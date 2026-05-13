@@ -987,10 +987,26 @@ class QuicConnection(
                 // listener (handleServerFinished → onApplicationKeysReady)
                 // runs inside streamsLock.withLock { feedDatagram(...) }
                 // in the read loop.
+                // RFC 9001 §4.6.1: treat 0-RTT as REJECTED if either
+                //   - the server did not echo the early_data extension
+                //     in EncryptedExtensions (`!tls.earlyDataAccepted`), or
+                //   - the negotiated ALPN differs from the resumed
+                //     session's ALPN. Even when `earlyDataAccepted` is
+                //     true the spec forbids using 0-RTT under a new
+                //     ALPN binding, so we must replay any already-sent
+                //     0-RTT bytes under 1-RTT.
+                // The `effectiveResumption` filter above prevents us
+                // from OFFERING 0-RTT with an incompatible ALPN — this
+                // post-EE check is the safety net for a non-conforming
+                // server that picks a different ALPN from what we
+                // remembered.
+                val resumed = effectiveResumption
+                val alpnMatch =
+                    resumed?.negotiatedAlpn?.contentEquals(tls.negotiatedAlpn ?: ByteArray(0)) ?: true
                 val rejected0Rtt =
-                    resumption != null &&
-                        resumption.maxEarlyDataSize > 0 &&
-                        !tls.earlyDataAccepted
+                    resumed != null &&
+                        resumed.maxEarlyDataSize > 0 &&
+                        (!tls.earlyDataAccepted || !alpnMatch)
                 if (rejected0Rtt) {
                     requeueAllInflightStreamData()
                     application.cryptoSend.requeueAllInflight()
@@ -1083,6 +1099,41 @@ class QuicConnection(
         if (!handshakeConfirmedSignal.isCompleted) handshakeConfirmedSignal.completeExceptionally(cause)
     }
 
+    /**
+     * Resumption state actually passed to [TlsClient] — `null` (cold
+     * handshake) if the cached ticket is past its server-advertised
+     * lifetime, or if the resumed session's negotiated ALPN isn't in our
+     * current [alpnList].
+     *
+     * - RFC 8446 §4.6.1 — tickets MUST NOT be used past `ticket_lifetime`
+     *   seconds after issue (clipped at 7 days). An expired ticket
+     *   silently fails to resume server-side and any 0-RTT bytes are
+     *   discarded; filtering at the call site keeps us from emitting the
+     *   PSK extension + 0-RTT data on a doomed ticket.
+     * - RFC 9001 §4.6.1 — 0-RTT is forbidden when the new ALPN differs
+     *   from the resumed session's ALPN. Defense-in-depth: a server that
+     *   doesn't reject the offer would still see 0-RTT bytes encrypted
+     *   under a session whose ALPN binding no longer holds. The post-EE
+     *   `rejected0Rtt` check below covers the same lane for servers that
+     *   pick a different ALPN from what we cached.
+     */
+    private val effectiveResumption: com.vitorpamplona.quic.tls.TlsResumptionState? =
+        resumption?.takeIf { r ->
+            // 7-day clip per RFC 8446 §4.6.1 (any larger advertised
+            // lifetime is the server bypassing the spec; we honour the
+            // cap regardless).
+            val effectiveLifetimeSec = r.ticketLifetimeSec.coerceAtMost(7L * 24L * 60L * 60L)
+            val ageSec = ((nowMillis() - r.issuedAtMillis).coerceAtLeast(0L)) / 1000L
+            if (ageSec >= effectiveLifetimeSec) return@takeIf false
+            // ALPN continuity: drop resumption when our offered ALPN
+            // list doesn't include the resumed session's ALPN. Use
+            // null-cached ALPNs (pre-2026-05 tickets) conservatively
+            // — without the binding we can't prove continuity, so
+            // skip resumption entirely.
+            val cachedAlpn = r.negotiatedAlpn ?: return@takeIf false
+            alpnList.any { it.contentEquals(cachedAlpn) }
+        }
+
     val tls: TlsClient =
         TlsClient(
             serverName = serverName,
@@ -1091,7 +1142,7 @@ class QuicConnection(
             certificateValidator = tlsCertificateValidator,
             offeredAlpns = alpnList,
             cipherSuites = cipherSuites,
-            resumption = resumption,
+            resumption = effectiveResumption,
         )
 
     init {
@@ -1117,9 +1168,9 @@ class QuicConnection(
         // in EncryptedExtensions and the existing
         // [applyPeerTransportParameters] hook then overwrites these
         // pre-loaded values.
-        if (resumption?.peerTransportParameters != null) {
+        if (effectiveResumption?.peerTransportParameters != null) {
             try {
-                val tp = TransportParameters.decode(resumption.peerTransportParameters)
+                val tp = TransportParameters.decode(effectiveResumption.peerTransportParameters)
                 sendConnectionFlowCredit = tp.initialMaxData ?: 0L
                 peerMaxStreamsBidi = tp.initialMaxStreamsBidi ?: 0L
                 peerMaxStreamsUni = tp.initialMaxStreamsUni ?: 0L

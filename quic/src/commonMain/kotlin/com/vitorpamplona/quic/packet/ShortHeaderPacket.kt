@@ -98,8 +98,9 @@ object ShortHeaderPacket {
 
         val sampleStart = pnOffset + 4
         require(sampleStart + 16 <= packet.size) { "packet too short for HP sample" }
-        val sample = packet.copyOfRange(sampleStart, sampleStart + 16)
-        val mask = hp.mask(hpKey, sample)
+        // Round-5 #P1: read the sample window directly from `packet` — pre-
+        // fix this allocated a fresh 16-byte ByteArray on every outbound.
+        val mask = hp.maskAt(hpKey, packet, sampleStart)
         applyHeaderProtectionMask(packet, firstByteOffset, pnOffset, pnLen, mask)
         return packet
     }
@@ -138,8 +139,7 @@ object ShortHeaderPacket {
         val pnOffset = offset + 1 + dcidLen
         val sampleStart = pnOffset + 4
         if (sampleStart + 16 > bytes.size) return null
-        val sample = bytes.copyOfRange(sampleStart, sampleStart + 16)
-        val mask = hp.mask(hpKey, sample)
+        val mask = hp.maskAt(hpKey, bytes, sampleStart)
         val unprotectedFirst = first xor (mask[0].toInt() and 0x1F)
         return Peek(
             keyPhase = (unprotectedFirst and 0x04) != 0,
@@ -173,8 +173,7 @@ object ShortHeaderPacket {
         val pnOffset = offset + 1 + dcidLen
         val sampleStart = pnOffset + 4
         if (sampleStart + 16 > bytes.size) return null
-        val sample = bytes.copyOfRange(sampleStart, sampleStart + 16)
-        val mask = hp.mask(hpKey, sample)
+        val mask = hp.maskAt(hpKey, bytes, sampleStart)
         val packetEnd = bytes.size
         val packet = bytes.copyOfRange(offset, packetEnd)
         val localPnOffset = pnOffset - offset

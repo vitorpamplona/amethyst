@@ -103,16 +103,20 @@ fun encodeSupportedGroupsX25519(): ByteArray {
     return w.toByteArray()
 }
 
-/** Build the `signature_algorithms` extension covering ECDSA-P256, RSA-PSS, Ed25519. */
+/** Build the `signature_algorithms` extension covering ECDSA-P256/P384, RSA-PSS, Ed25519. */
 fun encodeSignatureAlgorithms(): ByteArray {
     val w = QuicWriter()
     w.withUint16Length {
+        // RFC 8446 §4.2.3 forbids rsa_pkcs1_* in CertificateVerify (only
+        // permitted as a server-side cert chain hint). The JdkCertificateValidator
+        // already rejects it, so advertising rsa_pkcs1_sha256 here lied to the
+        // peer about what we accept and risked a 0x0401 selection that we'd
+        // then reject with an alert. Stick to RSA-PSS / ECDSA / Ed25519.
         writeUint16(TlsConstants.SIG_ECDSA_SECP256R1_SHA256)
         writeUint16(TlsConstants.SIG_RSA_PSS_RSAE_SHA256)
         writeUint16(TlsConstants.SIG_RSA_PSS_RSAE_SHA384)
         writeUint16(TlsConstants.SIG_RSA_PSS_RSAE_SHA512)
         writeUint16(TlsConstants.SIG_ED25519)
-        writeUint16(TlsConstants.SIG_RSA_PKCS1_SHA256)
         writeUint16(TlsConstants.SIG_ECDSA_SECP384R1_SHA384)
     }
     return w.toByteArray()

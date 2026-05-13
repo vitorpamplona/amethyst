@@ -53,6 +53,14 @@ import com.vitorpamplona.quic.tls.TlsClient
 private const val MAX_QUIC_OFFSET: Long = (1L shl 62) - 1L
 
 /**
+ * RFC 9000 §19.11: MAX_STREAMS values strictly above 2^60 are illegal.
+ * Anything larger (e.g. a hostile 2^62-1) would let local stream-ID
+ * minting overflow Long, so we treat the receipt as STREAM_LIMIT_ERROR
+ * and close.
+ */
+private const val MAX_STREAMS_LIMIT: Long = 1L shl 60
+
+/**
  * RFC 9000 §22 CRYPTO_BUFFER_EXCEEDED cap. Largest amount of CRYPTO
  * data we'll buffer per encryption level past the contiguous read
  * frontier before closing the connection. Sized to comfortably hold:
@@ -331,15 +339,19 @@ private fun feedLongHeaderPacket(
         conn.destinationConnectionId = parsed.packet.scid
     }
 
+    // Round-5 #P3: decode the frame list ONCE — qlog (when attached) and
+    // dispatch both need the same decoded view. Pre-fix the parser walked
+    // the payload twice per inbound packet.
+    val decodedFrames = decodeFramesOrClose(conn, parsed.packet.payload) ?: return parsed.consumed
     if (conn.qlogObserver !== com.vitorpamplona.quic.observability.QlogObserver.NoOp) {
         conn.qlogObserver.onPacketReceived(
             level = level,
             packetNumber = parsed.packet.packetNumber,
             sizeBytes = parsed.consumed,
-            frames = peekFrameNames(parsed.packet.payload),
+            frames = frameNamesFor(decodedFrames),
         )
     }
-    dispatchFrames(conn, level, parsed.packet.payload, parsed.packet.packetNumber, nowMillis)
+    dispatchFrames(conn, level, decodedFrames, parsed.packet.packetNumber, nowMillis)
     return parsed.consumed
 }
 
@@ -543,52 +555,60 @@ private fun feedShortHeaderPacket(
     // RFC 9000 §10.1.1: any successfully processed inbound packet
     // resets the idle timer.
     conn.lastActivityMs = nowMillis
+    // Round-5 #P3: single decode of the application-level payload feeds
+    // both qlog and dispatch.
+    val decodedFrames = decodeFramesOrClose(conn, parsed.packet.payload) ?: return
     if (conn.qlogObserver !== com.vitorpamplona.quic.observability.QlogObserver.NoOp) {
         conn.qlogObserver.onPacketReceived(
             level = EncryptionLevel.APPLICATION,
             packetNumber = parsed.packet.packetNumber,
             sizeBytes = datagram.size - offset,
-            frames = peekFrameNames(parsed.packet.payload),
+            frames = frameNamesFor(decodedFrames),
         )
     }
-    dispatchFrames(conn, EncryptionLevel.APPLICATION, parsed.packet.payload, parsed.packet.packetNumber, nowMillis)
+    dispatchFrames(conn, EncryptionLevel.APPLICATION, decodedFrames, parsed.packet.packetNumber, nowMillis)
 }
 
 /**
- * Decode the payload's frames just to surface their qlog names. Reuses
- * the same [com.vitorpamplona.quic.frame.decodeFrames] path as
- * [dispatchFrames]; if it throws (malformed peer payload), we return
- * an empty list — the dispatch path will catch the same exception
- * and surface the close via `markClosedExternally`.
+ * Map a decoded frame list to qlog frame-type names. Reused by callers
+ * that have already decoded the payload (qlog path) so we don't pay the
+ * varint scan twice.
  */
-private fun peekFrameNames(payload: ByteArray): List<String> =
+private fun frameNamesFor(frames: List<com.vitorpamplona.quic.frame.Frame>): List<String> {
+    val out = ArrayList<String>(frames.size)
+    for (f in frames) out += qlogFrameName(f::class.simpleName ?: "frame")
+    return out
+}
+
+/**
+ * Decode a packet payload into a frame list, gracefully closing the
+ * connection on a malformed (post-AEAD) payload. Returns null on close —
+ * the caller MUST stop processing the packet.
+ *
+ * Audit-4 #1: malformed frames in an otherwise-AEAD-validated payload (or
+ * unknown frame types from a future-extension peer) used to throw straight
+ * through the read loop's `finally` block, dropping the connection without
+ * ever sending CONNECTION_CLOSE. Catch decode exceptions and turn them into
+ * a graceful close so the peer learns why we tore down.
+ */
+private fun decodeFramesOrClose(
+    conn: QuicConnection,
+    payload: ByteArray,
+): List<com.vitorpamplona.quic.frame.Frame>? =
     try {
-        com.vitorpamplona.quic.frame
-            .decodeFrames(payload)
-            .map { qlogFrameName(it::class.simpleName ?: "frame") }
-    } catch (_: QuicCodecException) {
-        emptyList()
+        decodeFrames(payload)
+    } catch (e: QuicCodecException) {
+        conn.markClosedExternally("frame decode failed: ${e.message}")
+        null
     }
 
 private fun dispatchFrames(
     conn: QuicConnection,
     level: EncryptionLevel,
-    payload: ByteArray,
+    frames: List<com.vitorpamplona.quic.frame.Frame>,
     packetNumber: Long,
     nowMillis: Long,
 ) {
-    // Audit-4 #1: malformed frames in an otherwise-AEAD-validated payload (or
-    // unknown frame types from a future-extension peer) used to throw straight
-    // through the read loop's `finally` block, dropping the connection without
-    // ever sending CONNECTION_CLOSE. Catch decode exceptions and turn them
-    // into a graceful close so the peer learns why we tore down.
-    val frames =
-        try {
-            decodeFrames(payload)
-        } catch (e: QuicCodecException) {
-            conn.markClosedExternally("frame decode failed: ${e.message}")
-            return
-        }
     val state = conn.levelState(level)
     var ackEliciting = false
     for (frame in frames) {
@@ -908,6 +928,19 @@ private fun dispatchFrames(
                 // RFC 9000 §19.11: MAX_STREAMS only ever raises the cap.
                 // Frames with values smaller than the current cap are ignored.
                 // Bidi vs uni is signaled via the frame's `bidi` flag.
+                //
+                // §19.11 also caps a valid MAX_STREAMS value at 2^60 — a peer
+                // that sends a larger value commits a STREAM_LIMIT_ERROR.
+                // Without this gate a hostile peer could push the cap up to
+                // 2^62-1 (varint max), and our per-connection
+                // `nextLocalBidiIndex`/`nextLocalUniIndex` (Long) would then
+                // overflow as we minted stream IDs. Treat as a fatal close.
+                if (frame.maxStreams > MAX_STREAMS_LIMIT) {
+                    conn.markClosedExternally(
+                        "STREAM_LIMIT_ERROR: peer MAX_STREAMS=${frame.maxStreams} exceeds RFC 9000 §19.11 cap of 2^60",
+                    )
+                    return
+                }
                 if (frame.bidi) {
                     if (frame.maxStreams > conn.peerMaxStreamsBidi) {
                         conn.peerMaxStreamsBidi = frame.maxStreams

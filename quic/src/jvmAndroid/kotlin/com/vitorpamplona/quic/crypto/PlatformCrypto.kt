@@ -39,12 +39,34 @@ private val aesEcbCipher: ThreadLocal<Cipher> =
     ThreadLocal.withInitial { Cipher.getInstance("AES/ECB/NoPadding") }
 
 actual val PlatformAesOneBlock: AesOneBlockEncrypt =
-    AesOneBlockEncrypt { key, block ->
-        // .get() is non-null because withInitial supplies a Cipher, but
-        // Kotlin sees the Java return type as platform-nullable.
-        val cipher = aesEcbCipher.get()!!
-        cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "AES"))
-        cipher.doFinal(block)
+    object : AesOneBlockEncrypt {
+        override fun encrypt(
+            key: ByteArray,
+            block: ByteArray,
+        ): ByteArray {
+            // .get() is non-null because withInitial supplies a Cipher, but
+            // Kotlin sees the Java return type as platform-nullable.
+            val cipher = aesEcbCipher.get()!!
+            cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "AES"))
+            return cipher.doFinal(block)
+        }
+
+        override fun encryptInto(
+            key: ByteArray,
+            src: ByteArray,
+            srcOffset: Int,
+            dst: ByteArray,
+            dstOffset: Int,
+        ) {
+            // JCA's range-overload writes directly into [dst] starting at
+            // [dstOffset] — skips both the [block] copyOfRange the caller
+            // would have done AND the freshly-allocated 16-byte ciphertext
+            // the no-offset doFinal returns. Per-packet HP cost on the hot
+            // path drops from two 16-byte ByteArrays to zero.
+            val cipher = aesEcbCipher.get()!!
+            cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "AES"))
+            cipher.doFinal(src, srcOffset, 16, dst, dstOffset)
+        }
     }
 
 /**

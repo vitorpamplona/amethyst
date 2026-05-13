@@ -133,10 +133,11 @@ object LongHeaderPacket {
         )
 
         // Apply header protection. Sample is 16 bytes starting 4 bytes after pnOffset.
+        // Round-5 #P1: read the sample window directly from `packet` instead
+        // of allocating a 16-byte copyOfRange per outbound long-header packet.
         val sampleStart = pnOffset + 4
         require(sampleStart + 16 <= packet.size) { "packet too short for HP sample" }
-        val sample = packet.copyOfRange(sampleStart, sampleStart + 16)
-        val mask = hp.mask(hpKey, sample)
+        val mask = hp.maskAt(hpKey, packet, sampleStart)
         applyHeaderProtectionMask(packet, firstByteOffset, pnOffset, pnLen, mask)
 
         return packet
@@ -196,8 +197,7 @@ object LongHeaderPacket {
         // Sample for HP starts at pnOffset + 4.
         val sampleStart = pnOffset + 4
         if (sampleStart + 16 > bytes.size) return null
-        val sample = bytes.copyOfRange(sampleStart, sampleStart + 16)
-        val mask = hp.mask(hpKey, sample)
+        val mask = hp.maskAt(hpKey, bytes, sampleStart)
 
         // Make a private copy of the packet so we can mutate the header in place.
         val packetEnd = pnOffset + length

@@ -20,12 +20,17 @@
  */
 package com.vitorpamplona.quic.tls
 
+import java.io.ByteArrayOutputStream
 import java.security.MessageDigest
 
 /**
  * JCA-backed incremental SHA-256. `MessageDigest.clone()` is supported by all
- * stock JDK SHA-256 providers and produces an independent digest object — we
- * use that to take a snapshot without disturbing the running state.
+ * stock JDK SHA-256 providers AND by Android's Conscrypt
+ * `OpenSSLMessageDigestJDK` on shipping releases — but a handful of API
+ * 26–28 builds have been reported to throw `CloneNotSupportedException`
+ * from the native digest. Detect that on first snapshot and fall back to
+ * one-shot SHA-256 over an accumulated byte buffer; we keep accumulating
+ * regardless so the fallback always has the complete transcript to hash.
  *
  * Single-thread per instance: the TlsClient state machine is the sole caller,
  * driven by the QUIC connection's lock, so no synchronization is needed.
@@ -33,15 +38,36 @@ import java.security.MessageDigest
 actual class TlsRunningSha256 actual constructor() {
     private val digest: MessageDigest = MessageDigest.getInstance("SHA-256")
 
+    // Parallel byte accumulator — small (a few KB for a TLS transcript),
+    // and only consulted on the cloneable-digest fallback path. Keeping it
+    // populated unconditionally costs one `ByteArrayOutputStream.write` per
+    // [update] but avoids a "first snapshot fails, we have no history"
+    // failure mode on the broken-clone Android builds.
+    private val accumulator = ByteArrayOutputStream(512)
+    private var cloneable = true
+
     actual fun update(bytes: ByteArray) {
         digest.update(bytes)
+        accumulator.write(bytes)
     }
 
     actual fun snapshot(): ByteArray {
-        // Cloning the digest is the only way to read the current hash without
-        // ending the running state — `digest.digest()` finalizes and resets,
-        // which would silently corrupt subsequent updates.
-        val clone = digest.clone() as MessageDigest
-        return clone.digest()
+        if (cloneable) {
+            try {
+                // Cloning the digest is the cheap path — independent digest
+                // object with the current internal state, no consume.
+                val clone = digest.clone() as MessageDigest
+                return clone.digest()
+            } catch (_: CloneNotSupportedException) {
+                // Latch the fallback so we don't pay the JCA throw on every
+                // subsequent snapshot.
+                cloneable = false
+            }
+        }
+        // Fallback: one-shot SHA-256 over the accumulated transcript bytes.
+        // `MessageDigest.getInstance("SHA-256")` is mandated on every JCA
+        // provider — only the `.clone()` capability varies — so this is
+        // guaranteed to work on the same device that rejected the clone.
+        return MessageDigest.getInstance("SHA-256").digest(accumulator.toByteArray())
     }
 }
