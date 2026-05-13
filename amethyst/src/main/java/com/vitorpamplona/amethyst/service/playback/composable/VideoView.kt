@@ -22,7 +22,9 @@ package com.vitorpamplona.amethyst.service.playback.composable
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.IconButton
@@ -146,6 +148,13 @@ fun VideoView(
                     ImageUrlWithDownloadButton(url = videoUri, showImage = automaticallyStartPlayback)
                 }
             } else {
+                // Sized backdrop while the MediaController IPC is in flight and ContentFrame
+                // hasn't mounted yet. Only emitted when the Box already has an aspectRatio
+                // modifier — fillMaxSize requires bounded constraints, which the ratio
+                // provides. Mirrors the DisplayBlurHash backdrop in the blurhash branch.
+                if (ratio != null) {
+                    Spacer(Modifier.fillMaxSize())
+                }
                 VideoViewInner(
                     videoUri = videoUri,
                     mimeType = mimeType,
