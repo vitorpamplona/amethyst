@@ -1300,7 +1300,7 @@ class Account(
     }
 
     /**
-     * Publishes a sibling NIP-9A `kind:34551` rules document for a community we just
+     * Publishes a sibling NIP-9B `kind:34551` rules document for a community we just
      * (or previously) defined with [sendCommunityDefinition]. The event is signed by
      * the community owner and addresses the definition through its `a` tag, sharing
      * the same `dTag` so it replaces in place when re-edited.

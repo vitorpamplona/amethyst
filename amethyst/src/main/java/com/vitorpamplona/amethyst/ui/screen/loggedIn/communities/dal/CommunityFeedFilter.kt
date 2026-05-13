@@ -38,7 +38,7 @@ class CommunityFeedFilter(
     val account: Account,
     /**
      * When true, candidate events are additionally checked against the latest
-     * NIP-9A `kind:34551` rules document for this community and dropped on any
+     * NIP-9B `kind:34551` rules document for this community and dropped on any
      * violation. No-op when no rules document is cached. Default false preserves
      * pre-9A behaviour for any caller that constructs the filter directly.
      */

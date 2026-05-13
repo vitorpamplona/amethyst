@@ -152,7 +152,7 @@ class AccountSettings(
     val useLocalBlossomCache: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val localBlossomCacheProfilePicturesOnly: MutableStateFlow<Boolean> = MutableStateFlow(false),
     /**
-     * NIP-9A opt-in: when true, community feeds drop events whose latest cached
+     * NIP-9B opt-in: when true, community feeds drop events whose latest cached
      * `kind:34551` rules document fails [com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesValidator].
      * Default false preserves pre-9A behaviour.
      */

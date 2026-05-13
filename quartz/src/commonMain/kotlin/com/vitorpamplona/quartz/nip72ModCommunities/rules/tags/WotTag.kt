@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
- * NIP-9A `wot` tag: optional web-of-trust gate.
+ * NIP-9B `wot` tag: optional web-of-trust gate.
  *
  * Form: `["wot", "<root-pubkey>", "<depth>"]`
  *

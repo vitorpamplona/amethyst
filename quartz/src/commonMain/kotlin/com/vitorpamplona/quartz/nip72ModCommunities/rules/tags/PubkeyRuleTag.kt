@@ -27,7 +27,7 @@ import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
- * NIP-9A `p` tag: per-pubkey allow/deny override with optional role.
+ * NIP-9B `p` tag: per-pubkey allow/deny override with optional role.
  *
  * Form: `["p", "<hex>", "<allow|deny>", "<role?>"]`
  *

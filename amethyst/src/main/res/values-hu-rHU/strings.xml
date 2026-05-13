@@ -485,7 +485,7 @@
     <string name="new_community_relay_marker_approvals">Jóváhagyások</string>
     <string name="new_community_empty">Nincs olyan közösség, amely megfelelne ennek a szűrőnek.</string>
     <string name="new_community_rules_section">Ellenőrizhető szabályok (nem kötelező)</string>
-    <string name="new_community_rules_hint">A közösség mellett egy géppel olvasható szabálydokumentumot (NIP-9A) is közzétesz. Az ezt támogató kliensek küldés előtt blokkolják a szabályoknak meg nem felelő bejegyzéseket.</string>
+    <string name="new_community_rules_hint">A közösség mellett egy géppel olvasható szabálydokumentumot (NIP-9B) is közzétesz. Az ezt támogató kliensek küldés előtt blokkolják a szabályoknak meg nem felelő bejegyzéseket.</string>
     <string name="new_community_rules_kinds_section">Engedélyezett eseménytípusok</string>
     <string name="new_community_rules_kinds_hint">Koppintson egy típus engedélyezéséhez. Tartsa hosszan nyomva az eseményenkénti méretkorlát vagy a napi bejegyzéslimit beállításához.</string>
     <string name="new_community_rules_kind_short_text">Rövid szöveg (1)</string>
@@ -1134,7 +1134,7 @@
     <string name="max_hashtag_limit_title">Kulcsszavak száma legfeljebb bejegyzésenként</string>
     <string name="max_hashtag_limit_explainer">Elrejti azokat a bejegyzéseket, amelyek több kulcsszót tartalmaznak ennél a korlátnál. A kikapcsoláshoz állítsa 0-ra</string>
     <string name="hide_community_rules_violations_title">Közösségi szabályokat sértő bejegyzések elrejtése</string>
-    <string name="hide_community_rules_violations_explainer">Eltávolítja a bejegyzéseket a közösségi hírfolyamokból, ha a közösség közzétesz egy NIP-9A szabálydokumentumot, és egy esemény nem felel meg annak. Nincs hatása, ha a közösség nem rendelkezik strukturált szabályokkal.</string>
+    <string name="hide_community_rules_violations_explainer">Eltávolítja a bejegyzéseket a közösségi hírfolyamokból, ha a közösség közzétesz egy NIP-9B szabálydokumentumot, és egy esemény nem felel meg annak. Nincs hatása, ha a közösség nem rendelkezik strukturált szabályokkal.</string>
     <string name="new_reaction_symbol">Új reakció-szimbólum</string>
     <string name="no_reaction_type_setup_long_press_to_change">A felhasználó számára nincsenek előre kiválasztott reakciótípusok. Hosszan nyomja meg a szív gombot a módosításhoz</string>
     <string name="zapraiser">Zap-gyűjtés</string>
@@ -2561,7 +2561,7 @@
     <string name="emoji_public_explainer">A nyilvános emodzsik mindenki számára láthatók, és megjelennek a reakciómenüben, valamint a „:” automatikus kiegészítő listájában, ha ez a csomag szerepel az emodzsilistában.</string>
     <string name="emoji_private_explainer">A privát emodzsik titkosítva kerülnek tárolásra az átjátszókon, és csak Önnek láthatók. Ugyanúgy megjelennek a reakciómenüben és a „:” automatikus kiegészítésben, mint a nyilvánosak.</string>
     <string name="gif">Gif</string>
-    <!-- NIP-9A community rules composer-side validation. -->
+    <!-- NIP-9B community rules composer-side validation. -->
     <string name="community_rules_violation_icon">Közösségi szabálysértés</string>
     <string name="community_rules_violation_author_denied">Ön szerepel a közösség tiltólistáján. A bejegyzései nem lesznek elfogadva.</string>
     <string name="community_rules_violation_kind_not_allowed">Ez a közösség nem fogad el %1$d típusú eseményeket.</string>

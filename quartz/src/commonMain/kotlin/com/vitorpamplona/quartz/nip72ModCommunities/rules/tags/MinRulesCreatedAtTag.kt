@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
- * NIP-9A `min_rules_created_at` tag: anti-rollback ratchet.
+ * NIP-9B `min_rules_created_at` tag: anti-rollback ratchet.
  *
  * Clients MUST refuse rules events whose `created_at` is below this value, even
  * when signed by the legitimate owner. Limits the damage window from a stolen

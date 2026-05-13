@@ -485,7 +485,7 @@
     <string name="new_community_relay_marker_approvals">Godkännanden</string>
     <string name="new_community_empty">Inga gemenskaper matchar detta filter.</string>
     <string name="new_community_rules_section">Verifierbara regler (valfritt)</string>
-    <string name="new_community_rules_hint">Publicerar ett maskinläsbart regeldokument (NIP-9A) tillsammans med gemenskapen. Klienter som stödjer det blockerar inlägg som inte matchar innan de skickas.</string>
+    <string name="new_community_rules_hint">Publicerar ett maskinläsbart regeldokument (NIP-9B) tillsammans med gemenskapen. Klienter som stödjer det blockerar inlägg som inte matchar innan de skickas.</string>
     <string name="new_community_rules_kinds_section">Tillåtna händelsetyper</string>
     <string name="new_community_rules_kinds_hint">Tryck för att tillåta en typ. Tryck och håll på en typ för att ställa in storleks- eller dagliga inläggsgränser per händelse.</string>
     <string name="new_community_rules_kind_short_text">Kort text (1)</string>
@@ -1131,7 +1131,7 @@
     <string name="max_hashtag_limit_title">Max hashtags per inlägg</string>
     <string name="max_hashtag_limit_explainer">Döljer inlägg med fler hashtaggar än denna gräns. Sätt till 0 för att inaktivera</string>
     <string name="hide_community_rules_violations_title">Dölj inlägg som bryter mot gemenskapens regler</string>
-    <string name="hide_community_rules_violations_explainer">Filtrerar bort inlägg från gemenskapsflöden när gemenskapen publicerar ett NIP-9A-regeldokument och en händelse inte skulle godkännas. Ingen effekt när en gemenskap inte har strukturerade regler.</string>
+    <string name="hide_community_rules_violations_explainer">Filtrerar bort inlägg från gemenskapsflöden när gemenskapen publicerar ett NIP-9B-regeldokument och en händelse inte skulle godkännas. Ingen effekt när en gemenskap inte har strukturerade regler.</string>
     <string name="new_reaction_symbol">Ny reaktionssymbol</string>
     <string name="no_reaction_type_setup_long_press_to_change">Inga reaktionstyper valda. Håll ned för att ändra</string>
     <string name="zapraiser">Zap insamling</string>
@@ -2561,7 +2561,7 @@
     <string name="emoji_public_explainer">Offentliga emojis är synliga för alla och visas i din reaktionsmeny och i \":\"-autokompletteringen när detta paket finns i din emoji-lista.</string>
     <string name="emoji_private_explainer">Privata emojis lagras krypterade på relän och är endast synliga för dig. De visas i din reaktionsmeny och i autokomplettering med \":\" precis som offentliga.</string>
     <string name="gif">Gif</string>
-    <!-- NIP-9A community rules composer-side validation. -->
+    <!-- NIP-9B community rules composer-side validation. -->
     <string name="community_rules_violation_icon">Brott mot gemenskapens regler</string>
     <string name="community_rules_violation_author_denied">Du står på den här gemenskapens blockeringslista. Inlägg kommer inte att accepteras.</string>
     <string name="community_rules_violation_kind_not_allowed">Den här gemenskapen accepterar inte händelser av typ %1$d.</string>

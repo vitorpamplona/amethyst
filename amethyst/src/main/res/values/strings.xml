@@ -518,7 +518,7 @@
     <string name="new_community_relay_marker_approvals">Approvals</string>
     <string name="new_community_empty">No communities match this filter.</string>
     <string name="new_community_rules_section">Verifiable rules (optional)</string>
-    <string name="new_community_rules_hint">Publishes a machine-readable rules document (NIP-9A) alongside the community. Clients that support it block posts that don\'t match before sending.</string>
+    <string name="new_community_rules_hint">Publishes a machine-readable rules document (NIP-9B) alongside the community. Clients that support it block posts that don\'t match before sending.</string>
     <string name="new_community_rules_kinds_section">Allowed event kinds</string>
     <string name="new_community_rules_kinds_hint">Tap to allow a kind. Long-press a kind to set per-event size or daily-post limits.</string>
     <string name="new_community_rules_kind_short_text">Short text (1)</string>
@@ -1252,7 +1252,7 @@
     <string name="max_hashtag_limit_title">Max hashtags per post</string>
     <string name="max_hashtag_limit_explainer">Hides posts with more hashtags than this limit. Set to 0 to disable</string>
     <string name="hide_community_rules_violations_title">Hide posts that violate community rules</string>
-    <string name="hide_community_rules_violations_explainer">Drops posts from community feeds when the community publishes a NIP-9A rules document and an event would fail it. No effect when a community has no structured rules.</string>
+    <string name="hide_community_rules_violations_explainer">Drops posts from community feeds when the community publishes a NIP-9B rules document and an event would fail it. No effect when a community has no structured rules.</string>
 
     <string name="new_reaction_symbol">New Reaction Symbol</string>
     <string name="no_reaction_type_setup_long_press_to_change">No reaction types pre-selected for this user. Long press on the heart button to change</string>
@@ -2852,7 +2852,7 @@
     <string name="emoji_public_explainer">Public emojis are visible to everyone and appear in your reaction menu and \":\" autocomplete picker when this pack is in your emoji list.</string>
     <string name="emoji_private_explainer">Private emojis are stored encrypted on relays and visible only to you. They appear in your reaction menu and \":\" autocomplete just like public ones.</string>
     <string name="gif">Gif</string>
-    <!-- NIP-9A community rules composer-side validation. -->
+    <!-- NIP-9B community rules composer-side validation. -->
     <string name="community_rules_violation_icon">Community rule violation</string>
     <string name="community_rules_violation_author_denied">You are on this community\'s deny-list. Posts will not be accepted.</string>
     <string name="community_rules_violation_kind_not_allowed">This community does not accept events of kind %1$d.</string>

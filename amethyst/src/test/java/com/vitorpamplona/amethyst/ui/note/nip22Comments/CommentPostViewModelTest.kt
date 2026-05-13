@@ -29,7 +29,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Unit tests for the pure NIP-9A draft-validation helper exposed on
+ * Unit tests for the pure NIP-9B draft-validation helper exposed on
  * [CommentPostViewModel]'s companion. The ViewModel itself is too coupled to
  * Compose state, the relay subscription stack, and signers to construct in a
  * unit test, but the helper is the only place where draft size, kind, and

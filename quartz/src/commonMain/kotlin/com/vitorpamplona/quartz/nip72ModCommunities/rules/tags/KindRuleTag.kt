@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.utils.arrayOfNotNull
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
- * NIP-9A `k` tag: whitelists one event kind for the community, optionally with a
+ * NIP-9B `k` tag: whitelists one event kind for the community, optionally with a
  * max event size in bytes and a per-author quota per day.
  *
  * Form: `["k", "<kind>", "<max-bytes?>", "<max-per-author-per-day?>"]`

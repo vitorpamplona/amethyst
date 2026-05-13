@@ -485,7 +485,7 @@
     <string name="new_community_relay_marker_approvals">Aprovações</string>
     <string name="new_community_empty">Nenhuma comunidade corresponde a este filtro.</string>
     <string name="new_community_rules_section">Regras verificáveis (opcional)</string>
-    <string name="new_community_rules_hint">Publica um documento de regras legível por máquina (NIP-9A) junto com a comunidade. Clientes que o suportam bloqueiam posts que não correspondem antes de enviar.</string>
+    <string name="new_community_rules_hint">Publica um documento de regras legível por máquina (NIP-9B) junto com a comunidade. Clientes que o suportam bloqueiam posts que não correspondem antes de enviar.</string>
     <string name="new_community_rules_kinds_section">Tipos de evento permitidos</string>
     <string name="new_community_rules_kinds_hint">Toque para permitir um tipo. Pressione e segure um tipo para definir limites de tamanho por evento ou de posts diários.</string>
     <string name="new_community_rules_kind_short_text">Texto curto (1)</string>
@@ -1132,7 +1132,7 @@
     <string name="max_hashtag_limit_title">Máximo de hashtags por postagem</string>
     <string name="max_hashtag_limit_explainer">Oculta postagens com mais hashtags do que este limite. Defina como 0 para desativar</string>
     <string name="hide_community_rules_violations_title">Ocultar posts que violam as regras da comunidade</string>
-    <string name="hide_community_rules_violations_explainer">Remove posts dos feeds da comunidade quando ela publica um documento de regras NIP-9A e o evento não passaria. Sem efeito quando uma comunidade não tem regras estruturadas.</string>
+    <string name="hide_community_rules_violations_explainer">Remove posts dos feeds da comunidade quando ela publica um documento de regras NIP-9B e o evento não passaria. Sem efeito quando uma comunidade não tem regras estruturadas.</string>
     <string name="new_reaction_symbol">Novo símbolo de reação</string>
     <string name="no_reaction_type_setup_long_press_to_change">Nenhum tipo de reação selecionado. Pressione e segure para alterar</string>
     <string name="zapraiser">Arrecadação de Zaps</string>
@@ -2562,7 +2562,7 @@
     <string name="emoji_public_explainer">Emojis públicos são visíveis para todos e aparecem no seu menu de reações e no seletor de autocompletar \":\" quando este pacote está na sua lista de emojis.</string>
     <string name="emoji_private_explainer">Emojis privados são armazenados criptografados em relays e visíveis apenas para você. Eles aparecem no seu menu de reações e no autocompletar \":\" assim como os públicos.</string>
     <string name="gif">Gif</string>
-    <!-- NIP-9A community rules composer-side validation. -->
+    <!-- NIP-9B community rules composer-side validation. -->
     <string name="community_rules_violation_icon">Violação das regras da comunidade</string>
     <string name="community_rules_violation_author_denied">Você está na lista de bloqueados desta comunidade. Os posts não serão aceitos.</string>
     <string name="community_rules_violation_kind_not_allowed">Esta comunidade não aceita eventos do tipo %1$d.</string>

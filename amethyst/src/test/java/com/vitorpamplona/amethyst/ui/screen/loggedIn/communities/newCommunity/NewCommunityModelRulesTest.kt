@@ -29,7 +29,7 @@ import org.junit.Test
 
 /**
  * Unit tests for the pure-helper portion of [NewCommunityModel] that wires the
- * structured-rules editor state into a NIP-9A `kind:34551` payload. The full
+ * structured-rules editor state into a NIP-9B `kind:34551` payload. The full
  * `publish()` path needs a live [com.vitorpamplona.amethyst.model.Account] (and
  * thus relays + a signer), so here we exercise the deterministic mapping that
  * sits between the editor's drafts and the Quartz tag types.

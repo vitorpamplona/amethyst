@@ -63,7 +63,7 @@ data class CommunityRelayEntry(
 )
 
 /**
- * Editor-side draft of a NIP-9A `k` rule. Empty/null limit fields mean "no limit";
+ * Editor-side draft of a NIP-9B `k` rule. Empty/null limit fields mean "no limit";
  * they are dropped from the published tag.
  */
 @Immutable
@@ -76,7 +76,7 @@ data class KindRuleDraft(
 }
 
 /**
- * Editor-side draft of a NIP-9A `p` rule for a banned pubkey. v1 only writes
+ * Editor-side draft of a NIP-9B `p` rule for a banned pubkey. v1 only writes
  * `deny` policies; allow-listing is deferred to a follow-up.
  */
 @Immutable
@@ -87,7 +87,7 @@ data class BannedPubkeyDraft(
     fun toTag(): PubkeyRuleTag = PubkeyRuleTag(pubkey, PubkeyRuleTag.Policy.DENY, role)
 }
 
-/** Editor-side draft of a NIP-9A `wot` gate. */
+/** Editor-side draft of a NIP-9B `wot` gate. */
 @Immutable
 data class WotGateDraft(
     val rootPubkey: HexKey,
@@ -125,7 +125,7 @@ class NewCommunityModel : ViewModel() {
     val moderators = mutableStateListOf<User>()
     val relays = mutableStateListOf<CommunityRelayEntry>()
 
-    // NIP-9A structured rules - kept separate from the freeform `rules: String` text
+    // NIP-9B structured rules - kept separate from the freeform `rules: String` text
     // field above. When all four collections/values are empty, no kind:34551 event is
     // published, so existing communities upgrade only when an owner opts in.
     val kindRules = mutableStateListOf<KindRuleDraft>()
@@ -219,7 +219,7 @@ class NewCommunityModel : ViewModel() {
             name.isNotBlank() &&
             description.isNotBlank()
 
-    /** Returns true when the editor has any structured NIP-9A rule worth publishing. */
+    /** Returns true when the editor has any structured NIP-9B rule worth publishing. */
     fun hasStructuredRules(): Boolean =
         kindRules.isNotEmpty() ||
             bannedPubkeys.isNotEmpty() ||
@@ -333,7 +333,7 @@ class NewCommunityModel : ViewModel() {
                     return@launch
                 }
 
-                // Sibling NIP-9A rules document. Strictly opt-in: only published when
+                // Sibling NIP-9B rules document. Strictly opt-in: only published when
                 // the owner has set at least one structured rule. Reuses the same dTag
                 // so the rules event replaces in place across edits.
                 if (hasStructuredRules()) {

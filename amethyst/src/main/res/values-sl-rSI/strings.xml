@@ -2454,5 +2454,5 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="emoji_public_explainer">Javni emojiji so vidni vsem. Ko dodate ta paket, se bodo pojavili v meniju za odzive in v izbirniku ob vpisu dvopičja (\":\").</string>
     <string name="emoji_private_explainer">Zasebni emojiji so šifrirano shranjeni na relejih in vidni le vam. V meniju za odzive in pri samodejnem dokončanju z »:« se pojavijo enako kot javni.</string>
     <string name="gif">Gif</string>
-    <!-- NIP-9A community rules composer-side validation. -->
+    <!-- NIP-9B community rules composer-side validation. -->
 </resources>

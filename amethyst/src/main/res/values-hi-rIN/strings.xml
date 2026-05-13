@@ -2533,7 +2533,7 @@
     <string name="emoji_public_explainer">सार्वजनिक चित्राक्षर सब के लिए दृश्य हैं तथा आपके प्रतिक्रिया विकल्पसूची में उपस्थित होते हैं तथा \":\" स्वतःसम्पन्न चयनकर्ता में जब यह पोटली आपकी चित्राक्षर सूची में है।</string>
     <string name="emoji_private_explainer">निजी चित्राक्षर रहस्यीकृत रूप में रखे जाते हैं पुनःप्रसारकों में तथा केवल आप के लिए दृश्य हैं। आपके प्रतिक्रिया विकल्पसूची में उपस्थित होते हैं तथा \":\" स्वतःसम्पन्न सुविधा में सार्वजनिक चित्राक्षरों के जैसे ही।</string>
     <string name="gif">जिफ॰</string>
-    <!-- NIP-9A community rules composer-side validation. -->
+    <!-- NIP-9B community rules composer-side validation. -->
     <string name="community_rules_violation_icon">समुदाय नियभ उल्लंघन</string>
     <string name="community_rules_violation_author_denied">आप इस समुदाय के अस्वीकार सूची में हैं। पत्र स्वीकृत नहीं होगे।</string>
     <string name="community_rules_violation_kind_not_allowed">इस समुदाय द्वारा %1$d प्रकार घटनाएँ स्वीकृत नहीं।</string>
