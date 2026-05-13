@@ -59,8 +59,8 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.richtext.Urls
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
-import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.ui.components.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.desktop.ui.media.AnimatedGifImage
 import com.vitorpamplona.amethyst.desktop.ui.media.AudioPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopVideoPlayer
@@ -202,8 +202,8 @@ fun NoteCard(
                     }
 
                     // Timestamp
-                    Text(
-                        text = note.createdAt.toTimeAgo(withDot = false),
+                    ToggleableTimeAgoText(
+                        timestamp = note.createdAt,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

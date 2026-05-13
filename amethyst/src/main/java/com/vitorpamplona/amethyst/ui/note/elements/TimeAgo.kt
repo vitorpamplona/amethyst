@@ -20,17 +20,24 @@
  */
 package com.vitorpamplona.amethyst.ui.note.elements
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.note.timeAbsolute
+import com.vitorpamplona.amethyst.ui.note.timeAbsoluteNoDot
 import com.vitorpamplona.amethyst.ui.note.timeAgo
 import com.vitorpamplona.amethyst.ui.note.timeAgoShort
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -48,11 +55,14 @@ fun TimeAgo(time: Long) {
     // Subscribe to the shared coarse ticker; `derivedStateOf` ensures the Text only
     // recomposes when the formatted string actually flips (e.g. 1m → 2m), not on every tick.
     val nowState = LocalNowSeconds.current
+    var showAbsolute by rememberSaveable(time) { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+
     val timeStr by
         remember(time, context, nowState) {
             derivedStateOf {
                 nowState.value
-                timeAgo(time, context = context)
+                if (showAbsolute) timeAbsolute(time, context) else timeAgo(time, context = context)
             }
         }
 
@@ -60,6 +70,11 @@ fun TimeAgo(time: Long) {
         text = timeStr,
         color = MaterialTheme.colorScheme.placeholderText,
         maxLines = 1,
+        modifier =
+            Modifier.clickable(
+                interactionSource = interactionSource,
+                indication = null,
+            ) { showAbsolute = !showAbsolute },
     )
 }
 
@@ -70,12 +85,16 @@ fun NormalTimeAgo(
 ) {
     val nowStr = stringRes(id = R.string.now)
     val nowState = LocalNowSeconds.current
+    val context = LocalContext.current
+    var showAbsolute by rememberSaveable(baseNote.idHex) { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
 
     val time by
         remember(baseNote, nowStr, nowState) {
             derivedStateOf {
                 nowState.value
-                timeAgoShort(baseNote.createdAt() ?: 0L, nowStr)
+                val createdAt = baseNote.createdAt() ?: 0L
+                if (showAbsolute) timeAbsoluteNoDot(createdAt, context) else timeAgoShort(createdAt, nowStr)
             }
         }
 
@@ -83,6 +102,10 @@ fun NormalTimeAgo(
         text = time,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier = modifier,
+        modifier =
+            modifier.clickable(
+                interactionSource = interactionSource,
+                indication = null,
+            ) { showAbsolute = !showAbsolute },
     )
 }
