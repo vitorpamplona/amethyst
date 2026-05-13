@@ -648,6 +648,24 @@
     <string name="nest_participant_unfollow">Követés megszüntetése</string>
     <string name="nest_participant_mute">Némítás</string>
     <string name="nest_participant_unmute">Némítás megszüntetése</string>
+    <string name="nest_force_mute_note">Ezt figyelmen kívül hagyhatják azok a kliensek, amelyek nem támogatják ezt a műveletet.</string>
+    <string name="nest_confirm_kick_title">Eltávolítja a szobából?</string>
+    <string name="nest_confirm_kick_body">%1$s el lesz távolítva az audiosíkról és a résztvevők listájáról. Ha rendelkezik a szoba hivatkozásával, később újracsatlakozhat.</string>
+    <string name="nest_confirm_kick_confirm">Eltávolítás</string>
+    <string name="nest_confirm_force_mute_title">Előadó kényszerített némítása?</string>
+    <string name="nest_confirm_force_mute_body">Kérés %1$s kliense felé a mikrofon némítására. Néhány kliens figyelmen kívül hagyhatja ezt a parancsot.</string>
+    <string name="nest_confirm_force_mute_confirm">Kényszerített némítás</string>
+    <string name="nest_confirm_cancel">Mégse</string>
+    <string name="nest_toast_action_title">Hangszoba</string>
+    <string name="nest_toast_follow_sent">%1$s követése.</string>
+    <string name="nest_toast_unfollow_sent">%1$s nem követett.</string>
+    <string name="nest_toast_mute_sent">%1$s némítva.</string>
+    <string name="nest_toast_unmute_sent">%1$s nincs némítva.</string>
+    <string name="nest_toast_promote_speaker_sent">Előadává léptette elő őt: %1$s</string>
+    <string name="nest_toast_promote_moderator_sent">Moderátorrá léptette elő őt: %1$s</string>
+    <string name="nest_toast_demote_listener_sent">Hallgatóvá fokozta le őt: %1$s</string>
+    <string name="nest_toast_force_mute_sent">Kényszerítetten némította őt: %1$s.</string>
+    <string name="nest_toast_kick_sent">Eltávolította a szobából őt: %1$s.</string>
     <string name="nest_share_action">Szoba megosztása</string>
     <string name="nest_minimize">Minimalizálás</string>
     <string name="nest_minimize_description">Minimalizálás a további hallgatáshoz</string>
@@ -1077,6 +1095,10 @@
     <string name="always_on_notif_connecting">Kapcsolódás a beérkező üzenetátjátszókhoz\u2026</string>
     <string name="always_on_notif_setting_title">Folyamatos értesítési szolgáltatás</string>
     <string name="always_on_notif_setting_description">Folyamatos kapcsolatot tart fenn a beérkező üzenetek átjátszóival az értesítések azonnali kézbesítése érdekében. Megjeleníti a folyamatban lévő értesítéseket. Több akkumulátort fogyaszt, de így biztosan nem marad le egyetlen üzenetről sem.</string>
+    <string name="split_notifications_setting_title">Értesítések szétválasztása követések szerint</string>
+    <string name="split_notifications_setting_description">Két értesítési fül megjelenítése — Követettek (akiket Ön követ) és Mindenki. Az olvasatlan jelző csak a követett személyek aktivitása esetén világít.</string>
+    <string name="notification_tab_following">Követés</string>
+    <string name="notification_tab_everyone">Mindenki</string>
     <string name="battery_optimization_title">Akkumulátor-optimalizálás aktív</string>
     <string name="battery_optimization_description">Az Android korlátozhatja a háttérben futó átjátszókapcsolatokat. Az Amethyst esetében tiltsa le az akkumulátor-optimalizálást a megbízható értesítések biztosítása érdekében.</string>
     <string name="battery_optimization_fix_now">Javítás most</string>
@@ -1104,7 +1126,9 @@
     <string name="disable_client_tag_title">Ne legyenek megjelölve az eseményeim klienscímkével</string>
     <string name="disable_client_tag_explainer">Ha engedélyezve van, akkor az Amethyst nem fűz NIP-89 klienscímkét az Ön által közzétett eseményekhez.</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Figyelmeztetés a jelentésekre</string>
-    <string name="warn_when_posts_have_reports_from_your_follows_explainer">Figyelmeztető üzenet jelenik meg, ha a bejegyzéseket az Ön által követett felhasználók 5 vagy annál többször jelentették</string>
+    <string name="warn_when_posts_have_reports_from_your_follows_explainer">Figyelmeztető üzenetet jelenít meg, ha az Ön követői bejelentést tettek bejegyzésekről vagy profilokról</string>
+    <string name="report_warning_threshold_title">Jelentési figyelmeztetés küszöbértéke</string>
+    <string name="report_warning_threshold_explainer">Figyelmeztet, ha a bejegyzések vagy profilok elérik az Ön által követett személyektől érkező jelentések ezen számát</string>
     <string name="show_sensitive_content_title">Érzékeny tartalom megjelenítése</string>
     <string name="show_sensitive_content_explainer">Figyelmeztető üzenet jelenik meg, ha a bejegyzés szerzője érzékenynek jelölte a hozzászólást</string>
     <string name="max_hashtag_limit_title">Kulcsszavak száma legfeljebb bejegyzésenként</string>
@@ -1676,6 +1700,8 @@
     <string name="video_player_settings_action_download_description">Töltse le a videót a készülékedre (rejtett az élő közvetítéseknél)</string>
     <string name="video_player_settings_action_pip">Kép a képben</string>
     <string name="video_player_settings_action_pip_description">Videó lejátszása lebegő ablakban (rejtett, ha a rendszer nem támogatja)</string>
+    <string name="video_player_settings_action_cast">Közvetítés eszközre</string>
+    <string name="video_player_settings_action_cast_description">Videó küldése a Wi-Fi hálózaton található Chromecast eszközre (helyi fájloknál nem érhető el)</string>
     <string name="profile_image_of_user">%1$s profilképe</string>
     <string name="relay_info">%1$s átjátszó</string>
     <string name="expand_relay_list">Átjátszólista kibontása</string>
@@ -1889,7 +1915,7 @@
     <string name="add_dvm_to_favorites">Hírfolyam-algoritmus hozzáadása a kedvencekhez</string>
     <string name="remove_dvm_from_favorites">Eltávolítás a kedvencekből</string>
     <string name="favorite_dvms_title">Kedvenc hírfolyam-algoritmusok</string>
-    <string name="favorite_dvms_explainer">Az itt kedvencként megjelölt hírfolyam-algoritmusok szűrőgombként jelennek meg a főoldal hírfolyamán. Nyissa meg a felfedezés menüpontot, ha továbbiakat szeretne hozzáadni.</string>
+    <string name="favorite_dvms_explainer">A kedvencnek jelölt algoritmusok itt jelennek meg, valamint szűrőelemként a Főoldal hírfolyamában.</string>
     <string name="favorite_dvms_empty_headline">Kedvenc algoritmus kitűzése</string>
     <string name="favorite_dvms_empty_subtitle">Koppintson az alábbi gombra az algoritmusok böngészéséhez, és jelölje meg csillaggal azokat, amelyeket itt szeretne megőrizni.</string>
     <string name="favorite_dvms_empty_cta">Néhány hírfolyam hozzáadása</string>
@@ -2285,6 +2311,10 @@
     <string name="playback_actions_dialog_title">Lejátszás</string>
     <string name="video_quality_auto">Automatikus</string>
     <!-- LAN cast (Chromecast) feature -->
+    <string name="cast_to_device">Közvetítés eszközre</string>
+    <string name="cast_stop_casting">Közvetítés leállítása</string>
+    <string name="cast_to_device_dialog_title">Közvetítés…</string>
+    <string name="cast_searching_for_devices">Eszközök keresése a Wi-Fi hálózaton…</string>
     <!-- HLS multi-resolution video sharing -->
     <string name="share_hls_video">HLS-feltöltés</string>
     <string name="share_hls_video_drawer_description">Többféle felbontású HLS- videó közzététele a médiakiszolgálókon</string>
