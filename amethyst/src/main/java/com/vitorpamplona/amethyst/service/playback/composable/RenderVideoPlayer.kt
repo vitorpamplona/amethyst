@@ -120,6 +120,11 @@ fun RenderVideoPlayer(
             modifier = videoModifier,
             surfaceType = SURFACE_TYPE_TEXTURE_VIEW,
             contentScale = contentScale,
+            // Transparent shutter — media3's default is an opaque black Box that flashes
+            // until EVENT_RENDERED_FIRST_FRAME fires. Letting the layer beneath show
+            // through (blurhash backdrop in the with-blurhash branch, or the post
+            // background otherwise) avoids the black blink when re-entering the feed.
+            shutter = {},
         )
 
         AudioPlayingAnimation(
