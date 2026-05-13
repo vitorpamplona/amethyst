@@ -310,7 +310,7 @@ open class NestNewMessageViewModel :
     suspend fun sendDraftSync() {
         if (message.text.toString().isBlank()) {
             account.deleteDraftIgnoreErrors(draftTag.current)
-        } else {
+        } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             val attachments = mutableSetOf<Event>()
             nip95attachments.forEach {
                 attachments.add(it.first)

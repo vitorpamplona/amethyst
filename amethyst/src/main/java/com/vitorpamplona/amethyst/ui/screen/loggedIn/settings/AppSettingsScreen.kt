@@ -55,7 +55,6 @@ import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.ConnectivityType
 import com.vitorpamplona.amethyst.model.FeatureSetType
 import com.vitorpamplona.amethyst.model.ProfileGalleryType
@@ -136,8 +135,6 @@ fun SettingsScreen(
         ImmersiveScrollingChoice(sharedPrefs)
         FeatureSetChoice(sharedPrefs)
         GalleryChoice(sharedPrefs)
-        AiWritingHelpChoice(sharedPrefs)
-        TrackedBroadcastsChoice(sharedPrefs)
         PushNotificationSettingsRow(sharedPrefs)
         if (accountViewModel != null) {
             AlwaysOnNotificationServiceChoice(accountViewModel)
@@ -402,46 +399,6 @@ fun GalleryChoice(sharedPrefs: UiSettingsFlow) {
         galleryIndex.screenCode,
     ) {
         sharedPrefs.gallerySet.tryEmit(parseGalleryType(it))
-    }
-}
-
-@Composable
-fun AiWritingHelpChoice(sharedPrefs: UiSettingsFlow) {
-    val aiIndex by sharedPrefs.automaticallyProposeAiImprovements.collectAsState()
-
-    val booleanItems =
-        persistentListOf(
-            TitleExplainer(stringRes(ConnectivityType.ALWAYS.resourceId)),
-            TitleExplainer(stringRes(ConnectivityType.NEVER.resourceId)),
-        )
-
-    SettingsRow(
-        R.string.ai_writing_setting_title,
-        R.string.ai_writing_setting_description,
-        booleanItems,
-        aiIndex.screenCode,
-    ) {
-        sharedPrefs.automaticallyProposeAiImprovements.tryEmit(parseBooleanType(it))
-    }
-}
-
-@Composable
-fun TrackedBroadcastsChoice(sharedPrefs: UiSettingsFlow) {
-    val useTrackedBroadcastsIndex by sharedPrefs.useTrackedBroadcasts.collectAsState()
-
-    val booleanItems =
-        persistentListOf(
-            TitleExplainer(stringRes(BooleanType.ALWAYS.reourceId)),
-            TitleExplainer(stringRes(BooleanType.NEVER.reourceId)),
-        )
-
-    SettingsRow(
-        R.string.tracked_broadcasts_setting_title,
-        R.string.tracked_broadcasts_setting_description,
-        booleanItems,
-        useTrackedBroadcastsIndex.screenCode,
-    ) {
-        sharedPrefs.useTrackedBroadcasts.tryEmit(parseBooleanType(it))
     }
 }
 

@@ -215,6 +215,8 @@ sealed class Route {
 
     @Serializable object Settings : Route()
 
+    @Serializable object ComposeSettings : Route()
+
     @Serializable object UserSettings : Route()
 
     @Serializable object ReactionsSettings : Route()

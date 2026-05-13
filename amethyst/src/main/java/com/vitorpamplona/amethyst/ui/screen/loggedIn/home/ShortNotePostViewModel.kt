@@ -897,7 +897,7 @@ open class ShortNotePostViewModel :
     suspend fun sendDraftSync() {
         if (message.text.toString().isBlank()) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftTag.current)
-        } else {
+        } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             val attachments = mutableSetOf<Event>()
             nip95attachments.forEach {
                 attachments.add(it.first)

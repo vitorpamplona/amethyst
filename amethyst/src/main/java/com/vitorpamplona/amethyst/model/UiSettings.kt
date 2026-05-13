@@ -43,6 +43,7 @@ data class UiSettings(
     val gallerySet: ProfileGalleryType = ProfileGalleryType.CLASSIC,
     val automaticallyProposeAiImprovements: BooleanType = BooleanType.ALWAYS,
     val useTrackedBroadcasts: BooleanType = BooleanType.ALWAYS,
+    val automaticallyCreateDrafts: BooleanType = BooleanType.ALWAYS,
     val bottomBarItems: List<NavBarItem> = DefaultBottomBarItems,
     val showHomeNewThreadsTab: Boolean = true,
     val showHomeConversationsTab: Boolean = true,

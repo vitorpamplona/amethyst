@@ -348,7 +348,7 @@ class LongFormPostViewModel :
     suspend fun sendDraftSync() {
         if (message.text.toString().isBlank() && title.text.isBlank()) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftTag.current)
-        } else {
+        } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             val template = createTemplate() ?: return
             accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, emptySet())
         }

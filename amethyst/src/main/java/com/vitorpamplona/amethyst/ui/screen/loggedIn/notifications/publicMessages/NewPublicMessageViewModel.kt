@@ -352,7 +352,7 @@ class NewPublicMessageViewModel :
     suspend fun sendDraftSync() {
         if (message.text.toString().isBlank()) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftTag.current)
-        } else {
+        } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             val broadcast = mutableSetOf<Event>()
             nip95attachments.forEach {
                 broadcast.add(it.first)
