@@ -73,9 +73,12 @@ object LongHeaderPacket {
         hp: HeaderProtection,
         hpKey: ByteArray,
         largestAckedInSpace: Long,
-        // Round-5 #P2: optional 12-byte scratch the writer can reuse across
-        // packets. Default = allocate fresh (preserves test ergonomics).
+        // Round-5 #P2 + #P1: optional caller-owned scratch buffers. When
+        // provided the build path allocates nothing for nonce / HP work.
+        // Default = allocate fresh on each call (preserves tests).
         nonceScratch: ByteArray? = null,
+        hpScratch: ByteArray? = null,
+        hpMask: ByteArray? = null,
     ): ByteArray {
         val pnLen =
             com.vitorpamplona.quic.connection.PacketNumberSpaceState.encodeLength(
@@ -142,11 +145,17 @@ object LongHeaderPacket {
         )
 
         // Apply header protection. Sample is 16 bytes starting 4 bytes after pnOffset.
-        // Round-5 #P1: read the sample window directly from `packet` instead
-        // of allocating a 16-byte copyOfRange per outbound long-header packet.
+        // Round-5 #P1: read the sample window directly from `packet`. When
+        // caller-owned hp scratch + mask are provided the HP path allocates
+        // zero bytes per packet; otherwise allocate fresh (test path).
         val sampleStart = pnOffset + 4
         require(sampleStart + 16 <= packet.size) { "packet too short for HP sample" }
-        val mask = hp.maskAt(hpKey, packet, sampleStart)
+        val mask =
+            if (hpScratch != null && hpMask != null) {
+                hp.maskInto(hpKey, packet, sampleStart, hpScratch, hpMask)
+            } else {
+                hp.maskAt(hpKey, packet, sampleStart)
+            }
         applyHeaderProtectionMask(packet, firstByteOffset, pnOffset, pnLen, mask)
 
         return packet
@@ -169,9 +178,12 @@ object LongHeaderPacket {
         hp: HeaderProtection,
         hpKey: ByteArray,
         largestReceivedInSpace: Long,
-        // Round-5 #P2: optional 12-byte scratch the parser reuses across
-        // inbound packets. Default = allocate fresh (preserves tests).
+        // Round-5 #P2 + #P1: optional caller-owned scratch buffers. When
+        // provided the parse path allocates nothing for nonce / HP work.
+        // Default = allocate fresh on each call (preserves tests).
         nonceScratch: ByteArray? = null,
+        hpScratch: ByteArray? = null,
+        hpMask: ByteArray? = null,
     ): ParseResult? {
         val packetStart = offset
         val r = QuicReader(bytes, offset)
@@ -209,7 +221,12 @@ object LongHeaderPacket {
         // Sample for HP starts at pnOffset + 4.
         val sampleStart = pnOffset + 4
         if (sampleStart + 16 > bytes.size) return null
-        val mask = hp.maskAt(hpKey, bytes, sampleStart)
+        val mask =
+            if (hpScratch != null && hpMask != null) {
+                hp.maskInto(hpKey, bytes, sampleStart, hpScratch, hpMask)
+            } else {
+                hp.maskAt(hpKey, bytes, sampleStart)
+            }
 
         // Make a private copy of the packet so we can mutate the header in place.
         val packetEnd = pnOffset + length

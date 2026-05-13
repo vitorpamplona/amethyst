@@ -28,9 +28,14 @@ import java.security.MessageDigest
  * stock JDK SHA-256 providers AND by Android's Conscrypt
  * `OpenSSLMessageDigestJDK` on shipping releases — but a handful of API
  * 26–28 builds have been reported to throw `CloneNotSupportedException`
- * from the native digest. Detect that on first snapshot and fall back to
- * one-shot SHA-256 over an accumulated byte buffer; we keep accumulating
- * regardless so the fallback always has the complete transcript to hash.
+ * from the native digest.
+ *
+ * We probe `clone()` ONCE at construction: if it works the JCA-clone path
+ * runs for the lifetime of the instance with zero side-buffer overhead;
+ * if it doesn't we switch to byte-accumulator-then-one-shot-SHA-256 mode
+ * from the start, so the very first snapshot already has the complete
+ * transcript. Working devices (the overwhelming majority) pay nothing
+ * for the fallback.
  *
  * Single-thread per instance: the TlsClient state machine is the sole caller,
  * driven by the QUIC connection's lock, so no synchronization is needed.
@@ -38,36 +43,45 @@ import java.security.MessageDigest
 actual class TlsRunningSha256 actual constructor() {
     private val digest: MessageDigest = MessageDigest.getInstance("SHA-256")
 
-    // Parallel byte accumulator — small (a few KB for a TLS transcript),
-    // and only consulted on the cloneable-digest fallback path. Keeping it
-    // populated unconditionally costs one `ByteArrayOutputStream.write` per
-    // [update] but avoids a "first snapshot fails, we have no history"
-    // failure mode on the broken-clone Android builds.
-    private val accumulator = ByteArrayOutputStream(512)
-    private var cloneable = true
+    /**
+     * Result of the one-time `digest.clone()` probe. Conscrypt's clone
+     * support is a property of the build (native bridge presence), not of
+     * the digest's internal state, so a single probe is a reliable signal
+     * — repeated clones on the same instance behave identically.
+     */
+    private val cloneable: Boolean =
+        try {
+            digest.clone()
+            true
+        } catch (_: CloneNotSupportedException) {
+            false
+        }
+
+    /**
+     * Byte accumulator allocated only on the broken-clone fallback path.
+     * Holds every byte fed to [update] so [snapshot] can one-shot
+     * SHA-256 the full transcript. On clone-capable devices this stays
+     * `null` and [update] never touches it.
+     */
+    private val accumulator: ByteArrayOutputStream? =
+        if (cloneable) null else ByteArrayOutputStream(512)
 
     actual fun update(bytes: ByteArray) {
         digest.update(bytes)
-        accumulator.write(bytes)
+        accumulator?.write(bytes)
     }
 
     actual fun snapshot(): ByteArray {
         if (cloneable) {
-            try {
-                // Cloning the digest is the cheap path — independent digest
-                // object with the current internal state, no consume.
-                val clone = digest.clone() as MessageDigest
-                return clone.digest()
-            } catch (_: CloneNotSupportedException) {
-                // Latch the fallback so we don't pay the JCA throw on every
-                // subsequent snapshot.
-                cloneable = false
-            }
+            // Cheap path — independent digest object with current internal
+            // state, no consume.
+            val clone = digest.clone() as MessageDigest
+            return clone.digest()
         }
         // Fallback: one-shot SHA-256 over the accumulated transcript bytes.
         // `MessageDigest.getInstance("SHA-256")` is mandated on every JCA
-        // provider — only the `.clone()` capability varies — so this is
+        // provider — only `.clone()` capability varies — so this is
         // guaranteed to work on the same device that rejected the clone.
-        return MessageDigest.getInstance("SHA-256").digest(accumulator.toByteArray())
+        return MessageDigest.getInstance("SHA-256").digest(accumulator!!.toByteArray())
     }
 }

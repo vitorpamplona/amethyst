@@ -32,7 +32,8 @@ sealed class HeaderProtection {
     /**
      * Compute the HP mask from a 16-byte standalone sample buffer. Retained
      * for callers (mostly tests) that already have a heap-allocated sample
-     * blob — the production hot path uses [maskAt] to avoid the slice.
+     * blob — the production hot path uses [maskInto] to avoid every per-
+     * packet allocation.
      */
     abstract fun mask(
         hpKey: ByteArray,
@@ -42,14 +43,35 @@ sealed class HeaderProtection {
     /**
      * Compute the HP mask from a 16-byte sample window inside [src] starting
      * at [srcOffset]. Avoids the `copyOfRange` of the sample on every
-     * outbound and inbound packet (round-5 #P1). Returns a freshly allocated
-     * 5-byte mask — the per-packet allocation budget drops from
-     * `16 (sample) + 16 (cipher output) + 5 (mask)` to `16 + 5` for AES-ECB.
+     * outbound and inbound packet (round-5 #P1) but still allocates a
+     * fresh 5-byte mask + an internal 16-byte AES scratch on each call.
+     * Use [maskInto] when caller-owned scratch + mask buffers are
+     * available (the production writer/parser path).
      */
     abstract fun maskAt(
         hpKey: ByteArray,
         src: ByteArray,
         srcOffset: Int,
+    ): ByteArray
+
+    /**
+     * Allocation-free HP mask: write the 5 mask bytes into [dstMask], using
+     * [scratch16] (caller-owned 16-byte buffer) for the AES-ECB output
+     * intermediate. Returns [dstMask] for fluent use.
+     *
+     * Both buffers are MUTATED — callers must consume the mask before the
+     * next [maskInto] call on the same buffers. The hot QUIC writer/parser
+     * path in `Short/LongHeaderPacket.build` + `parseAndDecrypt` keeps a
+     * per-PacketProtection scratch + mask pair and consumes the mask
+     * immediately during [com.vitorpamplona.quic.crypto.applyHeaderProtectionMask],
+     * so the lifetime is trivially safe.
+     */
+    abstract fun maskInto(
+        hpKey: ByteArray,
+        src: ByteArray,
+        srcOffset: Int,
+        scratch16: ByteArray,
+        dstMask: ByteArray,
     ): ByteArray
 }
 
@@ -71,15 +93,23 @@ class AesEcbHeaderProtection(
         hpKey: ByteArray,
         src: ByteArray,
         srcOffset: Int,
+    ): ByteArray = maskInto(hpKey, src, srcOffset, ByteArray(16), ByteArray(5))
+
+    override fun maskInto(
+        hpKey: ByteArray,
+        src: ByteArray,
+        srcOffset: Int,
+        scratch16: ByteArray,
+        dstMask: ByteArray,
     ): ByteArray {
         require(srcOffset >= 0 && srcOffset + 16 <= src.size) { "HP sample window out of range" }
         require(hpKey.size in setOf(16, 24, 32)) { "AES-ECB key must be 16/24/32 bytes" }
-        val scratch = ByteArray(16)
-        aesEncryptOneBlock.encryptInto(hpKey, src, srcOffset, scratch, 0)
+        require(scratch16.size == 16) { "AES scratch must be 16 bytes" }
+        require(dstMask.size >= 5) { "HP mask buffer must be at least 5 bytes" }
+        aesEncryptOneBlock.encryptInto(hpKey, src, srcOffset, scratch16, 0)
         // Mask is the first 5 bytes per RFC 9001 §5.4.3.
-        val mask = ByteArray(5)
-        scratch.copyInto(mask, 0, 0, 5)
-        return mask
+        scratch16.copyInto(dstMask, 0, 0, 5)
+        return dstMask
     }
 }
 
@@ -99,6 +129,32 @@ class ChaCha20HeaderProtection(
         hpKey: ByteArray,
         src: ByteArray,
         srcOffset: Int,
+    ): ByteArray = chacha20Mask(hpKey, src, srcOffset)
+
+    override fun maskInto(
+        hpKey: ByteArray,
+        src: ByteArray,
+        srcOffset: Int,
+        scratch16: ByteArray,
+        dstMask: ByteArray,
+    ): ByteArray {
+        require(dstMask.size >= 5) { "HP mask buffer must be at least 5 bytes" }
+        // ChaCha20 HP unavoidably allocates a fresh 5-byte ciphertext via the
+        // [ChaCha20BlockEncrypt] SPI, plus a 12-byte nonce slice (Quartz's
+        // `ChaCha20Core.chaCha20Xor` takes a standalone nonce). Copy the
+        // result into the caller's [dstMask] so call-site shape matches the
+        // AES-ECB path; a future pass could push src+offset through the
+        // ChaCha20 SPI to fully eliminate the slice. [scratch16] is unused
+        // here.
+        val mask = chacha20Mask(hpKey, src, srcOffset)
+        mask.copyInto(dstMask, 0, 0, 5)
+        return dstMask
+    }
+
+    private fun chacha20Mask(
+        hpKey: ByteArray,
+        src: ByteArray,
+        srcOffset: Int,
     ): ByteArray {
         require(srcOffset >= 0 && srcOffset + 16 <= src.size) { "ChaCha20 HP sample window out of range" }
         require(hpKey.size == 32) { "ChaCha20 HP key must be 32 bytes" }
@@ -107,10 +163,6 @@ class ChaCha20HeaderProtection(
                 ((src[srcOffset + 1].toInt() and 0xFF) shl 8) or
                 ((src[srcOffset + 2].toInt() and 0xFF) shl 16) or
                 ((src[srcOffset + 3].toInt() and 0xFF) shl 24)
-        // The nonce slice is unavoidable as long as we delegate to Quartz's
-        // `ChaCha20Core.chaCha20Xor(plaintext, key, nonce, counter)` which
-        // takes a standalone nonce ByteArray. A future pass could thread
-        // src + offset all the way down.
         val nonce = src.copyOfRange(srcOffset + 4, srcOffset + 16)
         return chacha20Encrypt.encrypt(hpKey, nonce, counter, ByteArray(5))
     }

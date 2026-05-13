@@ -46,6 +46,23 @@ class PacketProtection(
      * invocation.
      */
     val nonceScratch: ByteArray = ByteArray(iv.size)
+
+    /**
+     * Per-direction header-protection scratch — 16 bytes of AES-ECB output
+     * for [hp.maskInto][com.vitorpamplona.quic.crypto.HeaderProtection.maskInto].
+     * Reused per packet so the AES output no longer allocates (round-5 #P1).
+     * Same single-direction thread-safety rationale as [nonceScratch].
+     */
+    val hpScratch: ByteArray = ByteArray(16)
+
+    /**
+     * Per-direction header-protection mask buffer — 5 bytes per RFC 9001
+     * §5.4.3. Filled by [hp.maskInto][com.vitorpamplona.quic.crypto.HeaderProtection.maskInto]
+     * and immediately consumed by [com.vitorpamplona.quic.crypto.applyHeaderProtectionMask]
+     * (write path) or by inline first-byte / packet-number unmasking
+     * (parse path). Consume before the next mask call on this instance.
+     */
+    val hpMask: ByteArray = ByteArray(5)
 }
 
 /** All four encryption levels we ever see in a QUIC client connection. */

@@ -321,6 +321,8 @@ private fun feedLongHeaderPacket(
             hpKey = proto.hpKey,
             largestReceivedInSpace = state.pnSpace.largestReceived,
             nonceScratch = proto.nonceScratch,
+            hpScratch = proto.hpScratch,
+            hpMask = proto.hpMask,
         )
     if (parsed == null) {
         conn.qlogObserver.onPacketDropped(
@@ -393,6 +395,8 @@ private fun feedShortHeaderPacket(
             dcidLen = conn.sourceConnectionId.length,
             hp = live.hp,
             hpKey = live.hpKey,
+            hpScratch = live.hpScratch,
+            hpMask = live.hpMask,
         )
     if (peek == null) {
         conn.qlogObserver.onPacketDropped(
@@ -444,6 +448,8 @@ private fun feedShortHeaderPacket(
                 hpKey = live.hpKey,
                 largestReceivedInSpace = state.pnSpace.largestReceived,
                 nonceScratch = live.nonceScratch,
+                hpScratch = live.hpScratch,
+                hpMask = live.hpMask,
             )
         rotateOnSuccess = null
     } else {
@@ -463,6 +469,8 @@ private fun feedShortHeaderPacket(
                     hpKey = prev.hpKey,
                     largestReceivedInSpace = state.pnSpace.largestReceived,
                     nonceScratch = prev.nonceScratch,
+                    hpScratch = prev.hpScratch,
+                    hpMask = prev.hpMask,
                 )
             }
         if (priorTry != null) {
@@ -493,6 +501,8 @@ private fun feedShortHeaderPacket(
                     hpKey = nextPhase.hpKey,
                     largestReceivedInSpace = state.pnSpace.largestReceived,
                     nonceScratch = nextPhase.nonceScratch,
+                    hpScratch = nextPhase.hpScratch,
+                    hpMask = nextPhase.hpMask,
                 )
             rotateOnSuccess = nextPhase
         }
