@@ -26,6 +26,7 @@ import java.lang.reflect.InvocationTargetException
 import java.net.IDN
 import java.net.InetAddress
 import java.security.KeyStore
+import java.security.NoSuchAlgorithmException
 import java.security.Signature
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
@@ -136,23 +137,48 @@ class JdkCertificateValidator(
 
     private fun jcaSignatureFor(algorithm: Int): Signature =
         when (algorithm) {
-            TlsConstants.SIG_ECDSA_SECP256R1_SHA256 -> Signature.getInstance("SHA256withECDSA")
+            TlsConstants.SIG_ECDSA_SECP256R1_SHA256 -> {
+                Signature.getInstance("SHA256withECDSA")
+            }
 
-            TlsConstants.SIG_ECDSA_SECP384R1_SHA384 -> Signature.getInstance("SHA384withECDSA")
+            TlsConstants.SIG_ECDSA_SECP384R1_SHA384 -> {
+                Signature.getInstance("SHA384withECDSA")
+            }
 
-            TlsConstants.SIG_RSA_PSS_RSAE_SHA256 -> rsaPss("SHA-256", 32)
+            TlsConstants.SIG_RSA_PSS_RSAE_SHA256 -> {
+                rsaPss("SHA-256", 32)
+            }
 
-            TlsConstants.SIG_RSA_PSS_RSAE_SHA384 -> rsaPss("SHA-384", 48)
+            TlsConstants.SIG_RSA_PSS_RSAE_SHA384 -> {
+                rsaPss("SHA-384", 48)
+            }
 
-            TlsConstants.SIG_RSA_PSS_RSAE_SHA512 -> rsaPss("SHA-512", 64)
+            TlsConstants.SIG_RSA_PSS_RSAE_SHA512 -> {
+                rsaPss("SHA-512", 64)
+            }
 
-            TlsConstants.SIG_ED25519 -> Signature.getInstance("Ed25519")
+            TlsConstants.SIG_ED25519 -> {
+                try {
+                    // JCA "Ed25519" was added to Android Conscrypt in API 33.
+                    // On API 26–32 (our minSdk floor) this throws — surface
+                    // it as a clean QuicCodecException so the read loop maps
+                    // to CONNECTION_CLOSE rather than crashing the parser.
+                    Signature.getInstance("Ed25519")
+                } catch (_: NoSuchAlgorithmException) {
+                    throw QuicCodecException(
+                        "Ed25519 not supported on this platform " +
+                            "(requires Android API 33+ or a JDK with the EdDSA provider)",
+                    )
+                }
+            }
 
             // Audit-4 #2: rsa_pkcs1_* schemes are forbidden in CertificateVerify
             // by RFC 8446 §4.2.3 (only allowed in CertificateRequest for
             // legacy compat). Accepting them allowed a server to sign with
             // weaker PKCS#1 v1.5 instead of RSA-PSS.
-            else -> throw QuicCodecException("unsupported signature algorithm 0x${algorithm.toString(16)}")
+            else -> {
+                throw QuicCodecException("unsupported signature algorithm 0x${algorithm.toString(16)}")
+            }
         }
 
     private fun rsaPss(

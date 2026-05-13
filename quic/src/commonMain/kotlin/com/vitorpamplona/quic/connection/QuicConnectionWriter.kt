@@ -359,6 +359,9 @@ private fun buildBestLevelPacket(
                 proto.hp,
                 proto.hpKey,
                 largestAckedInSpace = -1L,
+                nonceScratch = proto.nonceScratch,
+                hpScratch = proto.hpScratch,
+                hpMask = proto.hpMask,
             )
         emitQlogSent(conn, EncryptionLevel.APPLICATION, pn, built.size, frames)
         return built
@@ -405,6 +408,9 @@ private fun buildLongHeaderPacket(
             proto.hp,
             proto.hpKey,
             largestAckedInSpace = -1L,
+            nonceScratch = proto.nonceScratch,
+            hpScratch = proto.hpScratch,
+            hpMask = proto.hpMask,
         )
     emitQlogSent(conn, level, pn, built.size, frames)
     return built
@@ -559,6 +565,9 @@ private fun buildLongHeaderFromFrames(
             proto.hp,
             proto.hpKey,
             largestAckedInSpace = -1L,
+            nonceScratch = proto.nonceScratch,
+            hpScratch = proto.hpScratch,
+            hpMask = proto.hpMask,
         )
     // Step E: retain the packet for RFC 9002 retransmit. Initial /
     // Handshake packets carry CRYPTO frames; loss detection runs at
@@ -912,6 +921,9 @@ private fun buildApplicationPacket(
                     proto.hp,
                     proto.hpKey,
                     largestAckedInSpace = -1L,
+                    nonceScratch = proto.nonceScratch,
+                    hpScratch = proto.hpScratch,
+                    hpMask = proto.hpMask,
                 )
             } else {
                 // 0-RTT — long header type=0x01. Same Application packet
@@ -933,6 +945,9 @@ private fun buildApplicationPacket(
                     proto.hp,
                     proto.hpKey,
                     largestAckedInSpace = -1L,
+                    nonceScratch = proto.nonceScratch,
+                    hpScratch = proto.hpScratch,
+                    hpMask = proto.hpMask,
                 )
             }
         }
@@ -1039,9 +1054,10 @@ private fun appendFlowControlUpdates(
         conn.pendingMaxData = null
     }
     if (conn.pendingMaxStreamData.isNotEmpty()) {
-        // Iterate over a snapshot so we can mutate the map safely.
-        val pendingStreamEntries = conn.pendingMaxStreamData.entries.toList()
-        for ((streamId, maxData) in pendingStreamEntries) {
+        // Direct map iteration — safe because we don't mutate the map
+        // inside the loop, only `clear()` after the walk completes. Avoids
+        // the per-drain `entries.toList()` allocation (round-5 #P5).
+        for ((streamId, maxData) in conn.pendingMaxStreamData) {
             frames += MaxStreamDataFrame(streamId, maxData)
             tokens += RecoveryToken.MaxStreamData(streamId = streamId, maxData = maxData)
         }
@@ -1140,8 +1156,10 @@ private fun appendFlowControlUpdates(
     // carrier packet was declared lost. Same wire shape as a fresh
     // issuance; we just preserve the original token.
     if (conn.pendingNewConnectionId.isNotEmpty()) {
-        val pendingNewCidEntries = conn.pendingNewConnectionId.entries.toList()
-        for ((_, token) in pendingNewCidEntries) {
+        // Direct iteration over map values — we only mutate via `clear()`
+        // after the walk completes. Drops the per-drain `entries.toList()`
+        // (round-5 #P5).
+        for (token in conn.pendingNewConnectionId.values) {
             frames +=
                 NewConnectionIdFrame(
                     sequenceNumber = token.sequenceNumber,

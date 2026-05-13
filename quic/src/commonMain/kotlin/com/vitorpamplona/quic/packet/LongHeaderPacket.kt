@@ -27,6 +27,7 @@ import com.vitorpamplona.quic.connection.ConnectionId
 import com.vitorpamplona.quic.crypto.Aead
 import com.vitorpamplona.quic.crypto.HeaderProtection
 import com.vitorpamplona.quic.crypto.aeadNonce
+import com.vitorpamplona.quic.crypto.aeadNonceInto
 import com.vitorpamplona.quic.crypto.applyHeaderProtectionMask
 
 /**
@@ -72,6 +73,12 @@ object LongHeaderPacket {
         hp: HeaderProtection,
         hpKey: ByteArray,
         largestAckedInSpace: Long,
+        // Round-5 #P2 + #P1: optional caller-owned scratch buffers. When
+        // provided the build path allocates nothing for nonce / HP work.
+        // Default = allocate fresh on each call (preserves tests).
+        nonceScratch: ByteArray? = null,
+        hpScratch: ByteArray? = null,
+        hpMask: ByteArray? = null,
     ): ByteArray {
         val pnLen =
             com.vitorpamplona.quic.connection.PacketNumberSpaceState.encodeLength(
@@ -116,7 +123,12 @@ object LongHeaderPacket {
         // four ByteArrays per outbound packet. The single-buffer +
         // [Aead.sealInto] form below collapses the seal output and
         // concat into the same allocation.
-        val nonce = aeadNonce(iv, plain.packetNumber)
+        val nonce =
+            if (nonceScratch != null) {
+                aeadNonceInto(iv, plain.packetNumber, nonceScratch)
+            } else {
+                aeadNonce(iv, plain.packetNumber)
+            }
         val packet = ByteArray(headerBytes.size + paddedPlaintext.size + aead.tagLength)
         headerBytes.copyInto(packet, 0)
         aead.sealInto(
@@ -133,10 +145,17 @@ object LongHeaderPacket {
         )
 
         // Apply header protection. Sample is 16 bytes starting 4 bytes after pnOffset.
+        // Round-5 #P1: read the sample window directly from `packet`. When
+        // caller-owned hp scratch + mask are provided the HP path allocates
+        // zero bytes per packet; otherwise allocate fresh (test path).
         val sampleStart = pnOffset + 4
         require(sampleStart + 16 <= packet.size) { "packet too short for HP sample" }
-        val sample = packet.copyOfRange(sampleStart, sampleStart + 16)
-        val mask = hp.mask(hpKey, sample)
+        val mask =
+            if (hpScratch != null && hpMask != null) {
+                hp.maskInto(hpKey, packet, sampleStart, hpScratch, hpMask)
+            } else {
+                hp.maskAt(hpKey, packet, sampleStart)
+            }
         applyHeaderProtectionMask(packet, firstByteOffset, pnOffset, pnLen, mask)
 
         return packet
@@ -159,6 +178,12 @@ object LongHeaderPacket {
         hp: HeaderProtection,
         hpKey: ByteArray,
         largestReceivedInSpace: Long,
+        // Round-5 #P2 + #P1: optional caller-owned scratch buffers. When
+        // provided the parse path allocates nothing for nonce / HP work.
+        // Default = allocate fresh on each call (preserves tests).
+        nonceScratch: ByteArray? = null,
+        hpScratch: ByteArray? = null,
+        hpMask: ByteArray? = null,
     ): ParseResult? {
         val packetStart = offset
         val r = QuicReader(bytes, offset)
@@ -196,8 +221,12 @@ object LongHeaderPacket {
         // Sample for HP starts at pnOffset + 4.
         val sampleStart = pnOffset + 4
         if (sampleStart + 16 > bytes.size) return null
-        val sample = bytes.copyOfRange(sampleStart, sampleStart + 16)
-        val mask = hp.mask(hpKey, sample)
+        val mask =
+            if (hpScratch != null && hpMask != null) {
+                hp.maskInto(hpKey, bytes, sampleStart, hpScratch, hpMask)
+            } else {
+                hp.maskAt(hpKey, bytes, sampleStart)
+            }
 
         // Make a private copy of the packet so we can mutate the header in place.
         val packetEnd = pnOffset + length
@@ -244,7 +273,12 @@ object LongHeaderPacket {
             )
 
         val aadEnd = localPnOffset + pnLen
-        val nonce = aeadNonce(iv, fullPn)
+        val nonce =
+            if (nonceScratch != null) {
+                aeadNonceInto(iv, fullPn, nonceScratch)
+            } else {
+                aeadNonce(iv, fullPn)
+            }
         // Range-based open avoids two ByteArray slice allocations per
         // inbound packet — see [ShortHeaderPacket.parseAndDecrypt] for
         // rationale.

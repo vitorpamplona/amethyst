@@ -247,15 +247,37 @@ object ChaCha20Poly1305Aead : Aead() {
  * Build a QUIC AEAD nonce from a static IV and a packet number.
  *
  * RFC 9001 §5.3: nonce = static_iv XOR (packet_number padded to nonce length, big-endian).
+ *
+ * Allocates a fresh nonce buffer on every call — see [aeadNonceInto] for the
+ * caller-owned-scratch variant used when the call site is on a per-packet
+ * hot path and can maintain a persistent 12-byte buffer (round-5 #P2).
  */
 fun aeadNonce(
     staticIv: ByteArray,
     packetNumber: Long,
+): ByteArray = aeadNonceInto(staticIv, packetNumber, ByteArray(staticIv.size))
+
+/**
+ * Build a QUIC AEAD nonce into a caller-owned [dst] buffer. [dst] must
+ * have the same size as [staticIv] (12 bytes for AES-128-GCM, AES-256-GCM
+ * and ChaCha20-Poly1305 in QUIC).
+ *
+ * Returns [dst] for fluent use. This is the allocation-free shape that lets
+ * a long-lived call site (a per-direction packet-protection slot, a
+ * writer hot loop, …) reuse the same nonce buffer across thousands of
+ * packets. RFC 9001 §5.3: nonce = static_iv XOR (packet_number padded to
+ * nonce length, big-endian).
+ */
+fun aeadNonceInto(
+    staticIv: ByteArray,
+    packetNumber: Long,
+    dst: ByteArray,
 ): ByteArray {
-    val nonce = staticIv.copyOf()
-    val len = nonce.size
+    require(dst.size == staticIv.size) { "nonce scratch must match static IV size" }
+    staticIv.copyInto(dst)
+    val len = dst.size
     for (i in 0 until 8) {
-        nonce[len - 1 - i] = (nonce[len - 1 - i].toInt() xor ((packetNumber ushr (i * 8)).toInt() and 0xFF)).toByte()
+        dst[len - 1 - i] = (dst[len - 1 - i].toInt() xor ((packetNumber ushr (i * 8)).toInt() and 0xFF)).toByte()
     }
-    return nonce
+    return dst
 }

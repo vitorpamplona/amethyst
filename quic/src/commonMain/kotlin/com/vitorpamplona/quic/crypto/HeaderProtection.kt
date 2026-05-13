@@ -29,9 +29,49 @@ package com.vitorpamplona.quic.crypto
  *   are the nonce; ChaCha20-encrypt 5 zero bytes; that's the mask.
  */
 sealed class HeaderProtection {
+    /**
+     * Compute the HP mask from a 16-byte standalone sample buffer. Retained
+     * for callers (mostly tests) that already have a heap-allocated sample
+     * blob — the production hot path uses [maskInto] to avoid every per-
+     * packet allocation.
+     */
     abstract fun mask(
         hpKey: ByteArray,
         sample: ByteArray,
+    ): ByteArray
+
+    /**
+     * Compute the HP mask from a 16-byte sample window inside [src] starting
+     * at [srcOffset]. Avoids the `copyOfRange` of the sample on every
+     * outbound and inbound packet (round-5 #P1) but still allocates a
+     * fresh 5-byte mask + an internal 16-byte AES scratch on each call.
+     * Use [maskInto] when caller-owned scratch + mask buffers are
+     * available (the production writer/parser path).
+     */
+    abstract fun maskAt(
+        hpKey: ByteArray,
+        src: ByteArray,
+        srcOffset: Int,
+    ): ByteArray
+
+    /**
+     * Allocation-free HP mask: write the 5 mask bytes into [dstMask], using
+     * [scratch16] (caller-owned 16-byte buffer) for the AES-ECB output
+     * intermediate. Returns [dstMask] for fluent use.
+     *
+     * Both buffers are MUTATED — callers must consume the mask before the
+     * next [maskInto] call on the same buffers. The hot QUIC writer/parser
+     * path in `Short/LongHeaderPacket.build` + `parseAndDecrypt` keeps a
+     * per-PacketProtection scratch + mask pair and consumes the mask
+     * immediately during [com.vitorpamplona.quic.crypto.applyHeaderProtectionMask],
+     * so the lifetime is trivially safe.
+     */
+    abstract fun maskInto(
+        hpKey: ByteArray,
+        src: ByteArray,
+        srcOffset: Int,
+        scratch16: ByteArray,
+        dstMask: ByteArray,
     ): ByteArray
 }
 
@@ -48,6 +88,29 @@ class AesEcbHeaderProtection(
         val out = aesEncryptOneBlock.encrypt(hpKey, sample)
         return out.copyOfRange(0, 5)
     }
+
+    override fun maskAt(
+        hpKey: ByteArray,
+        src: ByteArray,
+        srcOffset: Int,
+    ): ByteArray = maskInto(hpKey, src, srcOffset, ByteArray(16), ByteArray(5))
+
+    override fun maskInto(
+        hpKey: ByteArray,
+        src: ByteArray,
+        srcOffset: Int,
+        scratch16: ByteArray,
+        dstMask: ByteArray,
+    ): ByteArray {
+        require(srcOffset >= 0 && srcOffset + 16 <= src.size) { "HP sample window out of range" }
+        require(hpKey.size in setOf(16, 24, 32)) { "AES-ECB key must be 16/24/32 bytes" }
+        require(scratch16.size == 16) { "AES scratch must be 16 bytes" }
+        require(dstMask.size >= 5) { "HP mask buffer must be at least 5 bytes" }
+        aesEncryptOneBlock.encryptInto(hpKey, src, srcOffset, scratch16, 0)
+        // Mask is the first 5 bytes per RFC 9001 §5.4.3.
+        scratch16.copyInto(dstMask, 0, 0, 5)
+        return dstMask
+    }
 }
 
 /** ChaCha20-based header protection per RFC 9001 §5.4.4. */
@@ -59,23 +122,82 @@ class ChaCha20HeaderProtection(
         sample: ByteArray,
     ): ByteArray {
         require(sample.size == 16) { "ChaCha20 HP sample must be 16 bytes" }
+        return maskAt(hpKey, sample, 0)
+    }
+
+    override fun maskAt(
+        hpKey: ByteArray,
+        src: ByteArray,
+        srcOffset: Int,
+    ): ByteArray = chacha20Mask(hpKey, src, srcOffset)
+
+    override fun maskInto(
+        hpKey: ByteArray,
+        src: ByteArray,
+        srcOffset: Int,
+        scratch16: ByteArray,
+        dstMask: ByteArray,
+    ): ByteArray {
+        require(dstMask.size >= 5) { "HP mask buffer must be at least 5 bytes" }
+        // ChaCha20 HP unavoidably allocates a fresh 5-byte ciphertext via the
+        // [ChaCha20BlockEncrypt] SPI, plus a 12-byte nonce slice (Quartz's
+        // `ChaCha20Core.chaCha20Xor` takes a standalone nonce). Copy the
+        // result into the caller's [dstMask] so call-site shape matches the
+        // AES-ECB path; a future pass could push src+offset through the
+        // ChaCha20 SPI to fully eliminate the slice. [scratch16] is unused
+        // here.
+        val mask = chacha20Mask(hpKey, src, srcOffset)
+        mask.copyInto(dstMask, 0, 0, 5)
+        return dstMask
+    }
+
+    private fun chacha20Mask(
+        hpKey: ByteArray,
+        src: ByteArray,
+        srcOffset: Int,
+    ): ByteArray {
+        require(srcOffset >= 0 && srcOffset + 16 <= src.size) { "ChaCha20 HP sample window out of range" }
         require(hpKey.size == 32) { "ChaCha20 HP key must be 32 bytes" }
         val counter =
-            ((sample[0].toInt() and 0xFF)) or
-                ((sample[1].toInt() and 0xFF) shl 8) or
-                ((sample[2].toInt() and 0xFF) shl 16) or
-                ((sample[3].toInt() and 0xFF) shl 24)
-        val nonce = sample.copyOfRange(4, 16)
+            ((src[srcOffset].toInt() and 0xFF)) or
+                ((src[srcOffset + 1].toInt() and 0xFF) shl 8) or
+                ((src[srcOffset + 2].toInt() and 0xFF) shl 16) or
+                ((src[srcOffset + 3].toInt() and 0xFF) shl 24)
+        val nonce = src.copyOfRange(srcOffset + 4, srcOffset + 16)
         return chacha20Encrypt.encrypt(hpKey, nonce, counter, ByteArray(5))
     }
 }
 
-/** SPI for one-block AES encryption (provided by jvmAndroid via JCA). */
-fun interface AesOneBlockEncrypt {
+/**
+ * SPI for one-block AES-ECB encryption (provided by jvmAndroid via JCA).
+ * Two shapes:
+ *
+ *  - [encrypt] — returns a freshly allocated 16-byte ciphertext. Retained
+ *    for callers that don't have a destination buffer at hand.
+ *  - [encryptInto] — fills caller-owned [dst] starting at [dstOffset] with
+ *    the AES-ECB encryption of `src[srcOffset..srcOffset+16)`. The hot QUIC
+ *    header-protection path uses this overload so the per-packet allocation
+ *    of both the sample slice AND the cipher output goes away (round-5 #P1).
+ */
+interface AesOneBlockEncrypt {
     fun encrypt(
         key: ByteArray,
         block: ByteArray,
     ): ByteArray
+
+    fun encryptInto(
+        key: ByteArray,
+        src: ByteArray,
+        srcOffset: Int,
+        dst: ByteArray,
+        dstOffset: Int,
+    ) {
+        // Default impl: copy the 16-byte sample out and call the existing
+        // allocation-shaped overload. Concrete platform impls override
+        // this with a zero-allocation Cipher.doFinal range overload.
+        val ct = encrypt(key, src.copyOfRange(srcOffset, srcOffset + 16))
+        ct.copyInto(dst, dstOffset, 0, 16)
+    }
 }
 
 /** SPI for ChaCha20 keystream encryption with explicit counter. */

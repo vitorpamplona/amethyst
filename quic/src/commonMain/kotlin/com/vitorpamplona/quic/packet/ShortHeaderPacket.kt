@@ -26,6 +26,7 @@ import com.vitorpamplona.quic.connection.PacketNumberSpaceState
 import com.vitorpamplona.quic.crypto.Aead
 import com.vitorpamplona.quic.crypto.HeaderProtection
 import com.vitorpamplona.quic.crypto.aeadNonce
+import com.vitorpamplona.quic.crypto.aeadNonceInto
 import com.vitorpamplona.quic.crypto.applyHeaderProtectionMask
 
 /**
@@ -53,6 +54,16 @@ object ShortHeaderPacket {
         hp: HeaderProtection,
         hpKey: ByteArray,
         largestAckedInSpace: Long,
+        // Round-5 #P2: optional 12-byte AEAD-nonce scratch the writer can
+        // reuse across packets. Default = allocate fresh (preserves tests).
+        nonceScratch: ByteArray? = null,
+        // Round-5 #P1: optional 16-byte AES-ECB scratch + 5-byte mask
+        // buffer for header protection. When BOTH are provided the call
+        // site reuses them across packets and the HP path allocates
+        // nothing per packet. Either-null (or both-null) falls back to
+        // the maskAt path which allocates fresh (preserves tests).
+        hpScratch: ByteArray? = null,
+        hpMask: ByteArray? = null,
     ): ByteArray {
         val pnLen = PacketNumberSpaceState.encodeLength(plain.packetNumber, largestAckedInSpace)
         require(pnLen in 1..4)
@@ -80,7 +91,12 @@ object ShortHeaderPacket {
         // ciphertext+tag directly into it instead of allocating a fresh
         // `seal()` return + a concat buffer. Saves 2 ByteArrays per
         // outbound short-header packet.
-        val nonce = aeadNonce(iv, plain.packetNumber)
+        val nonce =
+            if (nonceScratch != null) {
+                aeadNonceInto(iv, plain.packetNumber, nonceScratch)
+            } else {
+                aeadNonce(iv, plain.packetNumber)
+            }
         val packet = ByteArray(headerBytes.size + paddedPlaintext.size + aead.tagLength)
         headerBytes.copyInto(packet, 0)
         aead.sealInto(
@@ -98,8 +114,15 @@ object ShortHeaderPacket {
 
         val sampleStart = pnOffset + 4
         require(sampleStart + 16 <= packet.size) { "packet too short for HP sample" }
-        val sample = packet.copyOfRange(sampleStart, sampleStart + 16)
-        val mask = hp.mask(hpKey, sample)
+        // Round-5 #P1: when caller-owned HP scratch + mask buffers are
+        // provided, write the mask in-place — zero per-packet allocation.
+        // Otherwise allocate fresh (test path).
+        val mask =
+            if (hpScratch != null && hpMask != null) {
+                hp.maskInto(hpKey, packet, sampleStart, hpScratch, hpMask)
+            } else {
+                hp.maskAt(hpKey, packet, sampleStart)
+            }
         applyHeaderProtectionMask(packet, firstByteOffset, pnOffset, pnLen, mask)
         return packet
     }
@@ -126,6 +149,10 @@ object ShortHeaderPacket {
         dcidLen: Int,
         hp: HeaderProtection,
         hpKey: ByteArray,
+        // Round-5 #P1: optional caller-owned HP scratch + mask. Both null
+        // = allocate fresh (test path); both non-null = zero-alloc.
+        hpScratch: ByteArray? = null,
+        hpMask: ByteArray? = null,
     ): Peek? {
         if (offset >= bytes.size) return null
         val first = bytes[offset].toInt() and 0xFF
@@ -138,8 +165,12 @@ object ShortHeaderPacket {
         val pnOffset = offset + 1 + dcidLen
         val sampleStart = pnOffset + 4
         if (sampleStart + 16 > bytes.size) return null
-        val sample = bytes.copyOfRange(sampleStart, sampleStart + 16)
-        val mask = hp.mask(hpKey, sample)
+        val mask =
+            if (hpScratch != null && hpMask != null) {
+                hp.maskInto(hpKey, bytes, sampleStart, hpScratch, hpMask)
+            } else {
+                hp.maskAt(hpKey, bytes, sampleStart)
+            }
         val unprotectedFirst = first xor (mask[0].toInt() and 0x1F)
         return Peek(
             keyPhase = (unprotectedFirst and 0x04) != 0,
@@ -163,6 +194,12 @@ object ShortHeaderPacket {
         hp: HeaderProtection,
         hpKey: ByteArray,
         largestReceivedInSpace: Long,
+        // Round-5 #P2 + #P1: optional caller-owned scratch buffers. When
+        // provided the parse path allocates nothing for nonce / HP work.
+        // Default = allocate fresh on each call (preserves tests).
+        nonceScratch: ByteArray? = null,
+        hpScratch: ByteArray? = null,
+        hpMask: ByteArray? = null,
     ): ParseResult? {
         if (offset >= bytes.size) return null
         val first = bytes[offset].toInt() and 0xFF
@@ -173,8 +210,12 @@ object ShortHeaderPacket {
         val pnOffset = offset + 1 + dcidLen
         val sampleStart = pnOffset + 4
         if (sampleStart + 16 > bytes.size) return null
-        val sample = bytes.copyOfRange(sampleStart, sampleStart + 16)
-        val mask = hp.mask(hpKey, sample)
+        val mask =
+            if (hpScratch != null && hpMask != null) {
+                hp.maskInto(hpKey, bytes, sampleStart, hpScratch, hpMask)
+            } else {
+                hp.maskAt(hpKey, bytes, sampleStart)
+            }
         val packetEnd = bytes.size
         val packet = bytes.copyOfRange(offset, packetEnd)
         val localPnOffset = pnOffset - offset
@@ -204,7 +245,12 @@ object ShortHeaderPacket {
         }
         val fullPn = PacketNumberSpaceState.decodePacketNumber(largestReceivedInSpace, truncatedPn, pnLen)
         val aadEnd = localPnOffset + pnLen
-        val nonce = aeadNonce(iv, fullPn)
+        val nonce =
+            if (nonceScratch != null) {
+                aeadNonceInto(iv, fullPn, nonceScratch)
+            } else {
+                aeadNonce(iv, fullPn)
+            }
         // Range-based open: aad = packet[0..aadEnd), ciphertext = packet[aadEnd..size).
         // Saves the two ByteArray slice allocations that the
         // whole-array form (`aad = copyOfRange(0, aadEnd)` etc.)
