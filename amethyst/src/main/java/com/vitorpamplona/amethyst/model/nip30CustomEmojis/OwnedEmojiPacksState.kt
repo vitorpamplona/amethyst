@@ -200,9 +200,7 @@ class OwnedEmojiPacksState(
         isPrivate: Boolean,
         account: Account,
     ) {
-        if (!EmojiUrlTag.isValidShortcode(emojiTag.code)) {
-            throw IllegalArgumentException("Invalid emoji shortcode: ${emojiTag.code}")
-        }
+        require(EmojiUrlTag.isValidShortcode(emojiTag.code)) { "Invalid emoji shortcode: ${emojiTag.code}" }
 
         val packEvent = getOwnedEmojiPackEvent(dTag) ?: return
 

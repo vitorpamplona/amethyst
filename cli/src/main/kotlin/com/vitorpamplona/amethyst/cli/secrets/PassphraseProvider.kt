@@ -42,7 +42,7 @@ class PassphraseProvider(
     ): String {
         fileFlag?.let { path ->
             val text = File(path).readText().trimEnd('\n', '\r')
-            if (text.isEmpty()) throw IllegalArgumentException("--passphrase-file $path is empty")
+            require(text.isNotEmpty()) { "--passphrase-file $path is empty" }
             return text
         }
         System.getenv(envName)?.takeIf { it.isNotEmpty() }?.let { return it }
@@ -52,10 +52,10 @@ class PassphraseProvider(
                     "No TTY and no passphrase source: set $envName or pass --passphrase-file PATH.",
                 )
         val first = console.readPassword("$prompt: ").concatToString()
-        if (first.isEmpty()) throw IllegalArgumentException("empty passphrase")
+        require(first.isNotEmpty()) { "empty passphrase" }
         if (confirm) {
             val second = console.readPassword("Confirm passphrase: ").concatToString()
-            if (first != second) throw IllegalArgumentException("passphrases do not match")
+            require(first == second) { "passphrases do not match" }
         }
         return first
     }
