@@ -320,6 +320,7 @@ private fun feedLongHeaderPacket(
             hp = proto.hp,
             hpKey = proto.hpKey,
             largestReceivedInSpace = state.pnSpace.largestReceived,
+            nonceScratch = proto.nonceScratch,
         )
     if (parsed == null) {
         conn.qlogObserver.onPacketDropped(
@@ -442,6 +443,7 @@ private fun feedShortHeaderPacket(
                 hp = live.hp,
                 hpKey = live.hpKey,
                 largestReceivedInSpace = state.pnSpace.largestReceived,
+                nonceScratch = live.nonceScratch,
             )
         rotateOnSuccess = null
     } else {
@@ -460,6 +462,7 @@ private fun feedShortHeaderPacket(
                     hp = prev.hp,
                     hpKey = prev.hpKey,
                     largestReceivedInSpace = state.pnSpace.largestReceived,
+                    nonceScratch = prev.nonceScratch,
                 )
             }
         if (priorTry != null) {
@@ -489,6 +492,7 @@ private fun feedShortHeaderPacket(
                     hp = nextPhase.hp,
                     hpKey = nextPhase.hpKey,
                     largestReceivedInSpace = state.pnSpace.largestReceived,
+                    nonceScratch = nextPhase.nonceScratch,
                 )
             rotateOnSuccess = nextPhase
         }

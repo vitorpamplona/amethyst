@@ -26,6 +26,7 @@ import com.vitorpamplona.quic.connection.PacketNumberSpaceState
 import com.vitorpamplona.quic.crypto.Aead
 import com.vitorpamplona.quic.crypto.HeaderProtection
 import com.vitorpamplona.quic.crypto.aeadNonce
+import com.vitorpamplona.quic.crypto.aeadNonceInto
 import com.vitorpamplona.quic.crypto.applyHeaderProtectionMask
 
 /**
@@ -53,6 +54,9 @@ object ShortHeaderPacket {
         hp: HeaderProtection,
         hpKey: ByteArray,
         largestAckedInSpace: Long,
+        // Round-5 #P2: optional 12-byte scratch the writer can reuse across
+        // packets. Default = allocate fresh (preserves test ergonomics).
+        nonceScratch: ByteArray? = null,
     ): ByteArray {
         val pnLen = PacketNumberSpaceState.encodeLength(plain.packetNumber, largestAckedInSpace)
         require(pnLen in 1..4)
@@ -80,7 +84,12 @@ object ShortHeaderPacket {
         // ciphertext+tag directly into it instead of allocating a fresh
         // `seal()` return + a concat buffer. Saves 2 ByteArrays per
         // outbound short-header packet.
-        val nonce = aeadNonce(iv, plain.packetNumber)
+        val nonce =
+            if (nonceScratch != null) {
+                aeadNonceInto(iv, plain.packetNumber, nonceScratch)
+            } else {
+                aeadNonce(iv, plain.packetNumber)
+            }
         val packet = ByteArray(headerBytes.size + paddedPlaintext.size + aead.tagLength)
         headerBytes.copyInto(packet, 0)
         aead.sealInto(
@@ -163,6 +172,9 @@ object ShortHeaderPacket {
         hp: HeaderProtection,
         hpKey: ByteArray,
         largestReceivedInSpace: Long,
+        // Round-5 #P2: optional 12-byte scratch the parser reuses across
+        // inbound packets. Default = allocate fresh (preserves tests).
+        nonceScratch: ByteArray? = null,
     ): ParseResult? {
         if (offset >= bytes.size) return null
         val first = bytes[offset].toInt() and 0xFF
@@ -203,7 +215,12 @@ object ShortHeaderPacket {
         }
         val fullPn = PacketNumberSpaceState.decodePacketNumber(largestReceivedInSpace, truncatedPn, pnLen)
         val aadEnd = localPnOffset + pnLen
-        val nonce = aeadNonce(iv, fullPn)
+        val nonce =
+            if (nonceScratch != null) {
+                aeadNonceInto(iv, fullPn, nonceScratch)
+            } else {
+                aeadNonce(iv, fullPn)
+            }
         // Range-based open: aad = packet[0..aadEnd), ciphertext = packet[aadEnd..size).
         // Saves the two ByteArray slice allocations that the
         // whole-array form (`aad = copyOfRange(0, aadEnd)` etc.)

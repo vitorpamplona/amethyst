@@ -29,7 +29,24 @@ class PacketProtection(
     val iv: ByteArray,
     val hp: com.vitorpamplona.quic.crypto.HeaderProtection,
     val hpKey: ByteArray,
-)
+) {
+    /**
+     * Per-direction nonce scratch buffer, sized to match [iv] (12 bytes for
+     * QUIC's AEADs). Reused by hot-path callers via
+     * [com.vitorpamplona.quic.crypto.aeadNonceInto] so the AEAD nonce no
+     * longer allocates a fresh ByteArray on every encrypt/decrypt (round-5
+     * #P2).
+     *
+     * Thread-safety: a `PacketProtection` instance only ever lives in ONE
+     * direction (send or receive) at one encryption level. The writer and
+     * parser both operate under `streamsLock`, so the scratch is touched
+     * by at most one coroutine at a time. Callers that need to keep a
+     * nonce around past a single seal/open call must copy it; the buffer
+     * is overwritten on the next [com.vitorpamplona.quic.crypto.aeadNonceInto]
+     * invocation.
+     */
+    val nonceScratch: ByteArray = ByteArray(iv.size)
+}
 
 /** All four encryption levels we ever see in a QUIC client connection. */
 enum class EncryptionLevel(

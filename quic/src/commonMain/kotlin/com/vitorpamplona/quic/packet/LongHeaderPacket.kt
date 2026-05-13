@@ -27,6 +27,7 @@ import com.vitorpamplona.quic.connection.ConnectionId
 import com.vitorpamplona.quic.crypto.Aead
 import com.vitorpamplona.quic.crypto.HeaderProtection
 import com.vitorpamplona.quic.crypto.aeadNonce
+import com.vitorpamplona.quic.crypto.aeadNonceInto
 import com.vitorpamplona.quic.crypto.applyHeaderProtectionMask
 
 /**
@@ -72,6 +73,9 @@ object LongHeaderPacket {
         hp: HeaderProtection,
         hpKey: ByteArray,
         largestAckedInSpace: Long,
+        // Round-5 #P2: optional 12-byte scratch the writer can reuse across
+        // packets. Default = allocate fresh (preserves test ergonomics).
+        nonceScratch: ByteArray? = null,
     ): ByteArray {
         val pnLen =
             com.vitorpamplona.quic.connection.PacketNumberSpaceState.encodeLength(
@@ -116,7 +120,12 @@ object LongHeaderPacket {
         // four ByteArrays per outbound packet. The single-buffer +
         // [Aead.sealInto] form below collapses the seal output and
         // concat into the same allocation.
-        val nonce = aeadNonce(iv, plain.packetNumber)
+        val nonce =
+            if (nonceScratch != null) {
+                aeadNonceInto(iv, plain.packetNumber, nonceScratch)
+            } else {
+                aeadNonce(iv, plain.packetNumber)
+            }
         val packet = ByteArray(headerBytes.size + paddedPlaintext.size + aead.tagLength)
         headerBytes.copyInto(packet, 0)
         aead.sealInto(
@@ -160,6 +169,9 @@ object LongHeaderPacket {
         hp: HeaderProtection,
         hpKey: ByteArray,
         largestReceivedInSpace: Long,
+        // Round-5 #P2: optional 12-byte scratch the parser reuses across
+        // inbound packets. Default = allocate fresh (preserves tests).
+        nonceScratch: ByteArray? = null,
     ): ParseResult? {
         val packetStart = offset
         val r = QuicReader(bytes, offset)
@@ -244,7 +256,12 @@ object LongHeaderPacket {
             )
 
         val aadEnd = localPnOffset + pnLen
-        val nonce = aeadNonce(iv, fullPn)
+        val nonce =
+            if (nonceScratch != null) {
+                aeadNonceInto(iv, fullPn, nonceScratch)
+            } else {
+                aeadNonce(iv, fullPn)
+            }
         // Range-based open avoids two ByteArray slice allocations per
         // inbound packet — see [ShortHeaderPacket.parseAndDecrypt] for
         // rationale.

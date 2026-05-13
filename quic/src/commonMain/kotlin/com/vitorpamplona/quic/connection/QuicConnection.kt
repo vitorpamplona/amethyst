@@ -83,6 +83,22 @@ class QuicConnection(
      * timestamps in qlog) and understand the wallclock pitfalls.
      */
     val nowMillis: () -> Long = defaultMonotonicNowMillis(),
+    /**
+     * Wallclock (epoch) clock used ONLY for cross-connection age comparisons —
+     * specifically, validating that a cached TLS session ticket hasn't aged
+     * past its server-advertised lifetime (RFC 8446 §4.6.1). Distinct from
+     * [nowMillis] because the monotonic clock resets on every connection
+     * construction; comparing a ticket's wallclock issuedAt against a fresh
+     * monotonic clock would yield meaningless deltas (typically large
+     * negative, coerced to 0 → ticket never expires).
+     *
+     * Must produce values comparable to [com.vitorpamplona.quic.tls.TlsResumptionState.issuedAtMillis],
+     * which [com.vitorpamplona.quic.tls.TlsClient] populates via its own
+     * `nowMillisSource` (wallclock by default).
+     *
+     * Tests can inject a fixed wallclock to drive expiry deterministically.
+     */
+    val epochMillis: () -> Long = { defaultEpochMillis() },
     val alpnList: List<ByteArray> = listOf(TlsConstants.ALPN_H3),
     /**
      * Optional second listener invoked after the connection's own
@@ -1001,12 +1017,14 @@ class QuicConnection(
                 // server that picks a different ALPN from what we
                 // remembered.
                 val resumed = effectiveResumption
-                val alpnMatch =
-                    resumed?.negotiatedAlpn?.contentEquals(tls.negotiatedAlpn ?: ByteArray(0)) ?: true
+                val alpnMismatch =
+                    resumed != null &&
+                        resumed.negotiatedAlpn != null &&
+                        !resumed.negotiatedAlpn.contentEquals(tls.negotiatedAlpn)
                 val rejected0Rtt =
                     resumed != null &&
                         resumed.maxEarlyDataSize > 0 &&
-                        (!tls.earlyDataAccepted || !alpnMatch)
+                        (!tls.earlyDataAccepted || alpnMismatch)
                 if (rejected0Rtt) {
                     requeueAllInflightStreamData()
                     application.cryptoSend.requeueAllInflight()
@@ -1102,8 +1120,8 @@ class QuicConnection(
     /**
      * Resumption state actually passed to [TlsClient] — `null` (cold
      * handshake) if the cached ticket is past its server-advertised
-     * lifetime, or if the resumed session's negotiated ALPN isn't in our
-     * current [alpnList].
+     * lifetime, or if the resumed session's negotiated ALPN doesn't
+     * overlap our current [alpnList].
      *
      * - RFC 8446 §4.6.1 — tickets MUST NOT be used past `ticket_lifetime`
      *   seconds after issue (clipped at 7 days). An expired ticket
@@ -1116,21 +1134,35 @@ class QuicConnection(
      *   under a session whose ALPN binding no longer holds. The post-EE
      *   `rejected0Rtt` check below covers the same lane for servers that
      *   pick a different ALPN from what we cached.
+     *
+     * Cross-clock note: ticket-age comparison uses [epochMillis] (wallclock)
+     * to match what [com.vitorpamplona.quic.tls.TlsClient] stamps into
+     * [com.vitorpamplona.quic.tls.TlsResumptionState.issuedAtMillis]. The
+     * connection-local [nowMillis] (monotonic, anchored at construction)
+     * would yield meaningless deltas and silently bypass the check.
      */
     private val effectiveResumption: com.vitorpamplona.quic.tls.TlsResumptionState? =
         resumption?.takeIf { r ->
-            // 7-day clip per RFC 8446 §4.6.1 (any larger advertised
-            // lifetime is the server bypassing the spec; we honour the
-            // cap regardless).
+            // RFC 8446 §4.6.1: 7-day cap on usable ticket lifetime. The
+            // server's advertised lifetime is clipped here regardless of
+            // what it offered. Note also that `>` (not `>=`) admits a
+            // ticket on its exact-lifetime boundary — RFC wording is
+            // "MUST NOT be used after"; treat the boundary as still
+            // usable since the server-side window is typically several
+            // seconds wider than the advertised number anyway.
             val effectiveLifetimeSec = r.ticketLifetimeSec.coerceAtMost(7L * 24L * 60L * 60L)
-            val ageSec = ((nowMillis() - r.issuedAtMillis).coerceAtLeast(0L)) / 1000L
-            if (ageSec >= effectiveLifetimeSec) return@takeIf false
-            // ALPN continuity: drop resumption when our offered ALPN
-            // list doesn't include the resumed session's ALPN. Use
-            // null-cached ALPNs (pre-2026-05 tickets) conservatively
-            // — without the binding we can't prove continuity, so
-            // skip resumption entirely.
-            val cachedAlpn = r.negotiatedAlpn ?: return@takeIf false
+            val ageSec = ((epochMillis() - r.issuedAtMillis).coerceAtLeast(0L)) / 1000L
+            if (ageSec > effectiveLifetimeSec) return@takeIf false
+            // ALPN continuity: skip resumption if the cached session's
+            // ALPN isn't in our offered list. When the cached ALPN is
+            // null (server didn't negotiate one on the prior connection,
+            // or the field is missing on a serialized-from-older-build
+            // ticket) we treat the absence as "no ALPN binding to
+            // honour" and allow resumption — the RFC 9001 §4.6.1
+            // restriction is about ALPN MISMATCH, not absence. Match
+            // the same null-tolerant shape the existing
+            // `rejected0Rtt` post-EE branch uses.
+            val cachedAlpn = r.negotiatedAlpn ?: return@takeIf true
             alpnList.any { it.contentEquals(cachedAlpn) }
         }
 
@@ -3316,6 +3348,14 @@ private fun defaultMonotonicNowMillis(): () -> Long {
             .markNow()
     return { anchor.elapsedNow().inWholeMilliseconds }
 }
+
+/**
+ * Default wallclock (epoch) supplier for [QuicConnection.epochMillis].
+ * Java's `System.currentTimeMillis()` is the same source [com.vitorpamplona.quic.tls.TlsClient]
+ * uses by default to stamp `TlsResumptionState.issuedAtMillis`, so deltas
+ * across the pair are meaningful even across process restarts.
+ */
+private fun defaultEpochMillis(): Long = System.currentTimeMillis()
 
 /**
  * One source CID we've issued to the peer (RFC 9000 §5.1.1 +

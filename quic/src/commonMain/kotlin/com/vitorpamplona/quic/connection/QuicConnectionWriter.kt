@@ -359,6 +359,7 @@ private fun buildBestLevelPacket(
                 proto.hp,
                 proto.hpKey,
                 largestAckedInSpace = -1L,
+                nonceScratch = proto.nonceScratch,
             )
         emitQlogSent(conn, EncryptionLevel.APPLICATION, pn, built.size, frames)
         return built
@@ -405,6 +406,7 @@ private fun buildLongHeaderPacket(
             proto.hp,
             proto.hpKey,
             largestAckedInSpace = -1L,
+            nonceScratch = proto.nonceScratch,
         )
     emitQlogSent(conn, level, pn, built.size, frames)
     return built
@@ -559,6 +561,7 @@ private fun buildLongHeaderFromFrames(
             proto.hp,
             proto.hpKey,
             largestAckedInSpace = -1L,
+            nonceScratch = proto.nonceScratch,
         )
     // Step E: retain the packet for RFC 9002 retransmit. Initial /
     // Handshake packets carry CRYPTO frames; loss detection runs at
@@ -912,6 +915,7 @@ private fun buildApplicationPacket(
                     proto.hp,
                     proto.hpKey,
                     largestAckedInSpace = -1L,
+                    nonceScratch = proto.nonceScratch,
                 )
             } else {
                 // 0-RTT — long header type=0x01. Same Application packet
@@ -933,6 +937,7 @@ private fun buildApplicationPacket(
                     proto.hp,
                     proto.hpKey,
                     largestAckedInSpace = -1L,
+                    nonceScratch = proto.nonceScratch,
                 )
             }
         }
