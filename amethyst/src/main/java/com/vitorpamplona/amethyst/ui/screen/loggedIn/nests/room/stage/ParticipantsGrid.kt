@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomMember
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomReaction
+import com.vitorpamplona.amethyst.commons.viewmodels.RoomZap
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -151,6 +152,7 @@ internal fun StageGrid(
     modifier: Modifier = Modifier,
     audioLevels: Map<String, Float> = emptyMap(),
     reactionsByPubkey: Map<String, List<RoomReaction>> = emptyMap(),
+    zapsByPubkey: Map<String, List<RoomZap>> = emptyMap(),
     connectingSpeakers: ImmutableSet<String> = persistentSetOf(),
     onLongPressParticipant: ((String) -> Unit)? = null,
     onTapParticipant: ((String) -> Unit)? = null,
@@ -228,6 +230,7 @@ internal fun StageGrid(
                             isConnecting = member.pubkey in connectingSpeakers,
                             showMicBadge = true,
                             reactions = reactionsByPubkey[member.pubkey].orEmpty(),
+                            zaps = zapsByPubkey[member.pubkey].orEmpty(),
                             accountViewModel = accountViewModel,
                             onLongPressParticipant = onLongPressParticipant,
                             onTapParticipant = if (isSelf) null else onTapParticipant,
@@ -363,6 +366,7 @@ private fun MemberCell(
     reactions: List<RoomReaction>,
     accountViewModel: AccountViewModel,
     onLongPressParticipant: ((String) -> Unit)?,
+    zaps: List<RoomZap> = emptyList(),
     isSelf: Boolean = false,
     onTapSelf: (() -> Unit)? = null,
     onTapParticipant: ((String) -> Unit)? = null,
@@ -525,6 +529,7 @@ private fun MemberCell(
                 showMicBadge = showMicBadge,
                 isSpeaking = isSpeaking,
                 reactions = reactions,
+                zaps = zaps,
             )
         }
         UsernameDisplay(
@@ -549,6 +554,7 @@ private fun AvatarAndBadges(
     showMicBadge: Boolean,
     isSpeaking: Boolean,
     reactions: List<RoomReaction>,
+    zaps: List<RoomZap> = emptyList(),
 ) {
     Box(contentAlignment = Alignment.Center) {
         ClickableUserPicture(
@@ -602,6 +608,21 @@ private fun AvatarAndBadges(
                     Modifier
                         .align(Alignment.BottomEnd)
                         .offset(x = 6.dp, y = 6.dp),
+            )
+        }
+        // Zaps float over the avatar's bottom-left corner so they don't
+        // collide with the reaction overlay (BottomEnd), the mic badge
+        // (BottomCenter), the role badge (TopStart) or the hand-raise
+        // badge (TopEnd). Same sliding-window cadence as reactions —
+        // both fade up + out over [REACTION_WINDOW_SEC] so the two
+        // streams animate in lockstep.
+        if (zaps.isNotEmpty()) {
+            SpeakerZapOverlay(
+                zaps = zaps,
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .offset(x = -6.dp, y = 6.dp),
             )
         }
     }

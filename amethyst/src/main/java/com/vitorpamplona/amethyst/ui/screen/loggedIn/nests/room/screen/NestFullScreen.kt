@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.viewmodels.NestUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.ParticipantGrid
+import com.vitorpamplona.amethyst.ui.navigation.navs.BouncingIntentNav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.chat.NestChatPanel
@@ -136,9 +137,15 @@ internal fun NestFullScreen(
     val myPubkey = accountViewModel.account.signer.pubKey
     val leaveScope = rememberCoroutineScope()
     val topBarContext = LocalContext.current
+    // BouncingIntentNav handles the few routes the zap button can reach
+    // (UpdateZapAmount, ManualZapSplitPayment) by bouncing through
+    // MainActivity — same mechanism the NestChatPanel uses for tap-on-
+    // mention nav. Routes that don't map to a `nostr:` URI are no-ops.
+    val actionBarNav = remember(topBarContext, leaveScope) { BouncingIntentNav(topBarContext, leaveScope) }
 
     val presences by viewModel.presences.collectAsState()
     val reactionsByPubkey by viewModel.recentReactions.collectAsState()
+    val zapsByPubkey by viewModel.recentZaps.collectAsState()
     val speakerCatalogs by viewModel.speakerCatalogs.collectAsState()
     val audioLevels by viewModel.audioLevels.collectAsState()
 
@@ -235,6 +242,7 @@ internal fun NestFullScreen(
                 audioLevels = audioLevels,
                 accountViewModel = accountViewModel,
                 reactionsByPubkey = reactionsByPubkey,
+                zapsByPubkey = zapsByPubkey,
                 connectingSpeakers = ui.connectingSpeakers,
                 onLongPressParticipant = onLongPressParticipant,
                 // Tap on a stage avatar opens the same per-participant
@@ -276,6 +284,9 @@ internal fun NestFullScreen(
                         onLeave()
                     }
                 },
+                roomNote = roomNote,
+                accountViewModel = accountViewModel,
+                nav = actionBarNav,
             )
             NestTabRow(
                 tabs = tabs,
