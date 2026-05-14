@@ -314,6 +314,16 @@ After completing any task that modifies Kotlin files, always run:
 ```
 Do this before considering the task complete.
 
+### Kotlin Style
+
+- **Never write fully-qualified class names inline in function bodies.** Add an
+  `import` for the class and reference it by its simple name. Write
+  `Event` (with `import com.vitorpamplona.quartz...Event`), not
+  `com.vitorpamplona.quartz...Event` in the middle of code.
+- The only acceptable inline fully-qualified names are: a genuine name
+  collision (prefer `import ... as Alias` instead), or where the language
+  requires it. Comments, KDoc, and string literals are exempt.
+
 ### Navigation Shell
 - **Desktop**: Sidebar + main content area
 - **Android**: Bottom navigation
