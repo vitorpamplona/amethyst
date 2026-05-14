@@ -2558,4 +2558,23 @@
     <string name="community_rules_violation_quota_exceeded">Você já publicou %1$d eventos deste tipo hoje (limite %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Você não atende aos requisitos da rede de confiança desta comunidade.</string>
     <string name="community_rules_violation_stale_rules">O documento mais recente de regras da comunidade foi rejeitado por estar desatualizado.</string>
+    <string name="auto_create_drafts_setting_description">Salva um evento de rascunho automaticamente quando você digita ou sai do compositor com texto não enviado e envia para seus relays de saída privados.</string>
+    <string name="auto_create_drafts_setting_title">Criar rascunhos automaticamente</string>
+    <string name="compose_settings">Configurações de composição</string>
+    <string name="external_id_scope">Comentar em um recurso externo</string>
+    <string name="external_url_scope">Comentar em um site</string>
+    <string name="nest_toast_host_action_failed_template_null">A ação não pôde ser preparada.</string>
+    <string name="nest_toast_host_action_failed_title">Falha na ação</string>
+    <string name="profile_ui_setting_app_recommendations">Recomendações de Apps</string>
+    <string name="profile_ui_setting_badges">Selos de perfil</string>
+    <string name="profile_ui_setting_followers_feed">Feed de Seguidores</string>
+    <string name="profile_ui_setting_zap_received_feed">Feed de Zaps Recebidos</string>
+    <string name="profile_ui_settings">Interface do perfil</string>
+    <string name="profile_ui_settings_description">Escolha quais seções e feeds aparecem nas telas de perfil dos usuários. Todas as opções estão habilitadas por padrão.</string>
+    <string name="security_blocked_users_empty">Você ainda não bloqueou nenhum usuário.</string>
+    <string name="security_hidden_words_empty">Nenhuma palavra oculta. Adicione uma palavra abaixo para ocultar publicações que a contenham.</string>
+    <string name="security_section_blocked_content">Conteúdo bloqueado</string>
+    <string name="security_section_filtering_preferences">Preferências de filtragem</string>
+    <string name="security_spamming_users_empty">Nenhuma conta foi marcada como spam nesta sessão.</string>
+    <string name="security_unlimited">∞</string>
 </resources>
