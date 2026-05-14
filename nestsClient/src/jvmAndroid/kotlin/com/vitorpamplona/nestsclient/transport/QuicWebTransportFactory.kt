@@ -120,6 +120,9 @@ class QuicWebTransportFactory(
         // original hostname so it (a) matches the server's certificate and
         // (b) is a legal RFC 6066 host_name rather than an IP literal.
         val socketHost = resolvePreferIpv4(host)
+        // One-line wire target so a stalled/failed handshake is self-diagnosing
+        // (did we connect over IPv4 or fall into the ::1 blackhole?).
+        val target = "socket=$socketHost:$port sni=$host"
         val socket = UdpSocket.connect(socketHost, port)
         val conn =
             QuicConnection(
@@ -144,7 +147,7 @@ class QuicWebTransportFactory(
                 driver.close()
                 throw WebTransportException(
                     kind = WebTransportException.Kind.HandshakeFailed,
-                    message = "QUIC handshake failed: ${t.message}",
+                    message = "QUIC handshake failed [$target]: ${t.message}",
                     cause = t,
                 )
             }
@@ -153,7 +156,7 @@ class QuicWebTransportFactory(
             throw WebTransportException(
                 kind = WebTransportException.Kind.HandshakeFailed,
                 message =
-                    "QUIC handshake stalled — no completion within ${connectTimeoutMillis}ms " +
+                    "QUIC handshake stalled — no completion within ${connectTimeoutMillis}ms [$target] " +
                         "(a server-side TLS failure such as a rejected IP-literal SNI hangs here with no alert)",
             )
         }
