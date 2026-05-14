@@ -9,7 +9,7 @@ What's New?
 - Favorite algo feeds
 - HLS Video Uploads
 - Schedule posts for later
-- Cast videos to your TV (Chromecast / DLNA)
+- Cast videos to your TV (Chromecast)
 - Multiple accounts on Desktop
 - Mute a whole conversation thread
 - Tap any timestamp to see the exact date and time
@@ -42,10 +42,12 @@ What's New?
   - Custom room themes and fonts (kind 30312).
   - Home live-bubble row showing follows broadcasting.
   - Host-leave confirmation and default-server prompt.
-  - In-app lobby route to gate re-entry.
+  - In-app lobby with a chat composer, gating room re-entry.
   - PiP that focuses active speakers.
-  - Feed bucketed into Live / Scheduled / Recently ended.
+  - Feed bucketed into Live / Scheduled / Recently ended, with "live" verified by kind-10312 presence freshness.
   - Live audio-level speaker ring.
+  - Keeps the screen on while connected.
+  - Audio plays through the media volume stream.
 - Marmot Encrypted Group Chats (MLS over Nostr / NIP-EE)
   - Create, join and leave groups.
   - Inline group rendering in Messages.
@@ -57,10 +59,13 @@ What's New?
   - Full RFC 9420 compliance pass (P0/P1/P2).
   - External Commit flow.
   - Retained-epoch decryption for offline catch-up.
+  - Required-capabilities advertised on groups; 64-char KeyPackage IDs for MDK interop.
   - Popup notifications for group messages (kind:445).
 - Multi-account on Desktop
   - Account switcher dropdown in the sidebar and single-pane layout.
   - Add Account dialog and per-account logout.
+  - View-only (npub-only) accounts.
+  - Account removal switches to another account or logs out cleanly.
   - Encrypted `DesktopAccountStorage` (AES-256-GCM).
   - Migration into a shared `AccountManager`.
   - Display names and middle-truncated npubs.
@@ -70,7 +75,8 @@ What's New?
   - Background worker that publishes at the scheduled time.
   - Warning when scheduling without always-on notifications.
 - Cast videos to your TV
-  - LAN casting via Chromecast (on play) and DLNA (both flavors).
+  - Chromecast casting (Google Play build only).
+  - Stop-from-phone button; the local player pauses while casting.
   - Cast button backfilled for accounts that already had video settings.
 - Mute a whole thread
   - Mute thread entry in the long-press dropdown and quick-action sheet.
@@ -79,6 +85,10 @@ What's New?
 - Configurable home tabs
   - Choose between New Threads, Conversations and Everything.
   - Visibility toggles persist across restarts.
+- Configurable bottom navigation bar
+  - Pick which screens appear in the bottom bar.
+  - Restore-default button in settings.
+  - Pinned-icon feeds are preloaded.
 - Reply and Mention notifications (NIP-10 / NIP-22)
   - Dedicated Mentions channel.
   - Per-thread grouping.
@@ -86,6 +96,12 @@ What's New?
   - All content-event citations routed to Mentions.
   - Opt-in Following / Everyone tab split.
 - Filter the home feed in place by hashtag, community, geohash and relay (no navigation away)
+- Hashtag and geohash top-nav filters on Pictures, Shorts, Articles, Polls and Products
+- NIP-22 comments on external content (hashtags, geohashes, URLs) render a typed reply-context chip and land in the conversations feed
+- Interest Sets (NIP-51, kind 30015)
+  - List, create, rename, delete and clone interest sets.
+  - Public/private hashtag toggle.
+  - TopNav filter chips.
 - NIP-9A Community Rules
   - Structured rules editor in the new-community flow.
   - Post validation against community rules in the composer.
@@ -94,6 +110,7 @@ What's New?
   - Inline PDF previews in feeds.
   - Double-tap to toggle zoom.
   - Zoom-aware hi-res re-render for crisp pinch-zoom.
+  - Download and save PDFs to Downloads/Amethyst.
 - Multi-wallet NWC
   - Multiple wallets with a balance view.
   - Default picker, rename and reorder.
@@ -189,7 +206,10 @@ What's New?
   - Save, switch and restore workspaces.
   - Tabs, an editor and unified search.
   - Pin/unpin syncs to the active workspace.
-- Namecoin name resolution — Namecoin lookups now resolve and surface in search
+- Namecoin name resolution
+  - Namecoin lookups now resolve and surface in search.
+  - Follows the `import` field of name objects (ifa-0001).
+  - Added `relay.testls.bit` ElectrumX endpoints (clearnet TLS, Tor, bare IP).
 - Native theming for macOS, GNOME, KDE and Windows (matches platform look and accent colors)
 - Relay power tools
   - Dashboard and config editors.
@@ -242,7 +262,10 @@ What's New?
 - Adds NIP-82 Software Applications (experimental)
 - Adds the AdminCommandEvent for audio-room kick (kind 4312)
 - Adds the NIP-9A community rules parser + validator (kind:34551)
-- Expands NIP-34 git collaboration coverage
+- Expands NIP-34 git collaboration coverage.
+  - Repository State (kind 30618).
+  - Pull Requests and PR updates (kinds 1618 / 1619).
+  - Git Status events (open / closed / draft / applied) and GitAuthorList.
 - Adds the rest of NIP-51 list event kinds and full NIP-53 live-activity rendering
 - Adds MLS / Marmot event types and a pure-Kotlin MLS engine with IETF RFC 9420 interop test vectors (no native deps)
 - Adds an async SQLite event persistence layer.
@@ -272,21 +295,21 @@ What's New?
   - Adaptive connection pooling for 10k+ connections.
 - Adds an EventInterner so deserialized events share canonical instances, with an interning event store that interns on insert
 - Adds Ktor KMP HTTP implementations alongside OkHttp
-- Adds macOS / iOS / Linux native targets.
-  - Pure-Kotlin Ed25519 and X25519 for those platforms.
+- Adds macOS (Apple Silicon), iOS and Linux native targets.
+  - Pure-Kotlin Ed25519 and X25519 for the MLS crypto on those platforms.
   - `commonMain` now compiles for Kotlin/Native.
 
 ## Crypto and Performance
 
-- custom pure-Kotlin secp256k1
-  - Starts to replace `fr.acinq.secp256k1` with C and ASM acceleration:
-  - Hardware SHA-256 (SHA-NI on x86_64, ARMv8 CE on ARM64)
-  - Comb method for G multiplication → 3× faster sign/keygen
-  - Same-pubkey batch Schnorr verify (5–6× throughput)
-  - `verifySchnorrFast` for Nostr (skips y-parity inversion)
-  - 4×64-bit limb representation, lazy field ops, ARM64 ASM `fe_mul`
-  - Native macOS / iOS / Linux crypto on KMP
-  - Standalone `libsecp256k1-nostr` / `libschnorr256k1` C project
+- Custom secp256k1 implementation, starting to replace `fr.acinq.secp256k1`
+  - Pure-Kotlin core for KMP native targets (macOS / iOS / Linux).
+  - C + inline-ASM accelerated path on Android via a JNI bridge.
+  - Hardware SHA-256 (SHA-NI on x86_64, ARMv8 CE on ARM64).
+  - Comb method for G multiplication → 3× faster sign/keygen.
+  - Same-pubkey batch Schnorr verify (5–6× throughput).
+  - `verifySchnorrFast` for Nostr (skips y-parity inversion).
+  - 4×64-bit limb representation, lazy field ops, ARM64 ASM `fe_mul`.
+  - Standalone `libsecp256k1-nostr` / `libschnorr256k1` C project, with Android benchmarks.
 - Concurrent caching DNS resolver (SurgeDns)
   - Lock-free DNS cache.
   - 24h positive TTL.
@@ -311,6 +334,14 @@ What's New?
 - Paginated GiftWrap loading for the DM chat list
 - Bookmark events preload via EventFinderFilterAssembler
 - Drops `remember` wrappers where overhead exceeded savings
+- Lifecycle-aware screen subscriptions
+  - Feed/screen relay subscriptions pause on background and resume on foreground.
+  - 30s grace delay so brief app switches don't churn subscriptions.
+  - `AccountForegroundFilterAssembler` for scan-heavy account loaders.
+- Adaptive video disk cache — sized to 20% of free disk (256 MB–4 GB) instead of a fixed 1 GB, with on-demand HLS videos cached in SimpleCache
+- Tuned image/video OkHttp dispatcher and connection pool (16 in-flight per host) to de-serialize feed loading
+- Streaming image hashing — computes image hashes without loading the whole file into memory; SHA-256 hasher moved off the thread pool
+- GeoHash library rewritten from scratch for performance, dropping an external dependency
 
 ## QUIC + nestsClient (foundation)
 
@@ -343,12 +374,15 @@ What's New?
 ## Improvements and Fixes
 - WakeUp Push Notification events — Starting to migrate to a better Push/Loading system
 - Pinned notes moved to their own screen
+- Left drawer reorganized into collapsible You / Feeds / Create / System sections, with clearer names
 - Article writing redesign — banner, tags, slug
+- Redesigned long-form article cards (richer LongFormHeader layout)
 - GIF support
   - Playback controls and autoplay.
-  - GIF→MP4 upload conversion.
-  - GIF keyboard support in the short post screen.
+  - GIF→MP4 upload conversion option in the upload screen.
+  - GIF / image keyboard support in the short post screen and in Marmot, DM and public-channel chat fields.
 - Configurable video player buttons in Account Settings (drag restricted to the drag handle)
+- Autoplay Videos setting (Always / Never), separate from the video-loading toggle
 - Drag-and-drop reordering for some relay list settings
 - 3-dot options menu on video / picture / file feed cards
 - Zoomable media grows from its source bounds, and loads the full-resolution source in the image dialog
@@ -385,15 +419,22 @@ What's New?
   - Bug, performance and jitter overhaul.
   - `{N}` placeholders so URLs survive CJK translation.
 - Swipe-to-dismiss containers fixed on newer Compose
-- `InterestSetEvent` (kind 30015) now fetched for the account
 - Right-to-Vanish settings observe toggles reactively, preserve prior behavior on upgrade
 - Relay reconnection:
   - Auto-reconnect after a server-initiated disconnect.
   - Periodic keep-alive to revive relays stuck in long backoff.
+- Account settings (profile, follow list, mutes, relay lists, KeyPackages) are republished to newly-selected relays so accounts aren't lost on fresh relays
 - Broadcasting relays:
   - Kept out of personal & channel sends.
   - Always included in non-private sends.
   - a-tag cycle in the broadcast relay computation broken.
+- Tor now falls back to clearnet when bootstrap is stuck
+- Android Arti reliability: stale Arti cache cleared on init with retry, SOCKS proxy default port moved with busy-port retry, relay-over-Tor connectivity fixes
+- Chess game challenges filtered out of the home feed (ended games only); chess cards show user picture and name instead of hex pubkeys
+- Expired polls re-evaluated and removed from notification cards
+- NIP-39 external identity claims without a platform separator are rejected
+- Dismissible cleanup banner across Pinned Notes, Bookmarks and Bookmark Sets, flagging author-deleted items with a "Remove from list" action
+- Bogus Content-Type rejected when saving downloaded media, with URL-extension fallback validation
 - NIP-46 bunker decrypt/encrypt response parsing fixed, with a longer timeout
 - Hidden DMs no longer counted toward the unread message badge
 - Profile header hides the `_@` prefix on NIP-05 names
