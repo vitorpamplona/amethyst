@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip06KeyDerivation
 
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -56,12 +55,5 @@ class Nip06CommonTest {
 
         val privateKeyHex21 = nip06.privateKeyFromMnemonic(menemonic1, 42).toHexKey()
         assertEquals("ad993054383da74e955f8b86346365b5ffd6575992e1de3738dda9f94407052b", privateKeyHex21)
-    }
-
-    @Test
-    @Ignore
-    fun fromSeedNip06FromSnort() {
-        val privateKeyNsec = nip06.privateKeyFromMnemonic(snortTest).toHexKey()
-        assertEquals("nsec1ppw9ltr2x9qwg9a2qnmgv98tfruy2ejnja7me76mwmsreu3s8u2sscj5nt", privateKeyNsec)
     }
 }
