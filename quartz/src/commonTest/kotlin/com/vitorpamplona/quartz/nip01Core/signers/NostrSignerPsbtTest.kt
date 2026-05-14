@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.signers
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nipBCOnchainZaps.build.OnchainZapBuilder
+import com.vitorpamplona.quartz.nipBCOnchainZaps.builder.OnchainZapBuilder
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.Utxo
 import com.vitorpamplona.quartz.nipBCOnchainZaps.psbt.Psbt
 import com.vitorpamplona.quartz.nipBCOnchainZaps.psbt.PsbtFinalizer

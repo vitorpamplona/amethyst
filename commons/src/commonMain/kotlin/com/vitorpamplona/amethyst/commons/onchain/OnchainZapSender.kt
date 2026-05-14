@@ -25,11 +25,13 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nipBCOnchainZaps.build.OnchainZapBuilder
+import com.vitorpamplona.quartz.nipBCOnchainZaps.builder.OnchainZapBuilder
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.OnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.psbt.Psbt
 import com.vitorpamplona.quartz.nipBCOnchainZaps.psbt.PsbtFinalizer
 import com.vitorpamplona.quartz.nipBCOnchainZaps.psbt.PsbtSignatureVerifier
+import com.vitorpamplona.quartz.nipBCOnchainZaps.psbt.inputTapKeySig
+import com.vitorpamplona.quartz.nipBCOnchainZaps.psbt.setInputTapKeySig
 import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.TaprootAddress
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import kotlin.coroutines.cancellation.CancellationException
@@ -149,10 +151,9 @@ object OnchainZapSender {
                 val signedHex = signer.signPsbt(built.psbt.toHex())
                 val signedPsbt = Psbt.parse(signedHex)
 
-                // Fund-safety: the signer must ONLY add signatures. If it returns a
-                // different transaction (with valid signatures over IT), finalizing
-                // and broadcasting would send funds wherever that tx says. Reject
-                // anything whose unsigned transaction isn't byte-identical to ours.
+                // Fund-safety: the signer must ONLY contribute signatures. First
+                // reject anything whose unsigned transaction isn't byte-identical
+                // to ours — that gives a clear error for the substitution attack.
                 val expectedTx = built.psbt.global.get(Psbt.PSBT_GLOBAL_UNSIGNED_TX)
                 val returnedTx = signedPsbt.global.get(Psbt.PSBT_GLOBAL_UNSIGNED_TX)
                 if (expectedTx == null || returnedTx == null || !expectedTx.contentEquals(returnedTx)) {
@@ -161,21 +162,30 @@ object OnchainZapSender {
                         "The signer returned a different transaction than the one it was asked to sign",
                     )
                 }
-                if (!PsbtFinalizer.isFullySigned(signedPsbt)) {
-                    return fail(
-                        OnchainZapSendStage.SIGNING,
-                        "The signer did not sign every input",
-                    )
+
+                // Copy ONLY the signatures back onto the PSBT we built. Everything
+                // else used downstream (witness UTXOs, tap internal keys) stays the
+                // values WE chose, so a signer can never influence the sighash, the
+                // verified output keys, or where funds go.
+                built.psbt.unsignedTx.inputs.indices.forEach { i ->
+                    val sig =
+                        signedPsbt.inputTapKeySig(i)
+                            ?: return fail(
+                                OnchainZapSendStage.SIGNING,
+                                "The signer did not sign every input",
+                            )
+                    built.psbt.setInputTapKeySig(i, sig)
                 }
+
                 // Verify every signature is actually valid before money moves —
                 // catches a broken signer up front instead of a doomed broadcast.
-                if (!PsbtSignatureVerifier.verifyAllKeyPathInputs(signedPsbt)) {
+                if (!PsbtSignatureVerifier.verifyAllKeyPathInputs(built.psbt)) {
                     return fail(
                         OnchainZapSendStage.SIGNING,
                         "The signed transaction has invalid signatures",
                     )
                 }
-                PsbtFinalizer.finalizeToHex(signedPsbt)
+                PsbtFinalizer.finalizeToHex(built.psbt)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {

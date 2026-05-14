@@ -32,7 +32,8 @@ import kotlinx.coroutines.sync.withLock
  * - `getTx`: a **confirmed** transaction is immutable, so it's cached
  *   indefinitely; an unconfirmed one is cached only briefly (its confirmation
  *   status will change). `null` (not-found) is never cached — the tx may
- *   appear later.
+ *   appear later. The tx cache is bounded ([maxCachedTxs]); when full, the
+ *   oldest entry is evicted so a long session can't leak memory.
  * - `tipHeight` / `feeEstimates`: cached with a short TTL.
  * - `getUtxosForAddress`: never cached — wallet balance must be fresh.
  * - `broadcast`: never cached.
@@ -46,6 +47,7 @@ class CachingOnchainBackend(
     private val unconfirmedTxTtlSeconds: Long = 60,
     private val tipHeightTtlSeconds: Long = 60,
     private val feeEstimatesTtlSeconds: Long = 60,
+    private val maxCachedTxs: Int = 512,
     private val nowSeconds: () -> Long = { TimeUtils.now() },
 ) : OnchainBackend {
     private class Stamped<T>(
@@ -71,7 +73,13 @@ class CachingOnchainBackend(
 
         val fetched = delegate.getTx(txid) ?: return null
 
-        mutex.withLock { txCache[txid] = Stamped(fetched, nowSeconds()) }
+        mutex.withLock {
+            if (txCache.size >= maxCachedTxs && !txCache.containsKey(txid)) {
+                // Evict the oldest entry to keep the cache bounded.
+                txCache.minByOrNull { it.value.fetchedAt }?.key?.let { txCache.remove(it) }
+            }
+            txCache[txid] = Stamped(fetched, nowSeconds())
+        }
         return fetched
     }
 

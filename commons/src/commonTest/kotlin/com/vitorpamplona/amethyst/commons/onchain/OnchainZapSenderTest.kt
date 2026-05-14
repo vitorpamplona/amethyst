@@ -29,7 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
-import com.vitorpamplona.quartz.nipBCOnchainZaps.build.OnchainZapBuilder
+import com.vitorpamplona.quartz.nipBCOnchainZaps.builder.OnchainZapBuilder
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.BitcoinTx
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.FeeEstimates
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.OnchainBackend

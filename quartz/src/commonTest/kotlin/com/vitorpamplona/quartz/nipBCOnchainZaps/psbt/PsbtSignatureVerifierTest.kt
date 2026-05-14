@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nipBCOnchainZaps.psbt
 
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nipBCOnchainZaps.build.OnchainZapBuilder
+import com.vitorpamplona.quartz.nipBCOnchainZaps.builder.OnchainZapBuilder
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.Utxo
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import kotlin.test.Test
