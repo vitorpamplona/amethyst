@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.BottomAppBarDefaults.windowInsets
 import androidx.compose.material3.HorizontalDivider
@@ -49,10 +48,12 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import com.vitorpamplona.amethyst.ui.theme.HorzPadding
 import com.vitorpamplona.amethyst.ui.theme.Size0dp
 import com.vitorpamplona.amethyst.ui.theme.Size10Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size24dp
-import com.vitorpamplona.amethyst.ui.theme.Size27dp
+import com.vitorpamplona.amethyst.ui.theme.Size25Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size27Modifier
+import com.vitorpamplona.amethyst.ui.theme.onSurface65
 
 /** Content height of the [AppBottomBar] (the 50.dp Column inside [RenderBottomMenu]),
  * exclusive of the system navigation-bar inset. Used by FAB callers that want to
@@ -110,6 +111,7 @@ private fun RenderBottomMenu(
             thickness = DividerThickness,
         )
         NavigationBar(
+            modifier = HorzPadding,
             containerColor = MaterialTheme.colorScheme.background,
             tonalElevation = Size0dp,
         ) {
@@ -151,13 +153,12 @@ private fun NotifiableIcon(
     destination: Route,
     accountViewModel: AccountViewModel,
 ) {
-    Box(Modifier.size(Size27dp)) {
-        val iconSizeModifier = Modifier.size(Size24dp)
-        val description = stringRes(def.labelRes)
+    Box(Size27Modifier, contentAlignment = Alignment.Center) {
         Icon(
             symbol = def.icon,
-            contentDescription = description,
-            modifier = iconSizeModifier,
+            contentDescription = stringRes(def.labelRes),
+            modifier = Size25Modifier,
+            tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface65,
         )
 
         AddNotifIconIfNeeded(destination, accountViewModel, Modifier.align(Alignment.TopEnd))
