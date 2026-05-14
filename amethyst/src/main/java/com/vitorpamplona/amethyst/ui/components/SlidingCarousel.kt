@@ -26,6 +26,7 @@ import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -63,7 +64,11 @@ fun SlidingCarousel(
         // you can remove the surface in case you don't want
         // the transparent bacground
         Surface(
-            modifier = Modifier.padding(bottom = 8.dp).align(Alignment.BottomCenter),
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(bottom = 8.dp),
             shape = CircleShape,
             color = Color.Black.copy(alpha = 0.5f),
         ) {
