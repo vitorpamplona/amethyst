@@ -626,7 +626,6 @@
     <string name="nest_chat_send">Küldés</string>
     <string name="nest_chat_placeholder">Mondjon valamit…</string>
     <string name="nest_chat_empty">Még nincsenek üzenetek. Legyen Ön az első hozzászóló.</string>
-    <string name="nest_reactions_title">Reagálás</string>
     <string name="nest_reactions_button">Reagálás</string>
     <string name="nest_edit_title">Szoba szerkesztése</string>
     <string name="nest_edit_save">Mentés</string>
@@ -656,16 +655,6 @@
     <string name="nest_confirm_force_mute_body">Kérés %1$s kliense felé a mikrofon némítására. Néhány kliens figyelmen kívül hagyhatja ezt a parancsot.</string>
     <string name="nest_confirm_force_mute_confirm">Kényszerített némítás</string>
     <string name="nest_confirm_cancel">Mégse</string>
-    <string name="nest_toast_action_title">Hangszoba</string>
-    <string name="nest_toast_follow_sent">%1$s követése.</string>
-    <string name="nest_toast_unfollow_sent">%1$s nem követett.</string>
-    <string name="nest_toast_mute_sent">%1$s némítva.</string>
-    <string name="nest_toast_unmute_sent">%1$s nincs némítva.</string>
-    <string name="nest_toast_promote_speaker_sent">Előadává léptette elő őt: %1$s</string>
-    <string name="nest_toast_promote_moderator_sent">Moderátorrá léptette elő őt: %1$s</string>
-    <string name="nest_toast_demote_listener_sent">Hallgatóvá fokozta le őt: %1$s</string>
-    <string name="nest_toast_force_mute_sent">Kényszerítetten némította őt: %1$s.</string>
-    <string name="nest_toast_kick_sent">Eltávolította a szobából őt: %1$s.</string>
     <string name="nest_share_action">Szoba megosztása</string>
     <string name="nest_minimize">Minimalizálás</string>
     <string name="nest_minimize_description">Minimalizálás a további hallgatáshoz</string>

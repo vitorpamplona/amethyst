@@ -638,7 +638,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="nest_chat_send">Wyślij</string>
     <string name="nest_chat_placeholder">Powiedz coś…</string>
     <string name="nest_chat_empty">Na razie nie ma wiadomości. Zacznij rozmowę jako pierwszy.</string>
-    <string name="nest_reactions_title">Reagowanie</string>
     <string name="nest_reactions_button">Reaguj</string>
     <string name="nest_edit_title">Edytuj pokój</string>
     <string name="nest_edit_save">Zapisz</string>
@@ -668,16 +667,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="nest_confirm_force_mute_body">Prosi klienta %1$so wyciszenie mikrofonu. Niektórzy klienci mogą zignorować to polecenie.</string>
     <string name="nest_confirm_force_mute_confirm">Wymuś wyciszenie</string>
     <string name="nest_confirm_cancel">Anuluj</string>
-    <string name="nest_toast_action_title">Pokój audio</string>
-    <string name="nest_toast_follow_sent">Obserwujesz %1$s.</string>
-    <string name="nest_toast_unfollow_sent">Nieobserwowany %1$s.</string>
-    <string name="nest_toast_mute_sent">Wyciszono %1$s.</string>
-    <string name="nest_toast_unmute_sent">Odblokowany/na %1$s.</string>
-    <string name="nest_toast_promote_speaker_sent">Wysunięto %1$s jako lektora.</string>
-    <string name="nest_toast_promote_moderator_sent">Wysunięto %1$s jako moderatora.</string>
-    <string name="nest_toast_demote_listener_sent">Obniżono status %1$s na słuchacza.</string>
-    <string name="nest_toast_force_mute_sent">Wymuszono blokadę %1$s.</string>
-    <string name="nest_toast_kick_sent">Wyrzucono %1$s z pokoju.</string>
     <string name="nest_share_action">Udostępnij pokój</string>
     <string name="nest_minimize">Zminimalizuj</string>
     <string name="nest_minimize_description">Minimalizuj aby słuchać</string>
