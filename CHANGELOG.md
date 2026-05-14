@@ -18,61 +18,187 @@ What's New?
 
 ## Features
 
-- **Voice and Video Calls (NIP-AC)** — one-on-one and group WebRTC calls with full-screen incoming-call UI over the lock screen, PiP, ringtone/vibration, proximity sensor, Bluetooth headset routing, Camera switch, network resilience, default TURN servers, mid-call peer invites with 30s timeout and per-peer status, and a Settings toggle to disable calls
-- **Audio Rooms / Nests (NIP-53)** — full revamp: live chat panel, reactions overlay + picker, listener counter, presence with publishing/onstage tags, hand-raise queue, host actions (kick / promote / demote / edit / close room), per-participant context sheet, scheduled rooms with TimePicker + SCHEDULED badge, "Listen to recording" CTA for closed rooms, share as `naddr1`, custom room themes & fonts (kind 30312), home live-bubble row showing follows broadcasting, host-leave confirmation, default-server prompt, in-app lobby route to gate re-entry, PiP that focuses active speakers, feed bucketed into Live / Scheduled / Recently ended, live audio-level speaker ring
-- **Marmot Encrypted Group Chats (MLS over Nostr / NIP-EE)** — create, join, leave; inline group rendering in Messages; member management with user search; admin grant/revoke; group info screen with picture, member list and per-relay freshness; auto-publish KeyPackage; Reset Marmot State safety valve in Settings; full RFC 9420 compliance pass (P0/P1/P2), External Commit flow, retained-epoch decryption for offline catch-up; popup notifications for group messages (kind:445)
-- **Multi-account on Desktop** — account switcher dropdown in the sidebar and single-pane layout, Add Account dialog, per-account logout, encrypted `DesktopAccountStorage` (AES-256-GCM), migration into a shared `AccountManager`, display names and middle-truncated npubs
-- **Schedule posts for later** — date/time picker and toolbar toggle in the post composer, a dedicated screen + drawer entry to view, push or delete scheduled posts, a background worker that publishes at the scheduled time, and a warning when scheduling without always-on notifications
-- **Cast videos to your TV** — LAN casting via Chromecast (on play) and DLNA (both flavors), with a Cast button backfilled for accounts that already had video settings
-- **Mute a whole thread** — Mute thread entry in the long-press dropdown and quick-action sheet; muted threads are listed in Security Filters with an unmute action and dropped from feeds, notifications and push delivery
-- **Configurable home tabs** — choose between New Threads, Conversations and Everything; visibility toggles persist across restarts
-- **Reply and Mention notifications (NIP-10 / NIP-22)** — dedicated Mentions channel, per-thread grouping, inline reply, all content-event citations routed to Mentions, plus an opt-in Following / Everyone tab split
+- **Voice and Video Calls (NIP-AC)** — one-on-one and group WebRTC calls.
+  - Full-screen incoming-call UI over the lock screen.
+  - PiP, ringtone and vibration.
+  - Proximity sensor support.
+  - Bluetooth headset routing.
+  - Camera switch.
+  - Network resilience and default TURN servers.
+  - Mid-call peer invites with a 30s timeout and per-peer status.
+  - Settings toggle to disable calls.
+- **Audio Rooms / Nests (NIP-53)** — a full revamp.
+  - Live chat panel.
+  - Reactions overlay and picker.
+  - Listener counter.
+  - Presence with publishing/onstage tags.
+  - Hand-raise queue.
+  - Host actions: kick, promote, demote, edit, close room.
+  - Per-participant context sheet.
+  - Scheduled rooms with a TimePicker and SCHEDULED badge.
+  - "Listen to recording" CTA for closed rooms.
+  - Share a room as `naddr1`.
+  - Custom room themes and fonts (kind 30312).
+  - Home live-bubble row showing follows broadcasting.
+  - Host-leave confirmation and default-server prompt.
+  - In-app lobby route to gate re-entry.
+  - PiP that focuses active speakers.
+  - Feed bucketed into Live / Scheduled / Recently ended.
+  - Live audio-level speaker ring.
+- **Marmot Encrypted Group Chats (MLS over Nostr / NIP-EE)**
+  - Create, join and leave groups.
+  - Inline group rendering in Messages.
+  - Member management with user search.
+  - Admin grant/revoke.
+  - Group info screen with picture, member list and per-relay freshness.
+  - Auto-publish KeyPackage.
+  - Reset Marmot State safety valve in Settings.
+  - Full RFC 9420 compliance pass (P0/P1/P2).
+  - External Commit flow.
+  - Retained-epoch decryption for offline catch-up.
+  - Popup notifications for group messages (kind:445).
+- **Multi-account on Desktop**
+  - Account switcher dropdown in the sidebar and single-pane layout.
+  - Add Account dialog and per-account logout.
+  - Encrypted `DesktopAccountStorage` (AES-256-GCM).
+  - Migration into a shared `AccountManager`.
+  - Display names and middle-truncated npubs.
+- **Schedule posts for later**
+  - Date/time picker and toolbar toggle in the post composer.
+  - Dedicated screen and drawer entry to view, push or delete scheduled posts.
+  - Background worker that publishes at the scheduled time.
+  - Warning when scheduling without always-on notifications.
+- **Cast videos to your TV**
+  - LAN casting via Chromecast (on play) and DLNA (both flavors).
+  - Cast button backfilled for accounts that already had video settings.
+- **Mute a whole thread**
+  - Mute thread entry in the long-press dropdown and quick-action sheet.
+  - Muted threads listed in Security Filters with an unmute action.
+  - Muted threads dropped from feeds, notifications and push delivery.
+- **Configurable home tabs**
+  - Choose between New Threads, Conversations and Everything.
+  - Visibility toggles persist across restarts.
+- **Reply and Mention notifications (NIP-10 / NIP-22)**
+  - Dedicated Mentions channel.
+  - Per-thread grouping.
+  - Inline reply.
+  - All content-event citations routed to Mentions.
+  - Opt-in Following / Everyone tab split.
 - **Filter the home feed in place** by hashtag, community, geohash and relay (no navigation away)
-- **NIP-9A Community Rules** — structured rules editor in the new-community flow, post validation against community rules in the composer, and an opt-in moderation feed filter
+- **NIP-9A Community Rules**
+  - Structured rules editor in the new-community flow.
+  - Post validation against community rules in the composer.
+  - Opt-in moderation feed filter.
 - **PDF previews** in feeds
-- **Multi-wallet NWC** — multiple wallets with balance view, default picker, rename, reorder, dedicated Add Wallet screen with Connect Wallet / paste / QR scan
+- **Multi-wallet NWC**
+  - Multiple wallets with a balance view.
+  - Default picker, rename and reorder.
+  - Dedicated Add Wallet screen with Connect Wallet / paste / QR scan.
 - **Favorite Algo Feeds** filter in the Top Nav Bar
 - **Custom Post creation** on Polls / Pictures / Shorts / Longs
-- **HLS Video uploads (NIP-71)** — pick which renditions to upload, see which file is currently uploading, optional cross-post as a kind-1 note, generated poster JPEG, and blurhash + thumbhash on every video imeta
-- **NIP-A3 Payment Targets (kind 10133)** — Pay action on note reactions row, payment-targets button on profile, Lightning address moved to the wallet setup screen, alt-text on PaymentTargetsEvent
-- **Search power tools** — scope, source, follows and sort toggles, plus paste an `npub1…`, `nprofile1…`, `nevent1…`, `naddr1…` or `note1…` to jump straight to it
+- **HLS Video uploads (NIP-71)**
+  - Pick which renditions to upload.
+  - See which file is currently uploading.
+  - Optional cross-post as a kind-1 note.
+  - Generated poster JPEG.
+  - Blurhash and thumbhash on every video imeta.
+- **NIP-A3 Payment Targets (kind 10133)**
+  - Pay action on the note reactions row.
+  - Payment-targets button on the profile.
+  - Lightning address moved to the wallet setup screen.
+  - Alt-text on PaymentTargetsEvent.
+- **Search power tools**
+  - Scope, source, follows and sort toggles.
+  - Paste an `npub1…`, `nprofile1…`, `nevent1…`, `naddr1…` or `note1…` to jump straight to it.
 - **Markdown renderer** — improved typography, blockquote gutter, table styling
-- **Polls** — single-screen creation with poll-type selector, Open/Closed tabs, "View results" option (prevents voting after viewing), dismiss button on active-poll cards
+- **Polls**
+  - Single-screen creation with a poll-type selector.
+  - Open/Closed tabs.
+  - "View results" option (prevents voting after viewing).
+  - Dismiss button on active-poll cards.
 - **Badge support Redesigned** — You can now create, grant, manage and add/remove badges from your profile.
-- **Settings revamp** — modernized Settings screen, a dedicated Profile UI settings page, a Compose Settings screen (auto-draft toggle), and Security Filters split into a hub with per-category screens
+- **Settings revamp**
+  - Modernized Settings screen.
+  - Dedicated Profile UI settings page.
+  - Compose Settings screen (auto-draft toggle).
+  - Security Filters split into a hub with per-category screens.
 - **Tap a timestamp** to toggle between relative ("2h ago") and absolute date/time, driven by a single shared ticker
 - **Copy raw JSON** of a note from the dropdown menu
 - **Stale-relay hint** on replaceable events, using the NIP-66 relay cache
-- **Two-stage zap progress**, bulk-remove for blocked users and hidden words, a jump-to-parent icon on replies in Full UI mode, a configurable report-warning threshold, and `.f4a` audio playback
+- **Two-stage zap progress** on the zap action
+- **Bulk-remove** for blocked users and hidden words
+- **Jump-to-parent icon** on replies in Full UI mode
+- **Configurable report-warning threshold**
+- **`.f4a` audio playback**
 
 ## In AI-Ready phones (Pixel 9+, Samsung 25+, Xiaomi 15+):
-- **AI Writing Help** — assistant in the new-post screen with tone suggestions (precomputed in parallel), auto language detection, and an on-device option in Application Preferences
-- **AI Alt-Text for images** — on-device image description / labeling, suggestions appear in the upload sheet (Google Play build)
+- **AI Writing Help** — assistant in the new-post screen.
+  - Tone suggestions, precomputed in parallel.
+  - Auto language detection.
+  - On-device option in Application Preferences.
+- **AI Alt-Text for images** — on-device image description / labeling.
+  - Suggestions appear in the upload sheet (Google Play build).
 
 ## Desktop
 
-- **Tor Support** — full Tor support on the desktop app (kmp-tor daemon, settings UI, per-relay routing, .onion badge, restart-on-toggle, image loading via Tor)
-- **Multi-account** — sidebar account switcher, Add Account dialog, per-account logout, encrypted account storage
+- **Tor Support** — full Tor support on the desktop app.
+  - kmp-tor daemon and settings UI.
+  - Per-relay routing.
+  - `.onion` badge.
+  - Restart-on-toggle.
+  - Image loading via Tor.
+- **Multi-account**
+  - Sidebar account switcher.
+  - Add Account dialog and per-account logout.
+  - Encrypted account storage.
 - **Embedded local relay** — an in-process relay with SQLite event persistence
-- **Custom feeds system** — create, pin and inline-switch between custom feeds, with author search in the feed builder (relay NIP-50 + avatars)
+- **Custom feeds system**
+  - Create, pin and inline-switch between custom feeds.
+  - Author search in the feed builder (relay NIP-50 + avatars).
 - **Namecoin name resolution** — Namecoin lookups now resolve and surface in search
 - **Native theming** for macOS, GNOME, KDE and Windows (matches platform look and accent colors)
-- **Relay power tools** — dashboard, config editors, per-screen relay picker, persistent configuration, correct counts
-- **Messages** — draggable divider, alignment polish, centered empty states, typography hierarchy, refined dividers
-- **macOS polish** — dock / Cmd+Tab icon via Taskbar API, Apple-HIG squircle margins, transparent window icon, light-mode primary contrast, content extends correctly under the title bar
+- **Relay power tools**
+  - Dashboard and config editors.
+  - Per-screen relay picker.
+  - Persistent configuration.
+  - Correct counts.
+- **Messages**
+  - Draggable divider.
+  - Alignment polish and centered empty states.
+  - Typography hierarchy and refined dividers.
+- **macOS polish**
+  - Dock / Cmd+Tab icon via the Taskbar API.
+  - Apple-HIG squircle margins.
+  - Transparent window icon.
+  - Light-mode primary contrast.
+  - Content extends correctly under the title bar.
 - **Reading layout** — width-capped ReadingColumn + 12 dp horizontal gutter for comfortable wide-window reading
-- **Compact UI** — Search/Chat/Profile inputs, Settings hierarchy normalized, tabs-first headers across Home / Reads / Notifications, whole-card hover on notes
+- **Compact UI**
+  - Search/Chat/Profile inputs.
+  - Settings hierarchy normalized.
+  - Tabs-first headers across Home / Reads / Notifications.
+  - Whole-card hover on notes.
 - **Per-OS theming preview** flag for testing macOS/GNOME/KDE/Windows looks locally
-- Selectable error messages, scrollable single-pane navigation rail
-- Fixes feed loading, repost rendering and Profile back-navigation visibility
+- Selectable error messages.
+- Scrollable single-pane navigation rail.
+- Fixes feed loading, repost rendering and Profile back-navigation visibility.
 
 ## Amy (CLI)
 
-- New **`amy`**, a non-interactive CLI Nostr client that drives the same Quartz + Commons engine as the apps. Available on macOS and Linux from the GitHub Release.
-- Subcommands: `account` / `use`, `profile`, `post`, `feed`, `notes`, `dm send | list | await | send-file` (NIP-17, kind:14 + kind:15), `marmot …`, `store stat | sweep-expired | scrub | compact`
-- Cache-first reads from a local file-backed event store; relays.json gone — `kind:10002 / 10050 / 10051` events in the store *are* the config
-- Secure key storage — private keys move out of `identity.json` into the OS keychain or a NIP-49 encrypted file; on-disk data restricted to owner-only
-- Color, human-readable output by default; `--json` opts in
+- New **`amy`**, a non-interactive CLI Nostr client.
+  - Drives the same Quartz + Commons engine as the apps.
+  - Available on macOS and Linux from the GitHub Release.
+- Subcommands:
+  - `account` / `use`, `profile`, `post`, `feed`, `notes`.
+  - `dm send | list | await | send-file` (NIP-17, kind:14 + kind:15).
+  - `marmot …`.
+  - `store stat | sweep-expired | scrub | compact`.
+- Cache-first reads from a local file-backed event store.
+  - `relays.json` is gone — `kind:10002 / 10050 / 10051` events in the store *are* the config.
+- Secure key storage.
+  - Private keys move out of `identity.json` into the OS keychain or a NIP-49 encrypted file.
+  - On-disk data restricted to owner-only.
+- Color, human-readable output by default; `--json` opts in.
 
 ## Quartz
 
@@ -85,12 +211,30 @@ What's New?
 - Expands **NIP-34** git collaboration coverage
 - Adds the rest of **NIP-51** list event kinds and full **NIP-53** live-activity rendering
 - Adds **MLS / Marmot** event types and a pure-Kotlin MLS engine with IETF RFC 9420 interop test vectors (no native deps)
-- Adds an async **SQLite event persistence layer** with NIP-09 / NIP-50 / NIP-62 compliance and a Room-style connection pool, plus a reactive `EventStoreProjection` over it
-- Adds a **file-backed event store** — flock + transactions, scrub/compact, NIP-50 full-text search, NIP-62 Right-to-Vanish, NIP-01 tiebreaker, NIP-09 created_at window, deletion-author check, SQLite parity matrix
-- Promotes the relay toolkit into the new **`geode`** module — a real Nostr relay implementing NIP-01, NIP-45, **NIP-77 negentropy reconciliation** (strfry parity) and a **NIP-86 management API**, with TOML config, graceful drain, and adaptive connection pooling for 10k+ connections
+- Adds an async **SQLite event persistence layer**.
+  - NIP-09 / NIP-50 / NIP-62 compliance.
+  - Room-style connection pool.
+  - Reactive `EventStoreProjection` over it.
+- Adds a **file-backed event store**.
+  - flock + transactions.
+  - scrub/compact.
+  - NIP-50 full-text search.
+  - NIP-62 Right-to-Vanish.
+  - NIP-01 tiebreaker.
+  - NIP-09 created_at window.
+  - Deletion-author check.
+  - SQLite parity matrix.
+- Promotes the relay toolkit into the new **`geode`** module — a real Nostr relay.
+  - Implements NIP-01 and NIP-45.
+  - **NIP-77 negentropy reconciliation** (strfry parity).
+  - **NIP-86 management API**.
+  - TOML config and graceful drain.
+  - Adaptive connection pooling for 10k+ connections.
 - Adds an **EventInterner** so deserialized events share canonical instances, with an interning event store that interns on insert
 - Adds **Ktor KMP HTTP** implementations alongside OkHttp
-- Adds **macOS / iOS / Linux native targets**, plus pure-Kotlin Ed25519 and X25519 for those platforms; `commonMain` now compiles for Kotlin/Native
+- Adds **macOS / iOS / Linux native targets**.
+  - Pure-Kotlin Ed25519 and X25519 for those platforms.
+  - `commonMain` now compiles for Kotlin/Native.
 
 ## Crypto and Performance
 
@@ -103,12 +247,25 @@ What's New?
   - 4×64-bit limb representation, lazy field ops, ARM64 ASM `fe_mul`
   - Native macOS / iOS / Linux crypto on KMP
   - Standalone `libsecp256k1-nostr` / `libschnorr256k1` C project
-- **Concurrent caching DNS resolver** (SurgeDns) — lock-free DNS cache, 24h positive TTL, stale-while-revalidate, persisted across process restarts
-- **Smoother video playback** — warm ExoPlayer pool, tuned LoadControl, VideoCache warmup 10s → 1.5s, retained warm players, stable controller-overlay tree
+- **Concurrent caching DNS resolver** (SurgeDns)
+  - Lock-free DNS cache.
+  - 24h positive TTL.
+  - Stale-while-revalidate.
+  - Persisted across process restarts.
+- **Smoother video playback**
+  - Warm ExoPlayer pool and retained warm players.
+  - Tuned LoadControl.
+  - VideoCache warmup 10s → 1.5s.
+  - Stable controller-overlay tree.
 - **Faster icons** — shared FontFamily and TextMeasurer across all Material Symbols
 - **Faster chat lists** — typed sealed keys, stable per-chatroom LazyColumn key, hoisted static modifiers
 - **Faster note rendering** — cached event-derived values, second-pass remember-key fixes, cut per-item allocations during feed scroll
-- **Faster Quartz queries** — direct-slot driver for replaceable + addressable lookups, streaming k-way merge, smallest-first FTS intersect, parallel Schnorr verify in the ingest queue, index-driven (`FilterIndex`) fanout for `LocalCache.observables` and `LiveEventStore`
+- **Faster Quartz queries**
+  - Direct-slot driver for replaceable + addressable lookups.
+  - Streaming k-way merge.
+  - Smallest-first FTS intersect.
+  - Parallel Schnorr verify in the ingest queue.
+  - Index-driven (`FilterIndex`) fanout for `LocalCache.observables` and `LiveEventStore`.
 - **Faster rich-text translation** — split UI from orchestration, dedupe boilerplate
 - **Thumbnail disk cache** for profile pictures; Coil disk-cache eviction moved off the write path to prevent scroll stalls
 - **Paginated GiftWrap loading** for the DM chat list
@@ -117,17 +274,40 @@ What's New?
 
 ## QUIC + nestsClient (foundation)
 
-- New **pure-Kotlin QUIC v1 + HTTP/3 + WebTransport** client (no JNI, no native deps). Powers the **NIP-53 audio-rooms over MoQ-transport** path.
-- Full **RFC 9002 loss recovery and retransmission**, **0-RTT early data**, **1-RTT key update**, **TLS 1.3 session resumption (PSK)**, **ECN**, connection migration with **path validation**, **Retry** and **Version Negotiation** packet handling, **stateless-reset** detection, and a broad DoS-hardening / RFC-compliance stabilization sweep
-- Passes the **quic-interop-runner** test matrix against picoquic and quic-go (handshake, transfer, multiplexing, retry, 0-RTT, key-update, ECN, http3), with qlog diagnostics
-- Multiple security and correctness audits, RFC 9001 test vectors, live interop against aioquic and picoquic
-- **`nestsClient`** module — MoQ-transport (IETF) reference implementation plus a production **moq-lite Lite-03/04** codec with version-aware ALPN negotiation, `catalog.json` publishing aligned with kixelated/hang, Opus, AudioRecord/AudioTrack, a reconnection policy with proactive JWT refresh, and a cross-stack (Amethyst ↔ Rust ↔ browser) interop harness in CI
+- New **pure-Kotlin QUIC v1 + HTTP/3 + WebTransport** client (no JNI, no native deps).
+  - Powers the **NIP-53 audio-rooms over MoQ-transport** path.
+- Full RFC coverage and stabilization:
+  - **RFC 9002 loss recovery and retransmission**.
+  - **0-RTT early data**.
+  - **1-RTT key update**.
+  - **TLS 1.3 session resumption (PSK)**.
+  - **ECN**.
+  - Connection migration with **path validation**.
+  - **Retry** and **Version Negotiation** packet handling.
+  - **Stateless-reset** detection.
+  - Broad DoS-hardening / RFC-compliance stabilization sweep.
+- Passes the **quic-interop-runner** test matrix against picoquic and quic-go.
+  - Covers handshake, transfer, multiplexing, retry, 0-RTT, key-update, ECN, http3.
+  - Includes qlog diagnostics.
+- Multiple security and correctness audits.
+  - RFC 9001 test vectors.
+  - Live interop against aioquic and picoquic.
+- **`nestsClient`** module
+  - MoQ-transport (IETF) reference implementation.
+  - Production **moq-lite Lite-03/04** codec with version-aware ALPN negotiation.
+  - `catalog.json` publishing aligned with kixelated/hang.
+  - Opus + AudioRecord/AudioTrack.
+  - Reconnection policy with proactive JWT refresh.
+  - Cross-stack (Amethyst ↔ Rust ↔ browser) interop harness in CI.
 
 ## Improvements and Fixes
 - **WakeUp Push Notification events** — Starting to migrate to a better Push/Loading system
 - **Pinned notes** moved to their own screen
 - **Article writing redesign** — banner, tags, slug
-- **GIF playback controls and autoplay**, plus GIF→MP4 upload conversion and GIF keyboard support in the short post screen
+- **GIF support**
+  - Playback controls and autoplay.
+  - GIF→MP4 upload conversion.
+  - GIF keyboard support in the short post screen.
 - **Configurable video player buttons** in Account Settings (drag restricted to the drag handle)
 - **Drag-and-drop reordering** for some relay list settings
 - **3-dot options menu** on video / picture / file feed cards
@@ -135,26 +315,44 @@ What's New?
 - **Configurable max-hashtag spam filter**
 - **Account setting** to forward kind 0 events to a local relay
 - **Relay Sync** UI replaced with visual indicators
-- **Account Settings**: split broadcast tracker visibility from Complete UI mode, hide payment-targets icon by default, place it after Zap, float the broadcast banner as a rounded card
+- **Account Settings**
+  - Split broadcast tracker visibility from Complete UI mode.
+  - Hide payment-targets icon by default and place it after Zap.
+  - Float the broadcast banner as a rounded card.
 - **Danger Zone** section in settings
-- **NIP-89 client tag** — per-account toggle to disable it, synced via NIP-78 security settings; on by default and moved into Compose settings
-- **Local Blossom cache** — image and profile-picture fetches route through a local Blossom cache via an OkHttp interceptor that catches all sha256-keyed URLs
-- Mention preservation in compose — atomic against IME word-recomposition, partial-overlap edits delete the whole mention, cursor snaps to mention boundaries
+- **NIP-89 client tag**
+  - Per-account toggle to disable it, synced via NIP-78 security settings.
+  - On by default and moved into Compose settings.
+- **Local Blossom cache** — image and profile-picture fetches route through a local Blossom cache, via an OkHttp interceptor that catches all sha256-keyed URLs
+- Mention preservation in compose:
+  - Atomic against IME word-recomposition.
+  - Partial-overlap edits delete the whole mention.
+  - Cursor snaps to mention boundaries.
 - Chat cursor jumping fixed
 - Avatar zoom-in keeps aspect ratio during the animation
 - Profile pictures center-cropped to prevent squashing
-- HLS video playback routed to the right MediaSource; HLS multi-rendition videos collapse to a single gallery tile and render with artwork + graceful fallback
+- HLS video fixes:
+  - Playback routed to the right MediaSource.
+  - Multi-rendition videos collapse to a single gallery tile.
+  - Render with artwork and a graceful fallback.
 - Broken "Pause" action removed from the always-on background notification
 - Hand-raise button in audio rooms now has a visible toggled state
 - GiftWrap unwrapping for all writable accounts when always-on is enabled
 - Search bar bech32 paste navigates instead of running a search
 - Scaffold spacing keeps top/bottom bars visible on non-scrollable lists
-- Rich-text translation — bug, performance and jitter overhaul; `{N}` placeholders so URLs survive CJK translation
+- Rich-text translation:
+  - Bug, performance and jitter overhaul.
+  - `{N}` placeholders so URLs survive CJK translation.
 - Swipe-to-dismiss containers fixed on newer Compose
 - `InterestSetEvent` (kind 30015) now fetched for the account
 - Right-to-Vanish settings observe toggles reactively, preserve prior behavior on upgrade
-- Auto-reconnect relays after a server-initiated disconnect, plus a periodic keep-alive to revive relays stuck in long backoff
-- Broadcasting relays kept out of personal & channel sends but always included in non-private sends; a-tag cycle in the broadcast relay computation broken
+- Relay reconnection:
+  - Auto-reconnect after a server-initiated disconnect.
+  - Periodic keep-alive to revive relays stuck in long backoff.
+- Broadcasting relays:
+  - Kept out of personal & channel sends.
+  - Always included in non-private sends.
+  - a-tag cycle in the broadcast relay computation broken.
 - NIP-46 bunker decrypt/encrypt response parsing fixed, with a longer timeout
 - Hidden DMs no longer counted toward the unread message badge
 - Profile header hides the `_@` prefix on NIP-05 names
@@ -172,7 +370,11 @@ What's New?
 
 ## Build & Documentation
 
-- Splits Android into its own CI job, adds Android Lint as the first step, merges test+build to eliminate duplicate compilation, drops `assembleDebug` APK uploads
+- CI restructure:
+  - Splits Android into its own CI job.
+  - Adds Android Lint as the first step.
+  - Merges test+build to eliminate duplicate compilation.
+  - Drops `assembleDebug` APK uploads.
 - Adds a `:nestsClient:test` step to the desktop CI leg
 - Adds a quic-interop-runner CI workflow and a browser-side cross-stack interop workflow
 - Broadens `libicu` Depends so the `.deb` installs across Debian and Ubuntu
