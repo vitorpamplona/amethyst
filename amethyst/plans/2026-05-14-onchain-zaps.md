@@ -149,8 +149,8 @@ Lightning fast path. Two minimal hooks:
 | **A.1** | Quartz foundation (receive side): taproot address, bech32m segwit, Esplora client, verifier + tests | **Shipped** |
 | **C**   | Receive + display: `OnchainSection` in `WalletScreen` (address + live balance), Esplora sync, `LocalCache.consume(OnchainZapEvent)`, `updateZapTotal` fold-in, kind-list edits in all 7 in-scope filter files | **Shipped** |
 | **A.2** | Quartz foundation (send side): BIP-174 PSBT codec, BIP-341 sighash, `OnchainZapBuilder`, `signPsbt` on the `NostrSigner` hierarchy. All crypto validated against BIP-341 wallet test vectors (31 tests). | **Shipped** |
+| **D**   | Send flow: `OnchainZapSender` orchestrator, `Account.sendOnchainZap`, `OnchainZapSendDialog`, "Send" button on the wallet `OnchainSection`. | **Shipped** |
 | **B**   | NIP-55 `sign_psbt` intent contract + `NostrSignerExternal.signPsbt`. Broken until Amber ships matching support — surface "update your signer" in the UI. | Pending |
-| **D**   | Send: dialog in zap menu, UTXO selection, build → sign → broadcast → publish kind 8333 | Pending |
 
 ### Phase A.2 — shipped
 
@@ -165,15 +165,29 @@ Lightning fast path. Two minimal hooks:
 - `NostrSigner.signPsbt`: real impl on internal signer; delegated by the
   client-tag wrapper; `UnsupportedMethodException` stubs on NIP-46 / NIP-55.
 
-### What's still required before send works end-to-end
+### Phase D — shipped
+
+- `commons/onchain/OnchainZapSender`: stateless orchestrator —
+  load UTXOs → `OnchainZapBuilder.build` → `signer.signPsbt` →
+  `PsbtFinalizer` → `OnchainBackend.broadcast` → publish kind:8333 via an
+  injected callback. Per-stage `OnchainZapSendResult.Failure`; broadcast txid
+  preserved when only the receipt-publish stage fails.
+- `Account.sendOnchainZap`: binds the account signer, `LocalCache.onchainBackend`,
+  and `signAndComputeBroadcast` into the orchestrator.
+- `OnchainZapSendDialog`: recipient npub (or fixed recipient + `zappedEvent`
+  for a future note-zap-menu entry), amount, fee tier from the backend's
+  estimates, comment; runs the send and shows progress + result.
+- `OnchainSection`: "Send" button on the wallet-screen Bitcoin card.
+
+### What's still pending
 
 1. **Phase B — NIP-55 `sign_psbt` Intent.** The Android external-signer Intent
    contract for PSBT signing, plus `NostrSignerExternal.signPsbt`. Blocked on
-   Amber shipping support; until then external-signer accounts must fall back
-   or see "update your signer".
-2. **Phase D — Send flow.** Send dialog in the zap menu, fee-rate picker, the
-   build → `signPsbt` → `EsploraBackend.broadcast` → publish-kind-8333
-   orchestrator (in commons), and wallet-screen wiring.
+   Amber shipping support; until then external-signer accounts hit
+   `UnsupportedMethodException` (the send dialog surfaces it as a failure).
+2. **Note-zap-menu entry point.** `OnchainZapSendDialog` already accepts
+   `recipientPubKey` + `zappedEvent`; wiring an "Onchain" option into the
+   existing `ZapAmountChoicePopup` is the remaining UI hook for event zaps.
 
 ## Risks / open questions
 
