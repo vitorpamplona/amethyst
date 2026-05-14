@@ -13,6 +13,7 @@ What's New?
 - Multiple accounts on Desktop
 - Mute a whole conversation thread
 - Tap any timestamp to see the exact date and time
+- Pull Notification (internal Pokey)
 - Local LLM helpers (Pixel 9+, Samsung 25+, Xiaomi 15+)
 - Cli tools
 
@@ -214,7 +215,6 @@ What's New?
 - Adds an async SQLite event persistence layer.
   - NIP-09 / NIP-50 / NIP-62 compliance.
   - Room-style connection pool.
-  - Reactive `EventStoreProjection` over it.
 - Adds a file-backed event store.
   - flock + transactions.
   - scrub/compact.
@@ -224,6 +224,13 @@ What's New?
   - NIP-09 created_at window.
   - Deletion-author check.
   - SQLite parity matrix.
+- Adds a reactive `ObservableEventStore` layer.
+  - A façade that wraps any event store — SQLite-backed, file-backed, or in-memory.
+  - Publishes a `StoreChange` on every accepted insert, delete and expiration sweep.
+  - Projections stay in sync without re-querying the store.
+  - Ephemeral events (kinds 20000-29999) emit without being persisted.
+  - `EventStoreProjection` turns the change stream into a cold `Flow` of sealed `ProjectionState`.
+  - Per-filter limits and per-projection NIP-62 vanish scoping.
 - Promotes the relay toolkit into the new `geode` module — a real Nostr relay.
   - Implements NIP-01 and NIP-45.
   - NIP-77 negentropy reconciliation (strfry parity).
