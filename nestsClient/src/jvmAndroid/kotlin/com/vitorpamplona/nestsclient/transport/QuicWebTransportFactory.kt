@@ -112,7 +112,15 @@ class QuicWebTransportFactory(
         bearerToken: String?,
     ): WebTransportSession {
         val (host, port) = splitAuthority(authority)
-        val socket = UdpSocket.connect(host, port)
+        // Decouple the socket target from the TLS SNI name. The socket must
+        // reach a routable address — `localhost` commonly resolves to ::1
+        // first, and IPv6 loopback is not always routable (e.g. Docker's
+        // IPv6 UDP port-forwarding silently blackholes), so prefer an IPv4
+        // address for the actual connection. SNI, however, must stay the
+        // original hostname so it (a) matches the server's certificate and
+        // (b) is a legal RFC 6066 host_name rather than an IP literal.
+        val socketHost = resolvePreferIpv4(host)
+        val socket = UdpSocket.connect(socketHost, port)
         val conn =
             QuicConnection(
                 serverName = host,
@@ -372,6 +380,25 @@ class QuicWebTransportFactory(
         }
         return items.joinToString(", ") { "\"$it\"" }
     }
+
+    /**
+     * Resolve [host] to a concrete address string, preferring IPv4. Returns
+     * an IPv4 literal when one exists, otherwise the first resolved address,
+     * otherwise [host] unchanged (already an IP literal, or resolution
+     * failed — let the socket layer surface the error). The returned IP
+     * literal is only used as the UDP socket target; the caller still passes
+     * the original [host] as the TLS SNI server name.
+     */
+    private fun resolvePreferIpv4(host: String): String =
+        try {
+            val addrs = java.net.InetAddress.getAllByName(host)
+            (
+                addrs.firstOrNull { it is java.net.Inet4Address }
+                    ?: addrs.firstOrNull()
+            )?.hostAddress ?: host
+        } catch (_: java.net.UnknownHostException) {
+            host
+        }
 
     private fun splitAuthority(authority: String): Pair<String, Int> {
         val idx = authority.lastIndexOf(':')
