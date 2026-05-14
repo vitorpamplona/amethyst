@@ -64,6 +64,11 @@ class OnchainZapVerifier(
             backend.getTx(txid)
                 ?: return VerifiedOnchainZap.Rejected(txid, VerifiedOnchainZap.Rejected.Reason.TX_NOT_FOUND)
 
+        // Defensive: the backend must have returned the transaction we asked for.
+        if (!tx.txid.equals(txid, ignoreCase = true)) {
+            return VerifiedOnchainZap.Rejected(txid, VerifiedOnchainZap.Rejected.Reason.TX_NOT_FOUND)
+        }
+
         val recipientScriptHex = TaprootAddress.scriptPubKeyHexForRecipient(recipientPubKey).lowercase()
         val senderScriptHex = TaprootAddress.scriptPubKeyHexForRecipient(event.pubKey).lowercase()
 
@@ -81,7 +86,7 @@ class OnchainZapVerifier(
                 txid = txid,
                 recipientPubKey = recipientPubKey,
                 verifiedSats = verifiedSats,
-                confirmations = tx.confirmations,
+                confirmations = realConfirmations(tx),
                 blockHeight = tx.blockHeight,
                 blockHashHex = tx.blockHashHex,
             )
@@ -92,6 +97,18 @@ class OnchainZapVerifier(
                 verifiedSats = verifiedSats,
             )
         }
+    }
+
+    /**
+     * Resolve the real confirmation depth. Backends often report only a binary
+     * confirmed/unconfirmed flag (as `confirmations` 1 or 0), so when a block
+     * height is available we compute `tip - height + 1` against the chain tip.
+     * Falls back to the backend-reported value if the tip can't be fetched.
+     */
+    private suspend fun realConfirmations(tx: BitcoinTx): Int {
+        val height = tx.blockHeight ?: return tx.confirmations
+        val tip = runCatching { backend.tipHeight() }.getOrNull() ?: return tx.confirmations
+        return (tip - height + 1).coerceAtLeast(1).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
     }
 
     /**

@@ -61,13 +61,19 @@ class TaprootAddressTest {
         assertEquals(expectedScriptPubKey, script.toHexKey())
     }
 
+    // BIP-341 wallet-test-vectors `scriptPubKey` entry 1 (scriptTree = null):
+    // internalPubkey d6889cb0… → bip350Address.
+    private val expectedAddress = "bc1p2wsldez5mud2yam29q22wgfh9439spgduvct83k3pm50fcxa5dps59h4z5"
+
+    @Test
+    fun derivesExactBip350Address() {
+        // Full key-path-only derivation pinned to the BIP-341 wallet test vector.
+        assertEquals(expectedAddress, TaprootAddress.fromPubKey(internalKey))
+        assertEquals(expectedAddress, TaprootAddress.fromPubKey(internalKey.hexToByteArray()))
+    }
+
     @Test
     fun derivedAddressRoundTripsToOutputKey() {
-        // The address itself is the bech32m encoding of (v1, output_key). We
-        // don't hard-code a specific bech32m string here because some
-        // historical BIP-341 wallet vectors used post-Taproot-Schnorr key
-        // adjustments — instead, verify the address decodes back to the
-        // expected output key.
         val address = TaprootAddress.fromPubKey(internalKey)
         val decoded = SegwitAddress.decode(address)
         assertEquals(1, decoded.witnessVersion)

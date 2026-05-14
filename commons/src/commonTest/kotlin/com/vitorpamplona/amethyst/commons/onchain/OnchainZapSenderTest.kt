@@ -20,15 +20,22 @@
  */
 package com.vitorpamplona.amethyst.commons.onchain
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nipBCOnchainZaps.build.OnchainZapBuilder
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.BitcoinTx
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.FeeEstimates
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.OnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.Utxo
 import com.vitorpamplona.quartz.nipBCOnchainZaps.psbt.BitcoinTransaction
+import com.vitorpamplona.quartz.nipBCOnchainZaps.psbt.PsbtSigner
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import kotlinx.coroutines.test.runTest
@@ -174,5 +181,89 @@ class OnchainZapSenderTest {
             // The payment went through — the txid is preserved for retry/diagnostics.
             val broadcastTxid = BitcoinTransaction.parse(backend.broadcastedHex!!).txid()
             assertEquals(broadcastTxid, result.broadcastTxid)
+        }
+
+    /**
+     * A signer that ignores the PSBT it was handed and instead signs a
+     * completely different transaction of its own — the substitution attack.
+     */
+    private class TamperingSigner(
+        private val inner: NostrSignerInternal,
+        private val attackerControlledPubKey: HexKey,
+    ) : NostrSigner(inner.pubKey) {
+        override fun isWriteable() = inner.isWriteable()
+
+        override fun hasForegroundSupport() = inner.hasForegroundSupport()
+
+        override suspend fun <T : Event> sign(
+            createdAt: Long,
+            kind: Int,
+            tags: Array<Array<String>>,
+            content: String,
+        ): T = inner.sign(createdAt, kind, tags, content)
+
+        override suspend fun nip04Encrypt(
+            plaintext: String,
+            toPublicKey: HexKey,
+        ) = inner.nip04Encrypt(plaintext, toPublicKey)
+
+        override suspend fun nip04Decrypt(
+            ciphertext: String,
+            fromPublicKey: HexKey,
+        ) = inner.nip04Decrypt(ciphertext, fromPublicKey)
+
+        override suspend fun nip44Encrypt(
+            plaintext: String,
+            toPublicKey: HexKey,
+        ) = inner.nip44Encrypt(plaintext, toPublicKey)
+
+        override suspend fun nip44Decrypt(
+            ciphertext: String,
+            fromPublicKey: HexKey,
+        ) = inner.nip44Decrypt(ciphertext, fromPublicKey)
+
+        override suspend fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent = inner.decryptZapEvent(event)
+
+        override suspend fun deriveKey(nonce: HexKey): HexKey = inner.deriveKey(nonce)
+
+        override suspend fun signPsbt(psbtHex: String): String {
+            // Discard the requested PSBT entirely; build and sign one that pays
+            // the attacker instead, then hand it back as if it were the answer.
+            val malicious =
+                OnchainZapBuilder.build(
+                    senderPubKey = inner.pubKey,
+                    recipientPubKey = attackerControlledPubKey,
+                    amountSats = 200_000L,
+                    feeRateSatPerVByte = 1.0,
+                    availableUtxos = listOf(Utxo("9".repeat(64), 0, 250_000L, 6)),
+                )
+            PsbtSigner.signKeyPathInputs(malicious.psbt, inner.keyPair.privKey!!)
+            return malicious.psbt.toHex()
+        }
+    }
+
+    @Test
+    fun rejectsASignerThatReturnsADifferentTransaction() =
+        runTest {
+            val backend = FakeBackend(listOf(Utxo("5".repeat(64), 0, 250_000L, 6)))
+            val tamperingSigner = TamperingSigner(senderSigner, attackerControlledPubKey = recipientPubKey)
+
+            val result =
+                OnchainZapSender.send(
+                    backend = backend,
+                    signer = tamperingSigner,
+                    senderPubKey = senderPubKey,
+                    recipientPubKey = recipientPubKey,
+                    amountSats = 50_000L,
+                    feeRateSatPerVByte = 5.0,
+                    comment = "",
+                    zappedEvent = null,
+                ) { senderSigner.sign(it) }
+
+            // The substituted transaction must be rejected at the signing stage,
+            // and nothing must have been broadcast.
+            assertIs<OnchainZapSendResult.Failure>(result)
+            assertEquals(OnchainZapSendStage.SIGNING, result.stage)
+            assertEquals(null, backend.broadcastedHex)
         }
 }

@@ -100,6 +100,7 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumXClient
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.TOR_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
+import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.CachingOnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraBackend
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -334,14 +335,18 @@ class AppModules(
 
     // NIP-BC onchain zap verification backend. Wired up once at app init so
     // LocalCache.consume(OnchainZapEvent) can sum the on-chain output values
-    // that pay the recipient's derived Taproot address. Endpoint is currently
-    // a fixed default; per-account override (AccountSettings.onchainEsploraEndpoint)
-    // is plumbed for a future Settings UI.
+    // that pay the recipient's derived Taproot address. Wrapped in a caching
+    // decorator so a feed full of onchain zaps doesn't fan out into one HTTP
+    // request per event. Endpoint is currently a fixed default; per-account
+    // override (AccountSettings.onchainEsploraEndpoint) is plumbed for a future
+    // Settings UI.
     init {
         cache.onchainBackend =
-            EsploraBackend(
-                baseUrl = { DEFAULT_ESPLORA_ENDPOINT },
-                client = roleBasedHttpClientBuilder.okHttpClientForMoney(DEFAULT_ESPLORA_ENDPOINT),
+            CachingOnchainBackend(
+                EsploraBackend(
+                    baseUrl = { DEFAULT_ESPLORA_ENDPOINT },
+                    client = roleBasedHttpClientBuilder.okHttpClientForMoney(DEFAULT_ESPLORA_ENDPOINT),
+                ),
             )
     }
 

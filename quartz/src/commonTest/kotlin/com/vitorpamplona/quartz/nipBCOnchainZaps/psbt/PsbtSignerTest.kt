@@ -70,6 +70,28 @@ class PsbtSignerTest {
     private val outputKey0 = "53a1f6e454df1aa2776a2814a721372d6258050de330b3c6d10ee8f4e0dda343"
     private val sigHashSingle0 = "2514a6272f85cfa0f45eb907fcb0d121b808ed37c6ea160a5a9046ed5526d555"
 
+    // BIP-341 keyPathSpending input 0 — the full expected witness (64-byte
+    // signature + the SIGHASH_SINGLE 0x03 byte).
+    private val expectedWitness0 =
+        "ed7c1647cb97379e76892be0cacff57ec4a7102aa24296ca39af7541246d8ff1" +
+            "4d38958d4cc1e2e478e4d4a764bbfd835b16d4e314b72937b29833060b87276c03"
+
+    @Test
+    fun producesExactBip341VectorSignature() {
+        // Pins the full BIP-340 signing pipeline (and its nonce determinism) to
+        // the authoritative BIP-341 wallet test vector: signing the vector's
+        // sighash with the vector's tweaked key must reproduce the vector's
+        // witness signature byte-for-byte.
+        val sig =
+            Secp256k1Instance.signSchnorr(
+                sigHashSingle0.hexToByteArray(),
+                tweakedPrivKey0.hexToByteArray(),
+            )
+        // Witness is the 64-byte signature; the trailing 0x03 is the sighash type
+        // appended by the PSBT signer, not part of the BIP-340 signature itself.
+        assertEquals(expectedWitness0.substring(0, 128), sig.toHexKey())
+    }
+
     private fun psbtForVectorTx(): Psbt {
         val psbt = Psbt.fromUnsignedTx(BitcoinTransaction.parse(unsignedTxHex))
         spentOutputs.forEachIndexed { i, utxo -> psbt.setInputWitnessUtxo(i, utxo) }

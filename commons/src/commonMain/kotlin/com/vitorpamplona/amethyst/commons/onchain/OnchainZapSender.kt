@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nipBCOnchainZaps.build.OnchainZapBuilder
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.OnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.psbt.Psbt
 import com.vitorpamplona.quartz.nipBCOnchainZaps.psbt.PsbtFinalizer
+import com.vitorpamplona.quartz.nipBCOnchainZaps.psbt.PsbtSignatureVerifier
 import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.TaprootAddress
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import kotlin.coroutines.cancellation.CancellationException
@@ -142,15 +143,36 @@ object OnchainZapSender {
                 return fail(OnchainZapSendStage.BUILDING, e.message ?: "Could not build the transaction", e)
             }
 
-        // 3. Sign and finalize.
+        // 3. Sign, verify the signer didn't tamper, and finalize.
         val rawTxHex =
             try {
                 val signedHex = signer.signPsbt(built.psbt.toHex())
                 val signedPsbt = Psbt.parse(signedHex)
+
+                // Fund-safety: the signer must ONLY add signatures. If it returns a
+                // different transaction (with valid signatures over IT), finalizing
+                // and broadcasting would send funds wherever that tx says. Reject
+                // anything whose unsigned transaction isn't byte-identical to ours.
+                val expectedTx = built.psbt.global.get(Psbt.PSBT_GLOBAL_UNSIGNED_TX)
+                val returnedTx = signedPsbt.global.get(Psbt.PSBT_GLOBAL_UNSIGNED_TX)
+                if (expectedTx == null || returnedTx == null || !expectedTx.contentEquals(returnedTx)) {
+                    return fail(
+                        OnchainZapSendStage.SIGNING,
+                        "The signer returned a different transaction than the one it was asked to sign",
+                    )
+                }
                 if (!PsbtFinalizer.isFullySigned(signedPsbt)) {
                     return fail(
                         OnchainZapSendStage.SIGNING,
                         "The signer did not sign every input",
+                    )
+                }
+                // Verify every signature is actually valid before money moves —
+                // catches a broken signer up front instead of a doomed broadcast.
+                if (!PsbtSignatureVerifier.verifyAllKeyPathInputs(signedPsbt)) {
+                    return fail(
+                        OnchainZapSendStage.SIGNING,
+                        "The signed transaction has invalid signatures",
                     )
                 }
                 PsbtFinalizer.finalizeToHex(signedPsbt)

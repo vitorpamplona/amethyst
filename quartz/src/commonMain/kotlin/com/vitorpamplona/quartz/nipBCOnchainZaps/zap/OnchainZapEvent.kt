@@ -97,7 +97,9 @@ class OnchainZapEvent(
 
     companion object {
         const val KIND = 8333
-        const val ALT_DESCRIPTION = "Onchain Zap"
+
+        /** NIP-31 human-readable fallback. Includes the amount, as in the NIP-BC example. */
+        fun altDescription(amountInSats: Long) = "Onchain zap: $amountInSats sats"
 
         /**
          * Build an onchain zap that targets a specific event.
@@ -111,7 +113,7 @@ class OnchainZapEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<OnchainZapEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, content, createdAt) {
-            alt(ALT_DESCRIPTION)
+            alt(altDescription(amountInSats))
             txid(txid)
             recipient(recipientPubKey)
             amountInSats(amountInSats)
@@ -134,7 +136,7 @@ class OnchainZapEvent(
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<OnchainZapEvent>.() -> Unit = {},
         ) = eventTemplate(KIND, content, createdAt) {
-            alt(ALT_DESCRIPTION)
+            alt(altDescription(amountInSats))
             txid(txid)
             recipient(recipientPubKey)
             amountInSats(amountInSats)

@@ -53,13 +53,31 @@ class SegwitAddressTest {
     }
 
     @Test
-    fun encodedTaprootIsLowercaseAndCorrectLength() {
-        // P2TR encoded address must be 62 chars, lowercase, with 'bc1p' prefix.
-        val outputKey = "53a1f6e454df1aa2776a2814a721372d6258050de330b3c6d10ee8f4e0dda343".hexToByteArray()
-        val address = SegwitAddress.encodeP2TR(outputKey)
-        assertEquals(62, address.length)
-        assertEquals(address, address.lowercase())
-        assertEquals("bc1p", address.substring(0, 4))
+    fun encodesP2trAgainstBip341WalletTestVectors() {
+        // All seven `scriptPubKey` entries from the BIP-341 wallet-test-vectors:
+        // (tweaked output key, expected bip350Address).
+        val vectors =
+            listOf(
+                "53a1f6e454df1aa2776a2814a721372d6258050de330b3c6d10ee8f4e0dda343" to
+                    "bc1p2wsldez5mud2yam29q22wgfh9439spgduvct83k3pm50fcxa5dps59h4z5",
+                "147c9c57132f6e7ecddba9800bb0c4449251c92a1e60371ee77557b6620f3ea3" to
+                    "bc1pz37fc4cn9ah8anwm4xqqhvxygjf9rjf2resrw8h8w4tmvcs0863sa2e586",
+                "e4d810fd50586274face62b8a807eb9719cef49c04177cc6b76a9a4251d5450e" to
+                    "bc1punvppl2stp38f7kwv2u2spltjuvuaayuqsthe34hd2dyy5w4g58qqfuag5",
+                "712447206d7a5238acc7ff53fbe94a3b64539ad291c7cdbc490b7577e4b17df5" to
+                    "bc1pwyjywgrd0ffr3tx8laflh6228dj98xkjj8rum0zfpd6h0e930h6saqxrrm",
+                "77e30a5522dd9f894c3f8b8bd4c4b2cf82ca7da8a3ea6a239655c39c050ab220" to
+                    "bc1pwl3s54fzmk0cjnpl3w9af39je7pv5ldg504x5guk2hpecpg2kgsqaqstjq",
+                "91b64d5324723a985170e4dc5a0f84c041804f2cd12660fa5dec09fc21783605" to
+                    "bc1pjxmy65eywgafs5tsunw95ruycpqcqnev6ynxp7jaasylcgtcxczs6n332e",
+                "75169f4001aa68f15bbed28b218df1d0a62cbbcf1188c6665110c293c907b831" to
+                    "bc1pw5tf7sqp4f50zka7629jrr036znzew70zxyvvej3zrpf8jg8hqcssyuewe",
+            )
+        for ((outputKey, address) in vectors) {
+            assertEquals(address, SegwitAddress.encodeP2TR(outputKey.hexToByteArray()))
+            // And it must decode back to the same output key.
+            assertEquals(outputKey, SegwitAddress.decode(address).program.toHexKey())
+        }
     }
 
     // ============================================================

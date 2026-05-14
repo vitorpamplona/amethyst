@@ -37,7 +37,8 @@ import okhttp3.coroutines.executeAsync
  * - `GET /address/{addr}/utxo`  — UTXO list for a derived address
  * - `POST /tx`                  — broadcast (body = raw tx hex)
  * - `GET /blocks/tip/height`    — chain tip
- * - `GET /v1/fees/recommended`  — fee tier suggestions (mempool.space variant)
+ * - `GET /v1/fees/recommended`  — fee tiers (mempool.space); falls back to
+ *   `GET /fee-estimates` (the standard Esplora target→rate map) on 404
  *
  * The `baseUrl` is supplied as a function so callers can hot-swap endpoints
  * from `AccountSettings` without rebuilding the backend.
@@ -134,26 +135,54 @@ class EsploraBackend(
     }
 
     override suspend fun feeEstimates(): FeeEstimates {
-        // mempool.space-style recommended fees endpoint.
-        val url = "${baseUrl()}/v1/fees/recommended"
-        val request =
+        // mempool.space-style recommended-fees endpoint.
+        val recommendedUrl = "${baseUrl()}/v1/fees/recommended"
+        val recommended =
             Request
                 .Builder()
                 .header("Accept", "application/json")
-                .url(url)
+                .url(recommendedUrl)
                 .get()
                 .build()
-        return client.newCall(request).executeAsync().use { response ->
+        client.newCall(recommended).executeAsync().use { response ->
+            when {
+                response.isSuccessful -> {
+                    return parseRecommendedFees(response.body.string())
+                }
+
+                // Standard Esplora servers (blockstream.info, self-hosted) don't
+                // expose /v1/fees/recommended — fall back to /fee-estimates.
+                response.code == 404 -> {
+                    Unit
+                }
+
+                else -> {
+                    throw OnchainBackendException(
+                        "GET $recommendedUrl failed: ${response.code} ${response.message}",
+                    )
+                }
+            }
+        }
+
+        val estimatesUrl = "${baseUrl()}/fee-estimates"
+        val estimates =
+            Request
+                .Builder()
+                .header("Accept", "application/json")
+                .url(estimatesUrl)
+                .get()
+                .build()
+        return client.newCall(estimates).executeAsync().use { response ->
             if (!response.isSuccessful) {
                 throw OnchainBackendException(
-                    "GET $url failed: ${response.code} ${response.message}",
+                    "GET $estimatesUrl failed: ${response.code} ${response.message}",
                 )
             }
-            parseFees(response.body.string())
+            parseFeeEstimates(response.body.string())
         }
     }
 
-    private fun parseTx(json: String): BitcoinTx {
+    internal fun parseTx(json: String): BitcoinTx {
         val node = JacksonMapper.mapper.readTree(json)
         val txid = node["txid"].asText()
         val status = node["status"]
@@ -189,7 +218,7 @@ class EsploraBackend(
         )
     }
 
-    private fun parseUtxoList(json: String): List<Utxo> {
+    internal fun parseUtxoList(json: String): List<Utxo> {
         val node = JacksonMapper.mapper.readTree(json)
         return node.map { utxo ->
             val confirmed = utxo["status"]?.get("confirmed")?.asBoolean() == true
@@ -202,22 +231,46 @@ class EsploraBackend(
         }
     }
 
-    private fun parseFees(json: String): FeeEstimates {
+    /** mempool.space `/v1/fees/recommended`: `{ fastestFee, halfHourFee, hourFee, minimumFee }`. */
+    internal fun parseRecommendedFees(json: String): FeeEstimates {
         val node = JacksonMapper.mapper.readTree(json)
-        // mempool.space exposes fastestFee / halfHourFee / hourFee / minimumFee.
         val fast = node["fastestFee"]?.asDouble()
         val normal = node["halfHourFee"]?.asDouble() ?: fast
         val slow = node["hourFee"]?.asDouble() ?: node["minimumFee"]?.asDouble() ?: normal
 
         if (fast == null) {
             Log.w(logTag) { "fee response missing 'fastestFee': $json" }
-            // Sensible default if the endpoint disagrees with our schema.
             return FeeEstimates(20.0, 10.0, 5.0)
         }
         return FeeEstimates(
             fastSatPerVbyte = fast,
             normalSatPerVbyte = normal ?: fast,
             slowSatPerVbyte = slow ?: fast,
+        )
+    }
+
+    /**
+     * Standard Esplora `/fee-estimates`: a JSON object mapping a confirmation
+     * target (in blocks, as a string key) to the estimated sat/vB. We map the
+     * 2-block / 6-block / 144-block targets to the fast / normal / slow tiers.
+     */
+    internal fun parseFeeEstimates(json: String): FeeEstimates {
+        val node = JacksonMapper.mapper.readTree(json)
+
+        fun rate(vararg targets: String): Double? = targets.firstNotNullOfOrNull { node[it]?.asDouble() }
+
+        val fast = rate("1", "2")
+        val normal = rate("4", "6", "3")
+        val slow = rate("144", "1008", "10")
+
+        if (fast == null) {
+            Log.w(logTag) { "fee-estimates response missing block targets: $json" }
+            return FeeEstimates(20.0, 10.0, 5.0)
+        }
+        return FeeEstimates(
+            fastSatPerVbyte = fast,
+            normalSatPerVbyte = normal ?: fast,
+            slowSatPerVbyte = slow ?: normal ?: fast,
         )
     }
 

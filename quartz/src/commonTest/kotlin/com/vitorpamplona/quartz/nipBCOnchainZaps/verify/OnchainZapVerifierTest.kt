@@ -77,6 +77,7 @@ class OnchainZapVerifierTest {
 
     private class FakeBackend(
         private val tx: BitcoinTx?,
+        private val tip: Long = 800_006L,
     ) : OnchainBackend {
         override suspend fun getTx(txid: String): BitcoinTx? = if (tx?.txid == txid) tx else null
 
@@ -84,7 +85,7 @@ class OnchainZapVerifierTest {
 
         override suspend fun broadcast(rawTxHex: String): String = throw UnsupportedOperationException()
 
-        override suspend fun tipHeight(): Long = 0L
+        override suspend fun tipHeight(): Long = tip
 
         override suspend fun feeEstimates(): FeeEstimates = FeeEstimates(20.0, 10.0, 5.0)
     }
@@ -100,17 +101,19 @@ class OnchainZapVerifierTest {
                             BitcoinTxOutput(0, 25000L, recipientScriptHex),
                             BitcoinTxOutput(1, 99000L, senderScriptHex), // change
                         ),
-                    confirmations = 3,
+                    confirmations = 1,
                     blockHashHex = "f".repeat(64),
                     blockHeight = 800_000L,
                 )
-            val verifier = OnchainZapVerifier(FakeBackend(tx))
+            val verifier = OnchainZapVerifier(FakeBackend(tx, tip = 800_006L))
             val result = verifier.verify(mkEvent())
 
             assertIs<VerifiedOnchainZap.Confirmed>(result)
             assertEquals(25000L, result.verifiedSats)
             assertEquals(recipientHex, result.recipientPubKey)
             assertEquals(800_000L, result.blockHeight)
+            // Real depth computed from the chain tip: 800006 - 800000 + 1 = 7.
+            assertEquals(7, result.confirmations)
         }
 
     @Test

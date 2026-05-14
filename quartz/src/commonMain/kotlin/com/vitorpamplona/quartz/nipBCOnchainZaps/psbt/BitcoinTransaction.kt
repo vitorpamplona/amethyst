@@ -185,6 +185,14 @@ data class BitcoinTransaction(
     fun txid(): String = hash256(serializeForId()).reversedArray().toHexKey()
 
     companion object {
+        /**
+         * Sanity cap on input/output/witness-item counts while parsing. A real
+         * Bitcoin transaction is bounded by the 4 MWU block weight (~100k
+         * minimal inputs); this generous limit just stops an attacker-supplied
+         * varint from triggering a giant pre-allocation or a long spin.
+         */
+        const val MAX_PARSE_ITEMS = 1_000_000L
+
         fun parse(rawHex: String): BitcoinTransaction = parse(rawHex.hexToByteArray())
 
         fun parse(bytes: ByteArray): BitcoinTransaction {
@@ -210,6 +218,7 @@ data class BitcoinTransaction(
                         else -> firstByte.toLong()
                     }
             }
+            requireCount(inputCount, "input")
 
             val inputs = ArrayList<TxIn>(inputCount.toInt())
             for (i in 0 until inputCount) {
@@ -217,6 +226,7 @@ data class BitcoinTransaction(
             }
 
             val outputCount = reader.readVarInt()
+            requireCount(outputCount, "output")
             val outputs = ArrayList<TxOut>(outputCount.toInt())
             for (i in 0 until outputCount) {
                 outputs.add(TxOut.read(reader))
@@ -225,6 +235,7 @@ data class BitcoinTransaction(
             if (isSegwit) {
                 for (i in inputs.indices) {
                     val itemCount = reader.readVarInt()
+                    requireCount(itemCount, "witness item")
                     val items = ArrayList<ByteArray>(itemCount.toInt())
                     for (j in 0 until itemCount) {
                         items.add(reader.readVarBytes())
@@ -235,6 +246,15 @@ data class BitcoinTransaction(
 
             val lockTime = reader.readUInt32LE()
             return BitcoinTransaction(version, inputs, outputs, lockTime)
+        }
+
+        private fun requireCount(
+            count: Long,
+            label: String,
+        ) {
+            if (count < 0 || count > MAX_PARSE_ITEMS) {
+                throw PsbtParseException("$label count out of range: $count")
+            }
         }
     }
 }
