@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomMember
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomReaction
+import com.vitorpamplona.amethyst.commons.viewmodels.RoomZap
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -151,6 +152,7 @@ internal fun StageGrid(
     modifier: Modifier = Modifier,
     audioLevels: Map<String, Float> = emptyMap(),
     reactionsByPubkey: Map<String, List<RoomReaction>> = emptyMap(),
+    zapsByPubkey: Map<String, List<RoomZap>> = emptyMap(),
     connectingSpeakers: ImmutableSet<String> = persistentSetOf(),
     onLongPressParticipant: ((String) -> Unit)? = null,
     onTapParticipant: ((String) -> Unit)? = null,
@@ -228,6 +230,7 @@ internal fun StageGrid(
                             isConnecting = member.pubkey in connectingSpeakers,
                             showMicBadge = true,
                             reactions = reactionsByPubkey[member.pubkey].orEmpty(),
+                            zaps = zapsByPubkey[member.pubkey].orEmpty(),
                             accountViewModel = accountViewModel,
                             onLongPressParticipant = onLongPressParticipant,
                             onTapParticipant = if (isSelf) null else onTapParticipant,
@@ -304,6 +307,7 @@ internal fun AudienceGrid(
     onTapParticipant: ((String) -> Unit)? = null,
     myPubkey: String? = null,
     reactionsByPubkey: Map<String, List<RoomReaction>> = emptyMap(),
+    zapsByPubkey: Map<String, List<RoomZap>> = emptyMap(),
 ) {
     if (members.isEmpty()) {
         Box(
@@ -343,6 +347,7 @@ internal fun AudienceGrid(
                 isConnecting = false,
                 showMicBadge = false,
                 reactions = reactionsByPubkey[member.pubkey].orEmpty(),
+                zaps = zapsByPubkey[member.pubkey].orEmpty(),
                 accountViewModel = accountViewModel,
                 onLongPressParticipant = onLongPressParticipant,
                 onTapParticipant = onTapParticipant,
@@ -364,6 +369,7 @@ private fun MemberCell(
     reactions: List<RoomReaction>,
     accountViewModel: AccountViewModel,
     onLongPressParticipant: ((String) -> Unit)?,
+    zaps: List<RoomZap> = emptyList(),
     isSelf: Boolean = false,
     onTapSelf: (() -> Unit)? = null,
     onTapParticipant: ((String) -> Unit)? = null,
@@ -553,6 +559,26 @@ private fun MemberCell(
                         Modifier
                             .align(Alignment.BottomEnd)
                             .offset(x = -ringPadding + 6.dp, y = -ringPadding + 6.dp),
+                )
+            }
+            // Zaps animate just above the avatar, TOP-CENTER — the
+            // only badge-free anchor: the role badge sits TopStart,
+            // the hand-raise badge TopEnd, the mic badge BottomCenter
+            // and the reaction overlay BottomEnd. Anchoring TopEnd
+            // would collide with the hand-raise badge, and now that
+            // zaps float from the *zapper's* avatar (a likely
+            // hand-raiser), that overlap would be common. Center-
+            // anchored so the `⚡ Nsats` chip extends symmetrically
+            // and stays within the cell rather than bleeding into the
+            // neighbouring column. Same outer-Box sibling placement
+            // and layout-stability reasoning as the reaction overlay.
+            if (zaps.isNotEmpty()) {
+                SpeakerZapOverlay(
+                    zaps = zaps,
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .offset(y = ringPadding - 6.dp),
                 )
             }
         }

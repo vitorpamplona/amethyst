@@ -40,6 +40,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilledTonalIconToggleButton
@@ -52,7 +53,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -68,9 +72,20 @@ import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.note.ZapAmountChoicePopup
+import com.vitorpamplona.amethyst.ui.note.ZapCustomDialog
+import com.vitorpamplona.amethyst.ui.note.payViaIntent
+import com.vitorpamplona.amethyst.ui.note.zapClick
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.reactions.RoomReactionPopup
 import com.vitorpamplona.amethyst.ui.stringRes
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Sticky bottom action bar for the room screen.
@@ -101,6 +116,7 @@ internal fun NestActionBar(
     onHandRaisedChange: (Boolean) -> Unit,
     roomNote: AddressableNote,
     accountViewModel: AccountViewModel,
+    nav: INav,
     onLeave: () -> Unit,
 ) {
     Surface(
@@ -127,6 +143,7 @@ internal fun NestActionBar(
                     onHandRaisedChange = onHandRaisedChange,
                     roomNote = roomNote,
                     accountViewModel = accountViewModel,
+                    nav = nav,
                     onLeave = onLeave,
                 )
             }
@@ -359,6 +376,7 @@ private fun EndCluster(
     onHandRaisedChange: (Boolean) -> Unit,
     roomNote: AddressableNote,
     accountViewModel: AccountViewModel,
+    nav: INav,
     onLeave: () -> Unit,
 ) {
     Row(
@@ -370,6 +388,13 @@ private fun EndCluster(
         if (!isOnStage && isConnected) {
             HandRaiseToggle(handRaised = handRaised, onToggle = onHandRaisedChange)
         }
+        // Zap and React both work in any state — even disconnected
+        // users can zap / react via the room note.
+        NestZapButton(
+            roomNote = roomNote,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
         // React works in any state — even disconnected users can react
         // via the room note. Reuses the same ReactionChoicePopup
         // NoteCompose's heart button drives (NIP-30 custom-emoji
@@ -399,6 +424,185 @@ private fun EndCluster(
         }
         Spacer(Modifier.width(4.dp))
         LeaveRoomButton(onClick = onLeave)
+    }
+}
+
+/**
+ * Round zap button styled to match [HandRaiseToggle] / the React
+ * button — same `FilledTonalIconButton` shape and tonal palette, but
+ * tinted with [BitcoinOrange] while a zap is in flight so the user
+ * sees the progress without needing a separate amount label.
+ *
+ * Click behavior is delegated to NoteCompose's [zapClick], which
+ * applies the user's configured zap amount choices the same way the
+ * normal note ⚡ button does (single-tap fires the default amount;
+ * multi-choice opens [ZapAmountChoicePopup]; an unconfigured account
+ * opens [ZapCustomDialog]). Long-press routes to the
+ * [Route.UpdateZapAmount] settings screen via the activity's
+ * [BouncingIntentNav] (no-op when the route can't be expressed as a
+ * `nostr:` URI — same fallback as the chat panel uses).
+ */
+@OptIn(ExperimentalUuidApi::class)
+@Composable
+private fun NestZapButton(
+    roomNote: AddressableNote,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    var wantsToZap by remember { mutableStateOf(false) }
+    var wantsToSetCustomZap by remember { mutableStateOf(false) }
+
+    // 0f when idle. Driven 0f → 1f by the zap flow's progress
+    // callbacks; reset to 0f on error, on dismiss, and when the flow
+    // hands off to an external wallet via `onPayViaIntent` (the
+    // button can't observe payment completion past that handoff, so
+    // it must not leave the spinner up — unlike NoteCompose's
+    // ZapReaction, this button has no ObserveZapIconState fallback).
+    var zappingProgress by remember { mutableFloatStateOf(0f) }
+
+    val isZapping = zappingProgress > 0.00001f && zappingProgress < 0.99999f
+
+    FilledTonalIconButton(
+        onClick = {
+            scope.launch {
+                zapClick(
+                    baseNote = roomNote,
+                    accountViewModel = accountViewModel,
+                    context = context,
+                    onZapStarts = {},
+                    onZappingProgress = { progress -> scope.launch { zappingProgress = progress } },
+                    onMultipleChoices = { scope.launch { wantsToZap = true } },
+                    onError = { _, message, user ->
+                        scope.launch {
+                            zappingProgress = 0f
+                            accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
+                        }
+                    },
+                    onPayViaIntent = {
+                        // Handing off to an external wallet (or the
+                        // manual-split screen) ends the in-app phase —
+                        // clear the spinner since nothing downstream
+                        // tracks payment completion for this button.
+                        zappingProgress = 0f
+                        if (it.size == 1) {
+                            val payable = it.first()
+                            payViaIntent(payable.invoice, context, { }) { error ->
+                                zappingProgress = 0f
+                                accountViewModel.toastManager.toast(
+                                    R.string.error_dialog_zap_error,
+                                    UserBasedErrorMessage(error, payable.info.user),
+                                )
+                            }
+                        } else {
+                            val uid = Uuid.random().toString()
+                            accountViewModel.tempManualPaymentCache.put(uid, it)
+                            nav.nav(Route.ManualZapSplitPayment(uid))
+                        }
+                    },
+                    onCustomAmount = { wantsToSetCustomZap = true },
+                )
+            }
+        },
+    ) {
+        if (isZapping) {
+            CircularProgressIndicator(
+                progress = { zappingProgress },
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        } else {
+            Icon(
+                symbol = MaterialSymbols.Bolt,
+                contentDescription = stringRes(R.string.zap_description),
+            )
+        }
+    }
+
+    if (wantsToZap) {
+        ZapAmountChoicePopup(
+            baseNote = roomNote,
+            popupYOffset = 48.dp,
+            accountViewModel = accountViewModel,
+            onZapStarts = {},
+            onDismiss = {
+                wantsToZap = false
+                zappingProgress = 0f
+            },
+            onChangeAmount = {
+                scope.launch {
+                    wantsToZap = false
+                    nav.nav(Route.UpdateZapAmount())
+                }
+            },
+            onError = { _, message, user ->
+                scope.launch {
+                    zappingProgress = 0f
+                    accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
+                }
+            },
+            onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
+            onPayViaIntent = {
+                // Handing off to an external wallet (or the manual-
+                // split screen) ends the in-app phase — clear the
+                // spinner since nothing downstream tracks payment
+                // completion for this button.
+                zappingProgress = 0f
+                if (it.size == 1) {
+                    val payable = it.first()
+                    payViaIntent(payable.invoice, context, { }) { error ->
+                        zappingProgress = 0f
+                        accountViewModel.toastManager.toast(
+                            R.string.error_dialog_zap_error,
+                            UserBasedErrorMessage(error, payable.info.user),
+                        )
+                    }
+                } else {
+                    val uid = Uuid.random().toString()
+                    accountViewModel.tempManualPaymentCache.put(uid, it)
+                    nav.nav(Route.ManualZapSplitPayment(uid))
+                }
+            },
+        )
+    }
+
+    if (wantsToSetCustomZap) {
+        ZapCustomDialog(
+            onZapStarts = {},
+            onClose = { wantsToSetCustomZap = false },
+            onError = { _, message, user ->
+                scope.launch {
+                    zappingProgress = 0f
+                    accountViewModel.toastManager.toast(R.string.error_dialog_zap_error, message, user)
+                }
+            },
+            onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
+            onPayViaIntent = {
+                // Handing off to an external wallet (or the manual-
+                // split screen) ends the in-app phase — clear the
+                // spinner since nothing downstream tracks payment
+                // completion for this button.
+                zappingProgress = 0f
+                if (it.size == 1) {
+                    val payable = it.first()
+                    payViaIntent(payable.invoice, context, { }) { error ->
+                        zappingProgress = 0f
+                        accountViewModel.toastManager.toast(
+                            R.string.error_dialog_zap_error,
+                            UserBasedErrorMessage(error, payable.info.user),
+                        )
+                    }
+                } else {
+                    val uid = Uuid.random().toString()
+                    accountViewModel.tempManualPaymentCache.put(uid, it)
+                    nav.nav(Route.ManualZapSplitPayment(uid))
+                }
+            },
+            accountViewModel = accountViewModel,
+            baseNote = roomNote,
+        )
     }
 }
 

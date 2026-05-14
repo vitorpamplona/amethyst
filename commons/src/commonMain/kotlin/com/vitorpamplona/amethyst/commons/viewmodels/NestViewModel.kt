@@ -175,6 +175,18 @@ class NestViewModel(
     val recentReactions: StateFlow<Map<String, List<RoomReaction>>> = _recentReactions.asStateFlow()
 
     /**
+     * Recent kind-9735 zap receipts for the floating zap-avatar overlay.
+     * Same map shape as [recentReactions] (keyed by target pubkey,
+     * room-wide zaps under the empty-string key) so the zap overlay
+     * can mirror the reaction overlay's grouping logic. Sliding
+     * [REACTION_WINDOW_SEC] window driven by the platform layer's
+     * eviction tick.
+     */
+    private val zapsAgg = RoomZapsAggregator()
+    private val _recentZaps = MutableStateFlow<Map<String, List<RoomZap>>>(emptyMap())
+    val recentZaps: StateFlow<Map<String, List<RoomZap>>> = _recentZaps.asStateFlow()
+
+    /**
      * moq-lite `catalog.json` payload per speaker pubkey. Populated
      * lazily as the per-speaker subscriptions land — listeners
      * without catalog support (IETF reference path) leave this map
@@ -608,6 +620,30 @@ class NestViewModel(
     fun evictReactions(olderThanSec: Long) {
         if (closed) return
         _recentReactions.value = reactionsAgg.evictAndSnapshot(olderThanSec)
+    }
+
+    /**
+     * Apply one kind-9735 zap receipt to the sliding-window aggregator.
+     * Mirror of [onReactionEvent] — the floating zap chip uses the
+     * same window so the visual cadence matches the React button.
+     */
+    fun onZapEvent(
+        event: com.vitorpamplona.quartz.nip57Zaps.LnZapEvent,
+        nowSec: Long,
+        windowSec: Long = REACTION_WINDOW_SEC,
+    ) {
+        if (closed) return
+        _recentZaps.value = zapsAgg.apply(event, nowSec, windowSec)
+    }
+
+    /**
+     * Drop zaps older than the staleness threshold. Platform layer
+     * drives this on a 1-s tick — the same cadence as [evictReactions]
+     * — so the zap and reaction overlays age out in lockstep.
+     */
+    fun evictZaps(olderThanSec: Long) {
+        if (closed) return
+        _recentZaps.value = zapsAgg.evictAndSnapshot(olderThanSec)
     }
 
     /**
