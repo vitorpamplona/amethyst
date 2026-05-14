@@ -28,10 +28,10 @@ import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.DEFAULT_ESPLORA_ENDPOINT
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
+import com.vitorpamplona.amethyst.model.nip03Timestamp.BitcoinExplorerEndpoint
 import com.vitorpamplona.amethyst.model.nip03Timestamp.IncomingOtsEventVerifier
 import com.vitorpamplona.amethyst.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
@@ -92,6 +92,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineT
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.stats.RelayReqStats
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
+import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.OkHttpNip05Fetcher
@@ -337,15 +338,26 @@ class AppModules(
     // LocalCache.consume(OnchainZapEvent) can sum the on-chain output values
     // that pay the recipient's derived Taproot address. Wrapped in a caching
     // decorator so a feed full of onchain zaps doesn't fan out into one HTTP
-    // request per event. Endpoint is currently a fixed default; per-account
-    // override (AccountSettings.onchainEsploraEndpoint) is plumbed for a future
-    // Settings UI.
+    // request per event.
+    //
+    // The explorer endpoint is shared with OpenTimestamps: it honours the same
+    // user-configured server (OTS settings) and the same Tor-aware default
+    // selection, via BitcoinExplorerEndpoint — onchain zaps must not silently
+    // bypass the user's Tor preference.
     init {
         cache.onchainBackend =
             CachingOnchainBackend(
                 EsploraBackend(
-                    baseUrl = { DEFAULT_ESPLORA_ENDPOINT },
-                    client = roleBasedHttpClientBuilder.okHttpClientForMoney(DEFAULT_ESPLORA_ENDPOINT),
+                    baseUrl = {
+                        BitcoinExplorerEndpoint.resolveNormalized(
+                            customExplorerUrl = otsPrefs.current.normalizedUrl(),
+                            usingTor =
+                                roleBasedHttpClientBuilder.shouldUseTorForMoneyOperations(
+                                    OkHttpBitcoinExplorer.MEMPOOL_API_URL,
+                                ),
+                        )
+                    },
+                    client = roleBasedHttpClientBuilder.okHttpClientForMoney(OkHttpBitcoinExplorer.MEMPOOL_API_URL),
                 ),
             )
     }
