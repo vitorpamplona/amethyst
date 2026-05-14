@@ -45,6 +45,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -334,6 +335,29 @@ private class ReconnectingHandle(
             )
         val liveHandleRef = AtomicReference<SubscribeHandle?>(null)
 
+        // Cross-subscription replay guard. moq-lite publishers carry
+        // their group lineage forward monotonically across their own
+        // session recycles (ReconnectingNestsSpeaker.runHotSwapIteration
+        // seeds each new publisher with the prior one's nextSequence),
+        // and on every re-subscribe — listener-side reconnect OR the
+        // inner publisher-cycle loop — the relay re-serves its cached
+        // latest group from the first frame. Without a drop filter that
+        // stale group is replayed straight into the decoder; in a
+        // fully-muted room, where no newer group is ever produced, it's
+        // the same ~1 s clip looping once per reconnect. Mirrors
+        // kixelated/hang's `Container.Consumer.#run`, which drops any
+        // group not strictly newer than what's already been consumed.
+        //
+        // Watermark = highest group sequence delivered by a PRIOR
+        // underlying subscription. It only advances when a subscription
+        // ends (the `finally` below), so frames of the *current* group
+        // are never dropped mid-stream — a live group is always newer
+        // than the frozen watermark. Cost: a reconnect mid-group drops
+        // the tail of that one in-progress group (≤ ~1 s of audio),
+        // which is the right trade for live audio and strictly better
+        // than replaying already-played speech.
+        val priorGroupWatermark = AtomicLong(-1L)
+
         // Re-subscribe pump. Two re-issue triggers, layered:
         //
         //   1. Listener session swap (outer collectLatest) — fires
@@ -432,15 +456,31 @@ private class ReconnectingHandle(
                         liveHandleRef.set(handle)
                         Log.d("NestRx") { "wrapper: handle attached id=${handle.subscribeId}, starting collect" }
                         var emitted = 0L
+                        var droppedStale = 0L
+                        var handleHighestGroup = -1L
                         try {
-                            handle.objects.collect {
+                            handle.objects.collect { obj ->
+                                if (obj.groupId <= priorGroupWatermark.get()) {
+                                    // Stale group re-served from the relay
+                                    // cache after a re-subscribe — drop so
+                                    // it never reaches the decoder.
+                                    droppedStale += 1
+                                    return@collect
+                                }
+                                if (obj.groupId > handleHighestGroup) handleHighestGroup = obj.groupId
                                 emitted += 1
-                                frames.emit(it)
+                                frames.emit(obj)
                             }
                         } finally {
                             if (liveHandleRef.get() === handle) liveHandleRef.set(null)
+                            // Advance the watermark only now the subscription
+                            // is done, so the next re-subscribe drops every
+                            // group up to and including the last one we saw.
+                            if (handleHighestGroup > priorGroupWatermark.get()) {
+                                priorGroupWatermark.set(handleHighestGroup)
+                            }
                         }
-                        Log.w("NestRx") { "wrapper: handle objects flow ENDED id=${handle.subscribeId} emitted=$emitted — re-issuing after ${RESUBSCRIBE_BACKOFF_MS}ms" }
+                        Log.w("NestRx") { "wrapper: handle objects flow ENDED id=${handle.subscribeId} emitted=$emitted droppedStale=$droppedStale — re-issuing after ${RESUBSCRIBE_BACKOFF_MS}ms" }
                         // Brief backoff so a permanently-gone
                         // publisher doesn't tight-loop the relay
                         // with re-subscribes. 100 ms stays well
