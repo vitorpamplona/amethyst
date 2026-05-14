@@ -372,6 +372,8 @@
     <string name="quick_action_block_dialog_btn">Letiltás</string>
     <string name="quick_action_delete_dialog_btn">Törlés</string>
     <string name="quick_action_block">Letiltás</string>
+    <string name="quick_action_mute_thread">Szál némítása</string>
+    <string name="quick_action_unmute_thread">Szál némításának megszüntetése</string>
     <string name="quick_action_report">Bejelentés</string>
     <string name="quick_action_delete_button">Törlés</string>
     <string name="quick_action_dont_show_again_button">Ne jelenítse meg újra</string>
@@ -485,7 +487,7 @@
     <string name="new_community_relay_marker_approvals">Jóváhagyások</string>
     <string name="new_community_empty">Nincs olyan közösség, amely megfelelne ennek a szűrőnek.</string>
     <string name="new_community_rules_section">Ellenőrizhető szabályok (nem kötelező)</string>
-    <string name="new_community_rules_hint">A közösség mellett egy géppel olvasható szabálydokumentumot (NIP-9B) is közzétesz. Az ezt támogató kliensek küldés előtt blokkolják a szabályoknak meg nem felelő bejegyzéseket.</string>
+    <string name="new_community_rules_hint">A közösség mellett egy géppel olvasható szabálydokumentumot (NIP-9B) is közzétesz. Az ezt támogató kliensek küldés előtt eltávolítják a szabályoknak meg nem felelő bejegyzéseket.</string>
     <string name="new_community_rules_kinds_section">Engedélyezett eseménytípusok</string>
     <string name="new_community_rules_kinds_hint">Koppintson egy típus engedélyezéséhez. Tartsa hosszan nyomva az eseményenkénti méretkorlát vagy a napi bejegyzéslimit beállításához.</string>
     <string name="new_community_rules_kind_short_text">Rövid szöveg (1)</string>
@@ -1124,6 +1126,12 @@
     <string name="max_hashtag_limit_explainer">Elrejti azokat a bejegyzéseket, amelyek több kulcsszót tartalmaznak ennél a korlátnál. A kikapcsoláshoz állítsa 0-ra</string>
     <string name="hide_community_rules_violations_title">Közösségi szabályokat sértő bejegyzések elrejtése</string>
     <string name="hide_community_rules_violations_explainer">Eltávolítja a bejegyzéseket a közösségi hírfolyamokból, ha a közösség közzétesz egy NIP-9B szabálydokumentumot, és egy esemény nem felel meg annak. Nincs hatása, ha a közösség nem rendelkezik strukturált szabályokkal.</string>
+    <string name="security_section_filtering_preferences">Beállítások szűrése</string>
+    <string name="security_section_blocked_content">Letiltott tartalom</string>
+    <string name="security_unlimited">∞</string>
+    <string name="security_blocked_users_empty">Ön még nem tiltott le egyetlen felhasználót sem.</string>
+    <string name="security_spamming_users_empty">Ebben a munkamenetben egyetlen fiókot sem jelölt meg kéretlen tartalomként.</string>
+    <string name="security_hidden_words_empty">Nincsenek rejtett szavak. Adjon hozzá egy szót alább, hogy elrejtse az azt tartalmazó bejegyzéseket.</string>
     <string name="new_reaction_symbol">Új reakció-szimbólum</string>
     <string name="no_reaction_type_setup_long_press_to_change">A felhasználó számára nincsenek előre kiválasztott reakciótípusok. Hosszan nyomja meg a szív gombot a módosításhoz</string>
     <string name="zapraiser">Zap-gyűjtés</string>
@@ -1301,6 +1309,7 @@
     <string name="spamming_users">Spamelők</string>
     <string name="muted_button">Némítva. Koppintson a némitás megszüntetéséhez</string>
     <string name="mute_button">Hang bekapcsolva. Koppintson a némításhoz</string>
+    <string name="action_unmute">Némítás megszüntetése</string>
     <string name="skip_back">Visszatekerés %d másodperccel</string>
     <string name="skip_forward">Előretekerés %d másodperccel</string>
     <string name="picture_in_picture">Kép a képben</string>
@@ -1424,6 +1433,9 @@
     <string name="no_blossom_apps_found_description">Nem található Blossom-alkalmazás. Telepítsen egy helyi Blossom-alkalmazást a fájl megtekintéséhez</string>
     <string name="hidden_words">Rejtett szavak</string>
     <string name="hide_new_word_label">Új szó vagy mondat elrejtése</string>
+    <string name="settings_muted_threads_title">Némított szálak</string>
+    <string name="settings_muted_threads_empty">Nincsenek némított szálak</string>
+    <string name="settings_muted_threads_unknown">Ismeretlen szál · %1$s</string>
     <string name="automatically_show_profile_picture">Profilkép</string>
     <string name="automatically_show_profile_picture_description">Profilképek megjelenítése</string>
     <string name="select_an_option">Válasszon egy lehetőséget</string>
@@ -1655,6 +1667,12 @@
     <string name="home_tabs_settings">Kezdőlap lapjai</string>
     <string name="home_tabs_settings_description">Válassza ki, mely lapok jelenjenek meg a kezdőlapon. Ha csak egy lap aktív, akkor a lapsáv rejtett.</string>
     <string name="home_tab_everything">Minden</string>
+    <string name="profile_ui_settings">Profil felhasználói felülete</string>
+    <string name="profile_ui_settings_description">Válassza ki, hogy mely szekciók és hírfolyamok jelenjenek meg a felhasználói profil képernyőin. Alapértelmezés szerint minden beállítás engedélyezve van.</string>
+    <string name="profile_ui_setting_badges">Profilkitűzők</string>
+    <string name="profile_ui_setting_app_recommendations">Ajánlott alkalmazások</string>
+    <string name="profile_ui_setting_zap_received_feed">Beérkezett zapek hírfolyama</string>
+    <string name="profile_ui_setting_followers_feed">Követők hírfolyama</string>
     <string name="reactions_settings">Reakciósor</string>
     <string name="reactions_settings_description">Állítsa be, hogy mely reakciógombok jelenjenek meg, azok sorrendjét, valamint a számlálók megjelenítését.</string>
     <string name="reactions_settings_enabled">Engedélyezve</string>
@@ -2502,6 +2520,9 @@
     <string name="ai_writing_setting_description">Az eszközön futó LLM-modell segítségével szövegjavításokkal és hangnemváltoztatásokkal kapcsolatos javaslatokat kaphat.</string>
     <string name="tracked_broadcasts_setting_title">Nyomon követhető közvetítések</string>
     <string name="tracked_broadcasts_setting_description">Nyomon követhető közvetítők használata az események küldesékor. Közvetítés közben megjeleníti a jelenlegi előrehaladást és az egyes átjátszók állapotát.</string>
+    <string name="compose_settings">Üzenetírási beállítások</string>
+    <string name="auto_create_drafts_setting_title">Vázlatok automatikus létrehozása</string>
+    <string name="auto_create_drafts_setting_description">Automatikusan menti a vázlateseményt, amikor beírja a szöveget, vagy elküldetlen szöveggel hagyja a levelezőlistát, és elküldi a privát kimenő üzenetek mappájába.</string>
     <string name="ai_writing_use_this">Ennek használata</string>
     <string name="ai_writing_dismiss">Eltüntetés</string>
     <string name="ai_tone_correct">Javítás</string>
