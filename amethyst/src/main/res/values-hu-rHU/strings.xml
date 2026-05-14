@@ -545,7 +545,7 @@
     <string name="badge_award_received_title">Ön kapott egy kitűzőt</string>
     <string name="profile_badges_title">Profilkitűzők</string>
     <string name="profile_badges_header">Kitűzők · %1$d </string>
-    <string name="profile_badges_description">Válassza ki, hogy a megszerzett jelvények közül melyek jelenjenek meg a profilban.</string>
+    <string name="profile_badges_description">Válassza ki, hogy a megszerzett kitűzők közül melyek jelenjenek meg a profilban.</string>
     <string name="profile_badges_empty">Ön még nem kapott kitűzőt.</string>
     <string name="pictures">Képek</string>
     <string name="shorts">Rövidek</string>
@@ -657,6 +657,8 @@
     <string name="nest_confirm_force_mute_body">Kérés %1$s kliense felé a mikrofon némítására. Néhány kliens figyelmen kívül hagyhatja ezt a parancsot.</string>
     <string name="nest_confirm_force_mute_confirm">Kényszerített némítás</string>
     <string name="nest_confirm_cancel">Mégse</string>
+    <string name="nest_toast_host_action_failed_title">Sikertelen művelet</string>
+    <string name="nest_toast_host_action_failed_template_null">A műveletet nem sikerült előkészíteni.</string>
     <string name="nest_share_action">Szoba megosztása</string>
     <string name="nest_minimize">Minimalizálás</string>
     <string name="nest_minimize_description">Minimalizálás a további hallgatáshoz</string>
@@ -1756,7 +1758,7 @@
     <string name="outbox_relays_title">Átjátszók a kimenő üzenetkhez</string>
     <string name="outbox_relays_not_found">Állítsa be a nyilvános kimenő üzenetek átjátszóit a bejegyzéshez</string>
     <string name="outbox_relays_not_found_description">A tartalom fogadására kifejezetten kialakított átjátszólista létrehozása elengedhetetlen a Nostr élményhez, és ez az egyetlen módja annak, hogy a követői megtalálják Önt. </string>
-    <string name="outbox_relays_not_found_editing">Adjon meg 1–3 átjátszót, amelyek fogadják az Ön bejegyzéseit. Győződjön meg arról, hogy nem kérnek fizetést, ha Ön nem fizet a használatukért</string>
+    <string name="outbox_relays_not_found_editing">Adjon meg 1-3 átjátszót, amelyek fogadják az Ön bejegyzéseit. Győződjön meg arról, hogy nem kérnek fizetést, ha Ön nem fizet a használatukért</string>
     <string name="outbox_relays_not_found_examples">Jó választási lehetőségek:\n - nos.lol\n - nostr.mom\n - nostr.bitcoiner.social</string>
     <string name="inbox_relays_title">Átjátszók a bejövő üzenetkhez</string>
     <string name="inbox_relays_not_found">Állítsa be a nyilvános bejövő üzenetek átjátszóit az értesítések fogadásához</string>
