@@ -67,6 +67,9 @@ import com.vitorpamplona.amethyst.commons.viewmodels.BroadcastUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.ConnectionUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
+import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.reactions.RoomReactionPopup
 import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
@@ -96,7 +99,8 @@ internal fun NestActionBar(
     isOnStage: Boolean,
     handRaised: Boolean,
     onHandRaisedChange: (Boolean) -> Unit,
-    onShowReactionPicker: () -> Unit,
+    roomNote: AddressableNote,
+    accountViewModel: AccountViewModel,
     onLeave: () -> Unit,
 ) {
     Surface(
@@ -121,7 +125,8 @@ internal fun NestActionBar(
                     isConnected = ui.connection is ConnectionUiState.Connected,
                     handRaised = handRaised,
                     onHandRaisedChange = onHandRaisedChange,
-                    onShowReactionPicker = onShowReactionPicker,
+                    roomNote = roomNote,
+                    accountViewModel = accountViewModel,
                     onLeave = onLeave,
                 )
             }
@@ -352,7 +357,8 @@ private fun EndCluster(
     isConnected: Boolean,
     handRaised: Boolean,
     onHandRaisedChange: (Boolean) -> Unit,
-    onShowReactionPicker: () -> Unit,
+    roomNote: AddressableNote,
+    accountViewModel: AccountViewModel,
     onLeave: () -> Unit,
 ) {
     Row(
@@ -365,12 +371,31 @@ private fun EndCluster(
             HandRaiseToggle(handRaised = handRaised, onToggle = onHandRaisedChange)
         }
         // React works in any state — even disconnected users can react
-        // via the room note.
-        FilledTonalIconButton(onClick = onShowReactionPicker) {
+        // via the room note. Reuses the same ReactionChoicePopup
+        // NoteCompose's heart button drives (NIP-30 custom-emoji
+        // support, user-configured reaction set). Earlier hand-rolled
+        // bottom-sheet picker is gone — it only emitted a fixed set
+        // of six unicode emojis with no path to custom packs.
+        var wantsToReact by rememberSaveable { mutableStateOf(false) }
+        FilledTonalIconButton(onClick = { wantsToReact = true }) {
             Icon(
                 symbol = MaterialSymbols.EmojiEmotions,
                 contentDescription = stringRes(R.string.nest_reactions_button),
             )
+            if (wantsToReact) {
+                RoomReactionPopup(
+                    roomNote = roomNote,
+                    iconSize = 24.dp,
+                    accountViewModel = accountViewModel,
+                    onDismiss = { wantsToReact = false },
+                    // No `Route.UpdateReactionType` from inside the
+                    // standalone NestActivity (no NavController). The
+                    // "change reactions" button still dismisses the
+                    // popup; users edit their reaction set from the
+                    // main app's settings.
+                    onChangeAmount = { wantsToReact = false },
+                )
+            }
         }
         Spacer(Modifier.width(4.dp))
         LeaveRoomButton(onClick = onLeave)

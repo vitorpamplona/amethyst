@@ -290,6 +290,19 @@ private fun NestActivityBody(
         }
     }
 
+    // Re-sync the optimistic local intent flag with the role-derived
+    // on-stage state whenever the user becomes on stage. Symmetric to
+    // the auto-stop above: when `isOnStageMe` flips to true (initial
+    // promotion or a re-promotion after a previous voluntary leave),
+    // also flip `ui.onStageNow` back to true so [StageControlsBar]'s
+    // `!ui.onStageNow` gate doesn't hide the talk button when their
+    // role says they CAN talk. Without this, a promoted speaker
+    // appeared on the stage grid but saw no speaker controls
+    // — confirmed during testing on 2026-05-13.
+    LaunchedEffect(isOnStageMe) {
+        if (isOnStageMe) viewModel.setOnStage(true)
+    }
+
     // Single REQ per relay covering chat, presence, reactions, admin
     // commands. See NestRoomFilterAssembler for the filter shape.
     NestRoomFilterAssemblerSubscription(roomNote, accountViewModel)

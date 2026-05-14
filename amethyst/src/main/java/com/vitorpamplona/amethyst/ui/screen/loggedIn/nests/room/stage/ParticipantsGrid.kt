@@ -303,6 +303,7 @@ internal fun AudienceGrid(
     onLongPressParticipant: ((String) -> Unit)? = null,
     onTapParticipant: ((String) -> Unit)? = null,
     myPubkey: String? = null,
+    reactionsByPubkey: Map<String, List<RoomReaction>> = emptyMap(),
 ) {
     if (members.isEmpty()) {
         Box(
@@ -341,7 +342,7 @@ internal fun AudienceGrid(
                 audioLevel = 0f,
                 isConnecting = false,
                 showMicBadge = false,
-                reactions = emptyList(),
+                reactions = reactionsByPubkey[member.pubkey].orEmpty(),
                 accountViewModel = accountViewModel,
                 onLongPressParticipant = onLongPressParticipant,
                 onTapParticipant = onTapParticipant,
@@ -524,8 +525,36 @@ private fun MemberCell(
                 isConnecting = isConnecting,
                 showMicBadge = showMicBadge,
                 isSpeaking = isSpeaking,
-                reactions = reactions,
             )
+            // Reactions overlay sits as a SIBLING of AvatarAndBadges
+            // inside this fixed-size outer Box, NOT inside
+            // AvatarAndBadges itself. AvatarAndBadges' inner Box
+            // wraps content, so any change to the overlay's measured
+            // size (chip appears / animates / disappears) would shift
+            // the inner Box's centre and the badges aligned to its
+            // corners would drift with it. The outer Box has an
+            // explicit `.size(outerBoxSize)`, so adding the overlay
+            // here can't change layout dimensions.
+            //
+            // Anchor the chip's bottom-RIGHT to the avatar's
+            // bottom-right corner (small inward nudge from the outer
+            // Box edge so it clears the ring/glow padding). The chip
+            // extends LEFTWARD inside the cell as content widens
+            // (single emoji vs `×N` count). Earlier `BottomStart`
+            // experiment anchored the chip's left edge at the same
+            // corner — looked great for a fixed-width chip but bled
+            // straight into the next column once a real emoji was
+            // rendered, because the cell was only ~100 dp wide and
+            // the chip extended out 40+ dp to the right.
+            if (reactions.isNotEmpty()) {
+                SpeakerReactionOverlay(
+                    reactions = reactions,
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .offset(x = -ringPadding + 6.dp, y = -ringPadding + 6.dp),
+                )
+            }
         }
         UsernameDisplay(
             baseUser = user,
@@ -548,7 +577,6 @@ private fun AvatarAndBadges(
     isConnecting: Boolean,
     showMicBadge: Boolean,
     isSpeaking: Boolean,
-    reactions: List<RoomReaction>,
 ) {
     Box(contentAlignment = Alignment.Center) {
         ClickableUserPicture(
@@ -589,19 +617,6 @@ private fun AvatarAndBadges(
                 isSpeaking = isSpeaking,
                 isMuted = member.muted == true,
                 modifier = Modifier.align(Alignment.BottomCenter),
-            )
-        }
-        // Reactions float over the avatar's bottom-right corner so
-        // a 👏 burst no longer pushes the username down and reflows
-        // neighbouring cells. The mic badge sits at BottomCenter,
-        // so BottomEnd + a small outward offset keeps them clear.
-        if (reactions.isNotEmpty()) {
-            SpeakerReactionOverlay(
-                reactions = reactions,
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomEnd)
-                        .offset(x = 6.dp, y = 6.dp),
             )
         }
     }

@@ -70,7 +70,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.chat.NestChatPan
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.edit.EditNestSheet
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.edit.EditNestViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.participants.ParticipantHostActionsSheet
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.reactions.RoomReactionPickerSheet
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.stage.AudienceGrid
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.stage.HandRaiseQueueSection
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.stage.StageGrid
@@ -120,7 +119,6 @@ internal fun NestFullScreen(
     var showEditSheet by rememberSaveable { mutableStateOf(false) }
     var showHostMenu by rememberSaveable { mutableStateOf(false) }
     var showHostLeaveConfirm by rememberSaveable { mutableStateOf(false) }
-    var showReactionPicker by rememberSaveable { mutableStateOf(false) }
     var hostMenuTarget by rememberSaveable { mutableStateOf<String?>(null) }
     // Summary is collapsed by default; tapping the top-bar title
     // toggles it so the user can preview the room description without
@@ -268,7 +266,8 @@ internal fun NestFullScreen(
                 isOnStage = isOnStageMe,
                 handRaised = handRaised,
                 onHandRaisedChange = onHandRaisedChange,
-                onShowReactionPicker = { showReactionPicker = true },
+                roomNote = roomNote,
+                accountViewModel = accountViewModel,
                 onLeave = {
                     if (isHost) {
                         showHostLeaveConfirm = true
@@ -310,6 +309,7 @@ internal fun NestFullScreen(
                         onLongPressParticipant = onLongPressParticipant,
                         onTapParticipant = onLongPressParticipant,
                         myPubkey = myPubkey,
+                        reactionsByPubkey = reactionsByPubkey,
                         modifier =
                             Modifier
                                 .weight(1f)
@@ -346,13 +346,6 @@ internal fun NestFullScreen(
             nestViewModel = viewModel,
             onDismiss = { hostMenuTarget = null },
             catalog = speakerCatalogs[target],
-        )
-    }
-
-    if (showReactionPicker) {
-        RoomReactionPickerSheet(
-            onPick = { emoji -> accountViewModel.reactToOrDelete(roomNote, emoji) },
-            onDismiss = { showReactionPicker = false },
         )
     }
 
