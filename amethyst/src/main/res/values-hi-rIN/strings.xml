@@ -1100,8 +1100,6 @@
     <string name="warn_when_posts_have_reports_from_your_follows">चेतावनी दें जब पत्र सूचित किये गये हों आपके द्वारा अनुचरित व्यक्तियों से</string>
     <string name="filter_spam_from_strangers_title">कचरालेख छलनी</string>
     <string name="filter_spam_from_strangers_explainer">अज्ञात लोगों से पत्र छिपाएँ जो निरन्तर 5 अथवा अधिक बार यथावत समान थे</string>
-    <string name="disable_client_tag_title">मेरे घटनाओं में ग्राहक सूचक ना जोडें</string>
-    <string name="disable_client_tag_explainer">जब सक्षम अमेथिस्ट निप॰८९ ग्राहक सूचक नहीं जोडेगा आपके द्वारा प्रकाशित घटनाओं में।</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">सूचनाएँ प्राप्त होने पर चेतावनी दें</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">चेतावनी सन्देश दिखाता है जब प्रकाशित पत्र 5 अथवा अधिक बार सूचित हो आपके द्वारा अनुचरित लेखाओं से</string>
     <string name="report_warning_threshold_title">चेतावनी सीमा सूचना</string>

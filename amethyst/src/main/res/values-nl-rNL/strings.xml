@@ -1078,8 +1078,6 @@
     <string name="warn_when_posts_have_reports_from_your_follows">Waarschuwen bij rapportages van volgers</string>
     <string name="filter_spam_from_strangers_title">Spamfilter</string>
     <string name="filter_spam_from_strangers_explainer">Verbergt identieke berichten van onbekenden die 5 keer of vaker voorkomen</string>
-    <string name="disable_client_tag_title">Geen client-tag toevoegen aan mijn events</string>
-    <string name="disable_client_tag_explainer">Wanneer ingeschakeld voegt Amethyst geen NIP-89 client-tag toe aan events die je publiceert.</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Waarschuwen bij rapportages</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Toont waarschuwing wanneer een bericht 5 of meer rapportages van je volgers heeft</string>
     <string name="show_sensitive_content_title">Gevoelige inhoud tonen</string>

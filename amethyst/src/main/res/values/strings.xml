@@ -1232,8 +1232,8 @@
 
     <string name="filter_spam_from_strangers_title">Filter spam</string>
     <string name="filter_spam_from_strangers_explainer">Hides posts from strangers that were exactly the same for 5 or more times</string>
-    <string name="disable_client_tag_title">Don\'t add client tag to my events</string>
-    <string name="disable_client_tag_explainer">When enabled, Amethyst will not append a NIP-89 client tag to events you publish.</string>
+    <string name="add_client_tag_title">Add client tag to my events</string>
+    <string name="add_client_tag_explainer">When enabled, Amethyst appends a NIP-89 client tag to events you publish.</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Warn on reports</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Shows a warning message when posts or profiles have reports from your follows</string>
     <string name="report_warning_threshold_title">Report warning threshold</string>

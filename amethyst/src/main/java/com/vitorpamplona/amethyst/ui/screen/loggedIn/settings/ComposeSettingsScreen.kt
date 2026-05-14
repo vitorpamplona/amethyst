@@ -33,12 +33,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -57,7 +59,7 @@ fun ComposeSettingsScreen(
         },
     ) {
         Column(Modifier.padding(it)) {
-            ComposeSettingsContent(accountViewModel.settings.uiSettingsFlow)
+            ComposeSettingsContent(accountViewModel.settings.uiSettingsFlow, accountViewModel)
         }
     }
 }
@@ -66,12 +68,15 @@ fun ComposeSettingsScreen(
 @Composable
 fun ComposeSettingsScreenPreview() {
     ThemeComparisonRow {
-        ComposeSettingsContent(UiSettingsFlow())
+        ComposeSettingsContent(UiSettingsFlow(), mockAccountViewModel())
     }
 }
 
 @Composable
-fun ComposeSettingsContent(sharedPrefs: UiSettingsFlow) {
+fun ComposeSettingsContent(
+    sharedPrefs: UiSettingsFlow,
+    accountViewModel: AccountViewModel,
+) {
     Column(
         Modifier
             .fillMaxSize()
@@ -94,6 +99,24 @@ fun ComposeSettingsContent(sharedPrefs: UiSettingsFlow) {
             sharedPrefs.useTrackedBroadcasts,
             R.string.tracked_broadcasts_setting_title,
             R.string.tracked_broadcasts_setting_description,
+        )
+        AddClientTagRow(accountViewModel)
+    }
+}
+
+@Composable
+private fun AddClientTagRow(accountViewModel: AccountViewModel) {
+    val addClientTag by accountViewModel.account.settings.syncedSettings.security
+        .addClientTag
+        .collectAsStateWithLifecycle()
+
+    SettingsRow(
+        R.string.add_client_tag_title,
+        R.string.add_client_tag_explainer,
+    ) {
+        Switch(
+            checked = addClientTag,
+            onCheckedChange = accountViewModel::updateAddClientTag,
         )
     }
 }

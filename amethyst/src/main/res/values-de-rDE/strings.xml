@@ -1115,8 +1115,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="warn_when_posts_have_reports_from_your_follows">Warnung bei Meldungen von deinen Abonnements</string>
     <string name="filter_spam_from_strangers_title">Spam filtern</string>
     <string name="filter_spam_from_strangers_explainer">Versteckt Beiträge von Fremden, die 5 oder mehr Male genau die gleichen waren</string>
-    <string name="disable_client_tag_title">Kein Client-Tag zu meinen Ereignissen hinzufügen</string>
-    <string name="disable_client_tag_explainer">Wenn aktiviert, fügt Amethyst deinen veröffentlichten Ereignissen kein NIP-89 Client-Tag hinzu.</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Bei Berichten warnen</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Zeigt eine Warnmeldung an, wenn die Beiträge 5 oder mehr Berichte von den folgenden Beiträgen enthalten</string>
     <string name="report_warning_threshold_title">Warnschwelle für Meldungen</string>

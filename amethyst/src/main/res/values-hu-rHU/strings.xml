@@ -1114,8 +1114,6 @@
     <string name="warn_when_posts_have_reports_from_your_follows">Figyelmeztessen amikor a bejegyzések jelentve vannak azok által akiket követek</string>
     <string name="filter_spam_from_strangers_title">Kéretlen tartalomszűrő</string>
     <string name="filter_spam_from_strangers_explainer">Elrejti az ismeretlen felhasználók hozzászólásait, amelyek pontosan ugyanazok voltak 5 vagy több alkalommal</string>
-    <string name="disable_client_tag_title">Ne legyenek megjelölve az eseményeim klienscímkével</string>
-    <string name="disable_client_tag_explainer">Ha engedélyezve van, akkor az Amethyst nem fűz NIP-89 klienscímkét az Ön által közzétett eseményekhez.</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Figyelmeztetés a jelentésekre</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Figyelmeztető üzenetet jelenít meg, ha az Ön követői bejelentést tettek bejegyzésekről vagy profilokról</string>
     <string name="report_warning_threshold_title">Jelentési figyelmeztetés küszöbértéke</string>
