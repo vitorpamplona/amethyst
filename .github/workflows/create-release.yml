@@ -88,13 +88,13 @@ jobs:
         if: matrix.family == 'linux-portable'
         run: |
           set -euo pipefail
-          curl -fsSL --retry 3 "$LINUXDEPLOY_URL" -o packaging/appimage/linuxdeploy-x86_64.AppImage
-          actual=$(sha256sum packaging/appimage/linuxdeploy-x86_64.AppImage | awk '{print $1}')
+          curl -fsSL --retry 3 "$LINUXDEPLOY_URL" -o desktopApp/packaging/appimage/linuxdeploy-x86_64.AppImage
+          actual=$(sha256sum desktopApp/packaging/appimage/linuxdeploy-x86_64.AppImage | awk '{print $1}')
           if [[ "$actual" != "$LINUXDEPLOY_SHA256" ]]; then
             echo "::error::linuxdeploy SHA256 mismatch. Expected $LINUXDEPLOY_SHA256, got $actual"
             exit 1
           fi
-          chmod +x packaging/appimage/linuxdeploy-x86_64.AppImage
+          chmod +x desktopApp/packaging/appimage/linuxdeploy-x86_64.AppImage
 
       - name: Build desktop artifacts
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0
