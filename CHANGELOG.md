@@ -90,13 +90,37 @@ What's New?
   - Structured rules editor in the new-community flow.
   - Post validation against community rules in the composer.
   - Opt-in moderation feed filter.
-- PDF previews in feeds
+- PDF reader
+  - Inline PDF previews in feeds.
+  - Double-tap to toggle zoom.
+  - Zoom-aware hi-res re-render for crisp pinch-zoom.
 - Multi-wallet NWC
   - Multiple wallets with a balance view.
   - Default picker, rename and reorder.
   - Dedicated Add Wallet screen with Connect Wallet / paste / QR scan.
 - Favorite Algo Feeds filter in the Top Nav Bar
 - Custom Post creation on Polls / Pictures / Shorts / Longs
+- Custom Emoji Packs (NIP-30)
+  - Browse Emoji Sets screen for discovering kind 30030 packs.
+  - My Emoji List screen for managing your kind 10030 selection.
+  - Modernized pack metadata screen with hero image and inline emoji/cover upload.
+  - Public/private toggle when adding emoji.
+  - Decrypted private emojis surfaced end-to-end.
+- Dedicated drawer screens for more content types.
+  - Standalone Articles, Products, Public Chats, Communities (NIP-72), Live Streams and Follow Packs screens.
+  - Products screen defaults to "Around Me".
+- Richer live stream chat.
+  - Inline clips (kind 1313) and raids (kind 1312).
+  - Inline zap receipts.
+  - NIP-75 zap goal pinned at the top.
+  - Top zappers leaderboard.
+  - Stream clips surfaced in the profile gallery tab.
+- Content warnings on media.
+  - Grid-level content warnings with distinct reasons.
+  - Warning overlaid on the blurhash at media size.
+- YouTube-style video quality picker.
+  - Feed and PiP default to the lowest HLS resolution.
+  - Fullscreen defaults to auto.
 - HLS Video uploads (NIP-71)
   - Pick which renditions to upload.
   - See which file is currently uploading.
@@ -156,6 +180,11 @@ What's New?
 - Custom feeds system
   - Create, pin and inline-switch between custom feeds.
   - Author search in the feed builder (relay NIP-50 + avatars).
+- App Drawer with a categorized screen launcher
+- Workspace management
+  - Save, switch and restore workspaces.
+  - Tabs, an editor and unified search.
+  - Pin/unpin syncs to the active workspace.
 - Namecoin name resolution — Namecoin lookups now resolve and surface in search
 - Native theming for macOS, GNOME, KDE and Windows (matches platform look and accent colors)
 - Relay power tools
@@ -318,7 +347,8 @@ What's New?
 - Configurable video player buttons in Account Settings (drag restricted to the drag handle)
 - Drag-and-drop reordering for some relay list settings
 - 3-dot options menu on video / picture / file feed cards
-- Zoomable media grows from its source bounds
+- Zoomable media grows from its source bounds, and loads the full-resolution source in the image dialog
+- Favorite relays can now be added to the Global Feed
 - Configurable max-hashtag spam filter
 - Account setting to forward kind 0 events to a local relay
 - Relay Sync UI replaced with visual indicators
