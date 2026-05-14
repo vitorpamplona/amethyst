@@ -130,6 +130,13 @@ data class ScenarioResult(
     val scenario: Scenario,
     val sendOutcomes: BooleanArray,
     val sendDurationsMicros: LongArray,
+    /**
+     * Wall-clock time each frame was handed to [MoqLitePublisherHandle.send],
+     * relative to [collectStartedAtMs] (so it's on the same clock as
+     * [FrameArrival.wallMs]). Indexed by send order. `-1` for frames
+     * that were never sent (e.g. the run aborted early).
+     */
+    val sendWallMsByIndex: LongArray,
     val endGroupErrors: Array<String?>,
     val arrivalsPerSubscriber: List<List<FrameArrival>>,
     val pumpStartedAtMs: Long,
@@ -138,6 +145,36 @@ data class ScenarioResult(
 ) {
     val sendTrueCount: Int get() = sendOutcomes.count { it }
     val firstFalseSendIndex: Int get() = sendOutcomes.indexOfFirst { !it }
+
+    /**
+     * Sorted end-to-end send→arrival latencies (ms) for every frame
+     * that reached [subscriberIndex]. This is the number that
+     * quantifies the "audio feels delayed" symptom: with
+     * `framesPerGroup > 1` the first frame of a group is sent
+     * immediately but the relay only forwards it once the group's uni
+     * stream is closed at the group boundary, so that frame's latency
+     * carries the whole batching window (≈ `framesPerGroup * cadenceMs`).
+     */
+    fun e2eLatenciesMsFor(subscriberIndex: Int): LongArray =
+        arrivalIndexPerSubscriber[subscriberIndex]
+            .values
+            .mapNotNull { a ->
+                val sentAt = sendWallMsByIndex.getOrElse(a.objectId.toInt()) { -1L }
+                if (sentAt < 0) null else a.wallMs - sentAt
+            }.sorted()
+            .toLongArray()
+
+    /**
+     * Latency (ms) of the first frame to arrive at [subscriberIndex] —
+     * the "time to first audio" a listener perceives when the speaker
+     * starts talking. `-1` if nothing arrived or its send time is
+     * unknown.
+     */
+    fun timeToFirstFrameMsFor(subscriberIndex: Int): Long {
+        val first = arrivalsPerSubscriber[subscriberIndex].minByOrNull { it.wallMs } ?: return -1L
+        val sentAt = sendWallMsByIndex.getOrElse(first.objectId.toInt()) { -1L }
+        return if (sentAt < 0) -1L else first.wallMs - sentAt
+    }
 
     /**
      * Per subscriber: `{objectId -> arrival}`. We index by objectId
@@ -232,6 +269,10 @@ object SendTraceScenario {
 
         val sendOutcomes = BooleanArray(scenario.frameCount)
         val sendDurationsMicros = LongArray(scenario.frameCount)
+        // Wall-clock send time per frame, on the same clock as
+        // FrameArrival.wallMs, so reportAndAssert can derive the true
+        // end-to-end send→arrival latency the listener perceives.
+        val sendWallMsByIndex = LongArray(scenario.frameCount) { -1L }
         val endGroupErrors = arrayOfNulls<String>(scenario.frameCount)
         // Pre-sized synchronized ArrayList per subscriber.
         // CopyOnWriteArrayList (the previous choice) is O(N) per add —
@@ -299,6 +340,7 @@ object SendTraceScenario {
             }
 
             val payload = payloadPrefix + byteArrayOf(i.toByte())
+            sendWallMsByIndex[i] = System.currentTimeMillis() - collectStart
             val sendStartedNs = System.nanoTime()
             sendOutcomes[i] = publisher.send(payload)
             val sendElapsedNs = System.nanoTime() - sendStartedNs
@@ -362,6 +404,7 @@ object SendTraceScenario {
             scenario = scenario,
             sendOutcomes = sendOutcomes,
             sendDurationsMicros = sendDurationsMicros,
+            sendWallMsByIndex = sendWallMsByIndex,
             endGroupErrors = endGroupErrors,
             // Snapshot under lock — synchronizedList iteration must
             // be guarded explicitly per the JDK contract.
@@ -493,6 +536,24 @@ object SendTraceScenario {
                     "firstSentButLost=$firstSentButLost " +
                     "missing=${runs(missing)}",
             )
+
+            // End-to-end send→arrival latency. This is the line that
+            // answers "does audio feel delayed?" — with framesPerGroup
+            // > 1 the per-frame latency floor rises by roughly the
+            // batching window (framesPerGroup * cadenceMs) because the
+            // relay only forwards a group once its uni stream closes.
+            val latencies = result.e2eLatenciesMsFor(subscriberIndex)
+            if (latencies.isNotEmpty()) {
+                val p50 = latencies[latencies.size / 2]
+                val p99 = latencies[(latencies.size * 99 / 100).coerceAtMost(latencies.size - 1)]
+                InteropDebug.checkpoint(
+                    scope,
+                    "sub[$subscriberIndex] e2e latency (send→arrival): " +
+                        "timeToFirstFrame=${result.timeToFirstFrameMsFor(subscriberIndex)}ms " +
+                        "p50=${p50}ms p99=${p99}ms min=${latencies.first()}ms max=${latencies.last()}ms " +
+                        "(framesPerGroup=${s.framesPerGroup}, cadence=${s.cadenceMs}ms)",
+                )
+            }
         }
 
         // Average / min / max / p99 send latency, plus count of sends

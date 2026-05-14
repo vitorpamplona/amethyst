@@ -301,10 +301,26 @@ class NostrNestsSustainedSendOutcomesInteropTest {
         )
 
     @Test
+    fun harness_sweep_frames_per_group_10() =
+        runHarnessScenarioOrSkip(
+            "h-fpg10",
+            Scenario(frameCount = 100, cadenceMs = 20L, framesPerGroup = 10),
+        )
+
+    @Test
     fun harness_sweep_frames_per_group_20() =
         runHarnessScenarioOrSkip(
             "h-fpg20",
             Scenario(frameCount = 100, cadenceMs = 20L, framesPerGroup = 20),
+        )
+
+    // Production default — see the matching note in
+    // NostrnestsProdAudioTransmissionTest.sweep_frames_per_group_50.
+    @Test
+    fun harness_sweep_frames_per_group_50_production_default() =
+        runHarnessScenarioOrSkip(
+            "h-fpg50",
+            Scenario(frameCount = 100, cadenceMs = 20L, framesPerGroup = 50),
         )
 
     @Test
