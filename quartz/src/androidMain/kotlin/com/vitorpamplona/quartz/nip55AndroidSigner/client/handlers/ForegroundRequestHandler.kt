@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.reques
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.requests.Nip04EncryptRequest
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.requests.Nip44DecryptRequest
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.requests.Nip44EncryptRequest
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.requests.SignPsbtRequest
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.requests.SignRequest
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses.DecryptZapResponse
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses.DeriveKeyResponse
@@ -36,6 +37,7 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.respon
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses.Nip04EncryptResponse
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses.Nip44DecryptResponse
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses.Nip44EncryptResponse
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses.SignPsbtResponse
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses.SignResponse
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 
@@ -94,5 +96,11 @@ class ForegroundRequestHandler(
         launcher.launchWaitAndParse(
             requestIntentBuilder = { DeriveKeyRequest.assemble(nonce, loggedInUser, packageName) },
             parser = DeriveKeyResponse::parse,
+        )
+
+    suspend fun signPsbt(psbtHex: String) =
+        launcher.launchWaitAndParse(
+            requestIntentBuilder = { SignPsbtRequest.assemble(psbtHex, loggedInUser, packageName) },
+            parser = SignPsbtResponse::parse,
         )
 }

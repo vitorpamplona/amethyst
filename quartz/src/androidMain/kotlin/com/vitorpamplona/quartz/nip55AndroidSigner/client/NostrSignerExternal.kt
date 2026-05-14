@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.DecryptionResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.DerivationResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.EncryptionResult
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignPsbtResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.ZapEventDecryptionResult
@@ -175,16 +176,23 @@ class NostrSignerExternal(
     }
 
     /**
-     * NIP-BC `sign_psbt` over NIP-55. The Android external-signer Intent
-     * contract for PSBT signing is not implemented yet (Phase B); Amber and
-     * other signer apps must also ship support before this can work. Until
-     * then, callers should fall back to other signer kinds or surface an
-     * "update your signer" message.
+     * NIP-BC `sign_psbt` over NIP-55. Sends the PSBT (lowercase hex) to the
+     * external signer app, which signs each input whose `tapInternalKey`
+     * matches the user's pubkey and returns the updated (not finalized) PSBT.
+     *
+     * Signer apps that predate `sign_psbt` support reply with no `result`,
+     * which surfaces here as [SignerExceptions.CouldNotPerformException] —
+     * callers should treat that as "update your signer".
      */
-    override suspend fun signPsbt(psbtHex: String): String =
-        throw SignerExceptions.UnsupportedMethodException(
-            "This external signer does not support sign_psbt yet",
-        )
+    override suspend fun signPsbt(psbtHex: String): String {
+        val result = backgroundQuery.signPsbt(psbtHex) ?: foregroundQuery.signPsbt(psbtHex)
+
+        if (result is SignerResult.RequestAddressed.Successful<SignPsbtResult>) {
+            return result.result.signedPsbtHex
+        }
+
+        throw convertExceptions("Could not sign PSBT", result)
+    }
 
     // always ready
     override fun hasForegroundSupport() = hasForegroundActivity()

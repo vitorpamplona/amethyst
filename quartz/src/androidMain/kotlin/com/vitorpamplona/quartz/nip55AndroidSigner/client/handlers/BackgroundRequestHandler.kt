@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.DecryptionResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.DerivationResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.EncryptionResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.PubKeyResult
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignPsbtResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.ZapEventDecryptionResult
@@ -37,6 +38,7 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries.Nip04D
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries.Nip04EncryptQuery
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries.Nip44DecryptQuery
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries.Nip44EncryptQuery
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries.SignPsbtQuery
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.background.queries.SignQuery
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 
@@ -53,6 +55,7 @@ class BackgroundRequestHandler(
     val nip44Decrypt = Nip44DecryptQuery(loggedInUser, packageName, contentResolver)
     val decryptZap = DecryptZapQuery(loggedInUser, packageName, contentResolver)
     val deriveKey = DeriveKeyQuery(loggedInUser, packageName, contentResolver)
+    val signPsbt = SignPsbtQuery(loggedInUser, packageName, contentResolver)
 
     fun login() = login.query() as? SignerResult.RequestAddressed<PubKeyResult>
 
@@ -81,4 +84,6 @@ class BackgroundRequestHandler(
     fun decryptZapEvent(event: LnZapRequestEvent) = decryptZap.query(event) as? SignerResult.RequestAddressed<ZapEventDecryptionResult>
 
     fun deriveKey(nonce: HexKey) = deriveKey.query(nonce) as? SignerResult.RequestAddressed<DerivationResult>
+
+    fun signPsbt(psbtHex: String) = signPsbt.query(psbtHex) as? SignerResult.RequestAddressed<SignPsbtResult>
 }

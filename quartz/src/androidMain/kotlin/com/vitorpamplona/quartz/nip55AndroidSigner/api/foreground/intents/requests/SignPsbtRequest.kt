@@ -18,35 +18,31 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip55AndroidSigner.api
+package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.requests
 
-enum class CommandType(
-    val code: String,
-) {
-    SIGN_EVENT("sign_event"),
-    NIP04_ENCRYPT("nip04_encrypt"),
-    NIP04_DECRYPT("nip04_decrypt"),
-    NIP44_ENCRYPT("nip44_encrypt"),
-    NIP44_DECRYPT("nip44_decrypt"),
-    GET_PUBLIC_KEY("get_public_key"),
-    DECRYPT_ZAP_EVENT("decrypt_zap_event"),
-    DERIVE_KEY("derive_key"),
-    SIGN_PSBT("sign_psbt"),
-    ;
+import android.content.Intent
+import androidx.core.net.toUri
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
 
+/**
+ * NIP-BC `sign_psbt` foreground Intent request.
+ *
+ * Carries the PSBT (lowercase hex) as the `nostrsigner:` URI data so the
+ * signer app can display the inputs/outputs to the user for confirmation.
+ */
+class SignPsbtRequest {
     companion object {
-        fun parse(code: String): CommandType? =
-            when (code) {
-                SIGN_EVENT.code -> SIGN_EVENT
-                NIP04_ENCRYPT.code -> NIP04_ENCRYPT
-                NIP04_DECRYPT.code -> NIP04_DECRYPT
-                NIP44_ENCRYPT.code -> NIP44_ENCRYPT
-                NIP44_DECRYPT.code -> NIP44_DECRYPT
-                GET_PUBLIC_KEY.code -> GET_PUBLIC_KEY
-                DECRYPT_ZAP_EVENT.code -> DECRYPT_ZAP_EVENT
-                DERIVE_KEY.code -> DERIVE_KEY
-                SIGN_PSBT.code -> SIGN_PSBT
-                else -> null
-            }
+        fun assemble(
+            psbtHex: String,
+            loggedInUser: HexKey,
+            packageName: String,
+        ): Intent {
+            val intent = Intent(Intent.ACTION_VIEW, "nostrsigner:$psbtHex".toUri())
+            intent.`package` = packageName
+            intent.putExtra("type", CommandType.SIGN_PSBT.code)
+            intent.putExtra("current_user", loggedInUser)
+            return intent
+        }
     }
 }

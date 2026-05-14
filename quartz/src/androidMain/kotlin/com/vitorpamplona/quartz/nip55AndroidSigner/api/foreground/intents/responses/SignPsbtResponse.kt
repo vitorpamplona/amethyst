@@ -18,35 +18,33 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip55AndroidSigner.api
+package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.responses
 
-enum class CommandType(
-    val code: String,
-) {
-    SIGN_EVENT("sign_event"),
-    NIP04_ENCRYPT("nip04_encrypt"),
-    NIP04_DECRYPT("nip04_decrypt"),
-    NIP44_ENCRYPT("nip44_encrypt"),
-    NIP44_DECRYPT("nip44_decrypt"),
-    GET_PUBLIC_KEY("get_public_key"),
-    DECRYPT_ZAP_EVENT("decrypt_zap_event"),
-    DERIVE_KEY("derive_key"),
-    SIGN_PSBT("sign_psbt"),
-    ;
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignPsbtResult
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
+import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.results.IntentResult
 
+/**
+ * Parses the external signer's `sign_psbt` Intent reply. The `result` field
+ * carries the updated (signed, not finalized) PSBT as lowercase hex.
+ */
+class SignPsbtResponse {
     companion object {
-        fun parse(code: String): CommandType? =
-            when (code) {
-                SIGN_EVENT.code -> SIGN_EVENT
-                NIP04_ENCRYPT.code -> NIP04_ENCRYPT
-                NIP04_DECRYPT.code -> NIP04_DECRYPT
-                NIP44_ENCRYPT.code -> NIP44_ENCRYPT
-                NIP44_DECRYPT.code -> NIP44_DECRYPT
-                GET_PUBLIC_KEY.code -> GET_PUBLIC_KEY
-                DECRYPT_ZAP_EVENT.code -> DECRYPT_ZAP_EVENT
-                DERIVE_KEY.code -> DERIVE_KEY
-                SIGN_PSBT.code -> SIGN_PSBT
-                else -> null
+        fun assemble(signedPsbtHex: String): IntentResult =
+            IntentResult(
+                result = signedPsbtHex,
+            )
+
+        fun parse(intent: IntentResult): SignerResult.RequestAddressed<SignPsbtResult> {
+            if (intent.rejected == true) {
+                return SignerResult.RequestAddressed.ManuallyRejected()
             }
+            val signedPsbtHex = intent.result
+            return if (!signedPsbtHex.isNullOrBlank()) {
+                SignerResult.RequestAddressed.Successful(SignPsbtResult(signedPsbtHex))
+            } else {
+                SignerResult.RequestAddressed.ReceivedButCouldNotPerform()
+            }
+        }
     }
 }

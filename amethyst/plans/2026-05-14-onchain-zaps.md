@@ -150,7 +150,7 @@ Lightning fast path. Two minimal hooks:
 | **C**   | Receive + display: `OnchainSection` in `WalletScreen` (address + live balance), Esplora sync, `LocalCache.consume(OnchainZapEvent)`, `updateZapTotal` fold-in, kind-list edits in all 7 in-scope filter files | **Shipped** |
 | **A.2** | Quartz foundation (send side): BIP-174 PSBT codec, BIP-341 sighash, `OnchainZapBuilder`, `signPsbt` on the `NostrSigner` hierarchy. All crypto validated against BIP-341 wallet test vectors (31 tests). | **Shipped** |
 | **D**   | Send flow: `OnchainZapSender` orchestrator, `Account.sendOnchainZap`, `OnchainZapSendDialog`, "Send" button on the wallet `OnchainSection`. | **Shipped** |
-| **B**   | NIP-55 `sign_psbt` intent contract + `NostrSignerExternal.signPsbt`. Broken until Amber ships matching support — surface "update your signer" in the UI. | Pending |
+| **B**   | NIP-55 `sign_psbt` Intent + ContentResolver contract, wired through `NostrSignerExternal.signPsbt`. Works once the external signer app (Amber etc.) ships `sign_psbt` support — older signers reply with no `result`, surfaced as a send failure. | **Shipped** |
 
 ### Phase A.2 — shipped
 
@@ -179,15 +179,27 @@ Lightning fast path. Two minimal hooks:
   estimates, comment; runs the send and shows progress + result.
 - `OnchainSection`: "Send" button on the wallet-screen Bitcoin card.
 
+### Phase B — shipped
+
+- `CommandType.SIGN_PSBT` (`sign_psbt`) — also usable in NIP-55 `perms` lists
+  via `Permission`, which wraps `CommandType` directly.
+- `SignPsbtResult` result type; `SignPsbtQuery` (background ContentResolver),
+  `SignPsbtRequest` / `SignPsbtResponse` (foreground Intent), mirroring the
+  `derive_key` string-in/string-out shape — the PSBT hex rides the
+  `nostrsigner:` URI, the signed PSBT comes back in `result`.
+- `BackgroundRequestHandler.signPsbt` / `ForegroundRequestHandler.signPsbt`;
+  `NostrSignerExternal.signPsbt` now does the real background-then-foreground
+  query instead of throwing. External signers that predate `sign_psbt` reply
+  with no `result` → `CouldNotPerformException`, surfaced by the send dialog.
+
 ### What's still pending
 
-1. **Phase B — NIP-55 `sign_psbt` Intent.** The Android external-signer Intent
-   contract for PSBT signing, plus `NostrSignerExternal.signPsbt`. Blocked on
-   Amber shipping support; until then external-signer accounts hit
-   `UnsupportedMethodException` (the send dialog surfaces it as a failure).
-2. **Note-zap-menu entry point.** `OnchainZapSendDialog` already accepts
+1. **Note-zap-menu entry point.** `OnchainZapSendDialog` already accepts
    `recipientPubKey` + `zappedEvent`; wiring an "Onchain" option into the
    existing `ZapAmountChoicePopup` is the remaining UI hook for event zaps.
+2. **NIP-46 `sign_psbt`.** `NostrSignerRemote.signPsbt` still throws
+   `UnsupportedMethodException` — the bunker-side command is not standardized
+   yet.
 
 ## Risks / open questions
 

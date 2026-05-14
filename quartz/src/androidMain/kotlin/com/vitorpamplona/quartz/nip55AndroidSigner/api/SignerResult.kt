@@ -89,3 +89,7 @@ data class ZapEventDecryptionResult(
 data class DerivationResult(
     val newPrivKey: HexKey,
 ) : IResult
+
+data class SignPsbtResult(
+    val signedPsbtHex: String,
+) : IResult
