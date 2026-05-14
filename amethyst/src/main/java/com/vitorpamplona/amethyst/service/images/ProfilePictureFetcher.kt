@@ -30,8 +30,8 @@ import coil3.fetch.Fetcher
 import coil3.fetch.ImageFetchResult
 import coil3.key.Keyer
 import coil3.network.CacheStrategy
-import coil3.network.ConcurrentRequestStrategy
 import coil3.network.ConnectivityChecker
+import coil3.network.DeDupeConcurrentRequestStrategy
 import coil3.network.NetworkFetcher
 import coil3.network.okhttp.asNetworkClient
 import coil3.request.Options
@@ -113,7 +113,7 @@ class ProfilePictureFetcher(
                     diskCache = diskCacheLazy,
                     cacheStrategy = lazy { CacheStrategy.DEFAULT },
                     connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
-                    concurrentRequestStrategy = lazy { ConcurrentRequestStrategy.UNCOORDINATED },
+                    concurrentRequestStrategy = lazy { DeDupeConcurrentRequestStrategy() },
                 )
 
             return ProfilePictureFetcher(
