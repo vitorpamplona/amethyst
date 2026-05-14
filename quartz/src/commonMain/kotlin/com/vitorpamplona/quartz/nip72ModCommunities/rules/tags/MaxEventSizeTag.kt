@@ -24,7 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.has
 import com.vitorpamplona.quartz.utils.ensure
 
 /**
- * NIP-9A `max_event_size` tag: hard cap on the JSON-encoded event byte size,
+ * NIP-9B `max_event_size` tag: hard cap on the JSON-encoded event byte size,
  * applied in addition to any per-kind size limit from `KindRuleTag`.
  *
  * Form: `["max_event_size", "<bytes>"]`

@@ -472,7 +472,7 @@
     <string name="new_community_relay_marker_approvals">Goedkeuringen</string>
     <string name="new_community_empty">Geen communities gevonden die aan dit filter voldoen.</string>
     <string name="new_community_rules_section">Verifieerbare regels (optioneel)</string>
-    <string name="new_community_rules_hint">Publiceert een machine-leesbaar regelsdocument (NIP-9A) naast de community. Clients die dit ondersteunen blokkeren berichten die niet voldoen voordat ze worden verzonden.</string>
+    <string name="new_community_rules_hint">Publiceert een machine-leesbaar regelsdocument (NIP-9B) naast de community. Clients die dit ondersteunen blokkeren berichten die niet voldoen voordat ze worden verzonden.</string>
     <string name="new_community_rules_kinds_section">Toegestane event-kinds</string>
     <string name="new_community_rules_kinds_hint">Tik om een kind toe te staan. Lang indrukken op een kind om per-event-grootte of dagelijkse limieten in te stellen.</string>
     <string name="new_community_rules_kind_short_text">Korte tekst (1)</string>
@@ -1088,7 +1088,7 @@
     <string name="max_hashtag_limit_title">Maximum hashtags per bericht</string>
     <string name="max_hashtag_limit_explainer">Verbergt berichten met meer hashtags dan deze limiet. Stel in op 0 om uit te schakelen.</string>
     <string name="hide_community_rules_violations_title">Berichten verbergen die community-regels schenden</string>
-    <string name="hide_community_rules_violations_explainer">Verwijdert berichten uit community-feeds wanneer de community een NIP-9A regelsdocument publiceert en een event daartegen zou falen. Heeft geen effect wanneer een community geen gestructureerde regels heeft.</string>
+    <string name="hide_community_rules_violations_explainer">Verwijdert berichten uit community-feeds wanneer de community een NIP-9B regelsdocument publiceert en een event daartegen zou falen. Heeft geen effect wanneer een community geen gestructureerde regels heeft.</string>
     <string name="new_reaction_symbol">Nieuw reactie-symbool</string>
     <string name="no_reaction_type_setup_long_press_to_change">Geen reactietypes ingesteld. Houd ingedrukt om te wijzigen.</string>
     <string name="zapraiser">Zapraiser</string>
@@ -2499,7 +2499,7 @@
     <string name="emoji_public_explainer">Openbare emoji\'s zijn zichtbaar voor iedereen en verschijnen in je reactiemenu en \":\" autocomplete-picker wanneer dit pakket in je emoji-lijst staat.</string>
     <string name="emoji_private_explainer">Privé-emoji\'s worden versleuteld opgeslagen op relays en zijn alleen zichtbaar voor jou. Ze verschijnen in je reactiemenu en \":\" autocomplete net als openbare emoji\'s.</string>
     <string name="gif">Gif</string>
-    <!-- NIP-9A community rules composer-side validation. -->
+    <!-- NIP-9B community rules composer-side validation. -->
     <string name="community_rules_violation_icon">Schending community-regels</string>
     <string name="community_rules_violation_author_denied">Je staat op de blokkeerlijst van deze community. Berichten worden niet geaccepteerd.</string>
     <string name="community_rules_violation_kind_not_allowed">Deze community accepteert geen events van kind %1$d.</string>

@@ -37,7 +37,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.WotTag
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
- * NIP-9A Verifiable Community Rules.
+ * NIP-9B Verifiable Community Rules.
  *
  * Addressable replaceable event (`kind:34551`) carrying a machine-readable, signed
  * rules document for a community defined by NIP-72 (`kind:34550`). Clients fetch

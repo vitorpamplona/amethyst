@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefiniti
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesEvent
 
 /**
- * Subscribes to the latest NIP-9A [CommunityRulesEvent] (kind:34551) for each
+ * Subscribes to the latest NIP-9B [CommunityRulesEvent] (kind:34551) for each
  * tracked community.
  *
  * Reuses the existing [CommunityQueryState] keyspace so any screen that already

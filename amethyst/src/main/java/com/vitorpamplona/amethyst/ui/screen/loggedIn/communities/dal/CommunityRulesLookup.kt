@@ -32,7 +32,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesValidato
  * Returns the most recent [CommunityRulesEvent] whose `a` tag points back at
  * [community], signed by the community owner or a declared moderator.
  *
- * NIP-9A explicitly delegates rules authoring to whichever pubkeys appear in the
+ * NIP-9B explicitly delegates rules authoring to whichever pubkeys appear in the
  * community's `kind:34550` definition (`p` moderator tags + the owner). Picking
  * the highest-`createdAt` event across that set matches the validator contract:
  * latest rules win.

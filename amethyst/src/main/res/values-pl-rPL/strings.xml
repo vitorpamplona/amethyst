@@ -495,7 +495,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="new_community_relay_marker_approvals">Akceptacje</string>
     <string name="new_community_empty">Nie znaleziono społeczności spełniających te kryteria.</string>
     <string name="new_community_rules_section">Zasady weryfikowalne (opcjonalne)</string>
-    <string name="new_community_rules_hint">Wspólnie ze społecznością publikuje dokument zawierający reguły w formacie nadającym się do odczytu maszynowego (NIP-9A). Klienci obsługujący ten standard blokują przed wysłaniem posty, które nie spełniają tych reguł.</string>
+    <string name="new_community_rules_hint">Wspólnie ze społecznością publikuje dokument zawierający reguły w formacie nadającym się do odczytu maszynowego (NIP-9B). Klienci obsługujący ten standard blokują przed wysłaniem posty, które nie spełniają tych reguł.</string>
     <string name="new_community_rules_kinds_section">Dozwolone rodzaje zdarzeń</string>
     <string name="new_community_rules_kinds_hint">Kliknij, aby zezwolić na dany typ. Naciśnij i przytrzymaj dany typ, aby ustawić limit wielkości zdarzeń lub limit dziennych postów.</string>
     <string name="new_community_rules_kind_short_text">Krótki tekst (1)</string>
@@ -1146,7 +1146,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="max_hashtag_limit_title">Maks ilość hashtagów na post</string>
     <string name="max_hashtag_limit_explainer">Ukrywa posty zawierające więcej hashtagów niż ten limit. Ustaw wartość 0, aby wyłączyć tę funkcję</string>
     <string name="hide_community_rules_violations_title">Ukryj posty, które naruszają zasady społeczności</string>
-    <string name="hide_community_rules_violations_explainer">Usuwa posty z kanałów społeczności, gdy społeczność opublikuje dokument zawierający zasady NIP-9A, a dane wydarzenie nie spełnia tych zasad. Nie ma to żadnego wpływu, jeśli społeczność nie posiada strukturyzowanych zasad.</string>
+    <string name="hide_community_rules_violations_explainer">Usuwa posty z kanałów społeczności, gdy społeczność opublikuje dokument zawierający zasady NIP-9B, a dane wydarzenie nie spełnia tych zasad. Nie ma to żadnego wpływu, jeśli społeczność nie posiada strukturyzowanych zasad.</string>
     <string name="new_reaction_symbol">Nowy Symbol Odzewu</string>
     <string name="no_reaction_type_setup_long_press_to_change">Brak wstępnie wybranych typów reakcji dla tego użytkownika. Przytrzymaj przycisk serce, aby zmienić</string>
     <string name="zapraiser">Zapraiser</string>
@@ -2589,7 +2589,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="emoji_public_explainer">Publiczne emotikony są widoczne dla wszystkich i pojawiają się w menu odezw oraz w oknie podpowiedzi \":\", jeśli ten pakiet znajduje się na liście emotikonów.</string>
     <string name="emoji_private_explainer">Prywatne emotikony są przechowywane zaszyfrowane na transmiterach i widoczne tylko dla Ciebie. Znajdują się w menu odzewów oraz w autouzupełnianiu po wpisaniu znaku „:” – tak samo jak emotikony publiczne.</string>
     <string name="gif">Gif</string>
-    <!-- NIP-9A community rules composer-side validation. -->
+    <!-- NIP-9B community rules composer-side validation. -->
     <string name="community_rules_violation_icon">Naruszenie Zasad Społeczności</string>
     <string name="community_rules_violation_author_denied">Jesteś na czarnej liście tej społeczności. Posty nie zostaną zaakceptowane.</string>
     <string name="community_rules_violation_kind_not_allowed">Ta społeczność nie akceptuje zdarzeń typu %1$d.</string>

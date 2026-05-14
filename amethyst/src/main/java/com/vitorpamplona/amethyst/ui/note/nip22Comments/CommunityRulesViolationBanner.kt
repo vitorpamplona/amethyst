@@ -43,7 +43,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesValidato
 
 /**
  * Inline banner shown above the composer's send button when the current draft
- * violates the latest NIP-9A `kind:34551` rules document for the community
+ * violates the latest NIP-9B `kind:34551` rules document for the community
  * being posted into. The send button is disabled in lockstep — see
  * `CommentPostViewModel.canPost`.
  */

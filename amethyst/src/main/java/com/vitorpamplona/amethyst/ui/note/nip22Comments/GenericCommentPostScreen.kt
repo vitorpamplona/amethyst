@@ -150,7 +150,7 @@ fun GenericCommentPostScreen(
 ) {
     WatchAndLoadMyEmojiList(accountViewModel)
 
-    // NIP-9A: when replying into a NIP-72 community, mount the community feed
+    // NIP-9B: when replying into a NIP-72 community, mount the community feed
     // subscription so the latest kind:34551 rules document is fetched and
     // observed by the ViewModel for composer-side validation. No-op for
     // hashtag/geohash composers (replyingTo is null or not addressable there).
@@ -423,7 +423,7 @@ private fun GenericCommentPostBody(
             )
         }
 
-        // NIP-9A: surface the first community-rules violation found in the current draft.
+        // NIP-9B: surface the first community-rules violation found in the current draft.
         postViewModel.validationResult?.let { CommunityRulesViolationBanner(it) }
 
         BottomRowActions(postViewModel)

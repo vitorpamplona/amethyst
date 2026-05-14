@@ -24,10 +24,10 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.PubkeyRuleTag
 
 /**
- * Validates draft events against a [CommunityRulesEvent] (NIP-9A).
+ * Validates draft events against a [CommunityRulesEvent] (NIP-9B).
  *
  * Pure logic; no I/O. Web-of-trust gates are deferred to the caller via
- * [WotResolver] because NIP-9A leaves the lookup mechanism unspecified
+ * [WotResolver] because NIP-9B leaves the lookup mechanism unspecified
  * (NIP-02 follow lists, NIP-85 trusted assertions, etc).
  */
 class CommunityRulesValidator(

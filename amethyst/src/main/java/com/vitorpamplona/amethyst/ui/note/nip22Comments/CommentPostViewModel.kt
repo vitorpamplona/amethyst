@@ -155,13 +155,13 @@ open class CommentPostViewModel :
 
     var notifying by mutableStateOf<List<User>?>(null)
 
-    // NIP-9A: latest community rules document for the community we're posting into.
+    // NIP-9B: latest community rules document for the community we're posting into.
     // Null when the reply target is not a community, or no rules have been observed yet.
     var communityRules: CommunityRulesEvent? by mutableStateOf(null)
         private set
     private var rulesObserverJob: Job? = null
 
-    // NIP-9A: latest validation outcome for the current draft.
+    // NIP-9B: latest validation outcome for the current draft.
     // Null = no violation (or rules not yet known); non-null = first violation found.
     var validationResult: CommunityRulesValidator.Violation? by mutableStateOf(null)
         private set
@@ -264,7 +264,7 @@ open class CommentPostViewModel :
     /**
      * Subscribes to the latest [CommunityRulesEvent] when [target] is a NIP-72
      * community, and clears the rules state otherwise. Re-evaluates the current
-     * draft against any rules that arrive (NIP-9A composer-side validation).
+     * draft against any rules that arrive (NIP-9B composer-side validation).
      */
     private fun observeCommunityRules(target: Note) {
         rulesObserverJob?.cancel()
@@ -298,9 +298,9 @@ open class CommentPostViewModel :
     }
 
     /**
-     * Runs the NIP-9A validator against the current draft and updates
+     * Runs the NIP-9B validator against the current draft and updates
      * [validationResult]. Web-of-trust gates and per-day quota checks are deferred
-     * to a follow-up (see NIP-9A track), so [postsTodayByKind] and `wot` are null
+     * to a follow-up (see NIP-9B track), so [postsTodayByKind] and `wot` are null
      * here; the validator skips those checks cleanly.
      */
     private fun revalidateDraft() {
@@ -322,13 +322,13 @@ open class CommentPostViewModel :
 
     companion object {
         /**
-         * Pure helper that runs the NIP-9A validator for a `kind:1111` reply with
+         * Pure helper that runs the NIP-9B validator for a `kind:1111` reply with
          * [draftContent]. Sizes are estimated from the content bytes; tags add bytes,
          * so this can under-count on the boundary, but relays still enforce the real
          * cap. Good enough for a pre-send preview.
          *
          * Web-of-trust gates and per-day quota lookups are deferred to a follow-up;
-         * see the NIP-9A track in the issue tracker.
+         * see the NIP-9B track in the issue tracker.
          */
         internal fun validateDraft(
             rules: CommunityRulesEvent,

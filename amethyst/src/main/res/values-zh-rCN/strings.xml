@@ -480,7 +480,7 @@
     <string name="new_community_relay_marker_approvals">批准</string>
     <string name="new_community_empty">没有社区匹配此过滤器。</string>
     <string name="new_community_rules_section">可验证规则 (可选)</string>
-    <string name="new_community_rules_hint">和社区一起发布机器可读的规则文档 (NIP-9A) 。支持它的客户端在发送之前阻止不匹配的帖子。</string>
+    <string name="new_community_rules_hint">和社区一起发布机器可读的规则文档 (NIP-9B) 。支持它的客户端在发送之前阻止不匹配的帖子。</string>
     <string name="new_community_rules_kinds_section">允许的事件类型</string>
     <string name="new_community_rules_kinds_hint">轻触以允许一种类型。长按一种类型来设置每个事件的大小或每日帖子的限制。</string>
     <string name="new_community_rules_kind_short_text">短文本 (1)</string>
@@ -1127,7 +1127,7 @@
     <string name="max_hashtag_limit_title">每个帖子最大话题标签数</string>
     <string name="max_hashtag_limit_explainer">隐藏话题超过此限制的帖子。设为 0 表示禁用</string>
     <string name="hide_community_rules_violations_title">隐藏违反社区规则的帖子</string>
-    <string name="hide_community_rules_violations_explainer">当社区发布了一份NIP-9A规则文档而一个事件会让它失灵时，丢弃社区的帖子。 当社区没有结构化规则时没有任何影响。</string>
+    <string name="hide_community_rules_violations_explainer">当社区发布了一份NIP-9B规则文档而一个事件会让它失灵时，丢弃社区的帖子。 当社区没有结构化规则时没有任何影响。</string>
     <string name="new_reaction_symbol">新回应符号</string>
     <string name="no_reaction_type_setup_long_press_to_change">未选择回应类型。长按可更改</string>
     <string name="zapraiser">Zapraiser</string>
@@ -2548,7 +2548,7 @@
     <string name="emoji_public_explainer">公开表情符号对所有人可见；当此表情包位于您的表情符号列表中时，它们会显示在您的“反应”菜单及“:”自动补全选择器中。</string>
     <string name="emoji_private_explainer">私密表情符号被加密存储在中继上，只对您可见。它们就像公开表情符号一样出现在回应菜单和 \":\" 自动完成中。</string>
     <string name="gif">Gif</string>
-    <!-- NIP-9A community rules composer-side validation. -->
+    <!-- NIP-9B community rules composer-side validation. -->
     <string name="community_rules_violation_icon">违反社区规则</string>
     <string name="community_rules_violation_author_denied">您在这个社区拒绝列表中。帖子将不被接受。</string>
     <string name="community_rules_violation_kind_not_allowed">这个社区不接受 %1$d 类型的事件。</string>

@@ -64,7 +64,7 @@ import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 
 /**
- * NIP-9A structured-rules editor section embedded in the community form.
+ * NIP-9B structured-rules editor section embedded in the community form.
  *
  * The whole section is opt-in: when no chip is selected and no other field is
  * filled, [NewCommunityModel.publish] won't emit a `kind:34551` event and the
