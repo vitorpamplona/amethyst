@@ -1113,6 +1113,7 @@
     <string name="filter_spam_from_strangers_title">Filtrar spam</string>
     <string name="filter_spam_from_strangers_explainer">Esconde publicações de desconhecidos que eram exatamente o mesmo por 5 ou mais vezes</string>
     <string name="add_client_tag_title">Adicionar tag de cliente aos meus eventos</string>
+    <string name="add_client_tag_explainer">Quando ativado, o Amethyst anexa uma tag de cliente NIP-89 aos eventos que você publica.</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Avisar em relatórios</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Mostra uma mensagem de aviso quando as postagens tiverem 5 ou mais relatórios de suas seguintes</string>
     <string name="report_warning_threshold_title">Limite de aviso de denúncias</string>
@@ -1922,7 +1923,7 @@
     <string name="favorite_dvms_title">Algoritmos de feed favoritos</string>
     <string name="favorite_dvms_explainer">Os algoritmos de feed marcados com estrela aparecem como chips de filtro no feed Início. Abra Descobrir para adicionar mais.</string>
     <string name="favorite_dvms_empty_headline">Fixe seus algoritmos favoritos</string>
-    <string name="favorite_dvms_empty_subtitle">Toque no botão abaixo para explorar algoritmos e marque com estrela os que deseja manter aqui.</string>
+    <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <string name="favorite_dvms_empty_cta">Adicionar alguns feeds</string>
     <string name="dvm_home_status_requesting">Solicitando feed a %1$s…</string>
     <string name="dvm_home_status_requesting_all">Solicitando feeds aos seus algoritmos favoritos…</string>
@@ -2578,5 +2579,4 @@
     <string name="community_rules_violation_quota_exceeded">Você já publicou %1$d eventos deste tipo hoje (limite %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Você não atende aos requisitos da rede de confiança desta comunidade.</string>
     <string name="community_rules_violation_stale_rules">O documento mais recente de regras da comunidade foi rejeitado por estar desatualizado.</string>
-    <string name="add_client_tag_explainer">Quando ativado, o Amethyst anexa uma tag de cliente NIP-89 aos eventos que você publica.</string>
 </resources>

@@ -1856,7 +1856,7 @@
     <string name="favorite_dvms_title">Favoriete feed-algoritmes</string>
     <string name="favorite_dvms_explainer">Feed-algoritmes die je hier hebt gesterd, verschijnen als filterchips op de startfeed. Open Ontdekken om meer toe te voegen.</string>
     <string name="favorite_dvms_empty_headline">Pin je favoriete algoritmes</string>
-    <string name="favorite_dvms_empty_subtitle">Tik op de knop hieronder om algoritmes te bekijken en de gewenste te sterren.</string>
+    <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <string name="favorite_dvms_empty_cta">Feeds toevoegen</string>
     <string name="dvm_home_status_requesting">%1$s vragen voor een feed…</string>
     <string name="dvm_home_status_requesting_all">Je favoriete feed-algoritmes vragen voor feeds…</string>

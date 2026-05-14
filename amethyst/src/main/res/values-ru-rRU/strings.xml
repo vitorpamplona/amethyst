@@ -539,6 +539,7 @@
     <string name="classifieds_category_food">Еда</string>
     <string name="classifieds_category_misc">Разное</string>
     <string name="classifieds_category_other">Другое</string>
+    <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <string name="share_image">Поделиться изображением…</string>
     <string name="unable_to_share_image">Не удается поделиться изображением, повторите попытку позже…</string>
     <string name="share_video">Поделиться видео…</string>
