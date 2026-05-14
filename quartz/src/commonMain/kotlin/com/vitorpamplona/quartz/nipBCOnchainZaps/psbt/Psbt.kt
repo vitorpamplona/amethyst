@@ -97,6 +97,12 @@ class PsbtMap(
  * finalize the single-key-path P2TR spends NIP-BC needs. Unknown records are
  * preserved verbatim so the container round-trips even when fields aren't
  * modeled.
+ *
+ * This `psbt/` package is intentionally hand-rolled rather than delegated to a
+ * Bitcoin library. That is a recorded architecture decision — see
+ * `amethyst/plans/2026-05-14-onchain-zaps.md` ("Architecture decision:
+ * hand-rolled Bitcoin consensus code"). It holds only while the scope stays at
+ * single-key-path P2TR; expanding past that should revisit the decision.
  */
 class Psbt(
     val global: PsbtMap,

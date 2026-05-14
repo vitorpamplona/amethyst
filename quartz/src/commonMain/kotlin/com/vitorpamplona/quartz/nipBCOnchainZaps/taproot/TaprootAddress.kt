@@ -37,6 +37,11 @@ import com.vitorpamplona.quartz.utils.sha256.sha256
  *
  * where `bytes(P)` is the 32-byte x-only Nostr pubkey and `hashTapTweak` is
  * the BIP-340 tagged hash with tag `"TapTweak"`.
+ *
+ * This `taproot/` package is intentionally hand-rolled rather than delegated to
+ * a Bitcoin library — a recorded architecture decision, see
+ * `amethyst/plans/2026-05-14-onchain-zaps.md` ("Architecture decision:
+ * hand-rolled Bitcoin consensus code").
  */
 object TaprootAddress {
     private const val TAP_TWEAK_TAG = "TapTweak"

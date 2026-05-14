@@ -20,9 +20,41 @@ rest of the system.
 - **Chain backend.** User-configured Esplora-compatible API
   (mempool.space, blockstream.info, self-hosted). The configured server sees
   the user's UTXO queries — accepted tradeoff for v1. Header-only SPV mode is
-  a future-phase add.
+  a future-phase add. The explorer endpoint is shared with OpenTimestamps via
+  `BitcoinExplorerEndpoint`: same user-configured server, same Tor-aware
+  default selection.
 - **Scope.** Full send + receive + display loop on Android. Desktop is out of
   scope for v1.
+
+### Architecture decision: hand-rolled Bitcoin consensus code (2026-05-14)
+
+**Decision:** keep the hand-rolled Bitcoin consensus layer in
+`quartz/.../nipBCOnchainZaps/{psbt,taproot}/` — the transaction codec,
+serialization/txid, BIP-341 sighash, BIP-174 PSBT codec/signer/finalizer, and
+BIP-341/350 address derivation. Do **not** pull in `fr.acinq.bitcoin-kmp`.
+
+**Considered alternative:** replace the `psbt/` + transaction + sighash layer
+with `fr.acinq.bitcoin-kmp` (mature, same vendor as the `secp256k1` binding
+already in the build).
+
+**Rationale for keeping it hand-rolled:**
+- It is a deliberately small, constrained subset — single-key-path P2TR only,
+  no script trees, one transaction shape.
+- It is pinned to authoritative external test vectors at *every* layer:
+  BIP-341 sighash (all 7 vectors + ANYONECANPAY), the BIP-341 tweak, the full
+  BIP-341 witness *signature bytes*, the 7 BIP-341/350 P2TR mainnet addresses,
+  and tx serialization against the genesis coinbase. It is "matches the
+  authoritative vectors," not "trust our code."
+- Consistent with the project's stance on minimal dependencies (cf. the
+  from-scratch `quic` module).
+- No new transitive dependencies or version-conflict surface.
+
+**Consequence / what this commits us to:** we own the correctness of this code
+forever. If the scope ever expands beyond single-key-path P2TR (script-path
+spends, multisig, PSBT fields we don't model), revisit this decision — at that
+point a vetted library is the better trade. The `nipBCOnchainZaps/{psbt,taproot}/`
+packages carry a pointer back to this section.
+
 
 ## Architecture
 
