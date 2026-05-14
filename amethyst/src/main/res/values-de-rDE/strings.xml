@@ -2582,4 +2582,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="community_rules_violation_quota_exceeded">Du hast heute bereits %1$d Ereignisse dieses Typs veröffentlicht (Limit %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Du erfüllst die Web-of-Trust-Anforderungen dieser Community nicht.</string>
     <string name="community_rules_violation_stale_rules">Das aktuelle Community-Regeldokument wurde als veraltet abgelehnt.</string>
+    <string name="add_client_tag_title">Client-Tag zu meinen Ereignissen hinzufügen</string>
+    <string name="add_client_tag_explainer">Wenn aktiviert, fügt Amethyst Ereignissen, die du veröffentlichst, einen NIP-89-Client-Tag hinzu.</string>
 </resources>
