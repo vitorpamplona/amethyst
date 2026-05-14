@@ -146,11 +146,29 @@ Lightning fast path. Two minimal hooks:
 
 | Phase | Deliverable | Status |
 |---|---|---|
-| **A.1** | Quartz foundation (receive side): taproot address, bech32m segwit, Esplora client, tx parser, verifier | In progress |
-| **A.2** | Quartz foundation (send side): PSBT codec, builder, `signPsbt` on signer hierarchy | Pending |
-| **B** | NIP-55 `sign_psbt` intent contract + `NostrSignerExternal.signPsbt` | Pending |
-| **C** | Receive + display: `OnchainSection` in `WalletScreen`, Esplora sync, `LocalCache.consume(OnchainZapEvent)`, `updateZapTotal` fold-in, kind-list edits in all 8 filter files | Pending |
-| **D** | Send: dialog in zap menu, UTXO selection, build/sign/broadcast, publish | Pending |
+| **A.1** | Quartz foundation (receive side): taproot address, bech32m segwit, Esplora client, verifier + tests | **Shipped** |
+| **C**   | Receive + display: `OnchainSection` in `WalletScreen` (address + live balance), Esplora sync, `LocalCache.consume(OnchainZapEvent)`, `updateZapTotal` fold-in, kind-list edits in all 7 in-scope filter files | **Shipped** |
+| **A.2** | Quartz foundation (send side): minimal BIP-174 PSBT codec, `OnchainZapBuilder`, `signPsbt` on `NostrSigner` hierarchy | Pending |
+| **B**   | NIP-55 `sign_psbt` intent contract + `NostrSignerExternal.signPsbt`. Broken until Amber ships matching support — surface "update your signer" in the UI. | Pending |
+| **D**   | Send: dialog in zap menu, UTXO selection, build → sign → broadcast → publish kind 8333 | Pending |
+
+### What's still required before send can ship (Phase A.2)
+
+1. **PSBT codec.** Hand-rolled BIP-174 reader/writer for the single shape we need
+   (1+ inputs key-path-only P2TR, 1-2 outputs, no script tree). Needs explicit
+   test vectors from the BIP-174 / BIP-341 test suites — any bug here can lose
+   user funds.
+2. **TapTweak in signer.** `NostrSignerInternal.signPsbt` applies the BIP-341
+   key-path-only tweak to its private key before producing the Schnorr sig
+   over the BIP-341 sighash. Today `signSchnorr*` always uses the raw
+   keypair — we need an internal `signWithTweakedKey` variant. Tests must
+   compare against the libsecp256k1 reference output.
+3. **Sighash computation.** BIP-341 default sighash (SIGHASH_DEFAULT) is its
+   own serialization; not reusable from existing Nostr signing.
+4. **Coin selection.** Simple smallest-set-covering-amount is enough for v1
+   but needs a fee-vs-dust guard.
+5. **Broadcast & publish.** Already plumbed through `EsploraBackend.broadcast`;
+   just needs the orchestrator in commons.
 
 ## Risks / open questions
 
