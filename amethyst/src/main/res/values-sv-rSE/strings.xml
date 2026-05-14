@@ -2557,23 +2557,4 @@
     <string name="community_rules_violation_quota_exceeded">Du har redan publicerat %1$d händelser av den här typen idag (gräns %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Du uppfyller inte den här gemenskapens krav på förtroendenät.</string>
     <string name="community_rules_violation_stale_rules">Det senaste dokumentet med gemenskapsregler avvisades som föråldrat.</string>
-    <string name="auto_create_drafts_setting_description">Sparar ett utkast automatiskt när du skriver eller lämnar redigeraren med osänd text och skickar det till dina privata utgående reläer.</string>
-    <string name="auto_create_drafts_setting_title">Skapa utkast automatiskt</string>
-    <string name="compose_settings">Skrivinställningar</string>
-    <string name="external_id_scope">Kommentera en extern resurs</string>
-    <string name="external_url_scope">Kommentera en webbplats</string>
-    <string name="nest_toast_host_action_failed_template_null">Åtgärden kunde inte förberedas.</string>
-    <string name="nest_toast_host_action_failed_title">Åtgärden misslyckades</string>
-    <string name="profile_ui_setting_app_recommendations">App-rekommendationer</string>
-    <string name="profile_ui_setting_badges">Profilmärken</string>
-    <string name="profile_ui_setting_followers_feed">Följarflöde</string>
-    <string name="profile_ui_setting_zap_received_feed">Mottagna zaps-flöde</string>
-    <string name="profile_ui_settings">Profilgränssnitt</string>
-    <string name="profile_ui_settings_description">Välj vilka sektioner och flöden som visas på användarprofiler. Alla alternativ är aktiverade som standard.</string>
-    <string name="security_blocked_users_empty">Du har inte blockerat några användare än.</string>
-    <string name="security_hidden_words_empty">Inga dolda ord. Lägg till ett ord nedan för att dölja inlägg som innehåller det.</string>
-    <string name="security_section_blocked_content">Blockerat innehåll</string>
-    <string name="security_section_filtering_preferences">Filterinställningar</string>
-    <string name="security_spamming_users_empty">Inga konton har flaggats som spam under denna session.</string>
-    <string name="security_unlimited">∞</string>
 </resources>
