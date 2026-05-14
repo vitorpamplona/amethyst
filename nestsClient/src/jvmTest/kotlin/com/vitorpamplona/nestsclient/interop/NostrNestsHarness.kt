@@ -205,7 +205,14 @@ class NostrNestsHarness private constructor(
                 // The path under this base is the namespace literal (per
                 // moq-rs `claims.root` matching); the `:nestsClient` connect
                 // helpers append `/<namespace>?jwt=<token>` themselves.
-                moqEndpoint = "https://127.0.0.1:$MOQ_HOST_PORT/",
+                //
+                // Host MUST be `localhost`, not `127.0.0.1`: the QUIC client
+                // sends the host as TLS SNI, RFC 6066 §3 forbids IP literals
+                // there, and a strict relay (rustls) rejects an IP-literal SNI
+                // and then has no SNI to select its dev cert on — the handshake
+                // stalls. `localhost` is a valid hostname and matches the dev
+                // cert moq-relay generates. Resolves to 127.0.0.1 regardless.
+                moqEndpoint = "https://localhost:$MOQ_HOST_PORT/",
             )
         }
 
@@ -242,7 +249,9 @@ class NostrNestsHarness private constructor(
             return NostrNestsHarness(
                 workDir = null,
                 authBaseUrl = "http://127.0.0.1:$AUTH_HOST_PORT",
-                moqEndpoint = "https://127.0.0.1:$MOQ_HOST_PORT/",
+                // `localhost`, not `127.0.0.1` — see the doStart() return for
+                // why an IP-literal host breaks the TLS SNI / cert selection.
+                moqEndpoint = "https://localhost:$MOQ_HOST_PORT/",
             )
         }
 

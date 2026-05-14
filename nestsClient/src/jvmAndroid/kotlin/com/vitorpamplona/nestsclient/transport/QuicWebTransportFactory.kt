@@ -122,14 +122,31 @@ class QuicWebTransportFactory(
         val driver = QuicConnectionDriver(conn, socket, parentScope)
         driver.start()
 
-        try {
-            conn.awaitHandshake()
-        } catch (t: Throwable) {
+        val handshakeCompleted =
+            try {
+                // Bound the handshake — a server-side TLS failure (e.g. a relay
+                // that rejects an IP-literal SNI and can't select a cert) leaves
+                // the handshake stalled with no alert, so without this ceiling
+                // connect() hangs indefinitely instead of failing fast.
+                kotlinx.coroutines.withTimeoutOrNull(connectTimeoutMillis) {
+                    conn.awaitHandshake()
+                    true
+                }
+            } catch (t: Throwable) {
+                driver.close()
+                throw WebTransportException(
+                    kind = WebTransportException.Kind.HandshakeFailed,
+                    message = "QUIC handshake failed: ${t.message}",
+                    cause = t,
+                )
+            }
+        if (handshakeCompleted == null) {
             driver.close()
             throw WebTransportException(
                 kind = WebTransportException.Kind.HandshakeFailed,
-                message = "QUIC handshake failed: ${t.message}",
-                cause = t,
+                message =
+                    "QUIC handshake stalled — no completion within ${connectTimeoutMillis}ms " +
+                        "(a server-side TLS failure such as a rejected IP-literal SNI hangs here with no alert)",
             )
         }
         if (conn.status != QuicConnection.Status.CONNECTED) {
