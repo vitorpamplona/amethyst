@@ -20,12 +20,37 @@
  */
 package com.vitorpamplona.amethyst.ui.note.nip22Comments
 
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.LinkInteractionListener
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withLink
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.nip73ExternalIds.ExternalId
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
+import com.vitorpamplona.quartz.nip73ExternalIds.urls.UrlId
 
 @Composable
 fun DisplayExternalId(
@@ -42,6 +67,73 @@ fun DisplayExternalId(
             DisplayHashtagExternalId(externalId, accountViewModel, nav)
         }
 
-        else -> {}
+        is UrlId -> {
+            DisplayUrlExternalId(externalId)
+        }
+
+        else -> {
+            DisplayGenericExternalId(externalId)
+        }
+    }
+}
+
+@Composable
+fun DisplayUrlExternalId(externalId: UrlId) {
+    val uriHandler = LocalUriHandler.current
+    DisplayExternalIdChip(
+        symbol = MaterialSymbols.Link,
+        contentDescription = stringRes(id = R.string.external_url_scope),
+        label = externalId.url,
+        linkInteractionListener = { runCatching { uriHandler.openUri(externalId.url) } },
+    )
+}
+
+@Composable
+fun DisplayGenericExternalId(externalId: ExternalId) {
+    DisplayExternalIdChip(
+        symbol = MaterialSymbols.Public,
+        contentDescription = stringRes(id = R.string.external_id_scope),
+        label = externalId.toScope(),
+        linkInteractionListener = null,
+    )
+}
+
+@Composable
+private fun DisplayExternalIdChip(
+    symbol: MaterialSymbol,
+    contentDescription: String,
+    label: String,
+    linkInteractionListener: LinkInteractionListener?,
+) {
+    Row(modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            symbol = symbol,
+            contentDescription = contentDescription,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+
+        Spacer(StdHorzSpacer)
+
+        Text(
+            text =
+                if (linkInteractionListener != null) {
+                    buildAnnotatedString {
+                        withLink(
+                            LinkAnnotation.Clickable("externalId", null, linkInteractionListener),
+                        ) {
+                            append(label)
+                        }
+                    }
+                } else {
+                    buildAnnotatedString { append(label) }
+                },
+            style =
+                LocalTextStyle.current.copy(
+                    fontWeight = FontWeight.Bold,
+                ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }

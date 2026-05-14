@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.ui.note.ReplyNoteComposition
 import com.vitorpamplona.amethyst.ui.note.ReplyToLabel
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
+import com.vitorpamplona.amethyst.ui.note.nip22Comments.DisplayExternalId
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
@@ -54,7 +55,9 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.hasAnyTaggedUser
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip73ExternalIds.scope
 
 enum class ReplyRenderType {
     FULL,
@@ -118,6 +121,14 @@ fun RenderTextEvent(
                     )
                     Spacer(modifier = HalfVertSpacer)
                 }
+            }
+        } else if (!makeItShort && noteEvent is CommentEvent) {
+            // A comment scoped to an external identifier (`I` tag) has no in-cache parent
+            // note. Show the scope itself as the reply context.
+            val scope = remember(note) { noteEvent.scope() }
+            if (scope != null) {
+                DisplayExternalId(scope, accountViewModel, nav)
+                Spacer(modifier = StdVertSpacer)
             }
         }
     }

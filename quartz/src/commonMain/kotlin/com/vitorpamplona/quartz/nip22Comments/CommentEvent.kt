@@ -181,6 +181,9 @@ class CommentEvent(
 
     fun isScoped(scopeTest: (String) -> Boolean) = tags.any { RootIdentifierTag.isTagged(it, scopeTest) || ReplyIdentifierTag.isTagged(it, scopeTest) }
 
+    /** True when the comment points at an external identifier (`I` tag), e.g. a hashtag, geohash or url. */
+    fun hasRootScopeIdentifier() = tags.any(RootIdentifierTag::match)
+
     fun hasRootScopeKind(kind: String) = tags.any(RootKindTag::isKind, kind)
 
     fun hasReplyScopeKind(kind: String) = tags.any(ReplyKindTag::isKind, kind)

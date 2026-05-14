@@ -1475,6 +1475,9 @@
     <string name="hashtag_exclusive">Hashtag-exclusive Post</string>
     <string name="hashtag_exclusive_explainer">Only followers of the hashtag will see it. Your general followers won\'t see it.</string>
 
+    <string name="external_url_scope">Comment on a website</string>
+    <string name="external_id_scope">Comment on an external resource</string>
+
     <string name="long_form_reading_minutes">%1$d min read</string>
 
 
