@@ -101,4 +101,9 @@ class NostrSignerInternal(
         runWrapErrors {
             signerSync.deriveKey(nonce)
         }
+
+    override suspend fun signPsbt(psbtHex: String): String =
+        runWrapErrors {
+            signerSync.signPsbt(psbtHex)
+        }
 }

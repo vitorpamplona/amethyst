@@ -174,6 +174,18 @@ class NostrSignerExternal(
         throw convertExceptions("Could not decrypt private zap", result)
     }
 
+    /**
+     * NIP-BC `sign_psbt` over NIP-55. The Android external-signer Intent
+     * contract for PSBT signing is not implemented yet (Phase B); Amber and
+     * other signer apps must also ship support before this can work. Until
+     * then, callers should fall back to other signer kinds or surface an
+     * "update your signer" message.
+     */
+    override suspend fun signPsbt(psbtHex: String): String =
+        throw SignerExceptions.UnsupportedMethodException(
+            "This external signer does not support sign_psbt yet",
+        )
+
     // always ready
     override fun hasForegroundSupport() = hasForegroundActivity()
 

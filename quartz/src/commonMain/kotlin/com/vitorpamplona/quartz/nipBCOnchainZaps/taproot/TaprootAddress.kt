@@ -79,6 +79,36 @@ object TaprootAddress {
     }
 
     /**
+     * BIP-341 `taproot_tweak_seckey` for a key-path-only spend (no script tree).
+     *
+     * Produces the private key that controls the P2TR output derived from
+     * [internalSecKey]'s public key. The internal key is first normalized to
+     * the even-y representation BIP-341 hashes over, then the TapTweak scalar
+     * is added.
+     *
+     * @param internalSecKey 32-byte internal private key.
+     * @return 32-byte tweaked private key suitable for a BIP-340 Schnorr
+     *         signature over a [TaprootSigHash]-style key-path sighash.
+     */
+    fun tweakSecretKey(internalSecKey: ByteArray): ByteArray {
+        require(internalSecKey.size == 32) {
+            "internal secret key must be 32 bytes (got ${internalSecKey.size})"
+        }
+        // P = internalSecKey · G, as a 33-byte compressed point.
+        val compressedPubKey = Secp256k1Instance.compressedPubKeyFor(internalSecKey)
+        val xOnly = compressedPubKey.copyOfRange(1, 33)
+
+        // If P has odd y, BIP-341 negates the secret key so it corresponds to
+        // the even-y lift used when computing the TapTweak hash.
+        val evenYParity = compressedPubKey[0].toInt() == 0x02
+        val normalizedSecKey =
+            if (evenYParity) internalSecKey else Secp256k1Instance.privKeyNegate(internalSecKey)
+
+        val tweak = tapTweakHash(xOnly)
+        return Secp256k1Instance.privateKeyAdd(normalizedSecKey, tweak)
+    }
+
+    /**
      * Derive the Bitcoin mainnet taproot address (`bc1p...`) for a Nostr
      * public key. The pubkey is used directly as the BIP-341 internal key.
      */

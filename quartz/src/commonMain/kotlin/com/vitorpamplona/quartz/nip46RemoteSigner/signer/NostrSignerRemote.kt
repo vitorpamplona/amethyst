@@ -278,6 +278,16 @@ class NostrSignerRemote(
         TODO("Not yet implemented")
     }
 
+    /**
+     * NIP-BC `sign_psbt` over NIP-46. The bunker-side command is not yet
+     * standardized/shipped, so this is intentionally unsupported until the
+     * remote-signer ecosystem catches up.
+     */
+    override suspend fun signPsbt(psbtHex: String): String =
+        throw SignerExceptions.UnsupportedMethodException(
+            "Remote (NIP-46) signers do not support sign_psbt yet",
+        )
+
     override fun hasForegroundSupport(): Boolean = true
 
     fun convertExceptions(

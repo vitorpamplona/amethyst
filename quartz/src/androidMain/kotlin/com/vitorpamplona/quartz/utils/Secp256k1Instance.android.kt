@@ -72,4 +72,6 @@ actual object Secp256k1Instance {
         val full = if (pubKey.size == 32) h02 + pubKey else pubKey
         return secp256k1.pubKeyCompress(secp256k1.pubKeyTweakAdd(full, tweak))
     }
+
+    actual fun privKeyNegate(privKey: ByteArray): ByteArray = secp256k1.privKeyNegate(privKey)
 }

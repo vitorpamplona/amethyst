@@ -73,4 +73,12 @@ expect object Secp256k1Instance {
         pubKey: ByteArray,
         tweak: ByteArray,
     ): ByteArray
+
+    /**
+     * Negate a private key: returns `(n - d) mod n` as 32 bytes.
+     *
+     * Used by the BIP-341 `taproot_tweak_seckey` algorithm when the internal
+     * key's public point has odd y.
+     */
+    fun privKeyNegate(privKey: ByteArray): ByteArray
 }
