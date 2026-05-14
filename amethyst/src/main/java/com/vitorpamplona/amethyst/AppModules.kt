@@ -47,9 +47,12 @@ import com.vitorpamplona.amethyst.service.connectivity.ConnectivityStatus
 import com.vitorpamplona.amethyst.service.crashreports.CrashReportCache
 import com.vitorpamplona.amethyst.service.crashreports.UnexpectedCrashSaver
 import com.vitorpamplona.amethyst.service.eventCache.MemoryTrimmingService
+import com.vitorpamplona.amethyst.service.images.CoilDiskTrimmer
 import com.vitorpamplona.amethyst.service.images.ImageCacheFactory
 import com.vitorpamplona.amethyst.service.images.ImageLoaderSetup
+import com.vitorpamplona.amethyst.service.images.KeyAccessLog
 import com.vitorpamplona.amethyst.service.images.ThumbnailDiskCache
+import com.vitorpamplona.amethyst.service.images.TrackingDiskCache
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.notifications.AlwaysOnNotificationServiceManager
 import com.vitorpamplona.amethyst.service.notifications.NotificationDispatcher
@@ -117,6 +120,7 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.transform
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.io.File
@@ -507,10 +511,33 @@ class AppModules(
         VideoCacheFactory.new(appContext)
     }
 
-    // image cache in disk for coil
+    // shadow index of Coil's disk cache keys so the trimmer can evict
+    // oldest-first via Coil's public remove(key) API.
+    val coilKeyAccessLog: KeyAccessLog by lazy {
+        KeyAccessLog(
+            logFile = File(appContext.filesDir, "coil_key_access.log"),
+            scope = applicationIOScope,
+        )
+    }
+
+    // image cache in disk for coil. Wrapped in TrackingDiskCache so the
+    // background trimmer can keep `size < maxSize` and prevent inline
+    // eviction storms on the write path during feed scroll.
     val diskCache: DiskCache by lazy {
         Log.d("AppModules", "ImageCacheFactory Init")
-        ImageCacheFactory.newDisk(appContext)
+        TrackingDiskCache(
+            delegate = ImageCacheFactory.newDisk(appContext),
+            keyLog = coilKeyAccessLog,
+        )
+    }
+
+    // Background trimmer that drains the Coil disk cache to ~55% of cap
+    // whenever it crosses ~70%. Runs on a fixed cadence and on onTrimMemory.
+    val coilDiskTrimmer: CoilDiskTrimmer by lazy {
+        CoilDiskTrimmer(
+            diskCache = { diskCache },
+            keyLog = coilKeyAccessLog,
+        )
     }
 
     // image cache in memory for coil
@@ -663,6 +690,19 @@ class AppModules(
             delay(1_500)
             videoCache
         }
+
+        // Replay the persisted Coil key-access log into memory so the
+        // background trimmer can evict oldest-first via remove(key). Then
+        // run the trim loop while the app is alive. The first pass is
+        // delayed so it doesn't compete with first-paint IO.
+        applicationIOScope.launch {
+            coilKeyAccessLog.load()
+            delay(30_000)
+            while (isActive) {
+                coilDiskTrimmer.trim()
+                delay(5 * 60 * 1000L)
+            }
+        }
     }
 
     fun terminate(appContext: Context) {
@@ -684,6 +724,10 @@ class AppModules(
             dnsStore.save()
             val loggedIn = accountsCache.accounts.value.values
             trimmingService.run(loggedIn, LocalPreferences.allSavedAccounts())
+            // Drain the Coil disk cache below target on backgrounding too —
+            // doing it here keeps the next foreground session's write path on
+            // the no-inline-eviction fast path.
+            coilDiskTrimmer.trim()
         }
     }
 }
