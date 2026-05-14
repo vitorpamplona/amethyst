@@ -152,16 +152,21 @@ class AudioTrackPlayer(
         }
         // Target ~250 ms of audio: enough headroom so the decode loop can
         // miss its 20 ms cadence by an order of magnitude before the device
-        // underruns. Take the larger of `minBuffer * 16` and an explicit
-        // 250 ms-equivalent so devices that report a small minBuffer still
-        // get the same wall-clock slack. Stereo doubles the byte count
-        // per sample (interleaved L,R 16-bit shorts); a higher sample
-        // rate scales the per-second byte count linearly — both factor
-        // into the target so the wall-clock 250 ms target is preserved
-        // regardless of channel layout / sample rate.
+        // underruns. Use `minBuffer` as the floor — most devices report a
+        // floor well under 250 ms, so the 250 ms target wins and we cap
+        // at the intended wall-clock slack. The earlier `minBuffer * 16`
+        // multiplier silently inflated the ring to ~600 ms – 1 s on
+        // common handsets (Pixel `getMinBufferSize` ≈ 40 ms × 16 = 640 ms),
+        // so audio sat in the ring for that long before the speaker
+        // played it — visible as the speaking-now ring lighting up ~1 s
+        // before the listener heard the speaker. Stereo doubles the
+        // byte count per sample (interleaved L,R 16-bit shorts); a
+        // higher sample rate scales the per-second byte count linearly
+        // — both factor into the target so the wall-clock 250 ms target
+        // is preserved regardless of channel layout / sample rate.
         val targetBytes250Ms =
             (sampleRate / 4) * AudioFormat.BYTES_PER_SAMPLE * channelCount
-        val bufferBytes = maxOf(minBuffer * 16, targetBytes250Ms)
+        val bufferBytes = maxOf(minBuffer, targetBytes250Ms)
 
         val newTrack =
             try {
