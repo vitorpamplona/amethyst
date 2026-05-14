@@ -510,7 +510,7 @@ class AppModules(
     // image cache in disk for coil
     val diskCache: DiskCache by lazy {
         Log.d("AppModules", "ImageCacheFactory Init")
-        ImageCacheFactory.newDisk(appContext)
+        ImageCacheFactory.newDisk(appContext, applicationIOScope)
     }
 
     // image cache in memory for coil
