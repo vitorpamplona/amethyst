@@ -180,17 +180,27 @@ class QuicWebTransportFactory(
                     readConnectResponse(requestStream)
                 }
             if (response == null) {
+                val connDiag = describeConnectionState(conn, requestStream)
                 driver.close()
                 throw WebTransportException(
                     kind = WebTransportException.Kind.HandshakeFailed,
-                    message = "WebTransport CONNECT response timed out after ${connectTimeoutMillis}ms",
+                    message =
+                        "WebTransport CONNECT response timed out after ${connectTimeoutMillis}ms — $connDiag",
                 )
             }
             if (response.status !in 200..299) {
+                // Capture connection-level state BEFORE driver.close() — if the
+                // relay tore the connection down, closeReason/closeErrorCode
+                // are already set and tell us whether this was a CONNECTION_CLOSE
+                // (e.g. H3_SETTINGS_ERROR from a rejected SETTINGS frame) or the
+                // relay simply FIN'd the request bidi without an H3 response.
+                val connDiag = describeConnectionState(conn, requestStream)
                 driver.close()
                 throw WebTransportException(
                     kind = WebTransportException.Kind.ConnectRejected,
-                    message = "WebTransport CONNECT returned :status=${response.status}",
+                    message =
+                        "WebTransport CONNECT returned :status=${response.status} — " +
+                            "${response.diagnostic}; $connDiag",
                 )
             }
 
@@ -230,11 +240,19 @@ class QuicWebTransportFactory(
     private suspend fun readConnectResponse(requestStream: QuicStream): ConnectResponse {
         val reader = Http3FrameReader()
         val incoming = requestStream.incoming
+        // Diagnostic accounting — when the CONNECT fails, :status=0 alone
+        // can't tell us whether the relay never answered, FIN'd us with
+        // garbage, or sent a HEADERS frame that lacked :status. Track
+        // enough to disambiguate in the thrown exception message.
+        var bytesSeen = 0
+        val h3FramesSeen = mutableListOf<String>()
         try {
             incoming.collect { chunk ->
+                bytesSeen += chunk.size
                 reader.push(chunk)
                 while (true) {
                     val frame = reader.next() ?: break
+                    h3FramesSeen += frame::class.simpleName ?: "?"
                     if (frame is Http3Frame.Headers) {
                         val pairs = QpackDecoder().decodeFieldSection(frame.qpackPayload)
                         val status = pairs.firstOrNull { it.first == ":status" }?.second?.toIntOrNull() ?: 0
@@ -243,24 +261,63 @@ class QuicWebTransportFactory(
                                 .firstOrNull { it.first.equals("wt-protocol", ignoreCase = true) }
                                 ?.second
                                 ?.let { parseFirstSfString(it) }
-                        throw HeadersReceived(status, subProtocol)
+                        val diag =
+                            if (status == 0) {
+                                "HEADERS frame carried no parseable :status — fields=[${pairs.joinToString { it.first }}]"
+                            } else {
+                                "HEADERS received, status=$status"
+                            }
+                        throw HeadersReceived(status, subProtocol, diag)
                     }
                 }
             }
         } catch (e: HeadersReceived) {
-            return ConnectResponse(e.status, e.subProtocol)
+            return ConnectResponse(e.status, e.subProtocol, e.diagnostic)
         }
-        return ConnectResponse(0, null)
+        // The incoming flow completed WITHOUT a HEADERS frame — the relay
+        // ended (FIN'd) the request bidi without an H3 response. Note this
+        // is a *clean* close: a RESET_STREAM would have thrown out of
+        // `incoming.collect` and been wrapped as HandshakeFailed instead.
+        return ConnectResponse(
+            status = 0,
+            subProtocol = null,
+            diagnostic =
+                "request stream ended with no HEADERS frame " +
+                    "(bytesSeen=$bytesSeen, h3FramesSeen=$h3FramesSeen, requestStreamClosed=${requestStream.isClosed})",
+        )
     }
+
+    /**
+     * One-line snapshot of the QUIC connection + request-stream state for
+     * a failed CONNECT. Distinguishes "the relay sent a CONNECTION_CLOSE"
+     * (status != CONNECTED, closeErrorCode/closeReason populated — e.g.
+     * H3_SETTINGS_ERROR if it rejected our SETTINGS frame) from "the relay
+     * left the connection up but closed just the request stream".
+     */
+    private fun describeConnectionState(
+        conn: QuicConnection,
+        requestStream: QuicStream,
+    ): String =
+        buildString {
+            append("conn.status=").append(conn.status)
+            conn.closeReason?.let { append(", closeReason='").append(it).append('\'') }
+            if (conn.closeErrorCode != 0L) {
+                append(", closeErrorCode=0x").append(conn.closeErrorCode.toString(16))
+            }
+            append(", requestStreamClosed=").append(requestStream.isClosed)
+        }
 
     private data class ConnectResponse(
         val status: Int,
         val subProtocol: String?,
+        /** Human-readable account of how the response was (or wasn't) received. */
+        val diagnostic: String,
     )
 
     private class HeadersReceived(
         val status: Int,
         val subProtocol: String?,
+        val diagnostic: String,
     ) : RuntimeException()
 
     /**
