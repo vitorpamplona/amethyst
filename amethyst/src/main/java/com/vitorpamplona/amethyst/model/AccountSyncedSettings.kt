@@ -56,7 +56,7 @@ class AccountSyncedSettings(
             MutableStateFlow(internalSettings.security.filterSpamFromStrangers),
             MutableStateFlow(internalSettings.security.maxHashtagLimit),
             MutableStateFlow(internalSettings.security.sendKind0EventsToLocalRelay),
-            MutableStateFlow(internalSettings.security.disableClientTag),
+            MutableStateFlow(internalSettings.security.addClientTag),
         )
     val videoPlayer =
         AccountVideoPlayerPreferences(
@@ -85,7 +85,7 @@ class AccountSyncedSettings(
                     security.filterSpamFromStrangers.value,
                     security.maxHashtagLimit.value,
                     security.sendKind0EventsToLocalRelay.value,
-                    security.disableClientTag.value,
+                    security.addClientTag.value,
                 ),
             videoPlayer = AccountVideoPlayerPreferencesInternal(videoPlayer.buttonItems.value),
         )
@@ -146,8 +146,8 @@ class AccountSyncedSettings(
             security.sendKind0EventsToLocalRelay.tryEmit(syncedSettingsInternal.security.sendKind0EventsToLocalRelay)
         }
 
-        if (security.disableClientTag.value != syncedSettingsInternal.security.disableClientTag) {
-            security.disableClientTag.tryEmit(syncedSettingsInternal.security.disableClientTag)
+        if (security.addClientTag.value != syncedSettingsInternal.security.addClientTag) {
+            security.addClientTag.tryEmit(syncedSettingsInternal.security.addClientTag)
         }
 
         val newVideoPlayerButtonItems =
@@ -247,7 +247,7 @@ class AccountSecurityPreferences(
     var filterSpamFromStrangers: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val maxHashtagLimit: MutableStateFlow<Int> = MutableStateFlow(5),
     var sendKind0EventsToLocalRelay: MutableStateFlow<Boolean> = MutableStateFlow(false),
-    val disableClientTag: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    val addClientTag: MutableStateFlow<Boolean> = MutableStateFlow(true),
 ) {
     fun updateShowSensitiveContent(show: Boolean?): Boolean {
         if (showSensitiveContent.value != show) {
@@ -297,9 +297,9 @@ class AccountSecurityPreferences(
             false
         }
 
-    fun updateDisableClientTag(disable: Boolean): Boolean =
-        if (disable != disableClientTag.value) {
-            disableClientTag.tryEmit(disable)
+    fun updateAddClientTag(add: Boolean): Boolean =
+        if (add != addClientTag.value) {
+            addClientTag.tryEmit(add)
             true
         } else {
             false

@@ -162,15 +162,12 @@ internal fun StageGrid(
     listenerCount: Int = 0,
     bottomBar: (@Composable () -> Unit)? = null,
 ) {
-    // Float currently-speaking members to the top so the listener can
-    // see who they're hearing without scrolling. sortedBy is stable in
-    // Kotlin — speakers retain relative order among themselves, as do
-    // non-speakers. Memoized on (members, speakingNow) so a 250ms
-    // speaking flip doesn't reallocate when neither input changed.
-    val sortedMembers =
-        remember(members, speakingNow) {
-            members.sortedBy { if (it.pubkey in speakingNow) 0 else 1 }
-        }
+    // Keep members in their stable arrival order. Reordering on the
+    // speaking state made a member jump to the front when they started
+    // talking and slide back ~250ms after they stopped — a constant
+    // shuffle in any active room. The speaking state is already shown
+    // in-place via MemberCell's mic badge / audio-level ring, so no
+    // reordering is needed.
     // Wrap the strip in a tonal card so the active speakers visually
     // live in their own zone, separated from the chat / audience tab
     // below. surfaceContainerLow is a quiet step up from the screen
@@ -221,7 +218,7 @@ internal fun StageGrid(
                     horizontalArrangement = Arrangement.spacedBy(GRID_SPACING),
                     verticalArrangement = Arrangement.spacedBy(GRID_SPACING),
                 ) {
-                    items(items = sortedMembers, key = { it.pubkey }) { member ->
+                    items(items = members, key = { it.pubkey }) { member ->
                         val isSelf = myPubkey != null && member.pubkey == myPubkey
                         MemberCell(
                             member = member,

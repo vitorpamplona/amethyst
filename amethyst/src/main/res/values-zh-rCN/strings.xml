@@ -1107,8 +1107,6 @@
     <string name="warn_when_posts_have_reports_from_your_follows">当帖子有你的关注的报告时警告</string>
     <string name="filter_spam_from_strangers_title">过滤垃圾信息</string>
     <string name="filter_spam_from_strangers_explainer">隐藏陌生人的五次或五次以上完全相同的帖子</string>
-    <string name="disable_client_tag_title">不要将客户标签添加到我的事件</string>
-    <string name="disable_client_tag_explainer">启用时，Amethyst 将不会在您发布的事件中附加一个 NIP-89 客户端标签。</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">举报警示</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">当帖子有来自你关注的五次及以上举报时显示警告消息</string>
     <string name="report_warning_threshold_title">举报警告阈值</string>

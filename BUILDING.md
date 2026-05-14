@@ -42,9 +42,9 @@ sudo dnf install -y rpm-build
 Install linuxdeploy locally (CI fetches its own — SHA-verified):
 
 ```bash
-curl -fsSL -o packaging/appimage/linuxdeploy-x86_64.AppImage \
+curl -fsSL -o desktopApp/packaging/appimage/linuxdeploy-x86_64.AppImage \
   https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20240109-1/linuxdeploy-x86_64.AppImage
-chmod +x packaging/appimage/linuxdeploy-x86_64.AppImage
+chmod +x desktopApp/packaging/appimage/linuxdeploy-x86_64.AppImage
 ```
 
 ---

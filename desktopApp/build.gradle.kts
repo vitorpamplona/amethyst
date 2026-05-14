@@ -173,13 +173,14 @@ tasks.withType<Download>().configureEach {
 // Instead: wrap `createReleaseDistributable` output with `linuxdeploy` (which
 // auto-bundles libraries, handles rpath, and calls appimagetool internally).
 //
-// Build inputs live in packaging/appimage/:
+// Build inputs live in desktopApp/packaging/appimage/:
 //   - AppRun              shell launcher (sets LD_LIBRARY_PATH including bundled VLC)
 //   - amethyst.desktop    XDG desktop entry
 //   - amethyst.png        512x512 icon
 //
-// linuxdeploy binary is fetched by CI (SHA-verified) into packaging/appimage/
-// as linuxdeploy-x86_64.AppImage. BUILDING.md documents local-dev fetch.
+// linuxdeploy binary is fetched by CI (SHA-verified) into
+// desktopApp/packaging/appimage/ as linuxdeploy-x86_64.AppImage.
+// BUILDING.md documents local-dev fetch.
 val createReleaseAppImage by tasks.registering(Exec::class) {
     group = "compose desktop"
     description = "Bundle createReleaseDistributable output into a Linux AppImage via linuxdeploy."
@@ -188,7 +189,7 @@ val createReleaseAppImage by tasks.registering(Exec::class) {
     val distDir = layout.buildDirectory.dir("compose/binaries/main-release/app/Amethyst")
     val appDir = layout.buildDirectory.dir("appimage/Amethyst.AppDir")
     val outFile = layout.buildDirectory.file("appimage/Amethyst-$appVersion-x86_64.AppImage")
-    val toolRoot = layout.projectDirectory.dir("../packaging/appimage")
+    val toolRoot = layout.projectDirectory.dir("packaging/appimage")
     val linuxdeployTool = toolRoot.file("linuxdeploy-x86_64.AppImage")
 
     inputs.dir(distDir)

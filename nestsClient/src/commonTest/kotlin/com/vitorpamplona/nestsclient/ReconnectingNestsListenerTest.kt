@@ -137,10 +137,13 @@ class ReconnectingNestsListenerTest {
         }
     }
 
-    private fun frame(payload: ByteArray): MoqObject =
+    private fun frame(
+        payload: ByteArray,
+        groupId: Long = 0L,
+    ): MoqObject =
         MoqObject(
             trackAlias = 1L,
-            groupId = 0L,
+            groupId = groupId,
             objectId = 0L,
             publisherPriority = 0,
             payload = payload,
@@ -232,7 +235,7 @@ class ReconnectingNestsListenerTest {
                     first.frames.subscriptionCount.first { it > 0 }
                 }
 
-                first.frames.emit(frame(byteArrayOf(0x01)))
+                first.frames.emit(frame(byteArrayOf(0x01), groupId = 0L))
 
                 // Wait for FRAME1 to traverse pump → wrapper.frames →
                 // consumer collector. Without this sync the next
@@ -261,7 +264,11 @@ class ReconnectingNestsListenerTest {
                     second.frames.subscriptionCount.first { it > 0 }
                 }
 
-                second.frames.emit(frame(byteArrayOf(0x02)))
+                // Post-reconnect audio lands in a newer group — moq-lite
+                // publishers carry their group lineage forward
+                // monotonically across recycles, so the second session's
+                // first real frame is group 1, not a replay of group 0.
+                second.frames.emit(frame(byteArrayOf(0x02), groupId = 1L))
 
                 val result = collected.await()
                 assertEquals(2, result.size)
@@ -277,6 +284,96 @@ class ReconnectingNestsListenerTest {
                 handle.unsubscribe()
                 assertEquals(1, second.unsubscribeCount)
 
+                reconnecting.close()
+            } finally {
+                scope.cancel()
+            }
+        }
+
+    /**
+     * Regression: after a reconnect the relay re-serves its cached
+     * latest group from the first frame. moq-lite publishers carry
+     * group sequences forward monotonically across their own recycles,
+     * so a re-served group has a sequence we've already consumed — the
+     * wrapper must drop it instead of replaying already-played audio
+     * into the decoder. In a fully-muted room (no newer group ever
+     * produced) the un-dropped replay loops the same clip once per
+     * reconnect.
+     */
+    @Test
+    fun reconnect_does_not_replay_already_consumed_group() =
+        runBlocking {
+            val scope = CoroutineScope(SupervisorJob())
+            try {
+                val first = ScriptedListener(room)
+                val second = ScriptedListener(room)
+                val listenersInOrder = mutableListOf(first, second)
+
+                val reconnecting =
+                    connectReconnectingNestsListener(
+                        httpClient = httpClient,
+                        transport = transport,
+                        scope = scope,
+                        room = room,
+                        signer = signer,
+                        policy = NestsReconnectPolicy(initialDelayMs = 1L),
+                        connector = { listenersInOrder.removeAt(0) },
+                    )
+
+                withTimeout(5_000L) {
+                    reconnecting.state.first { it is NestsListenerState.Connected }
+                }
+
+                val handle = reconnecting.subscribeSpeaker("speaker-pubkey")
+
+                val consumerSubscribed = CompletableDeferred<Unit>()
+                val consumerProgress = MutableStateFlow(0)
+
+                @Suppress("UNCHECKED_CAST")
+                val objectsAsShared = handle.objects as SharedFlow<MoqObject>
+                // Expect exactly two frames: the original group-0 frame
+                // and the genuinely-new group-1 frame. The group-0 frame
+                // re-served by the second session must NOT appear.
+                val collected =
+                    scope.async {
+                        withTimeout(5_000L) {
+                            objectsAsShared
+                                .onSubscription { consumerSubscribed.complete(Unit) }
+                                .take(2)
+                                .onEach { consumerProgress.value += 1 }
+                                .toList()
+                        }
+                    }
+
+                withTimeout(5_000L) { consumerSubscribed.await() }
+                withTimeout(5_000L) {
+                    first.frames.subscriptionCount.first { it > 0 }
+                }
+
+                first.frames.emit(frame(byteArrayOf(0x01), groupId = 0L))
+                withTimeout(5_000L) {
+                    consumerProgress.first { it >= 1 }
+                }
+
+                first.fail("scripted-disconnect")
+                withTimeout(5_000L) {
+                    second.frames.subscriptionCount.first { it > 0 }
+                }
+
+                // The relay re-serves the cached latest group (0) from
+                // the start — this is the stale replay that must be
+                // dropped.
+                second.frames.emit(frame(byteArrayOf(0x02), groupId = 0L))
+                // ...followed by genuinely new audio in the next group.
+                second.frames.emit(frame(byteArrayOf(0x03), groupId = 1L))
+
+                val result = collected.await()
+                assertEquals(2, result.size)
+                assertEquals(0x01.toByte(), result[0].payload[0])
+                // 0x02 (re-served group 0) dropped; 0x03 (group 1) kept.
+                assertEquals(0x03.toByte(), result[1].payload[0])
+
+                handle.unsubscribe()
                 reconnecting.close()
             } finally {
                 scope.cancel()
