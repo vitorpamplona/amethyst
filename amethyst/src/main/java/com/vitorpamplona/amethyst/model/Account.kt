@@ -36,6 +36,9 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListS
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.UserStatusAction
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.ReportAction
+import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
+import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage
+import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSender
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsOrchestrator
@@ -752,6 +755,37 @@ class Account(
 
         cache.justConsumeMyOwnEvent(zapRequest)
         return zapRequest
+    }
+
+    /**
+     * Send a NIP-BC onchain zap: build a Bitcoin transaction paying the recipient's
+     * derived Taproot address, sign it, broadcast it, and publish the kind:8333
+     * zap receipt. Pass [zappedEvent] to attribute the zap to a specific event, or
+     * leave it null for a profile zap.
+     */
+    suspend fun sendOnchainZap(
+        recipientPubKey: HexKey,
+        amountSats: Long,
+        feeRateSatPerVByte: Double,
+        comment: String = "",
+        zappedEvent: EventHintBundle<out Event>? = null,
+    ): OnchainZapSendResult {
+        val backend =
+            cache.onchainBackend
+                ?: return OnchainZapSendResult.Failure(
+                    OnchainZapSendStage.LOADING_UTXOS,
+                    "Bitcoin chain backend is not configured",
+                )
+        return OnchainZapSender.send(
+            backend = backend,
+            signer = signer,
+            senderPubKey = signer.pubKey,
+            recipientPubKey = recipientPubKey,
+            amountSats = amountSats,
+            feeRateSatPerVByte = feeRateSatPerVByte,
+            comment = comment,
+            zappedEvent = zappedEvent,
+        ) { template -> signAndComputeBroadcast(template) }
     }
 
     suspend fun report(

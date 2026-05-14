@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -133,7 +134,7 @@ fun OnchainSection(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                CopyAddressRow(address)
+                ActionRow(address = address, accountViewModel = accountViewModel)
             }
         }
     }
@@ -173,13 +174,17 @@ private fun BalanceRow(
 }
 
 @Composable
-private fun CopyAddressRow(address: String) {
+private fun ActionRow(
+    address: String,
+    accountViewModel: AccountViewModel,
+) {
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
+    var showSendDialog by remember { mutableStateOf(false) }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.End,
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         OutlinedButton(onClick = {
@@ -187,5 +192,15 @@ private fun CopyAddressRow(address: String) {
         }) {
             Text("Copy address")
         }
+        Button(onClick = { showSendDialog = true }) {
+            Text("Send")
+        }
+    }
+
+    if (showSendDialog) {
+        OnchainZapSendDialog(
+            accountViewModel = accountViewModel,
+            onDismiss = { showSendDialog = false },
+        )
     }
 }

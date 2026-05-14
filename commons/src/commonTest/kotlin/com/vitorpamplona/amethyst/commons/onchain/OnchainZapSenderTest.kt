@@ -1,0 +1,178 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.onchain
+
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.BitcoinTx
+import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.FeeEstimates
+import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.OnchainBackend
+import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.Utxo
+import com.vitorpamplona.quartz.nipBCOnchainZaps.psbt.BitcoinTransaction
+import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
+import com.vitorpamplona.quartz.utils.Secp256k1Instance
+import kotlinx.coroutines.test.runTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertTrue
+
+class OnchainZapSenderTest {
+    private val senderPriv = "0000000000000000000000000000000000000000000000000000000000000007"
+    private val recipientPriv = "000000000000000000000000000000000000000000000000000000000000000d"
+
+    private fun xOnly(privHex: String) =
+        Secp256k1Instance
+            .compressedPubKeyFor(privHex.hexToByteArray())
+            .copyOfRange(1, 33)
+            .toHexKey()
+
+    private val senderSigner = NostrSignerInternal(KeyPair(senderPriv.hexToByteArray()))
+    private val senderPubKey = xOnly(senderPriv)
+    private val recipientPubKey = xOnly(recipientPriv)
+
+    /** Records the broadcast tx and hands back its real txid. */
+    private class FakeBackend(
+        private val utxos: List<Utxo>,
+        private val broadcastFails: Boolean = false,
+    ) : OnchainBackend {
+        var broadcastedHex: String? = null
+
+        override suspend fun getTx(txid: String): BitcoinTx? = null
+
+        override suspend fun getUtxosForAddress(address: String): List<Utxo> = utxos
+
+        override suspend fun broadcast(rawTxHex: String): String {
+            if (broadcastFails) throw RuntimeException("relay rejected tx")
+            broadcastedHex = rawTxHex
+            return BitcoinTransaction.parse(rawTxHex).txid()
+        }
+
+        override suspend fun tipHeight(): Long = 800_000L
+
+        override suspend fun feeEstimates(): FeeEstimates = FeeEstimates(20.0, 10.0, 5.0)
+    }
+
+    @Test
+    fun profileZapSuccess() =
+        runTest {
+            val backend = FakeBackend(listOf(Utxo("1".repeat(64), 0, 250_000L, 6)))
+            var publishedTemplate: com.vitorpamplona.quartz.nip01Core.signers.EventTemplate<OnchainZapEvent>? = null
+
+            val result =
+                OnchainZapSender.send(
+                    backend = backend,
+                    signer = senderSigner,
+                    senderPubKey = senderPubKey,
+                    recipientPubKey = recipientPubKey,
+                    amountSats = 50_000L,
+                    feeRateSatPerVByte = 5.0,
+                    comment = "thanks!",
+                    zappedEvent = null,
+                ) { template ->
+                    publishedTemplate = template
+                    senderSigner.sign(template)
+                }
+
+            assertIs<OnchainZapSendResult.Success>(result)
+            assertTrue(result.feeSats > 0)
+
+            // The broadcast transaction's txid must match what the receipt references.
+            val broadcastTxid = BitcoinTransaction.parse(backend.broadcastedHex!!).txid()
+            assertEquals(broadcastTxid, result.txid)
+
+            // The published kind:8333 receipt must reference the same txid, recipient, amount.
+            val receipt = senderSigner.sign<OnchainZapEvent>(publishedTemplate!!)
+            assertEquals(OnchainZapEvent.KIND, receipt.kind)
+            assertEquals(broadcastTxid, receipt.txid())
+            assertEquals(recipientPubKey, receipt.recipient())
+            assertEquals(50_000L, receipt.claimedAmountInSats())
+            assertTrue(receipt.isProfileZap())
+        }
+
+    @Test
+    fun insufficientFundsFailsAtBuilding() =
+        runTest {
+            val backend = FakeBackend(listOf(Utxo("2".repeat(64), 0, 10_000L, 6)))
+            val result =
+                OnchainZapSender.send(
+                    backend = backend,
+                    signer = senderSigner,
+                    senderPubKey = senderPubKey,
+                    recipientPubKey = recipientPubKey,
+                    amountSats = 1_000_000L,
+                    feeRateSatPerVByte = 5.0,
+                    comment = "",
+                    zappedEvent = null,
+                ) { senderSigner.sign(it) }
+
+            assertIs<OnchainZapSendResult.Failure>(result)
+            assertEquals(OnchainZapSendStage.BUILDING, result.stage)
+            assertEquals(null, result.broadcastTxid)
+        }
+
+    @Test
+    fun broadcastFailureKeepsNoTxid() =
+        runTest {
+            val backend =
+                FakeBackend(listOf(Utxo("3".repeat(64), 0, 250_000L, 6)), broadcastFails = true)
+            val result =
+                OnchainZapSender.send(
+                    backend = backend,
+                    signer = senderSigner,
+                    senderPubKey = senderPubKey,
+                    recipientPubKey = recipientPubKey,
+                    amountSats = 50_000L,
+                    feeRateSatPerVByte = 5.0,
+                    comment = "",
+                    zappedEvent = null,
+                ) { senderSigner.sign(it) }
+
+            assertIs<OnchainZapSendResult.Failure>(result)
+            assertEquals(OnchainZapSendStage.BROADCASTING, result.stage)
+            assertEquals(null, result.broadcastTxid)
+        }
+
+    @Test
+    fun publishFailureReportsBroadcastTxid() =
+        runTest {
+            val backend = FakeBackend(listOf(Utxo("4".repeat(64), 0, 250_000L, 6)))
+            val result =
+                OnchainZapSender.send(
+                    backend = backend,
+                    signer = senderSigner,
+                    senderPubKey = senderPubKey,
+                    recipientPubKey = recipientPubKey,
+                    amountSats = 50_000L,
+                    feeRateSatPerVByte = 5.0,
+                    comment = "",
+                    zappedEvent = null,
+                ) { throw RuntimeException("relay down") }
+
+            assertIs<OnchainZapSendResult.Failure>(result)
+            assertEquals(OnchainZapSendStage.PUBLISHING, result.stage)
+            // The payment went through — the txid is preserved for retry/diagnostics.
+            val broadcastTxid = BitcoinTransaction.parse(backend.broadcastedHex!!).txid()
+            assertEquals(broadcastTxid, result.broadcastTxid)
+        }
+}
