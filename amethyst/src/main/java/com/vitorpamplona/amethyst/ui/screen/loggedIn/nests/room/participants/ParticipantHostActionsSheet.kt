@@ -50,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomSpeakerCatalog
@@ -71,6 +72,9 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * Per-participant context sheet (T2 #2). Long-press on any participant
@@ -100,12 +104,12 @@ internal fun ParticipantHostActionsSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val targetUser = remember(target) { LocalCache.getOrCreateUser(target) }
 
-    // Reactive display name — UsernameDisplay observes this for the
-    // header, and we reuse the same flow for toast text so the header
-    // and toast never disagree (e.g. metadata arriving mid-sheet).
+    // Reactive display name for confirmation-dialog bodies (kick /
+    // force-mute) — `observeUserInfo` lets the dialog text track a
+    // late-arriving metadata event without re-opening the sheet.
     val userInfo by observeUserInfo(targetUser, accountViewModel)
     val displayName = userInfo?.info?.bestName() ?: targetUser.pubkeyDisplayHex()
-    val toasts = rememberParticipantToasts(displayName)
+    val toasts = rememberParticipantToasts()
 
     var openDialog by rememberSaveable(stateSaver = SheetDialogSaver) {
         mutableStateOf<SheetDialog?>(null)
@@ -174,7 +178,6 @@ internal fun ParticipantHostActionsSheet(
                     //      so future presence events don't re-render them
                     broadcast(accountViewModel, AdminCommandEvent.kick(roomATag, target))
                     broadcast(accountViewModel, RoomParticipantActions.removeParticipant(event, target))
-                    accountViewModel.toastManager.toast(toasts.title, toasts.kickSent)
                     onDismiss()
                 },
                 onDismiss = { openDialog = null },
@@ -190,7 +193,6 @@ internal fun ParticipantHostActionsSheet(
                     openDialog = null
                     val roomATag = ATag(event.kind, event.pubKey, event.dTag(), null)
                     broadcast(accountViewModel, AdminCommandEvent.forceMute(roomATag, target))
-                    accountViewModel.toastManager.toast(toasts.title, toasts.forceMuteSent)
                     onDismiss()
                 },
                 onDismiss = { openDialog = null },
@@ -273,10 +275,8 @@ private fun AudienceActions(
     ) {
         if (isFollowing) {
             accountViewModel.unfollow(targetUser)
-            accountViewModel.toastManager.toast(toasts.title, toasts.unfollowSent)
         } else {
             accountViewModel.follow(targetUser)
-            accountViewModel.toastManager.toast(toasts.title, toasts.followSent)
         }
         onDismiss()
     }
@@ -289,10 +289,8 @@ private fun AudienceActions(
     ) {
         if (isHidden) {
             accountViewModel.show(targetUser)
-            accountViewModel.toastManager.toast(toasts.title, toasts.unmuteSent)
         } else {
             accountViewModel.hide(targetUser)
-            accountViewModel.toastManager.toast(toasts.title, toasts.muteSent)
         }
         onDismiss()
     }
@@ -337,13 +335,22 @@ private fun HostActions(
     val nestPresences by nestViewModel.presences.collectAsState()
     val targetIsBroadcasting = nestPresences[target]?.publishing == true
 
-    fun hostAction(
-        template: EventTemplate<out Event>?,
-        toastMsg: String,
-    ) {
-        broadcast(accountViewModel, template)
-        accountViewModel.toastManager.toast(toasts.title, toastMsg)
+    fun hostAction(template: EventTemplate<out Event>?) {
+        // Sign+publish runs inside a coroutine that surfaces ANY
+        // failure as a toast. Success is confirmed by the UI moving
+        // the target between stage/audience (or removing them), so
+        // no success toast is needed — the previous "Promoted X"
+        // toast was redundant once the kind-30312 + stale-presence
+        // fixes made the grid update visible. Silent signer failures
+        // (NIP-46 timeout, manual denial, etc.) still need to
+        // surface because they're invisible from the host's POV.
+        if (template == null) {
+            accountViewModel.toastManager.toast(toasts.failedTitle, toasts.failedTemplateNull)
+            onDismiss()
+            return
+        }
         onDismiss()
+        broadcastWithDiagnostics(accountViewModel, template, toasts.failedTitle)
     }
 
     Spacer(Modifier.height(4.dp))
@@ -353,12 +360,12 @@ private fun HostActions(
     // wasted relay traffic and an obvious UX tell.
     if (targetRole != ROLE.SPEAKER) {
         ActionRow(stringRes(R.string.nest_promote_speaker)) {
-            hostAction(RoomParticipantActions.setRole(event, target, ROLE.SPEAKER), toasts.promoteSpeakerSent)
+            hostAction(RoomParticipantActions.setRole(event, target, ROLE.SPEAKER))
         }
     }
     if (targetRole != ROLE.MODERATOR) {
         ActionRow(stringRes(R.string.nest_promote_moderator)) {
-            hostAction(RoomParticipantActions.setRole(event, target, ROLE.MODERATOR), toasts.promoteModeratorSent)
+            hostAction(RoomParticipantActions.setRole(event, target, ROLE.MODERATOR))
         }
     }
     // Demote only when the target actually has a role above listener —
@@ -366,7 +373,7 @@ private fun HostActions(
     // and the visible row sets up a misleading expectation.
     if (targetRole != null && targetRole != ROLE.PARTICIPANT) {
         ActionRow(stringRes(R.string.nest_demote_listener)) {
-            hostAction(RoomParticipantActions.demoteToListener(event, target), toasts.demoteListenerSent)
+            hostAction(RoomParticipantActions.demoteToListener(event, target))
         }
     }
     // Force-mute is honor-based: the target's client must honor the
@@ -498,6 +505,36 @@ private fun broadcast(
     accountViewModel.launchSigner { accountViewModel.account.signAndComputeBroadcast(template) }
 }
 
+/**
+ * Sign+publish a host-action template and surface only FAILURES as
+ * a toast. Success is implicit — the UI updates when the kind-30312
+ * round-trips, so a success toast would be redundant. Any throw
+ * (including the silent ones [launchSigner] Log.w-only's —
+ * `TimedOutException`, `ManuallyUnauthorizedException`,
+ * `CouldNotPerformException`,
+ * `RunningOnBackgroundWithoutAutomaticPermissionException`,
+ * `AutomaticallyUnauthorizedException`) becomes a visible error
+ * toast with the exception's class name + message so the host knows
+ * a remote-signer denial happened.
+ */
+private fun broadcastWithDiagnostics(
+    accountViewModel: AccountViewModel,
+    template: EventTemplate<out Event>,
+    failedTitle: String,
+) {
+    accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+        try {
+            accountViewModel.account.signAndComputeBroadcast(template)
+        } catch (ce: CancellationException) {
+            throw ce
+        } catch (e: Throwable) {
+            val klass = e::class.simpleName ?: "Throwable"
+            val msg = e.message?.takeIf { it.isNotBlank() } ?: "no message"
+            accountViewModel.toastManager.toast(failedTitle, "$klass: $msg")
+        }
+    }
+}
+
 private fun openProfileInMainActivity(
     context: Context,
     target: String,
@@ -545,33 +582,17 @@ private val SheetDialogSaver: Saver<SheetDialog?, String> =
  * (which are not @Composable) read them by reference.
  */
 private data class ParticipantToasts(
-    val title: String,
-    val followSent: String,
-    val unfollowSent: String,
-    val muteSent: String,
-    val unmuteSent: String,
-    val promoteSpeakerSent: String,
-    val promoteModeratorSent: String,
-    val demoteListenerSent: String,
-    val forceMuteSent: String,
-    val kickSent: String,
+    val failedTitle: String,
+    val failedTemplateNull: String,
     val noAppMessage: String,
     val zapSplitUnsupported: String,
 )
 
 @Composable
-private fun rememberParticipantToasts(displayName: String): ParticipantToasts =
+private fun rememberParticipantToasts(): ParticipantToasts =
     ParticipantToasts(
-        title = stringRes(R.string.nest_toast_action_title),
-        followSent = stringRes(R.string.nest_toast_follow_sent, displayName),
-        unfollowSent = stringRes(R.string.nest_toast_unfollow_sent, displayName),
-        muteSent = stringRes(R.string.nest_toast_mute_sent, displayName),
-        unmuteSent = stringRes(R.string.nest_toast_unmute_sent, displayName),
-        promoteSpeakerSent = stringRes(R.string.nest_toast_promote_speaker_sent, displayName),
-        promoteModeratorSent = stringRes(R.string.nest_toast_promote_moderator_sent, displayName),
-        demoteListenerSent = stringRes(R.string.nest_toast_demote_listener_sent, displayName),
-        forceMuteSent = stringRes(R.string.nest_toast_force_mute_sent, displayName),
-        kickSent = stringRes(R.string.nest_toast_kick_sent, displayName),
+        failedTitle = stringRes(R.string.nest_toast_host_action_failed_title),
+        failedTemplateNull = stringRes(R.string.nest_toast_host_action_failed_template_null),
         noAppMessage = stringRes(R.string.nest_no_app_to_open_link),
         zapSplitUnsupported = stringRes(R.string.nest_participant_zap_split_unsupported),
     )

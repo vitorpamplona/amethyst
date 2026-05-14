@@ -24,22 +24,22 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 
 /**
- * One in-flight kind-9735 zap to render as a floating overlay on a
- * participant's avatar (or as a room-wide pulse). Same ephemeral
- * contract as [RoomReaction]: the aggregator drops entries older
- * than the staleness window so the overlay clears itself without
- * per-component animation bookkeeping.
+ * One in-flight kind-9735 zap to render as a floating overlay on the
+ * zapper's avatar. Same ephemeral contract as [RoomReaction]: the
+ * aggregator drops entries older than the staleness window so the
+ * overlay clears itself without per-component animation bookkeeping.
  *
- * `targetPubkey == null` means the zap targets the room itself (no
- * `p` tag on the receipt); the UI can render those room-wide.
+ * `targetPubkey == null` means the receipt carried no `p` tag — the
+ * zap still floats from the zapper's avatar, so the target is only
+ * informational.
  */
 @Immutable
 data class RoomZap(
     /** Zap receipt event id — used for dedup across re-emits. */
     val eventId: String,
-    /** Who paid the invoice (zap recipient lnurl provider's signing key). */
+    /** Who SENT the zap (the kind-9734 request author, not the LN service). */
     val sourcePubkey: String,
-    /** Participant the zap is aimed at, or `null` for the room itself. */
+    /** Participant the zap names via its `p` tag, or `null` if none. */
     val targetPubkey: String?,
     /** Amount in sats, or `null` if the invoice couldn't be parsed. */
     val amountSats: Long?,
@@ -47,14 +47,16 @@ data class RoomZap(
 ) {
     companion object {
         /**
-         * Project a kind-9735 [LnZapEvent] into a [RoomZap]. The target
-         * pubkey is the FIRST `p` tag — the participant a zap message
-         * names; an empty list means the zap is room-wide.
+         * Project a kind-9735 [LnZapEvent] into a [RoomZap]. The
+         * source pubkey is the embedded kind-9734 request author —
+         * the actual zapper — NOT the receipt's own `pubKey`, which
+         * is the lnurl service provider's signing key. Falls back to
+         * the receipt issuer only when the request can't be parsed.
          */
         fun from(event: LnZapEvent): RoomZap =
             RoomZap(
                 eventId = event.id,
-                sourcePubkey = event.pubKey,
+                sourcePubkey = event.zapRequest?.pubKey ?: event.pubKey,
                 targetPubkey = event.zappedAuthor().firstOrNull(),
                 amountSats = event.amount?.toLong(),
                 createdAtSec = event.createdAt,
@@ -65,8 +67,8 @@ data class RoomZap(
 /**
  * Sliding-window aggregator for room zaps. Mirrors
  * [RoomReactionsAggregator] — same dedup-by-event-id rule and
- * groupBy-target-pubkey output shape so the UI can use one overlay
- * component for both streams.
+ * group-by-sender output shape so the UI can use one overlay
+ * placement convention for both streams.
  *
  * Not thread-safe — call from the VM's single coroutine.
  */
@@ -74,9 +76,6 @@ class RoomZapsAggregator {
     // Insertion-ordered so groupBy preserves arrival order; keyed by
     // event id so the same receipt from two relays only counts once.
     private val byEventId = LinkedHashMap<String, RoomZap>()
-
-    /** Stable key for room-wide zaps in the returned map. */
-    private val roomWideKey = ""
 
     /** Apply one zap and return the post-evict snapshot. */
     fun apply(
@@ -96,12 +95,20 @@ class RoomZapsAggregator {
      * — typically every second so the floating-up animation frame
      * rate is set by the eviction tick rather than by a
      * per-Composable timer.
+     *
+     * Zaps are grouped by [RoomZap.sourcePubkey] — the user who SENT
+     * the zap — so the chip floats up from the zapper's own avatar,
+     * matching how [RoomReactionsAggregator] groups reactions. In a
+     * live audio room the audience expects to see who's zapping, not
+     * who's being zapped; and the zapper may be an audience member,
+     * so the overlay is wired into the audience grid as well as the
+     * stage.
      */
     fun evictAndSnapshot(olderThanSec: Long): Map<String, List<RoomZap>> {
         val it = byEventId.entries.iterator()
         while (it.hasNext()) {
             if (it.next().value.createdAtSec < olderThanSec) it.remove()
         }
-        return byEventId.values.groupBy { it.targetPubkey ?: roomWideKey }
+        return byEventId.values.groupBy { it.sourcePubkey }
     }
 }

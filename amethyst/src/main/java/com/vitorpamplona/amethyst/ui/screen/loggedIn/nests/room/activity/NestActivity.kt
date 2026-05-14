@@ -38,6 +38,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.compose.RelayAuthSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.StringResSetup
+import com.vitorpamplona.amethyst.ui.components.toasts.DisplayErrorMessages
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.screen.ManageRelayServices
 import com.vitorpamplona.amethyst.ui.screen.ManageWebOkHttp
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
@@ -189,6 +191,24 @@ class NestActivity : AppCompatActivity() {
                     pipMuteSignal = toggleMuteSignal,
                     onLeave = { finish() },
                     onMinimize = { enterPip() },
+                )
+
+                // Mirror MainActivity's `AppNavigation` → render toasts
+                // inside *this* Activity's Compose tree so promote /
+                // demote / kick / room-edit results actually surface in
+                // front of the room UI. Without this, every
+                // `toastManager.toast(...)` from nest code queues into a
+                // StateFlow whose only collector lives in MainActivity —
+                // the dialog only becomes visible after the user PIPs out.
+                // EmptyNav is the documented stub for hosts that have no
+                // navigation graph; the only consumer that reads `nav`
+                // is `MultiErrorToastMsg` (zap-error aggregator) — nest
+                // call sites emit `ResourceToastMsg` / `StringToastMsg`
+                // which don't touch nav.
+                DisplayErrorMessages(
+                    toastManager = accountViewModel.toastManager,
+                    accountViewModel = accountViewModel,
+                    nav = EmptyNav(),
                 )
             }
         }

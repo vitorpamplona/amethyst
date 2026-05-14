@@ -659,7 +659,6 @@
     <string name="nest_chat_send">Send</string>
     <string name="nest_chat_placeholder">Say something…</string>
     <string name="nest_chat_empty">No messages yet. Be the first to chat.</string>
-    <string name="nest_reactions_title">React</string>
     <string name="nest_reactions_button">React</string>
     <string name="nest_edit_title">Edit room</string>
     <string name="nest_edit_save">Save</string>
@@ -689,16 +688,8 @@
     <string name="nest_confirm_force_mute_body">Asks %1$s\'s client to mute its mic. Some clients may ignore this command.</string>
     <string name="nest_confirm_force_mute_confirm">Force-mute</string>
     <string name="nest_confirm_cancel">Cancel</string>
-    <string name="nest_toast_action_title">Audio room</string>
-    <string name="nest_toast_follow_sent">Following %1$s.</string>
-    <string name="nest_toast_unfollow_sent">Unfollowed %1$s.</string>
-    <string name="nest_toast_mute_sent">Muted %1$s.</string>
-    <string name="nest_toast_unmute_sent">Unmuted %1$s.</string>
-    <string name="nest_toast_promote_speaker_sent">Promoted %1$s to speaker.</string>
-    <string name="nest_toast_promote_moderator_sent">Promoted %1$s to moderator.</string>
-    <string name="nest_toast_demote_listener_sent">Demoted %1$s to listener.</string>
-    <string name="nest_toast_force_mute_sent">Force-muted %1$s.</string>
-    <string name="nest_toast_kick_sent">Kicked %1$s from the room.</string>
+    <string name="nest_toast_host_action_failed_title">Action failed</string>
+    <string name="nest_toast_host_action_failed_template_null">The action could not be prepared.</string>
     <string name="nest_share_action">Share room</string>
     <string name="nest_minimize">Minimize</string>
     <string name="nest_minimize_description">Minimize to keep listening</string>

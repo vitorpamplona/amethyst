@@ -24,7 +24,6 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class RoomZapsStateTest {
     private val alice = "a".repeat(64)
@@ -34,11 +33,13 @@ class RoomZapsStateTest {
     private var nextEventId = 1
 
     /**
-     * Builds a kind-9735 zap receipt tagged for a room (`a`) and,
-     * optionally, a target participant (`p`). No `bolt11` tag is
-     * attached, so [LnZapEvent.amount] resolves to null — the
-     * aggregator's grouping / eviction / dedup logic does not depend
-     * on the amount, so that keeps the fixtures invoice-free.
+     * Builds a kind-9735 zap receipt with no embedded `description`
+     * request, so [RoomZap.from] falls back to the receipt's own
+     * `pubKey` as the sender — i.e. [from] is the grouping key. A
+     * `p` tag for [to] is attached when non-null (informational
+     * `targetPubkey`); no `bolt11` tag, so the amount resolves to
+     * null. The aggregator's grouping / eviction / dedup logic does
+     * not depend on the amount, which keeps the fixtures invoice-free.
      */
     private fun zap(
         from: String,
@@ -62,7 +63,7 @@ class RoomZapsStateTest {
     }
 
     @Test
-    fun fromEventGroupsByTargetPubkey() {
+    fun fromEventUsesSenderAndTarget() {
         val zap = RoomZap.from(zap(alice, bob, 100L))
         assertEquals(alice, zap.sourcePubkey)
         assertEquals(bob, zap.targetPubkey)
@@ -74,17 +75,21 @@ class RoomZapsStateTest {
     fun fromEventNullTargetWhenNoPTag() {
         val zap = RoomZap.from(zap(alice, null, 100L))
         assertNull(zap.targetPubkey)
+        // Source still resolves even without a `p` tag — the zap
+        // floats from the zapper's avatar regardless of target.
+        assertEquals(alice, zap.sourcePubkey)
     }
 
     @Test
-    fun aggregatorGroupsByParticipant() {
+    fun aggregatorGroupsBySender() {
         val agg = RoomZapsAggregator()
+        // Two zaps from alice, aimed at different participants — both
+        // float from alice's avatar, so both land under alice's key.
         agg.apply(zap(alice, bob, 100L), nowSec = 100L, windowSec = 30L)
-        val snap = agg.apply(zap(charlie, bob, 100L), nowSec = 100L, windowSec = 30L)
+        val snap = agg.apply(zap(alice, charlie, 100L), nowSec = 100L, windowSec = 30L)
 
-        // Two zaps on bob.
-        assertEquals(setOf(bob), snap.keys)
-        assertEquals(2, snap[bob]!!.size)
+        assertEquals(setOf(alice), snap.keys)
+        assertEquals(2, snap[alice]!!.size)
     }
 
     @Test
@@ -93,23 +98,12 @@ class RoomZapsStateTest {
         // Old zap (T=70) — outside the window when now=110, windowSec=30.
         agg.apply(zap(alice, bob, 70L), nowSec = 70L, windowSec = 30L)
         // Fresh zap (T=105) — inside the window.
-        val snap = agg.apply(zap(charlie, bob, 105L), nowSec = 110L, windowSec = 30L)
+        val snap = agg.apply(zap(bob, charlie, 105L), nowSec = 110L, windowSec = 30L)
 
-        // bob has only the fresh one left.
+        // alice's stale zap is gone; only bob's fresh one remains.
+        assertNull(snap[alice])
         assertEquals(1, snap[bob]!!.size)
         assertEquals(105L, snap[bob]!![0].createdAtSec)
-    }
-
-    @Test
-    fun aggregatorRoomWideZapsKeyedByEmptyString() {
-        val agg = RoomZapsAggregator()
-        val snap = agg.apply(zap(alice, null, 100L), nowSec = 100L, windowSec = 30L)
-
-        // Room-wide zaps (no `p` tag) land under the empty-string key
-        // so the map's value-type stays uniform; the UI can split them
-        // on render.
-        assertTrue(snap.containsKey(""))
-        assertEquals(1, snap[""]!!.size)
     }
 
     @Test
@@ -136,6 +130,6 @@ class RoomZapsStateTest {
         agg.apply(replay, nowSec = 100L, windowSec = 30L)
         val snap = agg.apply(replay, nowSec = 100L, windowSec = 30L)
 
-        assertEquals(1, snap[bob]!!.size)
+        assertEquals(1, snap[alice]!!.size)
     }
 }

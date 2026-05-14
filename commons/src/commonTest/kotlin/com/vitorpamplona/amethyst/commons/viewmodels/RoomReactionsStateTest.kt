@@ -24,7 +24,6 @@ import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class RoomReactionsStateTest {
     private val alice = "a".repeat(64)
@@ -71,14 +70,19 @@ class RoomReactionsStateTest {
     }
 
     @Test
-    fun aggregatorGroupsBySpeaker() {
+    fun aggregatorGroupsBySender() {
+        // Two reactions sent BY alice and charlie, both targeting bob.
+        // Group by sender so the floating chip rises from the
+        // reactor's avatar rather than the target speaker's.
         val agg = RoomReactionsAggregator()
         agg.apply(reaction(alice, bob, "🔥", 100L), nowSec = 100L, windowSec = 30L)
         val snap = agg.apply(reaction(charlie, bob, "👏", 100L), nowSec = 100L, windowSec = 30L)
 
-        // Two reactions on bob.
-        assertEquals(setOf(bob), snap.keys)
-        assertEquals(2, snap[bob]!!.size)
+        assertEquals(setOf(alice, charlie), snap.keys)
+        assertEquals(1, snap[alice]!!.size)
+        assertEquals("🔥", snap[alice]!![0].content)
+        assertEquals(1, snap[charlie]!!.size)
+        assertEquals("👏", snap[charlie]!![0].content)
     }
 
     @Test
@@ -89,20 +93,22 @@ class RoomReactionsStateTest {
         // Fresh reaction (T=105) — inside the window.
         val snap = agg.apply(reaction(charlie, bob, "👏", 105L), nowSec = 110L, windowSec = 30L)
 
-        // bob has only the fresh one left.
-        assertEquals(1, snap[bob]!!.size)
-        assertEquals("👏", snap[bob]!![0].content)
+        // alice's reaction is evicted, charlie's stays.
+        assertNull(snap[alice])
+        assertEquals(1, snap[charlie]!!.size)
+        assertEquals("👏", snap[charlie]!![0].content)
     }
 
     @Test
-    fun aggregatorRoomWideReactionsKeyedByEmptyString() {
+    fun aggregatorRoomWideReactionsKeyedBySender() {
         val agg = RoomReactionsAggregator()
         val snap = agg.apply(reaction(alice, null, "🎉", 100L), nowSec = 100L, windowSec = 30L)
 
-        // Room-wide reactions land under the empty-string key so the
-        // map's value-type stays uniform; the UI can split them on render.
-        assertTrue(snap.containsKey(""))
-        assertEquals(1, snap[""]!!.size)
+        // A reaction with no `p`-tag (room-wide) still groups under
+        // the sender's key, so it floats from the reactor's avatar
+        // exactly the same way a speaker-targeted reaction does.
+        assertEquals(setOf(alice), snap.keys)
+        assertEquals(1, snap[alice]!!.size)
     }
 
     @Test
@@ -129,6 +135,7 @@ class RoomReactionsStateTest {
         agg.apply(replay, nowSec = 100L, windowSec = 30L)
         val snap = agg.apply(replay, nowSec = 100L, windowSec = 30L)
 
-        assertEquals(1, snap[bob]!!.size)
+        // Sender-grouped: only one entry, under the sender (alice).
+        assertEquals(1, snap[alice]!!.size)
     }
 }
