@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.okhttp
 
 import android.content.Context
+import androidx.core.content.edit
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.utils.Log
@@ -56,7 +57,7 @@ class SurgeDnsStore(
                 MAPPER.readValue<List<DnsCacheRecord>>(json)
             } catch (t: Throwable) {
                 Log.w(TAG) { "Dropping corrupt DNS cache blob: ${t.message}" }
-                prefs.edit().remove(KEY_SNAPSHOT).apply()
+                prefs.edit { remove(KEY_SNAPSHOT) }
                 return
             }
         // restore() uses putIfAbsent and never marks dirty, so we deliberately do NOT clear the
@@ -78,7 +79,7 @@ class SurgeDnsStore(
         try {
             val records = dns.snapshot()
             val json = MAPPER.writeValueAsString(records)
-            prefs.edit().putString(KEY_SNAPSHOT, json).apply()
+            prefs.edit { putString(KEY_SNAPSHOT, json) }
             Log.d(TAG) { "Persisted ${records.size} DNS cache entries" }
         } catch (t: Throwable) {
             Log.w(TAG) { "Failed to persist DNS cache: ${t.message}" }
@@ -89,7 +90,7 @@ class SurgeDnsStore(
 
     /** Force-clear the on-disk cache. Useful for diagnostics or when the user wipes data. */
     fun clear() {
-        prefs.edit().remove(KEY_SNAPSHOT).apply()
+        prefs.edit { remove(KEY_SNAPSHOT) }
     }
 
     companion object {

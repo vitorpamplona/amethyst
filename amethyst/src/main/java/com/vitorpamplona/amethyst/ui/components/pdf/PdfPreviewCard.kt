@@ -48,6 +48,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.createBitmap
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
@@ -248,7 +249,7 @@ private fun renderFirstPage(
             renderer.openPage(0).use { page ->
                 val (renderW, renderH) = cappedRenderSize(page.width, page.height, targetWidthPx)
                 // PdfRenderer requires ARGB_8888; RGB_565 silently produces blank output.
-                val bitmap = Bitmap.createBitmap(renderW, renderH, Bitmap.Config.ARGB_8888)
+                val bitmap = createBitmap(renderW, renderH)
                 bitmap.eraseColor(android.graphics.Color.WHITE)
                 page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                 PdfLoadState.Ready(

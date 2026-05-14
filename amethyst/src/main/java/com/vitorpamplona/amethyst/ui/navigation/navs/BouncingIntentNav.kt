@@ -22,11 +22,11 @@ package com.vitorpamplona.amethyst.ui.navigation.navs
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
+import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
@@ -119,7 +119,7 @@ class BouncingIntentNav(
 
     private fun bounce(uri: String) {
         val intent =
-            Intent(Intent.ACTION_VIEW, Uri.parse(uri))
+            Intent(Intent.ACTION_VIEW, uri.toUri())
                 .setClass(context, MainActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         runCatching { context.startActivity(intent) }
