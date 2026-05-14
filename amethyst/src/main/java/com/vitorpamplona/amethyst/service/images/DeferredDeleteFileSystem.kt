@@ -33,32 +33,40 @@ import okio.Sink
 import java.io.IOException
 
 /**
- * okio [FileSystem] wrapper that moves Coil's eviction `unlink()` off the
- * cache write path.
+ * okio [FileSystem] wrapper that moves Coil's eviction `unlink()` out from
+ * under the `DiskLruCache` lock.
  *
- * Coil's `DiskLruCache` runs `trimToSize()` inline inside `commit()`: once the
- * cache is saturated, every new entry written during a feed scroll triggers a
- * burst of synchronous `delete()` syscalls on the same thread, contending with
- * the reads that paint on-screen avatars. That is the scroll stall.
+ * Verified against Coil 3.4.0's `coil3.disk.DiskLruCache`: eviction is not
+ * inline on the commit thread — `completeEdit()` calls `launchCleanup()`,
+ * which `launch`es on a limited-parallelism IO scope. But the cleanup
+ * coroutine runs `trimToSize()` *while holding the global `DiskLruCache`
+ * lock*, and `trimToSize()` → `removeEntry()` → `fileSystem.delete()` does
+ * the unlink syscalls under that lock. Every `openSnapshot()` (read) and
+ * `openEditor()` (write) contends on the same lock. So on a saturated
+ * cache, each cleanup pass blocks all feed-scroll reads and writes for the
+ * duration of a burst of `delete()` syscalls — that is the scroll stall
+ * users see go away after a storage wipe.
  *
- * This wrapper intercepts `delete()` — exactly the call eviction makes — and,
- * instead of unlinking inline, enqueues the path and unlinks it later on a
- * background coroutine, one path at a time with a `yield()` between each so the
- * IO dispatcher stays responsive. Coil keeps full ownership of LRU order, keys,
- * and `size` accounting; only the syscall is rescheduled.
+ * This wrapper intercepts `delete()` — exactly the call `removeEntry()`
+ * makes — and, instead of unlinking inline, enqueues the path and unlinks
+ * it later on a background coroutine, one path at a time with a `yield()`
+ * between each so the IO dispatcher stays responsive. `delete()` returns in
+ * microseconds, so `trimToSize()` releases the lock almost immediately;
+ * Coil keeps full ownership of LRU order, keys, and `size` accounting, and
+ * only the syscall is rescheduled off-lock.
  *
  * Re-create race: if Coil re-fetches a URL whose entry was just evicted, it
  * writes a new file at the same path. [atomicMove], [sink], [appendingSink],
- * [openReadWrite] and [createDirectory] therefore cancel any pending delete of
- * the path they are about to (re)create, so the drainer can never unlink a
- * freshly written file.
+ * [openReadWrite] and [createDirectory] therefore cancel any pending delete
+ * of the path they are about to (re)create, so the drainer can never unlink
+ * a freshly written file.
  *
  * The drainer unlinks each path while holding [lock], so a concurrent
  * write-path call that needs to cancel a delete waits at most one in-flight
  * `unlink()` — O(1), never the O(N) burst this class exists to remove.
  *
- * This instance is dedicated to Coil's image disk cache, so every path it sees
- * is a cache file and deferring all `delete()` calls is safe.
+ * This instance is dedicated to Coil's image disk cache, so every path it
+ * sees is a cache file and deferring all `delete()` calls is safe.
  */
 class DeferredDeleteFileSystem(
     delegate: FileSystem,
