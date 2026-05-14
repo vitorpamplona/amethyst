@@ -53,11 +53,13 @@ import kotlinx.coroutines.delay
 
 /**
  * Floating zap-chip overlay drawn over a participant's avatar — the
- * zap counterpart to [SpeakerReactionOverlay]. Each chip is keyed by
- * the zap event id; consecutive zaps to the same target stack into a
- * row, with the chip life-cycle (`fadeIn + scaleIn` on arrival,
- * upward drift + `fadeOut` over [REACTION_WINDOW_SEC]) matching
- * reactions so both streams visually feel like the same animation.
+ * zap counterpart to [SpeakerReactionOverlay]. The aggregator groups
+ * zaps by sender, so this renders the zaps a single participant has
+ * *sent*: consecutive zaps from that sender stack into a row, each
+ * chip keyed by its event id. The chip life-cycle (`fadeIn + scaleIn`
+ * on arrival, upward drift + `fadeOut` over [REACTION_WINDOW_SEC])
+ * matches reactions so both streams visually feel like the same
+ * animation.
  *
  * Renders an "⚡ Nsats" pill in [BitcoinOrange] so zaps are distinct
  * from emoji reactions at a glance.
@@ -141,7 +143,7 @@ private fun ZapChip(zap: RoomZap) {
 
 private const val ZAP_WINDOW_MS = REACTION_WINDOW_SEC * 1000L
 
-// Cap the row at a small number so a burst of zaps to the same
-// participant doesn't overflow the avatar's bottom-right corner —
-// the eviction sweep clears them within the window anyway.
+// Cap the row at a small number so a burst of zaps from the same
+// sender doesn't overflow the avatar's top-center anchor — the
+// eviction sweep clears them within the window anyway.
 private const val MAX_VISIBLE_ZAPS = 3

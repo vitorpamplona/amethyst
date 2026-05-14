@@ -561,21 +561,24 @@ private fun MemberCell(
                             .offset(x = -ringPadding + 6.dp, y = -ringPadding + 6.dp),
                 )
             }
-            // Zaps animate in the avatar's TOP-right corner — same
-            // outer-Box sibling placement and reasoning as the
-            // reaction overlay above, just the opposite vertical
-            // corner so the two streams never stack on each other
-            // (reactions BottomEnd, mic badge BottomCenter). End-
-            // anchored like reactions so the chip extends LEFTWARD
-            // into the cell as `⚡ Nsats` widens, rather than bleeding
-            // into the neighbouring column.
+            // Zaps animate just above the avatar, TOP-CENTER — the
+            // only badge-free anchor: the role badge sits TopStart,
+            // the hand-raise badge TopEnd, the mic badge BottomCenter
+            // and the reaction overlay BottomEnd. Anchoring TopEnd
+            // would collide with the hand-raise badge, and now that
+            // zaps float from the *zapper's* avatar (a likely
+            // hand-raiser), that overlap would be common. Center-
+            // anchored so the `⚡ Nsats` chip extends symmetrically
+            // and stays within the cell rather than bleeding into the
+            // neighbouring column. Same outer-Box sibling placement
+            // and layout-stability reasoning as the reaction overlay.
             if (zaps.isNotEmpty()) {
                 SpeakerZapOverlay(
                     zaps = zaps,
                     modifier =
                         Modifier
-                            .align(Alignment.TopEnd)
-                            .offset(x = -ringPadding + 6.dp, y = ringPadding - 6.dp),
+                            .align(Alignment.TopCenter)
+                            .offset(y = ringPadding - 6.dp),
                 )
             }
         }

@@ -54,7 +54,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -83,7 +82,6 @@ import com.vitorpamplona.amethyst.ui.note.zapClick
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.reactions.RoomReactionPopup
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.uuid.ExperimentalUuidApi
@@ -457,11 +455,15 @@ private fun NestZapButton(
     var wantsToZap by remember { mutableStateOf(false) }
     var wantsToSetCustomZap by remember { mutableStateOf(false) }
 
+    // 0f when idle. Driven 0f → 1f by the zap flow's progress
+    // callbacks; reset to 0f on error, on dismiss, and when the flow
+    // hands off to an external wallet via `onPayViaIntent` (the
+    // button can't observe payment completion past that handoff, so
+    // it must not leave the spinner up — unlike NoteCompose's
+    // ZapReaction, this button has no ObserveZapIconState fallback).
     var zappingProgress by remember { mutableFloatStateOf(0f) }
-    var zapStartingTime by remember { mutableLongStateOf(0L) }
 
-    val animatedProgress = zappingProgress
-    val isZapping = animatedProgress > 0.00001f && animatedProgress < 0.99999f
+    val isZapping = zappingProgress > 0.00001f && zappingProgress < 0.99999f
 
     FilledTonalIconButton(
         onClick = {
@@ -470,7 +472,7 @@ private fun NestZapButton(
                     baseNote = roomNote,
                     accountViewModel = accountViewModel,
                     context = context,
-                    onZapStarts = { zapStartingTime = TimeUtils.now() },
+                    onZapStarts = {},
                     onZappingProgress = { progress -> scope.launch { zappingProgress = progress } },
                     onMultipleChoices = { scope.launch { wantsToZap = true } },
                     onError = { _, message, user ->
@@ -480,6 +482,11 @@ private fun NestZapButton(
                         }
                     },
                     onPayViaIntent = {
+                        // Handing off to an external wallet (or the
+                        // manual-split screen) ends the in-app phase —
+                        // clear the spinner since nothing downstream
+                        // tracks payment completion for this button.
+                        zappingProgress = 0f
                         if (it.size == 1) {
                             val payable = it.first()
                             payViaIntent(payable.invoice, context, { }) { error ->
@@ -502,7 +509,7 @@ private fun NestZapButton(
     ) {
         if (isZapping) {
             CircularProgressIndicator(
-                progress = { animatedProgress },
+                progress = { zappingProgress },
                 strokeWidth = 2.dp,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -519,7 +526,7 @@ private fun NestZapButton(
             baseNote = roomNote,
             popupYOffset = 48.dp,
             accountViewModel = accountViewModel,
-            onZapStarts = { zapStartingTime = TimeUtils.now() },
+            onZapStarts = {},
             onDismiss = {
                 wantsToZap = false
                 zappingProgress = 0f
@@ -538,6 +545,11 @@ private fun NestZapButton(
             },
             onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
             onPayViaIntent = {
+                // Handing off to an external wallet (or the manual-
+                // split screen) ends the in-app phase — clear the
+                // spinner since nothing downstream tracks payment
+                // completion for this button.
+                zappingProgress = 0f
                 if (it.size == 1) {
                     val payable = it.first()
                     payViaIntent(payable.invoice, context, { }) { error ->
@@ -558,7 +570,7 @@ private fun NestZapButton(
 
     if (wantsToSetCustomZap) {
         ZapCustomDialog(
-            onZapStarts = { zapStartingTime = TimeUtils.now() },
+            onZapStarts = {},
             onClose = { wantsToSetCustomZap = false },
             onError = { _, message, user ->
                 scope.launch {
@@ -568,6 +580,11 @@ private fun NestZapButton(
             },
             onProgress = { scope.launch(Dispatchers.Main) { zappingProgress = it } },
             onPayViaIntent = {
+                // Handing off to an external wallet (or the manual-
+                // split screen) ends the in-app phase — clear the
+                // spinner since nothing downstream tracks payment
+                // completion for this button.
+                zappingProgress = 0f
                 if (it.size == 1) {
                     val payable = it.first()
                     payViaIntent(payable.invoice, context, { }) { error ->
