@@ -44,7 +44,7 @@ What's New?
   - Host-leave confirmation and default-server prompt.
   - In-app lobby with a chat composer, gating room re-entry.
   - PiP that focuses active speakers.
-  - Feed bucketed into Live / Scheduled / Recently ended, with "live" verified by kind-10312 presence freshness.
+  - Feed bucketed into Live / Scheduled / Recently ended, with live status verified by current presence.
   - Live audio-level speaker ring.
   - Keeps the screen on while connected.
   - Audio plays through the media volume stream.
@@ -59,15 +59,14 @@ What's New?
   - Full RFC 9420 compliance pass (P0/P1/P2).
   - External Commit flow.
   - Retained-epoch decryption for offline catch-up.
-  - Required-capabilities advertised on groups; 64-char KeyPackage IDs for MDK interop.
+  - Required-capabilities advertised on groups; interop fixes for other Marmot clients.
   - Popup notifications for group messages (kind:445).
 - Multi-account on Desktop
   - Account switcher dropdown in the sidebar and single-pane layout.
   - Add Account dialog and per-account logout.
   - View-only (npub-only) accounts.
   - Account removal switches to another account or logs out cleanly.
-  - Encrypted `DesktopAccountStorage` (AES-256-GCM).
-  - Migration into a shared `AccountManager`.
+  - Encrypted local account storage (AES-256-GCM).
   - Display names and middle-truncated npubs.
 - Schedule posts for later
   - Date/time picker and toolbar toggle in the post composer.
@@ -88,7 +87,6 @@ What's New?
 - Configurable bottom navigation bar
   - Pick which screens appear in the bottom bar.
   - Restore-default button in settings.
-  - Pinned-icon feeds are preloaded.
 - Reply and Mention notifications (NIP-10 / NIP-22)
   - Dedicated Mentions channel.
   - Per-thread grouping.
@@ -152,7 +150,7 @@ What's New?
   - Pay action on the note reactions row.
   - Payment-targets button on the profile.
   - Lightning address moved to the wallet setup screen.
-  - Alt-text on PaymentTargetsEvent.
+  - Alt-text on payment-target events.
 - Search power tools
   - Scope, source, follows and sort toggles.
   - Paste an `npub1…`, `nprofile1…`, `nevent1…`, `naddr1…` or `note1…` to jump straight to it.
@@ -226,7 +224,7 @@ What's New?
   - Transparent window icon.
   - Light-mode primary contrast.
   - Content extends correctly under the title bar.
-- Reading layout — width-capped ReadingColumn + 12 dp horizontal gutter for comfortable wide-window reading
+- Reading layout — width-capped reading column with comfortable side margins for wide windows
 - Compact UI
   - Search/Chat/Profile inputs.
   - Settings hierarchy normalized.
@@ -265,7 +263,7 @@ What's New?
 - Expands NIP-34 git collaboration coverage.
   - Repository State (kind 30618).
   - Pull Requests and PR updates (kinds 1618 / 1619).
-  - Git Status events (open / closed / draft / applied) and GitAuthorList.
+  - Git Status events (open / closed / draft / applied).
 - Adds the rest of NIP-51 list event kinds and full NIP-53 live-activity rendering
 - Adds MLS / Marmot event types and a pure-Kotlin MLS engine with IETF RFC 9420 interop test vectors (no native deps)
 - Adds an async SQLite event persistence layer.
@@ -279,7 +277,6 @@ What's New?
   - NIP-01 tiebreaker.
   - NIP-09 created_at window.
   - Deletion-author check.
-  - SQLite parity matrix.
 - Adds a reactive `ObservableEventStore` layer.
   - A façade that wraps any event store — SQLite-backed, file-backed, or in-memory.
   - Publishes a `StoreChange` on every accepted insert, delete and expiration sweep.
@@ -308,7 +305,7 @@ What's New?
   - Comb method for G multiplication → 3× faster sign/keygen.
   - Same-pubkey batch Schnorr verify (5–6× throughput).
   - `verifySchnorrFast` for Nostr (skips y-parity inversion).
-  - 4×64-bit limb representation, lazy field ops, ARM64 ASM `fe_mul`.
+  - 4×64-bit limb representation with lazy field ops and ARM64 assembly.
   - Standalone `libsecp256k1-nostr` / `libschnorr256k1` C project, with Android benchmarks.
 - Concurrent caching DNS resolver (SurgeDns)
   - Lock-free DNS cache.
@@ -321,23 +318,21 @@ What's New?
   - VideoCache warmup 10s → 1.5s.
   - Stable controller-overlay tree.
 - Faster icons — shared FontFamily and TextMeasurer across all Material Symbols
-- Faster chat lists — typed sealed keys, stable per-chatroom LazyColumn key, hoisted static modifiers
-- Faster note rendering — cached event-derived values, second-pass remember-key fixes, cut per-item allocations during feed scroll
+- Faster chat lists — stable list keys and reduced recomposition
+- Faster note rendering — cached event-derived values, fewer per-item allocations during feed scroll
 - Faster Quartz queries
   - Direct-slot driver for replaceable + addressable lookups.
   - Streaming k-way merge.
   - Smallest-first FTS intersect.
   - Parallel Schnorr verify in the ingest queue.
-  - Index-driven (`FilterIndex`) fanout for `LocalCache.observables` and `LiveEventStore`.
-- Faster rich-text translation — split UI from orchestration, dedupe boilerplate
+  - Index-driven fan-out for cache observers.
+- Faster rich-text translation
 - Thumbnail disk cache for profile pictures; Coil disk-cache eviction moved off the write path to prevent scroll stalls
 - Paginated GiftWrap loading for the DM chat list
-- Bookmark events preload via EventFinderFilterAssembler
-- Drops `remember` wrappers where overhead exceeded savings
+- Bookmark events preloaded for faster access
 - Lifecycle-aware screen subscriptions
   - Feed/screen relay subscriptions pause on background and resume on foreground.
   - 30s grace delay so brief app switches don't churn subscriptions.
-  - `AccountForegroundFilterAssembler` for scan-heavy account loaders.
 - Adaptive video disk cache — sized to 20% of free disk (256 MB–4 GB) instead of a fixed 1 GB, with on-demand HLS videos cached in SimpleCache
 - Tuned image/video OkHttp dispatcher and connection pool (16 in-flight per host) to de-serialize feed loading
 - Streaming image hashing — computes image hashes without loading the whole file into memory; SHA-256 hasher moved off the thread pool
@@ -376,12 +371,12 @@ What's New?
 - Pinned notes moved to their own screen
 - Left drawer reorganized into collapsible You / Feeds / Create / System sections, with clearer names
 - Article writing redesign — banner, tags, slug
-- Redesigned long-form article cards (richer LongFormHeader layout)
+- Redesigned long-form article cards
 - GIF support
   - Playback controls and autoplay.
   - GIF→MP4 upload conversion option in the upload screen.
   - GIF / image keyboard support in the short post screen and in Marmot, DM and public-channel chat fields.
-- Configurable video player buttons in Account Settings (drag restricted to the drag handle)
+- Configurable video player buttons in Account Settings
 - Autoplay Videos setting (Always / Never), separate from the video-loading toggle
 - Drag-and-drop reordering for some relay list settings
 - 3-dot options menu on video / picture / file feed cards
@@ -398,9 +393,9 @@ What's New?
 - NIP-89 client tag
   - Per-account toggle to disable it, synced via NIP-78 security settings.
   - On by default and moved into Compose settings.
-- Local Blossom cache — image and profile-picture fetches route through a local Blossom cache, via an OkHttp interceptor that catches all sha256-keyed URLs
+- Local Blossom cache — image and profile-picture fetches route through a local Blossom cache
 - Mention preservation in compose:
-  - Atomic against IME word-recomposition.
+  - Survives keyboard auto-correction.
   - Partial-overlap edits delete the whole mention.
   - Cursor snaps to mention boundaries.
 - Chat cursor jumping fixed
@@ -414,7 +409,7 @@ What's New?
 - Hand-raise button in audio rooms now has a visible toggled state
 - GiftWrap unwrapping for all writable accounts when always-on is enabled
 - Search bar bech32 paste navigates instead of running a search
-- Scaffold spacing keeps top/bottom bars visible on non-scrollable lists
+- Top and bottom bars stay visible on non-scrollable lists
 - Rich-text translation:
   - Bug, performance and jitter overhaul.
   - `{N}` placeholders so URLs survive CJK translation.
@@ -427,7 +422,7 @@ What's New?
 - Broadcasting relays:
   - Kept out of personal & channel sends.
   - Always included in non-private sends.
-  - a-tag cycle in the broadcast relay computation broken.
+  - Fixed an infinite loop in the broadcast-relay computation.
 - Tor now falls back to clearnet when bootstrap is stuck
 - Android Arti reliability: stale Arti cache cleared on init with retry, SOCKS proxy default port moved with busy-port retry, relay-over-Tor connectivity fixes
 - Chess game challenges filtered out of the home feed (ended games only); chess cards show user picture and name instead of hex pubkeys
@@ -441,7 +436,6 @@ What's New?
 - Foreground-service-not-allowed exception from the background handled gracefully
 - Fixes Samsung crash on outgoing call
 - Foreground service starts earlier to prevent call death on Android 14+
-- ProGuard / R8 keep no-arg constructors of Room `*_Impl` classes
 - Stop ringtone and call notification when rejecting consecutive calls
 
 ## UI Refresh
