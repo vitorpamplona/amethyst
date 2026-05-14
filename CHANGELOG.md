@@ -127,6 +127,10 @@ What's New?
   - Optional cross-post as a kind-1 note.
   - Generated poster JPEG.
   - Blurhash and thumbhash on every video imeta.
+- ThumbHash support alongside BlurHash
+  - Used across events, uploads and the UI.
+  - Forwarded when adding media to the gallery.
+  - Upload failures to generate a blurhash/thumbhash are now surfaced.
 - NIP-A3 Payment Targets (kind 10133)
   - Pay action on the note reactions row.
   - Payment-targets button on the profile.
