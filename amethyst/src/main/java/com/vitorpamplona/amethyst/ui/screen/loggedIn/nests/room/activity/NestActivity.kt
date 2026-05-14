@@ -121,19 +121,6 @@ class NestActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Auto-enable NestsTrace JSONL recording for debug builds the
-        // moment the room activity opens. Release builds keep tracing
-        // off (the field load + branch in `NestsTrace.emit` is the only
-        // cost). The capture is bounded by the activity lifetime: the
-        // `setRecording(false)` in onDestroy stops further emits when
-        // the user leaves the room. Capture from a connected device:
-        //   adb logcat -c
-        //   adb logcat -s NestsTraceJsonl:D -v raw > nest-trace.jsonl
-        if (com.vitorpamplona.amethyst.BuildConfig.DEBUG) {
-            com.vitorpamplona.nestsclient.trace.NestsTrace
-                .setRecording(true)
-        }
-
         val accountViewModel = NestBridge.accountViewModel
         val addressValue = intent.getStringExtra(EXTRA_ADDRESS)
         if (accountViewModel == null || addressValue == null) {
@@ -309,10 +296,6 @@ class NestActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         runCatching { unregisterReceiver(pipReceiver) }
-        if (com.vitorpamplona.amethyst.BuildConfig.DEBUG) {
-            com.vitorpamplona.nestsclient.trace.NestsTrace
-                .setRecording(false)
-        }
         super.onDestroy()
     }
 

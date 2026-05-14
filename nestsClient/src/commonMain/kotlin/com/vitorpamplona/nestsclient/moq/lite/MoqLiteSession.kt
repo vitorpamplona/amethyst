@@ -676,19 +676,6 @@ class MoqLiteSession internal constructor(
                                 ),
                             )
                         if (!sent.isSuccess) trySendFailures += 1
-                        // Per-frame timestamp at the moq-lite layer — first
-                        // stage of the listener-pipeline trace. Pair with
-                        // `frame_object_mapped` (NestsListener), `pcm_decoded`
-                        // (NestPlayer), and `pcm_enqueued` (NestPlayer) to
-                        // reconstruct end-to-end glass-to-glass latency.
-                        // `frame_idx` is the 0-based index of this frame
-                        // within the group so DROP_OLDEST gaps downstream
-                        // are visible as missing indices in pcm_decoded.
-                        NestsTrace.emit("frame_received") {
-                            "\"sub_id\":$subscribeId,\"group_seq\":$groupSequence," +
-                                "\"frame_idx\":$frameCount,\"size\":${frame.size}," +
-                                "\"queued\":${sent.isSuccess}"
-                        }
                     }
                     frameCount += 1
                 }

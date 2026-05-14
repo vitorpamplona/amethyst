@@ -277,16 +277,6 @@ class NestPlayer(
                         } else {
                             decodedFrames += 1
                             onLevel(peakAmplitude(pcm))
-                            // Third stage of the listener-pipeline trace.
-                            // Delta from `frame_object_mapped` to here is
-                            // Opus decode wall-time (typically <1ms — a
-                            // larger value means MediaCodec is contending).
-                            com.vitorpamplona.nestsclient.trace.NestsTrace
-                                .emit("pcm_decoded") {
-                                    "\"track_alias\":${obj.trackAlias},\"group\":${obj.groupId}," +
-                                        "\"obj_id\":${obj.objectId},\"samples\":${pcm.size}," +
-                                        "\"preroll_size\":${preroll.size},\"playback_begun\":$playbackBegun"
-                                }
                             if (playbackBegun) {
                                 val enqueueStart = System.currentTimeMillis()
                                 player.enqueue(pcm)
@@ -297,21 +287,6 @@ class NestPlayer(
                                         "NestPlayer enqueued #$enqueued (took ${enqueueMs}ms)"
                                     }
                                 }
-                                // Fourth stage of the listener-pipeline
-                                // trace. Delta from `pcm_decoded` to here
-                                // = AudioTrack ring-buffer backpressure:
-                                // `WRITE_BLOCKING` parks until the ring
-                                // has room. A consistent ~20ms means the
-                                // ring is full and the device clock is
-                                // the pacer (healthy steady-state). A
-                                // larger value means GC / Compose stalls
-                                // are starving the audio-priority writer.
-                                com.vitorpamplona.nestsclient.trace.NestsTrace
-                                    .emit("pcm_enqueued") {
-                                        "\"track_alias\":${obj.trackAlias},\"group\":${obj.groupId}," +
-                                            "\"obj_id\":${obj.objectId},\"samples\":${pcm.size}," +
-                                            "\"write_ms\":$enqueueMs"
-                                    }
                             } else {
                                 preroll.addLast(pcm)
                                 if (preroll.size >= prerollFrames) {
