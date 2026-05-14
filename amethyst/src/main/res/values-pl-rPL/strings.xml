@@ -1126,8 +1126,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="warn_when_posts_have_reports_from_your_follows">Ostrzegaj, gdy posty zostały zgłoszone przez osoby które obserwujesz</string>
     <string name="filter_spam_from_strangers_title">Filtr spamu</string>
     <string name="filter_spam_from_strangers_explainer">Ukrywa posty od nieznajomych, które były dokładnie takie same przez 5 lub więcej razy</string>
-    <string name="disable_client_tag_title">Nie dodawaj tagu klienta do moich publikacji</string>
-    <string name="disable_client_tag_explainer">Po włączeniu tej opcji Amethyst nie będzie dołączać tagu klienta NIP-89 do Twoich publikacji.</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Ostrzeżenie o zgłoszeniach</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Wyświetla komunikat ostrzegawczy, gdy posty zostały zgłoszone przez 5 lub więcej obserwowanych osób</string>
     <string name="report_warning_threshold_title">Zgłoś próg ostrzegawczy</string>

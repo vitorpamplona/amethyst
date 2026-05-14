@@ -1193,7 +1193,7 @@ class AccountViewModel(
 
     fun updateReportWarningThreshold(threshold: Int) = launchSigner { account.updateReportWarningThreshold(threshold) }
 
-    fun updateDisableClientTag(disable: Boolean) = launchSigner { account.updateDisableClientTag(disable) }
+    fun updateAddClientTag(add: Boolean) = launchSigner { account.updateAddClientTag(add) }
 
     fun updateFilterSpam(filterSpam: Boolean) =
         launchSigner {

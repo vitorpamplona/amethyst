@@ -1110,8 +1110,6 @@
     <string name="warn_when_posts_have_reports_from_your_follows">Avise quando as postagens tiverem denuncias de seus seguidores</string>
     <string name="filter_spam_from_strangers_title">Filtrar spam</string>
     <string name="filter_spam_from_strangers_explainer">Esconde publicações de desconhecidos que eram exatamente o mesmo por 5 ou mais vezes</string>
-    <string name="disable_client_tag_title">Não adicionar tag de cliente aos meus eventos</string>
-    <string name="disable_client_tag_explainer">Quando ativado, o Amethyst não anexará uma tag de cliente NIP-89 aos eventos que você publicar.</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Avisar em relatórios</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Mostra uma mensagem de aviso quando as postagens tiverem 5 ou mais relatórios de suas seguintes</string>
     <string name="report_warning_threshold_title">Limite de aviso de denúncias</string>

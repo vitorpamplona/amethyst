@@ -545,8 +545,8 @@ class Account(
         return false
     }
 
-    suspend fun updateDisableClientTag(disable: Boolean): Boolean {
-        if (settings.updateDisableClientTag(disable)) {
+    suspend fun updateAddClientTag(add: Boolean): Boolean {
+        if (settings.updateAddClientTag(add)) {
             sendNewAppSpecificData()
             return true
         }

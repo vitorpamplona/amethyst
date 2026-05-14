@@ -1109,8 +1109,6 @@
     <string name="warn_when_posts_have_reports_from_your_follows">Varna när inlägg har rapporter från dina följare</string>
     <string name="filter_spam_from_strangers_title">Filtrera spam</string>
     <string name="filter_spam_from_strangers_explainer">Döljer inlägg från främlingar som var exakt samma för 5 eller fler gånger</string>
-    <string name="disable_client_tag_title">Lägg inte till klienttagg i mina händelser</string>
-    <string name="disable_client_tag_explainer">När aktiverat kommer Amethyst inte att lägga till en NIP-89 klienttagg till händelser du publicerar.</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Varna vid rapporter</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Visar ett varningsmeddelande när inlägg har 5 eller fler rapporter från följande</string>
     <string name="report_warning_threshold_title">Tröskel för rapportvarning</string>
