@@ -86,9 +86,17 @@ class NostrNestsHarness private constructor(
         private fun isExternal(): Boolean = System.getProperty(EXTERNAL_PROPERTY) == "true"
 
         /**
-         * Pin the nostrnests revision to a known-good SHA. Bump deliberately
-         * — drift on `main` should not silently change interop expectations.
-         * Override at runtime via `-DnestsInteropRev=<sha-or-branch>`.
+         * The `nostrnests/nests` revision the harness checks out — this is
+         * the repo that supplies the `moq-auth` token-minting sidecar.
+         *
+         * NOT currently pinned: it tracks `main`. That's a known drift risk
+         * — `moq-auth`'s JWT format must stay compatible with the
+         * `moq-relay` version pinned in [DEFAULT_MOQ_REVISION]
+         * (`moq-relay-v0.10.10`). If nostrnests advances `moq-auth` past
+         * what 0.10.10 accepts, the pair desyncs again and the relay
+         * rejects every connection with `failed to decode the token`. Pin
+         * this to a SHA known-compatible with 0.10.10 once one is
+         * identified. Override at runtime via `-DnestsInteropRev=<sha-or-branch>`.
          */
         const val DEFAULT_REVISION = "main"
 
@@ -222,7 +230,11 @@ class NostrNestsHarness private constructor(
                 // there, and a strict relay (rustls) rejects an IP-literal SNI
                 // and then has no SNI to select its dev cert on — the handshake
                 // stalls. `localhost` is a valid hostname and matches the dev
-                // cert moq-relay generates. Resolves to 127.0.0.1 regardless.
+                // cert moq-relay generates. The UDP socket itself still goes to
+                // IPv4 loopback: QuicWebTransportFactory resolves the host with
+                // an IPv4 preference (`localhost` often resolves to ::1 first,
+                // and Docker's IPv6 UDP forwarding blackholes), while keeping
+                // `localhost` as the SNI name.
                 moqEndpoint = "https://localhost:$MOQ_HOST_PORT/",
             )
         }

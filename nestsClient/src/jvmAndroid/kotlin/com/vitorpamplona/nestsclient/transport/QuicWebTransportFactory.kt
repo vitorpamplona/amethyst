@@ -143,6 +143,14 @@ class QuicWebTransportFactory(
                     conn.awaitHandshake()
                     true
                 }
+            } catch (ce: kotlinx.coroutines.CancellationException) {
+                // A parent-scope cancellation propagates out of withTimeoutOrNull
+                // (it only swallows its OWN TimeoutCancellationException). Wrapping
+                // it in HandshakeFailed would break structured concurrency — close
+                // the driver but re-throw the cancellation untouched. Mirrors the
+                // CancellationException handling on the post-CONNECT path below.
+                driver.close()
+                throw ce
             } catch (t: Throwable) {
                 driver.close()
                 throw WebTransportException(
