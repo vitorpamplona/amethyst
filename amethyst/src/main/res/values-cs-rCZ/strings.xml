@@ -2582,23 +2582,4 @@
     <string name="community_rules_violation_quota_exceeded">Dnes jsi již zveřejnil %1$d událostí tohoto typu (limit %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Nesplňuješ požadavky sítě důvěry této komunity.</string>
     <string name="community_rules_violation_stale_rules">Nejnovější dokument s pravidly komunity byl odmítnut jako zastaralý.</string>
-    <string name="auto_create_drafts_setting_description">Automaticky uloží koncept události, když píšeš nebo opouštíš editor s neodeslaným textem, a odešle ho na tvé soukromé odchozí relaye.</string>
-    <string name="auto_create_drafts_setting_title">Automaticky vytvářet koncepty</string>
-    <string name="compose_settings">Nastavení editoru</string>
-    <string name="external_id_scope">Komentář k externímu zdroji</string>
-    <string name="external_url_scope">Komentář k webové stránce</string>
-    <string name="nest_toast_host_action_failed_template_null">Akci nelze připravit.</string>
-    <string name="nest_toast_host_action_failed_title">Akce selhala</string>
-    <string name="profile_ui_setting_app_recommendations">Doporučení aplikací</string>
-    <string name="profile_ui_setting_badges">Profilové odznaky</string>
-    <string name="profile_ui_setting_followers_feed">Kanál sledujících</string>
-    <string name="profile_ui_setting_zap_received_feed">Kanál přijatých zapů</string>
-    <string name="profile_ui_settings">Vzhled profilu</string>
-    <string name="profile_ui_settings_description">Vyberte, které sekce a kanály se zobrazí na profilových obrazovkách uživatelů. Všechny možnosti jsou ve výchozím nastavení povoleny.</string>
-    <string name="security_blocked_users_empty">Zatím jsi nezablokoval/a žádné uživatele.</string>
-    <string name="security_hidden_words_empty">Žádná skrytá slova. Přidej slovo níže pro skrytí příspěvků, které ho obsahují.</string>
-    <string name="security_section_blocked_content">Blokovaný obsah</string>
-    <string name="security_section_filtering_preferences">Předvolby filtrování</string>
-    <string name="security_spamming_users_empty">V této relaci nebyly žádné účty označeny jako spam.</string>
-    <string name="security_unlimited">∞</string>
 </resources>

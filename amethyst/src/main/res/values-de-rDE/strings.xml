@@ -2563,23 +2563,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="community_rules_violation_quota_exceeded">Du hast heute bereits %1$d Ereignisse dieses Typs veröffentlicht (Limit %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Du erfüllst die Web-of-Trust-Anforderungen dieser Community nicht.</string>
     <string name="community_rules_violation_stale_rules">Das aktuelle Community-Regeldokument wurde als veraltet abgelehnt.</string>
-    <string name="auto_create_drafts_setting_description">Speichert automatisch ein Entwurfsereignis, wenn du tippst oder den Editor mit ungesendetem Text verlässt, und sendet es an deine privaten ausgehenden Relays.</string>
-    <string name="auto_create_drafts_setting_title">Entwürfe automatisch erstellen</string>
-    <string name="compose_settings">Editor-Einstellungen</string>
-    <string name="external_id_scope">Eine externe Ressource kommentieren</string>
-    <string name="external_url_scope">Eine Webseite kommentieren</string>
-    <string name="nest_toast_host_action_failed_template_null">Die Aktion konnte nicht vorbereitet werden.</string>
-    <string name="nest_toast_host_action_failed_title">Aktion fehlgeschlagen</string>
-    <string name="profile_ui_setting_app_recommendations">App-Empfehlungen</string>
-    <string name="profile_ui_setting_badges">Profilabzeichen</string>
-    <string name="profile_ui_setting_followers_feed">Follower-Feed</string>
-    <string name="profile_ui_setting_zap_received_feed">Erhaltene-Zaps-Feed</string>
-    <string name="profile_ui_settings">Profil-Oberfläche</string>
-    <string name="profile_ui_settings_description">Wähle, welche Abschnitte und Feeds auf den Profilseiten erscheinen. Alle Optionen sind standardmäßig aktiviert.</string>
-    <string name="security_blocked_users_empty">Du hast noch keine Benutzer blockiert.</string>
-    <string name="security_hidden_words_empty">Keine versteckten Wörter. Füge unten ein Wort hinzu, um Beiträge auszublenden, die es enthalten.</string>
-    <string name="security_section_blocked_content">Blockierte Inhalte</string>
-    <string name="security_section_filtering_preferences">Filtereinstellungen</string>
-    <string name="security_spamming_users_empty">In dieser Sitzung wurden keine Konten als Spam markiert.</string>
-    <string name="security_unlimited">∞</string>
 </resources>
