@@ -36,6 +36,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.mutableStateOf
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.call.CallState
@@ -387,7 +388,7 @@ class CallActivity : AppCompatActivity() {
                 addAction(ACTION_PIP_HANGUP)
                 addAction(ACTION_PIP_TOGGLE_MUTE)
             }
-        registerReceiver(pipActionReceiver, filter, RECEIVER_NOT_EXPORTED)
+        ContextCompat.registerReceiver(this, pipActionReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
     }
 
     private fun unregisterPipReceiver() {

@@ -558,7 +558,7 @@
     <string name="nest_disconnect">断开连接</string>
     <string name="nest_mute">静音</string>
     <string name="nest_unmute">取消静音</string>
-    <string name="nest_connecting">正在连接...</string>
+    <string name="nest_connecting">正在连接…</string>
     <string name="nest_connecting_resolving">正在解析房间</string>
     <string name="nest_connecting_transport">正在打开传输</string>
     <string name="nest_connecting_handshake">正在协商音频</string>

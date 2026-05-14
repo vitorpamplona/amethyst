@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -742,5 +743,9 @@ private suspend fun probeSourceMetadata(
 private fun formatSize(bytes: Long): String {
     if (bytes <= 0) return "—"
     val mb = bytes.toDouble() / (1024 * 1024)
-    return if (mb >= 1) String.format("%.1f MB", mb) else String.format("%.0f KB", bytes / 1024.0)
+    return if (mb >= 1) {
+        String.format(Locale.getDefault(), "%.1f MB", mb)
+    } else {
+        String.format(Locale.getDefault(), "%.0f KB", bytes / 1024.0)
+    }
 }

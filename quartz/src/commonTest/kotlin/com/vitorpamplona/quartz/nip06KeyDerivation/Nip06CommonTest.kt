@@ -59,7 +59,7 @@ class Nip06CommonTest {
     }
 
     @Test
-    @Ignore()
+    @Ignore
     fun fromSeedNip06FromSnort() {
         val privateKeyNsec = nip06.privateKeyFromMnemonic(snortTest).toHexKey()
         assertEquals("nsec1ppw9ltr2x9qwg9a2qnmgv98tfruy2ejnja7me76mwmsreu3s8u2sscj5nt", privateKeyNsec)
