@@ -148,27 +148,32 @@ Lightning fast path. Two minimal hooks:
 |---|---|---|
 | **A.1** | Quartz foundation (receive side): taproot address, bech32m segwit, Esplora client, verifier + tests | **Shipped** |
 | **C**   | Receive + display: `OnchainSection` in `WalletScreen` (address + live balance), Esplora sync, `LocalCache.consume(OnchainZapEvent)`, `updateZapTotal` fold-in, kind-list edits in all 7 in-scope filter files | **Shipped** |
-| **A.2** | Quartz foundation (send side): minimal BIP-174 PSBT codec, `OnchainZapBuilder`, `signPsbt` on `NostrSigner` hierarchy | Pending |
+| **A.2** | Quartz foundation (send side): BIP-174 PSBT codec, BIP-341 sighash, `OnchainZapBuilder`, `signPsbt` on the `NostrSigner` hierarchy. All crypto validated against BIP-341 wallet test vectors (31 tests). | **Shipped** |
 | **B**   | NIP-55 `sign_psbt` intent contract + `NostrSignerExternal.signPsbt`. Broken until Amber ships matching support — surface "update your signer" in the UI. | Pending |
 | **D**   | Send: dialog in zap menu, UTXO selection, build → sign → broadcast → publish kind 8333 | Pending |
 
-### What's still required before send can ship (Phase A.2)
+### Phase A.2 — shipped
 
-1. **PSBT codec.** Hand-rolled BIP-174 reader/writer for the single shape we need
-   (1+ inputs key-path-only P2TR, 1-2 outputs, no script tree). Needs explicit
-   test vectors from the BIP-174 / BIP-341 test suites — any bug here can lose
-   user funds.
-2. **TapTweak in signer.** `NostrSignerInternal.signPsbt` applies the BIP-341
-   key-path-only tweak to its private key before producing the Schnorr sig
-   over the BIP-341 sighash. Today `signSchnorr*` always uses the raw
-   keypair — we need an internal `signWithTweakedKey` variant. Tests must
-   compare against the libsecp256k1 reference output.
-3. **Sighash computation.** BIP-341 default sighash (SIGHASH_DEFAULT) is its
-   own serialization; not reusable from existing Nostr signing.
-4. **Coin selection.** Simple smallest-set-covering-amount is enough for v1
-   but needs a fee-vs-dust guard.
-5. **Broadcast & publish.** Already plumbed through `EsploraBackend.broadcast`;
-   just needs the orchestrator in commons.
+- `nipBCOnchainZaps/psbt/`: `BitcoinIO` (LE byte codec + varint), `BitcoinTransaction`
+  (legacy + segwit serialization, witness-stripped txid), `TaprootSigHash`
+  (BIP-341 SigMsg + TapSighash, all sighash types), `Psbt` (BIP-174 subset,
+  unknown-record-preserving), `PsbtSigner` (key-path signing), `PsbtFinalizer`.
+- `nipBCOnchainZaps/build/OnchainZapBuilder`: largest-first coin selection +
+  unsigned-PSBT assembly with dust-aware change.
+- `TaprootAddress.tweakSecretKey`: BIP-341 `taproot_tweak_seckey`.
+- `Secp256k1Instance.privKeyNegate`: new primitive (commonMain + 3 actuals).
+- `NostrSigner.signPsbt`: real impl on internal signer; delegated by the
+  client-tag wrapper; `UnsupportedMethodException` stubs on NIP-46 / NIP-55.
+
+### What's still required before send works end-to-end
+
+1. **Phase B — NIP-55 `sign_psbt` Intent.** The Android external-signer Intent
+   contract for PSBT signing, plus `NostrSignerExternal.signPsbt`. Blocked on
+   Amber shipping support; until then external-signer accounts must fall back
+   or see "update your signer".
+2. **Phase D — Send flow.** Send dialog in the zap menu, fee-rate picker, the
+   build → `signPsbt` → `EsploraBackend.broadcast` → publish-kind-8333
+   orchestrator (in commons), and wallet-screen wiring.
 
 ## Risks / open questions
 
