@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.utils.BigDecimal
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
@@ -52,7 +53,7 @@ class UserProfileZapsViewModel(
 ) : ViewModel() {
     val zapsToUser =
         Filter(
-            kinds = listOf(LnZapEvent.KIND),
+            kinds = listOf(LnZapEvent.KIND, OnchainZapEvent.KIND),
             tags = mapOf("p" to listOf(user.pubkeyHex)),
         )
 

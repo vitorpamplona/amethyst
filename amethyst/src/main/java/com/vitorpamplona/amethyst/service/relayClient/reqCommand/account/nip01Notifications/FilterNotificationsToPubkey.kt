@@ -54,6 +54,7 @@ import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
+import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 
 val SummaryKinds =
     listOf(
@@ -62,6 +63,7 @@ val SummaryKinds =
         RepostEvent.KIND,
         GenericRepostEvent.KIND,
         LnZapEvent.KIND,
+        OnchainZapEvent.KIND,
     )
 
 val NotificationsPerKeyKinds =

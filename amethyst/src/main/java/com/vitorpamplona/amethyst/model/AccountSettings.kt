@@ -141,6 +141,9 @@ sealed class TopFilter(
     ) : TopFilter("InterestSet/${address.toValue()}")
 }
 
+/** Default Esplora-compatible Bitcoin chain backend for NIP-BC onchain zaps. */
+const val DEFAULT_ESPLORA_ENDPOINT = "https://mempool.space/api"
+
 @Stable
 class AccountSettings(
     val keyPair: KeyPair,
@@ -176,6 +179,8 @@ class AccountSettings(
     val defaultFollowPacksFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val nwcWallets: MutableStateFlow<List<NwcWalletEntryNorm>> = MutableStateFlow(emptyList()),
     val defaultNwcWalletId: MutableStateFlow<String?> = MutableStateFlow(null),
+    // NIP-BC onchain zap configuration.
+    val onchainEsploraEndpoint: MutableStateFlow<String> = MutableStateFlow(DEFAULT_ESPLORA_ENDPOINT),
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
     var hideNIP17WarningDialog: Boolean = false,

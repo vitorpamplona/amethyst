@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.DEFAULT_ESPLORA_ENDPOINT
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
@@ -99,6 +100,7 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumXClient
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.TOR_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
+import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraBackend
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -329,6 +331,19 @@ class AppModules(
 
     // Caches all events in Memory
     val cache: LocalCache = LocalCache
+
+    // NIP-BC onchain zap verification backend. Wired up once at app init so
+    // LocalCache.consume(OnchainZapEvent) can sum the on-chain output values
+    // that pay the recipient's derived Taproot address. Endpoint is currently
+    // a fixed default; per-account override (AccountSettings.onchainEsploraEndpoint)
+    // is plumbed for a future Settings UI.
+    init {
+        cache.onchainBackend =
+            EsploraBackend(
+                baseUrl = { DEFAULT_ESPLORA_ENDPOINT },
+                client = roleBasedHttpClientBuilder.okHttpClientForMoney(DEFAULT_ESPLORA_ENDPOINT),
+            )
+    }
 
     // Provides a relay pool
     val client: INostrClient = NostrClient(websocketBuilder, applicationIOScope)

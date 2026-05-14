@@ -74,6 +74,7 @@ import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
+import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -121,6 +122,7 @@ class NotificationFeedFilter(
                 ReactionEvent.KIND,
                 RepostEvent.KIND,
                 LnZapEvent.KIND,
+                OnchainZapEvent.KIND,
                 LiveActivitiesChatMessageEvent.KIND,
                 PictureEvent.KIND,
                 PollEvent.KIND,
