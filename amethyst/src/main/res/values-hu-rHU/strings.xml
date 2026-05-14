@@ -1924,7 +1924,7 @@
     <string name="favorite_dvms_title">Kedvenc hírfolyam-algoritmusok</string>
     <string name="favorite_dvms_explainer">A kedvencnek jelölt algoritmusok itt jelennek meg, valamint szűrőelemként a Főoldal hírfolyamában.</string>
     <string name="favorite_dvms_empty_headline">Kedvenc algoritmus kitűzése</string>
-    <string name="favorite_dvms_empty_subtitle">Koppintson az alábbi gombra az algoritmusok böngészéséhez, és jelölje meg csillaggal azokat, amelyeket itt szeretne megőrizni.</string>
+    <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <string name="favorite_dvms_empty_cta">Néhány hírfolyam hozzáadása</string>
     <string name="dvm_home_status_requesting">%1$s lekérdezése egy hírfolyamért…</string>
     <string name="dvm_home_status_requesting_all">Hírfolyamok keresése a kedvenc hírfolyam-algoritmusok segítségével…</string>

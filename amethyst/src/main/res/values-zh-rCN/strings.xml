@@ -1914,7 +1914,7 @@
     <string name="favorite_dvms_title">收藏源算法</string>
     <string name="favorite_dvms_explainer">此处加星的订阅源算法在主页源上显示为筛选缺口。打开发现添加更多。</string>
     <string name="favorite_dvms_empty_headline">固定您喜欢的算法</string>
-    <string name="favorite_dvms_empty_subtitle">轻触下面的按钮来浏览算法并将您想要保留在这里的算法加星。</string>
+    <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <string name="favorite_dvms_empty_cta">添加一些源</string>
     <string name="dvm_home_status_requesting">正请求 %1$s 获得一个源…</string>
     <string name="dvm_home_status_requesting_all">正向收藏的源算法请求订阅源…</string>

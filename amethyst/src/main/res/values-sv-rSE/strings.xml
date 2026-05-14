@@ -1111,6 +1111,8 @@
     <string name="warn_when_posts_have_reports_from_your_follows">Varna när inlägg har rapporter från dina följare</string>
     <string name="filter_spam_from_strangers_title">Filtrera spam</string>
     <string name="filter_spam_from_strangers_explainer">Döljer inlägg från främlingar som var exakt samma för 5 eller fler gånger</string>
+    <string name="add_client_tag_title">Lägg till klient-tagg i mina händelser</string>
+    <string name="add_client_tag_explainer">När det är aktiverat lägger Amethyst till en NIP-89-klient-tagg i händelser du publicerar.</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Varna vid rapporter</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Visar ett varningsmeddelande när inlägg har 5 eller fler rapporter från följande</string>
     <string name="report_warning_threshold_title">Tröskel för rapportvarning</string>
@@ -1920,7 +1922,7 @@
     <string name="favorite_dvms_title">Favorit-flödesalgoritmer</string>
     <string name="favorite_dvms_explainer">Flödesalgoritmer du stjärnmarkerar visas som filterchips på Hem-flödet. Öppna Upptäck för att lägga till fler.</string>
     <string name="favorite_dvms_empty_headline">Fäst dina favoritalgoritmer</string>
-    <string name="favorite_dvms_empty_subtitle">Tryck på knappen nedan för att bläddra bland algoritmer och stjärnmarkera de du vill behålla här.</string>
+    <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <string name="favorite_dvms_empty_cta">Lägg till några flöden</string>
     <string name="dvm_home_status_requesting">Frågar %1$s om ett flöde…</string>
     <string name="dvm_home_status_requesting_all">Frågar dina favorit-flödesalgoritmer om flöden…</string>
@@ -2576,6 +2578,4 @@
     <string name="community_rules_violation_quota_exceeded">Du har redan publicerat %1$d händelser av den här typen idag (gräns %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Du uppfyller inte den här gemenskapens krav på förtroendenät.</string>
     <string name="community_rules_violation_stale_rules">Det senaste dokumentet med gemenskapsregler avvisades som föråldrat.</string>
-    <string name="add_client_tag_title">Lägg till klient-tagg i mina händelser</string>
-    <string name="add_client_tag_explainer">När det är aktiverat lägger Amethyst till en NIP-89-klient-tagg i händelser du publicerar.</string>
 </resources>

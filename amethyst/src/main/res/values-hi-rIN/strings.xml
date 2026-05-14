@@ -1890,7 +1890,7 @@
     <string name="favorite_dvms_title">इष्ट सूचनावली कलनविधियाँ</string>
     <string name="favorite_dvms_explainer">सूचनावली कलनविधियाँ जिनहें आपने यहाँ ताराचिह्नित किए मूल सूचनावली पर छलनी खण्डों के जैसे दिखेंगे। खोज पटल खोलें अधिक जोडने के लिए।</string>
     <string name="favorite_dvms_empty_headline">आपके इष्ट कलनविधियाँ अटकाएँ</string>
-    <string name="favorite_dvms_empty_subtitle">नीचे घुण्डी दबाएँ कलनविधियों का वीक्षण करने के लिए तथा ताराचिह्नित करें जिनको आप यहाँ रखना चाहते हैं।</string>
+    <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <string name="favorite_dvms_empty_cta">सूचनावलियाँ जोडें</string>
     <string name="dvm_home_status_requesting">अनुरोध %1$s को सूचनावली के लिए…</string>
     <string name="dvm_home_status_requesting_all">आपके इष्ट सूचनावली कलनविधियों को अनुरोध किया जा रहा है सूचनावलियों के लिए…</string>

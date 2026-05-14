@@ -1284,6 +1284,7 @@
     <string name="feed_group_hashtags">Hashtags</string>
     <string name="feed_group_communities">Communautés</string>
     <string name="feed_group_lists">Listes</string>
+    <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <string name="temporary_account">Se déconnecter au verrouillage de l\'appareil</string>
     <string name="private_message">Message privé</string>
     <string name="public_message">Message public</string>

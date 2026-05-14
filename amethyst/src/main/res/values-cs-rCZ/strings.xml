@@ -1124,6 +1124,8 @@
     <string name="warn_when_posts_have_reports_from_your_follows">Varovat, když příspěvky obsahují hlášení od vašich sledovaných osob</string>
     <string name="filter_spam_from_strangers_title">Filtrovat spam</string>
     <string name="filter_spam_from_strangers_explainer">Skryje příspěvky od cizinců, které byly přesně stejné 5 a více krát</string>
+    <string name="add_client_tag_title">Přidávat klientský tag do mých událostí</string>
+    <string name="add_client_tag_explainer">Když je tato možnost zapnutá, Amethyst připojuje k událostem, které publikuješ, klientský tag podle NIP-89.</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Upozornit na hlášení</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Zobrazí varovnou zprávu, když příspěvky mají 5 nebo více hlášení od vašich sledovaných</string>
     <string name="report_warning_threshold_title">Práh varování o nahlášeních</string>
@@ -1933,7 +1935,7 @@
     <string name="favorite_dvms_title">Oblíbené algoritmy zdrojů</string>
     <string name="favorite_dvms_explainer">Algoritmy zdrojů, které zde označíte hvězdičkou, se zobrazí jako filtry na hlavním zdroji. Otevřete Objevovat pro přidání dalších.</string>
     <string name="favorite_dvms_empty_headline">Připněte si oblíbené algoritmy</string>
-    <string name="favorite_dvms_empty_subtitle">Klepněte na tlačítko níže pro procházení algoritmů a označte hvězdičkou ty, které si zde chcete ponechat.</string>
+    <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <string name="favorite_dvms_empty_cta">Přidat nějaké kanály</string>
     <string name="dvm_home_status_requesting">Žádost %1$s o zdroj…</string>
     <string name="dvm_home_status_requesting_all">Žádost oblíbených algoritmů o zdroje…</string>
@@ -2601,6 +2603,4 @@
     <string name="community_rules_violation_quota_exceeded">Dnes jsi již zveřejnil %1$d událostí tohoto typu (limit %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Nesplňuješ požadavky sítě důvěry této komunity.</string>
     <string name="community_rules_violation_stale_rules">Nejnovější dokument s pravidly komunity byl odmítnut jako zastaralý.</string>
-    <string name="add_client_tag_title">Přidávat klientský tag do mých událostí</string>
-    <string name="add_client_tag_explainer">Když je tato možnost zapnutá, Amethyst připojuje k událostem, které publikuješ, klientský tag podle NIP-89.</string>
 </resources>

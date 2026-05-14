@@ -172,6 +172,7 @@
     <string name="torrent_file">Torrenta datne</string>
     <string name="torrent_download">Lejupielādēt</string>
     <string name="torrent_no_apps">Nav uzstādītas torrent lietotnes, kas atvērtu un lejupielādētu datni.</string>
+    <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->
     <!-- LAN cast (Chromecast) feature -->
