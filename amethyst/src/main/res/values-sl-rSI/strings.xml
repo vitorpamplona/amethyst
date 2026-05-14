@@ -549,7 +549,6 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="nest_chat_send">Pošlji</string>
     <string name="nest_chat_placeholder">Povej kaj…</string>
     <string name="nest_chat_empty">Še ni sporočil. Začni klepet.</string>
-    <string name="nest_reactions_title">Odzovi se</string>
     <string name="nest_reactions_button">Odzovi se</string>
     <string name="nest_edit_title">Uredi sobo</string>
     <string name="nest_edit_save">Shrani</string>

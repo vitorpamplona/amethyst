@@ -621,7 +621,6 @@
     <string name="nest_chat_send">发送</string>
     <string name="nest_chat_placeholder">说些什么…</string>
     <string name="nest_chat_empty">还没有消息。成为第一个说话的。</string>
-    <string name="nest_reactions_title">回应</string>
     <string name="nest_reactions_button">回应</string>
     <string name="nest_edit_title">编辑聊天室</string>
     <string name="nest_edit_save">保存</string>
@@ -651,16 +650,6 @@
     <string name="nest_confirm_force_mute_body">要求 %1$s的客户端降低麦克风音量。有些客户端可能忽略此命令。</string>
     <string name="nest_confirm_force_mute_confirm">强制降低音量</string>
     <string name="nest_confirm_cancel">取消</string>
-    <string name="nest_toast_action_title">音频聊天室</string>
-    <string name="nest_toast_follow_sent">正在关注 %1$s。</string>
-    <string name="nest_toast_unfollow_sent">取消关注了 %1$s。</string>
-    <string name="nest_toast_mute_sent">静音了 %1$s。</string>
-    <string name="nest_toast_unmute_sent">取消静音了 %1$s。</string>
-    <string name="nest_toast_promote_speaker_sent">已提升 %1$s 为演讲者。</string>
-    <string name="nest_toast_promote_moderator_sent">已提升 %1$s 为协管。</string>
-    <string name="nest_toast_demote_listener_sent">已降级 %1$s 为听众。</string>
-    <string name="nest_toast_force_mute_sent">强制静音了 %1$s。</string>
-    <string name="nest_toast_kick_sent">把 %1$s 踢出了房间。</string>
     <string name="nest_share_action">分享聊天室</string>
     <string name="nest_minimize">最小化</string>
     <string name="nest_minimize_description">最小化以继续收听</string>

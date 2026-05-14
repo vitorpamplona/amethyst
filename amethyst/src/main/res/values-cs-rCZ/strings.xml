@@ -638,7 +638,6 @@
     <string name="nest_chat_send">Odeslat</string>
     <string name="nest_chat_placeholder">Něco napište…</string>
     <string name="nest_chat_empty">Zatím žádné zprávy. Buďte první.</string>
-    <string name="nest_reactions_title">Reagovat</string>
     <string name="nest_reactions_button">Reagovat</string>
     <string name="nest_edit_title">Upravit místnost</string>
     <string name="nest_edit_save">Uložit</string>
@@ -668,16 +667,6 @@
     <string name="nest_confirm_force_mute_body">Požádá klienta uživatele %1$s o ztlumení mikrofonu. Někteří klienti mohou tento příkaz ignorovat.</string>
     <string name="nest_confirm_force_mute_confirm">Vynutit ztlumení</string>
     <string name="nest_confirm_cancel">Zrušit</string>
-    <string name="nest_toast_action_title">Audio místnost</string>
-    <string name="nest_toast_follow_sent">Sledujete %1$s.</string>
-    <string name="nest_toast_unfollow_sent">Přestali jste sledovat %1$s.</string>
-    <string name="nest_toast_mute_sent">%1$s ztlumen/a.</string>
-    <string name="nest_toast_unmute_sent">Ztlumení %1$s zrušeno.</string>
-    <string name="nest_toast_promote_speaker_sent">%1$s povýšen/a na mluvčího.</string>
-    <string name="nest_toast_promote_moderator_sent">%1$s povýšen/a na moderátora.</string>
-    <string name="nest_toast_demote_listener_sent">%1$s snížen/a na posluchače.</string>
-    <string name="nest_toast_force_mute_sent">%1$s vynuceně ztlumen/a.</string>
-    <string name="nest_toast_kick_sent">%1$s byl/a vykopnut/a z místnosti.</string>
     <string name="nest_share_action">Sdílet místnost</string>
     <string name="nest_minimize">Minimalizovat</string>
     <string name="nest_minimize_description">Minimalizovat a poslouchat dál</string>
