@@ -285,7 +285,6 @@ class CallActivity : AppCompatActivity() {
     }
 
     private fun enterPipIfActive() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val callManager = CallSessionBridge.callManager ?: return
         val state = callManager.state.value
         val isActive =

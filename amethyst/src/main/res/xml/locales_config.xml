@@ -42,6 +42,7 @@
     <locale android:name="ks-IN"/>
     <locale android:name="ku-TR"/>
     <locale android:name="lt-LT"/>
+    <locale android:name="lv-LV"/>
     <locale android:name="ne-NP"/>
     <locale android:name="nl"/>
     <locale android:name="nl-BE"/>

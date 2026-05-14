@@ -47,6 +47,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -129,7 +130,7 @@ internal fun NestFullScreen(
     // Tab selection survives configuration changes and PIP transitions.
     // Stored as ordinal so rememberSaveable can persist it without a
     // custom Saver.
-    var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
+    var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
 
     val isHost = accountViewModel.account.signer.pubKey == event.pubKey
     val myPubkey = accountViewModel.account.signer.pubKey

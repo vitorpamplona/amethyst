@@ -38,7 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -93,7 +93,7 @@ private fun ZapChip(zap: RoomZap) {
     // + fade in lockstep with how close it is to being evicted. Re-key
     // on the event id so the animation restarts whenever a fresh zap
     // replaces the value at this slot.
-    var progress by remember(zap.eventId) { mutableStateOf(0f) }
+    var progress by remember(zap.eventId) { mutableFloatStateOf(0f) }
     LaunchedEffect(zap.eventId) {
         val ageMs = (System.currentTimeMillis() / 1000L - zap.createdAtSec).coerceAtLeast(0L) * 1000L
         val remaining = (ZAP_WINDOW_MS - ageMs).coerceAtLeast(0L)
