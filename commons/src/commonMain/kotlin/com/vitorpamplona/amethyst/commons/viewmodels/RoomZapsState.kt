@@ -104,7 +104,4 @@ class RoomZapsAggregator {
         }
         return byEventId.values.groupBy { it.targetPubkey ?: roomWideKey }
     }
-
-    /** Whether the aggregator currently holds any unevicted zaps. */
-    fun isEmpty(): Boolean = byEventId.isEmpty()
 }

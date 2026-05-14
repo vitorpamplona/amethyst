@@ -176,10 +176,11 @@ class NestViewModel(
 
     /**
      * Recent kind-9735 zap receipts for the floating zap-avatar overlay.
-     * Same shape as [recentReactions] so the UI can reuse the same
-     * floating-chip component — keyed by target pubkey, room-wide
-     * zaps under the empty-string key. Sliding [REACTION_WINDOW_SEC]
-     * window driven by the platform layer's eviction tick.
+     * Same map shape as [recentReactions] (keyed by target pubkey,
+     * room-wide zaps under the empty-string key) so the zap overlay
+     * can mirror the reaction overlay's grouping logic. Sliding
+     * [REACTION_WINDOW_SEC] window driven by the platform layer's
+     * eviction tick.
      */
     private val zapsAgg = RoomZapsAggregator()
     private val _recentZaps = MutableStateFlow<Map<String, List<RoomZap>>>(emptyMap())
@@ -637,8 +638,8 @@ class NestViewModel(
 
     /**
      * Drop zaps older than the staleness threshold. Platform layer
-     * drives this on the same 1-s tick that evicts reactions so both
-     * floating overlays share a single timer.
+     * drives this on a 1-s tick — the same cadence as [evictReactions]
+     * — so the zap and reaction overlays age out in lockstep.
      */
     fun evictZaps(olderThanSec: Long) {
         if (closed) return

@@ -43,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.viewmodels.REACTION_WINDOW_SEC
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomZap
@@ -72,9 +73,8 @@ internal fun SpeakerZapOverlay(
         exit = fadeOut() + scaleOut(targetScale = 0.6f),
         modifier = modifier,
     ) {
-        // Stable ordering by event id keeps the chip row from shuffling
-        // each tick — reactions sort by createdAt but zaps generally
-        // arrive one-at-a-time, so id order is good enough.
+        // Newest zap leads the row, matching SpeakerReactionOverlay's
+        // most-recent-first ordering so the two overlays read the same.
         val ordered = zaps.sortedByDescending { it.createdAtSec }
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             ordered.take(MAX_VISIBLE_ZAPS).forEach { zap ->
@@ -121,7 +121,10 @@ private fun ZapChip(zap: RoomZap) {
                 .alpha(animatedAlpha),
         shape = MaterialTheme.shapes.small,
         color = BitcoinOrange.copy(alpha = 0.95f),
-        contentColor = MaterialTheme.colorScheme.onPrimary,
+        // BitcoinOrange is theme-independent, so pin the content color
+        // to white rather than colorScheme.onPrimary (which tracks the
+        // theme's primary, not this fixed orange).
+        contentColor = Color.White,
         tonalElevation = 2.dp,
         shadowElevation = 1.dp,
     ) {
