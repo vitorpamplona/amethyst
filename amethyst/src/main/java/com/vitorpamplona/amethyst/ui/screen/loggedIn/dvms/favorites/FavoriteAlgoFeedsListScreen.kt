@@ -34,15 +34,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.BottomStart
 import androidx.compose.ui.Modifier
@@ -57,6 +58,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
+import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.DiscoverTab
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -70,20 +73,34 @@ import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.SimpleImage35Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
+import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoriteAlgoFeedsListScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    Scaffold(
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+
+    DisappearingScaffold(
+        isInvertedLayout = false,
         topBar = {
             TopBarWithBackButton(
                 caption = stringRes(R.string.favorite_dvms_title),
                 nav = nav,
             )
         },
+        bottomBar = {
+            AppBottomBar(Route.EditFavoriteAlgoFeeds, nav, accountViewModel) { route ->
+                if (route == Route.EditFavoriteAlgoFeeds) {
+                    coroutineScope.launch { listState.animateScrollToItem(0) }
+                } else {
+                    nav.navBottomBar(route)
+                }
+            }
+        },
+        accountViewModel = accountViewModel,
     ) { padding ->
         Column(
             modifier =
@@ -104,13 +121,14 @@ fun FavoriteAlgoFeedsListScreen(
                 color = MaterialTheme.colorScheme.grayText,
             )
 
-            FavoriteAlgoFeedList(accountViewModel, nav)
+            FavoriteAlgoFeedList(listState, accountViewModel, nav)
         }
     }
 }
 
 @Composable
 private fun FavoriteAlgoFeedList(
+    listState: LazyListState,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -154,6 +172,7 @@ private fun FavoriteAlgoFeedList(
     }
 
     LazyColumn(
+        state = listState,
         verticalArrangement = Arrangement.spacedBy(4.dp),
         contentPadding = FeedPadding,
     ) {
