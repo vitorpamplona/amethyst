@@ -58,4 +58,19 @@ expect object Secp256k1Instance {
         pubKey: ByteArray,
         privateKey: ByteArray,
     ): ByteArray
+
+    /**
+     * BIP-341 / BIP-32 style additive tweak.
+     *
+     * Returns `pubKey + tweak·G` as a 33-byte compressed point.
+     *
+     * @param pubKey 32-byte x-only public key (the input is assumed to have the
+     *               implicit even-y parity used by BIP-341 internal keys), or a
+     *               33-byte compressed public key.
+     * @param tweak  32-byte scalar.
+     */
+    fun pubKeyTweakAdd(
+        pubKey: ByteArray,
+        tweak: ByteArray,
+    ): ByteArray
 }

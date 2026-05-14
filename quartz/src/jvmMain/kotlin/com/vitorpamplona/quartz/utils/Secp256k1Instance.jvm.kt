@@ -64,4 +64,12 @@ actual object Secp256k1Instance {
         pubKey: ByteArray,
         privateKey: ByteArray,
     ): ByteArray = secp256k1.pubKeyTweakMul(h02 + pubKey, privateKey).copyOfRange(1, 33)
+
+    actual fun pubKeyTweakAdd(
+        pubKey: ByteArray,
+        tweak: ByteArray,
+    ): ByteArray {
+        val full = if (pubKey.size == 32) h02 + pubKey else pubKey
+        return secp256k1.pubKeyCompress(secp256k1.pubKeyTweakAdd(full, tweak))
+    }
 }
