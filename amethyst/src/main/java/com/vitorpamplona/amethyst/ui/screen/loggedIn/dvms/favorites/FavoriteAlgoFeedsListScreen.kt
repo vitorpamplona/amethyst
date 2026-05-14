@@ -46,11 +46,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.BottomStart
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.buildAnnotatedString
@@ -81,6 +83,8 @@ import com.vitorpamplona.amethyst.ui.theme.SimpleImage35Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import kotlinx.coroutines.launch
+
+private const val STAR_INLINE_ID = "star"
 
 @Composable
 fun FavoriteAlgoFeedsListScreen(
@@ -130,10 +134,47 @@ fun FavoriteAlgoFeedsListScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.grayText,
                 )
+                FavoriteAlgoFeedsEmptyState(nav)
+            } else {
+                FavoriteAlgoFeedList(favorites, listState, accountViewModel, nav)
             }
-
-            FavoriteAlgoFeedList(favorites, listState, accountViewModel, nav)
         }
+    }
+}
+
+@Composable
+private fun FavoriteAlgoFeedsEmptyState(nav: INav) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Spacer(modifier = Modifier.weight(1f))
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Icon(
+                symbol = MaterialSymbols.AutoAwesome,
+                contentDescription = null,
+                modifier = Modifier.size(72.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = stringRes(R.string.favorite_dvms_empty_headline),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            FavoriteAlgoFeedsEmptySteps(
+                ctaLabel = stringRes(R.string.favorite_dvms_empty_cta),
+                modifier = Modifier.widthIn(max = 320.dp),
+            )
+        }
+        Spacer(modifier = Modifier.weight(1f))
+        BrowseAlgosButton(
+            label = stringRes(R.string.favorite_dvms_empty_cta),
+            nav = nav,
+        )
     }
 }
 
@@ -144,41 +185,6 @@ private fun ColumnScope.FavoriteAlgoFeedList(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    if (favorites.isEmpty()) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Spacer(modifier = Modifier.weight(1f))
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Icon(
-                    symbol = MaterialSymbols.AutoAwesome,
-                    contentDescription = null,
-                    modifier = Modifier.size(72.dp),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    text = stringRes(R.string.favorite_dvms_empty_headline),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                FavoriteAlgoFeedsEmptySteps(
-                    ctaLabel = stringRes(R.string.favorite_dvms_empty_cta),
-                    modifier = Modifier.widthIn(max = 320.dp),
-                )
-            }
-            Spacer(modifier = Modifier.weight(1f))
-            Button(onClick = { nav.nav(Route.Discover(initialTab = DiscoverTab.ALGOS)) }) {
-                Text(text = stringRes(R.string.favorite_dvms_empty_cta))
-            }
-        }
-        return
-    }
-
     LazyColumn(
         modifier = Modifier.weight(1f),
         state = listState,
@@ -197,13 +203,24 @@ private fun ColumnScope.FavoriteAlgoFeedList(
             )
         }
     }
-    Box(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
-        contentAlignment = Alignment.Center,
+    BrowseAlgosButton(
+        label = stringRes(R.string.favorite_dvms_add_more),
+        nav = nav,
+        modifier = Modifier.align(Alignment.CenterHorizontally).padding(vertical = 32.dp),
+    )
+}
+
+@Composable
+private fun BrowseAlgosButton(
+    label: String,
+    nav: INav,
+    modifier: Modifier = Modifier,
+) {
+    Button(
+        onClick = { nav.nav(Route.Discover(initialTab = DiscoverTab.ALGOS)) },
+        modifier = modifier,
     ) {
-        Button(onClick = { nav.nav(Route.Discover(initialTab = DiscoverTab.ALGOS)) }) {
-            Text(text = stringRes(R.string.favorite_dvms_add_more))
-        }
+        Text(text = label)
     }
 }
 
@@ -290,34 +307,38 @@ private fun FavoriteAlgoFeedsEmptySteps(
     ctaLabel: String,
     modifier: Modifier = Modifier,
 ) {
-    val starInlineId = "star"
     val step2Template = stringRes(R.string.favorite_dvms_empty_step2)
-    val step2Parts = step2Template.split("%1\$s", limit = 2)
+    val primaryColor = MaterialTheme.colorScheme.primary
 
     val step2Text =
-        buildAnnotatedString {
-            append(step2Parts.first())
-            appendInlineContent(starInlineId, "[star]")
-            if (step2Parts.size > 1) append(step2Parts[1])
+        remember(step2Template) {
+            val parts = step2Template.split("%1\$s", limit = 2)
+            buildAnnotatedString {
+                append(parts.first())
+                appendInlineContent(STAR_INLINE_ID, "star")
+                if (parts.size > 1) append(parts[1])
+            }
         }
 
     val starInlineContent =
-        mapOf(
-            starInlineId to
-                InlineTextContent(
-                    Placeholder(
-                        width = 18.sp,
-                        height = 18.sp,
-                        placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
-                    ),
-                ) {
-                    Icon(
-                        symbol = MaterialSymbols.StarBorder,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                },
-        )
+        remember(primaryColor) {
+            mapOf(
+                STAR_INLINE_ID to
+                    InlineTextContent(
+                        Placeholder(
+                            width = 18.sp,
+                            height = 18.sp,
+                            placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
+                        ),
+                    ) {
+                        Icon(
+                            symbol = MaterialSymbols.StarBorder,
+                            contentDescription = null,
+                            tint = primaryColor,
+                        )
+                    },
+            )
+        }
 
     Column(
         modifier = modifier,
@@ -346,7 +367,10 @@ private fun NumberedStep(
     number: String,
     content: @Composable () -> Unit,
 ) {
-    Row(verticalAlignment = Alignment.Top) {
+    Row(
+        modifier = Modifier.semantics(mergeDescendants = true) {},
+        verticalAlignment = Alignment.Top,
+    ) {
         Text(
             text = number,
             style = MaterialTheme.typography.bodyMedium,
