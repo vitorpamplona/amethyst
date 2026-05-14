@@ -25,6 +25,8 @@ import android.content.Context
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.view.View
+import android.view.Window
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
@@ -55,6 +57,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -75,6 +78,9 @@ import androidx.compose.ui.util.lerp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -193,6 +199,7 @@ fun ZoomableImageDialog(
             attributes.flags = attributes.flags and WindowManager.LayoutParams.FLAG_DIM_BEHIND.inv()
             dialogWindow.attributes = attributes
         }
+        KeepSystemBarsVisibleInImageDialog(activityWindow, dialogWindow)
 
         Box(modifier = Modifier.fillMaxSize()) {
             // Background surface that fades in as the content grows to fullscreen.
@@ -214,6 +221,36 @@ fun ZoomableImageDialog(
                 accountViewModel = accountViewModel,
             )
         }
+    }
+}
+
+@Composable
+private fun KeepSystemBarsVisibleInImageDialog(
+    activityWindow: Window?,
+    dialogWindow: Window?,
+) {
+    SideEffect {
+        activityWindow?.showSystemBars()
+        dialogWindow?.showSystemBars()
+    }
+}
+
+private fun Window.showSystemBars() {
+    val decorView = decorView
+
+    @Suppress("DEPRECATION")
+    decorView.systemUiVisibility =
+        decorView.systemUiVisibility and
+        (
+            View.SYSTEM_UI_FLAG_FULLSCREEN or
+                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                View.SYSTEM_UI_FLAG_IMMERSIVE or
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+        ).inv()
+
+    WindowCompat.getInsetsController(this, decorView).apply {
+        systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+        show(WindowInsetsCompat.Type.systemBars())
     }
 }
 
