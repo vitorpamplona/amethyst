@@ -667,6 +667,8 @@
     <string name="nest_confirm_force_mute_body">Požádá klienta uživatele %1$s o ztlumení mikrofonu. Někteří klienti mohou tento příkaz ignorovat.</string>
     <string name="nest_confirm_force_mute_confirm">Vynutit ztlumení</string>
     <string name="nest_confirm_cancel">Zrušit</string>
+    <string name="nest_toast_host_action_failed_title">Akce selhala</string>
+    <string name="nest_toast_host_action_failed_template_null">Akci nelze připravit.</string>
     <string name="nest_share_action">Sdílet místnost</string>
     <string name="nest_minimize">Minimalizovat</string>
     <string name="nest_minimize_description">Minimalizovat a poslouchat dál</string>
@@ -1132,6 +1134,12 @@
     <string name="max_hashtag_limit_explainer">Skryje příspěvky s více hashtagy, než je tento limit. Nastavte 0 pro deaktivaci</string>
     <string name="hide_community_rules_violations_title">Skrývat příspěvky porušující pravidla komunity</string>
     <string name="hide_community_rules_violations_explainer">Skryje příspěvky z komunitních feedů, když komunita zveřejní dokument s pravidly NIP-9B a událost by jím neprošla. Bez efektu, pokud komunita nemá strukturovaná pravidla.</string>
+    <string name="security_section_filtering_preferences">Předvolby filtrování</string>
+    <string name="security_section_blocked_content">Blokovaný obsah</string>
+    <string name="security_unlimited">∞</string>
+    <string name="security_blocked_users_empty">Zatím jsi nezablokoval/a žádné uživatele.</string>
+    <string name="security_spamming_users_empty">V této relaci nebyly žádné účty označeny jako spam.</string>
+    <string name="security_hidden_words_empty">Žádná skrytá slova. Přidej slovo níže pro skrytí příspěvků, které ho obsahují.</string>
     <string name="new_reaction_symbol">Nový symbol reakce</string>
     <string name="no_reaction_type_setup_long_press_to_change">Nebyly vybrány žádné typy reakcí. Dlouhým stiskem změňte</string>
     <string name="zapraiser">Zap-sběr</string>
@@ -1329,6 +1337,8 @@
     <string name="geohash_exclusive_explainer">Uvidí to pouze následovníci umístění. Tvoji obecní následovníci to neuvidí.</string>
     <string name="hashtag_exclusive">Hashtag-exkluzivní příspěvek</string>
     <string name="hashtag_exclusive_explainer">Uvidí to pouze následovníci hashtagu. Tvůj všeobecní následovníci to neuvidí.</string>
+    <string name="external_url_scope">Komentář k webové stránce</string>
+    <string name="external_id_scope">Komentář k externímu zdroji</string>
     <string name="long_form_reading_minutes">%1$d min čtení</string>
     <string name="loading_location">Načítání umístění</string>
     <string name="lack_location_permissions">Žádná lokace oprávnění</string>
@@ -1666,6 +1676,12 @@
     <string name="home_tabs_settings">Záložky domovské obrazovky</string>
     <string name="home_tabs_settings_description">Vyberte, které záložky se zobrazí na domovské obrazovce. Pokud je aktivní jen jedna záložka, lišta záložek se skryje.</string>
     <string name="home_tab_everything">Vše</string>
+    <string name="profile_ui_settings">Vzhled profilu</string>
+    <string name="profile_ui_settings_description">Vyberte, které sekce a kanály se zobrazí na profilových obrazovkách uživatelů. Všechny možnosti jsou ve výchozím nastavení povoleny.</string>
+    <string name="profile_ui_setting_badges">Profilové odznaky</string>
+    <string name="profile_ui_setting_app_recommendations">Doporučení aplikací</string>
+    <string name="profile_ui_setting_zap_received_feed">Kanál přijatých zapů</string>
+    <string name="profile_ui_setting_followers_feed">Kanál sledujících</string>
     <string name="reactions_settings">Nastavení reakcí</string>
     <string name="reactions_settings_description">Nastavte, která tlačítka reakcí se zobrazují, jejich pořadí a zda se mají zobrazovat počty.</string>
     <string name="reactions_settings_enabled">Povoleno</string>
@@ -2525,6 +2541,9 @@
     <string name="ai_writing_setting_description">Používá AI model běžící v zařízení k navrhování oprav textu a změn tónu.</string>
     <string name="tracked_broadcasts_setting_title">Sledovaná vysílání</string>
     <string name="tracked_broadcasts_setting_description">Použít sledovaného vysílače při odesílání událostí. Zobrazuje živý průběh a stav jednotlivých relayů během vysílání.</string>
+    <string name="compose_settings">Nastavení editoru</string>
+    <string name="auto_create_drafts_setting_title">Automaticky vytvářet koncepty</string>
+    <string name="auto_create_drafts_setting_description">Automaticky uloží koncept události, když píšeš nebo opouštíš editor s neodeslaným textem, a odešle ho na tvé soukromé odchozí relaye.</string>
     <string name="ai_writing_use_this">Použít toto</string>
     <string name="ai_writing_dismiss">Zavřít</string>
     <string name="ai_tone_correct">Opravit</string>

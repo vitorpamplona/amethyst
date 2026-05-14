@@ -655,6 +655,8 @@
     <string name="nest_confirm_force_mute_body">Ber %1$s:s klient att stänga av mikrofonen. Vissa klienter kan ignorera detta kommando.</string>
     <string name="nest_confirm_force_mute_confirm">Tysta påtvingat</string>
     <string name="nest_confirm_cancel">Avbryt</string>
+    <string name="nest_toast_host_action_failed_title">Åtgärden misslyckades</string>
+    <string name="nest_toast_host_action_failed_template_null">Åtgärden kunde inte förberedas.</string>
     <string name="nest_share_action">Dela rum</string>
     <string name="nest_minimize">Minimera</string>
     <string name="nest_minimize_description">Minimera för att fortsätta lyssna</string>
@@ -1119,6 +1121,12 @@
     <string name="max_hashtag_limit_explainer">Döljer inlägg med fler hashtaggar än denna gräns. Sätt till 0 för att inaktivera</string>
     <string name="hide_community_rules_violations_title">Dölj inlägg som bryter mot gemenskapens regler</string>
     <string name="hide_community_rules_violations_explainer">Filtrerar bort inlägg från gemenskapsflöden när gemenskapen publicerar ett NIP-9B-regeldokument och en händelse inte skulle godkännas. Ingen effekt när en gemenskap inte har strukturerade regler.</string>
+    <string name="security_section_filtering_preferences">Filterinställningar</string>
+    <string name="security_section_blocked_content">Blockerat innehåll</string>
+    <string name="security_unlimited">∞</string>
+    <string name="security_blocked_users_empty">Du har inte blockerat några användare än.</string>
+    <string name="security_spamming_users_empty">Inga konton har flaggats som spam under denna session.</string>
+    <string name="security_hidden_words_empty">Inga dolda ord. Lägg till ett ord nedan för att dölja inlägg som innehåller det.</string>
     <string name="new_reaction_symbol">Ny reaktionssymbol</string>
     <string name="no_reaction_type_setup_long_press_to_change">Inga reaktionstyper valda. Håll ned för att ändra</string>
     <string name="zapraiser">Zap insamling</string>
@@ -1316,6 +1324,8 @@
     <string name="geohash_exclusive_explainer">Endast anhängare av platsen kommer att se den. Dina allmänna anhängare kommer inte att se den.</string>
     <string name="hashtag_exclusive">Hashtag-exklusivt inlägg</string>
     <string name="hashtag_exclusive_explainer">Endast anhängare av hashtaggen kommer att se den. Dina generella följare kommer inte att se den.</string>
+    <string name="external_url_scope">Kommentera en webbplats</string>
+    <string name="external_id_scope">Kommentera en extern resurs</string>
     <string name="long_form_reading_minutes">%1$d min läsning</string>
     <string name="loading_location">Laddar position</string>
     <string name="lack_location_permissions">Inga platsbehörigheter</string>
@@ -1653,6 +1663,12 @@
     <string name="home_tabs_settings">Hemflikar</string>
     <string name="home_tabs_settings_description">Välj vilka flikar som visas på startskärmen. När endast en flik är aktiv döljs flikraden.</string>
     <string name="home_tab_everything">Allt</string>
+    <string name="profile_ui_settings">Profilgränssnitt</string>
+    <string name="profile_ui_settings_description">Välj vilka sektioner och flöden som visas på användarprofiler. Alla alternativ är aktiverade som standard.</string>
+    <string name="profile_ui_setting_badges">Profilmärken</string>
+    <string name="profile_ui_setting_app_recommendations">App-rekommendationer</string>
+    <string name="profile_ui_setting_zap_received_feed">Mottagna zaps-flöde</string>
+    <string name="profile_ui_setting_followers_feed">Följarflöde</string>
     <string name="reactions_settings">Reaktionsinställningar</string>
     <string name="reactions_settings_description">Konfigurera vilka reaktionsknappar som visas, deras ordning och om räknare ska visas.</string>
     <string name="reactions_settings_enabled">Aktiverad</string>
@@ -2500,6 +2516,9 @@
     <string name="ai_writing_setting_description">Använder en AI-modell på enheten för att föreslå textkorrigeringar och tonändringar.</string>
     <string name="tracked_broadcasts_setting_title">Spårade sändningar</string>
     <string name="tracked_broadcasts_setting_description">Använd den spårade sändaren när du skickar händelser. Visar liveförlopp och status per relä under sändning.</string>
+    <string name="compose_settings">Skrivinställningar</string>
+    <string name="auto_create_drafts_setting_title">Skapa utkast automatiskt</string>
+    <string name="auto_create_drafts_setting_description">Sparar ett utkast automatiskt när du skriver eller lämnar redigeraren med osänd text och skickar det till dina privata utgående reläer.</string>
     <string name="ai_writing_use_this">Använd detta</string>
     <string name="ai_writing_dismiss">Avvisa</string>
     <string name="ai_tone_correct">Korrigera</string>
