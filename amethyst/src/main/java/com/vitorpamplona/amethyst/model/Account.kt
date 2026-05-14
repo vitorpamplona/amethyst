@@ -965,7 +965,15 @@ class Account(
         return true
     }
 
-    fun computeRelayListToBroadcast(event: Event): Set<NormalizedRelayUrl> {
+    fun computeRelayListToBroadcast(event: Event): Set<NormalizedRelayUrl> = computeRelayListToBroadcast(event, mutableSetOf())
+
+    private fun computeRelayListToBroadcast(
+        event: Event,
+        visited: MutableSet<HexKey>,
+    ): Set<NormalizedRelayUrl> {
+        // a-tagged events can form cycles; without this the two recursive descents stack-overflow.
+        if (!visited.add(event.id)) return emptySet()
+
         if (event is GiftWrapEvent) {
             val receiver = event.recipientPubKey()
             return if (receiver != null) {
@@ -1044,7 +1052,7 @@ class Account(
                     }
 
                     linkedNote.event?.let { linkedEvent ->
-                        relayList.addAll(computeRelayListToBroadcast(linkedEvent))
+                        relayList.addAll(computeRelayListToBroadcast(linkedEvent, visited))
                     }
                 }
             }
@@ -1065,7 +1073,7 @@ class Account(
                     }
 
                     linkedNote.event?.let { linkedEvent ->
-                        relayList.addAll(computeRelayListToBroadcast(linkedEvent))
+                        relayList.addAll(computeRelayListToBroadcast(linkedEvent, visited))
                     }
                 }
             }
