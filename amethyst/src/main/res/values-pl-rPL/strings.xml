@@ -667,6 +667,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="nest_confirm_force_mute_body">Prosi klienta %1$so wyciszenie mikrofonu. Niektórzy klienci mogą zignorować to polecenie.</string>
     <string name="nest_confirm_force_mute_confirm">Wymuś wyciszenie</string>
     <string name="nest_confirm_cancel">Anuluj</string>
+    <string name="nest_toast_host_action_failed_title">Akcja nieudana</string>
+    <string name="nest_toast_host_action_failed_template_null">Nie udało się przygotować tej akcji.</string>
     <string name="nest_share_action">Udostępnij pokój</string>
     <string name="nest_minimize">Zminimalizuj</string>
     <string name="nest_minimize_description">Minimalizuj aby słuchać</string>
@@ -1136,6 +1138,12 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="max_hashtag_limit_explainer">Ukrywa posty zawierające więcej hashtagów niż ten limit. Ustaw wartość 0, aby wyłączyć tę funkcję</string>
     <string name="hide_community_rules_violations_title">Ukryj posty, które naruszają zasady społeczności</string>
     <string name="hide_community_rules_violations_explainer">Usuwa posty z kanałów społeczności, gdy społeczność opublikuje dokument zawierający zasady NIP-9B, a dane wydarzenie nie spełnia tych zasad. Nie ma to żadnego wpływu, jeśli społeczność nie posiada strukturyzowanych zasad.</string>
+    <string name="security_section_filtering_preferences">Preferencje filtrowania</string>
+    <string name="security_section_blocked_content">Zablokowane treści</string>
+    <string name="security_unlimited">∞</string>
+    <string name="security_blocked_users_empty">Nie zablokowałeś jeszcze żadnych użytkowników.</string>
+    <string name="security_spamming_users_empty">W tej sesji żadne konta nie zostały oznaczone jako spam.</string>
+    <string name="security_hidden_words_empty">Brak ukrytych słów. Wpisz poniżej słowo, aby ukryć posty, które je zawierają.</string>
     <string name="new_reaction_symbol">Nowy Symbol Odzewu</string>
     <string name="no_reaction_type_setup_long_press_to_change">Brak wstępnie wybranych typów reakcji dla tego użytkownika. Przytrzymaj przycisk serce, aby zmienić</string>
     <string name="zapraiser">Zapraiser</string>
@@ -1333,6 +1341,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="geohash_exclusive_explainer">Tylko obserwatorzy z twojej lokalizacji to zobaczą. Twoi ogólni obserwatorzy nie zobaczą tego.</string>
     <string name="hashtag_exclusive">Wpis hashtagowy</string>
     <string name="hashtag_exclusive_explainer">Tylko obserwujący ten hashtag to zobaczą. Twoi ogólni obserwujący nie zobaczą tego.</string>
+    <string name="external_url_scope">Skomentuj na stronie internetowej</string>
+    <string name="external_id_scope">Skomentuj na zewnętrznym serwisie</string>
     <string name="long_form_reading_minutes">Czas czytania: %1$d min.</string>
     <string name="loading_location">Pobieranie lokalizacji</string>
     <string name="lack_location_permissions">Brak dostępu do lokalizacji</string>
@@ -1671,6 +1681,12 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="home_tabs_settings">Karty główne</string>
     <string name="home_tabs_settings_description">Wybierz, które karty pojawiają się na ekranie głównym. Gdy tylko jedna karta jest aktywna, pasek karty jest ukryty.</string>
     <string name="home_tab_everything">Wszystko</string>
+    <string name="profile_ui_settings">Interfejs profilu</string>
+    <string name="profile_ui_settings_description">Wybierz które sekcje i kanały pojawiają się na ekranach profilu użytkownika. Wszystkie opcje są domyślnie włączone.</string>
+    <string name="profile_ui_setting_badges">Odznaki w profilu</string>
+    <string name="profile_ui_setting_app_recommendations">Rekomendacje aplikacji</string>
+    <string name="profile_ui_setting_zap_received_feed">Kanał, który otrzymał Zapa</string>
+    <string name="profile_ui_setting_followers_feed">Kanał Obserwowanych</string>
     <string name="reactions_settings">Ustawienia reakcji</string>
     <string name="reactions_settings_description">Skonfiguruj które przyciski reakcji będą wyświetlane, ich kolejność i czy wyświetlić liczniki.</string>
     <string name="reactions_settings_enabled">Włączone</string>
@@ -2530,6 +2546,9 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="ai_writing_setting_description">Używa modelu sztucznej inteligencji wbudowanego w urządzenie, proponując poprawki tekstu i zmiany tonu wypowiedzi.</string>
     <string name="tracked_broadcasts_setting_title">Monitorowane transmisje</string>
     <string name="tracked_broadcasts_setting_description">Podczas wysyłania zdarzeń korzystaj z monitora transmisji. Pokazuje postęp na żywo i status transmisji podczas nadawania.</string>
+    <string name="compose_settings">Skonfiguruj ustawienia</string>
+    <string name="auto_create_drafts_setting_title">Automatycznie twórz wersje robocze</string>
+    <string name="auto_create_drafts_setting_description">Automatycznie zapisuje wersję roboczą wiadomości podczas pisania lub po zamknięciu okna edycji z niewysłanym tekstem i umieszcza ją w prywatnej skrzynce wysyłkowej transmiterów.</string>
     <string name="ai_writing_use_this">Użyj tego</string>
     <string name="ai_writing_dismiss">Ignoruj</string>
     <string name="ai_tone_correct">Popraw</string>
