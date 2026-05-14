@@ -15,7 +15,7 @@ What's New?
 - Tap any timestamp to see the exact date and time
 - Pull Notification (internal Pokey)
 - Local LLM helpers (Pixel 9+, Samsung 25+, Xiaomi 15+)
-- Cli tools
+- `amy`, a command-line Nostr client
 
 ## Features
 
