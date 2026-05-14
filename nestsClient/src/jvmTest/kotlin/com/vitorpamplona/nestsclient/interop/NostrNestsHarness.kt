@@ -99,12 +99,23 @@ class NostrNestsHarness private constructor(
         private const val MOQ_REPO_URL = "https://github.com/kixelated/moq.git"
 
         /**
-         * Pin the upstream `kixelated/moq` revision so test runs are
-         * reproducible even if upstream main changes a wire-level detail
-         * we depend on (e.g. moq-lite framing). Override at runtime via
-         * `-DnestsInteropMoqRev=<sha-or-branch>`.
+         * Pin the upstream `kixelated/moq` revision the harness builds
+         * `moq-relay` from. This MUST match the version nostrnests's
+         * `moq-auth` sidecar mints tokens for — otherwise the relay
+         * rejects every connection with `failed to decode the token`
+         * (the JWKS / JWT-signature handling drifted across releases).
+         *
+         * nostrnests pins `moq-relay --version 0.10.10` in their own
+         * `nests-relay/Dockerfile.relay`, so 0.10.10 is the version their
+         * `moq-auth` is written against. The `docker-compose-moq.yml` this
+         * harness uses builds `moq-relay` from `./moq` source instead of
+         * `cargo install`ing it, so we have to check out the matching tag
+         * ourselves. Plain `main` builds whatever is latest (0.10.25+),
+         * which moq-auth's tokens no longer satisfy.
+         *
+         * Override at runtime via `-DnestsInteropMoqRev=<sha-or-tag>`.
          */
-        const val DEFAULT_MOQ_REVISION = "main"
+        const val DEFAULT_MOQ_REVISION = "moq-relay-v0.10.10"
 
         private const val COMPOSE_FILE = "docker-compose-moq.yml"
         private const val PORT_READY_TIMEOUT_MS = 90_000L
@@ -314,8 +325,10 @@ class NostrNestsHarness private constructor(
             if (!moqDir.exists()) {
                 runProcess(nestsRepo, "git", "clone", MOQ_REPO_URL, "moq")
             }
-            // Reproducible runs: pin to the requested revision.
-            runProcess(moqDir, "git", "fetch", "origin", "--quiet")
+            // Reproducible runs: pin to the requested revision. `--tags` so a
+            // release-tag pin like `moq-relay-v0.10.10` is checkout-able even
+            // on a repo first cloned before that tag existed.
+            runProcess(moqDir, "git", "fetch", "origin", "--tags", "--quiet")
             runProcess(moqDir, "git", "checkout", "--quiet", rev)
         }
 
