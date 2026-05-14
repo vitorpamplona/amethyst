@@ -626,7 +626,6 @@
     <string name="nest_chat_send">भेजें</string>
     <string name="nest_chat_placeholder">कुछ बात करें…</string>
     <string name="nest_chat_empty">कोई सन्देश नहीं अब तक। आप ही पहले चर्चा आरम्भ करें।</string>
-    <string name="nest_reactions_title">प्रतिक्रिया</string>
     <string name="nest_reactions_button">प्रतिक्रिया</string>
     <string name="nest_edit_title">शाला सम्पादन</string>
     <string name="nest_edit_save">अभिलेखन</string>

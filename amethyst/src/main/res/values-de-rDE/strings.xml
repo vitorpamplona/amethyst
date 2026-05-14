@@ -632,7 +632,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nest_chat_send">Senden</string>
     <string name="nest_chat_placeholder">Sag etwas…</string>
     <string name="nest_chat_empty">Noch keine Nachrichten. Sei der Erste.</string>
-    <string name="nest_reactions_title">Reagieren</string>
     <string name="nest_reactions_button">Reagieren</string>
     <string name="nest_edit_title">Raum bearbeiten</string>
     <string name="nest_edit_save">Speichern</string>
@@ -662,16 +661,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nest_confirm_force_mute_body">Fordert den Client von %1$s auf, das Mikrofon stummzuschalten. Manche Clients ignorieren diesen Befehl.</string>
     <string name="nest_confirm_force_mute_confirm">Stummschalten erzwingen</string>
     <string name="nest_confirm_cancel">Abbrechen</string>
-    <string name="nest_toast_action_title">Audioraum</string>
-    <string name="nest_toast_follow_sent">Du folgst %1$s.</string>
-    <string name="nest_toast_unfollow_sent">Du folgst %1$s nicht mehr.</string>
-    <string name="nest_toast_mute_sent">%1$s stummgeschaltet.</string>
-    <string name="nest_toast_unmute_sent">Stummschaltung von %1$s aufgehoben.</string>
-    <string name="nest_toast_promote_speaker_sent">%1$s zum Sprecher befördert.</string>
-    <string name="nest_toast_promote_moderator_sent">%1$s zum Moderator befördert.</string>
-    <string name="nest_toast_demote_listener_sent">%1$s zum Zuhörer herabgestuft.</string>
-    <string name="nest_toast_force_mute_sent">%1$s wurde zwangsweise stummgeschaltet.</string>
-    <string name="nest_toast_kick_sent">%1$s aus dem Raum entfernt.</string>
     <string name="nest_share_action">Raum teilen</string>
     <string name="nest_minimize">Minimieren</string>
     <string name="nest_minimize_description">Minimieren, um weiter zuzuhören</string>
