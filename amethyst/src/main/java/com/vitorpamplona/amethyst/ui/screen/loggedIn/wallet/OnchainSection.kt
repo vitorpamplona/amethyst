@@ -31,18 +31,26 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.TaprootAddress
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.text.NumberFormat
 
 /**
  * "Bitcoin" section card on the wallet screen, shown above the lightning NWC
@@ -67,6 +75,32 @@ fun OnchainSection(
             runCatching { TaprootAddress.fromPubKey(pubKey) }.getOrNull()
         }
 
+    // Balance fetched from the configured OnchainBackend. null = unknown / loading
+    // / unconfigured. We intentionally do not retry on failure here — the user can
+    // refresh by leaving and re-entering the screen.
+    var balanceSats by remember(pubKey) { mutableStateOf<Long?>(null) }
+    var balanceState by remember(pubKey) { mutableStateOf(BalanceState.LOADING) }
+
+    LaunchedEffect(address) {
+        if (address == null) {
+            balanceState = BalanceState.UNAVAILABLE
+            return@LaunchedEffect
+        }
+        val backend = LocalCache.onchainBackend
+        if (backend == null) {
+            balanceState = BalanceState.UNAVAILABLE
+            return@LaunchedEffect
+        }
+        balanceState = BalanceState.LOADING
+        try {
+            val utxos = withContext(Dispatchers.IO) { backend.getUtxosForAddress(address) }
+            balanceSats = utxos.sumOf { it.valueSats }
+            balanceState = BalanceState.READY
+        } catch (t: Throwable) {
+            balanceState = BalanceState.ERROR
+        }
+    }
+
     Card(
         modifier = modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
@@ -87,6 +121,7 @@ fun OnchainSection(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
+                BalanceRow(state = balanceState, sats = balanceSats)
                 Text(
                     text = "Your Taproot address",
                     style = MaterialTheme.typography.labelMedium,
@@ -102,6 +137,39 @@ fun OnchainSection(
             }
         }
     }
+}
+
+private enum class BalanceState { LOADING, READY, ERROR, UNAVAILABLE }
+
+@Composable
+private fun BalanceRow(
+    state: BalanceState,
+    sats: Long?,
+) {
+    val text =
+        when (state) {
+            BalanceState.LOADING -> {
+                "Loading balance…"
+            }
+
+            BalanceState.READY -> {
+                val formatted = NumberFormat.getNumberInstance().format(sats ?: 0L)
+                "$formatted sats"
+            }
+
+            BalanceState.ERROR -> {
+                "Balance unavailable"
+            }
+
+            BalanceState.UNAVAILABLE -> {
+                "Chain backend not configured"
+            }
+        }
+    Text(
+        text = text,
+        style = MaterialTheme.typography.headlineSmall,
+        fontWeight = FontWeight.SemiBold,
+    )
 }
 
 @Composable
