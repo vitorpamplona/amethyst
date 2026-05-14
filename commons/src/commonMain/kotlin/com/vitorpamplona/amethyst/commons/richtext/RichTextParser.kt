@@ -420,7 +420,7 @@ class RichTextParser {
             )
 
         val imageExt = listOf("png", "jpg", "gif", "bmp", "jpeg", "webp", "svg", "avif")
-        val videoExt = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "mp3", "m3u8", "ogg", "wav", "flac", "aac", "opus", "m4a")
+        val videoExt = listOf("mp4", "avi", "wmv", "mpg", "amv", "webm", "mov", "mp3", "m3u8", "ogg", "wav", "flac", "aac", "opus", "m4a", "f4a")
         val pdfExt = listOf("pdf")
 
         val imageExtensions = imageExt + imageExt.map { it.uppercase() }
@@ -556,6 +556,7 @@ val mimeTypeMap: Map<String, String> =
         "wav" to "audio/wav",
         "ogg" to "audio/ogg",
         "m4a" to "audio/mp4",
+        "f4a" to "audio/mp4",
         "aac" to "audio/aac",
         "flac" to "audio/flac",
         // Documents
