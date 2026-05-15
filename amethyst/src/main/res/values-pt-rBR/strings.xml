@@ -2579,4 +2579,7 @@
     <string name="community_rules_violation_quota_exceeded">Você já publicou %1$d eventos deste tipo hoje (limite %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Você não atende aos requisitos da rede de confiança desta comunidade.</string>
     <string name="community_rules_violation_stale_rules">O documento mais recente de regras da comunidade foi rejeitado por estar desatualizado.</string>
+    <string name="favorite_dvms_add_more">Adicionar mais…</string>
+    <string name="favorite_dvms_empty_step1">Toque em \"%1$s\" abaixo para navegar pelos algoritmos.</string>
+    <string name="favorite_dvms_empty_step2">Toque na %1$s ao lado de um feed para mantê-lo aqui.</string>
 </resources>

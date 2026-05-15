@@ -2578,4 +2578,7 @@
     <string name="community_rules_violation_quota_exceeded">Du har redan publicerat %1$d händelser av den här typen idag (gräns %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Du uppfyller inte den här gemenskapens krav på förtroendenät.</string>
     <string name="community_rules_violation_stale_rules">Det senaste dokumentet med gemenskapsregler avvisades som föråldrat.</string>
+    <string name="favorite_dvms_add_more">Lägg till fler…</string>
+    <string name="favorite_dvms_empty_step1">Tryck på \"%1$s\" nedan för att bläddra bland algoritmer.</string>
+    <string name="favorite_dvms_empty_step2">Tryck på %1$s bredvid ett flöde för att behålla det här.</string>
 </resources>

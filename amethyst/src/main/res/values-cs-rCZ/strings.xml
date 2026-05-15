@@ -2603,4 +2603,7 @@
     <string name="community_rules_violation_quota_exceeded">Dnes jsi již zveřejnil %1$d událostí tohoto typu (limit %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Nesplňuješ požadavky sítě důvěry této komunity.</string>
     <string name="community_rules_violation_stale_rules">Nejnovější dokument s pravidly komunity byl odmítnut jako zastaralý.</string>
+    <string name="favorite_dvms_add_more">Přidat další…</string>
+    <string name="favorite_dvms_empty_step1">Klepněte na \"%1$s\" níže pro procházení algoritmů.</string>
+    <string name="favorite_dvms_empty_step2">Klepněte na %1$s vedle kanálu, abyste si jej zde uložili.</string>
 </resources>

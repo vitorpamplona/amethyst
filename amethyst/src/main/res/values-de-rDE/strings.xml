@@ -2584,4 +2584,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="community_rules_violation_quota_exceeded">Du hast heute bereits %1$d Ereignisse dieses Typs veröffentlicht (Limit %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Du erfüllst die Web-of-Trust-Anforderungen dieser Community nicht.</string>
     <string name="community_rules_violation_stale_rules">Das aktuelle Community-Regeldokument wurde als veraltet abgelehnt.</string>
+    <string name="favorite_dvms_add_more">Weitere hinzufügen…</string>
+    <string name="favorite_dvms_empty_step1">Tippe unten auf \"%1$s\", um Algorithmen zu durchsuchen.</string>
+    <string name="favorite_dvms_empty_step2">Tippe auf den %1$s neben einem Feed, um ihn hier zu behalten.</string>
 </resources>
