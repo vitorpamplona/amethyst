@@ -58,7 +58,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -104,16 +103,12 @@ fun BottomBarSettingsScreen(
 
 @Composable
 fun BottomBarSettingsContent(accountViewModel: AccountViewModel) {
-    val pinned by accountViewModel.settings.uiSettingsFlow.bottomBarItems
-        .collectAsStateWithLifecycle()
-
-    var items by remember(pinned) {
-        mutableStateOf(initialRows(pinned))
-    }
+    val bottomBarItemsFlow = accountViewModel.settings.uiSettingsFlow.bottomBarItems
+    var items by remember { mutableStateOf(initialRows(bottomBarItemsFlow.value)) }
 
     fun save(newItems: List<Row>) {
         items = newItems
-        accountViewModel.settings.uiSettingsFlow.bottomBarItems.tryEmit(
+        bottomBarItemsFlow.tryEmit(
             newItems.filter { it.pinned }.map { it.item },
         )
     }
