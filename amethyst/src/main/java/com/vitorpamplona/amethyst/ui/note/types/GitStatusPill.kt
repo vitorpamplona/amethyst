@@ -30,9 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,22 +69,15 @@ private fun GitStatusEvent.statusKind(): StatusKind =
     }
 
 @Composable
-fun rememberLatestStatus(targetIdHex: String): GitStatusEvent? {
-    LaunchedEffect(Unit) { GitStatusIndex.startIfNeeded() }
-    val index by GitStatusIndex.latestByTarget.collectAsStateWithLifecycle()
-    val latest by remember(targetIdHex) { derivedStateOf { index[targetIdHex] } }
-    return latest
-}
-
-@Composable
 fun GitStatusPill(
     targetIdHex: String,
     modifier: Modifier = Modifier,
     defaultIfMissing: StatusKind? = null,
 ) {
-    val latest = rememberLatestStatus(targetIdHex)
-    val kind =
-        latest?.statusKind() ?: defaultIfMissing ?: return
+    LaunchedEffect(Unit) { GitStatusIndex.startIfNeeded() }
+    val index by GitStatusIndex.latestByTarget.collectAsStateWithLifecycle()
+    val map = index ?: return // hide pill until the initial scan completes — avoids a default-then-real flicker
+    val kind = map[targetIdHex]?.statusKind() ?: defaultIfMissing ?: return
 
     GitStatusPill(kind, modifier)
 }

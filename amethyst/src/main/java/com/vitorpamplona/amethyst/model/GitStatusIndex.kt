@@ -28,6 +28,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -42,38 +43,40 @@ object GitStatusIndex {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val started = AtomicBoolean(false)
 
-    private val mutableLatestByTarget = MutableStateFlow<Map<HexKey, GitStatusEvent>>(emptyMap())
-    val latestByTarget: StateFlow<Map<HexKey, GitStatusEvent>> = mutableLatestByTarget.asStateFlow()
+    private val mutableLatestByTarget = MutableStateFlow<Map<HexKey, GitStatusEvent>?>(null)
+    val latestByTarget: StateFlow<Map<HexKey, GitStatusEvent>?> = mutableLatestByTarget.asStateFlow()
 
     fun startIfNeeded() {
         if (!started.compareAndSet(false, true)) return
         scope.launch {
-            val initial = HashMap<HexKey, GitStatusEvent>()
-            LocalCache.notes.forEach { _, note ->
-                val event = note.event as? GitStatusEvent ?: return@forEach
-                val target = event.rootEventId() ?: return@forEach
-                val current = initial[target]
-                if (current == null || event.createdAt > current.createdAt) {
-                    initial[target] = event
-                }
-            }
-            mutableLatestByTarget.value = initial
-
-            LocalCache.live.newEventBundles.collect { bundle ->
-                processBundle(bundle)
-            }
+            // Subscribe to bundle updates BEFORE the initial scan via onStart, so any
+            // events that arrive between scan start and collector attach are picked up.
+            LocalCache.live.newEventBundles
+                .onStart {
+                    val initial = HashMap<HexKey, GitStatusEvent>()
+                    LocalCache.notes.forEach { _, note ->
+                        val event = note.event as? GitStatusEvent ?: return@forEach
+                        val target = event.rootEventId() ?: return@forEach
+                        val current = initial[target]
+                        if (current == null || event.createdAt > current.createdAt) {
+                            initial[target] = event
+                        }
+                    }
+                    mutableLatestByTarget.value = initial
+                }.collect { bundle -> processBundle(bundle) }
         }
     }
 
     private fun processBundle(bundle: Set<Note>) {
+        val snapshot = mutableLatestByTarget.value ?: emptyMap()
         var modified: HashMap<HexKey, GitStatusEvent>? = null
         for (note in bundle) {
             val event = note.event as? GitStatusEvent ?: continue
             val target = event.rootEventId() ?: continue
-            val map = modified ?: mutableLatestByTarget.value
+            val map = modified ?: snapshot
             val current = map[target]
             if (current == null || event.createdAt > current.createdAt) {
-                if (modified == null) modified = HashMap(mutableLatestByTarget.value)
+                if (modified == null) modified = HashMap(snapshot)
                 modified[target] = event
             }
         }
