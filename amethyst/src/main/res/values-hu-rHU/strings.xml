@@ -1116,6 +1116,8 @@
     <string name="warn_when_posts_have_reports_from_your_follows">Figyelmeztessen amikor a bejegyzések jelentve vannak azok által akiket követek</string>
     <string name="filter_spam_from_strangers_title">Kéretlen tartalomszűrő</string>
     <string name="filter_spam_from_strangers_explainer">Elrejti az ismeretlen felhasználók hozzászólásait, amelyek pontosan ugyanazok voltak 5 vagy több alkalommal</string>
+    <string name="add_client_tag_title">Klienscímke hozzáadása a saját eseményekhez</string>
+    <string name="add_client_tag_explainer">Ha engedélyezve van, az Amethyst egy NIP-89 klienscímkét fűz hozzá a közzétett eseményekhez.</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Figyelmeztetés a jelentésekre</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Figyelmeztető üzenetet jelenít meg, ha az Ön követői bejelentést tettek bejegyzésekről vagy profilokról</string>
     <string name="report_warning_threshold_title">Jelentési figyelmeztetés küszöbértéke</string>
@@ -1329,6 +1331,8 @@
     <string name="geohash_exclusive_explainer">Csak a helyszín követői láthatják. Az általános követők nem fogják látni.</string>
     <string name="hashtag_exclusive">Kulcsszó-exkluzív bejegyzés</string>
     <string name="hashtag_exclusive_explainer">Csak a kulcsszó követői fogják látni, de az Ön általános követői viszont nem.</string>
+    <string name="external_url_scope">Megjegyzés egy weboldalhoz</string>
+    <string name="external_id_scope">Megjegyzés egy külső forráshoz</string>
     <string name="long_form_reading_minutes">Olvasási idő: %1$d perc</string>
     <string name="loading_location">Helyszín betöltése…</string>
     <string name="lack_location_permissions">A helyszín-meghatározás nincs engedélyezve</string>
@@ -1924,8 +1928,11 @@
     <string name="favorite_dvms_title">Kedvenc hírfolyam-algoritmusok</string>
     <string name="favorite_dvms_explainer">A kedvencnek jelölt algoritmusok itt jelennek meg, valamint szűrőelemként a Főoldal hírfolyamában.</string>
     <string name="favorite_dvms_empty_headline">Kedvenc algoritmus kitűzése</string>
+    <string name="favorite_dvms_empty_step1">Koppintson az alábbi „%1$s” gombra az algoritmusok böngészéséhez.</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
+    <string name="favorite_dvms_empty_step2">Koppintson a hírcsatorna melletti %1$s ikonra, ha itt szeretné megtartani azt.</string>
     <string name="favorite_dvms_empty_cta">Néhány hírfolyam hozzáadása</string>
+    <string name="favorite_dvms_add_more">Továbbiak hozzáadása…</string>
     <string name="dvm_home_status_requesting">%1$s lekérdezése egy hírfolyamért…</string>
     <string name="dvm_home_status_requesting_all">Hírfolyamok keresése a kedvenc hírfolyam-algoritmusok segítségével…</string>
     <string name="dvm_home_status_processing">Hírfolyam feldolgozása…</string>

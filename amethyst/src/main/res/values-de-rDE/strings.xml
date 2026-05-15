@@ -1928,8 +1928,11 @@ anz der Bedingungen ist erforderlich</string>
     <string name="favorite_dvms_title">Bevorzugte Feed-Algorithmen</string>
     <string name="favorite_dvms_explainer">Feed-Algorithmen, die du mit einem Stern markierst, erscheinen als Filter-Chips im Home-Feed. Öffne Entdecken, um weitere hinzuzufügen.</string>
     <string name="favorite_dvms_empty_headline">Lieblingsalgorithmen anheften</string>
+    <string name="favorite_dvms_empty_step1">Tippe unten auf \"%1$s\", um Algorithmen zu durchsuchen.</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
+    <string name="favorite_dvms_empty_step2">Tippe auf den %1$s neben einem Feed, um ihn hier zu behalten.</string>
     <string name="favorite_dvms_empty_cta">Feeds hinzufügen</string>
+    <string name="favorite_dvms_add_more">Weitere hinzufügen…</string>
     <string name="dvm_home_status_requesting">Frage %1$s nach einem Feed…</string>
     <string name="dvm_home_status_requesting_all">Frage deine bevorzugten Feed-Algorithmen nach Feeds…</string>
     <string name="dvm_home_status_processing">Feed wird verarbeitet…</string>
@@ -2584,7 +2587,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="community_rules_violation_quota_exceeded">Du hast heute bereits %1$d Ereignisse dieses Typs veröffentlicht (Limit %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Du erfüllst die Web-of-Trust-Anforderungen dieser Community nicht.</string>
     <string name="community_rules_violation_stale_rules">Das aktuelle Community-Regeldokument wurde als veraltet abgelehnt.</string>
-    <string name="favorite_dvms_add_more">Weitere hinzufügen…</string>
-    <string name="favorite_dvms_empty_step1">Tippe unten auf \"%1$s\", um Algorithmen zu durchsuchen.</string>
-    <string name="favorite_dvms_empty_step2">Tippe auf den %1$s neben einem Feed, um ihn hier zu behalten.</string>
 </resources>
