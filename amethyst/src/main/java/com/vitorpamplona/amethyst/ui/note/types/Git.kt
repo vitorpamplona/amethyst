@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -60,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
@@ -218,6 +220,7 @@ private fun RenderShortRepositoryHeader(
                 .fillMaxWidth()
                 .clip(ChipShape)
                 .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f))
+                .clickable { nav.nav(Route.GitRepository(baseNote.address)) }
                 .padding(horizontal = Size10dp, vertical = Size8dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = HeaderSpacing,
@@ -273,6 +276,8 @@ private fun RenderGitPatchEvent(
                 background = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f),
                 contentColor = MaterialTheme.colorScheme.tertiary,
             )
+
+            GitStatusPill(targetIdHex = note.idHex, defaultIfMissing = StatusKind.OPEN)
 
             val commit = remember(noteEvent) { noteEvent.commit() }
             commit?.takeIf { it.isNotBlank() }?.let { hash ->
@@ -394,11 +399,18 @@ private fun RenderGitIssueEvent(
     nav: INav,
 ) {
     GitCardContainer {
-        TypeChip(
-            text = stringRes(id = R.string.kind_git_issue),
-            background = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-            contentColor = MaterialTheme.colorScheme.primary,
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = HeaderSpacing,
+        ) {
+            TypeChip(
+                text = stringRes(id = R.string.kind_git_issue),
+                background = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                contentColor = MaterialTheme.colorScheme.primary,
+            )
+
+            GitStatusPill(targetIdHex = note.idHex, defaultIfMissing = StatusKind.OPEN)
+        }
 
         val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
         if (repository != null) {

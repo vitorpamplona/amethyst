@@ -44,6 +44,7 @@ import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
@@ -142,6 +143,10 @@ fun routeForInner(
 
         is CommunityDefinitionEvent -> {
             Route.Community(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag())
+        }
+
+        is GitRepositoryEvent -> {
+            Route.GitRepository(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag())
         }
 
         is GiftWrapEvent -> {
