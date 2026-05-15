@@ -35,6 +35,7 @@ import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
@@ -120,6 +122,7 @@ private fun GitRepositoryScreen(
     WatchLifecycleAndUpdateModel(patchesViewModel)
     RepositoryFilterAssemblerSubscription(note, accountViewModel.dataSources().gitRepository)
 
+    val event by observeNoteEvent<GitRepositoryEvent>(note, accountViewModel)
     val pagerState = rememberForeverPagerState(note.idHex + "GitRepoScreenPagerState") { 3 }
 
     DisappearingScaffold(
@@ -128,7 +131,7 @@ private fun GitRepositoryScreen(
             Column {
                 ShorterTopAppBar(
                     title = {
-                        TopBarTitle(note)
+                        TopBarTitle(event = event, fallback = note.dTag())
                     },
                     navigationIcon = {
                         Row(TitleIconModifier, verticalAlignment = Alignment.CenterVertically) {
@@ -170,9 +173,9 @@ private fun GitRepositoryScreen(
         ) { page ->
             when (page) {
                 0 -> {
-                    val event = note.event as? GitRepositoryEvent
-                    if (event != null) {
-                        GitRepositoryOverview(event, accountViewModel, nav)
+                    val currentEvent = event
+                    if (currentEvent != null) {
+                        GitRepositoryOverview(currentEvent, accountViewModel, nav)
                     } else {
                         EmptyMessage(stringRes(R.string.loading_feed))
                     }
@@ -201,11 +204,12 @@ private fun GitRepositoryScreen(
 }
 
 @Composable
-private fun TopBarTitle(note: AddressableNote) {
-    val event = note.event as? GitRepositoryEvent
-    val title = event?.name() ?: note.dTag()
+private fun TopBarTitle(
+    event: GitRepositoryEvent?,
+    fallback: String,
+) {
     Text(
-        text = title,
+        text = event?.name() ?: fallback,
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.SemiBold,
         maxLines = 1,

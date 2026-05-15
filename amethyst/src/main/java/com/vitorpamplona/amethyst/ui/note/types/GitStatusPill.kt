@@ -30,21 +30,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.GitStatusIndex
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusClosedEvent
@@ -72,38 +72,9 @@ private fun GitStatusEvent.statusKind(): StatusKind =
 
 @Composable
 fun rememberLatestStatus(targetIdHex: String): GitStatusEvent? {
-    var status by remember(targetIdHex) {
-        mutableStateOf(scanForLatestStatus(targetIdHex))
-    }
-
-    LaunchedEffect(targetIdHex) {
-        LocalCache.live.newEventBundles.collect { bundle ->
-            for (note in bundle) {
-                val event = note.event as? GitStatusEvent ?: continue
-                if (event.rootEventId() == targetIdHex) {
-                    val current = status
-                    if (current == null || event.createdAt > current.createdAt) {
-                        status = event
-                    }
-                }
-            }
-        }
-    }
-
-    return status
-}
-
-private fun scanForLatestStatus(targetIdHex: String): GitStatusEvent? {
-    var latest: GitStatusEvent? = null
-    LocalCache.notes.forEach { _, note ->
-        val event = note.event
-        if (event is GitStatusEvent && event.rootEventId() == targetIdHex) {
-            val current = latest
-            if (current == null || event.createdAt > current.createdAt) {
-                latest = event
-            }
-        }
-    }
+    LaunchedEffect(Unit) { GitStatusIndex.startIfNeeded() }
+    val index by GitStatusIndex.latestByTarget.collectAsStateWithLifecycle()
+    val latest by remember(targetIdHex) { derivedStateOf { index[targetIdHex] } }
     return latest
 }
 
