@@ -103,4 +103,4 @@
 ## Test Environment
 - OS:
 - JDK version:
-- Amethyst version: 1.08.0 (feat/desktop-multi-account)
+- Amethyst version: 1.09.1 (feat/desktop-multi-account)
