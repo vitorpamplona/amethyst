@@ -120,9 +120,19 @@ private fun GitRepositoryScreen(
 ) {
     WatchLifecycleAndUpdateModel(issuesViewModel)
     WatchLifecycleAndUpdateModel(patchesViewModel)
-    RepositoryFilterAssemblerSubscription(note, accountViewModel.dataSources().gitRepository)
 
     val event by observeNoteEvent<GitRepositoryEvent>(note, accountViewModel)
+
+    // RepositoryContentSubAssembler.updateFilter reads note.event and bails out if it isn't
+    // a GitRepositoryEvent yet. The compose subscription manager doesn't re-run updateFilter
+    // when note.event later mutates, so subscribing before the event has arrived (cold-start
+    // / deep-link case) leaves an empty filter forever. Gate the subscription composable on
+    // event presence so it enters composition (and fires DisposableEffect → subscribe → fresh
+    // updateFilter) only once the repo event is loaded.
+    if (event != null) {
+        RepositoryFilterAssemblerSubscription(note, accountViewModel.dataSources().gitRepository)
+    }
+
     val pagerState = rememberForeverPagerState(note.idHex + "GitRepoScreenPagerState") { 3 }
 
     DisappearingScaffold(
