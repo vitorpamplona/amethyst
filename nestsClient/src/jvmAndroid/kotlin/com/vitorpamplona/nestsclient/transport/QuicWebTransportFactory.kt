@@ -112,7 +112,18 @@ class QuicWebTransportFactory(
         bearerToken: String?,
     ): WebTransportSession {
         val (host, port) = splitAuthority(authority)
-        val socket = UdpSocket.connect(host, port)
+        // Decouple the socket target from the TLS SNI name. The socket must
+        // reach a routable address — `localhost` commonly resolves to ::1
+        // first, and IPv6 loopback is not always routable (e.g. Docker's
+        // IPv6 UDP port-forwarding silently blackholes), so prefer an IPv4
+        // address for the actual connection. SNI, however, must stay the
+        // original hostname so it (a) matches the server's certificate and
+        // (b) is a legal RFC 6066 host_name rather than an IP literal.
+        val socketHost = resolvePreferIpv4(host)
+        // One-line wire target so a stalled/failed handshake is self-diagnosing
+        // (did we connect over IPv4 or fall into the ::1 blackhole?).
+        val target = "socket=$socketHost:$port sni=$host"
+        val socket = UdpSocket.connect(socketHost, port)
         val conn =
             QuicConnection(
                 serverName = host,
@@ -122,14 +133,39 @@ class QuicWebTransportFactory(
         val driver = QuicConnectionDriver(conn, socket, parentScope)
         driver.start()
 
-        try {
-            conn.awaitHandshake()
-        } catch (t: Throwable) {
+        val handshakeCompleted =
+            try {
+                // Bound the handshake — a server-side TLS failure (e.g. a relay
+                // that rejects an IP-literal SNI and can't select a cert) leaves
+                // the handshake stalled with no alert, so without this ceiling
+                // connect() hangs indefinitely instead of failing fast.
+                kotlinx.coroutines.withTimeoutOrNull(connectTimeoutMillis) {
+                    conn.awaitHandshake()
+                    true
+                }
+            } catch (ce: kotlinx.coroutines.CancellationException) {
+                // A parent-scope cancellation propagates out of withTimeoutOrNull
+                // (it only swallows its OWN TimeoutCancellationException). Wrapping
+                // it in HandshakeFailed would break structured concurrency — close
+                // the driver but re-throw the cancellation untouched. Mirrors the
+                // CancellationException handling on the post-CONNECT path below.
+                driver.close()
+                throw ce
+            } catch (t: Throwable) {
+                driver.close()
+                throw WebTransportException(
+                    kind = WebTransportException.Kind.HandshakeFailed,
+                    message = "QUIC handshake failed [$target]: ${t.message}",
+                    cause = t,
+                )
+            }
+        if (handshakeCompleted == null) {
             driver.close()
             throw WebTransportException(
                 kind = WebTransportException.Kind.HandshakeFailed,
-                message = "QUIC handshake failed: ${t.message}",
-                cause = t,
+                message =
+                    "QUIC handshake stalled — no completion within ${connectTimeoutMillis}ms [$target] " +
+                        "(a server-side TLS failure such as a rejected IP-literal SNI hangs here with no alert)",
             )
         }
         if (conn.status != QuicConnection.Status.CONNECTED) {
@@ -180,17 +216,27 @@ class QuicWebTransportFactory(
                     readConnectResponse(requestStream)
                 }
             if (response == null) {
+                val connDiag = describeConnectionState(conn, requestStream)
                 driver.close()
                 throw WebTransportException(
                     kind = WebTransportException.Kind.HandshakeFailed,
-                    message = "WebTransport CONNECT response timed out after ${connectTimeoutMillis}ms",
+                    message =
+                        "WebTransport CONNECT response timed out after ${connectTimeoutMillis}ms — $connDiag",
                 )
             }
             if (response.status !in 200..299) {
+                // Capture connection-level state BEFORE driver.close() — if the
+                // relay tore the connection down, closeReason/closeErrorCode
+                // are already set and tell us whether this was a CONNECTION_CLOSE
+                // (e.g. H3_SETTINGS_ERROR from a rejected SETTINGS frame) or the
+                // relay simply FIN'd the request bidi without an H3 response.
+                val connDiag = describeConnectionState(conn, requestStream)
                 driver.close()
                 throw WebTransportException(
                     kind = WebTransportException.Kind.ConnectRejected,
-                    message = "WebTransport CONNECT returned :status=${response.status}",
+                    message =
+                        "WebTransport CONNECT returned :status=${response.status} — " +
+                            "${response.diagnostic}; $connDiag",
                 )
             }
 
@@ -230,11 +276,19 @@ class QuicWebTransportFactory(
     private suspend fun readConnectResponse(requestStream: QuicStream): ConnectResponse {
         val reader = Http3FrameReader()
         val incoming = requestStream.incoming
+        // Diagnostic accounting — when the CONNECT fails, :status=0 alone
+        // can't tell us whether the relay never answered, FIN'd us with
+        // garbage, or sent a HEADERS frame that lacked :status. Track
+        // enough to disambiguate in the thrown exception message.
+        var bytesSeen = 0
+        val h3FramesSeen = mutableListOf<String>()
         try {
             incoming.collect { chunk ->
+                bytesSeen += chunk.size
                 reader.push(chunk)
                 while (true) {
                     val frame = reader.next() ?: break
+                    h3FramesSeen += frame::class.simpleName ?: "?"
                     if (frame is Http3Frame.Headers) {
                         val pairs = QpackDecoder().decodeFieldSection(frame.qpackPayload)
                         val status = pairs.firstOrNull { it.first == ":status" }?.second?.toIntOrNull() ?: 0
@@ -243,24 +297,63 @@ class QuicWebTransportFactory(
                                 .firstOrNull { it.first.equals("wt-protocol", ignoreCase = true) }
                                 ?.second
                                 ?.let { parseFirstSfString(it) }
-                        throw HeadersReceived(status, subProtocol)
+                        val diag =
+                            if (status == 0) {
+                                "HEADERS frame carried no parseable :status — fields=[${pairs.joinToString { it.first }}]"
+                            } else {
+                                "HEADERS received, status=$status"
+                            }
+                        throw HeadersReceived(status, subProtocol, diag)
                     }
                 }
             }
         } catch (e: HeadersReceived) {
-            return ConnectResponse(e.status, e.subProtocol)
+            return ConnectResponse(e.status, e.subProtocol, e.diagnostic)
         }
-        return ConnectResponse(0, null)
+        // The incoming flow completed WITHOUT a HEADERS frame — the relay
+        // ended (FIN'd) the request bidi without an H3 response. Note this
+        // is a *clean* close: a RESET_STREAM would have thrown out of
+        // `incoming.collect` and been wrapped as HandshakeFailed instead.
+        return ConnectResponse(
+            status = 0,
+            subProtocol = null,
+            diagnostic =
+                "request stream ended with no HEADERS frame " +
+                    "(bytesSeen=$bytesSeen, h3FramesSeen=$h3FramesSeen, requestStreamClosed=${requestStream.isClosed})",
+        )
     }
+
+    /**
+     * One-line snapshot of the QUIC connection + request-stream state for
+     * a failed CONNECT. Distinguishes "the relay sent a CONNECTION_CLOSE"
+     * (status != CONNECTED, closeErrorCode/closeReason populated — e.g.
+     * H3_SETTINGS_ERROR if it rejected our SETTINGS frame) from "the relay
+     * left the connection up but closed just the request stream".
+     */
+    private fun describeConnectionState(
+        conn: QuicConnection,
+        requestStream: QuicStream,
+    ): String =
+        buildString {
+            append("conn.status=").append(conn.status)
+            conn.closeReason?.let { append(", closeReason='").append(it).append('\'') }
+            if (conn.closeErrorCode != 0L) {
+                append(", closeErrorCode=0x").append(conn.closeErrorCode.toString(16))
+            }
+            append(", requestStreamClosed=").append(requestStream.isClosed)
+        }
 
     private data class ConnectResponse(
         val status: Int,
         val subProtocol: String?,
+        /** Human-readable account of how the response was (or wasn't) received. */
+        val diagnostic: String,
     )
 
     private class HeadersReceived(
         val status: Int,
         val subProtocol: String?,
+        val diagnostic: String,
     ) : RuntimeException()
 
     /**
@@ -298,6 +391,25 @@ class QuicWebTransportFactory(
         }
         return items.joinToString(", ") { "\"$it\"" }
     }
+
+    /**
+     * Resolve [host] to a concrete address string, preferring IPv4. Returns
+     * an IPv4 literal when one exists, otherwise the first resolved address,
+     * otherwise [host] unchanged (already an IP literal, or resolution
+     * failed — let the socket layer surface the error). The returned IP
+     * literal is only used as the UDP socket target; the caller still passes
+     * the original [host] as the TLS SNI server name.
+     */
+    private fun resolvePreferIpv4(host: String): String =
+        try {
+            val addrs = java.net.InetAddress.getAllByName(host)
+            (
+                addrs.firstOrNull { it is java.net.Inet4Address }
+                    ?: addrs.firstOrNull()
+            )?.hostAddress ?: host
+        } catch (_: java.net.UnknownHostException) {
+            host
+        }
 
     private fun splitAuthority(authority: String): Pair<String, Int> {
         val idx = authority.lastIndexOf(':')

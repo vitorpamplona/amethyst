@@ -85,6 +85,32 @@ fun encodeServerNameExtension(hostName: String): ByteArray {
     return w.toByteArray()
 }
 
+/**
+ * RFC 6066 §3: the SNI `host_name` field MUST carry a DNS hostname — literal
+ * IPv4 and IPv6 addresses are explicitly NOT permitted. Strict servers reject
+ * an IP-literal SNI outright (e.g. `rustls`: "Illegal SNI extension: ignoring
+ * IP address presented as hostname"), which leaves the server with no SNI to
+ * key certificate selection on and stalls the handshake. Callers that build a
+ * ClientHello for an IP-literal target must therefore omit the `server_name`
+ * extension entirely; this predicate is the gate for that.
+ *
+ * Returns true for dotted-quad IPv4 (`127.0.0.1`) and for anything containing
+ * a `:` or wrapped in `[...]` (every IPv6 literal; no DNS hostname can contain
+ * a colon). Anything else — including a bare `localhost` — is treated as a
+ * hostname and gets a normal SNI.
+ */
+fun isIpLiteralHostname(host: String): Boolean {
+    if (host.isEmpty()) return false
+    // IPv6 literals always contain ':' (optionally bracketed); DNS names never do.
+    if (host.startsWith('[') || host.contains(':')) return true
+    // IPv4 dotted-quad: exactly four decimal octets in 0..255.
+    val parts = host.split('.')
+    if (parts.size != 4) return false
+    return parts.all { p ->
+        p.isNotEmpty() && p.length <= 3 && p.all { it in '0'..'9' } && p.toInt() in 0..255
+    }
+}
+
 /** Build the `supported_versions` extension carrying just TLS 1.3. */
 fun encodeSupportedVersionsExtensionClient(): ByteArray {
     val w = QuicWriter()
