@@ -650,6 +650,8 @@
     <string name="nest_confirm_force_mute_body">要求 %1$s的客户端降低麦克风音量。有些客户端可能忽略此命令。</string>
     <string name="nest_confirm_force_mute_confirm">强制降低音量</string>
     <string name="nest_confirm_cancel">取消</string>
+    <string name="nest_toast_host_action_failed_title">操作失败</string>
+    <string name="nest_toast_host_action_failed_template_null">无法准备该操作。</string>
     <string name="nest_share_action">分享聊天室</string>
     <string name="nest_minimize">最小化</string>
     <string name="nest_minimize_description">最小化以继续收听</string>
@@ -1107,6 +1109,8 @@
     <string name="warn_when_posts_have_reports_from_your_follows">当帖子有你的关注的报告时警告</string>
     <string name="filter_spam_from_strangers_title">过滤垃圾信息</string>
     <string name="filter_spam_from_strangers_explainer">隐藏陌生人的五次或五次以上完全相同的帖子</string>
+    <string name="add_client_tag_title">将客户端标签添加到我的事件</string>
+    <string name="add_client_tag_explainer">启用时，Amethyst 将会附加一个 NIP-89 客户端标签到您发布的事件。</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">举报警示</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">当帖子有来自你关注的五次及以上举报时显示警告消息</string>
     <string name="report_warning_threshold_title">举报警告阈值</string>
@@ -1117,6 +1121,7 @@
     <string name="max_hashtag_limit_explainer">隐藏话题超过此限制的帖子。设为 0 表示禁用</string>
     <string name="hide_community_rules_violations_title">隐藏违反社区规则的帖子</string>
     <string name="hide_community_rules_violations_explainer">当社区发布了一份NIP-9B规则文档而一个事件会让它失灵时，丢弃社区的帖子。 当社区没有结构化规则时没有任何影响。</string>
+    <string name="security_section_filtering_preferences">过滤的首选项</string>
     <string name="security_section_blocked_content">拦截的内容</string>
     <string name="security_unlimited">∞</string>
     <string name="security_blocked_users_empty">您尚未屏蔽任何用户。</string>
@@ -1319,6 +1324,8 @@
     <string name="geohash_exclusive_explainer">只有处于同一地理位置的关注者才能看到贴帖子。一般关注者无法看到。</string>
     <string name="hashtag_exclusive">话题限定帖</string>
     <string name="hashtag_exclusive_explainer">只有关注了话题的人才能看到帖子，您的普通关注者无法看到。</string>
+    <string name="external_url_scope">评论网站</string>
+    <string name="external_id_scope">评论外部资源</string>
     <string name="long_form_reading_minutes">需 %1$d 分钟读完</string>
     <string name="loading_location">加载位置中</string>
     <string name="lack_location_permissions">没有位置信息权限</string>
@@ -1914,8 +1921,11 @@
     <string name="favorite_dvms_title">收藏源算法</string>
     <string name="favorite_dvms_explainer">此处加星的订阅源算法在主页源上显示为筛选缺口。打开发现添加更多。</string>
     <string name="favorite_dvms_empty_headline">固定您喜欢的算法</string>
+    <string name="favorite_dvms_empty_step1">点击下面的“%1$s”来浏览算法。</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
+    <string name="favorite_dvms_empty_step2">点击源旁边的 %1$s 将它保留在此处。</string>
     <string name="favorite_dvms_empty_cta">添加一些源</string>
+    <string name="favorite_dvms_add_more">添加更多…</string>
     <string name="dvm_home_status_requesting">正请求 %1$s 获得一个源…</string>
     <string name="dvm_home_status_requesting_all">正向收藏的源算法请求订阅源…</string>
     <string name="dvm_home_status_processing">正处理你的源…</string>

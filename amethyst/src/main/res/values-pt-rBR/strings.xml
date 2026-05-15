@@ -1923,8 +1923,11 @@
     <string name="favorite_dvms_title">Algoritmos de feed favoritos</string>
     <string name="favorite_dvms_explainer">Os algoritmos de feed marcados com estrela aparecem como chips de filtro no feed Início. Abra Descobrir para adicionar mais.</string>
     <string name="favorite_dvms_empty_headline">Fixe seus algoritmos favoritos</string>
+    <string name="favorite_dvms_empty_step1">Toque em \"%1$s\" abaixo para navegar pelos algoritmos.</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
+    <string name="favorite_dvms_empty_step2">Toque na %1$s ao lado de um feed para mantê-lo aqui.</string>
     <string name="favorite_dvms_empty_cta">Adicionar alguns feeds</string>
+    <string name="favorite_dvms_add_more">Adicionar mais…</string>
     <string name="dvm_home_status_requesting">Solicitando feed a %1$s…</string>
     <string name="dvm_home_status_requesting_all">Solicitando feeds aos seus algoritmos favoritos…</string>
     <string name="dvm_home_status_processing">Processando seu feed…</string>
@@ -2579,7 +2582,4 @@
     <string name="community_rules_violation_quota_exceeded">Você já publicou %1$d eventos deste tipo hoje (limite %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Você não atende aos requisitos da rede de confiança desta comunidade.</string>
     <string name="community_rules_violation_stale_rules">O documento mais recente de regras da comunidade foi rejeitado por estar desatualizado.</string>
-    <string name="favorite_dvms_add_more">Adicionar mais…</string>
-    <string name="favorite_dvms_empty_step1">Toque em \"%1$s\" abaixo para navegar pelos algoritmos.</string>
-    <string name="favorite_dvms_empty_step2">Toque na %1$s ao lado de um feed para mantê-lo aqui.</string>
 </resources>
