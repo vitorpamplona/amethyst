@@ -47,14 +47,26 @@ data class Nip05Id(
     fun toDomainUrl(): String = domainUrl(domain)
 
     companion object {
+        // NIP-05 localpart: dot-separated atoms of [a-z0-9_-]. Forbids leading,
+        // trailing, and consecutive dots (NIP-05 + RFC 5321 local-part rules).
+        private val LOCAL_PART_REGEX = Regex("^[a-z0-9_-]+(\\.[a-z0-9_-]+)*$")
+
+        // Hostname: dot-separated labels of [a-z0-9-], no leading/trailing hyphen,
+        // require at least one dot so single-label garbage (e.g. "s!ayer") is rejected.
+        private val DOMAIN_REGEX =
+            Regex("^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)(\\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$")
+
         fun parse(nip05address: String): Nip05Id? {
             val parts = nip05address.trim().lowercase().split("@")
-
-            return when (parts.size) {
-                2 -> Nip05Id(parts[0], parts[1])
-                1 -> Nip05Id(parts[0], "_")
-                else -> null
-            }
+            if (parts.size != 2) return null
+            val name = parts[0]
+            val domain = parts[1]
+            if (!LOCAL_PART_REGEX.matches(name)) return null
+            if (!DOMAIN_REGEX.matches(domain)) return null
+            // Reject IP literals — NIP-05 expects a hostname, and a digits-only
+            // TLD is the cheapest way to tell them apart from real domains.
+            if (domain.substringAfterLast('.').all { it.isDigit() }) return null
+            return Nip05Id(name, domain)
         }
 
         fun assemble(
