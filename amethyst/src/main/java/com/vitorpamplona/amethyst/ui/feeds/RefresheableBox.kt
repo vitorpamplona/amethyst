@@ -73,7 +73,7 @@ fun RefresheableBox(
 ) {
     var isRefreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val onRefresh: () -> Unit = {
+    val onRefreshWrapped: () -> Unit = {
         isRefreshing = true
         scope.launch {
             onRefresh()
@@ -84,7 +84,7 @@ fun RefresheableBox(
 
     PullToRefreshBox(
         isRefreshing = isRefreshing,
-        onRefresh = onRefresh,
+        onRefresh = onRefreshWrapped,
         modifier = Modifier.fillMaxSize(),
         content = content,
     )
