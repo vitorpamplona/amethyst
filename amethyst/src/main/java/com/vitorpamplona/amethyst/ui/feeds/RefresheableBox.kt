@@ -23,15 +23,20 @@ package com.vitorpamplona.amethyst.ui.feeds
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.ui.layouts.LocalDisappearingScaffoldPadding
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -54,10 +59,9 @@ fun RefresheableBox(
     }
 
     if (enablePullRefresh) {
-        PullToRefreshBox(
+        PullToRefreshBoxWithScaffoldPadding(
             isRefreshing = isRefreshing,
             onRefresh = onRefresh,
-            modifier = Modifier.fillMaxSize(),
             content = content,
         )
     } else {
@@ -82,10 +86,45 @@ fun RefresheableBox(
         }
     }
 
-    PullToRefreshBox(
+    PullToRefreshBoxWithScaffoldPadding(
         isRefreshing = isRefreshing,
         onRefresh = onRefreshWrapped,
+        content = content,
+    )
+}
+
+/**
+ * [PullToRefreshBox] anchors its indicator at the top of the box. Inside a
+ * [DisappearingScaffold] the content fills the full screen height (feed items
+ * scroll behind the top bar), so the default indicator would appear behind the
+ * top bar. Offset the indicator down by the scaffold's top padding so it
+ * surfaces just below the bar.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PullToRefreshBoxWithScaffoldPadding(
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    val state = rememberPullToRefreshState()
+    val topPadding = LocalDisappearingScaffoldPadding.current.calculateTopPadding()
+
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        state = state,
         modifier = Modifier.fillMaxSize(),
+        indicator = {
+            PullToRefreshDefaults.Indicator(
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = topPadding),
+                isRefreshing = isRefreshing,
+                state = state,
+            )
+        },
         content = content,
     )
 }
