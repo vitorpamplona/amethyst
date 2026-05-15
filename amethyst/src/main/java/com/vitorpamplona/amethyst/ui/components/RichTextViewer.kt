@@ -97,6 +97,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.checkForHashtagWithIcon
 import com.vitorpamplona.amethyst.service.CachedRichTextParser
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.openBlossomUriAsIntent
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
@@ -660,6 +661,11 @@ fun BechLink(
     val loadedLink by produceCachedState(cache = accountViewModel.bechLinkCache, key = word)
 
     val baseNote = loadedLink?.baseNote
+
+    // Preload the placeholder's author NIP-65 outbox so a missing quoted event can be fetched from there.
+    baseNote?.author?.let { author ->
+        UserFinderFilterAssemblerSubscription(author, accountViewModel)
+    }
 
     if (canPreview && quotesLeft > 0 && baseNote != null) {
         Row {

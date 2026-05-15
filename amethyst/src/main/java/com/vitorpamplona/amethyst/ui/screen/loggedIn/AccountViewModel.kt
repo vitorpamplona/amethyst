@@ -2091,6 +2091,7 @@ class AccountViewModel(
                         }
 
                         is NEvent -> {
+                            LocalCache.consume(parsed)
                             LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note ->
                                 returningNote = note
                             }
