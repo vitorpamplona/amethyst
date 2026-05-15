@@ -329,6 +329,18 @@ sealed class Route {
         )
     }
 
+    @Serializable data class GitRepository(
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
+    ) : Route() {
+        constructor(address: Address) : this(
+            kind = address.kind,
+            pubKeyHex = address.pubKeyHex,
+            dTag = address.dTag,
+        )
+    }
+
     @Serializable data class FollowPack(
         val kind: Int,
         val pubKeyHex: HexKey,
