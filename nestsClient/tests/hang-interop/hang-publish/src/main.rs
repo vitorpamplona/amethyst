@@ -7,7 +7,8 @@
 //! the Rust → Amethyst direction. See
 //! `nestsClient/plans/2026-05-06-cross-stack-interop-test.md`.
 
-use std::time::Duration;
+use std::io::Write;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, anyhow};
 use bytes::Bytes;
@@ -87,6 +88,25 @@ struct Args {
     /// exercise the Kotlin listener's publisher-cycle handling.
     #[arg(long, default_value_t = 0)]
     reconnect_after_ms: u64,
+
+    /// If set, emit one line per frame to stdout, immediately before
+    /// the frame is handed to the moq-lite group producer:
+    ///
+    ///   `SEND frame=<N> send_t_us=<UNIX_EPOCH_MICROS>`
+    ///
+    /// Used by `AudioLatencyComparisonTest` to pair publisher send
+    /// time with the listener's arrival time and compute one-way
+    /// latency. `send_t_us` is the wall-clock microseconds since
+    /// `UNIX_EPOCH` (CLOCK_REALTIME on linux / macOS), which matches
+    /// what the JVM's `Instant.now()` reads on the listener side —
+    /// the two clocks share the same source when both processes run
+    /// on the same host.
+    ///
+    /// Disabled by default so existing interop scenarios (I7, etc.)
+    /// keep their plain stderr-only RUST_LOG output and don't have
+    /// to filter through 50 frame-tag lines per second on stdout.
+    #[arg(long, default_value_t = false)]
+    log_send_times: bool,
 }
 
 #[tokio::main]
@@ -364,6 +384,37 @@ async fn publish_cycle(
         }
 
         let g = group.as_mut().expect("group always Some after init");
+        if args.log_send_times {
+            // Read SystemTime AS LATE AS POSSIBLE before the moq-lite
+            // group write so the captured `send_t_us` reflects "moment
+            // the frame entered the publisher's outbound buffer". The
+            // group write is non-blocking (the per-stream send queue
+            // does the actual QUIC work asynchronously) so this is the
+            // closest deterministic anchor we have to "send time" from
+            // application code. Unwrap on the duration_since: the
+            // system clock running before UNIX_EPOCH would be a
+            // catastrophic environment failure, not a test condition.
+            let send_t_us = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("system clock predates UNIX_EPOCH")
+                .as_micros();
+            // Bypass tracing — RUST_LOG goes to stderr by config and
+            // the test parses stdout. Lock + flush per line because
+            // Rust's `Stdout` is fully-buffered when not a TTY (which
+            // is exactly our case here — `redirectErrorStream(true)`
+            // on the JVM side makes stdout a pipe), so a passive
+            // `writeln!` would batch frames into ~8 KB chunks and the
+            // parser would see them in bursts instead of as a live
+            // stream. Per-line flush is cheap (≤ 50 lines/s/publisher).
+            let stdout = std::io::stdout();
+            let mut handle = stdout.lock();
+            let _ = writeln!(
+                handle,
+                "SEND frame={} send_t_us={}",
+                *frame_no, send_t_us
+            );
+            let _ = handle.flush();
+        }
         frame.encode(g).context("encode hang frame into group")?;
         frames_in_group += 1;
         if frames_in_group == FRAMES_PER_GROUP {
