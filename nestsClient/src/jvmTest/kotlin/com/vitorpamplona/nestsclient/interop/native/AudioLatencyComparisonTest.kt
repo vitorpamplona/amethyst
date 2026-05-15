@@ -148,6 +148,15 @@ class AudioLatencyComparisonTest {
     @Test
     fun under_5pct_packet_loss_pacing_and_one_way_latency() = runComparison(scenario = "loss-5pct", lossRate = 0.05f)
 
+    @Test
+    fun under_10pct_packet_loss_pacing_and_one_way_latency() = runComparison(scenario = "loss-10pct", lossRate = 0.10f)
+
+    @Test
+    fun under_20pct_packet_loss_pacing_and_one_way_latency() = runComparison(scenario = "loss-20pct", lossRate = 0.20f)
+
+    @Test
+    fun under_30pct_packet_loss_pacing_and_one_way_latency() = runComparison(scenario = "loss-30pct", lossRate = 0.30f)
+
     /**
      * Single-scenario driver. Both `@Test` entry points are thin
      * wrappers so JUnit reports them as separate cases (and the
@@ -350,8 +359,21 @@ class AudioLatencyComparisonTest {
             println(rustStats)
             println("=".repeat(70))
 
+            // Frame-count floor scales with loss. QUIC streams are
+            // reliable so loss surfaces mainly as latency, but at high
+            // loss rates the retransmit + congestion-control feedback
+            // loop can eat into the test window, so the floor relaxes.
+            // The intent of the assertion is to catch a CATASTROPHIC
+            // failure (publisher never started, transport collapsed,
+            // listener subscribe never landed) — NOT to enforce a per-
+            // loss-rate delivery SLO. Reporting in the printed stats
+            // is the source of truth for delivery quality.
             val frameFloor =
-                if (lossRate > 0f) MIN_FRAMES_UNDER_LOSS else MIN_FRAMES_CLEAN_PATH
+                if (lossRate <= 0f) {
+                    MIN_FRAMES_CLEAN_PATH
+                } else {
+                    maxOf(MIN_FRAMES_HARD_FLOOR, ((1f - 3f * lossRate) * EXPECTED_FRAMES).toInt())
+                }
             assertTrue(
                 kotlinStats.frames >= frameFloor,
                 "Kotlin speaker delivered only ${kotlinStats.frames} frames in the " +
@@ -697,13 +719,13 @@ class AudioLatencyComparisonTest {
         private const val MIN_FRAMES_CLEAN_PATH = (EXPECTED_FRAMES * 0.8).toInt()
 
         /**
-         * Loss-path delivery floor: 60 % of expected. QUIC streams
-         * are reliable so the count should still be close to 100 %
-         * (loss surfaces as latency, not drops), but lowering the
-         * floor leaves headroom for a slow-start retransmit storm
-         * that eats into the test window.
+         * Absolute floor on delivered frames regardless of loss
+         * rate — anything under this is a catastrophic failure
+         * (publisher never started, transport collapsed). 50 frames
+         * ≈ 1 s of audio, which we should ALWAYS clear in a 10 s
+         * test even with aggressive loss.
          */
-        private const val MIN_FRAMES_UNDER_LOSS = (EXPECTED_FRAMES * 0.6).toInt()
+        private const val MIN_FRAMES_HARD_FLOOR = 50
 
         /**
          * Median inter-arrival should sit very close to [FRAME_MS] = 20 ms
