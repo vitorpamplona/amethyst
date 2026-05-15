@@ -213,4 +213,27 @@ class MediaUrlContentExtTest {
         val url = "https://example.com/$sha/avatar.jpg"
         assertEquals(url, bridgeProfilePictureUrl(url, useBridge = true))
     }
+
+    @Test
+    fun bridgeOnSkipsWhenLastSegmentHasNonHexPrefixBeforeSha() {
+        // nostr.build /i/ layout: <prefix>_<sha>.<ext>. The hex inside the
+        // filename isn't a Blossom blob per BUD-01 — the last segment must
+        // be exactly <sha> or <sha>.<ext>.
+        val url = "https://nostr.build/i/nostr.build_$sha.jpg"
+        val image = MediaUrlImage(url = url, hash = null)
+        assertEquals(url, image.toCoilModel(useLocalBlossomBridge = true))
+    }
+
+    @Test
+    fun bridgeProfilePictureUrlSkipsWhenLastSegmentHasNonHexPrefixBeforeSha() {
+        val url = "https://nostr.build/i/nostr.build_$sha.jpg"
+        assertEquals(url, bridgeProfilePictureUrl(url, useBridge = true))
+    }
+
+    @Test
+    fun bridgeOnSkipsWhenLastSegmentHasSuffixAfterSha() {
+        val url = "https://example.com/${sha}_thumb.jpg"
+        val image = MediaUrlImage(url = url, hash = null)
+        assertEquals(url, image.toCoilModel(useLocalBlossomBridge = true))
+    }
 }

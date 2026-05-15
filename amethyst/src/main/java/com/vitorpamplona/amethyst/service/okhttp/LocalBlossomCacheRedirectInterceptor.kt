@@ -72,16 +72,17 @@ class LocalBlossomCacheRedirectInterceptor(
     }
 
     private fun findSha256AndExtensionInPath(url: HttpUrl): Triple<Int, String, String>? {
-        // Per Blossom (BUD-01) the blob is always the last path segment. If the
-        // last segment isn't a sha256, this isn't a Blossom URL and the bridge
-        // must leave it alone — even if an earlier path segment happens to be
-        // a 64-char hex (e.g. a per-user cache prefix). The prefix segments
-        // are preserved verbatim via `buildServerBase`.
+        // Per Blossom (BUD-01) the last path segment must be exactly
+        // `<sha256>` or `<sha256>.<ext>`. URLs whose filename merely embeds a
+        // 64-char hex (e.g. "nostr.build_<sha>.jpg") aren't Blossom blobs and
+        // the bridge must leave them alone — rewriting them would point the
+        // local cache at a fallback `xs=` server that doesn't host the blob.
+        // Prefix segments are preserved verbatim via `buildServerBase`.
         val lastIndex = url.pathSegments.lastIndex
         if (lastIndex < 0) return null
         val segment = url.pathSegments[lastIndex]
-        val match = SHA256_SEGMENT_REGEX.find(segment) ?: return null
-        val sha = match.value.lowercase()
+        val match = BLOSSOM_LAST_SEGMENT_REGEX.matchEntire(segment) ?: return null
+        val sha = match.groupValues[1].lowercase()
         val ext = guessExtensionFrom(segment, sha) ?: "bin"
         return Triple(lastIndex, sha, ext)
     }
@@ -119,6 +120,6 @@ class LocalBlossomCacheRedirectInterceptor(
         const val LOCAL_CACHE_HOST = "127.0.0.1"
         const val LOCAL_CACHE_PORT = 24242
         const val LOCAL_CACHE_BASE = "http://$LOCAL_CACHE_HOST:$LOCAL_CACHE_PORT"
-        private val SHA256_SEGMENT_REGEX = Regex("(?<![0-9a-fA-F])[0-9a-fA-F]{64}(?![0-9a-fA-F])")
+        private val BLOSSOM_LAST_SEGMENT_REGEX = Regex("^([0-9a-fA-F]{64})(?:\\.[^./]+)?$")
     }
 }
