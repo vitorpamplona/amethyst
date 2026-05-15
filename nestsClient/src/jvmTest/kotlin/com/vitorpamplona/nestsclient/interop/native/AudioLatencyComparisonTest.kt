@@ -48,6 +48,7 @@ import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.test.BeforeTest
 import kotlin.test.assertTrue
 
 /**
@@ -142,6 +143,20 @@ import kotlin.test.assertTrue
  * `interopBuildSidecars` task produces.
  */
 class AudioLatencyComparisonTest {
+    /**
+     * Skip cleanly when run as part of the default `./gradlew test`
+     * suite — every test in this class drives the cargo-built
+     * `hang-publish` sidecar and the local moq-relay harness, both
+     * of which only exist with `-DnestsHangInterop=true`. Without
+     * this, the pre-push hook (which runs the whole suite) fails on
+     * `NativeMoqRelayHarness.shared()` with an `IllegalStateException`.
+     * Mirrors the pattern in `HangInteropTest`.
+     */
+    @BeforeTest
+    fun assumeHangInteropEnabled() {
+        NativeMoqRelayHarness.assumeHangInterop()
+    }
+
     @Test
     fun clean_path_pacing_and_one_way_latency() = runComparison(scenario = "clean", lossRate = 0.0f)
 
