@@ -217,13 +217,11 @@ fun VideoFeedLoaded(
         val item = items.list.getOrNull(page) ?: return@VerticalPager
 
         VideoPagerPage(baseNote = item, padding = padding, accountViewModel = accountViewModel, nav = nav) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                when (item.event) {
-                    is PictureEvent -> PictureCardCompose(baseNote = item, accountViewModel = accountViewModel, nav = nav, showReactions = false)
-                    is VideoEvent -> VideoCardCompose(item, accountViewModel, nav, showReactions = false)
-                    is FileHeaderEvent -> FileHeaderCardCompose(item, accountViewModel, nav, showReactions = false)
-                    else -> Unit
-                }
+            when (item.event) {
+                is PictureEvent -> PictureCardCompose(baseNote = item, accountViewModel = accountViewModel, nav = nav, showReactions = false)
+                is VideoEvent -> VideoCardCompose(item, accountViewModel, nav, showReactions = false)
+                is FileHeaderEvent -> FileHeaderCardCompose(item, accountViewModel, nav, showReactions = false)
+                else -> Unit
             }
         }
     }

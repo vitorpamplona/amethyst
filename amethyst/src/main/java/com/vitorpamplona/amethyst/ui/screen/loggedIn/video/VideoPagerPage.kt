@@ -38,10 +38,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.BlurhashBackdrop
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -54,6 +59,8 @@ import kotlinx.coroutines.delay
 
 private const val AUTO_HIDE_MS = 3000L
 private const val REACTIONS_SCALE = 1.5f
+private const val BACKDROP_SCRIM_ALPHA = 0.25f
+private val BackdropPosterBlur = 24.dp
 
 @Composable
 private fun EnlargedReactionsRow(
@@ -81,26 +88,37 @@ private fun EnlargedReactionsRow(
     }
 }
 
-private fun pageMediaHashes(note: Note): Pair<String?, String?> =
+private data class PageBackdrop(
+    val blurhash: String?,
+    val thumbhash: String?,
+    val posterUrl: String?,
+)
+
+private fun pageBackdropData(note: Note): PageBackdrop =
     when (val event = note.event) {
         is VideoEvent -> {
             val meta = event.imetaTags().firstOrNull()
-            meta?.blurhash to meta?.thumbhash
+            PageBackdrop(meta?.blurhash, meta?.thumbhash, meta?.image?.firstOrNull())
         }
 
         is PictureEvent -> {
             val meta = event.imetaTags().firstOrNull()
-            meta?.blurhash to meta?.thumbhash
+            PageBackdrop(meta?.blurhash, meta?.thumbhash, null)
         }
 
         is FileHeaderEvent -> {
-            event.blurhash() to event.thumbhash()
+            PageBackdrop(event.blurhash(), event.thumbhash(), null)
         }
 
         else -> {
-            null to null
+            PageBackdrop(null, null, null)
         }
     }
+
+private val PageBackdropGradient =
+    Brush.verticalGradient(
+        colors = listOf(Color(0xFF1E1A2E), Color(0xFF0A0814)),
+    )
 
 @Composable
 fun VideoPagerPage(
@@ -112,27 +130,52 @@ fun VideoPagerPage(
 ) {
     var chromeVisible by remember(baseNote.idHex) { mutableStateOf(true) }
 
-    LaunchedEffect(chromeVisible, baseNote.idHex) {
+    LaunchedEffect(chromeVisible) {
         if (chromeVisible) {
             delay(AUTO_HIDE_MS)
             chromeVisible = false
         }
     }
 
-    val (blurhash, thumbhash) =
-        remember(baseNote.idHex) { pageMediaHashes(baseNote) }
+    val backdrop = remember(baseNote.idHex) { pageBackdropData(baseNote) }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        // Backdrop layer — full-bleed so blur extends behind the (transparent) top bar.
-        if (blurhash != null || thumbhash != null) {
-            BlurhashBackdrop(blurhash = blurhash, description = null, thumbhash = thumbhash)
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.25f)),
-            )
+    // Backdrop is full-bleed (extends behind the transparent top bar). Gradient base prevents
+    // a fallback to scaffold black when no media hash or poster is available.
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(PageBackdropGradient),
+    ) {
+        when {
+            backdrop.thumbhash != null || backdrop.blurhash != null -> {
+                BlurhashBackdrop(
+                    blurhash = backdrop.blurhash,
+                    description = null,
+                    thumbhash = backdrop.thumbhash,
+                )
+            }
+
+            backdrop.posterUrl != null -> {
+                AsyncImage(
+                    model = backdrop.posterUrl,
+                    contentDescription = null,
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .blur(BackdropPosterBlur),
+                    contentScale = ContentScale.Crop,
+                )
+            }
         }
+
+        // Dim scrim improves chrome legibility over bright media.
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = BACKDROP_SCRIM_ALPHA)),
+        )
 
         // Foreground layer — respects scaffold insets so card + reactions stay clear of the bars.
         Box(
