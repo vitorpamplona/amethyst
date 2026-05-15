@@ -34,7 +34,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -103,7 +102,7 @@ fun VideoScreen(
         floatingButton = {
             // Bottom padding shifts the FAB above the reactions overlay so the row at the
             // very bottom stays unobstructed.
-            Box(modifier = Modifier.padding(bottom = 80.dp)) {
+            Box(modifier = Modifier.padding(bottom = ReactionsOverlayClearance)) {
                 FabBottomBarPadded(nav) {
                     NewImageButton(accountViewModel, nav, videoFeedContentState::sendToTop)
                 }
@@ -212,6 +211,9 @@ fun VideoFeedLoaded(
     VerticalPager(
         state = pagerState,
         modifier = Modifier.fillMaxSize(),
+        // Don't pre-instantiate ExoPlayer surfaces + ReactionsRow flow observers for neighbors;
+        // VideoPlayerActiveMutex still binds playback to the centered page only.
+        beyondViewportPageCount = 0,
         key = { idx -> items.list.getOrNull(idx)?.idHex ?: idx },
     ) { page ->
         val item = items.list.getOrNull(page) ?: return@VerticalPager

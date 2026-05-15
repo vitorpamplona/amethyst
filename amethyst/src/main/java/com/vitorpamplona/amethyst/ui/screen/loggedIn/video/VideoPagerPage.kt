@@ -43,10 +43,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.size.Size
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.BlurhashBackdrop
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -60,7 +63,9 @@ import kotlinx.coroutines.delay
 private const val AUTO_HIDE_MS = 3000L
 private const val REACTIONS_SCALE = 1.5f
 private const val BACKDROP_SCRIM_ALPHA = 0.25f
+private const val BACKDROP_POSTER_DECODE_PX = 128
 private val BackdropPosterBlur = 24.dp
+internal val ReactionsOverlayClearance = 80.dp
 
 @Composable
 private fun EnlargedReactionsRow(
@@ -69,13 +74,14 @@ private fun EnlargedReactionsRow(
     nav: INav,
 ) {
     val base = LocalDensity.current
-    CompositionLocalProvider(
-        LocalDensity provides
+    val scaled =
+        remember(base) {
             Density(
                 density = base.density * REACTIONS_SCALE,
                 fontScale = base.fontScale,
-            ),
-    ) {
+            )
+        }
+    CompositionLocalProvider(LocalDensity provides scaled) {
         ReactionsRow(
             baseNote = baseNote,
             showReactionDetail = false,
@@ -157,8 +163,19 @@ fun VideoPagerPage(
             }
 
             backdrop.posterUrl != null -> {
+                // The poster is invisible behind the 24dp blur + dark scrim; ask Coil to decode
+                // a tiny version so we don't pay full-resolution decode + GPU RenderEffect cost.
+                val context = LocalContext.current
+                val request =
+                    remember(backdrop.posterUrl) {
+                        ImageRequest
+                            .Builder(context)
+                            .data(backdrop.posterUrl)
+                            .size(Size(BACKDROP_POSTER_DECODE_PX, BACKDROP_POSTER_DECODE_PX))
+                            .build()
+                    }
                 AsyncImage(
-                    model = backdrop.posterUrl,
+                    model = request,
                     contentDescription = null,
                     modifier =
                         Modifier
