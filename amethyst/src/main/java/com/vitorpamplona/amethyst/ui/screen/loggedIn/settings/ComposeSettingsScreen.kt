@@ -20,8 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
+import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -30,11 +31,13 @@ import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -42,10 +45,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
-import com.vitorpamplona.amethyst.ui.theme.Size10dp
-import com.vitorpamplona.amethyst.ui.theme.Size20dp
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import kotlinx.coroutines.flow.MutableStateFlow
 
 @Composable
@@ -57,18 +57,12 @@ fun ComposeSettingsScreen(
         topBar = {
             TopBarWithBackButton(stringRes(id = R.string.compose_settings), nav)
         },
-    ) {
-        Column(Modifier.padding(it)) {
-            ComposeSettingsContent(accountViewModel.settings.uiSettingsFlow, accountViewModel)
-        }
-    }
-}
-
-@Preview(device = "spec:width=2160px,height=2340px,dpi=440")
-@Composable
-fun ComposeSettingsScreenPreview() {
-    ThemeComparisonRow {
-        ComposeSettingsContent(UiSettingsFlow(), mockAccountViewModel())
+    ) { padding ->
+        ComposeSettingsContent(
+            sharedPrefs = accountViewModel.settings.uiSettingsFlow,
+            accountViewModel = accountViewModel,
+            modifier = Modifier.padding(padding),
+        )
     }
 }
 
@@ -76,65 +70,99 @@ fun ComposeSettingsScreenPreview() {
 fun ComposeSettingsContent(
     sharedPrefs: UiSettingsFlow,
     accountViewModel: AccountViewModel,
+    modifier: Modifier = Modifier,
 ) {
     Column(
-        Modifier
-            .fillMaxSize()
-            .padding(top = Size10dp, start = Size20dp, end = Size20dp)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = RowColSpacing,
+        modifier =
+            modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        BooleanSwitchRow(
-            sharedPrefs.automaticallyCreateDrafts,
-            R.string.auto_create_drafts_setting_title,
-            R.string.auto_create_drafts_setting_description,
-        )
-        BooleanSwitchRow(
-            sharedPrefs.automaticallyProposeAiImprovements,
-            R.string.ai_writing_setting_title,
-            R.string.ai_writing_setting_description,
-        )
-        BooleanSwitchRow(
-            sharedPrefs.useTrackedBroadcasts,
-            R.string.tracked_broadcasts_setting_title,
-            R.string.tracked_broadcasts_setting_description,
-        )
-        AddClientTagRow(accountViewModel)
+        SettingsSection(R.string.compose_settings) {
+            BooleanSwitchTile(
+                flow = sharedPrefs.automaticallyCreateDrafts,
+                icon = MaterialSymbols.Drafts,
+                title = R.string.auto_create_drafts_setting_title,
+                description = R.string.auto_create_drafts_setting_description,
+            )
+            SettingsDivider()
+            BooleanSwitchTile(
+                flow = sharedPrefs.automaticallyProposeAiImprovements,
+                icon = MaterialSymbols.AutoAwesome,
+                title = R.string.ai_writing_setting_title,
+                description = R.string.ai_writing_setting_description,
+            )
+            SettingsDivider()
+            BooleanSwitchTile(
+                flow = sharedPrefs.useTrackedBroadcasts,
+                icon = MaterialSymbols.CellTower,
+                title = R.string.tracked_broadcasts_setting_title,
+                description = R.string.tracked_broadcasts_setting_description,
+            )
+            SettingsDivider()
+            AddClientTagTile(accountViewModel)
+        }
     }
 }
 
 @Composable
-private fun AddClientTagRow(accountViewModel: AccountViewModel) {
+private fun AddClientTagTile(accountViewModel: AccountViewModel) {
     val addClientTag by accountViewModel.account.settings.syncedSettings.security
         .addClientTag
         .collectAsStateWithLifecycle()
 
-    SettingsRow(
-        R.string.add_client_tag_title,
-        R.string.add_client_tag_explainer,
-    ) {
-        Switch(
-            checked = addClientTag,
-            onCheckedChange = accountViewModel::updateAddClientTag,
-        )
-    }
+    SwitchTile(
+        icon = MaterialSymbols.Code,
+        title = R.string.add_client_tag_title,
+        description = R.string.add_client_tag_explainer,
+        checked = addClientTag,
+        onCheckedChange = accountViewModel::updateAddClientTag,
+    )
 }
 
 @Composable
-private fun BooleanSwitchRow(
+private fun BooleanSwitchTile(
     flow: MutableStateFlow<BooleanType>,
-    title: Int,
-    description: Int,
+    icon: MaterialSymbol,
+    @StringRes title: Int,
+    @StringRes description: Int,
 ) {
     val value by flow.collectAsState()
 
-    SettingsRow(title, description) {
-        Switch(
-            checked = value == BooleanType.ALWAYS,
-            onCheckedChange = { isOn ->
-                flow.tryEmit(if (isOn) BooleanType.ALWAYS else BooleanType.NEVER)
-            },
-        )
+    SwitchTile(
+        icon = icon,
+        title = title,
+        description = description,
+        checked = value == BooleanType.ALWAYS,
+        onCheckedChange = { isOn ->
+            flow.tryEmit(if (isOn) BooleanType.ALWAYS else BooleanType.NEVER)
+        },
+    )
+}
+
+@Composable
+private fun SwitchTile(
+    icon: MaterialSymbol,
+    @StringRes title: Int,
+    @StringRes description: Int,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    SettingsControlRow(
+        icon = icon,
+        title = stringRes(title),
+        description = stringRes(description),
+        onClick = { onCheckedChange(!checked) },
+    ) {
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Preview(device = "spec:width=2160px,height=2340px,dpi=440")
+@Composable
+fun ComposeSettingsScreenPreview() {
+    ThemeComparisonColumn {
+        ComposeSettingsContent(UiSettingsFlow(), mockAccountViewModel())
     }
 }
