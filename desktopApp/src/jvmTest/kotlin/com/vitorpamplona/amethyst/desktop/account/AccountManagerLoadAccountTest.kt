@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.account
 
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
+import com.vitorpamplona.amethyst.commons.model.account.AccountInfo
 import com.vitorpamplona.amethyst.commons.model.account.SignerType
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -45,6 +46,8 @@ class AccountManagerLoadAccountTest {
     @BeforeTest
     fun setup() {
         storage = mockk(relaxed = true)
+        // Return null so DesktopAccountStorage generates a fresh AES key
+        coEvery { storage.getPrivateKey("account-metadata-key") } returns null
         tempDir = createTempDirectory("acctmgr-load-test").toFile()
         amethystDir = File(tempDir, ".amethyst")
         amethystDir.mkdirs()
@@ -57,9 +60,9 @@ class AccountManagerLoadAccountTest {
     }
 
     @Test
-    fun loadSavedAccountNoNpubReturnsFailure() =
+    fun loadSavedAccountNoAccountsReturnsFailure() =
         runTest {
-            // No last_account.txt file
+            // Empty accounts.json.enc (no accounts saved)
             val result = manager.loadSavedAccount()
             assertTrue(result.isFailure)
         }
@@ -71,10 +74,11 @@ class AccountManagerLoadAccountTest {
             val npub = keyPair.pubKey.toNpub()
             val privKeyHex = keyPair.privKey!!.toHexKey()
 
-            // Write last_account.txt
-            File(amethystDir, "last_account.txt").writeText(npub)
+            // Save account via storage API
+            manager.accountStorage.saveAccount(AccountInfo(npub = npub, signerType = SignerType.Internal))
+            manager.accountStorage.setCurrentAccount(npub)
 
-            // Mock storage to return the private key
+            // Mock keychain to return the private key
             coEvery { storage.getPrivateKey(npub) } returns privKeyHex
 
             val result = manager.loadSavedAccount()
@@ -90,7 +94,8 @@ class AccountManagerLoadAccountTest {
             val keyPair = KeyPair()
             val npub = keyPair.pubKey.toNpub()
 
-            File(amethystDir, "last_account.txt").writeText(npub)
+            manager.accountStorage.saveAccount(AccountInfo(npub = npub, signerType = SignerType.Internal))
+            manager.accountStorage.setCurrentAccount(npub)
             coEvery { storage.getPrivateKey(npub) } returns null
 
             val result = manager.loadSavedAccount()
@@ -106,10 +111,13 @@ class AccountManagerLoadAccountTest {
             val keyPair = KeyPair()
             val npub = keyPair.pubKey.toNpub()
 
-            File(amethystDir, "last_account.txt").writeText(npub)
-            File(amethystDir, "bunker_uri.txt").writeText(
-                "bunker://$validHex?relay=wss://r.com",
+            manager.accountStorage.saveAccount(
+                AccountInfo(npub = npub, signerType = SignerType.Remote("bunker://$validHex?relay=wss://r.com")),
             )
+            manager.accountStorage.setCurrentAccount(npub)
+            coEvery {
+                storage.getPrivateKey(AccountManager.bunkerEphemeralKeyAlias(npub))
+            } returns null
             coEvery {
                 storage.getPrivateKey(AccountManager.LEGACY_BUNKER_EPHEMERAL_KEY_ALIAS)
             } returns null
@@ -121,23 +129,49 @@ class AccountManagerLoadAccountTest {
     @Test
     fun loadSavedAccountBunkerSuccess() =
         runTest {
+            val walletKeyPair = KeyPair()
+            val validHex = walletKeyPair.pubKey.toHexKey()
             val keyPair = KeyPair()
             val npub = keyPair.pubKey.toNpub()
-            val ephemeralKeyPair = KeyPair()
-            val ephemeralPrivKeyHex = ephemeralKeyPair.privKey!!.toHexKey()
-            val validHex = keyPair.pubKey.toHexKey()
+            val ephemeralKey = KeyPair()
 
-            File(amethystDir, "last_account.txt").writeText(npub)
-            File(amethystDir, "bunker_uri.txt").writeText(
-                "bunker://$validHex?relay=wss://r.com",
+            manager.accountStorage.saveAccount(
+                AccountInfo(npub = npub, signerType = SignerType.Remote("bunker://$validHex?relay=wss://relay.nsec.app")),
             )
+            manager.accountStorage.setCurrentAccount(npub)
+
             coEvery {
-                storage.getPrivateKey(AccountManager.LEGACY_BUNKER_EPHEMERAL_KEY_ALIAS)
-            } returns ephemeralPrivKeyHex
+                storage.getPrivateKey(AccountManager.bunkerEphemeralKeyAlias(npub))
+            } returns ephemeralKey.privKey!!.toHexKey()
 
             val result = manager.loadSavedAccount()
             assertTrue(result.isSuccess)
             val state = result.getOrThrow()
             assertIs<SignerType.Remote>(state.signerType)
+        }
+
+    @Test
+    fun loadSavedAccountDeletesLegacyFiles() =
+        runTest {
+            val keyPair = KeyPair()
+            val npub = keyPair.pubKey.toNpub()
+            val privKeyHex = keyPair.privKey!!.toHexKey()
+
+            // Create legacy files
+            File(amethystDir, "last_account.txt").writeText(npub)
+            File(amethystDir, "bunker_uri.txt").writeText("bunker://test")
+            File(amethystDir, "nwc_connection.txt").writeText("nostr+walletconnect://test")
+
+            // Save via storage
+            manager.accountStorage.saveAccount(AccountInfo(npub = npub, signerType = SignerType.Internal))
+            manager.accountStorage.setCurrentAccount(npub)
+            coEvery { storage.getPrivateKey(npub) } returns privKeyHex
+
+            manager.loadSavedAccount()
+
+            // Legacy files should be deleted
+            assertTrue(!File(amethystDir, "last_account.txt").exists())
+            assertTrue(!File(amethystDir, "bunker_uri.txt").exists())
+            assertTrue(!File(amethystDir, "nwc_connection.txt").exists())
         }
 }

@@ -55,6 +55,7 @@ class AccountManagerStateTransitionTest {
     @BeforeTest
     fun setup() {
         storage = mockk(relaxed = true)
+        coEvery { storage.getPrivateKey("account-metadata-key") } returns null
         tempDir = createTempDirectory("acctmgr-state-test").toFile()
         amethystDir = File(tempDir, ".amethyst")
         amethystDir.mkdirs()
@@ -81,7 +82,13 @@ class AccountManagerStateTransitionTest {
             // Then load an internal account (simulating successful load)
             val keyPair = KeyPair()
             val npub = keyPair.pubKey.toNpub()
-            File(amethystDir, "last_account.txt").writeText(npub)
+            manager.accountStorage.saveAccount(
+                com.vitorpamplona.amethyst.commons.model.account.AccountInfo(
+                    npub = npub,
+                    signerType = com.vitorpamplona.amethyst.commons.model.account.SignerType.Internal,
+                ),
+            )
+            manager.accountStorage.setCurrentAccount(npub)
             coEvery { storage.getPrivateKey(npub) } returns keyPair.privKey!!.toHexKey()
             manager.loadSavedAccount()
 

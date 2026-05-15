@@ -67,8 +67,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.attribute.PosixFilePermission
 
 sealed class AccountState {
     data object LoggedOut : AccountState()
@@ -111,8 +109,15 @@ class AccountManager internal constructor(
         File(homeDir, ".amethyst")
     }
 
+    private val _storageCorruption = MutableStateFlow<StorageCorruption?>(null)
+    val storageCorruption: StateFlow<StorageCorruption?> = _storageCorruption.asStateFlow()
+
+    fun clearStorageCorruption() {
+        _storageCorruption.value = null
+    }
+
     val accountStorage: DesktopAccountStorage by lazy {
-        DesktopAccountStorage(secureStorage, homeDir)
+        DesktopAccountStorage(secureStorage, homeDir, onCorruption = { _storageCorruption.value = it })
     }
 
     private val _allAccounts = MutableStateFlow<ImmutableList<AccountInfo>>(persistentListOf())
@@ -232,16 +237,28 @@ class AccountManager internal constructor(
 
     suspend fun loadSavedAccount(): Result<AccountState.LoggedIn> =
         try {
-            val lastNpub = getLastNpub()
-            val bunkerUri = getBunkerUri()
+            // Clean up legacy files (one-time, silent)
+            File(amethystDir, "last_account.txt").delete()
+            File(amethystDir, "bunker_uri.txt").delete()
+            File(amethystDir, "nwc_connection.txt").delete()
 
-            if (bunkerUri != null) {
-                loadBunkerAccount(bunkerUri, lastNpub)
-            } else if (lastNpub != null) {
-                loadInternalAccount(lastNpub)
-            } else {
-                Result.failure(Exception("No saved account"))
+            // Single source of truth: accounts.json.enc
+            val activeNpub =
+                accountStorage.currentAccount()
+                    ?: return Result.failure(Exception("No saved account"))
+
+            val accounts = accountStorage.loadAccounts()
+            val info =
+                accounts.find { it.npub == activeNpub }
+                    ?: return Result.failure(Exception("Account not found in storage"))
+
+            when (info.signerType) {
+                is SignerType.Internal -> loadInternalAccount(activeNpub)
+                is SignerType.Remote -> loadBunkerAccount((info.signerType as SignerType.Remote).bunkerUri, activeNpub)
+                is SignerType.ViewOnly -> loadReadOnlyAccount(activeNpub)
             }
+        } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -298,7 +315,6 @@ class AccountManager internal constructor(
             }
 
         val resolvedNpub = npub ?: pubKeyHex.hexToByteArray().toNpub()
-        if (npub == null) saveLastNpub(resolvedNpub)
 
         val state =
             AccountState.LoggedIn(
@@ -439,17 +455,13 @@ class AccountManager internal constructor(
         ephemeralPrivKeyHex: String,
         npub: String,
     ) {
-        saveLastNpub(npub)
         secureStorage.savePrivateKey(bunkerEphemeralKeyAlias(npub), ephemeralPrivKeyHex)
-        saveBunkerUri(bunkerUri)
 
-        // Also save to multi-account storage
+        // Save to multi-account storage (sole source of truth)
         val info = AccountInfo(npub = npub, signerType = SignerType.Remote(bunkerUri))
         addAccountToStorage(info)
         accountStorage.setCurrentAccount(npub)
     }
-
-    fun hasBunkerAccount(): Boolean = getBunkerFile().exists()
 
     fun setConnectingRelays() {
         _accountState.value = AccountState.ConnectingRelays
@@ -480,8 +492,6 @@ class AccountManager internal constructor(
                 return Result.failure(e)
             }
         }
-
-        saveLastNpub(current.npub)
 
         // Always save to multi-account storage (including read-only)
         val info = AccountInfo(npub = current.npub, signerType = current.signerType)
@@ -564,23 +574,30 @@ class AccountManager internal constructor(
             // Clean up remote signer if bunker account
             if (current.signerType is SignerType.Remote) {
                 (current.signer as? NostrSignerRemote)?.closeSubscription()
-                if (deleteKey) {
-                    try {
-                        secureStorage.deletePrivateKey(bunkerEphemeralKeyAlias(current.npub))
-                    } catch (_: SecureStorageException) {
-                    }
-                    getBunkerFile().delete()
-                }
             }
             if (deleteKey) {
+                // Remove ALL credentials for this account
                 try {
                     secureStorage.deletePrivateKey(current.npub)
-                    clearLastNpub()
                 } catch (_: SecureStorageException) {
+                }
+                try {
+                    secureStorage.deletePrivateKey(bunkerEphemeralKeyAlias(current.npub))
+                } catch (_: SecureStorageException) {
+                }
+                try {
+                    secureStorage.deletePrivateKey(nwcKeyAlias(current.npub))
+                } catch (_: SecureStorageException) {
+                }
+                // Remove from metadata — fixes ghost accounts
+                try {
+                    accountStorage.deleteAccount(current.npub)
+                } catch (_: Exception) {
                 }
             }
         }
         disconnectNip46Client()
+        _nwcConnection.value = null
         _signerConnectionState.value = SignerConnectionState.NotRemote
         _lastPingTimeSec.value = null
         _accountState.value = AccountState.LoggedOut
@@ -708,6 +725,10 @@ class AccountManager internal constructor(
             secureStorage.deletePrivateKey(bunkerEphemeralKeyAlias(npub))
         } catch (_: SecureStorageException) {
         }
+        try {
+            secureStorage.deletePrivateKey(nwcKeyAlias(npub))
+        } catch (_: SecureStorageException) {
+        }
 
         refreshAccountList()
 
@@ -758,7 +779,7 @@ class AccountManager internal constructor(
         }
 
         // Reload NWC for the new account
-        loadNwcConnection()
+        loadNwcConnection(targetNpub)
 
         return newState
     }
@@ -785,91 +806,62 @@ class AccountManager internal constructor(
 
     fun currentAccount(): AccountState.LoggedIn? = _accountState.value as? AccountState.LoggedIn
 
-    // --- NWC ---
+    // --- NWC (per-account, secret in keychain) ---
+
+    private fun nwcKeyAlias(npub: String) = "nwc_$npub"
 
     fun hasNwcSetup(): Boolean = _nwcConnection.value != null
 
-    fun setNwcConnection(uri: String): Result<Nip47WalletConnect.Nip47URINorm> =
+    suspend fun setNwcConnection(
+        npub: String,
+        uri: String,
+    ): Result<Nip47WalletConnect.Nip47URINorm> =
         try {
             val parsed = Nip47WalletConnect.parse(uri)
+            if (parsed.secret == null) throw IllegalArgumentException("NWC URI has no secret")
+
+            // Store entire URI in keychain (not plaintext file)
+            secureStorage.savePrivateKey(nwcKeyAlias(npub), uri)
+
             _nwcConnection.value = parsed
-            saveNwcUri(uri)
             Result.success(parsed)
+        } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(e)
         }
 
-    fun clearNwcConnection() {
-        _nwcConnection.value = null
-        getNwcFile().delete()
-    }
-
-    fun loadNwcConnection() {
-        val uri = getNwcFile().takeIf { it.exists() }?.readText()?.trim()
-        if (!uri.isNullOrEmpty()) {
-            try {
-                _nwcConnection.value = Nip47WalletConnect.parse(uri)
-            } catch (_: Exception) {
-                getNwcFile().delete()
-            }
-        }
-    }
-
-    // --- File storage helpers ---
-
-    private fun ensureAmethystDir() {
-        if (!amethystDir.exists()) {
-            amethystDir.mkdirs()
-        }
+    suspend fun clearNwcConnection(npub: String) {
         try {
-            Files.setPosixFilePermissions(
-                amethystDir.toPath(),
-                setOf(
-                    PosixFilePermission.OWNER_READ,
-                    PosixFilePermission.OWNER_WRITE,
-                    PosixFilePermission.OWNER_EXECUTE,
-                ),
-            )
-        } catch (_: UnsupportedOperationException) {
-            // Windows — file system ACLs handle this
+            secureStorage.deletePrivateKey(nwcKeyAlias(npub))
+        } catch (_: SecureStorageException) {
+        }
+        _nwcConnection.value = null
+    }
+
+    suspend fun loadNwcConnection(npub: String) {
+        val secret =
+            try {
+                secureStorage.getPrivateKey(nwcKeyAlias(npub))
+            } catch (_: SecureStorageException) {
+                null
+            }
+
+        if (secret == null) {
+            _nwcConnection.value = null
+            return
+        }
+
+        // Reconstruct Nip47URINorm from the NWC URI stored in the keychain.
+        // The secret is the full NWC URI in hex form.
+        // For simplicity, the entire NWC URI is stored in keychain (not just the secret).
+        // This avoids needing to persist pubkey+relay separately.
+        try {
+            _nwcConnection.value = Nip47WalletConnect.parse(secret)
         } catch (_: Exception) {
+            _nwcConnection.value = null
         }
     }
-
-    private fun saveNwcUri(uri: String) {
-        ensureAmethystDir()
-        getNwcFile().writeText(uri)
-    }
-
-    private fun getNwcFile(): File = File(amethystDir, "nwc_connection.txt")
-
-    private fun getLastNpub(): String? {
-        val file = getPrefsFile()
-        return if (file.exists()) file.readText().trim().takeIf { it.isNotEmpty() } else null
-    }
-
-    private fun saveLastNpub(npub: String) {
-        ensureAmethystDir()
-        getPrefsFile().writeText(npub)
-    }
-
-    private fun clearLastNpub() {
-        getPrefsFile().delete()
-    }
-
-    private fun getPrefsFile(): File = File(amethystDir, "last_account.txt")
-
-    private fun getBunkerUri(): String? {
-        val file = getBunkerFile()
-        return if (file.exists()) file.readText().trim().takeIf { it.isNotEmpty() } else null
-    }
-
-    private fun saveBunkerUri(uri: String) {
-        ensureAmethystDir()
-        getBunkerFile().writeText(uri)
-    }
-
-    private fun getBunkerFile(): File = File(amethystDir, "bunker_uri.txt")
 }
 
 internal fun parseBunkerRelays(uri: String): Set<NormalizedRelayUrl> {
