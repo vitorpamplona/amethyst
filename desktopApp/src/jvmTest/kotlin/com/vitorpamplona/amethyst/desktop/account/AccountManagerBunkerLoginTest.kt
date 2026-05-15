@@ -27,7 +27,6 @@ import kotlin.io.path.createTempDirectory
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class AccountManagerBunkerLoginTest {
@@ -48,17 +47,6 @@ class AccountManagerBunkerLoginTest {
     @AfterTest
     fun teardown() {
         tempDir.deleteRecursively()
-    }
-
-    @Test
-    fun hasBunkerAccountReturnsFalseWhenNoFile() {
-        assertFalse(manager.hasBunkerAccount())
-    }
-
-    @Test
-    fun hasBunkerAccountReturnsTrueWhenFileExists() {
-        File(amethystDir, "bunker_uri.txt").writeText("bunker://${"a".repeat(64)}?relay=wss://r.com")
-        assertTrue(manager.hasBunkerAccount())
     }
 
     @Test

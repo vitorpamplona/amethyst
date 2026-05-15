@@ -887,24 +887,20 @@ fun App(
             // Load account list from encrypted storage
             accountManager.refreshAccountListOnStartup()
 
-            if (accountManager.hasBunkerAccount()) {
-                // Show connecting UI while dedicated NIP-46 client connects
-                accountManager.setConnectingRelays()
-            }
             val result = accountManager.loadSavedAccount()
             if (result.isSuccess) {
-                // Ensure loaded account is in multi-account storage
-                accountManager.ensureCurrentAccountInStorage()
                 accountManager.refreshAccountList()
 
                 val current = accountManager.currentAccount()
                 if (current?.signerType is com.vitorpamplona.amethyst.commons.model.account.SignerType.Remote) {
                     accountManager.startHeartbeat(scope)
                 }
-            } else if (accountManager.hasBunkerAccount()) {
-                // Corrupt bunker state — fall back to login screen
-                accountManager.logout(deleteKey = true)
+                // Load per-account NWC
+                if (current != null) {
+                    accountManager.loadNwcConnection(current.npub)
+                }
             }
+            // If failure: state remains LoggedOut → login screen shows automatically
         }
 
         onDispose {
@@ -965,18 +961,14 @@ fun App(
                             val account = accountState as AccountState.LoggedIn
                             val nwcConnection by accountManager.nwcConnection.collectAsState()
 
-                            // Lazy-load Namecoin services — almost never used, no need to keep in
-                            // memory from the start (matches Android lazy pattern)
+                            // Lazy-load Namecoin services
                             val namecoinPreferences = remember { DesktopNamecoinPreferences() }
                             val namecoinService =
                                 remember {
                                     DesktopNamecoinNameService(preferencesProvider = { namecoinPreferences.current })
                                 }
 
-                            // Load NWC connection on first composition
-                            LaunchedEffect(Unit) {
-                                accountManager.loadNwcConnection()
-                            }
+                            // NWC loaded during startup in loadSavedAccount flow
 
                             val currentTorStatus = torManager.status.collectAsState().value
                             androidx.compose.runtime.CompositionLocalProvider(
@@ -1498,10 +1490,7 @@ fun RelaySettingsScreen(
     var nwcInput by remember { mutableStateOf("") }
     var nwcError by remember { mutableStateOf<String?>(null) }
 
-    // Load NWC on first composition
-    LaunchedEffect(Unit) {
-        accountManager.loadNwcConnection()
-    }
+    val nwcScope = rememberCoroutineScope()
 
     com.vitorpamplona.amethyst.desktop.ui.ReadingColumn {
         val sidePadding =
@@ -1567,7 +1556,7 @@ fun RelaySettingsScreen(
                         )
                     }
                     OutlinedButton(
-                        onClick = { accountManager.clearNwcConnection() },
+                        onClick = { nwcScope.launch { accountManager.clearNwcConnection(account.npub) } },
                         colors =
                             ButtonDefaults.outlinedButtonColors(
                                 contentColor = MaterialTheme.colorScheme.error,
@@ -1597,11 +1586,13 @@ fun RelaySettingsScreen(
                     )
                     Button(
                         onClick = {
-                            val result = accountManager.setNwcConnection(nwcInput)
-                            result.fold(
-                                onSuccess = { nwcInput = "" },
-                                onFailure = { nwcError = it.message ?: "Invalid connection string" },
-                            )
+                            nwcScope.launch {
+                                val result = accountManager.setNwcConnection(account.npub, nwcInput)
+                                result.fold(
+                                    onSuccess = { nwcInput = "" },
+                                    onFailure = { nwcError = it.message ?: "Invalid connection string" },
+                                )
+                            }
                         },
                         enabled = nwcInput.isNotBlank(),
                     ) {

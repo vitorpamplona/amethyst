@@ -47,9 +47,22 @@ import javax.crypto.spec.SecretKeySpec
  *
  * File: ~/.amethyst/accounts.json.enc
  */
+sealed class StorageCorruption(
+    val backupPath: String?,
+) {
+    class FileCorrupted(
+        backupPath: String?,
+    ) : StorageCorruption(backupPath)
+
+    class JsonMalformed(
+        backupPath: String?,
+    ) : StorageCorruption(backupPath)
+}
+
 class DesktopAccountStorage(
     private val secureStorage: SecureKeyStorage,
     private val homeDir: File = File(System.getProperty("user.home")),
+    private val onCorruption: (StorageCorruption) -> Unit = {},
 ) : AccountStorage {
     companion object {
         private const val METADATA_KEY_ALIAS = "account-metadata-key"
@@ -115,15 +128,49 @@ class DesktopAccountStorage(
         val file = getAccountsFile()
         if (!file.exists()) return AccountMetadata()
 
+        val encrypted = file.readBytes()
+        if (encrypted.size < GCM_IV_SIZE) {
+            val backup = backupCorruptFile(file)
+            onCorruption(StorageCorruption.FileCorrupted(backup))
+            return AccountMetadata()
+        }
+
         return try {
-            val encrypted = file.readBytes()
             val decrypted = decrypt(encrypted)
             mapper.readValue<AccountMetadata>(decrypted)
+        } catch (e: javax.crypto.AEADBadTagException) {
+            Log.e("DesktopAccountStorage", "GCM auth tag mismatch — file corrupted or key lost", e)
+            val backup = backupCorruptFile(file)
+            onCorruption(StorageCorruption.FileCorrupted(backup))
+            AccountMetadata()
+        } catch (e: javax.crypto.BadPaddingException) {
+            Log.e("DesktopAccountStorage", "Decryption failed — file corrupted", e)
+            val backup = backupCorruptFile(file)
+            onCorruption(StorageCorruption.FileCorrupted(backup))
+            AccountMetadata()
+        } catch (e: com.fasterxml.jackson.core.JacksonException) {
+            Log.e("DesktopAccountStorage", "JSON malformed after decryption", e)
+            val backup = backupCorruptFile(file)
+            onCorruption(StorageCorruption.JsonMalformed(backup))
+            AccountMetadata()
         } catch (e: Exception) {
             Log.e("DesktopAccountStorage", "Failed to read accounts metadata", e)
+            val backup = backupCorruptFile(file)
+            onCorruption(StorageCorruption.FileCorrupted(backup))
             AccountMetadata()
         }
     }
+
+    private fun backupCorruptFile(file: File): String? =
+        try {
+            val backup = File(file.parent, "accounts.json.enc.corrupt.${System.currentTimeMillis()}")
+            java.nio.file.Files
+                .copy(file.toPath(), backup.toPath())
+            file.delete()
+            backup.absolutePath
+        } catch (_: Exception) {
+            null
+        }
 
     private suspend fun writeMetadataToDisk(metadata: AccountMetadata) {
         ensureDir()
@@ -226,6 +273,8 @@ internal data class AccountInfoDto(
     val bunkerUri: String? = null,
     val displayName: String? = null,
     val isTransient: Boolean = false,
+    val nwcPubKey: String? = null, // NWC wallet service pubkey (non-secret)
+    val nwcRelay: String? = null, // NWC wallet relay URL (non-secret)
 ) {
     fun toAccountInfo(): AccountInfo =
         AccountInfo(
