@@ -134,6 +134,27 @@ class Nip05Test {
     }
 
     @Test
+    fun `parse rejects localpart with leading trailing or consecutive dots`() {
+        assertNull(Nip05Id.parse(".alice@example.com"))
+        assertNull(Nip05Id.parse("alice.@example.com"))
+        assertNull(Nip05Id.parse("alice..bob@example.com"))
+    }
+
+    @Test
+    fun `parse rejects IPv4 literal as domain`() {
+        assertNull(Nip05Id.parse("alice@192.168.1.1"))
+        assertNull(Nip05Id.parse("alice@8.8.8.8"))
+    }
+
+    @Test
+    fun `parse accepts wildcard underscore localpart`() {
+        val nip05 = Nip05Id.parse("_@example.com")
+        assertNotNull(nip05)
+        assertEquals("_", nip05.name)
+        assertEquals("example.com", nip05.domain)
+    }
+
+    @Test
     fun `execute assemble url with valid value returns nip05 url`() {
         // given
         val userName = "TheUser"
