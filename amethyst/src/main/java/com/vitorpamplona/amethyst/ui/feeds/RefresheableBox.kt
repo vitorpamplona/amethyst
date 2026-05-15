@@ -23,43 +23,31 @@ package com.vitorpamplona.amethyst.ui.feeds
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.ui.layouts.LocalDisappearingScaffoldPadding
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RefresheableBox(
     invalidateableContent: InvalidatableContent,
     enablePullRefresh: Boolean = true,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    var isRefreshing by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-    val onRefresh: () -> Unit = {
-        isRefreshing = true
-        scope.launch {
-            invalidateableContent.invalidateData()
-            delay(500)
-            isRefreshing = false
-        }
-    }
-
     if (enablePullRefresh) {
-        PullToRefreshBox(
-            isRefreshing = isRefreshing,
-            onRefresh = onRefresh,
-            modifier = Modifier.fillMaxSize(),
-            content = content,
-        )
+        RefresheableBox(onRefresh = invalidateableContent::invalidateData, content = content)
     } else {
         Box(Modifier.fillMaxSize(), content = content)
     }
@@ -73,19 +61,35 @@ fun RefresheableBox(
 ) {
     var isRefreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val onRefreshWrapped: () -> Unit = {
-        isRefreshing = true
-        scope.launch {
-            onRefresh()
-            delay(500)
-            isRefreshing = false
-        }
-    }
+    val state = rememberPullToRefreshState()
+    val topPadding = LocalDisappearingScaffoldPadding.current.calculateTopPadding()
 
     PullToRefreshBox(
         isRefreshing = isRefreshing,
-        onRefresh = onRefreshWrapped,
+        onRefresh = {
+            isRefreshing = true
+            scope.launch {
+                onRefresh()
+                delay(500)
+                isRefreshing = false
+            }
+        },
+        state = state,
         modifier = Modifier.fillMaxSize(),
+        // Anchor the indicator below the scaffold's top bar. Inside a DisappearingScaffold
+        // the content fills the full screen height (feed items scroll behind the bar),
+        // so the default top-aligned indicator would sit behind the top bar. Outside a
+        // scaffold the local default is 0.dp and behaviour is unchanged.
+        indicator = {
+            PullToRefreshDefaults.Indicator(
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = topPadding),
+                isRefreshing = isRefreshing,
+                state = state,
+            )
+        },
         content = content,
     )
 }
