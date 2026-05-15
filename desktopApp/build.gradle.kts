@@ -129,6 +129,15 @@ compose.desktop {
                 rpmPackageVersion = appVersion.replace("-", "~")
             }
         }
+
+        // Compose Multiplatform 1.11.0 tightened the default ProGuard rules so
+        // unresolved references in transitive deps (Jackson kotlin-module value
+        // classes, okhttp's optional TLS adapters, JNA cleaner internals) now
+        // fail `proguardReleaseJars`. Project-level rules below add the missing
+        // `-dontwarn` directives.
+        buildTypes.release.proguard {
+            configurationFiles.from(project.file("compose-rules.pro"))
+        }
     }
 }
 
