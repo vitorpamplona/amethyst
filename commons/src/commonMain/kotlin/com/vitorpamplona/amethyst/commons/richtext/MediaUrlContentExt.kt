@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.commons.richtext
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
 
 private val sha256HexRegex = Regex("[0-9a-f]{64}")
-private val sha256InPathRegex = Regex("(?<![0-9a-fA-F])[0-9a-fA-F]{64}(?![0-9a-fA-F])")
+private val blossomLastSegmentRegex = Regex("^([0-9a-fA-F]{64})(?:\\.[^./]+)?$")
 
 /**
  * Converts this media content into a Coil/ExoPlayer-friendly model string.
@@ -144,14 +144,15 @@ private fun percentEncode(input: String): String {
 }
 
 private fun extractSha256FromUrlPath(url: String): String? {
-    // Per Blossom (BUD-01) the blob is always the last path segment. If the
-    // last segment isn't a sha256, this isn't a Blossom URL and the bridge
-    // must leave it alone — even if an earlier path segment happens to be
-    // a 64-char hex (e.g. a per-user cache prefix).
+    // Per Blossom (BUD-01) the last path segment must be exactly
+    // `<sha256>` or `<sha256>.<ext>`. URLs whose filename merely embeds a
+    // 64-char hex (e.g. "nostr.build_<sha>.jpg") aren't Blossom blobs and
+    // the bridge must leave them alone — rewriting them would point the
+    // local cache at a fallback `xs=` server that doesn't host the blob.
     val pathPart = url.substringBefore('?').substringBefore('#')
     val lastSegment = pathPart.substringAfterLast('/')
-    val match = sha256InPathRegex.find(lastSegment) ?: return null
-    return match.value.lowercase()
+    val match = blossomLastSegmentRegex.matchEntire(lastSegment) ?: return null
+    return match.groupValues[1].lowercase()
 }
 
 private fun guessExtension(

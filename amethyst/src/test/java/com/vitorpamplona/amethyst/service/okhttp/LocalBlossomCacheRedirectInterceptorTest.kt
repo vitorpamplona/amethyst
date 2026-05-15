@@ -163,6 +163,31 @@ class LocalBlossomCacheRedirectInterceptorTest {
         response.close()
     }
 
+    @Test
+    fun bridgeOnSkipsWhenLastSegmentHasNonHexPrefixBeforeSha() {
+        // nostr.build /i/ layout: <prefix>_<sha>.<ext>. The hex inside the
+        // filename isn't a Blossom blob — rewriting to the local cache and
+        // sending xs=https://nostr.build/i would 404 because the real blob
+        // is at /i/nostr.build_<sha>.jpg, not /i/<sha>.
+        val interceptor = LocalBlossomCacheRedirectInterceptor { true }
+        val captured = mutableListOf<String>()
+        val url = "https://nostr.build/i/nostr.build_$sha.jpg"
+        val response = interceptor.intercept(fakeChain(url, captured))
+        assertEquals(url, captured.single())
+        response.close()
+    }
+
+    @Test
+    fun bridgeOnSkipsWhenLastSegmentHasSuffixAfterSha() {
+        // A filename like <sha>_thumb.jpg isn't a BUD-01 blob URL either.
+        val interceptor = LocalBlossomCacheRedirectInterceptor { true }
+        val captured = mutableListOf<String>()
+        val url = "https://example.com/${sha}_thumb.jpg"
+        val response = interceptor.intercept(fakeChain(url, captured))
+        assertEquals(url, captured.single())
+        response.close()
+    }
+
     private fun fakeChain(
         url: String,
         captured: MutableList<String>,
