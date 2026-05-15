@@ -40,30 +40,14 @@ import com.vitorpamplona.amethyst.ui.layouts.LocalDisappearingScaffoldPadding
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RefresheableBox(
     invalidateableContent: InvalidatableContent,
     enablePullRefresh: Boolean = true,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    var isRefreshing by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-    val onRefresh: () -> Unit = {
-        isRefreshing = true
-        scope.launch {
-            invalidateableContent.invalidateData()
-            delay(500)
-            isRefreshing = false
-        }
-    }
-
     if (enablePullRefresh) {
-        PullToRefreshBoxWithScaffoldPadding(
-            isRefreshing = isRefreshing,
-            onRefresh = onRefresh,
-            content = content,
-        )
+        RefresheableBox(onRefresh = invalidateableContent::invalidateData, content = content)
     } else {
         Box(Modifier.fillMaxSize(), content = content)
     }
@@ -77,44 +61,25 @@ fun RefresheableBox(
 ) {
     var isRefreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val onRefreshWrapped: () -> Unit = {
-        isRefreshing = true
-        scope.launch {
-            onRefresh()
-            delay(500)
-            isRefreshing = false
-        }
-    }
-
-    PullToRefreshBoxWithScaffoldPadding(
-        isRefreshing = isRefreshing,
-        onRefresh = onRefreshWrapped,
-        content = content,
-    )
-}
-
-/**
- * [PullToRefreshBox] anchors its indicator at the top of the box. Inside a
- * [DisappearingScaffold] the content fills the full screen height (feed items
- * scroll behind the top bar), so the default indicator would appear behind the
- * top bar. Offset the indicator down by the scaffold's top padding so it
- * surfaces just below the bar.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PullToRefreshBoxWithScaffoldPadding(
-    isRefreshing: Boolean,
-    onRefresh: () -> Unit,
-    content: @Composable BoxScope.() -> Unit,
-) {
     val state = rememberPullToRefreshState()
     val topPadding = LocalDisappearingScaffoldPadding.current.calculateTopPadding()
 
     PullToRefreshBox(
         isRefreshing = isRefreshing,
-        onRefresh = onRefresh,
+        onRefresh = {
+            isRefreshing = true
+            scope.launch {
+                onRefresh()
+                delay(500)
+                isRefreshing = false
+            }
+        },
         state = state,
         modifier = Modifier.fillMaxSize(),
+        // Anchor the indicator below the scaffold's top bar. Inside a DisappearingScaffold
+        // the content fills the full screen height (feed items scroll behind the bar),
+        // so the default top-aligned indicator would sit behind the top bar. Outside a
+        // scaffold the local default is 0.dp and behaviour is unchanged.
         indicator = {
             PullToRefreshDefaults.Indicator(
                 modifier =
