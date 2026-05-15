@@ -2598,9 +2598,8 @@ object LocalCache : ILocalCache, ICacheProvider {
                     relayHints.addEvent(nip19.hex, relayHint)
                 }
                 val note = getOrCreateNote(nip19.hex)
-                val authorHex = nip19.author
-                if (note.author == null && authorHex != null) {
-                    note.author = checkGetOrCreateUser(authorHex)
+                if (note.author == null) {
+                    nip19.author?.let { note.author = checkGetOrCreateUser(it) }
                 }
             }
 
