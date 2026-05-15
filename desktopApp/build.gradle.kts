@@ -91,6 +91,17 @@ compose.desktop {
 
         jvmArgs += "-Xmx2g"
 
+        // ProGuard is run by the plugin's `*Release` packaging tasks
+        // (packageReleaseDmg, packageReleaseMsi, packageReleaseDeb,
+        // packageReleaseRpm). Without this rule file the default config
+        // bails on ~50 unresolved class references — all of them harmless
+        // probes for Android / JBR / JDK-8-internal classes that several
+        // KMP transitive deps make at runtime to detect the platform.
+        // See desktopApp/proguard-rules.pro for the full breakdown.
+        buildTypes.release.proguard {
+            configurationFiles.from(project.file("proguard-rules.pro"))
+        }
+
         // Forward platform-preview overrides from the gradle invocation to the
         // launched app's JVM so `./gradlew :desktopApp:run -Damethyst.platform=GNOME`
         // works in addition to the env-var form (`AMETHYST_PLATFORM=GNOME`).
