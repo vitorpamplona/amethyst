@@ -257,6 +257,8 @@ class AccountManager internal constructor(
                 is SignerType.Remote -> loadBunkerAccount((info.signerType as SignerType.Remote).bunkerUri, activeNpub)
                 is SignerType.ViewOnly -> loadReadOnlyAccount(activeNpub)
             }
+        } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -723,6 +725,10 @@ class AccountManager internal constructor(
             secureStorage.deletePrivateKey(bunkerEphemeralKeyAlias(npub))
         } catch (_: SecureStorageException) {
         }
+        try {
+            secureStorage.deletePrivateKey(nwcKeyAlias(npub))
+        } catch (_: SecureStorageException) {
+        }
 
         refreshAccountList()
 
@@ -819,6 +825,8 @@ class AccountManager internal constructor(
 
             _nwcConnection.value = parsed
             Result.success(parsed)
+        } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+            throw e
         } catch (e: Exception) {
             Result.failure(e)
         }
