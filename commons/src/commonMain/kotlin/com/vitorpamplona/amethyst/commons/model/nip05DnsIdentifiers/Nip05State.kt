@@ -45,7 +45,7 @@ sealed interface Nip05State {
 
         fun markAsVerifying() = verificationState.tryEmit(Nip05VerifState.Verifying(TimeUtils.fiveMinutesAhead()))
 
-        fun markAsError() = verificationState.tryEmit(Nip05VerifState.Verified(TimeUtils.fiveMinutesAhead()))
+        fun markAsError() = verificationState.tryEmit(Nip05VerifState.Error(TimeUtils.fiveMinutesAhead()))
 
         fun reset() = verificationState.tryEmit(Nip05VerifState.NotStarted)
 

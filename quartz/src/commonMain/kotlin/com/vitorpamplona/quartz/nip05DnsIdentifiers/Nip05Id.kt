@@ -47,14 +47,21 @@ data class Nip05Id(
     fun toDomainUrl(): String = domainUrl(domain)
 
     companion object {
+        // NIP-05 localpart: a-z, 0-9, -, _, .
+        private val LOCAL_PART_REGEX = Regex("^[a-z0-9._-]+$")
+
+        // Hostname: dot-separated labels of [a-z0-9-], no leading/trailing hyphen,
+        // require at least one dot so single-label garbage (e.g. "s!ayer") is rejected.
+        private val DOMAIN_REGEX =
+            Regex("^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)(\\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$")
+
         fun parse(nip05address: String): Nip05Id? {
             val parts = nip05address.trim().lowercase().split("@")
-
-            return when (parts.size) {
-                2 -> Nip05Id(parts[0], parts[1])
-                1 -> Nip05Id(parts[0], "_")
-                else -> null
-            }
+            if (parts.size != 2) return null
+            val (name, domain) = parts[0] to parts[1]
+            if (!LOCAL_PART_REGEX.matches(name)) return null
+            if (!DOMAIN_REGEX.matches(domain)) return null
+            return Nip05Id(name, domain)
         }
 
         fun assemble(

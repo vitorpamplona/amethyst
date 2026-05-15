@@ -95,6 +95,45 @@ class Nip05Test {
     }
 
     @Test
+    fun `parse rejects empty localpart`() {
+        assertNull(Nip05Id.parse("@example.com"))
+    }
+
+    @Test
+    fun `parse rejects empty domain`() {
+        assertNull(Nip05Id.parse("alice@"))
+    }
+
+    @Test
+    fun `parse rejects domain without a dot`() {
+        assertNull(Nip05Id.parse("alice@localhost"))
+    }
+
+    @Test
+    fun `parse rejects domain with illegal character`() {
+        assertNull(Nip05Id.parse("_@s!ayer"))
+        assertNull(Nip05Id.parse("@s!ayer"))
+    }
+
+    @Test
+    fun `parse rejects localpart with illegal character`() {
+        assertNull(Nip05Id.parse("al!ce@example.com"))
+        assertNull(Nip05Id.parse("alice space@example.com"))
+    }
+
+    @Test
+    fun `parse rejects bare string without at-sign`() {
+        assertNull(Nip05Id.parse("alice"))
+        assertNull(Nip05Id.parse("example.com"))
+    }
+
+    @Test
+    fun `parse rejects domain label with leading or trailing hyphen`() {
+        assertNull(Nip05Id.parse("alice@-example.com"))
+        assertNull(Nip05Id.parse("alice@example-.com"))
+    }
+
+    @Test
     fun `execute assemble url with valid value returns nip05 url`() {
         // given
         val userName = "TheUser"
