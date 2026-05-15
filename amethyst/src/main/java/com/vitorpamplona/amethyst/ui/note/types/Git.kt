@@ -20,13 +20,18 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,12 +39,18 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -54,14 +65,16 @@ import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.Font12SP
+import com.vitorpamplona.amethyst.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.Size16dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
-import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.Size8dp
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -69,6 +82,101 @@ import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+
+private val CardShape = QuoteBorder
+private val ChipShape = RoundedCornerShape(8.dp)
+private val CardPadding = PaddingValues(Size10dp)
+private val HeaderSpacing = Arrangement.spacedBy(Size8dp)
+private val LinkRowSpacing = Arrangement.spacedBy(Size8dp)
+
+@Composable
+private fun GitCardContainer(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    val border = MaterialTheme.colorScheme.subtleBorder
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(CardShape)
+                .border(1.dp, border, CardShape)
+                .padding(CardPadding),
+    ) {
+        content()
+    }
+}
+
+@Composable
+private fun IconBadge(
+    symbol: MaterialSymbol,
+    contentDescription: String?,
+    background: Color,
+    tint: Color,
+    size: Dp = 28.dp,
+    iconSize: Dp = Size16dp,
+) {
+    Row(
+        modifier =
+            Modifier
+                .size(size)
+                .clip(CircleShape)
+                .background(background),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Icon(
+            symbol = symbol,
+            contentDescription = contentDescription,
+            modifier = Modifier.size(iconSize),
+            tint = tint,
+        )
+    }
+}
+
+@Composable
+private fun TypeChip(
+    text: String,
+    background: Color,
+    contentColor: Color,
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = contentColor,
+        maxLines = 1,
+        modifier =
+            Modifier
+                .clip(ChipShape)
+                .background(background)
+                .padding(horizontal = Size8dp, vertical = 2.dp),
+    )
+}
+
+@Composable
+private fun LinkRow(
+    symbol: MaterialSymbol,
+    contentDescription: String?,
+    url: String,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = LinkRowSpacing,
+    ) {
+        Icon(
+            symbol = symbol,
+            contentDescription = contentDescription,
+            modifier = Modifier.size(Size16dp),
+            tint = MaterialTheme.colorScheme.grayText,
+        )
+        ClickableUrl(
+            url = url,
+            urlText = url.removePrefix("https://").removePrefix("http://"),
+        )
+    }
+}
 
 @Composable
 fun RenderGitPatchEvent(
@@ -101,26 +209,45 @@ private fun RenderShortRepositoryHeader(
     nav: INav,
 ) {
     val noteEvent by observeNoteEvent<GitRepositoryEvent>(baseNote, accountViewModel)
+    val title = noteEvent?.name() ?: baseNote.dTag()
+    val summary = noteEvent?.description()
 
-    Column(
-        modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp),
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(ChipShape)
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f))
+                .padding(horizontal = Size10dp, vertical = Size8dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = HeaderSpacing,
     ) {
-        val title = noteEvent?.name() ?: baseNote.dTag()
-        Text(
-            text = stringRes(id = R.string.git_repository, title),
-            style = MaterialTheme.typography.titleLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.fillMaxWidth(),
+        IconBadge(
+            symbol = MaterialSymbols.Code,
+            contentDescription = null,
+            background = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+            tint = MaterialTheme.colorScheme.primary,
+            size = 24.dp,
+            iconSize = 14.dp,
         )
 
-        noteEvent?.description()?.let {
-            Spacer(modifier = DoubleVertSpacer)
+        Column(modifier = Modifier.weight(1f, fill = true)) {
             Text(
-                text = it,
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            summary?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.grayText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
@@ -136,72 +263,96 @@ private fun RenderGitPatchEvent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
+    GitCardContainer {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = HeaderSpacing,
+        ) {
+            TypeChip(
+                text = stringRes(id = R.string.kind_git_patch),
+                background = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f),
+                contentColor = MaterialTheme.colorScheme.tertiary,
+            )
 
-    if (repository != null) {
-        LoadAddressableNote(repository, accountViewModel) {
-            if (it != null) {
-                RenderShortRepositoryHeader(it, accountViewModel, nav)
-                Spacer(modifier = DoubleVertSpacer)
+            val commit = remember(noteEvent) { noteEvent.commit() }
+            commit?.takeIf { it.isNotBlank() }?.let { hash ->
+                Text(
+                    text = hash.take(7),
+                    style = MaterialTheme.typography.labelMedium.copy(fontSize = Font12SP),
+                    color = MaterialTheme.colorScheme.grayText,
+                    maxLines = 1,
+                )
             }
         }
-    }
 
-    LoadDecryptedContent(note, accountViewModel) { body ->
-        val eventContent by
-            remember(note.event) {
-                derivedStateOf {
-                    val subject = (note.event as? TextNoteEvent)?.subject()?.ifEmpty { null }
-
-                    if (!subject.isNullOrBlank() && !body.split("\n")[0].contains(subject)) {
-                        "### $subject\n$body"
-                    } else {
-                        body
-                    }
+        val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
+        if (repository != null) {
+            Spacer(modifier = StdVertSpacer)
+            LoadAddressableNote(repository, accountViewModel) {
+                if (it != null) {
+                    RenderShortRepositoryHeader(it, accountViewModel, nav)
                 }
             }
+        }
 
-        val isAuthorTheLoggedUser =
-            remember(note.event) { accountViewModel.isLoggedUser(note.author) }
+        Spacer(modifier = HalfDoubleVertSpacer)
 
-        if (makeItShort && isAuthorTheLoggedUser) {
-            Text(
-                text = eventContent,
-                color = MaterialTheme.colorScheme.placeholderText,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        } else {
-            val callbackUri = remember(note) { note.toNostrUri() }
+        LoadDecryptedContent(note, accountViewModel) { body ->
+            val eventContent by
+                remember(note.event) {
+                    derivedStateOf {
+                        val subject = (note.event as? TextNoteEvent)?.subject()?.ifEmpty { null }
 
-            SensitivityWarning(
-                note = note,
-                accountViewModel = accountViewModel,
-            ) {
-                val tags = remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
+                        if (!subject.isNullOrBlank() && !body.split("\n")[0].contains(subject)) {
+                            "### $subject\n$body"
+                        } else {
+                            body
+                        }
+                    }
+                }
 
-                TranslatableRichTextViewer(
-                    content = eventContent,
-                    canPreview = canPreview && !makeItShort,
-                    quotesLeft = quotesLeft,
-                    modifier = Modifier.fillMaxWidth(),
-                    tags = tags,
-                    backgroundColor = backgroundColor,
-                    id = note.idHex,
-                    callbackUri = callbackUri,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
+            val isAuthorTheLoggedUser =
+                remember(note.event) { accountViewModel.isLoggedUser(note.author) }
+
+            if (makeItShort && isAuthorTheLoggedUser) {
+                Text(
+                    text = eventContent,
+                    color = MaterialTheme.colorScheme.placeholderText,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
-            }
+            } else {
+                val callbackUri = remember(note) { note.toNostrUri() }
 
-            if (note.event?.hasHashtags() == true) {
-                DisplayUncitedHashtags(
-                    event = noteEvent,
-                    content = eventContent,
-                    callbackUri = callbackUri,
+                SensitivityWarning(
+                    note = note,
                     accountViewModel = accountViewModel,
-                    nav = nav,
-                )
+                ) {
+                    val tags = remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
+
+                    TranslatableRichTextViewer(
+                        content = eventContent,
+                        canPreview = canPreview && !makeItShort,
+                        quotesLeft = quotesLeft,
+                        modifier = Modifier.fillMaxWidth(),
+                        tags = tags,
+                        backgroundColor = backgroundColor,
+                        id = note.idHex,
+                        callbackUri = callbackUri,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+
+                if (note.event?.hasHashtags() == true) {
+                    DisplayUncitedHashtags(
+                        event = noteEvent,
+                        content = eventContent,
+                        callbackUri = callbackUri,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
             }
         }
     }
@@ -242,67 +393,76 @@ private fun RenderGitIssueEvent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
+    GitCardContainer {
+        TypeChip(
+            text = stringRes(id = R.string.kind_git_issue),
+            background = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+            contentColor = MaterialTheme.colorScheme.primary,
+        )
 
-    if (repository != null) {
-        LoadAddressableNote(repository, accountViewModel) {
-            if (it != null) {
-                RenderShortRepositoryHeader(it, accountViewModel, nav)
-                Spacer(modifier = DoubleVertSpacer)
-            }
-        }
-    }
-
-    LoadDecryptedContent(note, accountViewModel) { body ->
-        val eventContent by
-            remember(note.event) {
-                derivedStateOf {
-                    val subject = (note.event as? TextNoteEvent)?.subject()?.ifEmpty { null }
-
-                    if (!subject.isNullOrBlank() && !body.split("\n")[0].contains(subject)) {
-                        "### $subject\n$body"
-                    } else {
-                        body
-                    }
+        val repository = remember(noteEvent) { noteEvent.repositoryAddress() }
+        if (repository != null) {
+            Spacer(modifier = StdVertSpacer)
+            LoadAddressableNote(repository, accountViewModel) {
+                if (it != null) {
+                    RenderShortRepositoryHeader(it, accountViewModel, nav)
                 }
             }
+        }
 
-        val isAuthorTheLoggedUser =
-            remember(note.event) { accountViewModel.isLoggedUser(note.author) }
+        Spacer(modifier = HalfDoubleVertSpacer)
 
-        if (makeItShort && isAuthorTheLoggedUser) {
-            Text(
-                text = eventContent,
-                color = MaterialTheme.colorScheme.placeholderText,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        } else {
-            val callbackUri = remember(note) { note.toNostrUri() }
+        LoadDecryptedContent(note, accountViewModel) { body ->
+            val eventContent by
+                remember(note.event) {
+                    derivedStateOf {
+                        val subject = (note.event as? TextNoteEvent)?.subject()?.ifEmpty { null }
 
-            SensitivityWarning(
-                note = note,
-                accountViewModel = accountViewModel,
-            ) {
-                val tags =
-                    remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
+                        if (!subject.isNullOrBlank() && !body.split("\n")[0].contains(subject)) {
+                            "### $subject\n$body"
+                        } else {
+                            body
+                        }
+                    }
+                }
 
-                TranslatableRichTextViewer(
-                    content = eventContent,
-                    canPreview = canPreview && !makeItShort,
-                    quotesLeft = quotesLeft,
-                    modifier = Modifier.fillMaxWidth(),
-                    tags = tags,
-                    backgroundColor = backgroundColor,
-                    id = note.idHex,
-                    callbackUri = callbackUri,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
+            val isAuthorTheLoggedUser =
+                remember(note.event) { accountViewModel.isLoggedUser(note.author) }
+
+            if (makeItShort && isAuthorTheLoggedUser) {
+                Text(
+                    text = eventContent,
+                    color = MaterialTheme.colorScheme.placeholderText,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
-            }
+            } else {
+                val callbackUri = remember(note) { note.toNostrUri() }
 
-            if (note.event?.hasHashtags() == true) {
-                DisplayUncitedHashtags(noteEvent, eventContent, callbackUri, accountViewModel, nav)
+                SensitivityWarning(
+                    note = note,
+                    accountViewModel = accountViewModel,
+                ) {
+                    val tags =
+                        remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
+
+                    TranslatableRichTextViewer(
+                        content = eventContent,
+                        canPreview = canPreview && !makeItShort,
+                        quotesLeft = quotesLeft,
+                        modifier = Modifier.fillMaxWidth(),
+                        tags = tags,
+                        backgroundColor = backgroundColor,
+                        id = note.idHex,
+                        callbackUri = callbackUri,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                }
+
+                if (note.event?.hasHashtags() == true) {
+                    DisplayUncitedHashtags(noteEvent, eventContent, callbackUri, accountViewModel, nav)
+                }
             }
         }
     }
@@ -331,62 +491,62 @@ private fun RenderGitRepositoryEvent(
     val web = noteEvent.web()
     val clone = noteEvent.clone()
 
-    Row(
-        modifier =
-            Modifier
-                .clip(shape = QuoteBorder)
-                .border(
-                    1.dp,
-                    MaterialTheme.colorScheme.subtleBorder,
-                    QuoteBorder,
-                ).padding(Size10dp),
-    ) {
-        Column {
-            Text(
-                text = stringRes(id = R.string.git_repository, title),
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.fillMaxWidth(),
+    GitCardContainer {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = HeaderSpacing,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            IconBadge(
+                symbol = MaterialSymbols.Code,
+                contentDescription = null,
+                background = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                tint = MaterialTheme.colorScheme.primary,
             )
 
-            summary?.let {
+            Column(modifier = Modifier.weight(1f, fill = true)) {
                 Text(
-                    text = it,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = Size5dp),
-                    maxLines = 3,
+                    text = stringRes(id = R.string.kind_git_repo),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.grayText,
+                    maxLines = 1,
+                )
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+        }
 
-            HorizontalDivider(thickness = DividerThickness)
+        summary?.let {
+            Spacer(modifier = HalfDoubleVertSpacer)
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
 
-            web?.let {
-                Row(Modifier.fillMaxWidth().padding(top = Size5dp)) {
-                    Text(
-                        text = stringRes(id = R.string.git_web_address),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Spacer(modifier = StdHorzSpacer)
-                    ClickableUrl(
+        if (web != null || clone != null) {
+            Spacer(modifier = HalfDoubleVertSpacer)
+            Column(verticalArrangement = Arrangement.spacedBy(Size5dp)) {
+                web?.let {
+                    LinkRow(
+                        symbol = MaterialSymbols.Public,
+                        contentDescription = stringRes(id = R.string.git_web_address),
                         url = it,
-                        urlText = it.removePrefix("https://").removePrefix("http://"),
                     )
                 }
-            }
-
-            clone?.let {
-                Row(Modifier.fillMaxWidth().padding(top = Size5dp)) {
-                    Text(
-                        text = stringRes(id = R.string.git_clone_address),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Spacer(modifier = StdHorzSpacer)
-                    ClickableUrl(
+                clone?.let {
+                    LinkRow(
+                        symbol = MaterialSymbols.AutoMirrored.OpenInNew,
+                        contentDescription = stringRes(id = R.string.git_clone_address),
                         url = it,
-                        urlText = it.removePrefix("https://").removePrefix("http://"),
                     )
                 }
             }
