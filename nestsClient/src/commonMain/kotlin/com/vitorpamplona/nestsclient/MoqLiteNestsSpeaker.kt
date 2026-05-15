@@ -230,6 +230,37 @@ class MoqLiteNestsSpeaker internal constructor(
     }
 
     /**
+     * [HotSwappablePublisherSource] implementation. The hot-swap pump
+     * drives publishing through [openPublisherForHotSwap] rather than
+     * [startBroadcasting], so it has to flip the state machine into
+     * Broadcasting itself. Connected → Broadcasting on first call;
+     * re-applies the mute intent if already Broadcasting (a session
+     * swap re-enters this with the new session still in Connected, so
+     * the common case is the Connected branch). No-op once terminal.
+     */
+    override fun reportBroadcasting(isMuted: Boolean) {
+        val current = mutableState.value
+        mutableState.value =
+            when (current) {
+                is NestsSpeakerState.Connected -> {
+                    NestsSpeakerState.Broadcasting(
+                        room = current.room,
+                        negotiatedMoqVersion = current.negotiatedMoqVersion,
+                        isMuted = isMuted,
+                    )
+                }
+
+                is NestsSpeakerState.Broadcasting -> {
+                    current.copy(isMuted = isMuted)
+                }
+
+                else -> {
+                    return
+                }
+            }
+    }
+
+    /**
      * Called from the broadcaster's `onTerminalFailure` callback (off
      * the speaker's coroutine). Transitions the speaker to `Failed` so
      * the reconnect orchestrator (`ReconnectingNestsSpeaker`) observes

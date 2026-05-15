@@ -57,6 +57,27 @@ internal interface HotSwappablePublisherSource {
     ): MoqLitePublisherHandle
 
     /**
+     * Flip the speaker's outward state to [NestsSpeakerState.Broadcasting].
+     *
+     * The hot-swap pump owns its own long-lived broadcaster and opens
+     * publishers via [openPublisherForHotSwap] instead of going through
+     * [MoqLiteNestsSpeaker.startBroadcasting], so the speaker's state
+     * machine never sees the Connected → Broadcasting transition that
+     * `startBroadcasting` performs. Without this call the reconnect
+     * wrapper — which mirrors the underlying speaker's state — stays
+     * stuck on Connected forever and callers waiting on Broadcasting
+     * (the production VM, interop tests) time out.
+     *
+     * Called once per session iteration after the audio publisher is
+     * installed, so a freshly-swapped session re-enters Broadcasting
+     * too. No-op when the speaker is already terminal.
+     *
+     * @param isMuted the user's current mute intent, replayed onto the
+     *   new state so the swap doesn't reset the mute indicator.
+     */
+    fun reportBroadcasting(isMuted: Boolean)
+
+    /**
      * Surface a broadcast-pipeline terminal failure (e.g. sustained
      * `publisher.send` errors past
      * [com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster.MAX_CONSECUTIVE_SEND_ERRORS])

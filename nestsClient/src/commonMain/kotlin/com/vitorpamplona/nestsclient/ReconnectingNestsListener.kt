@@ -458,8 +458,33 @@ private class ReconnectingHandle(
                         var emitted = 0L
                         var droppedStale = 0L
                         var handleHighestGroup = -1L
+                        var firstObjectOnHandle = true
                         try {
                             handle.objects.collect { obj ->
+                                if (firstObjectOnHandle) {
+                                    firstObjectOnHandle = false
+                                    // Publisher-side session restart detection.
+                                    // The watermark assumes monotonic group
+                                    // lineage across publisher sessions, which
+                                    // holds for ReconnectingNestsSpeaker (it
+                                    // seeds each new publisher with the prior
+                                    // nextSequence). External publishers — the
+                                    // kixelated/hang-publish reference, any
+                                    // moq-lite publisher that mints a fresh
+                                    // state per reconnect — restart at 0. If
+                                    // the first group on a fresh subscription
+                                    // arrives well below the watermark, the
+                                    // publisher restarted, NOT the relay
+                                    // replaying its cache (a replay carries
+                                    // exactly the prior max, not a value
+                                    // many groups below). Reset the watermark
+                                    // so the entire post-restart stream isn't
+                                    // dropped as stale.
+                                    val watermark = priorGroupWatermark.get()
+                                    if (watermark > 0L && obj.groupId < watermark - 1L) {
+                                        priorGroupWatermark.set(-1L)
+                                    }
+                                }
                                 if (obj.groupId <= priorGroupWatermark.get()) {
                                     // Stale group re-served from the relay
                                     // cache after a re-subscribe — drop so

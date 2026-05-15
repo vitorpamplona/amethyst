@@ -195,7 +195,6 @@ class NostrNestsHarness private constructor(
             runDocker(workDir, "up", "-d")
             try {
                 waitForPort("127.0.0.1", AUTH_HOST_PORT, PORT_READY_TIMEOUT_MS)
-                waitForPort("127.0.0.1", MOQ_HOST_PORT, PORT_READY_TIMEOUT_MS)
                 // moq-auth's Node runtime opens the listen socket
                 // before its handlers are wired, so the first POST that
                 // arrives in the gap can RST-on-write. Wait for /health
@@ -203,6 +202,19 @@ class NostrNestsHarness private constructor(
                 // pipeline is live and avoids the SocketException that
                 // otherwise hits the first test of the second class.
                 waitForHealth("http://127.0.0.1:$AUTH_HOST_PORT/health", PORT_READY_TIMEOUT_MS)
+                // moq-relay fetches its JWK set from moq-auth at startup
+                // and exits — with no retry — if that GET is refused.
+                // The compose file declares no `depends_on`, so on a cold
+                // `up -d` moq-relay races moq-auth's Node boot, loses,
+                // logs "failed to GET JWKS … Connection refused", and
+                // dies; every later QUIC handshake then fails with
+                // "read loop exited (socket closed or peer closed)".
+                // Now that moq-auth is confirmed healthy, (re)start
+                // moq-relay: this is a no-op if it survived the race and
+                // a clean restart if it didn't, so it always comes up
+                // against a live auth sidecar.
+                runDocker(workDir, "up", "-d", "moq-relay")
+                waitForPort("127.0.0.1", MOQ_HOST_PORT, PORT_READY_TIMEOUT_MS)
             } catch (t: Throwable) {
                 // Capture container state + recent logs BEFORE tearing
                 // down so the failure message is actually actionable.

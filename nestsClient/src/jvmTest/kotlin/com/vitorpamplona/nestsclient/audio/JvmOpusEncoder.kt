@@ -99,10 +99,40 @@ class JvmOpusEncoder(
             if (nativesLoaded) return
             synchronized(loadLock) {
                 if (nativesLoaded) return
-                check(OpusLibrary.isSupportedPlatform()) {
-                    "club.minnced:opus-java natives not available for this platform"
+                if (OpusLibrary.isSupportedPlatform()) {
+                    check(OpusLibrary.loadFromJar()) { "OpusLibrary.loadFromJar() returned false" }
+                } else {
+                    // opus-java 1.1.1's bundled `natives/darwin/libopus.dylib`
+                    // is x86_64-only, so `isSupportedPlatform()` returns
+                    // false on Apple Silicon (and on any host the jar
+                    // doesn't ship a binary for). Fall back to a
+                    // system-installed libopus: probe a small set of
+                    // canonical locations and `System.load` it directly
+                    // so its symbols are in the process. JNA's lazy
+                    // [Opus.INSTANCE] init falls back to RTLD_DEFAULT
+                    // for symbol lookup when `jna.library.path` doesn't
+                    // resolve the bare name, so preloading by absolute
+                    // path is the most reliable cross-host approach
+                    // (`brew install opus` on macOS, `apt install libopus0`
+                    // / `yum install opus` on linux). After the load, touch
+                    // [Opus.INSTANCE] so any remaining linkage issue
+                    // surfaces here rather than at the first encode call.
+                    val candidates =
+                        listOf(
+                            "/opt/homebrew/opt/opus/lib/libopus.dylib",
+                            "/usr/local/opt/opus/lib/libopus.dylib",
+                            "/usr/lib/x86_64-linux-gnu/libopus.so.0",
+                            "/usr/lib/aarch64-linux-gnu/libopus.so.0",
+                            "/usr/lib64/libopus.so.0",
+                        )
+                    val found = candidates.firstOrNull { java.io.File(it).exists() }
+                    checkNotNull(found) {
+                        "club.minnced:opus-java natives not available for this platform " +
+                            "and no system libopus found at any of: $candidates"
+                    }
+                    System.load(found)
+                    Opus.INSTANCE
                 }
-                check(OpusLibrary.loadFromJar()) { "OpusLibrary.loadFromJar() returned false" }
                 nativesLoaded = true
             }
         }
