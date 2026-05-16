@@ -342,8 +342,12 @@ class SurgeDns(
  * Persistable record. Addresses are stored as raw bytes (4 or 16) so [SurgeDnsStore] can write
  * them straight into the binary blob and round-trip through [InetAddress.getByAddress] without
  * formatting/parsing a string literal on either side.
+ *
+ * Not a `data class`: the auto-generated `equals`/`hashCode` would compare `addresses`
+ * (List<ByteArray>) by reference identity, which is a footgun. Nothing in this codebase needs
+ * structural equality on records, so the methods are simply not provided.
  */
-data class DnsCacheRecord(
+class DnsCacheRecord(
     val hostname: String,
     val addresses: List<ByteArray>,
     val expiresAtMillis: Long,
