@@ -85,6 +85,11 @@ class CachingOnchainBackend(
 
     override suspend fun getUtxosForAddress(address: String): List<Utxo> = delegate.getUtxosForAddress(address)
 
+    override suspend fun getTxsForAddress(
+        address: String,
+        afterTxid: String?,
+    ): List<BitcoinAddressTx> = delegate.getTxsForAddress(address, afterTxid)
+
     override suspend fun broadcast(rawTxHex: String): String = delegate.broadcast(rawTxHex)
 
     override suspend fun tipHeight(): Long {

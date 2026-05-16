@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,6 +64,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.components.util.setText
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.TaprootAddress
@@ -83,6 +86,7 @@ import java.text.NumberFormat
 @Composable
 fun OnchainSection(
     accountViewModel: AccountViewModel,
+    nav: INav,
     modifier: Modifier = Modifier,
 ) {
     val pubKey = accountViewModel.account.signer.pubKey
@@ -118,7 +122,10 @@ fun OnchainSection(
     val orange = MaterialTheme.colorScheme.bitcoinColor
 
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clickable { nav.nav(Route.OnchainTransactions) },
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(2.dp, orange),
         colors =

@@ -127,6 +127,7 @@ fun WalletScreen(
         Column(modifier = Modifier.padding(padding)) {
             OnchainSection(
                 accountViewModel = accountViewModel,
+                nav = nav,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
             if (!hasWallet) {

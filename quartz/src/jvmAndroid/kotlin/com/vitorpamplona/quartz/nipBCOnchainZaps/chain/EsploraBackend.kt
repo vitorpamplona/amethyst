@@ -94,6 +94,35 @@ class EsploraBackend(
         }
     }
 
+    override suspend fun getTxsForAddress(
+        address: String,
+        afterTxid: String?,
+    ): List<BitcoinAddressTx> {
+        // Esplora returns mempool + most-recent confirmed for the first call,
+        // and successive pages of confirmed via /chain/:last_seen_txid.
+        val url =
+            if (afterTxid == null) {
+                "${baseUrl()}/address/$address/txs"
+            } else {
+                "${baseUrl()}/address/$address/txs/chain/$afterTxid"
+            }
+        val request =
+            Request
+                .Builder()
+                .header("Accept", "application/json")
+                .url(url)
+                .get()
+                .build()
+        return client.newCall(request).executeAsync().use { response ->
+            if (!response.isSuccessful) {
+                throw OnchainBackendException(
+                    "GET $url failed: ${response.code} ${response.message}",
+                )
+            }
+            parseAddressTxList(response.body.string(), address)
+        }
+    }
+
     override suspend fun broadcast(rawTxHex: String): String {
         val url = "${baseUrl()}/tx"
         val request =
@@ -216,6 +245,62 @@ class EsploraBackend(
             blockHashHex = blockHash,
             blockHeight = blockHeight,
         )
+    }
+
+    /**
+     * Parse an Esplora `/address/:addr/txs[...] `response — an array of full
+     * tx objects with vin/vout/status — into address-perspective rows.
+     */
+    internal fun parseAddressTxList(
+        json: String,
+        address: String,
+    ): List<BitcoinAddressTx> {
+        val node = JacksonMapper.mapper.readTree(json)
+        return node.map { tx ->
+            val txid = tx["txid"].asText()
+            val status = tx["status"]
+            val confirmed = status?.get("confirmed")?.asBoolean() == true
+            val blockHeight = status?.get("block_height")?.asLong()
+            val blockTime = status?.get("block_time")?.asLong()
+
+            var spentByMe = 0L
+            val incomingCounterparties = LinkedHashSet<String>()
+            tx["vin"]?.forEach { vin ->
+                val prevout = vin["prevout"]
+                val prevAddress = prevout?.get("scriptpubkey_address")?.asText()
+                val value = prevout?.get("value")?.asLong() ?: 0L
+                if (prevAddress == address) {
+                    spentByMe += value
+                } else if (prevAddress != null) {
+                    incomingCounterparties.add(prevAddress)
+                }
+            }
+
+            var receivedByMe = 0L
+            val outgoingCounterparties = LinkedHashSet<String>()
+            tx["vout"]?.forEach { vout ->
+                val outAddress = vout["scriptpubkey_address"]?.asText()
+                val value = vout["value"]?.asLong() ?: 0L
+                if (outAddress == address) {
+                    receivedByMe += value
+                } else if (outAddress != null) {
+                    outgoingCounterparties.add(outAddress)
+                }
+            }
+
+            val net = receivedByMe - spentByMe
+            val counterparties =
+                if (net >= 0L) incomingCounterparties.toList() else outgoingCounterparties.toList()
+
+            BitcoinAddressTx(
+                txid = txid,
+                netValueSats = net,
+                confirmations = if (confirmed) 1 else 0,
+                blockHeight = blockHeight,
+                blockTime = blockTime,
+                counterpartyAddresses = counterparties,
+            )
+        }
     }
 
     internal fun parseUtxoList(json: String): List<Utxo> {

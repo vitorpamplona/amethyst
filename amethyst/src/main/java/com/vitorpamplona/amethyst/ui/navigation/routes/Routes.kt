@@ -111,6 +111,8 @@ sealed class Route {
 
     @Serializable object WalletTransactions : Route()
 
+    @Serializable object OnchainTransactions : Route()
+
     @Serializable
     data class WalletDetail(
         val walletId: String,
