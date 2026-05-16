@@ -55,10 +55,10 @@ class ChatroomListKnownFeedFilter(
 
         val publicChannels =
             account
-                .publicChatList.flow.value
-                .mapNotNull { it ->
+                .publicChatList.flowSet.value
+                .mapNotNull { channelId ->
                     LocalCache
-                        .getOrCreatePublicChatChannel(it.eventId)
+                        .getOrCreatePublicChatChannel(channelId)
                         .notes
                         .filter { _, it -> account.isAcceptable(it) && it.event != null }
                         .sortedWith(DefaultFeedOrder)
