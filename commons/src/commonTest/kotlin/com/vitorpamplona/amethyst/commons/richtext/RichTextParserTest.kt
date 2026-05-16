@@ -4400,6 +4400,35 @@ class RichTextParserTest {
             }
     }
 
+    @Test
+    fun testNowhereLinkInTheMiddleOfAPost() {
+        val text = "Check out my store https://nowhr.xyz/s#bYxNC4JAEEDRX7LbpcsirR9F1MW0jRDLPsEOMZaHinJTCzOl right now"
+        val state = RichTextParser().parseText(text, EmptyTagList, null)
+        val nowhere = state.paragraphs.flatMap { it.words }.firstOrNull { it is NowhereLinkSegment } as? NowhereLinkSegment
+        assertEquals("https://nowhr.xyz/s#bYxNC4JAEEDRX7LbpcsirR9F1MW0jRDLPsEOMZaHinJTCzOl", nowhere?.segmentText)
+        assertEquals("nowhr.xyz", nowhere?.host)
+        assertEquals("s", nowhere?.tool)
+    }
+
+    @Test
+    fun testHostedNowhereSchemelessLink() {
+        val text = "see hostednowhere.com/m#bYxNAB end"
+        val state = RichTextParser().parseText(text, EmptyTagList, null)
+        val nowhere = state.paragraphs.flatMap { it.words }.firstOrNull { it is NowhereLinkSegment } as? NowhereLinkSegment
+        assertEquals("hostednowhere.com/m#bYxNAB", nowhere?.segmentText)
+        assertEquals("hostednowhere.com", nowhere?.host)
+        assertEquals("m", nowhere?.tool)
+    }
+
+    @Test
+    fun testPlainNowhereHostWithoutFragmentStaysAsLink() {
+        // No fragment => not a nowhere site, fall through to LinkSegment.
+        val text = "Visit https://hostednowhere.com/manage to manage"
+        val state = RichTextParser().parseText(text, EmptyTagList, null)
+        val nowhere = state.paragraphs.flatMap { it.words }.firstOrNull { it is NowhereLinkSegment }
+        assertEquals(null, nowhere)
+    }
+
     private fun printStateForDebug(state: RichTextViewerState) {
         state.paragraphs.forEach { paragraph ->
             paragraph.words.forEach { seg ->
