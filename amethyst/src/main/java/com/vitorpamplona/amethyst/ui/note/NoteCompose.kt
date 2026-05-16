@@ -490,9 +490,12 @@ fun calculateBackgroundColor(
     val defaultBackgroundColor = MaterialTheme.colorScheme.background
     val newItemColor = MaterialTheme.colorScheme.newItemBackgroundColor
 
-    // Only fade in/out the "new item" highlight for items that track read state.
-    // Inner notes (reposts/quotes) pass routeForLastRead = null and reuse the parent color directly,
-    // so the LaunchedEffect would just park a coroutine for 5s per item during scroll.
+    // Inner notes (reposts) pass routeForLastRead = null with the parent's bgColor state;
+    // share it directly so the inner highlight fades in lockstep with the outer.
+    if (routeForLastRead == null && parentBackgroundColor != null) {
+        return parentBackgroundColor
+    }
+
     val isNew =
         remember(createdAt, routeForLastRead) {
             routeForLastRead != null && accountViewModel.loadAndMarkAsRead(routeForLastRead, createdAt)
