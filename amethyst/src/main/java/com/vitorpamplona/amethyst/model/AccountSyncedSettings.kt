@@ -245,7 +245,7 @@ class AccountSecurityPreferences(
     val warnAboutPostsWithReports: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val reportWarningThreshold: MutableStateFlow<Int> = MutableStateFlow(DefaultReportWarningThreshold),
     var filterSpamFromStrangers: MutableStateFlow<Boolean> = MutableStateFlow(true),
-    val maxHashtagLimit: MutableStateFlow<Int> = MutableStateFlow(5),
+    val maxHashtagLimit: MutableStateFlow<Int> = MutableStateFlow(8),
     var sendKind0EventsToLocalRelay: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val addClientTag: MutableStateFlow<Boolean> = MutableStateFlow(true),
 ) {

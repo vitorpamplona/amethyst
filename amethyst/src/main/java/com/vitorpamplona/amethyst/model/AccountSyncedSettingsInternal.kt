@@ -159,7 +159,7 @@ class AccountSecurityPreferencesInternal(
     var warnAboutPostsWithReports: Boolean = true,
     val reportWarningThreshold: Int = DefaultReportWarningThreshold,
     var filterSpamFromStrangers: Boolean = true,
-    val maxHashtagLimit: Int = 5,
+    val maxHashtagLimit: Int = 8,
     var sendKind0EventsToLocalRelay: Boolean = false,
     var addClientTag: Boolean = true,
 )
