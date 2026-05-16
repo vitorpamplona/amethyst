@@ -130,11 +130,18 @@ compose.desktop {
             }
         }
 
-        // Compose Multiplatform 1.11.0 tightened the default ProGuard rules so
-        // unresolved references in transitive deps (Jackson kotlin-module value
-        // classes, okhttp's optional TLS adapters, JNA cleaner internals) now
-        // fail `proguardReleaseJars`. Project-level rules below add the missing
-        // `-dontwarn` directives.
+        // Compose Multiplatform 1.11.0 wired ProGuard 7.7.0 into the release
+        // build. The Android (mobile) module already solved the same class of
+        // problems with `-dontobfuscate` plus global `-keepnames` / `-keep enum`
+        // rules (see `amethyst/proguard-rules.pro`). We mirror that strategy in
+        // `compose-rules.pro` so the desktop release survives JNI callbacks
+        // (secp256k1-kmp, sqlite-bundled, jkeychain, VLCj) and reflection-heavy
+        // libraries (Jackson, JNA) without renaming.
+        //
+        // Shrink and optimize stay ON. One ProGuard optimize sub-pass is
+        // disabled in `compose-rules.pro` to avoid a generated okio bridge
+        // whose declared return type the JVM verifier rejects (R8 doesn't hit
+        // this — it generates bridges differently from ProGuard).
         buildTypes.release.proguard {
             configurationFiles.from(project.file("compose-rules.pro"))
         }
