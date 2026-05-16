@@ -104,13 +104,20 @@ private fun bridgeUrl(
     if (url.startsWith("blossom:", ignoreCase = true)) return url
     if (!url.startsWith("http://", ignoreCase = true) && !url.startsWith("https://", ignoreCase = true)) return url
 
-    val sha =
-        explicitHash?.lowercase()?.takeIf { sha256HexRegex.matches(it) }
-            ?: extractSha256FromUrlPath(url)
-            ?: return url
+    // The local Blossom cache fetches `<xs>/<sha>.<ext>` on miss per BUD-01,
+    // which only works when the upstream URL is itself BUD-01 layout. For
+    // non-BUD-01 URLs (e.g. https://i.nostr.build/M5AwJ.gif) the imeta `x`
+    // hash identifies the blob but the upstream server doesn't host it at
+    // /<sha>.<ext>, so trusting only `explicitHash` would point the cache
+    // at a 404. Require the sha to be in the URL path before bridging.
+    val urlSha = extractSha256FromUrlPath(url) ?: return url
+
+    // Prefer the imeta hash when it's a valid sha256 (authoritative casing),
+    // otherwise fall back to what was parsed from the URL.
+    val sha = explicitHash?.lowercase()?.takeIf { sha256HexRegex.matches(it) } ?: urlSha
 
     val ext = guessExtension(url, mimeType)
-    val serverBase = extractServerBase(url, sha) ?: return url
+    val serverBase = extractServerBase(url, urlSha) ?: return url
 
     val authors =
         authorPubKey
