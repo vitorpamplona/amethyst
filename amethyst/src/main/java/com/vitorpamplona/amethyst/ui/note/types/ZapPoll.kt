@@ -87,7 +87,7 @@ fun RenderZapPoll(
                 }
             }
         if (replyingDirectlyTo != null) {
-            ReplyNoteComposition(replyingDirectlyTo, backgroundColor, accountViewModel, nav)
+            ReplyNoteComposition(replyingDirectlyTo, accountViewModel, nav)
             Spacer(modifier = StdVertSpacer)
         }
     }
