@@ -65,19 +65,18 @@ class SurgeDnsStore(
     private val file: File,
     private val dns: SurgeDns,
 ) {
-    init {
-        // One-shot reclaim of the legacy JSON blob — this class moved to a binary format. Safe
-        // to call every construction: it's a single stat + delete after the first run.
-        val legacy = File(file.parentFile, LEGACY_FILE_NAME)
-        if (legacy.exists()) legacy.delete()
-    }
-
     /**
      * Read the persisted snapshot and merge it into the resolver. Existing in-memory entries
      * are preserved (see [SurgeDns.restore]). Safe to call once at app start. Blocking I/O —
      * call from a background thread.
      */
     fun load() {
+        // One-shot reclaim of the legacy JSON blob — this class moved to a binary format. Done
+        // here (not in the constructor) so the syscall happens on the load() background thread
+        // instead of whatever thread builds the store.
+        val legacy = File(file.parentFile, LEGACY_FILE_NAME)
+        if (legacy.exists()) legacy.delete()
+
         if (!file.exists()) return
         val records =
             try {
@@ -103,18 +102,17 @@ class SurgeDnsStore(
         // captured by the next save instead of being silently lost. compareAndSet ensures two
         // concurrent saves don't both proceed.
         if (!dns.tryClearDirty()) return
+        // Write atomically: write to a sibling tmp file then rename so a crash mid-write
+        // can't leave a half-written blob that load() would have to throw away.
+        val tmp = File(file.parentFile, "${file.name}.tmp")
         try {
             val records = dns.snapshot()
             file.parentFile?.mkdirs()
-            // Write atomically: write to a sibling tmp file then rename so a crash mid-write
-            // can't leave a half-written blob that load() would have to throw away.
-            val tmp = File(file.parentFile, "${file.name}.tmp")
             writeRecords(tmp, records)
             if (!tmp.renameTo(file)) {
                 file.delete()
                 if (!tmp.renameTo(file)) {
                     tmp.copyTo(file, overwrite = true)
-                    tmp.delete()
                 }
             }
             Log.d(TAG) { "Persisted ${records.size} DNS cache entries" }
@@ -122,6 +120,10 @@ class SurgeDnsStore(
             Log.w(TAG) { "Failed to persist DNS cache: ${t.message}" }
             // Restore the dirty signal so the next save retries.
             dns.markDirty()
+        } finally {
+            // Cleans up after both happy paths (copyTo fallback) and failure paths (writeRecords
+            // crashed partway, leaving a partial blob) so a corrupt tmp can't accumulate.
+            if (tmp.exists()) tmp.delete()
         }
     }
 
