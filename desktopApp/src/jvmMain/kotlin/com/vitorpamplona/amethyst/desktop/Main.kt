@@ -118,6 +118,7 @@ import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
 import com.vitorpamplona.amethyst.desktop.ui.relay.LocalRelayCategories
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
 import com.vitorpamplona.amethyst.desktop.ui.settings.MediaServerSettings
+import com.vitorpamplona.amethyst.desktop.ui.settings.NamecoinSettingsSection
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -1623,6 +1624,31 @@ fun RelaySettingsScreen(
             Spacer(Modifier.height(24.dp))
             HorizontalDivider()
             Spacer(Modifier.height(24.dp))
+
+            // Namecoin Settings (ElectrumX servers for .bit / d/ / id/ resolution)
+            val namecoinPrefsHere = namecoinPreferences ?: LocalNamecoinPreferences.current
+            if (namecoinPrefsHere != null) {
+                val namecoinScope = rememberCoroutineScope()
+                val namecoinSettings by namecoinPrefsHere.settings.collectAsState()
+                NamecoinSettingsSection(
+                    settings = namecoinSettings,
+                    onToggleEnabled = { enabled ->
+                        namecoinScope.launch { namecoinPrefsHere.setEnabled(enabled) }
+                    },
+                    onAddServer = { server ->
+                        namecoinScope.launch { namecoinPrefsHere.addServer(server) }
+                    },
+                    onRemoveServer = { server ->
+                        namecoinScope.launch { namecoinPrefsHere.removeServer(server) }
+                    },
+                    onReset = {
+                        namecoinScope.launch { namecoinPrefsHere.reset() }
+                    },
+                )
+                Spacer(Modifier.height(24.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(24.dp))
+            }
 
             // Developer Settings Section (only in debug mode)
             if (DebugConfig.isDebugMode) {
