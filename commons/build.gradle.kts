@@ -89,6 +89,7 @@ kotlin {
             dependencies {
                 implementation(libs.kotlin.test)
                 implementation(libs.kotlinx.coroutines.test)
+                implementation(libs.mockk)
             }
         }
 
@@ -97,6 +98,8 @@ kotlin {
             create("jvmAndroid") {
                 dependsOn(commonMain.get())
                 dependencies {
+                    // Used by Namecoin .bit relay TLS pinning + URL rewriting
+                    implementation(libs.okhttp)
                 }
             }
 
