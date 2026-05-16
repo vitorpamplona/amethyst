@@ -592,6 +592,8 @@ class NestViewModelTest {
         override suspend fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent = error("not used")
 
         override suspend fun deriveKey(nonce: String): String = error("not used")
+
+        override suspend fun signPsbt(psbtHex: String): String = error("not used")
     }
 
     companion object {

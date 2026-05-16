@@ -98,6 +98,8 @@ class NostrSignerWithClientTag(
 
     override suspend fun deriveKey(nonce: HexKey): HexKey = inner.deriveKey(nonce)
 
+    override suspend fun signPsbt(psbtHex: String): String = inner.signPsbt(psbtHex)
+
     override fun hasForegroundSupport(): Boolean = inner.hasForegroundSupport()
 
     private fun appendClientTag(tags: Array<Array<String>>): Array<Array<String>> {

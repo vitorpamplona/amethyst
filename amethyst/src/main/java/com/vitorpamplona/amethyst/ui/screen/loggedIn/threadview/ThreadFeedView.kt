@@ -168,6 +168,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderMeetingRoomEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderMeetingSpaceEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderMintRecommendation
 import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderOnchainZap
 import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPoll
 import com.vitorpamplona.amethyst.ui.note.types.RenderPostApproval
@@ -291,6 +292,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
+import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import kotlinx.collections.immutable.toImmutableList
@@ -679,6 +681,8 @@ private fun FullBleedNoteCompose(
                     DisplayNIP65RelayList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is LnZapEvent) {
                     RenderLnZap(baseNote, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is OnchainZapEvent) {
+                    RenderOnchainZap(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is SearchRelayListEvent) {
                     DisplaySearchRelayList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is BlockedRelayListEvent) {

@@ -64,6 +64,19 @@ abstract class NostrSigner(
 
     abstract suspend fun deriveKey(nonce: HexKey): HexKey
 
+    /**
+     * NIP-BC `sign_psbt`: sign the key-path P2TR inputs of [psbtHex] that this
+     * signer's key controls and return the updated PSBT as lowercase hex.
+     *
+     * The signer adds `PSBT_IN_TAP_KEY_SIG` records; it does NOT finalize the
+     * PSBT — finalization and broadcast are the client's responsibility.
+     *
+     * Throws [SignerExceptions.UnsupportedMethodException] for signer kinds
+     * that have not implemented the method yet (remote NIP-46 bunkers, NIP-55
+     * external signers that predate `sign_psbt` support).
+     */
+    abstract suspend fun signPsbt(psbtHex: String): String
+
     abstract fun hasForegroundSupport(): Boolean
 
     suspend fun decrypt(

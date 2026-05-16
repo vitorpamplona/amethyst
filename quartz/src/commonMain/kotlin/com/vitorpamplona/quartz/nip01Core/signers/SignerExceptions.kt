@@ -59,4 +59,10 @@ sealed class SignerExceptions(
         msg: String,
         cause: Throwable? = null,
     ) : SignerExceptions(msg)
+
+    /** The signer cannot perform the requested method (e.g. a bunker that has not shipped `sign_psbt`). */
+    class UnsupportedMethodException(
+        msg: String,
+        cause: Throwable? = null,
+    ) : SignerExceptions(msg, cause)
 }

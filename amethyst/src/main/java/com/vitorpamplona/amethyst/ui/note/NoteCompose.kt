@@ -149,6 +149,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90ContentDiscoveryRespo
 import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90Status
 import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderNipContent
+import com.vitorpamplona.amethyst.ui.note.types.RenderOnchainZap
 import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPoll
 import com.vitorpamplona.amethyst.ui.note.types.RenderPostApproval
@@ -294,6 +295,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
+import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import kotlinx.coroutines.Dispatchers
@@ -946,6 +948,10 @@ private fun RenderNoteRow(
 
         is LnZapEvent -> {
             RenderLnZap(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is OnchainZapEvent -> {
+            RenderOnchainZap(baseNote, backgroundColor, accountViewModel, nav)
         }
 
         is LiveActivitiesClipEvent -> {

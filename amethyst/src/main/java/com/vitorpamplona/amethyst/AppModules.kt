@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.UiSettings
 import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
+import com.vitorpamplona.amethyst.model.nip03Timestamp.BitcoinExplorerEndpoint
 import com.vitorpamplona.amethyst.model.nip03Timestamp.IncomingOtsEventVerifier
 import com.vitorpamplona.amethyst.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
@@ -91,6 +92,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineT
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.stats.RelayReqStats
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
+import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.OkHttpNip05Fetcher
@@ -99,6 +101,8 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumXClient
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.TOR_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
+import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.CachingOnchainBackend
+import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraBackend
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -329,6 +333,34 @@ class AppModules(
 
     // Caches all events in Memory
     val cache: LocalCache = LocalCache
+
+    // NIP-BC onchain zap verification backend. Wired up once at app init so
+    // LocalCache.consume(OnchainZapEvent) can sum the on-chain output values
+    // that pay the recipient's derived Taproot address. Wrapped in a caching
+    // decorator so a feed full of onchain zaps doesn't fan out into one HTTP
+    // request per event.
+    //
+    // The explorer endpoint is shared with OpenTimestamps: it honours the same
+    // user-configured server (OTS settings) and the same Tor-aware default
+    // selection, via BitcoinExplorerEndpoint — onchain zaps must not silently
+    // bypass the user's Tor preference.
+    init {
+        cache.onchainBackend =
+            CachingOnchainBackend(
+                EsploraBackend(
+                    baseUrl = {
+                        BitcoinExplorerEndpoint.resolveNormalized(
+                            customExplorerUrl = otsPrefs.current.normalizedUrl(),
+                            usingTor =
+                                roleBasedHttpClientBuilder.shouldUseTorForMoneyOperations(
+                                    OkHttpBitcoinExplorer.MEMPOOL_API_URL,
+                                ),
+                        )
+                    },
+                    client = roleBasedHttpClientBuilder.okHttpClientForMoney(OkHttpBitcoinExplorer.MEMPOOL_API_URL),
+                ),
+            )
+    }
 
     // Provides a relay pool
     val client: INostrClient = NostrClient(websocketBuilder, applicationIOScope)
