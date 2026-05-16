@@ -1172,6 +1172,11 @@
     <string name="call_failed_start">Failed to start call</string>
     <string name="call_failed_accept">Failed to accept call</string>
     <string name="call_failed_session">Failed to create call session</string>
+    <string name="call_permission_denied_title">Permission needed</string>
+    <string name="call_permission_denied_voice">Amethyst needs microphone access to start a voice call. Please enable it in the app settings.</string>
+    <string name="call_permission_denied_video">Amethyst needs camera and microphone access to start a video call. Please enable them in the app settings.</string>
+    <string name="call_permission_denied_open_settings">Open settings</string>
+    <string name="call_permission_denied_cancel">Cancel</string>
     <string name="call_settings">Call Settings</string>
     <string name="call_settings_enable_calls">Enable voice and video calls</string>
     <string name="call_settings_enable_calls_description">When disabled, call buttons are hidden from chat screens and all incoming calls are silently ignored.</string>

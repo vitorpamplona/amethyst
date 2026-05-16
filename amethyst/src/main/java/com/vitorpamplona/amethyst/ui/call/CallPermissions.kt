@@ -22,13 +22,24 @@ package com.vitorpamplona.amethyst.ui.call
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.stringRes
 
 fun hasPermission(
     context: Context,
@@ -55,6 +66,17 @@ fun buildCallPermissions(isVideo: Boolean): Array<String> {
     return permissions.toTypedArray()
 }
 
+fun openAppSettings(context: Context) {
+    runCatching {
+        context.startActivity(
+            Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.fromParts("package", context.packageName, null),
+            ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) },
+        )
+    }
+}
+
 @Composable
 fun rememberCallWithPermission(
     context: Context,
@@ -62,23 +84,50 @@ fun rememberCallWithPermission(
     onCall: () -> Unit,
 ): () -> Unit {
     val permissions = remember(isVideo) { buildCallPermissions(isVideo) }
+    var showDeniedDialog by remember { mutableStateOf(false) }
 
     val launcher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions(),
         ) { _ ->
-            // Bluetooth is optional — proceed if core permissions are granted
-            if (hasCallPermissions(context, isVideo)) onCall()
+            // Bluetooth is optional — proceed if core permissions are granted.
+            // If core permissions are still denied (including the silent
+            // permanently-denied case where Android skips the dialog), surface
+            // the deep-link dialog instead of failing silently.
+            if (hasCallPermissions(context, isVideo)) {
+                onCall()
+            } else {
+                showDeniedDialog = true
+            }
         }
+
+    val bluetoothLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions(),
+        ) { _ ->
+            // BT result is best-effort and never blocks the call.
+        }
+
+    if (showDeniedDialog) {
+        CallPermissionDeniedDialog(
+            isVideo = isVideo,
+            onDismiss = { showDeniedDialog = false },
+            onOpenSettings = {
+                showDeniedDialog = false
+                openAppSettings(context)
+            },
+        )
+    }
 
     return remember(onCall, isVideo) {
         {
             if (hasCallPermissions(context, isVideo)) {
-                // Core permissions granted; still request BT if missing
+                // Core permissions granted; request BT separately so the
+                // result callback doesn't double-fire onCall().
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
                     !hasPermission(context, Manifest.permission.BLUETOOTH_CONNECT)
                 ) {
-                    launcher.launch(arrayOf(Manifest.permission.BLUETOOTH_CONNECT))
+                    bluetoothLauncher.launch(arrayOf(Manifest.permission.BLUETOOTH_CONNECT))
                 }
                 onCall()
             } else {
@@ -86,4 +135,37 @@ fun rememberCallWithPermission(
             }
         }
     }
+}
+
+@Composable
+private fun CallPermissionDeniedDialog(
+    isVideo: Boolean,
+    onDismiss: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(R.string.call_permission_denied_title)) },
+        text = {
+            Text(
+                stringRes(
+                    if (isVideo) {
+                        R.string.call_permission_denied_video
+                    } else {
+                        R.string.call_permission_denied_voice
+                    },
+                ),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onOpenSettings) {
+                Text(stringRes(R.string.call_permission_denied_open_settings))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringRes(R.string.call_permission_denied_cancel))
+            }
+        },
+    )
 }
