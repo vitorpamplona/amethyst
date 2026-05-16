@@ -22,4 +22,3 @@
 
 -keep class com.vitorpamplona.quartz.** { *; }
 -keep class com.vitorpamplona.amethyst.** { *; }
--keep class com.vitorpamplona.ammolite.** { *; }

@@ -164,7 +164,6 @@ Modules:
 - `amethyst/` — Android app: Activity, layouts, navigation.
 - `desktopApp/` — Desktop JVM app: Window, sidebar, keyboard shortcuts.
 - `cli/` — `amy`, a non-interactive JVM CLI over `quartz` + `commons`.
-- `ammolite/` — Legacy support module.
 
 Per-module design docs live in `<module>/plans/YYYY-MM-DD-<slug>.md`. The
 global `docs/plans/` folder is frozen.

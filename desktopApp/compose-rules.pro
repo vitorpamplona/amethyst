@@ -70,7 +70,6 @@
 # JSON-mapped first-party types (mirrors mobile)
 -keep class com.vitorpamplona.quartz.** { *; }
 -keep class com.vitorpamplona.amethyst.** { *; }
--keep class com.vitorpamplona.ammolite.** { *; }
 
 # ============================================================================
 # Desktop-only JNI keep rules — libraries the mobile module doesn't ship
