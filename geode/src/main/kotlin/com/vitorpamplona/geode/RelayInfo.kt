@@ -41,7 +41,7 @@ data class RelayInfo(
         const val NAME = "geode"
         const val DESCRIPTION = "Embedded Nostr relay from the Amethyst quartz library."
         const val SOFTWARE = "https://github.com/vitorpamplona/amethyst/tree/main/geode"
-        const val VERSION = "1.09.1"
+        const val VERSION = "1.09.2"
 
         /**
          * NIPs this relay implements out of the box. Single source of

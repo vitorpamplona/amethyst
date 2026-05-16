@@ -1,3 +1,29 @@
+<a id="v1.09.2"></a> Fixes
+
+- Fix Blossom blob detection to reject non-compliant filenames by @greenart7c3 in #2919
+- fix(desktop): add ProGuard keep rules so desktop builds actually launch by @mstrofnone in #2921
+- fix(desktop): mirror Android ProGuard strategy for release builds by @mstrofnone in #2922
+- fix(video): pause playback when app goes to background by @vitorpamplona in #2925
+- feat(desktop): wire NamecoinSettingsSection into Settings screen by @mstrofnone in #2923
+- feat(desktop): wire Import Follow List dialog into UI by @mstrofnone in #2924
+- Fix crash when toggling home tabs with persisted pager state by @vitorpamplona in #2930
+- Dedupe public channels in known chat list by channel id by @vitorpamplona in #2932
+- Route NIP-43 relay join/leave through launchSigner by @vitorpamplona in #2933
+- Migrate DNS cache from SharedPreferences to cacheDir by @vitorpamplona in #2935
+- Filter DNS poison (loopback / any-local) from non-loopback hosts by @vitorpamplona in #2936
+- perf(dns-cache): hand-rolled binary persistence format for SurgeDnsStore by @vitorpamplona in #2937
+- Ignore duplicated hashtags in different char cases when processing hashtag spam by @vitorpamplona
+- New Crowdin translations
+
+<a id="v1.09.1"></a> Activates Nest, Git Screens and Fixes
+
+- Activates Nest option in the Left Drawer
+- Rename onRefresh callback to avoid shadowing parameter by @vitorpamplona in #2912
+- Fix desktop app ProGuard build with Compose 1.11.0 by @vitorpamplona in #2914
+- Fix pull-to-refresh indicator positioning in DisappearingScaffold by @vitorpamplona in #2916
+- Remove collectAsStateWithLifecycle from BottomBarSettingsContent by @vitorpamplona in #2918
+- Add Git repository detail screen with issues/patches tabs by @vitorpamplona in #2917
+
 <a id="v1.09.0"></a>
 # [Release v1.09.0: We are going crazy](https://github.com/vitorpamplona/amethyst/releases/tag/v1.09.0) - 2026-05-14
 
