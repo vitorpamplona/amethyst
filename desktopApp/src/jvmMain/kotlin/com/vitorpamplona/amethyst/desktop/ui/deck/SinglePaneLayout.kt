@@ -95,6 +95,7 @@ fun SinglePaneLayout(
     onOpenFeedsDrawer: () -> Unit = onOpenAppDrawer,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
+    onShowImportFollowListDialog: () -> Unit = {},
     onZapFeedback: (ZapFeedback) -> Unit,
     signerConnectionState: SignerConnectionState,
     lastPingTimeSec: Long?,
@@ -177,6 +178,26 @@ fun SinglePaneLayout(
                             colors = NavigationRailItemDefaults.colors(),
                         )
                     }
+
+                    NavigationRailItem(
+                        selected = false,
+                        onClick = onShowImportFollowListDialog,
+                        icon = {
+                            Icon(
+                                MaterialSymbols.PersonAdd,
+                                contentDescription = "Import Follow List",
+                                modifier = Modifier.size(22.dp),
+                            )
+                        },
+                        label = {
+                            Text(
+                                "Import",
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                            )
+                        },
+                        colors = NavigationRailItemDefaults.colors(),
+                    )
 
                     NavigationRailItem(
                         selected = false,

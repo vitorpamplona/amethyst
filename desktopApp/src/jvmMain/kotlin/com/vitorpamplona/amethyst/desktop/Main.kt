@@ -96,6 +96,7 @@ import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinService
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
 import com.vitorpamplona.amethyst.desktop.ui.ConnectingRelaysScreen
+import com.vitorpamplona.amethyst.desktop.ui.ImportFollowListDialog
 import com.vitorpamplona.amethyst.desktop.ui.LoginScreen
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.amethyst.desktop.ui.auth.ForceLogoutDialog
@@ -628,6 +629,7 @@ fun main() {
                         onShowAppDrawer = { showAppDrawer = true },
                         replyToNote = replyToNote,
                         showImportFollowListDialog = showImportFollowListDialog,
+                        onShowImportFollowListDialog = { showImportFollowListDialog = true },
                         onDismissImportFollowListDialog = { showImportFollowListDialog = false },
                         onRestartApp = { appRestartKey++ },
                         torManager = torManager,
@@ -658,6 +660,7 @@ fun App(
     onShowAppDrawer: () -> Unit,
     replyToNote: com.vitorpamplona.quartz.nip01Core.core.Event?,
     showImportFollowListDialog: Boolean = false,
+    onShowImportFollowListDialog: () -> Unit = {},
     onDismissImportFollowListDialog: () -> Unit = {},
     onRestartApp: () -> Unit = {},
     torManager: com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager,
@@ -1012,7 +1015,21 @@ fun App(
                                             com.vitorpamplona.amethyst.desktop.ui.deck.AppDrawerTab.FEEDS
                                         onShowAppDrawer()
                                     },
+                                    onShowImportFollowListDialog = onShowImportFollowListDialog,
                                 )
+
+                                // Import Follow List dialog (triggered from File menu /
+                                // Cmd+Shift+I). Rendered inside this CompositionLocalProvider
+                                // so LocalNamecoinService is available for .bit / d/ / id/
+                                // identifier resolution.
+                                if (showImportFollowListDialog) {
+                                    ImportFollowListDialog(
+                                        onDismiss = onDismissImportFollowListDialog,
+                                        relayManager = relayManager,
+                                        account = account,
+                                        localCache = localCache,
+                                    )
+                                }
                             }
 
                             // Compose dialog
@@ -1115,6 +1132,7 @@ fun MainContent(
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
     onShowAppDrawer: () -> Unit,
     onOpenFeedsDrawer: () -> Unit = onShowAppDrawer,
+    onShowImportFollowListDialog: () -> Unit = {},
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -1332,6 +1350,7 @@ fun MainContent(
                                 onOpenFeedsDrawer = onOpenFeedsDrawer,
                                 onShowComposeDialog = onShowComposeDialog,
                                 onShowReplyDialog = onShowReplyDialog,
+                                onShowImportFollowListDialog = onShowImportFollowListDialog,
                                 onZapFeedback = onZapFeedback,
                                 signerConnectionState = signerConnectionState,
                                 lastPingTimeSec = lastPingTimeSec,
@@ -1368,6 +1387,7 @@ fun MainContent(
                                             deckState.addColumn(DeckColumnType.Settings)
                                         }
                                     },
+                                    onShowImportFollowListDialog = onShowImportFollowListDialog,
                                     signerConnectionState = signerConnectionState,
                                     lastPingTimeSec = lastPingTimeSec,
                                     torStatus = torStatus,
