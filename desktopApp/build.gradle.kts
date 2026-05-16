@@ -186,27 +186,39 @@ tasks.withType<Download>().configureEach {
 // --- AppImage packaging (Linux) ---
 //
 // Compose Multiplatform's TargetFormat.AppImage is known-broken in 1.10.x (CMP-7101).
-// Instead: wrap `createReleaseDistributable` output with `linuxdeploy` (which
-// auto-bundles libraries, handles rpath, and calls appimagetool internally).
+// Instead: wrap `createReleaseDistributable` output with `appimagetool`, which
+// just packages an AppDir as-is. We deliberately avoid `linuxdeploy` here —
+// linuxdeploy auto-walks every binary in the AppDir with ldd to bundle deps,
+// but jpackage already ships a self-contained tree we don't want it touching:
+//   - The bundled JRE puts libjvm.so under usr/lib/runtime/lib/server/ while
+//     sibling libs (libmanagement.so, libawt_xawt.so, libfontmanager.so) have
+//     RPATH=$ORIGIN, so ldd cannot resolve libjvm.so without help.
+//   - The bundled VLC plugins are UPX-compressed; linuxdeploy aborts on those
+//     with "patchelf: no section headers" because they look like static ELFs.
+//   - Several VLC libs have RUNPATH that does not point at sibling libs in
+//     the same directory, so ldd errors with "Could not find dependency".
+// appimagetool sidesteps all of this — it only embeds the AppDir into a
+// SquashFS, runtime-prepended, signed AppImage. AppRun handles LD_LIBRARY_PATH
+// at launch.
 //
 // Build inputs live in desktopApp/packaging/appimage/:
 //   - AppRun              shell launcher (sets LD_LIBRARY_PATH including bundled VLC)
 //   - amethyst.desktop    XDG desktop entry
 //   - amethyst.png        512x512 icon
 //
-// linuxdeploy binary is fetched by CI (SHA-verified) into
-// desktopApp/packaging/appimage/ as linuxdeploy-x86_64.AppImage.
+// appimagetool binary is fetched by CI (SHA-verified) into
+// desktopApp/packaging/appimage/ as appimagetool-x86_64.AppImage.
 // BUILDING.md documents local-dev fetch.
 val createReleaseAppImage by tasks.registering(Exec::class) {
     group = "compose desktop"
-    description = "Bundle createReleaseDistributable output into a Linux AppImage via linuxdeploy."
+    description = "Package createReleaseDistributable output into a Linux AppImage via appimagetool."
     dependsOn("createReleaseDistributable")
 
     val distDir = layout.buildDirectory.dir("compose/binaries/main-release/app/Amethyst")
     val appDir = layout.buildDirectory.dir("appimage/Amethyst.AppDir")
     val outFile = layout.buildDirectory.file("appimage/Amethyst-$appVersion-x86_64.AppImage")
     val toolRoot = layout.projectDirectory.dir("packaging/appimage")
-    val linuxdeployTool = toolRoot.file("linuxdeploy-x86_64.AppImage")
+    val appimagetool = toolRoot.file("appimagetool-x86_64.AppImage")
 
     inputs.dir(distDir)
     inputs.dir(toolRoot)
@@ -231,19 +243,16 @@ val createReleaseAppImage by tasks.registering(Exec::class) {
         if (dirIcon.exists()) dirIcon.delete()
         Files.createSymbolicLink(dirIcon.toPath(), File("amethyst.png").toPath())
 
-        if (!linuxdeployTool.asFile.canExecute()) {
-            linuxdeployTool.asFile.setExecutable(true)
+        if (!appimagetool.asFile.canExecute()) {
+            appimagetool.asFile.setExecutable(true)
         }
     }
 
     commandLine(
-        linuxdeployTool.asFile.absolutePath,
-        "--appdir", appDir.get().asFile.absolutePath,
-        "--output", "appimage",
-        "--desktop-file", "${appDir.get().asFile}/amethyst.desktop",
-        "--icon-file", "${appDir.get().asFile}/amethyst.png",
+        appimagetool.asFile.absolutePath,
+        appDir.get().asFile.absolutePath,
+        outFile.get().asFile.absolutePath,
     )
-    environment("OUTPUT", outFile.get().asFile.absolutePath)
     environment("ARCH", "x86_64")
     // Bypass FUSE requirement on CI runners (ubuntu-latest lacks libfuse.so.2).
     // AppImage standard env var: extracts + runs without mounting.
