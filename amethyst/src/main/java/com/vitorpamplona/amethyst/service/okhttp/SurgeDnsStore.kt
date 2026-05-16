@@ -20,44 +20,43 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
-import android.content.Context
-import androidx.core.content.edit
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.utils.Log
+import java.io.File
 
 /**
- * Persists [SurgeDns]'s positive cache to a small `SharedPreferences` blob so the resolver
- * starts hot after a process restart.
+ * Persists [SurgeDns]'s positive cache to a small JSON file under the app's cache directory
+ * so the resolver starts hot after a process restart.
  *
  * Cold starts are the resolver's worst case — every host is a sync `getaddrinfo`. With a
  * persisted snapshot, every previously-seen host falls into the stale-while-revalidate path on
  * first lookup: the cached IP is served immediately, and a background refresh updates it. That
  * turns ~700 blocking system calls at app start into zero.
  *
- * The blob is plain (not encrypted) — hostnames are already exposed in the user's signed relay
- * list, Coil's image cache, and the system resolver's own state. ~700 entries × ~80 bytes ≈
- * ~55 KB of JSON.
+ * Stored under `cacheDir` because the snapshot is pure perf — if the OS evicts it under storage
+ * pressure, the resolver just falls back to sync `getaddrinfo` and rebuilds the cache as
+ * lookups happen. The blob is plain (not encrypted) — hostnames are already exposed in the
+ * user's signed relay list, Coil's image cache, and the system resolver's own state. ~700
+ * entries × ~80 bytes ≈ ~55 KB of JSON.
  */
 class SurgeDnsStore(
-    private val context: Context,
+    private val file: File,
     private val dns: SurgeDns,
 ) {
-    private val prefs by lazy { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
-
     /**
      * Read the persisted snapshot and merge it into the resolver. Existing in-memory entries
      * are preserved (see [SurgeDns.restore]). Safe to call once at app start. Blocking I/O —
      * call from a background thread.
      */
     fun load() {
-        val json = prefs.getString(KEY_SNAPSHOT, null) ?: return
+        if (!file.exists()) return
         val records =
             try {
-                MAPPER.readValue<List<DnsCacheRecord>>(json)
+                MAPPER.readValue<List<DnsCacheRecord>>(file)
             } catch (t: Throwable) {
                 Log.w(TAG) { "Dropping corrupt DNS cache blob: ${t.message}" }
-                prefs.edit { remove(KEY_SNAPSHOT) }
+                file.delete()
                 return
             }
         // restore() uses putIfAbsent and never marks dirty, so we deliberately do NOT clear the
@@ -78,8 +77,18 @@ class SurgeDnsStore(
         if (!dns.tryClearDirty()) return
         try {
             val records = dns.snapshot()
-            val json = MAPPER.writeValueAsString(records)
-            prefs.edit { putString(KEY_SNAPSHOT, json) }
+            file.parentFile?.mkdirs()
+            // Write atomically: write to a sibling tmp file then rename so a crash mid-write
+            // can't leave a half-written blob that load() would have to throw away.
+            val tmp = File(file.parentFile, "${file.name}.tmp")
+            MAPPER.writeValue(tmp, records)
+            if (!tmp.renameTo(file)) {
+                file.delete()
+                if (!tmp.renameTo(file)) {
+                    tmp.copyTo(file, overwrite = true)
+                    tmp.delete()
+                }
+            }
             Log.d(TAG) { "Persisted ${records.size} DNS cache entries" }
         } catch (t: Throwable) {
             Log.w(TAG) { "Failed to persist DNS cache: ${t.message}" }
@@ -90,13 +99,12 @@ class SurgeDnsStore(
 
     /** Force-clear the on-disk cache. Useful for diagnostics or when the user wipes data. */
     fun clear() {
-        prefs.edit { remove(KEY_SNAPSHOT) }
+        file.delete()
     }
 
     companion object {
         private const val TAG = "SurgeDnsStore"
-        private const val PREFS_NAME = "amethyst_dns_cache"
-        private const val KEY_SNAPSHOT = "dns_cache_v1"
+        const val FILE_NAME = "dns_cache_v1.json"
         private val MAPPER = jacksonObjectMapper()
     }
 }
