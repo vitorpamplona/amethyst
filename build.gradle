@@ -30,7 +30,7 @@ allprojects {
         }
         spotlessPredeclare {
             kotlin {
-                ktlint()
+                ktlint('1.7.1')
             }
         }
     } else {
@@ -38,7 +38,7 @@ allprojects {
             kotlin {
                 target 'src/**/*.kt'
 
-                ktlint()
+                ktlint('1.7.1')
                 licenseHeaderFile rootProject.file('.spotless/copyright.kt'), "@file:|package|import|class|object|sealed|open|interface|abstract "
             }
 
