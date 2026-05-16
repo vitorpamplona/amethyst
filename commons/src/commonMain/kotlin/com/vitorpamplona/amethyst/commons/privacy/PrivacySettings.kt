@@ -25,15 +25,15 @@ import com.vitorpamplona.amethyst.commons.i2p.I2pType
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.commons.tor.TorType
 
-// Aggregate of all privacy configuration. TorSettings and I2pSettings stay
-// independent (each owns its daemon-type + per-relay-class booleans, persisted
-// under its own pref-key namespace). FeatureTransportChoices is the single
-// source of truth for per-feature clearnet routing — UI presents one 3-way
-// picker per role rather than two parallel toggles.
+// Aggregate of all privacy configuration. Both Tor and I2P daemons can run
+// side-by-side so hidden services on each network stay reachable, but only one
+// transport carries clearnet at a time: preferredClearnetTransport picks it.
+// The per-feature booleans on each TorSettings / I2pSettings only take effect
+// for the preferred transport.
 data class PrivacySettings(
     val tor: TorSettings = TorSettings(),
     val i2p: I2pSettings = I2pSettings(),
-    val features: FeatureTransportChoices = FeatureTransportChoices(),
+    val preferredClearnetTransport: PrivacyTransport = PrivacyTransport.DIRECT,
 ) {
     val torAvailable: Boolean get() = tor.torType != TorType.OFF
     val i2pAvailable: Boolean get() = i2p.i2pType != I2pType.OFF

@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.privacy
 
-// What the network call is for. Used by PrivacyRouter to pick a transport for
-// clearnet traffic (hidden-service hostnames hard-pin and ignore the role).
+// What the network call is for. PrivacyRouter uses this to look up the matching
+// per-feature toggle on whichever transport is preferred for clearnet
+// (TorSettings.imagesViaTor vs I2pSettings.imagesViaI2p, etc.). Hidden-service
+// hostnames ignore the role and hard-pin to their matching network.
 enum class FeatureRole {
     IMAGE,
     VIDEO,

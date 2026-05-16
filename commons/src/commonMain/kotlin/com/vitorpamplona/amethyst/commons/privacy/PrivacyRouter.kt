@@ -20,33 +20,74 @@
  */
 package com.vitorpamplona.amethyst.commons.privacy
 
+import com.vitorpamplona.amethyst.commons.i2p.I2pSettings
+import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.HiddenServiceKind
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 
-// Decides which PrivacyTransport carries a request. Hidden-service hostnames
-// hard-pin (onion → Tor, i2p → I2P) regardless of the per-feature picker, since
-// no other transport can reach them. If the pinned or chosen transport is OFF,
-// downgrade to DIRECT — the caller decides whether to make the request anyway.
+// Decides how a request is routed.
+//
+// Hidden-service hostnames hard-pin to their matching network — .onion needs
+// Tor, .i2p needs I2P — and fail closed (Blocked) when that daemon is OFF
+// rather than leak the request over the clearnet.
+//
+// For clearnet hostnames there is exactly one active privacy transport at a
+// time (PrivacySettings.preferredClearnetTransport). Per-feature toggles on
+// that transport's own settings (TorSettings.*ViaTor or I2pSettings.*ViaI2p)
+// decide whether this particular request is routed through it; otherwise the
+// request goes Direct.
 object PrivacyRouter {
     fun route(
         url: String,
         role: FeatureRole,
         settings: PrivacySettings,
-    ): PrivacyTransport =
+    ): PrivacyRoute =
         when (RelayUrlNormalizer.classifyHidden(url)) {
-            HiddenServiceKind.LOCALHOST -> PrivacyTransport.DIRECT
-            HiddenServiceKind.ONION -> if (settings.torAvailable) PrivacyTransport.TOR else PrivacyTransport.DIRECT
-            HiddenServiceKind.I2P -> if (settings.i2pAvailable) PrivacyTransport.I2P else PrivacyTransport.DIRECT
-            HiddenServiceKind.CLEARNET -> resolve(settings.features.choiceFor(role), settings)
+            HiddenServiceKind.LOCALHOST -> PrivacyRoute.Direct
+            HiddenServiceKind.ONION ->
+                if (settings.torAvailable) PrivacyRoute.Tor else PrivacyRoute.Blocked(BlockReason.ONION_REQUIRES_TOR)
+            HiddenServiceKind.I2P ->
+                if (settings.i2pAvailable) PrivacyRoute.I2p else PrivacyRoute.Blocked(BlockReason.I2P_REQUIRES_I2P)
+            HiddenServiceKind.CLEARNET -> clearnet(role, settings)
         }
 
-    private fun resolve(
-        choice: TransportChoice,
+    private fun clearnet(
+        role: FeatureRole,
         settings: PrivacySettings,
-    ): PrivacyTransport =
-        when (choice) {
-            TransportChoice.DIRECT -> PrivacyTransport.DIRECT
-            TransportChoice.TOR -> if (settings.torAvailable) PrivacyTransport.TOR else PrivacyTransport.DIRECT
-            TransportChoice.I2P -> if (settings.i2pAvailable) PrivacyTransport.I2P else PrivacyTransport.DIRECT
+    ): PrivacyRoute =
+        when (settings.preferredClearnetTransport) {
+            PrivacyTransport.TOR ->
+                if (settings.torAvailable && torEnables(role, settings.tor)) PrivacyRoute.Tor else PrivacyRoute.Direct
+            PrivacyTransport.I2P ->
+                if (settings.i2pAvailable && i2pEnables(role, settings.i2p)) PrivacyRoute.I2p else PrivacyRoute.Direct
+            PrivacyTransport.DIRECT -> PrivacyRoute.Direct
+        }
+
+    private fun torEnables(
+        role: FeatureRole,
+        tor: TorSettings,
+    ): Boolean =
+        when (role) {
+            FeatureRole.IMAGE -> tor.imagesViaTor
+            FeatureRole.VIDEO -> tor.videosViaTor
+            FeatureRole.URL_PREVIEW -> tor.urlPreviewsViaTor
+            FeatureRole.PROFILE_PIC -> tor.profilePicsViaTor
+            FeatureRole.NIP05 -> tor.nip05VerificationsViaTor
+            FeatureRole.MONEY -> tor.moneyOperationsViaTor
+            FeatureRole.UPLOAD -> tor.mediaUploadsViaTor
+        }
+
+    private fun i2pEnables(
+        role: FeatureRole,
+        i2p: I2pSettings,
+    ): Boolean =
+        when (role) {
+            FeatureRole.IMAGE -> i2p.imagesViaI2p
+            FeatureRole.VIDEO -> i2p.videosViaI2p
+            FeatureRole.URL_PREVIEW -> i2p.urlPreviewsViaI2p
+            FeatureRole.PROFILE_PIC -> i2p.profilePicsViaI2p
+            FeatureRole.NIP05 -> i2p.nip05VerificationsViaI2p
+            FeatureRole.MONEY -> i2p.moneyOperationsViaI2p
+            FeatureRole.UPLOAD -> i2p.mediaUploadsViaI2p
         }
 }

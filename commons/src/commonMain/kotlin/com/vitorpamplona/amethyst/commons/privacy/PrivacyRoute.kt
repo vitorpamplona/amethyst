@@ -20,26 +20,24 @@
  */
 package com.vitorpamplona.amethyst.commons.privacy
 
-// UI-facing per-feature choice. Kept separate from PrivacyTransport so a future
-// AUTO value can be added without churning the transport plumbing.
-enum class TransportChoice(
-    val screenCode: Int,
-) {
-    DIRECT(0),
-    TOR(1),
-    I2P(2),
+// Outcome of PrivacyRouter.route. Either an actionable transport, or Blocked
+// when a hidden-service hostname cannot be reached (matching daemon is OFF)
+// and we fail closed rather than leak the request over the clearnet.
+sealed interface PrivacyRoute {
+    data object Direct : PrivacyRoute
+
+    data object Tor : PrivacyRoute
+
+    data object I2p : PrivacyRoute
+
+    // Hidden-service request whose matching daemon is disabled. Callers must
+    // surface this as a visible failure — don't fall back to DIRECT.
+    data class Blocked(
+        val reason: BlockReason,
+    ) : PrivacyRoute
 }
 
-fun parseTransportChoice(code: Int?): TransportChoice =
-    when (code) {
-        TransportChoice.TOR.screenCode -> TransportChoice.TOR
-        TransportChoice.I2P.screenCode -> TransportChoice.I2P
-        else -> TransportChoice.DIRECT
-    }
-
-fun TransportChoice.toTransport(): PrivacyTransport =
-    when (this) {
-        TransportChoice.DIRECT -> PrivacyTransport.DIRECT
-        TransportChoice.TOR -> PrivacyTransport.TOR
-        TransportChoice.I2P -> PrivacyTransport.I2P
-    }
+enum class BlockReason {
+    ONION_REQUIRES_TOR,
+    I2P_REQUIRES_I2P,
+}

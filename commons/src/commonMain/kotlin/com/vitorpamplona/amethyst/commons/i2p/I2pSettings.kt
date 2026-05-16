@@ -20,10 +20,11 @@
  */
 package com.vitorpamplona.amethyst.commons.i2p
 
-// Mirror of TorSettings. Per-relay-class booleans answer "should I2P handle this
-// kind of relay" — kept independent of TorSettings since the same questions can
-// be answered differently for each transport. Per-feature picks (images,
-// videos, etc.) live on PrivacySettings.features, not here.
+// Shape mirrors TorSettings. Both daemons can be enabled side-by-side (needed so
+// .onion and .i2p hidden services stay reachable independently), but only one
+// transport carries clearnet at a time — see PrivacySettings.preferredClearnetTransport.
+// The per-feature booleans here only take effect when I2P is the preferred clearnet
+// transport; otherwise the matching TorSettings flag wins.
 data class I2pSettings(
     val i2pType: I2pType = I2pType.OFF,
     val externalSocksPort: Int = 4447,
@@ -31,6 +32,13 @@ data class I2pSettings(
     val dmRelaysViaI2p: Boolean = false,
     val newRelaysViaI2p: Boolean = false,
     val trustedRelaysViaI2p: Boolean = false,
+    val urlPreviewsViaI2p: Boolean = false,
+    val profilePicsViaI2p: Boolean = false,
+    val imagesViaI2p: Boolean = false,
+    val videosViaI2p: Boolean = false,
+    val moneyOperationsViaI2p: Boolean = false,
+    val nip05VerificationsViaI2p: Boolean = false,
+    val mediaUploadsViaI2p: Boolean = false,
 )
 
 enum class I2pType(
