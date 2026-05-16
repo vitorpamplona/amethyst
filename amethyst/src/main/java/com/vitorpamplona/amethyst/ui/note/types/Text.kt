@@ -109,7 +109,7 @@ fun RenderTextEvent(
         if (replyingDirectlyTo != null && canShowReply) {
             when (unPackReply) {
                 ReplyRenderType.FULL -> {
-                    ReplyNoteComposition(replyingDirectlyTo, accountViewModel, nav)
+                    ReplyNoteComposition(replyingDirectlyTo, backgroundColor, accountViewModel, nav)
                     Spacer(modifier = StdVertSpacer)
                 }
 

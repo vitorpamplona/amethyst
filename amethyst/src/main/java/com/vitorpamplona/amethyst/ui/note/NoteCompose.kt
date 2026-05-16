@@ -1496,6 +1496,7 @@ fun getGradient(backgroundColor: MutableState<Color>): Brush =
 @Composable
 fun ReplyNoteComposition(
     replyingDirectlyTo: Note,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -1506,6 +1507,7 @@ fun ReplyNoteComposition(
         unPackReply = ReplyRenderType.NONE,
         makeItShort = true,
         quotesLeft = 0,
+        parentBackgroundColor = backgroundColor,
         accountViewModel = accountViewModel,
         nav = nav,
     )
