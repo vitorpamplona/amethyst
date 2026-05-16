@@ -73,6 +73,7 @@ fun NewUserMetadataScreen(
     val context = LocalContext.current
 
     val socialExpanded = rememberSaveable { mutableStateOf(false) }
+    val lightningExpanded = rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(postViewModel, accountViewModel) {
         postViewModel.load()
@@ -80,6 +81,11 @@ fun NewUserMetadataScreen(
         // Auto-expand social proofs if any have data
         if (postViewModel.twitter.value.isNotBlank() || postViewModel.mastodon.value.isNotBlank() || postViewModel.github.value.isNotBlank()) {
             socialExpanded.value = true
+        }
+
+        // Auto-expand lightning if any has data
+        if (postViewModel.lnAddress.value.isNotBlank() || postViewModel.lnURL.value.isNotBlank()) {
+            lightningExpanded.value = true
         }
     }
 
@@ -270,6 +276,42 @@ fun NewUserMetadataScreen(
                     },
                     singleLine = true,
                 )
+
+                // -- Lightning --
+                ExpandableSection(
+                    title = stringRes(R.string.lightning_address),
+                    expanded = lightningExpanded,
+                ) {
+                    OutlinedTextField(
+                        label = { Text(text = stringRes(R.string.lightning_address)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        value = postViewModel.lnAddress.value,
+                        onValueChange = { postViewModel.lnAddress.value = it },
+                        placeholder = {
+                            Text(
+                                text = "me@mylightningnode.com",
+                                color = MaterialTheme.colorScheme.placeholderText,
+                            )
+                        },
+                        singleLine = true,
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedTextField(
+                        label = { Text(text = stringRes(R.string.lnurl)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        value = postViewModel.lnURL.value,
+                        onValueChange = { postViewModel.lnURL.value = it },
+                        placeholder = {
+                            Text(
+                                text = "LNURL1…",
+                                color = MaterialTheme.colorScheme.placeholderText,
+                            )
+                        },
+                        singleLine = true,
+                    )
+                }
 
                 // -- Social Proofs --
                 ExpandableSection(
