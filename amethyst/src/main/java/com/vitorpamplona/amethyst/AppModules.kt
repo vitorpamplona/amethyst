@@ -215,8 +215,8 @@ class AppModules(
 
     // Persists [surgeDns]'s positive cache across process restarts so cold starts don't pay
     // ~700 sync getaddrinfo calls. Restored entries fall through to the stale-while-revalidate
-    // path on first lookup.
-    val dnsStore = SurgeDnsStore(appContext, surgeDns)
+    // path on first lookup. Stored in cacheDir — pure perf data, OK if the OS evicts it.
+    val dnsStore = SurgeDnsStore(File(appContext.safeCacheDir(), SurgeDnsStore.FILE_NAME), surgeDns)
 
     // manages all the other connections separately from relays.
     val okHttpClients: DualHttpClientManager =
@@ -559,6 +559,9 @@ class AppModules(
         // once restored, every previously-seen host hits the stale-while-revalidate path
         // instead of blocking on getaddrinfo.
         applicationIOScope.launch {
+            // One-shot reclaim of the legacy SharedPreferences blob — SurgeDnsStore moved
+            // from storage to cacheDir.
+            appContext.deleteSharedPreferences("amethyst_dns_cache")
             dnsStore.load()
         }
 
