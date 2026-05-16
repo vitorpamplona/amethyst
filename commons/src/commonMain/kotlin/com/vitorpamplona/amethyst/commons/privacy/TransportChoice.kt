@@ -18,36 +18,28 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.relay.normalizer
+package com.vitorpamplona.amethyst.commons.privacy
 
-import androidx.compose.runtime.Stable
-
-@Stable
-data class NormalizedRelayUrl(
-    val url: String,
-) : Comparable<NormalizedRelayUrl> {
-    override fun compareTo(other: NormalizedRelayUrl) = url.compareTo(other.url)
+// UI-facing per-feature choice. Kept separate from PrivacyTransport so a future
+// AUTO value can be added without churning the transport plumbing.
+enum class TransportChoice(
+    val screenCode: Int,
+) {
+    DIRECT(0),
+    TOR(1),
+    I2P(2),
 }
 
-fun NormalizedRelayUrl.displayUrl() =
-    url
-        .removePrefix("wss://")
-        .removePrefix("ws://")
-        .removeSuffix("/")
-
-fun NormalizedRelayUrl.toHttp() =
-    if (url.startsWith("wss://")) {
-        "https${url.drop(3)}"
-    } else if (url.startsWith("ws://")) {
-        "http${url.drop(2)}"
-    } else {
-        "https://$url"
+fun parseTransportChoice(code: Int?): TransportChoice =
+    when (code) {
+        TransportChoice.TOR.screenCode -> TransportChoice.TOR
+        TransportChoice.I2P.screenCode -> TransportChoice.I2P
+        else -> TransportChoice.DIRECT
     }
 
-fun NormalizedRelayUrl.isOnion() = url.contains(".onion/")
-
-fun NormalizedRelayUrl.isI2p() = RelayUrlNormalizer.isI2p(this.url)
-
-fun NormalizedRelayUrl.isLocalHost() = RelayUrlNormalizer.isLocalHost(this.url)
-
-fun NormalizedRelayUrl.classifyHidden(): HiddenServiceKind = RelayUrlNormalizer.classifyHidden(this.url)
+fun TransportChoice.toTransport(): PrivacyTransport =
+    when (this) {
+        TransportChoice.DIRECT -> PrivacyTransport.DIRECT
+        TransportChoice.TOR -> PrivacyTransport.TOR
+        TransportChoice.I2P -> PrivacyTransport.I2P
+    }

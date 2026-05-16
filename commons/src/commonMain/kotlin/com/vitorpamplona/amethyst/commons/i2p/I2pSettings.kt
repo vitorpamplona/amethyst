@@ -18,36 +18,32 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.relay.normalizer
+package com.vitorpamplona.amethyst.commons.i2p
 
-import androidx.compose.runtime.Stable
+// Mirror of TorSettings. Per-relay-class booleans answer "should I2P handle this
+// kind of relay" — kept independent of TorSettings since the same questions can
+// be answered differently for each transport. Per-feature picks (images,
+// videos, etc.) live on PrivacySettings.features, not here.
+data class I2pSettings(
+    val i2pType: I2pType = I2pType.OFF,
+    val externalSocksPort: Int = 4447,
+    val i2pRelaysViaI2p: Boolean = true,
+    val dmRelaysViaI2p: Boolean = false,
+    val newRelaysViaI2p: Boolean = false,
+    val trustedRelaysViaI2p: Boolean = false,
+)
 
-@Stable
-data class NormalizedRelayUrl(
-    val url: String,
-) : Comparable<NormalizedRelayUrl> {
-    override fun compareTo(other: NormalizedRelayUrl) = url.compareTo(other.url)
+enum class I2pType(
+    val screenCode: Int,
+) {
+    OFF(0),
+    INTERNAL(1),
+    EXTERNAL(2),
 }
 
-fun NormalizedRelayUrl.displayUrl() =
-    url
-        .removePrefix("wss://")
-        .removePrefix("ws://")
-        .removeSuffix("/")
-
-fun NormalizedRelayUrl.toHttp() =
-    if (url.startsWith("wss://")) {
-        "https${url.drop(3)}"
-    } else if (url.startsWith("ws://")) {
-        "http${url.drop(2)}"
-    } else {
-        "https://$url"
+fun parseI2pType(code: Int?): I2pType =
+    when (code) {
+        I2pType.INTERNAL.screenCode -> I2pType.INTERNAL
+        I2pType.EXTERNAL.screenCode -> I2pType.EXTERNAL
+        else -> I2pType.OFF
     }
-
-fun NormalizedRelayUrl.isOnion() = url.contains(".onion/")
-
-fun NormalizedRelayUrl.isI2p() = RelayUrlNormalizer.isI2p(this.url)
-
-fun NormalizedRelayUrl.isLocalHost() = RelayUrlNormalizer.isLocalHost(this.url)
-
-fun NormalizedRelayUrl.classifyHidden(): HiddenServiceKind = RelayUrlNormalizer.classifyHidden(this.url)

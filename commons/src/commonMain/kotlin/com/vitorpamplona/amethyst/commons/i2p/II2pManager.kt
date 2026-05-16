@@ -18,36 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.relay.normalizer
+package com.vitorpamplona.amethyst.commons.i2p
 
-import androidx.compose.runtime.Stable
+import kotlinx.coroutines.flow.StateFlow
 
-@Stable
-data class NormalizedRelayUrl(
-    val url: String,
-) : Comparable<NormalizedRelayUrl> {
-    override fun compareTo(other: NormalizedRelayUrl) = url.compareTo(other.url)
+// Platform-agnostic interface for the I2P daemon lifecycle.
+// Android internal mode bundles net.i2p:router; external mode just opens a SOCKS
+// proxy to a user-run daemon. activePortOrNull surfaces whichever local SOCKS
+// port the HTTP manager should route I2P traffic through.
+interface II2pManager {
+    val status: StateFlow<I2pServiceStatus>
+    val activePortOrNull: StateFlow<Int?>
+
+    suspend fun dormant()
+
+    suspend fun active()
 }
-
-fun NormalizedRelayUrl.displayUrl() =
-    url
-        .removePrefix("wss://")
-        .removePrefix("ws://")
-        .removeSuffix("/")
-
-fun NormalizedRelayUrl.toHttp() =
-    if (url.startsWith("wss://")) {
-        "https${url.drop(3)}"
-    } else if (url.startsWith("ws://")) {
-        "http${url.drop(2)}"
-    } else {
-        "https://$url"
-    }
-
-fun NormalizedRelayUrl.isOnion() = url.contains(".onion/")
-
-fun NormalizedRelayUrl.isI2p() = RelayUrlNormalizer.isI2p(this.url)
-
-fun NormalizedRelayUrl.isLocalHost() = RelayUrlNormalizer.isLocalHost(this.url)
-
-fun NormalizedRelayUrl.classifyHidden(): HiddenServiceKind = RelayUrlNormalizer.classifyHidden(this.url)

@@ -18,36 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.relay.normalizer
+package com.vitorpamplona.amethyst.commons.privacy
 
-import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.i2p.I2pSettings
+import com.vitorpamplona.amethyst.commons.i2p.I2pType
+import com.vitorpamplona.amethyst.commons.tor.TorSettings
+import com.vitorpamplona.amethyst.commons.tor.TorType
 
-@Stable
-data class NormalizedRelayUrl(
-    val url: String,
-) : Comparable<NormalizedRelayUrl> {
-    override fun compareTo(other: NormalizedRelayUrl) = url.compareTo(other.url)
+// Aggregate of all privacy configuration. TorSettings and I2pSettings stay
+// independent (each owns its daemon-type + per-relay-class booleans, persisted
+// under its own pref-key namespace). FeatureTransportChoices is the single
+// source of truth for per-feature clearnet routing — UI presents one 3-way
+// picker per role rather than two parallel toggles.
+data class PrivacySettings(
+    val tor: TorSettings = TorSettings(),
+    val i2p: I2pSettings = I2pSettings(),
+    val features: FeatureTransportChoices = FeatureTransportChoices(),
+) {
+    val torAvailable: Boolean get() = tor.torType != TorType.OFF
+    val i2pAvailable: Boolean get() = i2p.i2pType != I2pType.OFF
 }
-
-fun NormalizedRelayUrl.displayUrl() =
-    url
-        .removePrefix("wss://")
-        .removePrefix("ws://")
-        .removeSuffix("/")
-
-fun NormalizedRelayUrl.toHttp() =
-    if (url.startsWith("wss://")) {
-        "https${url.drop(3)}"
-    } else if (url.startsWith("ws://")) {
-        "http${url.drop(2)}"
-    } else {
-        "https://$url"
-    }
-
-fun NormalizedRelayUrl.isOnion() = url.contains(".onion/")
-
-fun NormalizedRelayUrl.isI2p() = RelayUrlNormalizer.isI2p(this.url)
-
-fun NormalizedRelayUrl.isLocalHost() = RelayUrlNormalizer.isLocalHost(this.url)
-
-fun NormalizedRelayUrl.classifyHidden(): HiddenServiceKind = RelayUrlNormalizer.classifyHidden(this.url)
