@@ -30,7 +30,7 @@
     <string name="copy_text">复制文本</string>
     <string name="copy_user_pubkey">复制作者公钥 ID</string>
     <string name="copy_note_id">复制笔记 ID</string>
-    <string name="copy_raw_json">复制原始JSON</string>
+    <string name="copy_raw_json">复制原始 JSON</string>
     <string name="broadcast">广播</string>
     <string name="timestamp_it">获取公开时间戳</string>
     <string name="timestamp_pending">OpenTimestamps：待确认</string>
@@ -748,7 +748,7 @@
     <string name="private_articles_count">私密文章（%1$s）</string>
     <string name="public_articles_label">公开文章</string>
     <string name="public_articles_count">公开文章(%1$s)</string>
-    <string name="manage_bookmark_label">管理书签列表中的 %1$s</string>
+    <string name="manage_bookmark_label">管理书签列表中的%1$s</string>
     <string name="post_bookmark_management_title">将此帖子加入书签</string>
     <string name="article_bookmark_management_title">将此文章加入书签</string>
     <string name="public_bookmark_presence_indicator">在这里是一个公开书签</string>
@@ -1249,8 +1249,8 @@
     <string name="relay_setup">中继器</string>
     <string name="discover_follows">关注包</string>
     <string name="discover_follows_explainer">这些是您推荐给其他人的用户列表。只允许公开用户。</string>
-    <string name="discover_reads">次浏览</string>
-    <string name="discover_content_v2">动态源算法</string>
+    <string name="discover_reads">阅读</string>
+    <string name="discover_content_v2">算法动态</string>
     <string name="discover_marketplace">市场</string>
     <string name="discover_live_v2">直播</string>
     <string name="discover_community_v2">社区</string>
