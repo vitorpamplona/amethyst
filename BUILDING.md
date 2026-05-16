@@ -113,7 +113,7 @@ Where:
 
 | Field | Values                                                  |
 |---|---------------------------------------------------------|
-| `<version>` | Tag stripped of leading `v` (e.g. `1.09.2`)             |
+| `<version>` | Tag stripped of leading `v` (e.g. `1.10.0`)             |
 | `<family>` | `macos`, `windows`, `linux`                             |
 | `<arch>` | `x64`, `arm64`                                          |
 | `<ext>` | `dmg`, `msi`, `zip`, `deb`, `rpm`, `AppImage`, `tar.gz` |
@@ -124,10 +124,10 @@ any change is a breaking contract.
 
 Examples:
 
-- `amethyst-desktop-1.09.2-macos-x64.dmg`
-- `amethyst-desktop-1.09.2-macos-arm64.dmg`
-- `amethyst-desktop-1.09.2-windows-x64.msi`
-- `amethyst-desktop-1.09.2-linux-x64.AppImage`
+- `amethyst-desktop-1.10.0-macos-x64.dmg`
+- `amethyst-desktop-1.10.0-macos-arm64.dmg`
+- `amethyst-desktop-1.10.0-windows-x64.msi`
+- `amethyst-desktop-1.10.0-linux-x64.AppImage`
 
 ---
 
@@ -223,8 +223,8 @@ or equivalent issue tracker. On rotation, paste new token and run
 
 ```bash
 brew bump-cask-pr amethyst-nostr \
-  --version 1.09.2 \
-  --url "https://github.com/vitorpamplona/amethyst/releases/download/v1.09.2/amethyst-desktop-1.09.2-macos-arm64.dmg"
+  --version 1.10.0 \
+  --url "https://github.com/vitorpamplona/amethyst/releases/download/v1.10.0/amethyst-desktop-1.10.0-macos-arm64.dmg"
 ```
 
 The cask filename is `amethyst-nostr` (not `amethyst` — that's taken by a
@@ -235,7 +235,7 @@ auto-submits new version bumps on each stable release.
 
 ```bash
 wingetcreate new \
-  https://github.com/vitorpamplona/amethyst/releases/download/v1.09.2/amethyst-desktop-1.09.2-windows-x64.msi
+  https://github.com/vitorpamplona/amethyst/releases/download/v1.10.0/amethyst-desktop-1.10.0-windows-x64.msi
 ```
 
 Set `PackageIdentifier = VitorPamplona.Amethyst`. After the first manifest is
