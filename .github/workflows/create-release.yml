@@ -35,7 +35,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-13,       arch: x64,   family: macos,          tasks: "packageReleaseDmg" }
           - { os: macos-14,       arch: arm64, family: macos,          tasks: "packageReleaseDmg" }
           - { os: windows-latest, arch: x64,   family: windows,        tasks: "packageReleaseMsi createReleaseDistributable" }
           - { os: ubuntu-latest,  arch: x64,   family: linux,          tasks: "packageReleaseDeb packageReleaseRpm" }
@@ -204,7 +203,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-13,      arch: x64,   family: macos, tasks: "amyImage" }
           - { os: macos-14,      arch: arm64, family: macos, tasks: "amyImage" }
           - { os: ubuntu-latest, arch: x64,   family: linux, tasks: "amyImage jpackageDeb jpackageRpm" }
     runs-on: ${{ matrix.os }}
