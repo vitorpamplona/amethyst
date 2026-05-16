@@ -503,6 +503,7 @@
     <string name="new_community_rules_banned_add">添加被封禁用户</string>
     <string name="new_community_rules_banned_placeholder">姓名, npub, 或 NIP-05</string>
     <string name="new_community_rules_wot_section">信任网络网关(可选)</string>
+    <string name="new_community_rules_wot_hint">只允许贴文作者在某个数量的跃点内能够关联到根公钥的时候访问社区。只要任何一条 WoT 信任链满足就能获得许可。</string>
     <string name="new_community_rules_wot_root">根npub 或16进制 pubkey</string>
     <string name="new_community_rules_wot_depth">深度</string>
     <string name="new_community_rules_wot_add">添加信任网络(WoT)网关</string>
@@ -1824,6 +1825,18 @@
     <string name="git_repository">Git 仓库： %1$s</string>
     <string name="git_web_address">网址</string>
     <string name="git_clone_address">克隆：</string>
+    <string name="git_status_open">打开</string>
+    <string name="git_status_merged">已和并</string>
+    <string name="git_status_closed">已关闭</string>
+    <string name="git_status_draft">草稿</string>
+    <string name="git_repo_tab_overview">概述</string>
+    <string name="git_repo_tab_issues">议题</string>
+    <string name="git_repo_tab_patches">补丁 &amp; PR</string>
+    <string name="git_repo_section_about">关于</string>
+    <string name="git_repo_section_links">链接</string>
+    <string name="git_repo_section_maintainers">维护者</string>
+    <string name="git_repo_section_topics">话题</string>
+    <string name="git_repo_personal_fork">个人派生</string>
     <string name="nsite_title">静态网站: %1$s</string>
     <string name="nsite_root_site">根站点</string>
     <string name="nsite_source">源：</string>
