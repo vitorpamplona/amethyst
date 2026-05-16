@@ -158,7 +158,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.countHashtags
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasMoreHashtagsThan
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
@@ -3035,7 +3035,7 @@ class Account(
 
     private fun hasExcessiveHashtags(note: Note): Boolean {
         val limit = settings.syncedSettings.security.maxHashtagLimit.value
-        return limit > 0 && (note.event?.countHashtags() ?: 0) > limit
+        return limit > 0 && note.event?.hasMoreHashtagsThan(limit) == true
     }
 
     override fun isAcceptable(note: Note): Boolean {
