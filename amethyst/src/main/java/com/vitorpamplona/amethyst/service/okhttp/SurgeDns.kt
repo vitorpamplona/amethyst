@@ -296,8 +296,10 @@ class SurgeDns(
      * already lowercased.
      */
     private fun isLoopbackHostname(host: String): Boolean {
-        if (host == "localhost" || host.endsWith(".localhost")) return true
-        val literal = parseIpLiteral(host) ?: return false
+        // RFC 1034: a trailing dot is the FQDN form (e.g. `localhost.`), still the same name.
+        val name = host.trimEnd('.')
+        if (name == "localhost" || name.endsWith(".localhost")) return true
+        val literal = parseIpLiteral(name) ?: return false
         return literal.isLoopbackAddress || literal.isAnyLocalAddress
     }
 

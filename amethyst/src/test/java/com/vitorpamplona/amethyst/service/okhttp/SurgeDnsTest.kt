@@ -541,6 +541,15 @@ class SurgeDnsTest {
     }
 
     @Test
+    fun `trailing-dot FQDN form of localhost keeps loopback answers`() {
+        // RFC 1034: `localhost.` is the same name as `localhost`, just in FQDN form.
+        val upstream = CountingDns(mapOf("localhost." to listOf(ip("127.0.0.1"))))
+        val dns = SurgeDns(delegate = upstream)
+
+        assertEquals(listOf(ip("127.0.0.1")), dns.lookup("localhost."))
+    }
+
+    @Test
     fun `ipv4 loopback literal keeps loopback answers`() {
         val upstream = CountingDns(mapOf("127.0.0.1" to listOf(ip("127.0.0.1"))))
         val dns = SurgeDns(delegate = upstream)
