@@ -27,6 +27,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.res.Configuration
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Bundle
@@ -36,6 +37,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.mutableStateOf
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.call.CallState
@@ -217,8 +219,11 @@ class CallActivity : AppCompatActivity() {
         enterPipIfActive()
     }
 
-    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
-        super.onPictureInPictureModeChanged(isInPictureInPictureMode)
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: Configuration,
+    ) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
         isInPipMode.value = isInPictureInPictureMode
     }
 
@@ -285,7 +290,6 @@ class CallActivity : AppCompatActivity() {
     }
 
     private fun enterPipIfActive() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val callManager = CallSessionBridge.callManager ?: return
         val state = callManager.state.value
         val isActive =
@@ -388,7 +392,7 @@ class CallActivity : AppCompatActivity() {
                 addAction(ACTION_PIP_HANGUP)
                 addAction(ACTION_PIP_TOGGLE_MUTE)
             }
-        registerReceiver(pipActionReceiver, filter, RECEIVER_NOT_EXPORTED)
+        ContextCompat.registerReceiver(this, pipActionReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
     }
 
     private fun unregisterPipReceiver() {

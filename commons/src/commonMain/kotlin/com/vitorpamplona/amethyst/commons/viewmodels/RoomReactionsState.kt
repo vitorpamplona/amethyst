@@ -78,9 +78,6 @@ class RoomReactionsAggregator {
     // event id so the same kind-7 from two relays only counts once.
     private val byEventId = LinkedHashMap<String, RoomReaction>()
 
-    /** Stable key for room-wide reactions in the returned map. */
-    private val roomWideKey = ""
-
     /** Apply one reaction and return the post-evict snapshot. */
     fun apply(
         event: ReactionEvent,
@@ -102,13 +99,24 @@ class RoomReactionsAggregator {
      * cadence (typically every second so the floating-up animation
      * frame rate is set by the eviction tick rather than by a
      * per-Composable timer).
+     *
+     * Reactions are grouped by [RoomReaction.sourcePubkey] — the
+     * user who SENT the reaction. The chip floats up from the
+     * reactor's own avatar (matching nostrnests' UX) rather than
+     * from the target speaker's avatar (which would surface the
+     * NIP-25 `p`-tag's "originalAuthor" semantics — useful for
+     * comment threads but confusing in a live audio room, where the
+     * audience expects to see who's reacting, not who's being
+     * reacted to). Room-wide reactions (no `p`-tag at all) still
+     * land under their sender's key, so they show up on the
+     * reactor's avatar just like targeted ones.
      */
     fun evictAndSnapshot(olderThanSec: Long): Map<String, List<RoomReaction>> {
         val it = byEventId.entries.iterator()
         while (it.hasNext()) {
             if (it.next().value.createdAtSec < olderThanSec) it.remove()
         }
-        return byEventId.values.groupBy { it.targetPubkey ?: roomWideKey }
+        return byEventId.values.groupBy { it.sourcePubkey }
     }
 
     /** Whether the aggregator currently holds any unevicted reactions. */

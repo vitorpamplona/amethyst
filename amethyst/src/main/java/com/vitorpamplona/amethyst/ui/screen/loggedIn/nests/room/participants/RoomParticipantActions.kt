@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.summary
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * Pure builders for participant-list mutations on a kind-30312
@@ -132,12 +133,25 @@ internal object RoomParticipantActions {
                 ?: ParticipantTag(original.pubKey, null, ROLE.HOST.code, null)
         val others = participants.filterNot { it.pubKey == host.pubKey }
 
+        // Strictly monotonic createdAt. NIP-01 replaceable-event
+        // semantics drop a new version whose createdAt is <= the
+        // previous one (with a lower-id tie-break that's effectively
+        // random under signing). Creating a room then immediately
+        // promoting in the same wall-clock second produced the
+        // dreaded silent-no-op: the local cache rejected the new
+        // event in `consumeBaseReplaceable` (strict `>`) and relays
+        // applied the same rule. `+ 1` is enough to win the tie;
+        // `coerceAtLeast(now)` keeps the wire timestamp accurate
+        // when the original is already in the past.
+        val nextCreatedAt = (original.createdAt + 1L).coerceAtLeast(TimeUtils.now())
+
         return MeetingSpaceEvent.build(
             room = original.room().orEmpty(),
             status = status,
             service = original.service().orEmpty(),
             host = host,
             dTag = original.dTag(),
+            createdAt = nextCreatedAt,
         ) {
             original.endpoint()?.let { endpoint(it) }
             original.summary()?.takeIf { it.isNotBlank() }?.let { summary(it) }

@@ -598,6 +598,14 @@ private class ReissuingBroadcastHandle(
             if (old != null) runCatching { old.close() }
         }
 
+        // The audio publisher is now live on this session. Flip the
+        // underlying speaker's state machine into Broadcasting — the
+        // hot-swap path bypasses `startBroadcasting`, so without this
+        // the speaker (and the reconnect wrapper that mirrors it) would
+        // sit on Connected forever. Done every iteration so a swapped
+        // session — which arrives in Connected — re-enters Broadcasting.
+        hotSwap.reportBroadcasting(desiredMuted)
+
         // Catalog track on the new session. Keeps the broadcast
         // discoverable to standards-aligned moq-lite watchers (the
         // kixelated/moq browser reference) across JWT refresh — without

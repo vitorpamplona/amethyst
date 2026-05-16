@@ -84,8 +84,6 @@ private fun SecurityPreferencesSection(accountViewModel: AccountViewModel) {
         SettingsDivider()
         HideCommunityViolationsTile(accountViewModel)
         SettingsDivider()
-        DisableClientTagTile(accountViewModel)
-        SettingsDivider()
         WarnReportsTile(accountViewModel)
         SettingsDivider()
         MaxHashtagsTile(accountViewModel)
@@ -144,21 +142,6 @@ private fun HideCommunityViolationsTile(accountViewModel: AccountViewModel) {
         description = R.string.hide_community_rules_violations_explainer,
         checked = hideViolations,
         onCheckedChange = { accountViewModel.account.settings.changeHideCommunityRulesViolations(it) },
-    )
-}
-
-@Composable
-private fun DisableClientTagTile(accountViewModel: AccountViewModel) {
-    val disableClientTag by accountViewModel.account.settings.syncedSettings.security
-        .disableClientTag
-        .collectAsStateWithLifecycle()
-
-    SwitchTile(
-        icon = MaterialSymbols.Code,
-        title = R.string.disable_client_tag_title,
-        description = R.string.disable_client_tag_explainer,
-        checked = disableClientTag,
-        onCheckedChange = accountViewModel::updateDisableClientTag,
     )
 }
 

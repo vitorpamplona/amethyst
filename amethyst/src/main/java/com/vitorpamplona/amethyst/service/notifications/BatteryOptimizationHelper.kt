@@ -22,9 +22,9 @@ package com.vitorpamplona.amethyst.service.notifications
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.PowerManager
 import android.provider.Settings
+import androidx.core.net.toUri
 import com.vitorpamplona.quartz.utils.Log
 
 /**
@@ -54,7 +54,7 @@ object BatteryOptimizationHelper {
         try {
             val intent =
                 Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                    data = Uri.parse("package:${context.packageName}")
+                    data = "package:${context.packageName}".toUri()
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
             context.startActivity(intent)

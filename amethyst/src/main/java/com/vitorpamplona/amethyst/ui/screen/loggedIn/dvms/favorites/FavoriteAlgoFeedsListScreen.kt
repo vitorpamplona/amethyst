@@ -25,6 +25,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -37,21 +38,29 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.Button
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.BottomStart
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -75,6 +84,8 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import kotlinx.coroutines.launch
 
+private const val STAR_INLINE_ID = "star"
+
 @Composable
 fun FavoriteAlgoFeedsListScreen(
     accountViewModel: AccountViewModel,
@@ -82,6 +93,8 @@ fun FavoriteAlgoFeedsListScreen(
 ) {
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    val favorites by accountViewModel.account.favoriteAlgoFeedsList.flowNotes
+        .collectAsStateWithLifecycle()
 
     DisappearingScaffold(
         isInvertedLayout = false,
@@ -113,65 +126,67 @@ fun FavoriteAlgoFeedsListScreen(
                         bottom = padding.calculateBottomPadding(),
                     ).consumeWindowInsets(padding),
         ) {
-            Text(
-                text = stringRes(R.string.favorite_dvms_explainer),
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.grayText,
-            )
-
-            FavoriteAlgoFeedList(listState, accountViewModel, nav)
+            if (favorites.isEmpty()) {
+                Text(
+                    text = stringRes(R.string.favorite_dvms_explainer),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(top = 24.dp, bottom = 12.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.grayText,
+                )
+                FavoriteAlgoFeedsEmptyState(nav)
+            } else {
+                FavoriteAlgoFeedList(favorites, listState, accountViewModel, nav)
+            }
         }
     }
 }
 
 @Composable
-private fun FavoriteAlgoFeedList(
+private fun FavoriteAlgoFeedsEmptyState(nav: INav) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Spacer(modifier = Modifier.weight(1f))
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Icon(
+                symbol = MaterialSymbols.AutoAwesome,
+                contentDescription = null,
+                modifier = Modifier.size(72.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                text = stringRes(R.string.favorite_dvms_empty_headline),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            FavoriteAlgoFeedsEmptySteps(
+                ctaLabel = stringRes(R.string.favorite_dvms_empty_cta),
+                modifier = Modifier.widthIn(max = 320.dp),
+            )
+        }
+        Spacer(modifier = Modifier.weight(1f))
+        BrowseAlgosButton(
+            label = stringRes(R.string.favorite_dvms_empty_cta),
+            nav = nav,
+        )
+    }
+}
+
+@Composable
+private fun ColumnScope.FavoriteAlgoFeedList(
+    favorites: List<AddressableNote>,
     listState: LazyListState,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val favorites by accountViewModel.account.favoriteAlgoFeedsList.flowNotes
-        .collectAsStateWithLifecycle()
-
-    if (favorites.isEmpty()) {
-        Box(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Icon(
-                    symbol = MaterialSymbols.AutoAwesome,
-                    contentDescription = null,
-                    modifier = Modifier.size(72.dp),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    text = stringRes(R.string.favorite_dvms_empty_headline),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = stringRes(R.string.favorite_dvms_empty_subtitle),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.grayText,
-                    modifier = Modifier.widthIn(max = 280.dp),
-                )
-                Button(onClick = { nav.nav(Route.Discover(initialTab = DiscoverTab.ALGOS)) }) {
-                    Text(text = stringRes(R.string.favorite_dvms_empty_cta))
-                }
-            }
-        }
-        return
-    }
-
     LazyColumn(
+        modifier = Modifier.weight(1f),
         state = listState,
         verticalArrangement = Arrangement.spacedBy(4.dp),
         contentPadding = FeedPadding,
@@ -187,6 +202,25 @@ private fun FavoriteAlgoFeedList(
                 onRemove = { accountViewModel.unfollowFavoriteAlgoFeed(feedNote.address) },
             )
         }
+    }
+    BrowseAlgosButton(
+        label = stringRes(R.string.favorite_dvms_add_more),
+        nav = nav,
+        modifier = Modifier.align(Alignment.CenterHorizontally).padding(vertical = 32.dp),
+    )
+}
+
+@Composable
+private fun BrowseAlgosButton(
+    label: String,
+    nav: INav,
+    modifier: Modifier = Modifier,
+) {
+    Button(
+        onClick = { nav.nav(Route.Discover(initialTab = DiscoverTab.ALGOS)) },
+        modifier = modifier,
+    ) {
+        Text(text = label)
     }
 }
 
@@ -265,5 +299,84 @@ private fun FavoriteAlgoFeedRow(
                 contentDescription = stringRes(R.string.remove_dvm_from_favorites),
             )
         }
+    }
+}
+
+@Composable
+private fun FavoriteAlgoFeedsEmptySteps(
+    ctaLabel: String,
+    modifier: Modifier = Modifier,
+) {
+    val step2Template = stringRes(R.string.favorite_dvms_empty_step2)
+    val primaryColor = MaterialTheme.colorScheme.primary
+
+    val step2Text =
+        remember(step2Template) {
+            val parts = step2Template.split("%1\$s", limit = 2)
+            buildAnnotatedString {
+                append(parts.first())
+                appendInlineContent(STAR_INLINE_ID, "star")
+                if (parts.size > 1) append(parts[1])
+            }
+        }
+
+    val starInlineContent =
+        remember(primaryColor) {
+            mapOf(
+                STAR_INLINE_ID to
+                    InlineTextContent(
+                        Placeholder(
+                            width = 18.sp,
+                            height = 18.sp,
+                            placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
+                        ),
+                    ) {
+                        Icon(
+                            symbol = MaterialSymbols.StarBorder,
+                            contentDescription = null,
+                            tint = primaryColor,
+                        )
+                    },
+            )
+        }
+
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        NumberedStep(number = "1.") {
+            Text(
+                text = stringRes(R.string.favorite_dvms_empty_step1, ctaLabel),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.grayText,
+            )
+        }
+        NumberedStep(number = "2.") {
+            Text(
+                text = step2Text,
+                inlineContent = starInlineContent,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.grayText,
+            )
+        }
+    }
+}
+
+@Composable
+private fun NumberedStep(
+    number: String,
+    content: @Composable () -> Unit,
+) {
+    Row(
+        modifier = Modifier.semantics(mergeDescendants = true) {},
+        verticalAlignment = Alignment.Top,
+    ) {
+        Text(
+            text = number,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(end = 8.dp),
+        )
+        content()
     }
 }

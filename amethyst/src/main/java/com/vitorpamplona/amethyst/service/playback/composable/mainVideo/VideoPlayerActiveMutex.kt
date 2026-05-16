@@ -35,6 +35,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
+import java.lang.ref.WeakReference
 import kotlin.math.abs
 
 /**
@@ -58,8 +59,10 @@ private var winner: TrackedVideo? = null
 
 // Cached result of view.getGlobalVisibleRect. The compose root rarely changes
 // across a scroll burst; caching avoids N native calls per frame.
+// The view is held weakly: it is only used for an identity check, never
+// dereferenced, and a strong static reference would leak the Activity.
 private val cachedRootRect = Rect()
-private var cachedRootRectView: View? = null
+private var cachedRootRectView: WeakReference<View>? = null
 private var cachedRootRectVisible: Boolean = false
 private var cachedRootRectTimeNs: Long = 0L
 private const val ROOT_RECT_CACHE_TTL_NS = 8_000_000L // ~half a frame at 60fps
@@ -191,11 +194,11 @@ private fun electNewWinner() {
  */
 private fun cachedGlobalVisibleRect(view: View): Rect? {
     val now = System.nanoTime()
-    if (cachedRootRectView === view && (now - cachedRootRectTimeNs) < ROOT_RECT_CACHE_TTL_NS) {
+    if (cachedRootRectView?.get() === view && (now - cachedRootRectTimeNs) < ROOT_RECT_CACHE_TTL_NS) {
         return if (cachedRootRectVisible) cachedRootRect else null
     }
     cachedRootRectVisible = view.getGlobalVisibleRect(cachedRootRect)
-    cachedRootRectView = view
+    cachedRootRectView = WeakReference(view)
     cachedRootRectTimeNs = now
     return if (cachedRootRectVisible) cachedRootRect else null
 }

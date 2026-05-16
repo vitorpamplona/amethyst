@@ -21,9 +21,13 @@ permissions:
 env:
   # Asset naming contract: amethyst-desktop-<version>-<family>-<arch>.<ext>
   # Single source of truth in scripts/asset-name.sh.
-  # linuxdeploy pinned release — bump via Dependabot, verify SHA256 via env var below.
-  LINUXDEPLOY_URL: https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20240109-1/linuxdeploy-x86_64.AppImage
-  LINUXDEPLOY_SHA256: c86d6540f1df31061f02f539a2d3445f8d7f85cc3994eee1e74cd1ac97b76df0
+  # appimagetool pinned release — bump via Dependabot, verify SHA256 via env var below.
+  # We used to use linuxdeploy here, but it auto-walks the AppDir with ldd to
+  # bundle deps — that fights jpackage's self-contained JRE (libjvm.so RPATH
+  # mismatch) and the UPX-compressed VLC plugins. appimagetool only embeds the
+  # AppDir as-is, which is what we actually want.
+  APPIMAGETOOL_URL: https://github.com/AppImage/appimagetool/releases/download/1.9.0/appimagetool-x86_64.AppImage
+  APPIMAGETOOL_SHA256: 46fdd785094c7f6e545b61afcfb0f3d98d8eab243f644b4b17698c01d06083d1
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -35,7 +39,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-13,       arch: x64,   family: macos,          tasks: "packageReleaseDmg" }
           - { os: macos-14,       arch: arm64, family: macos,          tasks: "packageReleaseDmg" }
           - { os: windows-latest, arch: x64,   family: windows,        tasks: "packageReleaseMsi createReleaseDistributable" }
           - { os: ubuntu-latest,  arch: x64,   family: linux,          tasks: "packageReleaseDeb packageReleaseRpm" }
@@ -84,17 +87,19 @@ jobs:
         if: matrix.family == 'linux'
         run: sudo apt-get update && sudo apt-get install -y rpm fakeroot
 
-      - name: Fetch linuxdeploy (linux-portable only, SHA-verified)
+      - name: Fetch appimagetool (linux-portable only, SHA-verified)
         if: matrix.family == 'linux-portable'
         run: |
           set -euo pipefail
-          curl -fsSL --retry 3 "$LINUXDEPLOY_URL" -o packaging/appimage/linuxdeploy-x86_64.AppImage
-          actual=$(sha256sum packaging/appimage/linuxdeploy-x86_64.AppImage | awk '{print $1}')
-          if [[ "$actual" != "$LINUXDEPLOY_SHA256" ]]; then
-            echo "::error::linuxdeploy SHA256 mismatch. Expected $LINUXDEPLOY_SHA256, got $actual"
+          # appimagetool 1.9.0 validates the .desktop file via desktop-file-validate.
+          sudo apt-get update && sudo apt-get install -y desktop-file-utils
+          curl -fsSL --retry 3 "$APPIMAGETOOL_URL" -o desktopApp/packaging/appimage/appimagetool-x86_64.AppImage
+          actual=$(sha256sum desktopApp/packaging/appimage/appimagetool-x86_64.AppImage | awk '{print $1}')
+          if [[ "$actual" != "$APPIMAGETOOL_SHA256" ]]; then
+            echo "::error::appimagetool SHA256 mismatch. Expected $APPIMAGETOOL_SHA256, got $actual"
             exit 1
           fi
-          chmod +x packaging/appimage/linuxdeploy-x86_64.AppImage
+          chmod +x desktopApp/packaging/appimage/appimagetool-x86_64.AppImage
 
       - name: Build desktop artifacts
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0
@@ -204,7 +209,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-13,      arch: x64,   family: macos, tasks: "amyImage" }
           - { os: macos-14,      arch: arm64, family: macos, tasks: "amyImage" }
           - { os: ubuntu-latest, arch: x64,   family: linux, tasks: "amyImage jpackageDeb jpackageRpm" }
     runs-on: ${{ matrix.os }}

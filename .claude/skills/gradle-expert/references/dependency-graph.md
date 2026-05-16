@@ -8,13 +8,13 @@
 │                     (Amethyst)                           │
 └─────────────────────────────────────────────────────────┘
                           │
-         ┌────────────────┼────────────────┬────────────┐
-         │                │                │            │
-         ▼                ▼                ▼            ▼
-┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌──────────┐
-│  :amethyst  │  │ :desktopApp │  │ :benchmark  │  │:ammolite │
-│  (Android)  │  │   (JVM)     │  │  (Android)  │  │ (Support)│
-└─────────────┘  └─────────────┘  └─────────────┘  └──────────┘
+         ┌────────────────┼────────────────┐
+         │                │                │
+         ▼                ▼                ▼
+┌─────────────┐  ┌─────────────┐  ┌─────────────┐
+│  :amethyst  │  │ :desktopApp │  │ :benchmark  │
+│  (Android)  │  │   (JVM)     │  │  (Android)  │
+└─────────────┘  └─────────────┘  └─────────────┘
        │                │                │
        │                │                │
        └────────────────┼────────────────┘
@@ -77,7 +77,7 @@
 **Type:** Android Application
 **Targets:** Android
 **Dependencies:**
-- Modules: `:commons`, `:quartz`, `:ammolite`
+- Modules: `:commons`, `:quartz`, `:nestsClient`
 - External: Android SDK, AndroidX, Firebase, Tor
 
 **Role:** Android-specific navigation, layouts, and entry point
@@ -90,13 +90,6 @@
 - External: AndroidX Benchmark
 
 **Role:** Performance benchmarking for Android builds
-
-### :ammolite (Support Module)
-**Type:** Android Library
-**Targets:** Android
-**Dependencies:** Android-specific utilities
-
-**Role:** Android support utilities for amethyst
 
 ## Dependency Flow Patterns
 
@@ -112,10 +105,10 @@
 ### Android Build Chain
 ```
 :amethyst → :commons (androidMain) → :quartz (androidMain)
-    ↓                                      ↓
-:ammolite                            jvmAndroid
-                                         ↓
-                                   commonMain
+                                           ↓
+                                     jvmAndroid
+                                           ↓
+                                     commonMain
 ```
 
 ## Source Set Dependencies

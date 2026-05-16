@@ -26,6 +26,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.platform.LocalView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.Player
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 
@@ -74,6 +77,44 @@ fun ControlWhenPlayerIsActive(
             controller.removeListener(listener)
             listener.destroy()
         }
+    }
+
+    // Pause when the host activity leaves the foreground; resume the visible
+    // video when it comes back. The scroll-based mutex above only reacts to
+    // on-screen position, which doesn't change on background — so without
+    // this, videos play forever behind another app.
+    // Skip the explicit BackgroundMedia (PiP) instance: the user opted that
+    // one into keep-playing.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, mediaControllerState) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_PAUSE -> {
+                        if (controller.isPlaying && !BackgroundMedia.isMutex(mediaControllerState)) {
+                            controller.pause()
+                        }
+                    }
+
+                    Lifecycle.Event.ON_RESUME -> {
+                        if (automaticallyStartPlayback &&
+                            isClosestToTheCenterOfTheScreen.value &&
+                            !controller.isPlaying
+                        ) {
+                            if (BackgroundMedia.hasBackgroundButNot(mediaControllerState)) {
+                                controller.volume = 0f
+                            }
+                            controller.play()
+                        }
+                    }
+
+                    else -> {
+                        Unit
+                    }
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 }
 

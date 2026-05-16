@@ -139,7 +139,15 @@ class SurgeDns(
 
     private fun lookupAndCache(host: String): List<InetAddress> =
         try {
-            val addresses = delegate.lookup(host).ifEmpty { throw UnknownHostException(host) }
+            val raw = delegate.lookup(host).ifEmpty { throw UnknownHostException(host) }
+            val addresses =
+                if (isLoopbackHostname(host)) {
+                    raw
+                } else {
+                    raw
+                        .filterNot { it.isLoopbackAddress || it.isAnyLocalAddress }
+                        .ifEmpty { throw UnknownHostException(host) }
+                }
             putPositive(host, addresses)
             addresses
         } catch (e: UnknownHostException) {
@@ -220,12 +228,10 @@ class SurgeDns(
         for ((host, entry) in cache) {
             if (entry.addresses.isEmpty()) continue
             if (entry.expiresAtMillis <= now) continue
-            // hostAddress is platform-typed (String!); mapNotNull narrows to String and stays
-            // defensive against the rare case where it might be null.
-            val ips = entry.addresses.mapNotNull { it.hostAddress }
-            if (ips.isNotEmpty()) {
-                out += DnsCacheRecord(host, ips, entry.expiresAtMillis)
-            }
+            // Raw bytes from getAddress() — no string formatting / re-parsing on either side
+            // of the persistence boundary.
+            val ips = entry.addresses.map { it.address }
+            out += DnsCacheRecord(host, ips, entry.expiresAtMillis)
         }
         return out
     }
@@ -233,22 +239,35 @@ class SurgeDns(
     /**
      * Restore from a previously taken snapshot. Entries already expired on disk are dropped.
      * Existing in-memory entries are NOT overwritten (so a fresh lookup that completes before
-     * restore lands keeps its newer answer).
+     * restore lands keeps its newer answer). Loopback / any-local addresses (127/8, ::1, 0.0.0.0)
+     * are filtered out for non-loopback hostnames — they're poison left over from a captive
+     * portal, ad-blocker DNS, or VPN hiccup at snapshot time. When such addresses are dropped
+     * the cache is marked dirty so the next persist re-writes the snapshot without them.
      */
     fun restore(records: List<DnsCacheRecord>) {
         val now = System.currentTimeMillis()
+        var droppedPoisoned = false
         for (record in records) {
             if (record.expiresAtMillis <= now) continue
-            val addresses =
-                record.addresses.mapNotNull { literal ->
-                    // getByName on a numeric literal parses without doing DNS.
-                    runCatching { InetAddress.getByName(literal) }.getOrNull()
+            val key = record.hostname.lowercase(Locale.ROOT)
+            val allowLoopback = isLoopbackHostname(key)
+            val addresses = ArrayList<InetAddress>(record.addresses.size)
+            for (bytes in record.addresses) {
+                // getByAddress wraps the raw bytes without re-parsing a string literal.
+                val addr = runCatching { InetAddress.getByAddress(bytes) }.getOrNull() ?: continue
+                if (!allowLoopback && (addr.isLoopbackAddress || addr.isAnyLocalAddress)) {
+                    droppedPoisoned = true
+                    continue
                 }
+                addresses += addr
+            }
             if (addresses.isNotEmpty()) {
-                val key = record.hostname.lowercase(Locale.ROOT)
                 cache.putIfAbsent(key, Entry(addresses, record.expiresAtMillis))
             }
         }
+        // Dirty the cache so the next save rewrites the snapshot without the poisoned entries
+        // — otherwise they'd be re-restored on every cold start.
+        if (droppedPoisoned) dirty.set(true)
     }
 
     /** True if the cache has changed since the last [tryClearDirty] / [markDirty] / construction. */
@@ -265,6 +284,39 @@ class SurgeDns(
     /** Re-marks the cache dirty. For a store to call when its persist attempt fails. */
     fun markDirty() {
         dirty.set(true)
+    }
+
+    /**
+     * True if [host] is itself a loopback identifier — the user-configured `localhost`-style relay
+     * case where 127.0.0.1 / ::1 in the answer is legitimate and must not be filtered as poison.
+     * Accepts the DNS name `localhost` and any `.localhost` subdomain (RFC 6761), and IP literals
+     * that parse to a loopback or any-local address (127.0.0.0/8, ::1, 0.0.0.0). [host] is assumed
+     * already lowercased.
+     */
+    private fun isLoopbackHostname(host: String): Boolean {
+        // RFC 1034: a trailing dot is the FQDN form (e.g. `localhost.`), still the same name.
+        val name = host.trimEnd('.')
+        if (name == "localhost" || name.endsWith(".localhost")) return true
+        val literal = parseIpLiteral(name) ?: return false
+        return literal.isLoopbackAddress || literal.isAnyLocalAddress
+    }
+
+    /**
+     * Parses [host] as a numeric IP literal without ever triggering a DNS lookup. Returns null for
+     * anything that doesn't structurally look like an IPv4 or IPv6 literal — we must not hand a
+     * plain hostname to [InetAddress.getByName] from inside the resolver.
+     */
+    private fun parseIpLiteral(host: String): InetAddress? {
+        val candidate =
+            if (host.startsWith("[") && host.endsWith("]")) {
+                host.substring(1, host.length - 1)
+            } else {
+                host
+            }
+        val looksLikeIpv4 = candidate.isNotEmpty() && candidate.all { it.isDigit() || it == '.' } && candidate.contains('.')
+        val looksLikeIpv6 = candidate.contains(':')
+        if (!looksLikeIpv4 && !looksLikeIpv6) return null
+        return runCatching { InetAddress.getByName(candidate) }.getOrNull()
     }
 
     private class Entry(
@@ -286,9 +338,17 @@ class SurgeDns(
     }
 }
 
-/** Persistable record. Public so [SurgeDnsStore] can serialize it via Jackson. */
-data class DnsCacheRecord(
+/**
+ * Persistable record. Addresses are stored as raw bytes (4 or 16) so [SurgeDnsStore] can write
+ * them straight into the binary blob and round-trip through [InetAddress.getByAddress] without
+ * formatting/parsing a string literal on either side.
+ *
+ * Not a `data class`: the auto-generated `equals`/`hashCode` would compare `addresses`
+ * (List<ByteArray>) by reference identity, which is a footgun. Nothing in this codebase needs
+ * structural equality on records, so the methods are simply not provided.
+ */
+class DnsCacheRecord(
     val hostname: String,
-    val addresses: List<String>,
+    val addresses: List<ByteArray>,
     val expiresAtMillis: Long,
 )

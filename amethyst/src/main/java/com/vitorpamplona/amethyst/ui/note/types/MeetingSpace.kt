@@ -45,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -203,7 +204,7 @@ private fun ListenToRecordingButton(
             runCatching {
                 context.startActivity(
                     android.content
-                        .Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                        .Intent(android.content.Intent.ACTION_VIEW, url.toUri())
                         .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
                 )
             }.isSuccess

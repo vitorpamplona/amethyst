@@ -632,7 +632,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nest_chat_send">Senden</string>
     <string name="nest_chat_placeholder">Sag etwas…</string>
     <string name="nest_chat_empty">Noch keine Nachrichten. Sei der Erste.</string>
-    <string name="nest_reactions_title">Reagieren</string>
     <string name="nest_reactions_button">Reagieren</string>
     <string name="nest_edit_title">Raum bearbeiten</string>
     <string name="nest_edit_save">Speichern</string>
@@ -662,16 +661,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nest_confirm_force_mute_body">Fordert den Client von %1$s auf, das Mikrofon stummzuschalten. Manche Clients ignorieren diesen Befehl.</string>
     <string name="nest_confirm_force_mute_confirm">Stummschalten erzwingen</string>
     <string name="nest_confirm_cancel">Abbrechen</string>
-    <string name="nest_toast_action_title">Audioraum</string>
-    <string name="nest_toast_follow_sent">Du folgst %1$s.</string>
-    <string name="nest_toast_unfollow_sent">Du folgst %1$s nicht mehr.</string>
-    <string name="nest_toast_mute_sent">%1$s stummgeschaltet.</string>
-    <string name="nest_toast_unmute_sent">Stummschaltung von %1$s aufgehoben.</string>
-    <string name="nest_toast_promote_speaker_sent">%1$s zum Sprecher befördert.</string>
-    <string name="nest_toast_promote_moderator_sent">%1$s zum Moderator befördert.</string>
-    <string name="nest_toast_demote_listener_sent">%1$s zum Zuhörer herabgestuft.</string>
-    <string name="nest_toast_force_mute_sent">%1$s wurde zwangsweise stummgeschaltet.</string>
-    <string name="nest_toast_kick_sent">%1$s aus dem Raum entfernt.</string>
+    <string name="nest_toast_host_action_failed_title">Aktion fehlgeschlagen</string>
+    <string name="nest_toast_host_action_failed_template_null">Die Aktion konnte nicht vorbereitet werden.</string>
     <string name="nest_share_action">Raum teilen</string>
     <string name="nest_minimize">Minimieren</string>
     <string name="nest_minimize_description">Minimieren, um weiter zuzuhören</string>
@@ -1126,8 +1117,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="warn_when_posts_have_reports_from_your_follows">Warnung bei Meldungen von deinen Abonnements</string>
     <string name="filter_spam_from_strangers_title">Spam filtern</string>
     <string name="filter_spam_from_strangers_explainer">Versteckt Beiträge von Fremden, die 5 oder mehr Male genau die gleichen waren</string>
-    <string name="disable_client_tag_title">Kein Client-Tag zu meinen Ereignissen hinzufügen</string>
-    <string name="disable_client_tag_explainer">Wenn aktiviert, fügt Amethyst deinen veröffentlichten Ereignissen kein NIP-89 Client-Tag hinzu.</string>
+    <string name="add_client_tag_title">Client-Tag zu meinen Ereignissen hinzufügen</string>
+    <string name="add_client_tag_explainer">Wenn aktiviert, fügt Amethyst Ereignissen, die du veröffentlichst, einen NIP-89-Client-Tag hinzu.</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Bei Berichten warnen</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Zeigt eine Warnmeldung an, wenn die Beiträge 5 oder mehr Berichte von den folgenden Beiträgen enthalten</string>
     <string name="report_warning_threshold_title">Warnschwelle für Meldungen</string>
@@ -1138,6 +1129,12 @@ anz der Bedingungen ist erforderlich</string>
     <string name="max_hashtag_limit_explainer">Blendet Beiträge mit mehr Hashtags als dieses Limit aus. Auf 0 setzen zum Deaktivieren</string>
     <string name="hide_community_rules_violations_title">Beiträge ausblenden, die gegen Community-Regeln verstoßen</string>
     <string name="hide_community_rules_violations_explainer">Verwirft Beiträge aus Community-Feeds, wenn die Community ein NIP-9B-Regeldokument veröffentlicht und ein Ereignis daran scheitern würde. Keine Wirkung, wenn eine Community keine strukturierten Regeln hat.</string>
+    <string name="security_section_filtering_preferences">Filtereinstellungen</string>
+    <string name="security_section_blocked_content">Blockierte Inhalte</string>
+    <string name="security_unlimited">∞</string>
+    <string name="security_blocked_users_empty">Du hast noch keine Benutzer blockiert.</string>
+    <string name="security_spamming_users_empty">In dieser Sitzung wurden keine Konten als Spam markiert.</string>
+    <string name="security_hidden_words_empty">Keine versteckten Wörter. Füge unten ein Wort hinzu, um Beiträge auszublenden, die es enthalten.</string>
     <string name="new_reaction_symbol">Neues Reaktionssymbol</string>
     <string name="no_reaction_type_setup_long_press_to_change">Keine Reaktionstypen ausgewählt. Lange drücken, um zu ändern</string>
     <string name="zapraiser">Zap-Sammlung</string>
@@ -1335,6 +1332,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="geohash_exclusive_explainer">Nur Anhänger des Ortes werden es sehen. Deine allgemeinen Anhänger werden es nicht sehen.</string>
     <string name="hashtag_exclusive">Hashtag-exklusive Beitrag</string>
     <string name="hashtag_exclusive_explainer">Nur die Anhänger des Hashtags werden ihn sehen. Deine allgemeinen Follower werden ihn nicht sehen.</string>
+    <string name="external_url_scope">Eine Webseite kommentieren</string>
+    <string name="external_id_scope">Eine externe Ressource kommentieren</string>
     <string name="long_form_reading_minutes">%1$d Min. Lesezeit</string>
     <string name="loading_location">Standort wird geladen</string>
     <string name="lack_location_permissions">Keine Standortberechtigungen</string>
@@ -1672,6 +1671,12 @@ anz der Bedingungen ist erforderlich</string>
     <string name="home_tabs_settings">Startseiten-Tabs</string>
     <string name="home_tabs_settings_description">Wähle, welche Tabs auf der Startseite erscheinen. Wenn nur ein Tab aktiv ist, wird die Tab-Leiste ausgeblendet.</string>
     <string name="home_tab_everything">Alles</string>
+    <string name="profile_ui_settings">Profil-Oberfläche</string>
+    <string name="profile_ui_settings_description">Wähle, welche Abschnitte und Feeds auf den Profilseiten erscheinen. Alle Optionen sind standardmäßig aktiviert.</string>
+    <string name="profile_ui_setting_badges">Profilabzeichen</string>
+    <string name="profile_ui_setting_app_recommendations">App-Empfehlungen</string>
+    <string name="profile_ui_setting_zap_received_feed">Erhaltene-Zaps-Feed</string>
+    <string name="profile_ui_setting_followers_feed">Follower-Feed</string>
     <string name="reactions_settings">Reaktions-Einstellungen</string>
     <string name="reactions_settings_description">Konfigurieren Sie, welche Reaktionsschaltflächen angezeigt werden, ihre Reihenfolge und ob Zähler angezeigt werden sollen.</string>
     <string name="reactions_settings_enabled">Aktiviert</string>
@@ -1923,8 +1928,11 @@ anz der Bedingungen ist erforderlich</string>
     <string name="favorite_dvms_title">Bevorzugte Feed-Algorithmen</string>
     <string name="favorite_dvms_explainer">Feed-Algorithmen, die du mit einem Stern markierst, erscheinen als Filter-Chips im Home-Feed. Öffne Entdecken, um weitere hinzuzufügen.</string>
     <string name="favorite_dvms_empty_headline">Lieblingsalgorithmen anheften</string>
-    <string name="favorite_dvms_empty_subtitle">Tippe auf die Schaltfläche unten, um Algorithmen zu durchsuchen, und markiere die, die du hier behalten möchtest, mit einem Stern.</string>
+    <string name="favorite_dvms_empty_step1">Tippe unten auf \"%1$s\", um Algorithmen zu durchsuchen.</string>
+    <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
+    <string name="favorite_dvms_empty_step2">Tippe auf den %1$s neben einem Feed, um ihn hier zu behalten.</string>
     <string name="favorite_dvms_empty_cta">Feeds hinzufügen</string>
+    <string name="favorite_dvms_add_more">Weitere hinzufügen…</string>
     <string name="dvm_home_status_requesting">Frage %1$s nach einem Feed…</string>
     <string name="dvm_home_status_requesting_all">Frage deine bevorzugten Feed-Algorithmen nach Feeds…</string>
     <string name="dvm_home_status_processing">Feed wird verarbeitet…</string>
@@ -2519,6 +2527,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="ai_writing_setting_description">Verwendet ein KI-Modell auf dem Gerät, um Textkorrekturen und Tonänderungen vorzuschlagen.</string>
     <string name="tracked_broadcasts_setting_title">Verfolgte Übertragungen</string>
     <string name="tracked_broadcasts_setting_description">Verwende den verfolgten Broadcaster beim Senden von Ereignissen. Zeigt Live-Fortschritt und Status pro Relay während der Übertragung.</string>
+    <string name="compose_settings">Editor-Einstellungen</string>
+    <string name="auto_create_drafts_setting_title">Entwürfe automatisch erstellen</string>
+    <string name="auto_create_drafts_setting_description">Speichert automatisch ein Entwurfsereignis, wenn du tippst oder den Editor mit ungesendetem Text verlässt, und sendet es an deine privaten ausgehenden Relays.</string>
     <string name="ai_writing_use_this">Verwenden</string>
     <string name="ai_writing_dismiss">Schließen</string>
     <string name="ai_tone_correct">Korrigieren</string>

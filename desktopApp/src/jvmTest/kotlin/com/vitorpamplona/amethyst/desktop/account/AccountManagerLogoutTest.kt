@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.domain.nip46.SignerConnectionState
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip19Bech32.toNsec
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -44,6 +45,7 @@ class AccountManagerLogoutTest {
     @BeforeTest
     fun setup() {
         storage = mockk(relaxed = true)
+        coEvery { storage.getPrivateKey("account-metadata-key") } returns null
         tempDir = createTempDirectory("acctmgr-logout-test").toFile()
         manager = AccountManager(storage, tempDir)
     }

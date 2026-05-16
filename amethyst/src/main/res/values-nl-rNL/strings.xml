@@ -613,7 +613,6 @@
     <string name="nest_chat_send">Versturen</string>
     <string name="nest_chat_placeholder">Zeg iets…</string>
     <string name="nest_chat_empty">Nog geen berichten. Wees de eerste die chat.</string>
-    <string name="nest_reactions_title">Reageren</string>
     <string name="nest_reactions_button">Reageren</string>
     <string name="nest_edit_title">Ruimte bewerken</string>
     <string name="nest_edit_save">Opslaan</string>
@@ -1079,8 +1078,6 @@
     <string name="warn_when_posts_have_reports_from_your_follows">Waarschuwen bij rapportages van volgers</string>
     <string name="filter_spam_from_strangers_title">Spamfilter</string>
     <string name="filter_spam_from_strangers_explainer">Verbergt identieke berichten van onbekenden die 5 keer of vaker voorkomen</string>
-    <string name="disable_client_tag_title">Geen client-tag toevoegen aan mijn events</string>
-    <string name="disable_client_tag_explainer">Wanneer ingeschakeld voegt Amethyst geen NIP-89 client-tag toe aan events die je publiceert.</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Waarschuwen bij rapportages</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Toont waarschuwing wanneer een bericht 5 of meer rapportages van je volgers heeft</string>
     <string name="show_sensitive_content_title">Gevoelige inhoud tonen</string>
@@ -1859,7 +1856,7 @@
     <string name="favorite_dvms_title">Favoriete feed-algoritmes</string>
     <string name="favorite_dvms_explainer">Feed-algoritmes die je hier hebt gesterd, verschijnen als filterchips op de startfeed. Open Ontdekken om meer toe te voegen.</string>
     <string name="favorite_dvms_empty_headline">Pin je favoriete algoritmes</string>
-    <string name="favorite_dvms_empty_subtitle">Tik op de knop hieronder om algoritmes te bekijken en de gewenste te sterren.</string>
+    <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <string name="favorite_dvms_empty_cta">Feeds toevoegen</string>
     <string name="dvm_home_status_requesting">%1$s vragen voor een feed…</string>
     <string name="dvm_home_status_requesting_all">Je favoriete feed-algoritmes vragen voor feeds…</string>

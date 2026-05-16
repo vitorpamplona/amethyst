@@ -55,6 +55,7 @@ class AccountManagerNip46IsolationTest {
     @BeforeTest
     fun setup() {
         storage = mockk(relaxed = true)
+        coEvery { storage.getPrivateKey("account-metadata-key") } returns null
         tempDir = createTempDirectory("acctmgr-nip46-iso-test").toFile()
         amethystDir = File(tempDir, ".amethyst")
         amethystDir.mkdirs()
@@ -69,16 +70,21 @@ class AccountManagerNip46IsolationTest {
     @Test
     fun bunkerLoadCreatesRemoteSignerInternally() =
         runTest {
-            val validHex = "a".repeat(64)
+            val walletKeyPair = KeyPair()
+            val validHex = walletKeyPair.pubKey.toHexKey()
             val ephemeralKeyPair = KeyPair()
-            File(amethystDir, "bunker_uri.txt").writeText(
-                "bunker://$validHex?relay=wss://relay.nsec.app",
+            val npub = ephemeralKeyPair.pubKey.toNpub()
+            val bunkerUri = "bunker://$validHex?relay=wss://relay.nsec.app"
+
+            manager.accountStorage.saveAccount(
+                com.vitorpamplona.amethyst.commons.model.account.AccountInfo(
+                    npub = npub,
+                    signerType = SignerType.Remote(bunkerUri),
+                ),
             )
-            File(amethystDir, "last_account.txt").writeText(
-                ephemeralKeyPair.pubKey.toNpub(),
-            )
+            manager.accountStorage.setCurrentAccount(npub)
             coEvery {
-                storage.getPrivateKey(AccountManager.LEGACY_BUNKER_EPHEMERAL_KEY_ALIAS)
+                storage.getPrivateKey(AccountManager.bunkerEphemeralKeyAlias(npub))
             } returns ephemeralKeyPair.privKey!!.toHexKey()
 
             val result = manager.loadSavedAccount()
@@ -130,16 +136,21 @@ class AccountManagerNip46IsolationTest {
     @Test
     fun logoutResetsStateAfterBunkerLoad() =
         runTest {
-            val validHex = "a".repeat(64)
+            val walletKeyPair = KeyPair()
+            val validHex = walletKeyPair.pubKey.toHexKey()
             val ephemeralKeyPair = KeyPair()
-            File(amethystDir, "bunker_uri.txt").writeText(
-                "bunker://$validHex?relay=wss://relay.nsec.app",
+            val npub = ephemeralKeyPair.pubKey.toNpub()
+            val bunkerUri = "bunker://$validHex?relay=wss://relay.nsec.app"
+
+            manager.accountStorage.saveAccount(
+                com.vitorpamplona.amethyst.commons.model.account.AccountInfo(
+                    npub = npub,
+                    signerType = SignerType.Remote(bunkerUri),
+                ),
             )
-            File(amethystDir, "last_account.txt").writeText(
-                ephemeralKeyPair.pubKey.toNpub(),
-            )
+            manager.accountStorage.setCurrentAccount(npub)
             coEvery {
-                storage.getPrivateKey(AccountManager.LEGACY_BUNKER_EPHEMERAL_KEY_ALIAS)
+                storage.getPrivateKey(AccountManager.bunkerEphemeralKeyAlias(npub))
             } returns ephemeralKeyPair.privKey!!.toHexKey()
 
             manager.loadSavedAccount()
@@ -155,23 +166,28 @@ class AccountManagerNip46IsolationTest {
     @Test
     fun logoutThenReloadCreatesFreshNip46Client() =
         runTest {
-            val validHex = "a".repeat(64)
+            val walletKeyPair = KeyPair()
+            val validHex = walletKeyPair.pubKey.toHexKey()
             val ephemeralKeyPair = KeyPair()
+            val npub = ephemeralKeyPair.pubKey.toNpub()
             val bunkerUri = "bunker://$validHex?relay=wss://relay.nsec.app"
 
-            fun writeBunkerFiles() {
-                File(amethystDir, "bunker_uri.txt").writeText(bunkerUri)
-                File(amethystDir, "last_account.txt").writeText(
-                    ephemeralKeyPair.pubKey.toNpub(),
+            suspend fun setupBunkerAccount() {
+                manager.accountStorage.saveAccount(
+                    com.vitorpamplona.amethyst.commons.model.account.AccountInfo(
+                        npub = npub,
+                        signerType = SignerType.Remote(bunkerUri),
+                    ),
                 )
+                manager.accountStorage.setCurrentAccount(npub)
             }
 
             coEvery {
-                storage.getPrivateKey(AccountManager.LEGACY_BUNKER_EPHEMERAL_KEY_ALIAS)
+                storage.getPrivateKey(AccountManager.bunkerEphemeralKeyAlias(npub))
             } returns ephemeralKeyPair.privKey!!.toHexKey()
 
             // First load
-            writeBunkerFiles()
+            setupBunkerAccount()
             manager.loadSavedAccount()
             val firstSigner = manager.currentAccount()?.signer
             assertNotNull(firstSigner)
@@ -181,7 +197,7 @@ class AccountManagerNip46IsolationTest {
             assertIs<AccountState.LoggedOut>(manager.accountState.value)
 
             // Second load — should create a fresh NIP-46 client
-            writeBunkerFiles()
+            setupBunkerAccount()
             manager.loadSavedAccount()
             val secondSigner = manager.currentAccount()?.signer
             assertNotNull(secondSigner)

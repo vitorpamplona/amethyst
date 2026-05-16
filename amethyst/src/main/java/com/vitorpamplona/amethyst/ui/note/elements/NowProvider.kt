@@ -24,7 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.State
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.produceState
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.delay
@@ -35,7 +35,7 @@ private const val TICK_INTERVAL_MS = 30_000L
 // every TimeAgo on screen reads from it. Because TimeAgo wraps the formatted string in
 // `derivedStateOf`, the Text only recomposes when the displayed string actually changes
 // (e.g. crossing 1m → 2m) — not on every tick.
-val LocalNowSeconds = compositionLocalOf<State<Long>> { mutableStateOf(TimeUtils.now()) }
+val LocalNowSeconds = compositionLocalOf<State<Long>> { mutableLongStateOf(TimeUtils.now()) }
 
 @Composable
 fun NowProvider(content: @Composable () -> Unit) {

@@ -63,6 +63,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -70,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomMember
 import com.vitorpamplona.amethyst.commons.viewmodels.RoomReaction
+import com.vitorpamplona.amethyst.commons.viewmodels.RoomZap
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -151,6 +153,7 @@ internal fun StageGrid(
     modifier: Modifier = Modifier,
     audioLevels: Map<String, Float> = emptyMap(),
     reactionsByPubkey: Map<String, List<RoomReaction>> = emptyMap(),
+    zapsByPubkey: Map<String, List<RoomZap>> = emptyMap(),
     connectingSpeakers: ImmutableSet<String> = persistentSetOf(),
     onLongPressParticipant: ((String) -> Unit)? = null,
     onTapParticipant: ((String) -> Unit)? = null,
@@ -159,15 +162,12 @@ internal fun StageGrid(
     listenerCount: Int = 0,
     bottomBar: (@Composable () -> Unit)? = null,
 ) {
-    // Float currently-speaking members to the top so the listener can
-    // see who they're hearing without scrolling. sortedBy is stable in
-    // Kotlin — speakers retain relative order among themselves, as do
-    // non-speakers. Memoized on (members, speakingNow) so a 250ms
-    // speaking flip doesn't reallocate when neither input changed.
-    val sortedMembers =
-        remember(members, speakingNow) {
-            members.sortedBy { if (it.pubkey in speakingNow) 0 else 1 }
-        }
+    // Keep members in their stable arrival order. Reordering on the
+    // speaking state made a member jump to the front when they started
+    // talking and slide back ~250ms after they stopped — a constant
+    // shuffle in any active room. The speaking state is already shown
+    // in-place via MemberCell's mic badge / audio-level ring, so no
+    // reordering is needed.
     // Wrap the strip in a tonal card so the active speakers visually
     // live in their own zone, separated from the chat / audience tab
     // below. surfaceContainerLow is a quiet step up from the screen
@@ -218,7 +218,7 @@ internal fun StageGrid(
                     horizontalArrangement = Arrangement.spacedBy(GRID_SPACING),
                     verticalArrangement = Arrangement.spacedBy(GRID_SPACING),
                 ) {
-                    items(items = sortedMembers, key = { it.pubkey }) { member ->
+                    items(items = members, key = { it.pubkey }) { member ->
                         val isSelf = myPubkey != null && member.pubkey == myPubkey
                         MemberCell(
                             member = member,
@@ -228,6 +228,7 @@ internal fun StageGrid(
                             isConnecting = member.pubkey in connectingSpeakers,
                             showMicBadge = true,
                             reactions = reactionsByPubkey[member.pubkey].orEmpty(),
+                            zaps = zapsByPubkey[member.pubkey].orEmpty(),
                             accountViewModel = accountViewModel,
                             onLongPressParticipant = onLongPressParticipant,
                             onTapParticipant = if (isSelf) null else onTapParticipant,
@@ -303,6 +304,8 @@ internal fun AudienceGrid(
     onLongPressParticipant: ((String) -> Unit)? = null,
     onTapParticipant: ((String) -> Unit)? = null,
     myPubkey: String? = null,
+    reactionsByPubkey: Map<String, List<RoomReaction>> = emptyMap(),
+    zapsByPubkey: Map<String, List<RoomZap>> = emptyMap(),
 ) {
     if (members.isEmpty()) {
         Box(
@@ -341,7 +344,8 @@ internal fun AudienceGrid(
                 audioLevel = 0f,
                 isConnecting = false,
                 showMicBadge = false,
-                reactions = emptyList(),
+                reactions = reactionsByPubkey[member.pubkey].orEmpty(),
+                zaps = zapsByPubkey[member.pubkey].orEmpty(),
                 accountViewModel = accountViewModel,
                 onLongPressParticipant = onLongPressParticipant,
                 onTapParticipant = onTapParticipant,
@@ -363,6 +367,7 @@ private fun MemberCell(
     reactions: List<RoomReaction>,
     accountViewModel: AccountViewModel,
     onLongPressParticipant: ((String) -> Unit)?,
+    zaps: List<RoomZap> = emptyList(),
     isSelf: Boolean = false,
     onTapSelf: (() -> Unit)? = null,
     onTapParticipant: ((String) -> Unit)? = null,
@@ -524,8 +529,56 @@ private fun MemberCell(
                 isConnecting = isConnecting,
                 showMicBadge = showMicBadge,
                 isSpeaking = isSpeaking,
-                reactions = reactions,
             )
+            // Reactions overlay sits as a SIBLING of AvatarAndBadges
+            // inside this fixed-size outer Box, NOT inside
+            // AvatarAndBadges itself. AvatarAndBadges' inner Box
+            // wraps content, so any change to the overlay's measured
+            // size (chip appears / animates / disappears) would shift
+            // the inner Box's centre and the badges aligned to its
+            // corners would drift with it. The outer Box has an
+            // explicit `.size(outerBoxSize)`, so adding the overlay
+            // here can't change layout dimensions.
+            //
+            // Anchor the chip's bottom-RIGHT to the avatar's
+            // bottom-right corner (small inward nudge from the outer
+            // Box edge so it clears the ring/glow padding). The chip
+            // extends LEFTWARD inside the cell as content widens
+            // (single emoji vs `×N` count). Earlier `BottomStart`
+            // experiment anchored the chip's left edge at the same
+            // corner — looked great for a fixed-width chip but bled
+            // straight into the next column once a real emoji was
+            // rendered, because the cell was only ~100 dp wide and
+            // the chip extended out 40+ dp to the right.
+            if (reactions.isNotEmpty()) {
+                SpeakerReactionOverlay(
+                    reactions = reactions,
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .offset(x = -ringPadding + 6.dp, y = -ringPadding + 6.dp),
+                )
+            }
+            // Zaps animate just above the avatar, TOP-CENTER — the
+            // only badge-free anchor: the role badge sits TopStart,
+            // the hand-raise badge TopEnd, the mic badge BottomCenter
+            // and the reaction overlay BottomEnd. Anchoring TopEnd
+            // would collide with the hand-raise badge, and now that
+            // zaps float from the *zapper's* avatar (a likely
+            // hand-raiser), that overlap would be common. Center-
+            // anchored so the `⚡ Nsats` chip extends symmetrically
+            // and stays within the cell rather than bleeding into the
+            // neighbouring column. Same outer-Box sibling placement
+            // and layout-stability reasoning as the reaction overlay.
+            if (zaps.isNotEmpty()) {
+                SpeakerZapOverlay(
+                    zaps = zaps,
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .offset(y = ringPadding - 6.dp),
+                )
+            }
         }
         UsernameDisplay(
             baseUser = user,
@@ -548,7 +601,6 @@ private fun AvatarAndBadges(
     isConnecting: Boolean,
     showMicBadge: Boolean,
     isSpeaking: Boolean,
-    reactions: List<RoomReaction>,
 ) {
     Box(contentAlignment = Alignment.Center) {
         ClickableUserPicture(
@@ -591,19 +643,6 @@ private fun AvatarAndBadges(
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
-        // Reactions float over the avatar's bottom-right corner so
-        // a 👏 burst no longer pushes the username down and reflows
-        // neighbouring cells. The mic badge sits at BottomCenter,
-        // so BottomEnd + a small outward offset keeps them clear.
-        if (reactions.isNotEmpty()) {
-            SpeakerReactionOverlay(
-                reactions = reactions,
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomEnd)
-                        .offset(x = 6.dp, y = 6.dp),
-            )
-        }
     }
 }
 
@@ -631,7 +670,7 @@ private fun HandRaiseBadge(modifier: Modifier = Modifier) {
     Box(
         modifier =
             modifier
-                .offset(x = 2.dp, y = (-2).dp + offsetY.dp)
+                .offset { IntOffset(2.dp.roundToPx(), ((-2).dp + offsetY.dp).roundToPx()) }
                 .size(MAX_BADGE_SIZE)
                 .background(MaterialTheme.colorScheme.tertiary, CircleShape),
         contentAlignment = Alignment.Center,

@@ -161,7 +161,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.countHashtags
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasMoreHashtagsThan
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
@@ -548,8 +548,8 @@ class Account(
         return false
     }
 
-    suspend fun updateDisableClientTag(disable: Boolean): Boolean {
-        if (settings.updateDisableClientTag(disable)) {
+    suspend fun updateAddClientTag(add: Boolean): Boolean {
+        if (settings.updateAddClientTag(add)) {
             sendNewAppSpecificData()
             return true
         }
@@ -999,7 +999,15 @@ class Account(
         return true
     }
 
-    fun computeRelayListToBroadcast(event: Event): Set<NormalizedRelayUrl> {
+    fun computeRelayListToBroadcast(event: Event): Set<NormalizedRelayUrl> = computeRelayListToBroadcast(event, mutableSetOf())
+
+    private fun computeRelayListToBroadcast(
+        event: Event,
+        visited: MutableSet<HexKey>,
+    ): Set<NormalizedRelayUrl> {
+        // a-tagged events can form cycles; without this the two recursive descents stack-overflow.
+        if (!visited.add(event.id)) return emptySet()
+
         if (event is GiftWrapEvent) {
             val receiver = event.recipientPubKey()
             return if (receiver != null) {
@@ -1078,7 +1086,7 @@ class Account(
                     }
 
                     linkedNote.event?.let { linkedEvent ->
-                        relayList.addAll(computeRelayListToBroadcast(linkedEvent))
+                        relayList.addAll(computeRelayListToBroadcast(linkedEvent, visited))
                     }
                 }
             }
@@ -1099,7 +1107,7 @@ class Account(
                     }
 
                     linkedNote.event?.let { linkedEvent ->
-                        relayList.addAll(computeRelayListToBroadcast(linkedEvent))
+                        relayList.addAll(computeRelayListToBroadcast(linkedEvent, visited))
                     }
                 }
             }
@@ -3061,7 +3069,7 @@ class Account(
 
     private fun hasExcessiveHashtags(note: Note): Boolean {
         val limit = settings.syncedSettings.security.maxHashtagLimit.value
-        return limit > 0 && (note.event?.countHashtags() ?: 0) > limit
+        return limit > 0 && note.event?.hasMoreHashtagsThan(limit) == true
     }
 
     override fun isAcceptable(note: Note): Boolean {

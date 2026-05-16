@@ -135,10 +135,15 @@ import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.nip34Git.grasp.UserGraspListEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip34Git.state.GitRepositoryStateEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
@@ -2676,7 +2681,10 @@ object LocalCache : ILocalCache, ICacheProvider {
                 nip19.relay.forEach { relayHint ->
                     relayHints.addEvent(nip19.hex, relayHint)
                 }
-                getOrCreateNote(nip19.hex)
+                val note = getOrCreateNote(nip19.hex)
+                if (note.author == null) {
+                    nip19.author?.let { note.author = checkGetOrCreateUser(it) }
+                }
             }
 
             is NEmbed -> {
@@ -3097,7 +3105,27 @@ object LocalCache : ILocalCache, ICacheProvider {
                     consumeRegularEvent(event, relay, wasVerified)
                 }
 
+                is GitPullRequestEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is GitPullRequestUpdateEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is GitStatusEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
                 is GitRepositoryEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is GitRepositoryStateEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is UserGraspListEvent -> {
                     consumeBaseReplaceable(event, relay, wasVerified)
                 }
 

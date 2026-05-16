@@ -440,8 +440,8 @@ class AccountSettings(
         }
     }
 
-    fun updateDisableClientTag(disable: Boolean): Boolean =
-        if (syncedSettings.security.updateDisableClientTag(disable)) {
+    fun updateAddClientTag(add: Boolean): Boolean =
+        if (syncedSettings.security.updateAddClientTag(add)) {
             saveAccountSettings()
             true
         } else {

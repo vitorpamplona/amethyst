@@ -821,15 +821,20 @@ open class Note(
         return author?.reportsOrNull()?.hasReportNewerThan(dayAgo) ?: false
     }
 
-    fun isNewThread(): Boolean =
-        (
+    fun isNewThread(): Boolean {
+        val event = event
+        return (
             event is RepostEvent ||
                 event is GenericRepostEvent ||
                 replyTo == null ||
                 replyTo?.size == 0
         ) &&
+            // A comment scoped to an external identifier (`I` tag) is a reply to that
+            // scope, even though there is no in-cache parent note to populate replyTo.
+            !(event is CommentEvent && event.hasRootScopeIdentifier()) &&
             event !is ChannelMessageEvent &&
             event !is LiveActivitiesChatMessageEvent
+    }
 
     fun hasZapped(loggedIn: User): Boolean = zaps.any { it.key.author == loggedIn }
 

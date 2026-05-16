@@ -659,7 +659,6 @@
     <string name="nest_chat_send">Send</string>
     <string name="nest_chat_placeholder">Say something…</string>
     <string name="nest_chat_empty">No messages yet. Be the first to chat.</string>
-    <string name="nest_reactions_title">React</string>
     <string name="nest_reactions_button">React</string>
     <string name="nest_edit_title">Edit room</string>
     <string name="nest_edit_save">Save</string>
@@ -689,16 +688,8 @@
     <string name="nest_confirm_force_mute_body">Asks %1$s\'s client to mute its mic. Some clients may ignore this command.</string>
     <string name="nest_confirm_force_mute_confirm">Force-mute</string>
     <string name="nest_confirm_cancel">Cancel</string>
-    <string name="nest_toast_action_title">Audio room</string>
-    <string name="nest_toast_follow_sent">Following %1$s.</string>
-    <string name="nest_toast_unfollow_sent">Unfollowed %1$s.</string>
-    <string name="nest_toast_mute_sent">Muted %1$s.</string>
-    <string name="nest_toast_unmute_sent">Unmuted %1$s.</string>
-    <string name="nest_toast_promote_speaker_sent">Promoted %1$s to speaker.</string>
-    <string name="nest_toast_promote_moderator_sent">Promoted %1$s to moderator.</string>
-    <string name="nest_toast_demote_listener_sent">Demoted %1$s to listener.</string>
-    <string name="nest_toast_force_mute_sent">Force-muted %1$s.</string>
-    <string name="nest_toast_kick_sent">Kicked %1$s from the room.</string>
+    <string name="nest_toast_host_action_failed_title">Action failed</string>
+    <string name="nest_toast_host_action_failed_template_null">The action could not be prepared.</string>
     <string name="nest_share_action">Share room</string>
     <string name="nest_minimize">Minimize</string>
     <string name="nest_minimize_description">Minimize to keep listening</string>
@@ -1241,8 +1232,8 @@
 
     <string name="filter_spam_from_strangers_title">Filter spam</string>
     <string name="filter_spam_from_strangers_explainer">Hides posts from strangers that were exactly the same for 5 or more times</string>
-    <string name="disable_client_tag_title">Don\'t add client tag to my events</string>
-    <string name="disable_client_tag_explainer">When enabled, Amethyst will not append a NIP-89 client tag to events you publish.</string>
+    <string name="add_client_tag_title">Add client tag to my events</string>
+    <string name="add_client_tag_explainer">When enabled, Amethyst appends a NIP-89 client tag to events you publish.</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Warn on reports</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Shows a warning message when posts or profiles have reports from your follows</string>
     <string name="report_warning_threshold_title">Report warning threshold</string>
@@ -1483,6 +1474,9 @@
 
     <string name="hashtag_exclusive">Hashtag-exclusive Post</string>
     <string name="hashtag_exclusive_explainer">Only followers of the hashtag will see it. Your general followers won\'t see it.</string>
+
+    <string name="external_url_scope">Comment on a website</string>
+    <string name="external_id_scope">Comment on an external resource</string>
 
     <string name="long_form_reading_minutes">%1$d min read</string>
 
@@ -2073,6 +2067,18 @@
     <string name="git_repository">Git Repository: %1$s</string>
     <string name="git_web_address">Web:</string>
     <string name="git_clone_address">Clone:</string>
+    <string name="git_status_open">Open</string>
+    <string name="git_status_merged">Merged</string>
+    <string name="git_status_closed">Closed</string>
+    <string name="git_status_draft">Draft</string>
+    <string name="git_repo_tab_overview">Overview</string>
+    <string name="git_repo_tab_issues">Issues</string>
+    <string name="git_repo_tab_patches">Patches &amp; PRs</string>
+    <string name="git_repo_section_about">About</string>
+    <string name="git_repo_section_links">Links</string>
+    <string name="git_repo_section_maintainers">Maintainers</string>
+    <string name="git_repo_section_topics">Topics</string>
+    <string name="git_repo_personal_fork">Personal fork</string>
     <string name="nsite_title">Static Website: %1$s</string>
     <string name="nsite_root_site">Root Site</string>
     <string name="nsite_source">Source:</string>
@@ -2186,8 +2192,11 @@
     <string name="favorite_dvms_title">Favorite Feed Algorithms</string>
     <string name="favorite_dvms_explainer">Feed algorithms you star appear here and as filter chips on the Home feed.</string>
     <string name="favorite_dvms_empty_headline">Pin your favorite algorithms</string>
-    <string name="favorite_dvms_empty_subtitle">Tap the button below to browse algorithms and star the ones you want to keep here.</string>
+    <string name="favorite_dvms_empty_step1">Tap \"%1$s\" below to browse algorithms.</string>
+    <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
+    <string name="favorite_dvms_empty_step2">Tap the %1$s next to a feed to keep it here.</string>
     <string name="favorite_dvms_empty_cta">Add some feeds</string>
+    <string name="favorite_dvms_add_more">Add more…</string>
     <string name="dvm_home_status_requesting">Asking %1$s for a feed…</string>
     <string name="dvm_home_status_requesting_all">Asking your favorite feed algorithms for feeds…</string>
     <string name="dvm_home_status_processing">Processing your feed…</string>

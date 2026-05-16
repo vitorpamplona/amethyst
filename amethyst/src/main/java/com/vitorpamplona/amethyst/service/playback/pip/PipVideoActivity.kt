@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.playback.pip
 import android.app.ActivityOptions
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
@@ -68,8 +69,11 @@ class PipVideoActivity : ComponentActivity() {
         }
     }
 
-    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
-        super.onPictureInPictureModeChanged(isInPictureInPictureMode)
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: Configuration,
+    ) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
         if (!isInPictureInPictureMode) {
             // User dismissed PiP (swiped away or expanded).
             finishAndRemoveTask()

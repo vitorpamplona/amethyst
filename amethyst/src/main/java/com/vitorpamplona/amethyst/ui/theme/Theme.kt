@@ -107,6 +107,9 @@ private val LightMediumImportantLink = LightColorPalette.primary.copy(alpha = 0.
 private val DarkGrayText = DarkColorPalette.onSurface.copy(alpha = 0.52f)
 private val LightGrayText = LightColorPalette.onSurface.copy(alpha = 0.52f)
 
+private val DarkOnSurface65 = DarkColorPalette.onSurface.copy(alpha = 0.65f).compositeOver(DarkColorPalette.surface)
+private val LightOnSurface65 = LightColorPalette.onSurface.copy(alpha = 0.65f).compositeOver(LightColorPalette.surface)
+
 private val DarkPlaceholderText = DarkColorPalette.onSurface.copy(alpha = 0.42f)
 private val LightPlaceholderText = LightColorPalette.onSurface.copy(alpha = 0.42f)
 
@@ -436,6 +439,9 @@ val ColorScheme.onBackgroundColorFilter: ColorFilter
 
 val ColorScheme.grayText: Color
     get() = if (isLight) LightGrayText else DarkGrayText
+
+val ColorScheme.onSurface65: Color
+    get() = if (isLight) LightOnSurface65 else DarkOnSurface65
 
 val ColorScheme.subtleBorder: Color
     get() = if (isLight) LightSubtleBorder else DarkSubtleBorder

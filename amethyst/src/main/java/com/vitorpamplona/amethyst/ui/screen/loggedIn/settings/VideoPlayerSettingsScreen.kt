@@ -261,18 +261,7 @@ private fun VideoPlayerButtonItemCard(
                         scaleX = 1.02f
                         scaleY = 1.02f
                     }
-                }.padding(vertical = 8.dp, horizontal = Size20dp)
-                .pointerInput(Unit) {
-                    detectDragGestures(
-                        onDragStart = { onDragStart() },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            onDrag(dragAmount.y)
-                        },
-                        onDragEnd = { onDragEnd() },
-                        onDragCancel = { onDragCancel() },
-                    )
-                },
+                }.padding(vertical = 8.dp, horizontal = Size20dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -296,7 +285,20 @@ private fun VideoPlayerButtonItemCard(
             }
 
             Box(
-                modifier = Modifier.size(32.dp),
+                modifier =
+                    Modifier
+                        .size(32.dp)
+                        .pointerInput(Unit) {
+                            detectDragGestures(
+                                onDragStart = { onDragStart() },
+                                onDrag = { change, dragAmount ->
+                                    change.consume()
+                                    onDrag(dragAmount.y)
+                                },
+                                onDragEnd = { onDragEnd() },
+                                onDragCancel = { onDragCancel() },
+                            )
+                        },
                 contentAlignment = Alignment.CenterEnd,
             ) {
                 Icon(

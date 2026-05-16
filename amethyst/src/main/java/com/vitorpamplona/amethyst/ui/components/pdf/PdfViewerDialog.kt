@@ -60,6 +60,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.graphics.createBitmap
 import coil3.disk.DiskCache
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -398,7 +399,7 @@ private suspend fun renderPageCatching(
                         val (width, height) = cappedRenderSize(page.width, page.height, maxDim)
                         // PdfRenderer requires ARGB_8888 bitmaps — RGB_565 is silently
                         // rejected and produces blank output.
-                        val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                        val bmp = createBitmap(width, height)
                         bmp.eraseColor(android.graphics.Color.WHITE)
                         page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                         bmp

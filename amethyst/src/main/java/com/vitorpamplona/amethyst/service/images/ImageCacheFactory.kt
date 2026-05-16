@@ -24,14 +24,22 @@ import android.content.Context
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import com.vitorpamplona.amethyst.service.safeCacheDir
+import kotlinx.coroutines.CoroutineScope
+import okio.FileSystem
 import okio.Path.Companion.toOkioPath
 
 class ImageCacheFactory {
     companion object {
-        fun newDisk(app: Context): DiskCache =
+        fun newDisk(
+            app: Context,
+            scope: CoroutineScope,
+        ): DiskCache =
             DiskCache
                 .Builder()
                 .directory(app.safeCacheDir().resolve("image_cache").toOkioPath())
+                // Defers Coil's inline eviction unlink() onto [scope] so a
+                // saturated cache doesn't stall feed-scroll IO on the write path.
+                .fileSystem(DeferredDeleteFileSystem(FileSystem.SYSTEM, scope))
                 .maxSizePercent(0.2)
                 .maximumMaxSizeBytes(1024 * 1024 * 1024) // 1GB
                 .build()

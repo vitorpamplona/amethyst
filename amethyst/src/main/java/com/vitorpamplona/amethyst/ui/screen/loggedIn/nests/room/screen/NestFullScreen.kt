@@ -47,6 +47,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -64,13 +65,13 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.viewmodels.NestUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.ParticipantGrid
+import com.vitorpamplona.amethyst.ui.navigation.navs.BouncingIntentNav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.chat.NestChatPanel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.edit.EditNestSheet
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.edit.EditNestViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.participants.ParticipantHostActionsSheet
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.reactions.RoomReactionPickerSheet
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.stage.AudienceGrid
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.stage.HandRaiseQueueSection
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.stage.StageGrid
@@ -120,7 +121,6 @@ internal fun NestFullScreen(
     var showEditSheet by rememberSaveable { mutableStateOf(false) }
     var showHostMenu by rememberSaveable { mutableStateOf(false) }
     var showHostLeaveConfirm by rememberSaveable { mutableStateOf(false) }
-    var showReactionPicker by rememberSaveable { mutableStateOf(false) }
     var hostMenuTarget by rememberSaveable { mutableStateOf<String?>(null) }
     // Summary is collapsed by default; tapping the top-bar title
     // toggles it so the user can preview the room description without
@@ -130,15 +130,21 @@ internal fun NestFullScreen(
     // Tab selection survives configuration changes and PIP transitions.
     // Stored as ordinal so rememberSaveable can persist it without a
     // custom Saver.
-    var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
+    var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
 
     val isHost = accountViewModel.account.signer.pubKey == event.pubKey
     val myPubkey = accountViewModel.account.signer.pubKey
     val leaveScope = rememberCoroutineScope()
     val topBarContext = LocalContext.current
+    // BouncingIntentNav handles the few routes the zap button can reach
+    // (UpdateZapAmount, ManualZapSplitPayment) by bouncing through
+    // MainActivity — same mechanism the NestChatPanel uses for tap-on-
+    // mention nav. Routes that don't map to a `nostr:` URI are no-ops.
+    val actionBarNav = remember(topBarContext, leaveScope) { BouncingIntentNav(topBarContext, leaveScope) }
 
     val presences by viewModel.presences.collectAsState()
     val reactionsByPubkey by viewModel.recentReactions.collectAsState()
+    val zapsByPubkey by viewModel.recentZaps.collectAsState()
     val speakerCatalogs by viewModel.speakerCatalogs.collectAsState()
     val audioLevels by viewModel.audioLevels.collectAsState()
 
@@ -235,6 +241,7 @@ internal fun NestFullScreen(
                 audioLevels = audioLevels,
                 accountViewModel = accountViewModel,
                 reactionsByPubkey = reactionsByPubkey,
+                zapsByPubkey = zapsByPubkey,
                 connectingSpeakers = ui.connectingSpeakers,
                 onLongPressParticipant = onLongPressParticipant,
                 // Tap on a stage avatar opens the same per-participant
@@ -268,7 +275,9 @@ internal fun NestFullScreen(
                 isOnStage = isOnStageMe,
                 handRaised = handRaised,
                 onHandRaisedChange = onHandRaisedChange,
-                onShowReactionPicker = { showReactionPicker = true },
+                roomNote = roomNote,
+                accountViewModel = accountViewModel,
+                nav = actionBarNav,
                 onLeave = {
                     if (isHost) {
                         showHostLeaveConfirm = true
@@ -310,6 +319,8 @@ internal fun NestFullScreen(
                         onLongPressParticipant = onLongPressParticipant,
                         onTapParticipant = onLongPressParticipant,
                         myPubkey = myPubkey,
+                        reactionsByPubkey = reactionsByPubkey,
+                        zapsByPubkey = zapsByPubkey,
                         modifier =
                             Modifier
                                 .weight(1f)
@@ -346,13 +357,6 @@ internal fun NestFullScreen(
             nestViewModel = viewModel,
             onDismiss = { hostMenuTarget = null },
             catalog = speakerCatalogs[target],
-        )
-    }
-
-    if (showReactionPicker) {
-        RoomReactionPickerSheet(
-            onPick = { emoji -> accountViewModel.reactToOrDelete(roomNote, emoji) },
-            onDismiss = { showReactionPicker = false },
         )
     }
 

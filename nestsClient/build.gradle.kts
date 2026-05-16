@@ -164,6 +164,10 @@ val interopInstallMoqRelay by tasks.registering(Exec::class) {
         "--root", hangInteropCacheDir.asFile.absolutePath,
         "--locked",
     )
+    // See `interopBuildSidecars` — a transitive `*-sys` crate (rustls'
+    // aws-lc-sys) builds a C library via CMake whose CMakeLists.txt
+    // predates CMake 4's minimum-version floor.
+    environment("CMAKE_POLICY_VERSION_MINIMUM", "3.5")
     val installed =
         hangInteropCacheDir.dir("bin").file(
             if (org.gradle.internal.os.OperatingSystem.current().isWindows) "moq-relay.exe" else "moq-relay",
@@ -184,6 +188,9 @@ val interopInstallMoqTokenCli by tasks.registering(Exec::class) {
         "--root", hangInteropCacheDir.asFile.absolutePath,
         "--locked",
     )
+    // See `interopBuildSidecars` — CMake 4 vs. a stale bundled
+    // CMakeLists.txt in a transitive `*-sys` crate.
+    environment("CMAKE_POLICY_VERSION_MINIMUM", "3.5")
     val installed =
         hangInteropCacheDir.dir("bin").file(
             if (org.gradle.internal.os.OperatingSystem.current().isWindows) "moq-token-cli.exe" else "moq-token-cli",
@@ -199,6 +206,13 @@ val interopBuildSidecars by tasks.registering(Exec::class) {
     group = "interop"
     workingDir = hangInteropDir.asFile
     commandLine("cargo", "build", "--release")
+    // `audiopus_sys` bundles libopus, whose CMakeLists.txt declares
+    // `cmake_minimum_required(VERSION <3.5)`. CMake 4.x removed
+    // compatibility with that, so the build script panics. CMake reads
+    // this env var (added in 3.31) as the floor policy version, which
+    // lets the stale libopus config run unchanged. Harmless on older
+    // CMake that predates CMake 4's removal.
+    environment("CMAKE_POLICY_VERSION_MINIMUM", "3.5")
     // Track only manifests + sources; the `target/` subtree is the
     // output, including it as an input would mark the task always
     // out-of-date.
@@ -227,6 +241,21 @@ tasks.withType<Test>().configureEach {
     val cargoBin = hangInteropCacheDir.dir("bin").asFile
     systemProperty("nestsHangInteropSidecarsDir", sidecarRelease.absolutePath)
     systemProperty("nestsHangInteropCargoBinDir", cargoBin.absolutePath)
+    // `club.minnced:opus-java` 1.1.1 ships only an x86_64 darwin dylib,
+    // so its in-jar loader reports unsupported on Apple Silicon. Hand
+    // JNA an extra search directory so a Homebrew-installed arm64
+    // libopus (`brew install opus`, /opt/homebrew/opt/opus/lib) wins
+    // over the bundled binary. Append rather than replace to preserve
+    // any caller-supplied path; the existing system search still covers
+    // other platforms. Silently skipped if Homebrew isn't installed —
+    // tests on Intel mac / linux take the in-jar path unchanged.
+    val brewOpusLib = file("/opt/homebrew/opt/opus/lib")
+    if (brewOpusLib.exists()) {
+        val existing = System.getProperty("jna.library.path")
+        val combined =
+            if (existing.isNullOrEmpty()) brewOpusLib.absolutePath else "$existing:${brewOpusLib.absolutePath}"
+        systemProperty("jna.library.path", combined)
+    }
     // Per-method moq-relay trace log dir for the routing-race
     // investigation (plan 2026-05-07-moq-relay-routing-investigation.md).
     // Off by default; opt in via -DnestsHangInteropTraceRelay=true so a

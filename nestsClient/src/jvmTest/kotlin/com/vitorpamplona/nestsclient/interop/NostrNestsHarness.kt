@@ -86,9 +86,17 @@ class NostrNestsHarness private constructor(
         private fun isExternal(): Boolean = System.getProperty(EXTERNAL_PROPERTY) == "true"
 
         /**
-         * Pin the nostrnests revision to a known-good SHA. Bump deliberately
-         * — drift on `main` should not silently change interop expectations.
-         * Override at runtime via `-DnestsInteropRev=<sha-or-branch>`.
+         * The `nostrnests/nests` revision the harness checks out — this is
+         * the repo that supplies the `moq-auth` token-minting sidecar.
+         *
+         * NOT currently pinned: it tracks `main`. That's a known drift risk
+         * — `moq-auth`'s JWT format must stay compatible with the
+         * `moq-relay` version pinned in [DEFAULT_MOQ_REVISION]
+         * (`moq-relay-v0.10.10`). If nostrnests advances `moq-auth` past
+         * what 0.10.10 accepts, the pair desyncs again and the relay
+         * rejects every connection with `failed to decode the token`. Pin
+         * this to a SHA known-compatible with 0.10.10 once one is
+         * identified. Override at runtime via `-DnestsInteropRev=<sha-or-branch>`.
          */
         const val DEFAULT_REVISION = "main"
 
@@ -99,12 +107,23 @@ class NostrNestsHarness private constructor(
         private const val MOQ_REPO_URL = "https://github.com/kixelated/moq.git"
 
         /**
-         * Pin the upstream `kixelated/moq` revision so test runs are
-         * reproducible even if upstream main changes a wire-level detail
-         * we depend on (e.g. moq-lite framing). Override at runtime via
-         * `-DnestsInteropMoqRev=<sha-or-branch>`.
+         * Pin the upstream `kixelated/moq` revision the harness builds
+         * `moq-relay` from. This MUST match the version nostrnests's
+         * `moq-auth` sidecar mints tokens for — otherwise the relay
+         * rejects every connection with `failed to decode the token`
+         * (the JWKS / JWT-signature handling drifted across releases).
+         *
+         * nostrnests pins `moq-relay --version 0.10.10` in their own
+         * `nests-relay/Dockerfile.relay`, so 0.10.10 is the version their
+         * `moq-auth` is written against. The `docker-compose-moq.yml` this
+         * harness uses builds `moq-relay` from `./moq` source instead of
+         * `cargo install`ing it, so we have to check out the matching tag
+         * ourselves. Plain `main` builds whatever is latest (0.10.25+),
+         * which moq-auth's tokens no longer satisfy.
+         *
+         * Override at runtime via `-DnestsInteropMoqRev=<sha-or-tag>`.
          */
-        const val DEFAULT_MOQ_REVISION = "main"
+        const val DEFAULT_MOQ_REVISION = "moq-relay-v0.10.10"
 
         private const val COMPOSE_FILE = "docker-compose-moq.yml"
         private const val PORT_READY_TIMEOUT_MS = 90_000L
@@ -176,7 +195,6 @@ class NostrNestsHarness private constructor(
             runDocker(workDir, "up", "-d")
             try {
                 waitForPort("127.0.0.1", AUTH_HOST_PORT, PORT_READY_TIMEOUT_MS)
-                waitForPort("127.0.0.1", MOQ_HOST_PORT, PORT_READY_TIMEOUT_MS)
                 // moq-auth's Node runtime opens the listen socket
                 // before its handlers are wired, so the first POST that
                 // arrives in the gap can RST-on-write. Wait for /health
@@ -184,6 +202,19 @@ class NostrNestsHarness private constructor(
                 // pipeline is live and avoids the SocketException that
                 // otherwise hits the first test of the second class.
                 waitForHealth("http://127.0.0.1:$AUTH_HOST_PORT/health", PORT_READY_TIMEOUT_MS)
+                // moq-relay fetches its JWK set from moq-auth at startup
+                // and exits — with no retry — if that GET is refused.
+                // The compose file declares no `depends_on`, so on a cold
+                // `up -d` moq-relay races moq-auth's Node boot, loses,
+                // logs "failed to GET JWKS … Connection refused", and
+                // dies; every later QUIC handshake then fails with
+                // "read loop exited (socket closed or peer closed)".
+                // Now that moq-auth is confirmed healthy, (re)start
+                // moq-relay: this is a no-op if it survived the race and
+                // a clean restart if it didn't, so it always comes up
+                // against a live auth sidecar.
+                runDocker(workDir, "up", "-d", "moq-relay")
+                waitForPort("127.0.0.1", MOQ_HOST_PORT, PORT_READY_TIMEOUT_MS)
             } catch (t: Throwable) {
                 // Capture container state + recent logs BEFORE tearing
                 // down so the failure message is actually actionable.
@@ -205,7 +236,18 @@ class NostrNestsHarness private constructor(
                 // The path under this base is the namespace literal (per
                 // moq-rs `claims.root` matching); the `:nestsClient` connect
                 // helpers append `/<namespace>?jwt=<token>` themselves.
-                moqEndpoint = "https://127.0.0.1:$MOQ_HOST_PORT/",
+                //
+                // Host MUST be `localhost`, not `127.0.0.1`: the QUIC client
+                // sends the host as TLS SNI, RFC 6066 §3 forbids IP literals
+                // there, and a strict relay (rustls) rejects an IP-literal SNI
+                // and then has no SNI to select its dev cert on — the handshake
+                // stalls. `localhost` is a valid hostname and matches the dev
+                // cert moq-relay generates. The UDP socket itself still goes to
+                // IPv4 loopback: QuicWebTransportFactory resolves the host with
+                // an IPv4 preference (`localhost` often resolves to ::1 first,
+                // and Docker's IPv6 UDP forwarding blackholes), while keeping
+                // `localhost` as the SNI name.
+                moqEndpoint = "https://localhost:$MOQ_HOST_PORT/",
             )
         }
 
@@ -242,7 +284,9 @@ class NostrNestsHarness private constructor(
             return NostrNestsHarness(
                 workDir = null,
                 authBaseUrl = "http://127.0.0.1:$AUTH_HOST_PORT",
-                moqEndpoint = "https://127.0.0.1:$MOQ_HOST_PORT/",
+                // `localhost`, not `127.0.0.1` — see the doStart() return for
+                // why an IP-literal host breaks the TLS SNI / cert selection.
+                moqEndpoint = "https://localhost:$MOQ_HOST_PORT/",
             )
         }
 
@@ -305,8 +349,10 @@ class NostrNestsHarness private constructor(
             if (!moqDir.exists()) {
                 runProcess(nestsRepo, "git", "clone", MOQ_REPO_URL, "moq")
             }
-            // Reproducible runs: pin to the requested revision.
-            runProcess(moqDir, "git", "fetch", "origin", "--quiet")
+            // Reproducible runs: pin to the requested revision. `--tags` so a
+            // release-tag pin like `moq-relay-v0.10.10` is checkout-able even
+            // on a repo first cloned before that tag existed.
+            runProcess(moqDir, "git", "fetch", "origin", "--tags", "--quiet")
             runProcess(moqDir, "git", "checkout", "--quiet", rev)
         }
 

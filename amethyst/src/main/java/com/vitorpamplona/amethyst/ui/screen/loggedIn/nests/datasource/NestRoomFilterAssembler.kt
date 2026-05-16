@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 
 /**
  * Per-room state for every wire subscription scoped to a single
@@ -56,11 +57,11 @@ class NestRoomQueryState(
  * Single per-room sub-assembler. Issues two [Filter]s per outbox
  * relay on every key update:
  *
- *   1. `kinds=[1311, 10312, 7]`, `#a=[roomATag]` — the chat, presence
- *      and reaction streams the room consumes. Bundling them into
- *      one Filter is safe: a single Filter requires (kind ∈ kinds)
- *      AND (every tag dimension matches), and these three streams
- *      share the same `#a` gate.
+ *   1. `kinds=[1311, 10312, 7, 9735]`, `#a=[roomATag]` — the chat,
+ *      presence, reaction and zap-receipt streams the room consumes.
+ *      Bundling them into one Filter is safe: a single Filter
+ *      requires (kind ∈ kinds) AND (every tag dimension matches),
+ *      and these streams all share the same `#a` gate.
  *
  *   2. `kinds=[4312]`, `#a=[roomATag]`, `#p=[localPubkey]` — admin
  *      commands. Stays separate from (1) because the additional
@@ -94,6 +95,7 @@ class NestRoomFilterSubAssembler(
                                     LiveActivitiesChatMessageEvent.KIND,
                                     MeetingRoomPresenceEvent.KIND,
                                     ReactionEvent.KIND,
+                                    LnZapEvent.KIND,
                                 ),
                             tags = mapOf("a" to listOf(key.note.idHex)),
                             since = since?.get(relay)?.time,

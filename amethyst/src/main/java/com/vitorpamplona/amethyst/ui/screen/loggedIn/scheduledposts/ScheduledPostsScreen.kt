@@ -46,6 +46,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -98,6 +99,7 @@ import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
 import com.vitorpamplona.amethyst.ui.components.SwipeToDeleteWithConfirmation
 import com.vitorpamplona.amethyst.ui.components.util.setText
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.ShorterTopAppBar
@@ -130,6 +132,8 @@ fun ScheduledPostsScreen(
     val totalActive by viewModel.totalActive.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var expandedId by remember { mutableStateOf<String?>(null) }
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
 
     // Tick once per minute so relative-time strings ("publishes in 2h 13m")
     // refresh on a long-open list instead of being frozen at first composition.
@@ -183,9 +187,22 @@ fun ScheduledPostsScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { nav.popBack() }) { ArrowBackIcon() }
+                    // Suppress the back arrow when this is the bottom of the back stack
+                    // (i.e. the user landed here via the bottom nav, which clears the stack).
+                    if (nav.canPop()) {
+                        IconButton(onClick = { nav.popBack() }) { ArrowBackIcon() }
+                    }
                 },
             )
+        },
+        bottomBar = {
+            AppBottomBar(Route.ScheduledPosts, nav, accountViewModel) { route ->
+                if (route == Route.ScheduledPosts) {
+                    scope.launch { listState.animateScrollToItem(0) }
+                } else {
+                    nav.navBottomBar(route)
+                }
+            }
         },
     ) { padding ->
         if (groups.isEmpty()) {
@@ -194,6 +211,7 @@ fun ScheduledPostsScreen(
             val today = remember(nowSec) { LocalDate.now(ZoneId.systemDefault()) }
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding),
+                state = listState,
                 contentPadding = PaddingValues(vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {

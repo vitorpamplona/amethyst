@@ -46,8 +46,7 @@ amethyst/
 │       └── jvmAndroid/    # Opus encode/decode, AudioRecord/AudioTrack
 ├── desktopApp/     # Desktop JVM application (layouts, navigation)
 ├── amethyst/       # Android app (layouts, navigation)
-├── cli/            # Amy — non-interactive CLI (JVM only, no Compose)
-└── ammolite/       # Support module (unused)
+└── cli/            # Amy — non-interactive CLI (JVM only, no Compose)
 ```
 
 **Sharing Philosophy:**
@@ -98,6 +97,28 @@ Specialized skills provide domain expertise with bundled resources and patterns:
 | `amy-expert` | Amy CLI (`cli/` module) | Adding `amy <verb>` commands, JSON output contract, extracting logic from `amethyst/` into `commons/` so CLI can call it |
 | `find-missing-translations` | Utility | Extract untranslated Android strings |
 | `find-non-lambda-logs` | Utility | Audit Log calls for lambda overloads |
+
+### Technique-layer skills (Compose / Kotlin best practices)
+
+These are general Compose/Kotlin decision-framework skills (vendored from
+`chrisbanes/skills`). The skills above are **codebase-oriented** ("where is X in
+Amethyst, what pattern do we use"); these are **technique-oriented** ("what is
+the correct Compose/Kotlin design here"). They complement — not replace — the
+codebase skills: e.g. `compose-expert` tells you where shared composables live,
+`compose-slot-api-pattern` tells you how to shape their public API.
+
+| Skill | Expertise | Complements |
+|-------|-----------|-------------|
+| `compose-recomposition-performance` | Router: which recomposition axis is the problem | `compose-expert` |
+| `compose-stability-diagnostics` | Compiler reports, strong skipping, `ImmutableList` at UI boundaries | `compose-expert`, `kotlin-expert` |
+| `compose-state-deferred-reads` | Phase-aware state reads, block-form modifiers, provider lambdas | `compose-expert` |
+| `compose-slot-api-pattern` | `@Composable` slot design for reusable components | `compose-expert` |
+| `compose-modifier-and-layout-style` | `modifier` parameter conventions, chain construction, conditional hoisting | `compose-expert` |
+| `compose-side-effects` | `LaunchedEffect`/`DisposableEffect`/`SideEffect`, keys, `rememberUpdatedState` | `compose-expert` |
+| `compose-state-holder-ui-split` | State-holder vs plain-UI composable split | `compose-expert`, `feed-patterns` |
+| `kotlin-flow-state-event-modeling` | StateFlow/SharedFlow/Channel choice, sentinels, `stateIn`, `update {}` | `kotlin-expert` |
+| `kotlin-coroutines-structured-concurrency` | Stored-scope anti-pattern, `suspend` boundaries, `runBlocking`, cancellation | `kotlin-coroutines` |
+| `kotlin-types-value-class` | `@JvmInline value class` vs `data class`, Compose stability | `kotlin-expert` |
 
 ## Workflow
 
@@ -291,6 +312,16 @@ After completing any task that modifies Kotlin files, always run:
 ./gradlew spotlessApply
 ```
 Do this before considering the task complete.
+
+### Kotlin Style
+
+- **Never write fully-qualified class names inline in function bodies.** Add an
+  `import` for the class and reference it by its simple name. Write
+  `Event` (with `import com.vitorpamplona.quartz...Event`), not
+  `com.vitorpamplona.quartz...Event` in the middle of code.
+- The only acceptable inline fully-qualified names are: a genuine name
+  collision (prefer `import ... as Alias` instead), or where the language
+  requires it. Comments, KDoc, and string literals are exempt.
 
 ### Navigation Shell
 - **Desktop**: Sidebar + main content area

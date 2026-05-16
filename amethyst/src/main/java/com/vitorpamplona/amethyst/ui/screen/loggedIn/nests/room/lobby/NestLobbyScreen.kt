@@ -48,7 +48,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -435,7 +435,7 @@ private fun RoomHeader(
  */
 @Composable
 private fun CachedListenerCount(roomATag: String) {
-    var count by remember(roomATag) { mutableStateOf(0) }
+    var count by remember(roomATag) { mutableIntStateOf(0) }
     LaunchedEffect(roomATag) {
         val filter =
             Filter(

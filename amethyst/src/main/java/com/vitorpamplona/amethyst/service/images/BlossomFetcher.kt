@@ -27,8 +27,8 @@ import coil3.annotation.ExperimentalCoilApi
 import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
 import coil3.network.CacheStrategy
-import coil3.network.ConcurrentRequestStrategy
 import coil3.network.ConnectivityChecker
+import coil3.network.DeDupeConcurrentRequestStrategy
 import coil3.network.NetworkFetcher
 import coil3.network.okhttp.asNetworkClient
 import coil3.request.Options
@@ -74,7 +74,7 @@ class BlossomFetcher(
                     diskCache = lazy { imageLoader.diskCache },
                     cacheStrategy = lazy { CacheStrategy.DEFAULT },
                     connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
-                    concurrentRequestStrategy = lazy { ConcurrentRequestStrategy.UNCOORDINATED },
+                    concurrentRequestStrategy = lazy { DeDupeConcurrentRequestStrategy() },
                 )
             }
         }

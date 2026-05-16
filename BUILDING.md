@@ -27,7 +27,8 @@ Platform-specific:
 
 - **macOS**: Xcode Command Line Tools (`xcode-select --install`)
 - **Windows**: WiX Toolset 3.x on PATH (for MSI). `winget install WiXToolset.WiXToolset`
-- **Linux (all)**: nothing extra for `.deb`; `rpm` + `fakeroot` for `.rpm`; `linuxdeploy` for AppImage
+- **Linux (all)**: nothing extra for `.deb`; `rpm` + `fakeroot` for `.rpm`;
+  `appimagetool` + `desktop-file-utils` for AppImage
 
 Install Linux RPM tooling:
 
@@ -39,12 +40,15 @@ sudo apt-get install -y rpm fakeroot
 sudo dnf install -y rpm-build
 ```
 
-Install linuxdeploy locally (CI fetches its own — SHA-verified):
+Install appimagetool locally (CI fetches its own — SHA-verified):
 
 ```bash
-curl -fsSL -o packaging/appimage/linuxdeploy-x86_64.AppImage \
-  https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20240109-1/linuxdeploy-x86_64.AppImage
-chmod +x packaging/appimage/linuxdeploy-x86_64.AppImage
+# Debian/Ubuntu — appimagetool calls desktop-file-validate on the .desktop entry
+sudo apt-get install -y desktop-file-utils
+
+curl -fsSL -o desktopApp/packaging/appimage/appimagetool-x86_64.AppImage \
+  https://github.com/AppImage/appimagetool/releases/download/1.9.0/appimagetool-x86_64.AppImage
+chmod +x desktopApp/packaging/appimage/appimagetool-x86_64.AppImage
 ```
 
 ---
@@ -107,11 +111,11 @@ amethyst-desktop-<version>-<family>-<arch>.<ext>
 
 Where:
 
-| Field | Values |
-|---|---|
-| `<version>` | Tag stripped of leading `v` (e.g. `1.08.0`) |
-| `<family>` | `macos`, `windows`, `linux` |
-| `<arch>` | `x64`, `arm64` |
+| Field | Values                                                  |
+|---|---------------------------------------------------------|
+| `<version>` | Tag stripped of leading `v` (e.g. `1.09.2`)             |
+| `<family>` | `macos`, `windows`, `linux`                             |
+| `<arch>` | `x64`, `arm64`                                          |
 | `<ext>` | `dmg`, `msi`, `zip`, `deb`, `rpm`, `AppImage`, `tar.gz` |
 
 Single source of truth: [`scripts/asset-name.sh`](scripts/asset-name.sh).
@@ -120,10 +124,10 @@ any change is a breaking contract.
 
 Examples:
 
-- `amethyst-desktop-1.08.0-macos-x64.dmg`
-- `amethyst-desktop-1.08.0-macos-arm64.dmg`
-- `amethyst-desktop-1.08.0-windows-x64.msi`
-- `amethyst-desktop-1.08.0-linux-x64.AppImage`
+- `amethyst-desktop-1.09.2-macos-x64.dmg`
+- `amethyst-desktop-1.09.2-macos-arm64.dmg`
+- `amethyst-desktop-1.09.2-windows-x64.msi`
+- `amethyst-desktop-1.09.2-linux-x64.AppImage`
 
 ---
 
@@ -219,8 +223,8 @@ or equivalent issue tracker. On rotation, paste new token and run
 
 ```bash
 brew bump-cask-pr amethyst-nostr \
-  --version 1.08.0 \
-  --url "https://github.com/vitorpamplona/amethyst/releases/download/v1.08.0/amethyst-desktop-1.08.0-macos-arm64.dmg"
+  --version 1.09.2 \
+  --url "https://github.com/vitorpamplona/amethyst/releases/download/v1.09.2/amethyst-desktop-1.09.2-macos-arm64.dmg"
 ```
 
 The cask filename is `amethyst-nostr` (not `amethyst` — that's taken by a
@@ -231,7 +235,7 @@ auto-submits new version bumps on each stable release.
 
 ```bash
 wingetcreate new \
-  https://github.com/vitorpamplona/amethyst/releases/download/v1.08.0/amethyst-desktop-1.08.0-windows-x64.msi
+  https://github.com/vitorpamplona/amethyst/releases/download/v1.09.2/amethyst-desktop-1.09.2-windows-x64.msi
 ```
 
 Set `PackageIdentifier = VitorPamplona.Amethyst`. After the first manifest is

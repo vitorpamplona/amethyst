@@ -34,6 +34,8 @@ fun potentialRelaysToFindEvent(note: Note): Set<NormalizedRelayUrl> {
 
     set.addAll(LocalCache.relayHints.hintsForEvent(note.idHex))
 
+    note.author?.outboxRelays()?.let { set.addAll(it) }
+
     LocalCache.getAnyChannel(note)?.relays()?.let { set.addAll(it) }
 
     note.replyTo?.forEach { parentNote ->

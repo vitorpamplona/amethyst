@@ -814,6 +814,7 @@
     <string name="torrent_download">ดาวน์โหลด</string>
     <string name="torrent_failure">ไม่สามารถเปิดไฟล์ได้</string>
     <string name="select_list_to_filter">แลือกลิสต์เพื่อโชว์</string>
+    <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <string name="temporary_account">ออกจากระบบ</string>
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->

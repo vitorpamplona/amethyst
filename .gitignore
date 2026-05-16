@@ -167,9 +167,8 @@ desktopApp/src/jvmMain/appResources/macos/
 desktopApp/src/jvmMain/appResources/windows/
 
 # CI-fetched AppImage tooling (downloaded by create-release workflow; not committed)
-packaging/appimage/linuxdeploy-x86_64.AppImage
-packaging/appimage/linuxdeploy-extracted/
-packaging/appimage/squashfs-root/
+desktopApp/packaging/appimage/appimagetool-x86_64.AppImage
+desktopApp/packaging/appimage/squashfs-root/
 
 # Git worktrees
 .worktrees/

@@ -38,8 +38,29 @@ fun TagArray.hashtags() = this.mapNotNull(HashtagTag::parse)
 
 fun TagArray.countHashtags() = this.count(HashtagTag::isTagged)
 
+fun TagArray.hasMoreHashtagsThan(limit: Int): Boolean {
+    val count = this.count(HashtagTag::isTagged)
+    return count > limit && this.countUnique(count, HashtagTag::parseLowercase) > limit
+}
+
 fun TagArray.isTaggedHash(hashtag: String) = this.isTagged(HashtagTag.TAG_NAME, hashtag, true)
 
 fun TagArray.isTaggedHashes(hashtags: Set<String>) = this.isAnyLowercaseTagged(HashtagTag.TAG_NAME, hashtags)
 
 fun TagArray.firstIsTaggedHashes(hashtags: Set<String>) = this.firstAnyLowercaseTaggedValue(HashtagTag.TAG_NAME, hashtags)
+
+public inline fun <T, U> Array<out T>.countUnique(
+    size: Int,
+    transform: (T) -> U?,
+): Int {
+    // Pre-allocate hash set to avoid frequent resizing for larger arrays
+    val seen = HashSet<U>(size)
+    var count = 0
+    for (element in this) {
+        val value = transform(element)
+        if (value != null && seen.add(value)) {
+            ++count
+        }
+    }
+    return count
+}

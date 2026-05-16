@@ -313,7 +313,7 @@ class NestViewModelTest {
         }
 
     @Test
-    fun onReactionEventGroupsByTargetAndEvictsOnTick() =
+    fun onReactionEventGroupsBySenderAndEvictsOnTick() =
         runVmTest {
             val vm = newViewModel { FakeNestsListener() }
             val alice = "a".repeat(64)
@@ -339,10 +339,13 @@ class NestViewModelTest {
                 sig = "0".repeat(128),
             )
 
-            // Two reactions land within the 30-s window.
+            // Two reactions sent BY alice land within the 30-s window.
+            // The aggregator groups by sender (so the floating chip
+            // rises from the reactor's avatar), NOT by the `p`-tag
+            // target — both land under alice's key.
             vm.onReactionEvent(rxn(alice, bob, "🔥", 100L), nowSec = 100L)
             vm.onReactionEvent(rxn(alice, bob, "👏", 105L), nowSec = 105L)
-            assertEquals(2, vm.recentReactions.value[bob]!!.size)
+            assertEquals(2, vm.recentReactions.value[alice]!!.size)
 
             // LocalCache.observeEvents re-emits the full matching list
             // on every cache mutation; the same kind-7 must collapse
@@ -350,7 +353,7 @@ class NestViewModelTest {
             val replayed = rxn(alice, bob, "🔥", 100L, id = "f".repeat(64))
             vm.onReactionEvent(replayed, nowSec = 105L)
             vm.onReactionEvent(replayed, nowSec = 105L)
-            assertEquals(3, vm.recentReactions.value[bob]!!.size)
+            assertEquals(3, vm.recentReactions.value[alice]!!.size)
 
             // Tick advances past the window — all reactions evicted.
             vm.evictReactions(olderThanSec = 200L)

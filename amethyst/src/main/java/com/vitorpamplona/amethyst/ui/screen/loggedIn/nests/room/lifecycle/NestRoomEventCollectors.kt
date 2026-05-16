@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -61,6 +62,8 @@ internal fun NestRoomEventCollectors(
     ChatCollector(viewModel, roomATag)
     ReactionsCollector(viewModel, roomATag)
     ReactionsEvictionTicker(viewModel)
+    ZapsCollector(viewModel, roomATag)
+    ZapsEvictionTicker(viewModel)
     AdminCommandsCollector(viewModel, event, roomATag, localPubkey)
 }
 
@@ -140,6 +143,57 @@ private fun ReactionsCollector(
         LocalCache.observeEvents<ReactionEvent>(filter).collect { events ->
             val nowSec = System.currentTimeMillis() / 1000
             events.forEach { viewModel.onReactionEvent(it, nowSec) }
+        }
+    }
+}
+
+/**
+ * Pump kind-9735 zap receipts into the VM's chat ledger AND the
+ * floating zap-overlay aggregator. The same note flows two places:
+ *
+ *   1. [NestViewModel.onChatEvent] — `ChatroomMessageCompose` routes
+ *      `LnZapEvent` notes through `RenderChatZap`, which is the same
+ *      card live streams use. Sharing the chat ledger keeps zap
+ *      cards interleaved with kind-1311 chat messages in time order.
+ *
+ *   2. [NestViewModel.onZapEvent] — same sliding-window pattern as
+ *      reactions; drives the floating "⚡ Nsats" chip over the
+ *      targeted participant's avatar (or the room itself).
+ */
+@Composable
+private fun ZapsCollector(
+    viewModel: NestViewModel,
+    roomATag: String,
+) {
+    LaunchedEffect(viewModel, roomATag) {
+        val filter =
+            Filter(
+                kinds = listOf(LnZapEvent.KIND),
+                tags = mapOf("a" to listOf(roomATag)),
+            )
+        LocalCache.observeNotes(filter).collect { notes ->
+            val nowSec = System.currentTimeMillis() / 1000
+            notes.forEach { note ->
+                viewModel.onChatEvent(note)
+                (note.event as? LnZapEvent)?.let { viewModel.onZapEvent(it, nowSec) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ZapsEvictionTicker(viewModel: NestViewModel) {
+    // Mirrors [ReactionsEvictionTicker] — only tick while there are
+    // zaps to evict. The aggregator's last eviction empties
+    // [NestViewModel.recentZaps], which flips [hasZaps] to false and
+    // cancels the loop until the next zap arrives.
+    val zaps by viewModel.recentZaps.collectAsState()
+    val hasZaps = zaps.values.any { it.isNotEmpty() }
+    LaunchedEffect(viewModel, hasZaps) {
+        if (!hasZaps) return@LaunchedEffect
+        while (isActive) {
+            delay(REACTIONS_TICK_MS)
+            viewModel.evictZaps(System.currentTimeMillis() / 1000 - REACTION_WINDOW_SEC_LOCAL)
         }
     }
 }

@@ -219,8 +219,8 @@ class AppModules(
 
     // Persists [surgeDns]'s positive cache across process restarts so cold starts don't pay
     // ~700 sync getaddrinfo calls. Restored entries fall through to the stale-while-revalidate
-    // path on first lookup.
-    val dnsStore = SurgeDnsStore(appContext, surgeDns)
+    // path on first lookup. Stored in cacheDir — pure perf data, OK if the OS evicts it.
+    val dnsStore = SurgeDnsStore(File(appContext.safeCacheDir(), SurgeDnsStore.FILE_NAME), surgeDns)
 
     // manages all the other connections separately from relays.
     val okHttpClients: DualHttpClientManager =
@@ -542,7 +542,7 @@ class AppModules(
     // image cache in disk for coil
     val diskCache: DiskCache by lazy {
         Log.d("AppModules", "ImageCacheFactory Init")
-        ImageCacheFactory.newDisk(appContext)
+        ImageCacheFactory.newDisk(appContext, applicationIOScope)
     }
 
     // image cache in memory for coil

@@ -626,7 +626,6 @@
     <string name="nest_chat_send">Skicka</string>
     <string name="nest_chat_placeholder">Säg något…</string>
     <string name="nest_chat_empty">Inga meddelanden än. Var först att chatta.</string>
-    <string name="nest_reactions_title">Reagera</string>
     <string name="nest_reactions_button">Reagera</string>
     <string name="nest_edit_title">Redigera rum</string>
     <string name="nest_edit_save">Spara</string>
@@ -656,16 +655,8 @@
     <string name="nest_confirm_force_mute_body">Ber %1$s:s klient att stänga av mikrofonen. Vissa klienter kan ignorera detta kommando.</string>
     <string name="nest_confirm_force_mute_confirm">Tysta påtvingat</string>
     <string name="nest_confirm_cancel">Avbryt</string>
-    <string name="nest_toast_action_title">Ljudrum</string>
-    <string name="nest_toast_follow_sent">Följer %1$s.</string>
-    <string name="nest_toast_unfollow_sent">Slutade följa %1$s.</string>
-    <string name="nest_toast_mute_sent">%1$s tystad.</string>
-    <string name="nest_toast_unmute_sent">%1$s avtystad.</string>
-    <string name="nest_toast_promote_speaker_sent">%1$s befordrad till talare.</string>
-    <string name="nest_toast_promote_moderator_sent">%1$s befordrad till moderator.</string>
-    <string name="nest_toast_demote_listener_sent">%1$s degraderad till lyssnare.</string>
-    <string name="nest_toast_force_mute_sent">%1$s tystad påtvingat.</string>
-    <string name="nest_toast_kick_sent">%1$s utsparkad från rummet.</string>
+    <string name="nest_toast_host_action_failed_title">Åtgärden misslyckades</string>
+    <string name="nest_toast_host_action_failed_template_null">Åtgärden kunde inte förberedas.</string>
     <string name="nest_share_action">Dela rum</string>
     <string name="nest_minimize">Minimera</string>
     <string name="nest_minimize_description">Minimera för att fortsätta lyssna</string>
@@ -1120,8 +1111,8 @@
     <string name="warn_when_posts_have_reports_from_your_follows">Varna när inlägg har rapporter från dina följare</string>
     <string name="filter_spam_from_strangers_title">Filtrera spam</string>
     <string name="filter_spam_from_strangers_explainer">Döljer inlägg från främlingar som var exakt samma för 5 eller fler gånger</string>
-    <string name="disable_client_tag_title">Lägg inte till klienttagg i mina händelser</string>
-    <string name="disable_client_tag_explainer">När aktiverat kommer Amethyst inte att lägga till en NIP-89 klienttagg till händelser du publicerar.</string>
+    <string name="add_client_tag_title">Lägg till klient-tagg i mina händelser</string>
+    <string name="add_client_tag_explainer">När det är aktiverat lägger Amethyst till en NIP-89-klient-tagg i händelser du publicerar.</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Varna vid rapporter</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Visar ett varningsmeddelande när inlägg har 5 eller fler rapporter från följande</string>
     <string name="report_warning_threshold_title">Tröskel för rapportvarning</string>
@@ -1132,6 +1123,12 @@
     <string name="max_hashtag_limit_explainer">Döljer inlägg med fler hashtaggar än denna gräns. Sätt till 0 för att inaktivera</string>
     <string name="hide_community_rules_violations_title">Dölj inlägg som bryter mot gemenskapens regler</string>
     <string name="hide_community_rules_violations_explainer">Filtrerar bort inlägg från gemenskapsflöden när gemenskapen publicerar ett NIP-9B-regeldokument och en händelse inte skulle godkännas. Ingen effekt när en gemenskap inte har strukturerade regler.</string>
+    <string name="security_section_filtering_preferences">Filterinställningar</string>
+    <string name="security_section_blocked_content">Blockerat innehåll</string>
+    <string name="security_unlimited">∞</string>
+    <string name="security_blocked_users_empty">Du har inte blockerat några användare än.</string>
+    <string name="security_spamming_users_empty">Inga konton har flaggats som spam under denna session.</string>
+    <string name="security_hidden_words_empty">Inga dolda ord. Lägg till ett ord nedan för att dölja inlägg som innehåller det.</string>
     <string name="new_reaction_symbol">Ny reaktionssymbol</string>
     <string name="no_reaction_type_setup_long_press_to_change">Inga reaktionstyper valda. Håll ned för att ändra</string>
     <string name="zapraiser">Zap insamling</string>
@@ -1329,6 +1326,8 @@
     <string name="geohash_exclusive_explainer">Endast anhängare av platsen kommer att se den. Dina allmänna anhängare kommer inte att se den.</string>
     <string name="hashtag_exclusive">Hashtag-exklusivt inlägg</string>
     <string name="hashtag_exclusive_explainer">Endast anhängare av hashtaggen kommer att se den. Dina generella följare kommer inte att se den.</string>
+    <string name="external_url_scope">Kommentera en webbplats</string>
+    <string name="external_id_scope">Kommentera en extern resurs</string>
     <string name="long_form_reading_minutes">%1$d min läsning</string>
     <string name="loading_location">Laddar position</string>
     <string name="lack_location_permissions">Inga platsbehörigheter</string>
@@ -1666,6 +1665,12 @@
     <string name="home_tabs_settings">Hemflikar</string>
     <string name="home_tabs_settings_description">Välj vilka flikar som visas på startskärmen. När endast en flik är aktiv döljs flikraden.</string>
     <string name="home_tab_everything">Allt</string>
+    <string name="profile_ui_settings">Profilgränssnitt</string>
+    <string name="profile_ui_settings_description">Välj vilka sektioner och flöden som visas på användarprofiler. Alla alternativ är aktiverade som standard.</string>
+    <string name="profile_ui_setting_badges">Profilmärken</string>
+    <string name="profile_ui_setting_app_recommendations">App-rekommendationer</string>
+    <string name="profile_ui_setting_zap_received_feed">Mottagna zaps-flöde</string>
+    <string name="profile_ui_setting_followers_feed">Följarflöde</string>
     <string name="reactions_settings">Reaktionsinställningar</string>
     <string name="reactions_settings_description">Konfigurera vilka reaktionsknappar som visas, deras ordning och om räknare ska visas.</string>
     <string name="reactions_settings_enabled">Aktiverad</string>
@@ -1917,8 +1922,11 @@
     <string name="favorite_dvms_title">Favorit-flödesalgoritmer</string>
     <string name="favorite_dvms_explainer">Flödesalgoritmer du stjärnmarkerar visas som filterchips på Hem-flödet. Öppna Upptäck för att lägga till fler.</string>
     <string name="favorite_dvms_empty_headline">Fäst dina favoritalgoritmer</string>
-    <string name="favorite_dvms_empty_subtitle">Tryck på knappen nedan för att bläddra bland algoritmer och stjärnmarkera de du vill behålla här.</string>
+    <string name="favorite_dvms_empty_step1">Tryck på \"%1$s\" nedan för att bläddra bland algoritmer.</string>
+    <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
+    <string name="favorite_dvms_empty_step2">Tryck på %1$s bredvid ett flöde för att behålla det här.</string>
     <string name="favorite_dvms_empty_cta">Lägg till några flöden</string>
+    <string name="favorite_dvms_add_more">Lägg till fler…</string>
     <string name="dvm_home_status_requesting">Frågar %1$s om ett flöde…</string>
     <string name="dvm_home_status_requesting_all">Frågar dina favorit-flödesalgoritmer om flöden…</string>
     <string name="dvm_home_status_processing">Bearbetar ditt flöde…</string>
@@ -2513,6 +2521,9 @@
     <string name="ai_writing_setting_description">Använder en AI-modell på enheten för att föreslå textkorrigeringar och tonändringar.</string>
     <string name="tracked_broadcasts_setting_title">Spårade sändningar</string>
     <string name="tracked_broadcasts_setting_description">Använd den spårade sändaren när du skickar händelser. Visar liveförlopp och status per relä under sändning.</string>
+    <string name="compose_settings">Skrivinställningar</string>
+    <string name="auto_create_drafts_setting_title">Skapa utkast automatiskt</string>
+    <string name="auto_create_drafts_setting_description">Sparar ett utkast automatiskt när du skriver eller lämnar redigeraren med osänd text och skickar det till dina privata utgående reläer.</string>
     <string name="ai_writing_use_this">Använd detta</string>
     <string name="ai_writing_dismiss">Avvisa</string>
     <string name="ai_tone_correct">Korrigera</string>

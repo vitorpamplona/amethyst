@@ -843,10 +843,30 @@ class NostrnestsProdAudioTransmissionTest {
         )
 
     @Test
+    fun sweep_frames_per_group_10() =
+        runProdScenarioOrSkip(
+            "sweep-fpg10",
+            Scenario(frameCount = 100, cadenceMs = 20L, framesPerGroup = 10),
+        )
+
+    @Test
     fun sweep_frames_per_group_20() =
         runProdScenarioOrSkip(
             "sweep-fpg20",
             Scenario(frameCount = 100, cadenceMs = 20L, framesPerGroup = 20),
+        )
+
+    // The production default. With a 20 ms cadence this batches a full
+    // second of audio into one uni stream — so the e2e-latency line for
+    // this scenario is the direct measurement of the send delay the
+    // production app exhibits today. Compare its timeToFirstFrame /
+    // p50 against sweep_frames_per_group_5 and the framesPerGroup=1
+    // baseline to read the batching-vs-latency tradeoff curve.
+    @Test
+    fun sweep_frames_per_group_50_production_default() =
+        runProdScenarioOrSkip(
+            "sweep-fpg50",
+            Scenario(frameCount = 100, cadenceMs = 20L, framesPerGroup = 50),
         )
 
     @Test
