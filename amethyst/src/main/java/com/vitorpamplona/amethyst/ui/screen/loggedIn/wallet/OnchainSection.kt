@@ -20,14 +20,25 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -40,13 +51,20 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.TaprootAddress
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -54,13 +72,13 @@ import kotlinx.coroutines.withContext
 import java.text.NumberFormat
 
 /**
- * "Bitcoin" section card on the wallet screen, shown above the lightning NWC
- * wallet list. Every account has exactly one Taproot address (derived from
- * its Nostr pubkey via NIP-BC / BIP-341), so this is always a single card —
- * not a list.
+ * "Bitcoin" card on the wallet screen, shown above the lightning NWC wallet
+ * list. Visually mirrors [WalletCard] so the two payment rails read as the
+ * same kind of object; bitcoin-orange accent in place of NWC's primary
+ * (purple) keeps the rails distinct at a glance.
  *
- * Phase C scope: derive + display + copy address. Balance, recent zaps, send,
- * and tap-to-detail UI come in later phases.
+ * Every account has exactly one Taproot address (derived from its Nostr
+ * pubkey via NIP-BC / BIP-341), so this is always a single card — not a list.
  */
 @Composable
 fun OnchainSection(
@@ -69,16 +87,11 @@ fun OnchainSection(
 ) {
     val pubKey = accountViewModel.account.signer.pubKey
 
-    // Cache the derived address — bech32m + tap-tweak is cheap but pubkey doesn't
-    // change for the lifetime of the screen.
     val address =
         remember(pubKey) {
             runCatching { TaprootAddress.fromPubKey(pubKey) }.getOrNull()
         }
 
-    // Balance fetched from the configured OnchainBackend. null = unknown / loading
-    // / unconfigured. We intentionally do not retry on failure here — the user can
-    // refresh by leaving and re-entering the screen.
     var balanceSats by remember(pubKey) { mutableStateOf<Long?>(null) }
     var balanceState by remember(pubKey) { mutableStateOf(BalanceState.LOADING) }
 
@@ -102,39 +115,37 @@ fun OnchainSection(
         }
     }
 
+    val orange = MaterialTheme.colorScheme.bitcoinColor
+
     Card(
         modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(2.dp, orange),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = orange.copy(alpha = 0.12f),
+            ),
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = "Bitcoin",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
+        Column(modifier = Modifier.padding(16.dp)) {
+            HeaderRow(
+                orange = orange,
+                balanceState = balanceState,
+                balanceSats = balanceSats,
             )
+
             if (address == null) {
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = "Address derivation unavailable for this account.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
-                BalanceRow(state = balanceState, sats = balanceSats)
-                Text(
-                    text = "Your Taproot address",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = address,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                ActionRow(address = address, accountViewModel = accountViewModel)
+                Spacer(modifier = Modifier.height(12.dp))
+                AddressBlock(address = address)
+
+                Spacer(modifier = Modifier.height(12.dp))
+                ActionRow(address = address, accountViewModel = accountViewModel, orange = orange)
             }
         }
     }
@@ -143,33 +154,138 @@ fun OnchainSection(
 private enum class BalanceState { LOADING, READY, ERROR, UNAVAILABLE }
 
 @Composable
-private fun BalanceRow(
+private fun HeaderRow(
+    orange: Color,
+    balanceState: BalanceState,
+    balanceSats: Long?,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                BitcoinChip(orange)
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = "Bitcoin",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Onchain · Taproot",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        BalanceBlock(state = balanceState, sats = balanceSats, orange = orange)
+    }
+}
+
+@Composable
+private fun BitcoinChip(orange: Color) {
+    Box(
+        modifier =
+            Modifier
+                .size(28.dp)
+                .clip(CircleShape)
+                .background(color = orange),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            symbol = MaterialSymbols.CurrencyBitcoin,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(18.dp),
+        )
+    }
+}
+
+@Composable
+private fun BalanceBlock(
     state: BalanceState,
     sats: Long?,
+    orange: Color,
 ) {
-    val text =
-        when (state) {
-            BalanceState.LOADING -> {
-                "Loading balance…"
-            }
+    if (state == BalanceState.LOADING && sats == null) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(24.dp),
+            color = orange,
+        )
+        return
+    }
 
+    Column(horizontalAlignment = Alignment.End) {
+        when (state) {
             BalanceState.READY -> {
-                val formatted = NumberFormat.getNumberInstance().format(sats ?: 0L)
-                "$formatted sats"
+                val formatted =
+                    remember(sats) {
+                        NumberFormat.getIntegerInstance().format(sats ?: 0L)
+                    }
+                Text(
+                    text = formatted,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = orange,
+                )
+                Text(
+                    text = "sats",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
 
             BalanceState.ERROR -> {
-                "Balance unavailable"
+                Text(
+                    text = "—",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = "unavailable",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
             }
 
             BalanceState.UNAVAILABLE -> {
-                "Chain backend not configured"
+                Text(
+                    text = "—",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = "no backend",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
+
+            BalanceState.LOADING -> Unit
         }
+    }
+}
+
+@Composable
+private fun AddressBlock(address: String) {
     Text(
-        text = text,
-        style = MaterialTheme.typography.headlineSmall,
-        fontWeight = FontWeight.SemiBold,
+        text = "Your Taproot address",
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(modifier = Modifier.height(2.dp))
+    Text(
+        text = address,
+        style = MaterialTheme.typography.bodySmall,
+        fontFamily = FontFamily.Monospace,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
     )
 }
 
@@ -177,6 +293,7 @@ private fun BalanceRow(
 private fun ActionRow(
     address: String,
     accountViewModel: AccountViewModel,
+    orange: Color,
 ) {
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
@@ -184,16 +301,42 @@ private fun ActionRow(
 
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        OutlinedButton(onClick = {
-            scope.launch { clipboard.setText(address) }
-        }) {
-            Text("Copy address")
+        OutlinedButton(
+            onClick = { scope.launch { clipboard.setText(address) } },
+            modifier = Modifier.height(36.dp),
+            shape = RoundedCornerShape(8.dp),
+        ) {
+            Icon(
+                symbol = MaterialSymbols.ContentCopy,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text("Copy", style = MaterialTheme.typography.bodySmall)
         }
-        Button(onClick = { showSendDialog = true }) {
-            Text("Send")
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        Button(
+            onClick = { showSendDialog = true },
+            modifier = Modifier.height(36.dp),
+            shape = RoundedCornerShape(8.dp),
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = orange,
+                    contentColor = Color.White,
+                ),
+        ) {
+            Icon(
+                symbol = MaterialSymbols.AutoMirrored.Send,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text("Send", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
         }
     }
 
