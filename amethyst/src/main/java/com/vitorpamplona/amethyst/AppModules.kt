@@ -24,6 +24,7 @@ import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
+import com.vitorpamplona.amethyst.commons.i2p.I2pSettings
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
@@ -34,8 +35,10 @@ import com.vitorpamplona.amethyst.model.accountsCache.AccountCacheState
 import com.vitorpamplona.amethyst.model.nip03Timestamp.IncomingOtsEventVerifier
 import com.vitorpamplona.amethyst.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
+import com.vitorpamplona.amethyst.model.preferences.I2pSharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.NamecoinSharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.OtsSharedPreferences
+import com.vitorpamplona.amethyst.model.preferences.PrivacySharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.TorSharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
@@ -149,6 +152,18 @@ class AppModules(
             TorSharedPreferences(prefs, appContext, applicationIOScope)
         }
 
+    private val i2pPrefsDeferred =
+        applicationIOScope.async {
+            val prefs = I2pSharedPreferences.i2pPreferences(appContext) ?: I2pSettings()
+            I2pSharedPreferences(prefs, appContext, applicationIOScope)
+        }
+
+    private val privacyPrefsDeferred =
+        applicationIOScope.async {
+            val initial = PrivacySharedPreferences.preferredClearnetTransport(appContext)
+            PrivacySharedPreferences(initial, appContext, applicationIOScope)
+        }
+
     // Blocking load of UI Preferences to avoid theme/language blinking
     val uiPrefs by lazy {
         Log.d("AppModules", "UiSharedPreferences Init")
@@ -159,6 +174,21 @@ class AppModules(
     val torPrefs by lazy {
         Log.d("AppModules", "TorSharedPreferences Init")
         runBlocking { torPrefsDeferred.await() }
+    }
+
+    // Blocking load of I2P settings — paired with torPrefs since both feed the
+    // privacy transport routing decision and we don't want clearnet to leak before
+    // either is restored.
+    val i2pPrefs by lazy {
+        Log.d("AppModules", "I2pSharedPreferences Init")
+        runBlocking { i2pPrefsDeferred.await() }
+    }
+
+    // Picks which transport (if any) carries clearnet traffic. Loaded blocking for
+    // the same reason as torPrefs/i2pPrefs.
+    val privacyPrefs by lazy {
+        Log.d("AppModules", "PrivacySharedPreferences Init")
+        runBlocking { privacyPrefsDeferred.await() }
     }
 
     // Namecoin ElectrumX server preferences (global, like Tor settings)
