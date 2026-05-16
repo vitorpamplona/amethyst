@@ -508,6 +508,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="new_community_relay_marker_approvals">Odobritve</string>
     <string name="new_community_empty">Nobena skupnost ne ustreza temu filtru.</string>
     <string name="new_community_rules_section">Preverljiva pravila (poljubno)</string>
+    <string name="new_community_rules_hint">Objavi strojno berljiv dokument s pravili (NIP-9B) skupaj s skupnostjo. Nostr odjemalci, ki to podpirajo, blokirajo neustrezne objave še pred pošiljanjem.</string>
     <string name="new_community_rules_kinds_section">Dovoljeni tipi (kind) dogodka</string>
     <string name="new_community_rules_kinds_hint">Tapnite za odobritev tipa (kind). Pridržite tip (kind) za nastavitev omejitev velikosti dogodka ali dnevnih objav.</string>
     <string name="new_community_rules_kind_short_text">Kratko besedilo (1)</string>
@@ -874,8 +875,8 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="use_local_blossom_cache_caption">Ko se na tej napravi izvaja predpomnilnik Blossom (vrata 24242), se prenosi slik in videoposnetkov preusmerijo skoznje.</string>
     <string name="local_blossom_cache_detected">Na vratih 24242 je bil zaznan lokalni predpomnilnik.</string>
     <string name="local_blossom_cache_not_detected">Na vratih 24242 ni zaznati lokalnega predpomnilnika.</string>
-    <string name="local_blossom_cache_profile_pics_only">V predpomnilnik shrani le profilne slike</string>
-    <string name="local_blossom_cache_profile_pics_only_caption">Lokalni predpomnilnik omeji le na slike profila. Slike in videoposnetki iz vsebin se bodo prenašali neposredno z izvornih strežnikov.</string>
+    <string name="local_blossom_cache_profile_pics_only">V predpomnilnik shrani le slike profilov</string>
+    <string name="local_blossom_cache_profile_pics_only_caption">Lokalni predpomnilnik omeji le na slike profilov. Slike in videoposnetki iz vsebin se bodo prenašali neposredno z izvornih strežnikov.</string>
     <string name="no_nip96_server_message">Nimate nastavljenih NIP-96 strežnikov. Uporabite lahko Amethyst-ov seznam ali dodajte enega spodaj ↓</string>
     <string name="no_blossom_server_message">Nimate nastavljenih Blossom strežnikov. Uporabite lahko Amethyst-ov seznam ali dodajte enega spodaj ↓</string>
     <string name="recommended_media_servers">Priporočljivi medijski strežniki</string>
@@ -997,7 +998,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="tor_use_new_relays_explainer">Prisili tor pri relejih za odhodno/prejeto pošto</string>
     <string name="tor_use_trusted_relays">Zaupanja vredni releji</string>
     <string name="tor_use_trusted_relays_explainer">Prisili Tor na vseh relejih v tvojem spisku</string>
-    <string name="tor_use_profile_pictures">Profilne slike</string>
+    <string name="tor_use_profile_pictures">Slike profilov</string>
     <string name="tor_use_profile_pictures_explainer">Prisili tor pri nalaganju profilnih slik</string>
     <string name="tor_use_url_previews">URL predogledi</string>
     <string name="tor_use_url_previews_explainer">Prisili tor pri nalaganju url predogledov</string>
@@ -1148,6 +1149,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="show_sensitive_content_explainer">Prikaže opozorilo, če je avtor objavo označil kot občutljivo</string>
     <string name="max_hashtag_limit_title">Največje število ključnikov na objavo</string>
     <string name="max_hashtag_limit_explainer">Skrije objave, ki imajo več oznak od te omejitve. Za izklop nastavi na 0</string>
+    <string name="hide_community_rules_violations_title">Skrij objave, ki kršijo pravila skupnosti</string>
     <string name="hide_community_rules_violations_explainer">Iz vsebin skupnosti odstrani objave, ki kršijo pravila NIP-9B, če jih je skupnost objavila. Nima učinka, če skupnost nima strukturiranih pravil.</string>
     <string name="security_section_filtering_preferences">Možnosti filtriranja</string>
     <string name="security_section_blocked_content">Blokirana vsebina</string>
@@ -2630,6 +2632,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="community_rules_violation_kind_not_allowed">Dogodki tipa (kind) %1$d v tej skupnosti niso dovoljene.</string>
     <string name="community_rules_violation_kind_size_exceeded">Osnutek obsega %1$d bajtov; ta skupnost omejuje te tipe (kind) na %2$d bajtov.</string>
     <string name="community_rules_violation_max_size_exceeded">Osnutek obsega %1$d bajtov; ta skupnost omejuje dogodke na %2$d bajtov.</string>
+    <string name="community_rules_violation_quota_exceeded">Danes imate že %1$d dogodkov tega tipa (kind) (omejitev je %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Ne izpolnjuješ pogojev mreže zaupanja (WoT) te skupnosti.</string>
     <string name="community_rules_violation_stale_rules">Najnovejša pravila skupnosti so bila zavrnjena, ker so zastarela.</string>
 </resources>
