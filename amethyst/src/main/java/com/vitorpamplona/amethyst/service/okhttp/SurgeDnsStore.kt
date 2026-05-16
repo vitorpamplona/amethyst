@@ -71,12 +71,6 @@ class SurgeDnsStore(
      * call from a background thread.
      */
     fun load() {
-        // One-shot reclaim of the legacy JSON blob — this class moved to a binary format. Done
-        // here (not in the constructor) so the syscall happens on the load() background thread
-        // instead of whatever thread builds the store.
-        val legacy = File(file.parentFile, LEGACY_FILE_NAME)
-        if (legacy.exists()) legacy.delete()
-
         if (!file.exists()) return
         val records =
             try {
@@ -192,7 +186,6 @@ class SurgeDnsStore(
     companion object {
         private const val TAG = "SurgeDnsStore"
         const val FILE_NAME = "dns_cache_v1.bin"
-        private const val LEGACY_FILE_NAME = "dns_cache_v1.json"
 
         // 'SNSC' — Surge dNS Cache.
         private const val MAGIC = 0x534E5343

@@ -155,19 +155,4 @@ class SurgeDnsStoreTest {
         store.load() // must not throw
         assertTrue(dns.snapshot().isEmpty())
     }
-
-    @Test
-    fun `load deletes the legacy json sibling`() {
-        val legacy = File(tempFolder.root, "dns_cache_v1.json")
-        legacy.writeText("[]")
-        assertTrue(legacy.exists())
-
-        val target = File(tempFolder.root, "dns_cache_v1.bin")
-        val (store, _) = newStore(target)
-        // Construction must not touch the filesystem — only load() may.
-        assertTrue("constructor should not delete legacy file", legacy.exists())
-
-        store.load()
-        assertFalse("legacy json blob should be reclaimed by load()", legacy.exists())
-    }
 }
