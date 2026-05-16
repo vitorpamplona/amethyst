@@ -92,7 +92,6 @@ re-exporting. `:nestsClient` drops its `transport/` subpackage and declares
 ```groovy
 include ':quartz'
 include ':commons'
-include ':ammolite'
 include ':quic'            // NEW — pure-Kotlin QUIC + HTTP/3 + WebTransport
 include ':nestsClient'     // gains `implementation project(':quic')`
 include ':desktopApp'
