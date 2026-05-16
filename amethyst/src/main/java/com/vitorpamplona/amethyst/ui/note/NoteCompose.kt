@@ -1484,14 +1484,22 @@ fun RenderRepost(
     }
 }
 
-fun getGradient(backgroundColor: MutableState<Color>): Brush =
-    Brush.verticalGradient(
+@Composable
+fun getGradient(backgroundColor: MutableState<Color>): Brush {
+    val solid =
+        if (backgroundColor.value.alpha == 0f) {
+            MaterialTheme.colorScheme.background
+        } else {
+            backgroundColor.value.copy(alpha = 1f)
+        }
+    return Brush.verticalGradient(
         colors =
             listOf(
-                backgroundColor.value.copy(alpha = 0f),
-                backgroundColor.value.copy(alpha = 1f),
+                solid.copy(alpha = 0f),
+                solid,
             ),
     )
+}
 
 @Composable
 fun ReplyNoteComposition(
