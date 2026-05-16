@@ -30,6 +30,8 @@ import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 
 class ChatroomListKnownFeedFilter(
@@ -111,7 +113,7 @@ class ChatroomListKnownFeedFilter(
         newRelevantPublicMessages.forEach { newNotePair ->
             var hasUpdated = false
             oldList.forEach { oldNote ->
-                val channelId = (oldNote.event as? ChannelMessageEvent)?.channelId()
+                val channelId = publicChannelIdOf(oldNote)
                 if (newNotePair.key == channelId) {
                     hasUpdated = true
                     if ((newNotePair.value.createdAt() ?: 0L) > (oldNote.createdAt() ?: 0L)) {
@@ -260,4 +262,16 @@ class ChatroomListKnownFeedFilter(
     }
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
+
+    // The chat list keys public-channel rows by channel id, so the existing row
+    // for a channel may be backed by a ChannelCreateEvent or ChannelMetadataEvent
+    // (when no message has arrived yet) — not only a ChannelMessageEvent. Matching
+    // only ChannelMessageEvent here would leave the old row in place and append the
+    // new one, producing a duplicate LazyColumn key.
+    private fun publicChannelIdOf(note: Note): String? =
+        when (val event = note.event) {
+            is IsInPublicChatChannel -> event.channelId()
+            is ChannelCreateEvent -> event.id
+            else -> null
+        }
 }
