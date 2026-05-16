@@ -559,9 +559,6 @@ class AppModules(
         // once restored, every previously-seen host hits the stale-while-revalidate path
         // instead of blocking on getaddrinfo.
         applicationIOScope.launch {
-            // One-shot reclaim of the legacy SharedPreferences blob — SurgeDnsStore moved
-            // from storage to cacheDir.
-            appContext.deleteSharedPreferences("amethyst_dns_cache")
             dnsStore.load()
         }
 

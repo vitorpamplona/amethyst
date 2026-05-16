@@ -228,12 +228,10 @@ class SurgeDns(
         for ((host, entry) in cache) {
             if (entry.addresses.isEmpty()) continue
             if (entry.expiresAtMillis <= now) continue
-            // hostAddress is platform-typed (String!); mapNotNull narrows to String and stays
-            // defensive against the rare case where it might be null.
-            val ips = entry.addresses.mapNotNull { it.hostAddress }
-            if (ips.isNotEmpty()) {
-                out += DnsCacheRecord(host, ips, entry.expiresAtMillis)
-            }
+            // Raw bytes from getAddress() — no string formatting / re-parsing on either side
+            // of the persistence boundary.
+            val ips = entry.addresses.map { it.address }
+            out += DnsCacheRecord(host, ips, entry.expiresAtMillis)
         }
         return out
     }
@@ -254,9 +252,9 @@ class SurgeDns(
             val key = record.hostname.lowercase(Locale.ROOT)
             val allowLoopback = isLoopbackHostname(key)
             val addresses = ArrayList<InetAddress>(record.addresses.size)
-            for (literal in record.addresses) {
-                // getByName on a numeric literal parses without doing DNS.
-                val addr = runCatching { InetAddress.getByName(literal) }.getOrNull() ?: continue
+            for (bytes in record.addresses) {
+                // getByAddress wraps the raw bytes without re-parsing a string literal.
+                val addr = runCatching { InetAddress.getByAddress(bytes) }.getOrNull() ?: continue
                 if (!allowLoopback && (addr.isLoopbackAddress || addr.isAnyLocalAddress)) {
                     droppedPoisoned = true
                     continue
@@ -340,9 +338,17 @@ class SurgeDns(
     }
 }
 
-/** Persistable record. Public so [SurgeDnsStore] can serialize it via Jackson. */
-data class DnsCacheRecord(
+/**
+ * Persistable record. Addresses are stored as raw bytes (4 or 16) so [SurgeDnsStore] can write
+ * them straight into the binary blob and round-trip through [InetAddress.getByAddress] without
+ * formatting/parsing a string literal on either side.
+ *
+ * Not a `data class`: the auto-generated `equals`/`hashCode` would compare `addresses`
+ * (List<ByteArray>) by reference identity, which is a footgun. Nothing in this codebase needs
+ * structural equality on records, so the methods are simply not provided.
+ */
+class DnsCacheRecord(
     val hostname: String,
-    val addresses: List<String>,
+    val addresses: List<ByteArray>,
     val expiresAtMillis: Long,
 )

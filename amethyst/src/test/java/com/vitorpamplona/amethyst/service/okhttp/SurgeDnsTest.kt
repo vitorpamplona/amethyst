@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.okhttp
 
 import okhttp3.Dns
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
@@ -343,7 +344,8 @@ class SurgeDnsTest {
         val snapshot = dns.snapshot()
         assertEquals(1, snapshot.size)
         assertEquals("live.example", snapshot[0].hostname)
-        assertEquals(listOf("1.2.3.4"), snapshot[0].addresses)
+        assertEquals(1, snapshot[0].addresses.size)
+        assertArrayEquals(ip("1.2.3.4").address, snapshot[0].addresses[0])
     }
 
     @Test
@@ -352,7 +354,7 @@ class SurgeDnsTest {
         val dns = SurgeDns(delegate = upstream)
 
         val expiresAt = System.currentTimeMillis() + 60_000
-        dns.restore(listOf(DnsCacheRecord("relay.example", listOf("9.9.9.9"), expiresAt)))
+        dns.restore(listOf(DnsCacheRecord("relay.example", listOf(ip("9.9.9.9").address), expiresAt)))
 
         assertEquals(listOf(ip("9.9.9.9")), dns.lookup("relay.example"))
         assertEquals("Restored entry should serve without upstream", 0, upstream.calls("relay.example"))
@@ -364,7 +366,7 @@ class SurgeDnsTest {
         val dns = SurgeDns(delegate = upstream)
 
         val expiredAt = System.currentTimeMillis() - 1_000
-        dns.restore(listOf(DnsCacheRecord("relay.example", listOf("9.9.9.9"), expiredAt)))
+        dns.restore(listOf(DnsCacheRecord("relay.example", listOf(ip("9.9.9.9").address), expiredAt)))
 
         dns.lookup("relay.example")
         assertEquals(1, upstream.calls("relay.example"))
@@ -387,7 +389,7 @@ class SurgeDnsTest {
             listOf(
                 DnsCacheRecord(
                     "relay.example",
-                    listOf("9.9.9.9"),
+                    listOf(ip("9.9.9.9").address),
                     System.currentTimeMillis() + 60_000,
                 ),
             ),
@@ -427,7 +429,7 @@ class SurgeDnsTest {
 
         dns.restore(
             listOf(
-                DnsCacheRecord("Example.COM", listOf("9.9.9.9"), System.currentTimeMillis() + 60_000),
+                DnsCacheRecord("Example.COM", listOf(ip("9.9.9.9").address), System.currentTimeMillis() + 60_000),
             ),
         )
 
@@ -571,7 +573,7 @@ class SurgeDnsTest {
         val dns = SurgeDns(delegate = upstream)
 
         val expiresAt = System.currentTimeMillis() + 60_000
-        dns.restore(listOf(DnsCacheRecord("relay.example", listOf("127.0.0.1"), expiresAt)))
+        dns.restore(listOf(DnsCacheRecord("relay.example", listOf(ip("127.0.0.1").address), expiresAt)))
 
         assertTrue("Dropping poison must dirty the cache so the snapshot is rewritten", dns.isDirty())
         // Cache should not hold the poisoned entry, so the next lookup hits upstream.
@@ -587,7 +589,7 @@ class SurgeDnsTest {
         val expiresAt = System.currentTimeMillis() + 60_000
         dns.restore(
             listOf(
-                DnsCacheRecord("relay.example", listOf("127.0.0.1", "5.6.7.8"), expiresAt),
+                DnsCacheRecord("relay.example", listOf(ip("127.0.0.1").address, ip("5.6.7.8").address), expiresAt),
             ),
         )
 
@@ -602,7 +604,7 @@ class SurgeDnsTest {
         val dns = SurgeDns(delegate = upstream)
 
         val expiresAt = System.currentTimeMillis() + 60_000
-        dns.restore(listOf(DnsCacheRecord("localhost", listOf("127.0.0.1"), expiresAt)))
+        dns.restore(listOf(DnsCacheRecord("localhost", listOf(ip("127.0.0.1").address), expiresAt)))
 
         assertFalse("Loopback entry for localhost is legitimate, not poison", dns.isDirty())
         assertEquals(listOf(ip("127.0.0.1")), dns.lookup("localhost"))
@@ -614,7 +616,7 @@ class SurgeDnsTest {
         val dns = SurgeDns(delegate = upstream)
 
         val expiresAt = System.currentTimeMillis() + 60_000
-        dns.restore(listOf(DnsCacheRecord("relay.example", listOf("5.6.7.8"), expiresAt)))
+        dns.restore(listOf(DnsCacheRecord("relay.example", listOf(ip("5.6.7.8").address), expiresAt)))
 
         assertFalse("Clean restore must not dirty the cache", dns.isDirty())
     }
