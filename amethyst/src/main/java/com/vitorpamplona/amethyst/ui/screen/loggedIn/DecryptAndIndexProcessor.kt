@@ -301,19 +301,7 @@ class GiftWrapEventHandler(
         eventNote: Note,
         publicNote: Note,
     ) {
-        Log.d("MarmotDbg") {
-            "GiftWrapEventHandler.processNewGiftWrap: id=${event.id.take(8)}… recipient=${event.recipientPubKey()?.take(8)}…"
-        }
-        val innerGift = event.unwrapOrNull(account.signer)
-        if (innerGift == null) {
-            Log.w("MarmotDbg") {
-                "GiftWrapEventHandler.processNewGiftWrap: unwrap returned null (decrypt failed) for id=${event.id.take(8)}…"
-            }
-            return
-        }
-        Log.d("MarmotDbg") {
-            "GiftWrapEventHandler.processNewGiftWrap: unwrapped innerKind=${innerGift.kind} innerId=${innerGift.id.take(8)}…"
-        }
+        val innerGift = event.unwrapOrNull(account.signer) ?: return
 
         eventNote.event = event.copyNoContent()
 
@@ -324,9 +312,6 @@ class GiftWrapEventHandler(
             // Marmot Welcomes need MLS processing in addition to being cached,
             // but they do not route through the normal eventProcessor consumer.
             if (MarmotInboundProcessor.isWelcomeEvent(innerGift)) {
-                Log.d("MarmotDbg") {
-                    "GiftWrapEventHandler: detected Marmot WelcomeEvent — routing to processMarmotWelcomeFlow"
-                }
                 processMarmotWelcomeFlow(innerGift, account)
             } else {
                 eventProcessor.consumeEvent(innerGift, innerGiftNote, publicNote)
@@ -357,26 +342,14 @@ private suspend fun processMarmotWelcomeFlow(
     innerEvent: Event,
     account: Account,
 ) {
-    Log.d("MarmotDbg") {
-        "processMarmotWelcomeFlow: innerKind=${innerEvent.kind} innerId=${innerEvent.id.take(8)}…"
-    }
-    val manager = account.marmotManager
-    if (manager == null) {
-        Log.w("MarmotDbg") { "processMarmotWelcomeFlow: marmotManager is null — Marmot store probably failed to init" }
-        return
-    }
+    val manager = account.marmotManager ?: return
     if (innerEvent !is WelcomeEvent) {
-        Log.w("MarmotDbg") { "processMarmotWelcomeFlow: inner is not WelcomeEvent (kind=${innerEvent.kind})" }
         return
     }
 
     // "h" tag is optional per MIP-02 — some senders (e.g. whitenoise-rs) omit it.
     // nostrGroupId is derived from the MLS GroupContext's NostrGroupData extension instead.
     val hintNostrGroupId = innerEvent.nostrGroupId()
-    Log.d("MarmotDbg") {
-        "processMarmotWelcomeFlow: h-tag=${hintNostrGroupId?.take(8) ?: "(absent)"} — deriving from MLS content"
-    }
-
     val result = manager.processWelcome(innerEvent, hintNostrGroupId)
 
     when (result) {
@@ -460,19 +433,7 @@ class SealedRumorEventHandler(
         eventNote: Note,
         publicNote: Note,
     ) {
-        Log.d("MarmotDbg") {
-            "SealedRumorEventHandler.processNewSealedRumor: id=${event.id.take(8)}…"
-        }
-        val innerRumor = event.unsealOrNull(account.signer)
-        if (innerRumor == null) {
-            Log.w("MarmotDbg") {
-                "SealedRumorEventHandler.processNewSealedRumor: unseal returned null for ${event.id.take(8)}…"
-            }
-            return
-        }
-        Log.d("MarmotDbg") {
-            "SealedRumorEventHandler.processNewSealedRumor: unsealed innerKind=${innerRumor.kind} innerId=${innerRumor.id.take(8)}…"
-        }
+        val innerRumor = event.unsealOrNull(account.signer) ?: return
 
         eventNote.event = event.copyNoContent()
 
@@ -486,9 +447,6 @@ class SealedRumorEventHandler(
         // to the MLS flow for group joining in addition to caching — there's
         // no normal eventProcessor consumer for kind:444.
         if (MarmotInboundProcessor.isWelcomeEvent(innerRumor)) {
-            Log.d("MarmotDbg") {
-                "SealedRumorEventHandler: detected Marmot WelcomeEvent inside seal — routing to processMarmotWelcomeFlow"
-            }
             processMarmotWelcomeFlow(innerRumor, account)
         } else {
             eventProcessor.consumeEvent(innerRumor, innerRumorNote, publicNote)
