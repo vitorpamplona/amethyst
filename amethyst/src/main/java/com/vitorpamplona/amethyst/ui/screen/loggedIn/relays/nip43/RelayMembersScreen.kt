@@ -154,13 +154,13 @@ fun RelayMembersScreen(
                 joinRequestSent = joinRequestSent,
                 leaveRequestSent = leaveRequestSent,
                 onJoinRequest = {
-                    scope.launch(Dispatchers.IO) {
+                    accountViewModel.launchSigner {
                         sendJoinRequest(normalizedRelayUrl, accountViewModel)
                         joinRequestSent = true
                     }
                 },
                 onLeaveRequest = {
-                    scope.launch(Dispatchers.IO) {
+                    accountViewModel.launchSigner {
                         sendLeaveRequest(normalizedRelayUrl, accountViewModel)
                         leaveRequestSent = true
                     }
