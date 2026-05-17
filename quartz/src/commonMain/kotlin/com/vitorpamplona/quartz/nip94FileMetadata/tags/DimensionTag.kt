@@ -56,8 +56,11 @@ class DimensionTag(
             if (parts.size != 2) return null
 
             return try {
-                val width = parts[0].toInt()
-                val height = parts[1].toInt()
+                // Some clients (e.g. Primal) emit floating-point dimensions like "317.0x498.0"
+                // in NIP-92 imeta tags. Parse as Double and truncate to keep those tags usable
+                // for pre-load layout reservation.
+                val width = parts[0].toDouble().toInt()
+                val height = parts[1].toDouble().toInt()
 
                 DimensionTag(width, height)
             } catch (e: Exception) {
