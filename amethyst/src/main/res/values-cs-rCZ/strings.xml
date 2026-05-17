@@ -2606,4 +2606,21 @@
     <string name="community_rules_violation_quota_exceeded">Dnes jsi již zveřejnil %1$d událostí tohoto typu (limit %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Nesplňuješ požadavky sítě důvěry této komunity.</string>
     <string name="community_rules_violation_stale_rules">Nejnovější dokument s pravidly komunity byl odmítnut jako zastaralý.</string>
+    <string name="call_permission_denied_cancel">Zrušit</string>
+    <string name="call_permission_denied_open_settings">Otevřít nastavení</string>
+    <string name="call_permission_denied_title">Vyžadováno oprávnění</string>
+    <string name="call_permission_denied_video">Amethyst potřebuje přístup ke kameře a mikrofonu, aby mohl zahájit videohovor. Povolte je v nastavení aplikace.</string>
+    <string name="call_permission_denied_voice">Amethyst potřebuje přístup k mikrofonu, aby mohl zahájit hlasový hovor. Povolte jej v nastavení aplikace.</string>
+    <string name="git_repo_personal_fork">Osobní fork</string>
+    <string name="git_repo_section_about">O projektu</string>
+    <string name="git_repo_section_links">Odkazy</string>
+    <string name="git_repo_section_maintainers">Správci</string>
+    <string name="git_repo_section_topics">Témata</string>
+    <string name="git_repo_tab_issues">Issues</string>
+    <string name="git_repo_tab_overview">Přehled</string>
+    <string name="git_repo_tab_patches">Patche a PR</string>
+    <string name="git_status_closed">Uzavřeno</string>
+    <string name="git_status_draft">Koncept</string>
+    <string name="git_status_merged">Sloučeno</string>
+    <string name="git_status_open">Otevřeno</string>
 </resources>

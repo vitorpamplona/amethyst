@@ -2581,4 +2581,21 @@
     <string name="community_rules_violation_quota_exceeded">Du har redan publicerat %1$d händelser av den här typen idag (gräns %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Du uppfyller inte den här gemenskapens krav på förtroendenät.</string>
     <string name="community_rules_violation_stale_rules">Det senaste dokumentet med gemenskapsregler avvisades som föråldrat.</string>
+    <string name="call_permission_denied_cancel">Avbryt</string>
+    <string name="call_permission_denied_open_settings">Öppna inställningar</string>
+    <string name="call_permission_denied_title">Behörighet krävs</string>
+    <string name="call_permission_denied_video">Amethyst behöver åtkomst till kameran och mikrofonen för att starta ett videosamtal. Aktivera dem i appens inställningar.</string>
+    <string name="call_permission_denied_voice">Amethyst behöver åtkomst till mikrofonen för att starta ett röstsamtal. Aktivera den i appens inställningar.</string>
+    <string name="git_repo_personal_fork">Personlig fork</string>
+    <string name="git_repo_section_about">Om</string>
+    <string name="git_repo_section_links">Länkar</string>
+    <string name="git_repo_section_maintainers">Underhållare</string>
+    <string name="git_repo_section_topics">Ämnen</string>
+    <string name="git_repo_tab_issues">Issues</string>
+    <string name="git_repo_tab_overview">Översikt</string>
+    <string name="git_repo_tab_patches">Patchar och PR</string>
+    <string name="git_status_closed">Stängd</string>
+    <string name="git_status_draft">Utkast</string>
+    <string name="git_status_merged">Sammanfogad</string>
+    <string name="git_status_open">Öppen</string>
 </resources>
