@@ -1061,6 +1061,11 @@
     <string name="call_failed_start">未能开始通话</string>
     <string name="call_failed_accept">未能接受通话</string>
     <string name="call_failed_session">创建通话会话失败</string>
+    <string name="call_permission_denied_title">需要权限</string>
+    <string name="call_permission_denied_voice">Amethyst 需要麦克风权限来开始语音通话。请在应用程序设置中启用它。</string>
+    <string name="call_permission_denied_video">Amethyst需要摄像头和麦克风访问权限来开始视频通话。请在应用程序设置中启用它们。</string>
+    <string name="call_permission_denied_open_settings">打开设置</string>
+    <string name="call_permission_denied_cancel">取消</string>
     <string name="call_settings">通话设置</string>
     <string name="call_settings_enable_calls">启用语音和视频通话</string>
     <string name="call_settings_enable_calls_description">禁用时，通话按钮在聊天屏幕上隐藏，所有来电都被无声忽略。</string>
