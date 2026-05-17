@@ -31,6 +31,7 @@ enum class CommandType(
     GET_PUBLIC_KEY("get_public_key"),
     DECRYPT_ZAP_EVENT("decrypt_zap_event"),
     DERIVE_KEY("derive_key"),
+    SIGN_PSBT("sign_psbt"),
     ;
 
     companion object {
@@ -44,6 +45,7 @@ enum class CommandType(
                 GET_PUBLIC_KEY.code -> GET_PUBLIC_KEY
                 DECRYPT_ZAP_EVENT.code -> DECRYPT_ZAP_EVENT
                 DERIVE_KEY.code -> DERIVE_KEY
+                SIGN_PSBT.code -> SIGN_PSBT
                 else -> null
             }
     }

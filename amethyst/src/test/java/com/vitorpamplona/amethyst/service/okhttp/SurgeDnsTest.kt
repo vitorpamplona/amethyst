@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.okhttp
 
 import okhttp3.Dns
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
@@ -343,7 +344,8 @@ class SurgeDnsTest {
         val snapshot = dns.snapshot()
         assertEquals(1, snapshot.size)
         assertEquals("live.example", snapshot[0].hostname)
-        assertEquals(listOf("1.2.3.4"), snapshot[0].addresses)
+        assertEquals(1, snapshot[0].addresses.size)
+        assertArrayEquals(ip("1.2.3.4").address, snapshot[0].addresses[0])
     }
 
     @Test
@@ -352,7 +354,7 @@ class SurgeDnsTest {
         val dns = SurgeDns(delegate = upstream)
 
         val expiresAt = System.currentTimeMillis() + 60_000
-        dns.restore(listOf(DnsCacheRecord("relay.example", listOf("9.9.9.9"), expiresAt)))
+        dns.restore(listOf(DnsCacheRecord("relay.example", listOf(ip("9.9.9.9").address), expiresAt)))
 
         assertEquals(listOf(ip("9.9.9.9")), dns.lookup("relay.example"))
         assertEquals("Restored entry should serve without upstream", 0, upstream.calls("relay.example"))
@@ -364,7 +366,7 @@ class SurgeDnsTest {
         val dns = SurgeDns(delegate = upstream)
 
         val expiredAt = System.currentTimeMillis() - 1_000
-        dns.restore(listOf(DnsCacheRecord("relay.example", listOf("9.9.9.9"), expiredAt)))
+        dns.restore(listOf(DnsCacheRecord("relay.example", listOf(ip("9.9.9.9").address), expiredAt)))
 
         dns.lookup("relay.example")
         assertEquals(1, upstream.calls("relay.example"))
@@ -387,7 +389,7 @@ class SurgeDnsTest {
             listOf(
                 DnsCacheRecord(
                     "relay.example",
-                    listOf("9.9.9.9"),
+                    listOf(ip("9.9.9.9").address),
                     System.currentTimeMillis() + 60_000,
                 ),
             ),
@@ -427,7 +429,7 @@ class SurgeDnsTest {
 
         dns.restore(
             listOf(
-                DnsCacheRecord("Example.COM", listOf("9.9.9.9"), System.currentTimeMillis() + 60_000),
+                DnsCacheRecord("Example.COM", listOf(ip("9.9.9.9").address), System.currentTimeMillis() + 60_000),
             ),
         )
 
@@ -495,6 +497,128 @@ class SurgeDnsTest {
         // Entry should now be negative — next caller gets a fresh failure rather than
         // forever-stale wrong IPs.
         assertThrows(UnknownHostException::class.java) { dns.lookup("a.example") }
+    }
+
+    @Test
+    fun `loopback address from upstream is rejected for non-loopback host`() {
+        val upstream = CountingDns(mapOf("relay.example" to listOf(ip("127.0.0.1"))))
+        val dns = SurgeDns(delegate = upstream)
+
+        assertThrows(UnknownHostException::class.java) { dns.lookup("relay.example") }
+        assertFalse("Rejected answer must not be cached as positive", dns.isDirty())
+    }
+
+    @Test
+    fun `any-local address from upstream is rejected for non-loopback host`() {
+        val upstream = CountingDns(mapOf("relay.example" to listOf(ip("0.0.0.0"))))
+        val dns = SurgeDns(delegate = upstream)
+
+        assertThrows(UnknownHostException::class.java) { dns.lookup("relay.example") }
+    }
+
+    @Test
+    fun `loopback addresses are stripped but routable addresses are kept`() {
+        val upstream =
+            CountingDns(mapOf("relay.example" to listOf(ip("127.0.0.1"), ip("5.6.7.8"))))
+        val dns = SurgeDns(delegate = upstream)
+
+        val result = dns.lookup("relay.example")
+        assertEquals(listOf(ip("5.6.7.8")), result)
+    }
+
+    @Test
+    fun `localhost hostname keeps loopback answers`() {
+        val upstream = CountingDns(mapOf("localhost" to listOf(ip("127.0.0.1"))))
+        val dns = SurgeDns(delegate = upstream)
+
+        assertEquals(listOf(ip("127.0.0.1")), dns.lookup("localhost"))
+    }
+
+    @Test
+    fun `dot-localhost subdomain keeps loopback answers`() {
+        val upstream = CountingDns(mapOf("relay.localhost" to listOf(ip("127.0.0.1"))))
+        val dns = SurgeDns(delegate = upstream)
+
+        assertEquals(listOf(ip("127.0.0.1")), dns.lookup("relay.localhost"))
+    }
+
+    @Test
+    fun `trailing-dot FQDN form of localhost keeps loopback answers`() {
+        // RFC 1034: `localhost.` is the same name as `localhost`, just in FQDN form.
+        val upstream = CountingDns(mapOf("localhost." to listOf(ip("127.0.0.1"))))
+        val dns = SurgeDns(delegate = upstream)
+
+        assertEquals(listOf(ip("127.0.0.1")), dns.lookup("localhost."))
+    }
+
+    @Test
+    fun `ipv4 loopback literal keeps loopback answers`() {
+        val upstream = CountingDns(mapOf("127.0.0.1" to listOf(ip("127.0.0.1"))))
+        val dns = SurgeDns(delegate = upstream)
+
+        assertEquals(listOf(ip("127.0.0.1")), dns.lookup("127.0.0.1"))
+    }
+
+    @Test
+    fun `ipv6 loopback literal keeps loopback answers`() {
+        val upstream = CountingDns(mapOf("::1" to listOf(ip("::1"))))
+        val dns = SurgeDns(delegate = upstream)
+
+        assertEquals(listOf(ip("::1")), dns.lookup("::1"))
+    }
+
+    @Test
+    fun `restore filters loopback poison and marks cache dirty`() {
+        val upstream = CountingDns(mapOf("relay.example" to listOf(ip("5.6.7.8"))))
+        val dns = SurgeDns(delegate = upstream)
+
+        val expiresAt = System.currentTimeMillis() + 60_000
+        dns.restore(listOf(DnsCacheRecord("relay.example", listOf(ip("127.0.0.1").address), expiresAt)))
+
+        assertTrue("Dropping poison must dirty the cache so the snapshot is rewritten", dns.isDirty())
+        // Cache should not hold the poisoned entry, so the next lookup hits upstream.
+        assertEquals(listOf(ip("5.6.7.8")), dns.lookup("relay.example"))
+        assertEquals(1, upstream.calls("relay.example"))
+    }
+
+    @Test
+    fun `restore keeps non-loopback addresses when poison is mixed in`() {
+        val upstream = CountingDns(mapOf("relay.example" to listOf(ip("9.9.9.9"))))
+        val dns = SurgeDns(delegate = upstream)
+
+        val expiresAt = System.currentTimeMillis() + 60_000
+        dns.restore(
+            listOf(
+                DnsCacheRecord("relay.example", listOf(ip("127.0.0.1").address, ip("5.6.7.8").address), expiresAt),
+            ),
+        )
+
+        assertTrue("Dropping one poisoned address still dirties the cache", dns.isDirty())
+        assertEquals(listOf(ip("5.6.7.8")), dns.lookup("relay.example"))
+        assertEquals("Restored survivors should serve without upstream", 0, upstream.calls("relay.example"))
+    }
+
+    @Test
+    fun `restore keeps loopback for localhost host`() {
+        val upstream = CountingDns(emptyMap())
+        val dns = SurgeDns(delegate = upstream)
+
+        val expiresAt = System.currentTimeMillis() + 60_000
+        dns.restore(listOf(DnsCacheRecord("localhost", listOf(ip("127.0.0.1").address), expiresAt)))
+
+        assertFalse("Loopback entry for localhost is legitimate, not poison", dns.isDirty())
+        assertEquals(listOf(ip("127.0.0.1")), dns.lookup("localhost"))
+    }
+
+    @Test
+    fun `restore of clean snapshot does not dirty the cache`() {
+        val upstream = CountingDns(emptyMap())
+        val dns = SurgeDns(delegate = upstream)
+
+        val expiresAt = System.currentTimeMillis() + 60_000
+        dns.restore(listOf(DnsCacheRecord("relay.example", listOf(ip("5.6.7.8").address), expiresAt)))
+
+        assertFalse("Clean restore must not dirty the cache", dns.isDirty())
     }
 
     @Test

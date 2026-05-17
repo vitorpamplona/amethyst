@@ -372,6 +372,8 @@
     <string name="quick_action_block_dialog_btn">बाधित करें</string>
     <string name="quick_action_delete_dialog_btn">मिटाएँ</string>
     <string name="quick_action_block">बाधित करें</string>
+    <string name="quick_action_mute_thread">सूत्र मौन करें</string>
+    <string name="quick_action_unmute_thread">सूत्र मौन हटाएँ</string>
     <string name="quick_action_report">सूचना</string>
     <string name="quick_action_delete_button">मिटाएँ</string>
     <string name="quick_action_dont_show_again_button">फिर से ना दिखाएँ</string>
@@ -647,6 +649,16 @@
     <string name="nest_participant_unfollow">अनुचरण ना करें</string>
     <string name="nest_participant_mute">मौन</string>
     <string name="nest_participant_unmute">मौन हटाएँ</string>
+    <string name="nest_force_mute_note">सम्भाव्यतः उन ग्राहकों द्वारा उपेक्षित जो आज्ञा का सम्मान नहीं करते।</string>
+    <string name="nest_confirm_kick_title">क्या शाला से निष्कासित करें।</string>
+    <string name="nest_confirm_kick_body">%1$s को ध्वनि तल से हटाए जाएँगे तथा सहभागी सूची से भी। वे पुनः जुड सकते हैं यदि वे शाला योजक प्राप्त कर लें।</string>
+    <string name="nest_confirm_kick_confirm">पदप्रहार</string>
+    <string name="nest_confirm_force_mute_title">क्या वक्ता को मौन करें।</string>
+    <string name="nest_confirm_force_mute_body">%1$s के ग्राहक को अपना ध्वनिग्राहक मौन करने का अनुरोध करता है। कुछ ग्राहक इस आदेश की उपेक्षा कर सकते हैं।</string>
+    <string name="nest_confirm_force_mute_confirm">मौनकरण</string>
+    <string name="nest_confirm_cancel">निरस्त</string>
+    <string name="nest_toast_host_action_failed_title">क्रिया असफल</string>
+    <string name="nest_toast_host_action_failed_template_null">क्रिया का निर्माण नहीं हो सका।</string>
     <string name="nest_share_action">शाला बाँटें</string>
     <string name="nest_minimize">छोटा करें</string>
     <string name="nest_minimize_description">सुनते रहने के लिए छोटा करें</string>
@@ -1076,6 +1088,10 @@
     <string name="always_on_notif_connecting">आगतपेटिका पुनःप्रसारकों के साथ संयोजन किया जा रहा है \u2026</string>
     <string name="always_on_notif_setting_title">सदैव सक्रिय सूचना सेवा</string>
     <string name="always_on_notif_setting_description">अनवरत संयोजन बनाए रखता है आपके आगतपेटिका पुनःप्रसारकों के साथ तत्काल सूचना वितरण के लिए। एक स्थायी सूचना दिखाता है। विद्युत्कोष का अधिक उपयोग करता है पर निश्चित करता है कि आप कभी भी सन्देश नहीं खोएँगे।</string>
+    <string name="split_notifications_setting_title">सूचनाएँ विभाजित करें अनुचरित के अनुसार</string>
+    <string name="split_notifications_setting_description">दो सूचना पृष्ठसूचक दिखाएँ। अनुचरित (लोग जिनका आप अनुचरण करते हैं) तथा सभी। अपठित संकेतक चमकता है केवल आपके द्वारा अनुचरित लोगों के गतिविधियों के लिए।</string>
+    <string name="notification_tab_following">का अनुचरण</string>
+    <string name="notification_tab_everyone">सभी</string>
     <string name="battery_optimization_title">विद्युत्कोष अनुकूलन सक्रिय</string>
     <string name="battery_optimization_description">आण्ड्रोइड पुनःप्रसारक संयोजनों को प्रतिबंधित कर सकता है पृष्ठतल में। विद्युत्कोष अनुकूलन निष्क्रिय करें अमेथिस्ट के लिए सुनिश्चत रूप से सूचनाएँ प्राप्त करने के लिए।</string>
     <string name="battery_optimization_fix_now">अभी ठीक करें</string>
@@ -1100,6 +1116,8 @@
     <string name="warn_when_posts_have_reports_from_your_follows">चेतावनी दें जब पत्र सूचित किये गये हों आपके द्वारा अनुचरित व्यक्तियों से</string>
     <string name="filter_spam_from_strangers_title">कचरालेख छलनी</string>
     <string name="filter_spam_from_strangers_explainer">अज्ञात लोगों से पत्र छिपाएँ जो निरन्तर 5 अथवा अधिक बार यथावत समान थे</string>
+    <string name="add_client_tag_title">मेरे घटनाओं में ग्राहक सूचक जोडें</string>
+    <string name="add_client_tag_explainer">जब सक्षम अमेथिस्ट निप॰८९ ग्राहक सूचक जोडेगा आपके द्वारा प्रकाशित घटनाओं में।</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">सूचनाएँ प्राप्त होने पर चेतावनी दें</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">चेतावनी सन्देश दिखाता है जब प्रकाशित पत्र 5 अथवा अधिक बार सूचित हो आपके द्वारा अनुचरित लेखाओं से</string>
     <string name="report_warning_threshold_title">चेतावनी सीमा सूचना</string>
@@ -1110,6 +1128,12 @@
     <string name="max_hashtag_limit_explainer">इससे अधिक विषयसूचक युक्त पत्रों को नहीं दिखाता। शून्य रखें अक्षम करने के लिए</string>
     <string name="hide_community_rules_violations_title">समुदाय नियमों का उल्लंघन करनेवाले पत्रों को छुपाएँ</string>
     <string name="hide_community_rules_violations_explainer">समुदाय सूचनावलियों से पत्र हटाएँ जब समदाय द्वारा निप॰९ए नियम अभिलेख प्रकाशित है तथा घटना उसका उल्लंघन करेगा। कोई प्रभाव नहीं जब समुदाय के कोई व्यवस्थित नियम नहीं।</string>
+    <string name="security_section_filtering_preferences">छलनी आद्यताएँ</string>
+    <string name="security_section_blocked_content">बाधित विषयवस्तु</string>
+    <string name="security_unlimited">असीमित</string>
+    <string name="security_blocked_users_empty">आपने किसी प्रयोक्ता को बाधित नहीं किया अब तक।</string>
+    <string name="security_spamming_users_empty">कोई लेखा चिह्नित नहीं कचरालेख के लिए इस सत्र में।</string>
+    <string name="security_hidden_words_empty">कोई बाधित शब्द नहीं। नीचे शब्द जोडें उन पत्रों को अदृश्य करने के लिए जिनमें वह है।</string>
     <string name="new_reaction_symbol">नया प्रतिक्रिया चिह्न</string>
     <string name="no_reaction_type_setup_long_press_to_change">इस उपयोगकर्ता के लिए कोई प्रतिक्रिया प्रकार पूर्व चयनित नहीं। हृदयचिह्न घुण्डी पर दीर्घतः दबाएँ परिवर्तन करने के लिए</string>
     <string name="zapraiser">ज्सापोपार्जन योजना</string>
@@ -1287,6 +1311,7 @@
     <string name="spamming_users">कचरालेख प्रेषक</string>
     <string name="muted_button">मौन किया गया। अमौन करने के लिए टाँकें</string>
     <string name="mute_button">ध्वनि सक्रिय। मौन करने के लिए टाँकें</string>
+    <string name="action_unmute">मौन हटाएँ</string>
     <string name="skip_back">%d सेकण्ड पूर्व जाएँ</string>
     <string name="skip_forward">%d सेकण्ड आगे जाएँ</string>
     <string name="picture_in_picture">चित्र में चित्र</string>
@@ -1306,6 +1331,8 @@
     <string name="geohash_exclusive_explainer">स्थल के अनुचर ही देखेंगे। आपके सामान्य अनुचर नहीं देखेंगे।</string>
     <string name="hashtag_exclusive">विषयसूचक विशेष पत्र</string>
     <string name="hashtag_exclusive_explainer">केवल विषयसूचक के अनुचर इसे देखेंगे। आपके सामान्य अनुचर नहीं देखेंगे।</string>
+    <string name="external_url_scope">जालस्थान पर टिप्पणी</string>
+    <string name="external_id_scope">बाहरी संसाधन पर टिप्पणी</string>
     <string name="long_form_reading_minutes">%1$d मिन॰ पठन</string>
     <string name="loading_location">स्थान प्राप्त किया जा रहा है</string>
     <string name="lack_location_permissions">स्थान प्राप्त करने की अनुमति नहीं</string>
@@ -1410,6 +1437,9 @@
     <string name="no_blossom_apps_found_description">ब्लोस्सम॰ क्रमक प्राप्त नहीं। कृपया एक स्थानीय ब्लोस्सम॰ क्रमक की स्थापना करें इस अभिलेख को देखने के लिए</string>
     <string name="hidden_words">छिपाए गये शब्द</string>
     <string name="hide_new_word_label">नया शब्द अथवा वाक्य छिपाएँ</string>
+    <string name="settings_muted_threads_title">मौनकृत सूत्र</string>
+    <string name="settings_muted_threads_empty">कोई मौनकृत सूत्र नहीं</string>
+    <string name="settings_muted_threads_unknown">अज्ञात सूत्र। %1$s</string>
     <string name="automatically_show_profile_picture">परिचय चित्र</string>
     <string name="automatically_show_profile_picture_description">परिचय चित्र दिखाएँ</string>
     <string name="select_an_option">विकल्प का चयन करें</string>
@@ -1641,6 +1671,12 @@
     <string name="home_tabs_settings">मुख्यपटल पृष्ठसूचक</string>
     <string name="home_tabs_settings_description">चयन करें किन पृष्ठसूचक दिखने चाहिए मुख्यपटल पर। जब एक ही सक्रिय है तब पृष्ठसूचक पट्टी छुपाई जाएगी।</string>
     <string name="home_tab_everything">सभी</string>
+    <string name="profile_ui_settings">परिचय प्रयोगमाध्यम</string>
+    <string name="profile_ui_settings_description">चयन करें कि किन विभाग तथा सूचनावलियाँ दिखेंगे प्रयोक्ता परिचय पटल पर। सभी विकल्प सक्षम हैं मूलतः।</string>
+    <string name="profile_ui_setting_badges">परिचय पदक</string>
+    <string name="profile_ui_setting_app_recommendations">क्रमक अनुशंसाएँ</string>
+    <string name="profile_ui_setting_zap_received_feed">ज्साप प्राप्त सूचनावली</string>
+    <string name="profile_ui_setting_followers_feed">अनुचर सूचनावली</string>
     <string name="reactions_settings">प्रतिक्रिया पंक्ति</string>
     <string name="reactions_settings_description">समाकृति करें कि किन प्रतिक्रिया घुण्डियाँ दिखाए जाएँगे तथा उनके क्रम तथा यदि संकलन सूचक दिखाए जाएँगे।</string>
     <string name="reactions_settings_enabled">सक्षम</string>
@@ -1675,6 +1711,8 @@
     <string name="video_player_settings_action_download_description">चलचित्र का अवरोहण करें आपके यन्त्र तक (सीधे प्रसारों में अदृश्य)</string>
     <string name="video_player_settings_action_pip">चित्र में चित्र</string>
     <string name="video_player_settings_action_pip_description">चलचित्र दिखाएँ तैरते गवाक्ष में (अदृश्य यदि अनालम्बित)</string>
+    <string name="video_player_settings_action_cast">यन्त्र पर निक्षेपण</string>
+    <string name="video_player_settings_action_cast_description">चलचित्र को क्रेमकास्ट॰ ग्राहक तक भेजें आपके वैफै॰ पर (स्थानीय अभिलेखों के लिए अदृष्ट)</string>
     <string name="profile_image_of_user">%1$s का परिचय चित्र</string>
     <string name="relay_info">पुनःप्रसारक %1$s</string>
     <string name="expand_relay_list">पुनःप्रसारक सूची का विस्तारण करें</string>
@@ -1793,6 +1831,18 @@
     <string name="git_repository">गिट क्रमलेखकोश : %1$s</string>
     <string name="git_web_address">जाल :</string>
     <string name="git_clone_address">अनुकृति :</string>
+    <string name="git_status_open">खुला</string>
+    <string name="git_status_merged">विलीन</string>
+    <string name="git_status_closed">अवरुद्ध</string>
+    <string name="git_status_draft">पाण्डुलिपि</string>
+    <string name="git_repo_tab_overview">रूपरेखा विवरण</string>
+    <string name="git_repo_tab_issues">समस्याएँ</string>
+    <string name="git_repo_tab_patches">सुधारलेख तथा पीआर॰</string>
+    <string name="git_repo_section_about">जानकारी</string>
+    <string name="git_repo_section_links">योजक</string>
+    <string name="git_repo_section_maintainers">परिपालक</string>
+    <string name="git_repo_section_topics">विषय सूची</string>
+    <string name="git_repo_personal_fork">व्यक्तिगत पतभेद</string>
     <string name="nsite_title">स्थिर जालस्थान : %1$s</string>
     <string name="nsite_root_site">मूल स्थान</string>
     <string name="nsite_source">स्रोत :</string>
@@ -1890,8 +1940,11 @@
     <string name="favorite_dvms_title">इष्ट सूचनावली कलनविधियाँ</string>
     <string name="favorite_dvms_explainer">सूचनावली कलनविधियाँ जिनहें आपने यहाँ ताराचिह्नित किए मूल सूचनावली पर छलनी खण्डों के जैसे दिखेंगे। खोज पटल खोलें अधिक जोडने के लिए।</string>
     <string name="favorite_dvms_empty_headline">आपके इष्ट कलनविधियाँ अटकाएँ</string>
+    <string name="favorite_dvms_empty_step1">नीचे \"%1$s\" दबाएँ कलनविधियों का वीक्षण करने के लिए।</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
+    <string name="favorite_dvms_empty_step2">सूचनावली का पास %1$s दबाएँ यहाँ रखने के लिए।</string>
     <string name="favorite_dvms_empty_cta">सूचनावलियाँ जोडें</string>
+    <string name="favorite_dvms_add_more">अधिक जोडें…</string>
     <string name="dvm_home_status_requesting">अनुरोध %1$s को सूचनावली के लिए…</string>
     <string name="dvm_home_status_requesting_all">आपके इष्ट सूचनावली कलनविधियों को अनुरोध किया जा रहा है सूचनावलियों के लिए…</string>
     <string name="dvm_home_status_processing">आपकी सूचनावली पर कार्य चालू…</string>
@@ -2284,6 +2337,10 @@
     <string name="playback_actions_dialog_title">चालन</string>
     <string name="video_quality_auto">स्वचालित</string>
     <!-- LAN cast (Chromecast) feature -->
+    <string name="cast_to_device">यन्त्र पर निक्षेपण</string>
+    <string name="cast_stop_casting">निक्षेपण रोकें</string>
+    <string name="cast_to_device_dialog_title">निक्षेपण इस पर…</string>
+    <string name="cast_searching_for_devices">आपके वैफै॰ पर यन्त्रों का खोज चालू…</string>
     <!-- HLS multi-resolution video sharing -->
     <string name="share_hls_video">एचएलएस॰ आरोहण</string>
     <string name="share_hls_video_drawer_description">बहुसुलझाव एचएलएस॰ प्रकाशित करें आपके प्रसारसंगणक में</string>
@@ -2482,6 +2539,9 @@
     <string name="ai_writing_setting_description">यन्त्र स्थित एआई॰ प्रतिरूप का प्रयोग करता है लेख सुधार तथा स्वर परिवर्तन प्रस्तावों के लिए।</string>
     <string name="tracked_broadcasts_setting_title">पदचिह्न युक्त प्रसारण</string>
     <string name="tracked_broadcasts_setting_description">पदचिह्न युक्त प्रसारक का उपयोग करें घटनाओं को भेजते समय। तत्काल प्रगति दिखाता है तथा प्रत्येक पुनःप्रसारक की स्थिति प्रसारण करते समय।</string>
+    <string name="compose_settings">सम्पादन स्थापना विकल्प</string>
+    <string name="auto_create_drafts_setting_title">पाण्डुलिपियाँ स्वतः बनाएँ</string>
+    <string name="auto_create_drafts_setting_description">स्वतः पाण्डुलिपि घटना का अभिलेखन करता है जब आप टंकण करते है अथवा सम्पादक छोडते हैं अप्रेषित लेख के साथ तथा आपके निजी निर्गतपेटिका पुनःप्रसारकों को भेजता है।</string>
     <string name="ai_writing_use_this">इसका प्रयोग करें</string>
     <string name="ai_writing_dismiss">हटाएँ</string>
     <string name="ai_tone_correct">सम्यक</string>

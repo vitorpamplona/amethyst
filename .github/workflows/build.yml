@@ -218,7 +218,6 @@ jobs:
             :quartz:jvmTest \
             :commons:jvmTest \
             :nestsClient:jvmTest \
-            :ammolite:testDebugUnitTest \
             :amethyst:testFdroidDebugUnitTest \
             :amethyst:testPlayDebugUnitTest \
             :amethyst:assembleBenchmark \

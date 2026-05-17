@@ -20,44 +20,64 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
-import android.content.Context
-import androidx.core.content.edit
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.quartz.utils.Log
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
+import java.io.DataInputStream
+import java.io.DataOutputStream
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 
 /**
- * Persists [SurgeDns]'s positive cache to a small `SharedPreferences` blob so the resolver
- * starts hot after a process restart.
+ * Persists [SurgeDns]'s positive cache to a small binary blob under the app's cache directory
+ * so the resolver starts hot after a process restart.
  *
  * Cold starts are the resolver's worst case — every host is a sync `getaddrinfo`. With a
  * persisted snapshot, every previously-seen host falls into the stale-while-revalidate path on
  * first lookup: the cached IP is served immediately, and a background refresh updates it. That
  * turns ~700 blocking system calls at app start into zero.
  *
- * The blob is plain (not encrypted) — hostnames are already exposed in the user's signed relay
- * list, Coil's image cache, and the system resolver's own state. ~700 entries × ~80 bytes ≈
- * ~55 KB of JSON.
+ * Stored under `cacheDir` because the snapshot is pure perf — if the OS evicts it under storage
+ * pressure, the resolver just falls back to sync `getaddrinfo` and rebuilds the cache as
+ * lookups happen. The blob is plain (not encrypted) — hostnames are already exposed in the
+ * user's signed relay list, Coil's image cache, and the system resolver's own state.
+ *
+ * Format (big-endian, no padding):
+ * ```
+ * header:
+ *   [u32 magic = 0x534E5343]   // 'SNSC'
+ *   [u16 version = 1]
+ *   [u32 record_count]
+ * record (repeated record_count times):
+ *   [u8  host_len]              // hostname ASCII, < 256 bytes
+ *   [host_len bytes]            // UTF-8 hostname
+ *   [u8  ip_count]
+ *   per ip:
+ *     [u8 ip_byte_len]          // 4 or 16
+ *     [ip_byte_len bytes]       // raw, from InetAddress.address
+ *   [i64 expiresAtMillis]
+ * ```
+ *
+ * ~700 hosts × ~36 bytes ≈ ~25 KB.
  */
 class SurgeDnsStore(
-    private val context: Context,
+    private val file: File,
     private val dns: SurgeDns,
 ) {
-    private val prefs by lazy { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
-
     /**
      * Read the persisted snapshot and merge it into the resolver. Existing in-memory entries
      * are preserved (see [SurgeDns.restore]). Safe to call once at app start. Blocking I/O —
      * call from a background thread.
      */
     fun load() {
-        val json = prefs.getString(KEY_SNAPSHOT, null) ?: return
+        if (!file.exists()) return
         val records =
             try {
-                MAPPER.readValue<List<DnsCacheRecord>>(json)
+                readRecords(file)
             } catch (t: Throwable) {
                 Log.w(TAG) { "Dropping corrupt DNS cache blob: ${t.message}" }
-                prefs.edit { remove(KEY_SNAPSHOT) }
+                file.delete()
                 return
             }
         // restore() uses putIfAbsent and never marks dirty, so we deliberately do NOT clear the
@@ -76,27 +96,104 @@ class SurgeDnsStore(
         // captured by the next save instead of being silently lost. compareAndSet ensures two
         // concurrent saves don't both proceed.
         if (!dns.tryClearDirty()) return
+        // Write atomically: write to a sibling tmp file then rename so a crash mid-write
+        // can't leave a half-written blob that load() would have to throw away.
+        val tmp = File(file.parentFile, "${file.name}.tmp")
         try {
             val records = dns.snapshot()
-            val json = MAPPER.writeValueAsString(records)
-            prefs.edit { putString(KEY_SNAPSHOT, json) }
+            file.parentFile?.mkdirs()
+            writeRecords(tmp, records)
+            if (!tmp.renameTo(file)) {
+                file.delete()
+                if (!tmp.renameTo(file)) {
+                    tmp.copyTo(file, overwrite = true)
+                }
+            }
             Log.d(TAG) { "Persisted ${records.size} DNS cache entries" }
         } catch (t: Throwable) {
             Log.w(TAG) { "Failed to persist DNS cache: ${t.message}" }
             // Restore the dirty signal so the next save retries.
             dns.markDirty()
+        } finally {
+            // Cleans up after both happy paths (copyTo fallback) and failure paths (writeRecords
+            // crashed partway, leaving a partial blob) so a corrupt tmp can't accumulate.
+            if (tmp.exists()) tmp.delete()
         }
     }
 
     /** Force-clear the on-disk cache. Useful for diagnostics or when the user wipes data. */
     fun clear() {
-        prefs.edit { remove(KEY_SNAPSHOT) }
+        file.delete()
     }
+
+    private fun writeRecords(
+        target: File,
+        records: List<DnsCacheRecord>,
+    ) {
+        DataOutputStream(BufferedOutputStream(FileOutputStream(target))).use { out ->
+            out.writeInt(MAGIC)
+            out.writeShort(VERSION)
+            out.writeInt(records.size)
+            for (record in records) {
+                val hostBytes = record.hostname.toByteArray(Charsets.UTF_8)
+                require(hostBytes.size <= MAX_HOST_LEN) { "hostname too long: ${hostBytes.size}" }
+                require(record.addresses.size <= MAX_IPS_PER_HOST) { "too many IPs: ${record.addresses.size}" }
+                out.writeByte(hostBytes.size)
+                out.write(hostBytes)
+                out.writeByte(record.addresses.size)
+                for (ip in record.addresses) {
+                    require(ip.size == 4 || ip.size == 16) { "bad ip byte length: ${ip.size}" }
+                    out.writeByte(ip.size)
+                    out.write(ip)
+                }
+                out.writeLong(record.expiresAtMillis)
+            }
+        }
+    }
+
+    private fun readRecords(source: File): List<DnsCacheRecord> =
+        DataInputStream(BufferedInputStream(FileInputStream(source))).use { input ->
+            val magic = input.readInt()
+            if (magic != MAGIC) throw IllegalStateException("bad magic: 0x${Integer.toHexString(magic)}")
+            val version = input.readUnsignedShort()
+            if (version != VERSION) throw IllegalStateException("unsupported version: $version")
+            val count = input.readInt()
+            if (count < 0 || count > MAX_RECORDS) throw IllegalStateException("bad record count: $count")
+            val out = ArrayList<DnsCacheRecord>(count)
+            repeat(count) {
+                val hostLen = input.readUnsignedByte()
+                // 0-length hostnames are nonsense; treat as corruption rather than restoring them.
+                if (hostLen == 0) throw IllegalStateException("empty hostname")
+                val hostBytes = ByteArray(hostLen)
+                input.readFully(hostBytes)
+                val hostname = String(hostBytes, Charsets.UTF_8)
+                val ipCount = input.readUnsignedByte()
+                if (ipCount == 0 || ipCount > MAX_IPS_PER_HOST) throw IllegalStateException("bad ip count: $ipCount")
+                val ips = ArrayList<ByteArray>(ipCount)
+                repeat(ipCount) {
+                    val ipLen = input.readUnsignedByte()
+                    if (ipLen != 4 && ipLen != 16) throw IllegalStateException("bad ip byte length: $ipLen")
+                    val ipBytes = ByteArray(ipLen)
+                    input.readFully(ipBytes)
+                    ips += ipBytes
+                }
+                val expiresAt = input.readLong()
+                out += DnsCacheRecord(hostname, ips, expiresAt)
+            }
+            out
+        }
 
     companion object {
         private const val TAG = "SurgeDnsStore"
-        private const val PREFS_NAME = "amethyst_dns_cache"
-        private const val KEY_SNAPSHOT = "dns_cache_v1"
-        private val MAPPER = jacksonObjectMapper()
+        const val FILE_NAME = "dns_cache_v1.bin"
+
+        // 'SNSC' — Surge dNS Cache.
+        private const val MAGIC = 0x534E5343
+        private const val VERSION = 1
+        private const val MAX_HOST_LEN = 255
+        private const val MAX_IPS_PER_HOST = 255
+
+        // Sane cap so a corrupt header can't trick load() into allocating gigabytes.
+        private const val MAX_RECORDS = 100_000
     }
 }

@@ -61,7 +61,7 @@ data class LiveHiddenUsers(
     val spammers: Set<String> = emptySet(),
     val hiddenWords: Set<String> = emptySet(),
     val mutedThreads: Set<String> = emptySet(),
-    val maxHashtagLimit: Int = 5,
+    val maxHashtagLimit: Int = 8,
 ) {
     fun isUserHidden(userHex: String) = hiddenUsers.contains(userHex) || spammers.contains(userHex)
 

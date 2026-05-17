@@ -135,10 +135,15 @@ import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.nip34Git.grasp.UserGraspListEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip34Git.state.GitRepositoryStateEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
@@ -240,6 +245,10 @@ import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRejectEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
+import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.OnchainBackend
+import com.vitorpamplona.quartz.nipBCOnchainZaps.verify.OnchainZapVerifier
+import com.vitorpamplona.quartz.nipBCOnchainZaps.verify.VerifiedOnchainZap
+import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.DualCase
@@ -285,6 +294,15 @@ object LocalCache : ILocalCache, ICacheProvider {
     val ephemeralChannels = LargeCache<RoomId, EphemeralChatChannel>()
 
     val paymentTracker = NwcPaymentTracker()
+
+    /**
+     * Bitcoin chain backend used by [consume]`(OnchainZapEvent)` to verify NIP-BC zaps
+     * against the actual on-chain transaction. `null` disables verification (incoming
+     * onchain zap events still get cached, but no `Note.zapsAmount` contribution).
+     * Set during account init.
+     */
+    @Volatile
+    var onchainBackend: OnchainBackend? = null
 
     val relayHints = HintIndexer()
 
@@ -902,6 +920,18 @@ object LocalCache : ILocalCache, ICacheProvider {
                 event.zappedPost().mapNotNull { checkGetOrCreateNote(it) } +
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) } +
                     (event.zapRequest?.taggedAddresses()?.map { getOrCreateAddressableNote(it) } ?: emptyList())
+            }
+
+            is OnchainZapEvent -> {
+                // NIP-BC zaps can target an event id (e), an addressable event (a),
+                // or just the recipient profile (p). Profile-only zaps have no
+                // Note target and are surfaced through profile zap queries.
+                buildList {
+                    event.zappedEvent()?.let { checkGetOrCreateNote(it)?.let { add(it) } }
+                    event.zappedAddress()?.let { coord ->
+                        Address.parse(coord)?.let { add(getOrCreateAddressableNote(it)) }
+                    }
+                }
             }
 
             is LnZapRequestEvent -> {
@@ -1710,6 +1740,60 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
 
         return false
+    }
+
+    fun consume(
+        event: OnchainZapEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val note = getOrCreateNote(event.id)
+        if (note.event != null) return false
+
+        if (!(wasVerified || justVerify(event))) return false
+
+        // Anti-spoofing: NIP-BC requires rejecting self-zaps.
+        val recipient = event.recipient() ?: return false
+        if (event.pubKey.equals(recipient, ignoreCase = true)) return false
+
+        val author = getOrCreateUser(event.pubKey)
+        val repliesTo = computeReplyTo(event)
+        note.loadEvent(event, author, repliesTo)
+        refreshNewNoteObservers(note)
+
+        // Verification needs a chain backend. Without one (e.g. before Account
+        // wires its EsploraBackend) the event is still cached so subscriptions
+        // and profile zap views see it, but it can't contribute to Note totals.
+        val backend = onchainBackend ?: return true
+        val verifier = OnchainZapVerifier(backend)
+
+        Amethyst.instance.applicationIOScope.launch {
+            try {
+                when (val result = verifier.verify(event)) {
+                    is VerifiedOnchainZap.Confirmed -> {
+                        repliesTo.forEach {
+                            it.addOnchainZap(result.txid, result.verifiedSats, confirmed = true)
+                        }
+                    }
+
+                    is VerifiedOnchainZap.Pending -> {
+                        repliesTo.forEach {
+                            it.addOnchainZap(result.txid, result.verifiedSats, confirmed = false)
+                        }
+                    }
+
+                    is VerifiedOnchainZap.Rejected -> {
+                        Log.d("OnchainZap") {
+                            "rejected ${result.txid}: ${result.reason}"
+                        }
+                    }
+                }
+            } catch (t: Throwable) {
+                Log.w("OnchainZap", "verification failed for ${event.id}", t)
+            }
+        }
+
+        return true
     }
 
     private fun attachZapToLiveActivityChannel(
@@ -3021,7 +3105,27 @@ object LocalCache : ILocalCache, ICacheProvider {
                     consumeRegularEvent(event, relay, wasVerified)
                 }
 
+                is GitPullRequestEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is GitPullRequestUpdateEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is GitStatusEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
                 is GitRepositoryEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is GitRepositoryStateEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is UserGraspListEvent -> {
                     consumeBaseReplaceable(event, relay, wasVerified)
                 }
 
@@ -3142,6 +3246,10 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 is LnZapRequestEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is OnchainZapEvent -> {
                     consume(event, relay, wasVerified)
                 }
 

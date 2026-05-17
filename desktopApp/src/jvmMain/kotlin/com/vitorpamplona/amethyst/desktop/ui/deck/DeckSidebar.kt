@@ -56,6 +56,7 @@ fun DeckSidebar(
     onRemoveAccount: (String) -> Unit,
     onAddColumn: () -> Unit,
     onOpenSettings: () -> Unit,
+    onShowImportFollowListDialog: () -> Unit = {},
     signerConnectionState: SignerConnectionState,
     lastPingTimeSec: Long?,
     torStatus: TorServiceStatus,
@@ -86,6 +87,14 @@ fun DeckSidebar(
             Icon(
                 MaterialSymbols.Add,
                 contentDescription = "Add Column",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        IconButton(onClick = onShowImportFollowListDialog) {
+            Icon(
+                MaterialSymbols.PersonAdd,
+                contentDescription = "Import Follow List",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }

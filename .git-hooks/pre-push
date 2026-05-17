@@ -21,7 +21,6 @@ TASKS=(
     :commons:jvmTest
     :nestsClient:jvmTest
     :quic:jvmTest
-    :ammolite:testDebugUnitTest
     :amethyst:testPlayDebugUnitTest
     :cli:test
 )

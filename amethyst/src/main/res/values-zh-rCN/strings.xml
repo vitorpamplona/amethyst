@@ -30,7 +30,7 @@
     <string name="copy_text">复制文本</string>
     <string name="copy_user_pubkey">复制作者公钥 ID</string>
     <string name="copy_note_id">复制笔记 ID</string>
-    <string name="copy_raw_json">复制原始JSON</string>
+    <string name="copy_raw_json">复制原始 JSON</string>
     <string name="broadcast">广播</string>
     <string name="timestamp_it">获取公开时间戳</string>
     <string name="timestamp_pending">OpenTimestamps：待确认</string>
@@ -503,6 +503,7 @@
     <string name="new_community_rules_banned_add">添加被封禁用户</string>
     <string name="new_community_rules_banned_placeholder">姓名, npub, 或 NIP-05</string>
     <string name="new_community_rules_wot_section">信任网络网关(可选)</string>
+    <string name="new_community_rules_wot_hint">只允许从根公钥跳转 N 次内可触达的贴文作者。只要任何一条 WoT 信任链满足就能获得许可。</string>
     <string name="new_community_rules_wot_root">根npub 或16进制 pubkey</string>
     <string name="new_community_rules_wot_depth">深度</string>
     <string name="new_community_rules_wot_add">添加信任网络(WoT)网关</string>
@@ -747,7 +748,7 @@
     <string name="private_articles_count">私密文章（%1$s）</string>
     <string name="public_articles_label">公开文章</string>
     <string name="public_articles_count">公开文章(%1$s)</string>
-    <string name="manage_bookmark_label">管理书签列表中的 %1$s</string>
+    <string name="manage_bookmark_label">管理书签列表中的%1$s</string>
     <string name="post_bookmark_management_title">将此帖子加入书签</string>
     <string name="article_bookmark_management_title">将此文章加入书签</string>
     <string name="public_bookmark_presence_indicator">在这里是一个公开书签</string>
@@ -1060,6 +1061,11 @@
     <string name="call_failed_start">未能开始通话</string>
     <string name="call_failed_accept">未能接受通话</string>
     <string name="call_failed_session">创建通话会话失败</string>
+    <string name="call_permission_denied_title">需要权限</string>
+    <string name="call_permission_denied_voice">Amethyst 需要麦克风权限来开始语音通话。请在应用程序设置中启用它。</string>
+    <string name="call_permission_denied_video">Amethyst需要摄像头和麦克风访问权限来开始视频通话。请在应用程序设置中启用它们。</string>
+    <string name="call_permission_denied_open_settings">打开设置</string>
+    <string name="call_permission_denied_cancel">取消</string>
     <string name="call_settings">通话设置</string>
     <string name="call_settings_enable_calls">启用语音和视频通话</string>
     <string name="call_settings_enable_calls_description">禁用时，通话按钮在聊天屏幕上隐藏，所有来电都被无声忽略。</string>
@@ -1248,8 +1254,8 @@
     <string name="relay_setup">中继器</string>
     <string name="discover_follows">关注包</string>
     <string name="discover_follows_explainer">这些是您推荐给其他人的用户列表。只允许公开用户。</string>
-    <string name="discover_reads">次浏览</string>
-    <string name="discover_content_v2">动态源算法</string>
+    <string name="discover_reads">阅读</string>
+    <string name="discover_content_v2">算法动态</string>
     <string name="discover_marketplace">市场</string>
     <string name="discover_live_v2">直播</string>
     <string name="discover_community_v2">社区</string>
@@ -1824,6 +1830,18 @@
     <string name="git_repository">Git 仓库： %1$s</string>
     <string name="git_web_address">网址</string>
     <string name="git_clone_address">克隆：</string>
+    <string name="git_status_open">打开</string>
+    <string name="git_status_merged">已合并</string>
+    <string name="git_status_closed">已关闭</string>
+    <string name="git_status_draft">草稿</string>
+    <string name="git_repo_tab_overview">概述</string>
+    <string name="git_repo_tab_issues">议题</string>
+    <string name="git_repo_tab_patches">补丁 &amp; PR</string>
+    <string name="git_repo_section_about">关于</string>
+    <string name="git_repo_section_links">链接</string>
+    <string name="git_repo_section_maintainers">维护者</string>
+    <string name="git_repo_section_topics">话题</string>
+    <string name="git_repo_personal_fork">个人派生</string>
     <string name="nsite_title">静态网站: %1$s</string>
     <string name="nsite_root_site">根站点</string>
     <string name="nsite_source">源：</string>

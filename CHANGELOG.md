@@ -1,3 +1,29 @@
+<a id="v1.09.2"></a> Fixes
+
+- Fix Blossom blob detection to reject non-compliant filenames by @greenart7c3 in #2919
+- fix(desktop): add ProGuard keep rules so desktop builds actually launch by @mstrofnone in #2921
+- fix(desktop): mirror Android ProGuard strategy for release builds by @mstrofnone in #2922
+- fix(video): pause playback when app goes to background by @vitorpamplona in #2925
+- feat(desktop): wire NamecoinSettingsSection into Settings screen by @mstrofnone in #2923
+- feat(desktop): wire Import Follow List dialog into UI by @mstrofnone in #2924
+- Fix crash when toggling home tabs with persisted pager state by @vitorpamplona in #2930
+- Dedupe public channels in known chat list by channel id by @vitorpamplona in #2932
+- Route NIP-43 relay join/leave through launchSigner by @vitorpamplona in #2933
+- Migrate DNS cache from SharedPreferences to cacheDir by @vitorpamplona in #2935
+- Filter DNS poison (loopback / any-local) from non-loopback hosts by @vitorpamplona in #2936
+- perf(dns-cache): hand-rolled binary persistence format for SurgeDnsStore by @vitorpamplona in #2937
+- Ignore duplicated hashtags in different char cases when processing hashtag spam by @vitorpamplona
+- New Crowdin translations
+
+<a id="v1.09.1"></a> Activates Nest, Git Screens and Fixes
+
+- Activates Nest option in the Left Drawer
+- Rename onRefresh callback to avoid shadowing parameter by @vitorpamplona in #2912
+- Fix desktop app ProGuard build with Compose 1.11.0 by @vitorpamplona in #2914
+- Fix pull-to-refresh indicator positioning in DisappearingScaffold by @vitorpamplona in #2916
+- Remove collectAsStateWithLifecycle from BottomBarSettingsContent by @vitorpamplona in #2918
+- Add Git repository detail screen with issues/patches tabs by @vitorpamplona in #2917
+
 <a id="v1.09.0"></a>
 # [Release v1.09.0: We are going crazy](https://github.com/vitorpamplona/amethyst/releases/tag/v1.09.0) - 2026-05-14
 
@@ -458,13 +484,27 @@ What's New?
 - Moves desktop packaging / AppImage tooling into the `desktopApp` module
 - AGP and dependencies bumped
 
-## Translations
-
-_(translations will be added separately from Crowdin)_
-
 ## Contributors
 
-_(to be filled in)_
+- @npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z
+- @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
+- @npub12cfje6nl2nuxplcqfvhg7ljt89fmpj0n0fd24zxsukja5qm9wmtqd7y76c
+- @npub1w4uswmv6lu9yel005l3qgheysmr7tk9uvwluddznju3nuxalevvs2d0jr5
+- @npub1a3tx8wcrt789skl6gg7rqwj4wey0j53eesr4z6asd4h4jwrd62jq0wkq4k
+- @npub1dn0tej4a5806qk9ts56j572sndvjk27l5qmsxf0z3mquknccve7s4k8tfp
+
+## Translations
+
+- Czech, German, Swedish, and Portuguese by @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
+- Hungarian by @npub1dnvslq0vvrs8d603suykc4harv94yglcxwna9sl2xu8grt2afm3qgfh0tp
+- French by @npub106efcyntxc5qwl3w8krrhyt626m59ya2nk9f40px5s968u5xdwhsjsr8fz
+- Polish by @npub16gjyljum0ksrrm28zzvejydgxwfm7xse98zwc4hlgq8epxeuggushqwyrm
+- Hindi by @npub1ww6huwu3xye6r05n3qkjeq62wds5pq0jswhl7uc59lchc0n0ns4sdtw5e6
+- Slovenian by @npub1qqqqqqz7nhdqz3uuwmzlflxt46lyu7zkuqhcapddhgz66c4ddynswreecw
+- Bengali by @npub13qtw3yu0uc9r4yj5x0rhgy8nj5q0uyeq0pavkgt9ly69uuzxgkfqwvx23t
+- Spanish by @npub1luhyzgce7qtcs6r6v00ryjxza8av8u4dzh3avg0zks38tjktnmxspxq903
+- Chinese by hypnotichemionus4 and @npub1gd8e0xfkylc7v8c5a6hkpj4gelwwcy99jt90lqjseqjj2t253s2s6ch58h
+- Russian by Anton Zhao
 
 <a id="v1.08.0"></a>
 # [Release v1.08.0: Arti](https://github.com/vitorpamplona/amethyst/releases/tag/v1.08.0) - 2026-04-01

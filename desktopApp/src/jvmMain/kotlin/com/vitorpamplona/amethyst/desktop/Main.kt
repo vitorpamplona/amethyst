@@ -96,6 +96,7 @@ import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinService
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ComposeNoteDialog
 import com.vitorpamplona.amethyst.desktop.ui.ConnectingRelaysScreen
+import com.vitorpamplona.amethyst.desktop.ui.ImportFollowListDialog
 import com.vitorpamplona.amethyst.desktop.ui.LoginScreen
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.amethyst.desktop.ui.auth.ForceLogoutDialog
@@ -118,6 +119,7 @@ import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
 import com.vitorpamplona.amethyst.desktop.ui.relay.LocalRelayCategories
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
 import com.vitorpamplona.amethyst.desktop.ui.settings.MediaServerSettings
+import com.vitorpamplona.amethyst.desktop.ui.settings.NamecoinSettingsSection
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -628,6 +630,7 @@ fun main() {
                         onShowAppDrawer = { showAppDrawer = true },
                         replyToNote = replyToNote,
                         showImportFollowListDialog = showImportFollowListDialog,
+                        onShowImportFollowListDialog = { showImportFollowListDialog = true },
                         onDismissImportFollowListDialog = { showImportFollowListDialog = false },
                         onRestartApp = { appRestartKey++ },
                         torManager = torManager,
@@ -658,6 +661,7 @@ fun App(
     onShowAppDrawer: () -> Unit,
     replyToNote: com.vitorpamplona.quartz.nip01Core.core.Event?,
     showImportFollowListDialog: Boolean = false,
+    onShowImportFollowListDialog: () -> Unit = {},
     onDismissImportFollowListDialog: () -> Unit = {},
     onRestartApp: () -> Unit = {},
     torManager: com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager,
@@ -1012,7 +1016,21 @@ fun App(
                                             com.vitorpamplona.amethyst.desktop.ui.deck.AppDrawerTab.FEEDS
                                         onShowAppDrawer()
                                     },
+                                    onShowImportFollowListDialog = onShowImportFollowListDialog,
                                 )
+
+                                // Import Follow List dialog (triggered from File menu /
+                                // Cmd+Shift+I). Rendered inside this CompositionLocalProvider
+                                // so LocalNamecoinService is available for .bit / d/ / id/
+                                // identifier resolution.
+                                if (showImportFollowListDialog) {
+                                    ImportFollowListDialog(
+                                        onDismiss = onDismissImportFollowListDialog,
+                                        relayManager = relayManager,
+                                        account = account,
+                                        localCache = localCache,
+                                    )
+                                }
                             }
 
                             // Compose dialog
@@ -1115,6 +1133,7 @@ fun MainContent(
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
     onShowAppDrawer: () -> Unit,
     onOpenFeedsDrawer: () -> Unit = onShowAppDrawer,
+    onShowImportFollowListDialog: () -> Unit = {},
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -1332,6 +1351,7 @@ fun MainContent(
                                 onOpenFeedsDrawer = onOpenFeedsDrawer,
                                 onShowComposeDialog = onShowComposeDialog,
                                 onShowReplyDialog = onShowReplyDialog,
+                                onShowImportFollowListDialog = onShowImportFollowListDialog,
                                 onZapFeedback = onZapFeedback,
                                 signerConnectionState = signerConnectionState,
                                 lastPingTimeSec = lastPingTimeSec,
@@ -1368,6 +1388,7 @@ fun MainContent(
                                             deckState.addColumn(DeckColumnType.Settings)
                                         }
                                     },
+                                    onShowImportFollowListDialog = onShowImportFollowListDialog,
                                     signerConnectionState = signerConnectionState,
                                     lastPingTimeSec = lastPingTimeSec,
                                     torStatus = torStatus,
@@ -1623,6 +1644,31 @@ fun RelaySettingsScreen(
             Spacer(Modifier.height(24.dp))
             HorizontalDivider()
             Spacer(Modifier.height(24.dp))
+
+            // Namecoin Settings (ElectrumX servers for .bit / d/ / id/ resolution)
+            val namecoinPrefsHere = namecoinPreferences ?: LocalNamecoinPreferences.current
+            if (namecoinPrefsHere != null) {
+                val namecoinScope = rememberCoroutineScope()
+                val namecoinSettings by namecoinPrefsHere.settings.collectAsState()
+                NamecoinSettingsSection(
+                    settings = namecoinSettings,
+                    onToggleEnabled = { enabled ->
+                        namecoinScope.launch { namecoinPrefsHere.setEnabled(enabled) }
+                    },
+                    onAddServer = { server ->
+                        namecoinScope.launch { namecoinPrefsHere.addServer(server) }
+                    },
+                    onRemoveServer = { server ->
+                        namecoinScope.launch { namecoinPrefsHere.removeServer(server) }
+                    },
+                    onReset = {
+                        namecoinScope.launch { namecoinPrefsHere.reset() }
+                    },
+                )
+                Spacer(Modifier.height(24.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(24.dp))
+            }
 
             // Developer Settings Section (only in debug mode)
             if (DebugConfig.isDebugMode) {

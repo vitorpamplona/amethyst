@@ -156,6 +156,15 @@ open class Note(
 
     var zapsAmount: BigDecimal = BigDecimal.ZERO
 
+    /**
+     * NIP-BC verified onchain zaps targeting this note.
+     * Key: Bitcoin txid (lowercase 64-char hex). Value: verified satoshis paid to the recipient
+     * (NOT the sender-claimed amount). Confirmed and pending entries live here together;
+     * `updateZapTotal` only counts confirmed amounts.
+     */
+    var onchainZaps = mapOf<String, OnchainZapAmount>()
+        private set
+
     var zapPayments = mapOf<Note, Note?>()
         private set
 
@@ -318,6 +327,7 @@ open class Note(
         boosts = listOf()
         reports = mapOf()
         zaps = mapOf()
+        onchainZaps = mapOf()
         zapPayments = mapOf()
         zapsAmount = BigDecimal.ZERO
         relays = listOf()
@@ -414,6 +424,36 @@ open class Note(
                 updateZapTotal()
                 flowSet?.zaps?.invalidateData()
             }
+        }
+    }
+
+    @Synchronized
+    private fun innerAddOnchainZap(
+        txid: String,
+        amount: OnchainZapAmount,
+    ): Boolean {
+        val existing = onchainZaps[txid]
+        // Allow upgrading pending → confirmed but never reduce already-stored confirmations.
+        if (existing != null && existing.confirmed && !amount.confirmed) return false
+        if (existing == amount) return false
+        onchainZaps = onchainZaps + Pair(txid, amount)
+        return true
+    }
+
+    /**
+     * Register a NIP-BC verified onchain zap targeting this note. `verifiedSats` MUST come
+     * from on-chain verification (sum of outputs paying the recipient's derived Taproot
+     * address), not the sender-claimed `amount` tag.
+     */
+    fun addOnchainZap(
+        txid: String,
+        verifiedSats: Long,
+        confirmed: Boolean,
+    ) {
+        val inserted = innerAddOnchainZap(txid, OnchainZapAmount(verifiedSats, confirmed))
+        if (inserted) {
+            updateZapTotal()
+            flowSet?.zaps?.invalidateData()
         }
     }
 
@@ -626,6 +666,14 @@ open class Note(
             val noteEvent = it.value?.event
             if (noteEvent is LnZapEvent) {
                 sumOfAmounts += noteEvent.amount ?: BigDecimal.ZERO
+            }
+        }
+
+        // NIP-BC onchain zaps — verified amounts only, confirmed only.
+        // Pending/unconfirmed entries are tracked but excluded from the total per spec.
+        onchainZaps.values.forEach { entry ->
+            if (entry.confirmed) {
+                sumOfAmounts += BigDecimal.valueOf(entry.verifiedSats)
             }
         }
 

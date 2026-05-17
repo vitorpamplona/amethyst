@@ -286,6 +286,7 @@ import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
+import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 
@@ -517,6 +518,7 @@ class EventFactory {
                 NIP90EventPublishScheduleResponseEvent.KIND -> NIP90EventPublishScheduleResponseEvent(id, pubKey, createdAt, tags, content, sig)
                 NIP90EventPowDelegationRequestEvent.KIND -> NIP90EventPowDelegationRequestEvent(id, pubKey, createdAt, tags, content, sig)
                 NIP90EventPowDelegationResponseEvent.KIND -> NIP90EventPowDelegationResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                OnchainZapEvent.KIND -> OnchainZapEvent(id, pubKey, createdAt, tags, content, sig)
                 OtsEvent.KIND -> OtsEvent(id, pubKey, createdAt, tags, content, sig)
                 PaymentTargetsEvent.KIND -> PaymentTargetsEvent(id, pubKey, createdAt, tags, content, sig)
                 PeopleListEvent.KIND -> PeopleListEvent(id, pubKey, createdAt, tags, content, sig)

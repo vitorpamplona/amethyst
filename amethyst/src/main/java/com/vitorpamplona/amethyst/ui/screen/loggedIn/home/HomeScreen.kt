@@ -227,16 +227,21 @@ private fun HomePages(
             Column {
                 HomeTopBar(accountViewModel, nav)
                 if (tabs.size > 1) {
+                    // Clamp to a valid index: rememberForeverPagerState persists
+                    // currentPage across tab-count changes, so toggling off a home
+                    // tab can leave currentPage > tabs.lastIndex for a frame, which
+                    // crashes Material3's TabIndicatorOffsetNode.
+                    val selectedTab = pagerState.currentPage.coerceIn(0, tabs.lastIndex)
                     SecondaryTabRow(
                         containerColor = MaterialTheme.colorScheme.background,
                         contentColor = MaterialTheme.colorScheme.onBackground,
                         modifier = TabRowHeight,
-                        selectedTabIndex = pagerState.currentPage,
+                        selectedTabIndex = selectedTab,
                     ) {
                         val coroutineScope = rememberCoroutineScope()
                         tabs.forEachIndexed { index, tab ->
                             Tab(
-                                selected = pagerState.currentPage == index,
+                                selected = selectedTab == index,
                                 text = { Text(text = stringRes(tab.resource)) },
                                 onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
                             )
@@ -248,7 +253,7 @@ private fun HomePages(
         bottomBar = {
             AppBottomBar(Route.Home, nav, accountViewModel) { route ->
                 if (route == Route.Home) {
-                    tabs[pagerState.currentPage].feedState.sendToTop()
+                    tabs.getOrNull(pagerState.currentPage)?.feedState?.sendToTop()
                 } else {
                     nav.navBottomBar(route)
                 }

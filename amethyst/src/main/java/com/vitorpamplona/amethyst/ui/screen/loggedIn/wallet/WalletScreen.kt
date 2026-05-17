@@ -124,18 +124,24 @@ fun WalletScreen(
             }
         },
     ) { padding ->
-        if (!hasWallet) {
-            NoWalletSetup(
-                modifier = Modifier.padding(padding),
-                nav = nav,
+        Column(modifier = Modifier.padding(padding)) {
+            OnchainSection(
+                accountViewModel = accountViewModel,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
-        } else {
-            MultiWalletHomeContent(
-                walletViewModel = walletViewModel,
-                modifier = Modifier.padding(padding),
-                listState = listState,
-                nav = nav,
-            )
+            if (!hasWallet) {
+                NoWalletSetup(
+                    modifier = Modifier,
+                    nav = nav,
+                )
+            } else {
+                MultiWalletHomeContent(
+                    walletViewModel = walletViewModel,
+                    modifier = Modifier,
+                    listState = listState,
+                    nav = nav,
+                )
+            }
         }
     }
 }

@@ -1708,7 +1708,7 @@
     <string name="video_player_settings_action_share">Megosztás vagy mentés</string>
     <string name="video_player_settings_action_share_description">Ossza meg a videó hivatkozását külső oldalakon</string>
     <string name="video_player_settings_action_download">Mentés a telefonra</string>
-    <string name="video_player_settings_action_download_description">Töltse le a videót a készülékedre (rejtett az élő közvetítéseknél)</string>
+    <string name="video_player_settings_action_download_description">Töltse le a videót a készülékére (rejtett az élő közvetítéseknél)</string>
     <string name="video_player_settings_action_pip">Kép a képben</string>
     <string name="video_player_settings_action_pip_description">Videó lejátszása lebegő ablakban (rejtett, ha a rendszer nem támogatja)</string>
     <string name="video_player_settings_action_cast">Közvetítés eszközre</string>
@@ -1831,6 +1831,18 @@
     <string name="git_repository">Git tároló: %1$s</string>
     <string name="git_web_address">Weboldal:</string>
     <string name="git_clone_address">Klónozás:</string>
+    <string name="git_status_open">Nyitva</string>
+    <string name="git_status_merged">Beolvasztva</string>
+    <string name="git_status_closed">Lezárva</string>
+    <string name="git_status_draft">Vázlat</string>
+    <string name="git_repo_tab_overview">Áttekintés</string>
+    <string name="git_repo_tab_issues">Hibajegyek</string>
+    <string name="git_repo_tab_patches">Foltok &amp; Beolvasztási kérések</string>
+    <string name="git_repo_section_about">Névjegy</string>
+    <string name="git_repo_section_links">Hivatkozások</string>
+    <string name="git_repo_section_maintainers">Karbantartók</string>
+    <string name="git_repo_section_topics">Témák</string>
+    <string name="git_repo_personal_fork">Személyes ág</string>
     <string name="nsite_title">Statikus weboldal: %1$s</string>
     <string name="nsite_root_site">Főoldal</string>
     <string name="nsite_source">Forrás:</string>

@@ -271,6 +271,38 @@ fun NewUserMetadataScreen(
                     singleLine = true,
                 )
 
+                Spacer(modifier = Modifier.height(10.dp))
+
+                OutlinedTextField(
+                    label = { Text(text = stringRes(R.string.lightning_address)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    value = postViewModel.lnAddress.value,
+                    onValueChange = { postViewModel.lnAddress.value = it },
+                    placeholder = {
+                        Text(
+                            text = "me@mylightningnode.com",
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    },
+                    singleLine = true,
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                OutlinedTextField(
+                    label = { Text(text = stringRes(R.string.lnurl)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    value = postViewModel.lnURL.value,
+                    onValueChange = { postViewModel.lnURL.value = it },
+                    placeholder = {
+                        Text(
+                            text = "LNURL1…",
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    },
+                    singleLine = true,
+                )
+
                 // -- Social Proofs --
                 ExpandableSection(
                     title = stringRes(R.string.social_proof),

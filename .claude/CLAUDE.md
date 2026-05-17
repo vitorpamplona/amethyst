@@ -46,8 +46,7 @@ amethyst/
 │       └── jvmAndroid/    # Opus encode/decode, AudioRecord/AudioTrack
 ├── desktopApp/     # Desktop JVM application (layouts, navigation)
 ├── amethyst/       # Android app (layouts, navigation)
-├── cli/            # Amy — non-interactive CLI (JVM only, no Compose)
-└── ammolite/       # Support module (unused)
+└── cli/            # Amy — non-interactive CLI (JVM only, no Compose)
 ```
 
 **Sharing Philosophy:**

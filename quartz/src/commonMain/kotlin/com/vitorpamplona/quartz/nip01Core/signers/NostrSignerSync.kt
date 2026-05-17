@@ -33,6 +33,8 @@ import com.vitorpamplona.quartz.nip44Encryption.Nip44
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.PrivateZapRequestBuilder
+import com.vitorpamplona.quartz.nipBCOnchainZaps.psbt.Psbt
+import com.vitorpamplona.quartz.nipBCOnchainZaps.psbt.PsbtSigner
 
 class NostrSignerSync(
     val keyPair: KeyPair = KeyPair(),
@@ -128,6 +130,17 @@ class NostrSignerSync(
     }
 
     fun decryptZapEvent(event: LnZapRequestEvent): LnZapPrivateEvent = PrivateZapRequestBuilder().decryptZapEvent(event, this)
+
+    /**
+     * NIP-BC `sign_psbt`: sign the key-path P2TR inputs of [psbtHex] this key
+     * controls and return the updated (not finalized) PSBT as lowercase hex.
+     */
+    fun signPsbt(psbtHex: String): String {
+        val privKey = keyPair.privKey ?: throw SignerExceptions.ReadOnlyException()
+        val psbt = Psbt.parse(psbtHex)
+        PsbtSigner.signKeyPathInputs(psbt, privKey)
+        return psbt.toHex()
+    }
 
     fun deriveKey(nonce: HexKey): HexKey {
         if (keyPair.privKey == null) throw SignerExceptions.ReadOnlyException()
