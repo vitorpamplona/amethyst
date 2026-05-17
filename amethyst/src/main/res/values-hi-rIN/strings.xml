@@ -70,7 +70,7 @@
     <string name="signer_illegal_state_exception_description">बाहरी हस्ताक्षरकर्ता द्वारा दिया गया उत्तर विचित्र है अनुरोध के लिए। अमेथिस्ट अथवा हस्ताक्षरकर्ता में कुछ दोष हो सकता है।</string>
     <string name="zaps">ज्साप</string>
     <string name="view_count">दृष्ट संख्या</string>
-    <string name="boost">उद्धृत करें</string>
+    <string name="boost">उद्धरण</string>
     <string name="boosted">उद्धृत</string>
     <string name="edited">सम्पादित</string>
     <string name="edited_number">सम्पादन #%1$s</string>
@@ -1067,6 +1067,11 @@
     <string name="call_failed_start">आह्वान आरम्भ करने में असफल</string>
     <string name="call_failed_accept">आह्वान स्वीकार करने में असफल</string>
     <string name="call_failed_session">आह्वान सत्र बनानें में असफल</string>
+    <string name="call_permission_denied_title">अनुमति आवश्यक</string>
+    <string name="call_permission_denied_voice">अमेथिस्ट को ध्वनिग्राहक अभिगमन आवश्यक है ध्वनि आह्वान आरम्भ करने के लिए। कृपया इसे क्रमक स्थापना विकल्पों में सक्षम करें।</string>
+    <string name="call_permission_denied_video">अमेथिस्ट को चित्रग्राहक तथा ध्वनिग्राहक अभिगमन आवश्यक है दृश्य आह्वान आरम्भ करने के लिए। कृपया इन्हें क्रमक स्थापना विकल्पों में सक्षम करें।</string>
+    <string name="call_permission_denied_open_settings">स्थापना विकल्प खोलें</string>
+    <string name="call_permission_denied_cancel">निरस्त</string>
     <string name="call_settings">आह्वान स्थापना विकल्प</string>
     <string name="call_settings_enable_calls">ध्वनि तथा दृश्य आह्वान सक्षम करें</string>
     <string name="call_settings_enable_calls_description">जब अक्षम तब आह्वान घुण्डियाँ अदृश्य किए जाएँगे चर्चा पटल से तथा सभी आगामी आह्वान मौनतः उपेक्षित होंगे।</string>

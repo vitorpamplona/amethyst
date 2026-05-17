@@ -1835,6 +1835,7 @@
     <string name="git_status_closed">Stängd</string>
     <string name="git_status_draft">Utkast</string>
     <string name="git_repo_tab_overview">Översikt</string>
+    <string name="git_repo_tab_issues">Ärenden</string>
     <string name="git_repo_tab_patches">Patchar och PR</string>
     <string name="git_repo_section_about">Om</string>
     <string name="git_repo_section_links">Länkar</string>

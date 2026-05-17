@@ -1848,6 +1848,7 @@
     <string name="git_status_closed">Uzavřeno</string>
     <string name="git_status_draft">Koncept</string>
     <string name="git_repo_tab_overview">Přehled</string>
+    <string name="git_repo_tab_issues">Úkoly</string>
     <string name="git_repo_tab_patches">Patche a PR</string>
     <string name="git_repo_section_about">O projektu</string>
     <string name="git_repo_section_links">Odkazy</string>
