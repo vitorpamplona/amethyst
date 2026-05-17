@@ -1077,6 +1077,11 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="call_failed_start">Nie udało się nawiązać połączenia</string>
     <string name="call_failed_accept">Nie udało się przyjąć połączenia</string>
     <string name="call_failed_session">Nie udało się utworzyć sesji połączenia</string>
+    <string name="call_permission_denied_title">Konieczne pozwolenie</string>
+    <string name="call_permission_denied_voice">Ametysta potrzebuje dostępu do mikrofonu, aby rozpocząć rozmowę głosową. Proszę włączyć ją w ustawieniach aplikacji.</string>
+    <string name="call_permission_denied_video">Ametysta potrzebuje dostępu do aparatu i mikrofonu, aby rozpocząć rozmowę wideo. Proszę włączyć je w ustawieniach aplikacji.</string>
+    <string name="call_permission_denied_open_settings">Otwórz ustawienia</string>
+    <string name="call_permission_denied_cancel">Anuluj</string>
     <string name="call_settings">Ustawienia połączeń</string>
     <string name="call_settings_enable_calls">Włącz połączenia głosowe i wideo</string>
     <string name="call_settings_enable_calls_description">Gdy wyłączone, przyciski połączeń na ekranach czatu są ukryte, a wszystkie połączenia przychodzące są cicho ignorowane.</string>
