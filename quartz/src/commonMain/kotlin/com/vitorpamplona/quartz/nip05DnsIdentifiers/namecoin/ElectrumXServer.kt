@@ -110,6 +110,26 @@ val DEFAULT_ELECTRUMX_SERVERS =
         // nmc2.bitcoins.sk) so resolvers that have an unhealthy DNS path can
         // still reach the server. Cert pin works by SHA-256 of DER, no SNI required.
         ElectrumxServer("23.158.233.10", 50002, useSsl = true, usePinnedTrustStore = true),
+        // electrum.nmc.ethicnology.com — third public Namecoin ElectrumX deployment,
+        // operated by @ethicnology (github.com/ethicnology/namecoin-compose, a
+        // namecoind + ElectrumX + mempool podman stack). ElectrumX 1.19.0,
+        // Namecoin mainnet genesis (000000000062b72c…c770).
+        //
+        // Uses a publicly-trusted Let's Encrypt certificate, so usePinnedTrustStore
+        // is left at the default (false) — the system trust store is sufficient.
+        // This makes it the first entry in the list whose TLS does NOT rely on
+        // PINNED_ELECTRUMX_CERTS, and provides graceful fallback if every
+        // self-signed peer above is unreachable (e.g. corporate networks that
+        // strip unknown CAs but allow LE).
+        ElectrumxServer("electrum.nmc.ethicnology.com", 50002, useSsl = true, usePinnedTrustStore = false),
+        // Note: no bare-IP companion entry for electrum.nmc.ethicnology.com.
+        // Unlike the 46.229.238.187 / 23.158.233.10 peers above (which use
+        // usePinnedTrustStore=true and DER-SHA256 pinning that doesn't care
+        // about hostname verification), this server's TLS chains to a publicly-
+        // trusted Let's Encrypt cert whose SAN covers only electrum.nmc.ethicnology.com.
+        // Connecting by the bare IP 142.44.246.181 would fail standard hostname
+        // verification under the system trust manager, so the entry would never
+        // succeed in practice. The hostname entry above is the only useful form.
     )
 
 /** Tor-preferred server list: onion primary, clearnet fallback. */
@@ -135,4 +155,6 @@ val TOR_ELECTRUMX_SERVERS =
         ElectrumxServer("relay.testls.bit", 50002, useSsl = true, usePinnedTrustStore = true),
         // Bare IP peer (same operator/cert/box). See clearnet list above.
         ElectrumxServer("23.158.233.10", 50002, useSsl = true, usePinnedTrustStore = true),
+        // electrum.nmc.ethicnology.com — public LE-cert ElectrumX. See clearnet list above.
+        ElectrumxServer("electrum.nmc.ethicnology.com", 50002, useSsl = true, usePinnedTrustStore = false),
     )
