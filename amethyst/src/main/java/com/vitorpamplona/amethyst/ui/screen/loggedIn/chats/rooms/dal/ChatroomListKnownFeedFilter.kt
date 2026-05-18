@@ -30,6 +30,8 @@ import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 
 class ChatroomListKnownFeedFilter(
@@ -111,7 +113,7 @@ class ChatroomListKnownFeedFilter(
         newRelevantPublicMessages.forEach { newNotePair ->
             var hasUpdated = false
             oldList.forEach { oldNote ->
-                val channelId = (oldNote.event as? ChannelMessageEvent)?.channelId()
+                val channelId = publicChannelIdOf(oldNote)
                 if (newNotePair.key == channelId) {
                     hasUpdated = true
                     if ((newNotePair.value.createdAt() ?: 0L) > (oldNote.createdAt() ?: 0L)) {
@@ -260,4 +262,18 @@ class ChatroomListKnownFeedFilter(
     }
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
+
+    // Maps a note that represents a public chat row to its channel id. The
+    // representative note for a channel may be the channel's create event
+    // (id == channelId), a metadata update, or a message — match all three so
+    // an arriving ChannelMessageEvent replaces an existing placeholder
+    // metadata/create note for the same channel instead of duplicating it
+    // (which would yield the same LazyColumn key twice).
+    private fun publicChannelIdOf(note: Note): String? =
+        when (val event = note.event) {
+            is ChannelMessageEvent -> event.channelId()
+            is ChannelMetadataEvent -> event.channelId()
+            is ChannelCreateEvent -> event.id
+            else -> null
+        }
 }
