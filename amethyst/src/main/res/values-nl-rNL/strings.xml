@@ -359,6 +359,8 @@
     <string name="quick_action_block_dialog_btn">Blokkeren</string>
     <string name="quick_action_delete_dialog_btn">Verwijderen</string>
     <string name="quick_action_block">Blokkeren</string>
+    <string name="quick_action_mute_thread">Discussie dempen</string>
+    <string name="quick_action_unmute_thread">Discussie dempen opheffen</string>
     <string name="quick_action_report">Rapporteren</string>
     <string name="quick_action_delete_button">Verwijderen</string>
     <string name="quick_action_dont_show_again_button">Niet meer tonen</string>
@@ -634,6 +636,16 @@
     <string name="nest_participant_unfollow">Ontvolgen</string>
     <string name="nest_participant_mute">Dempen</string>
     <string name="nest_participant_unmute">Dempen opheffen</string>
+    <string name="nest_force_mute_note">Kan genegeerd worden door clients die dit commando niet ondersteunen.</string>
+    <string name="nest_confirm_kick_title">Uit de ruimte kicken?</string>
+    <string name="nest_confirm_kick_body">%1$s wordt verwijderd van het audiokanaal en uit de deelnemerslijst. Ze kunnen opnieuw deelnemen als ze de link hebben.</string>
+    <string name="nest_confirm_kick_confirm">Kicken</string>
+    <string name="nest_confirm_force_mute_title">Spreker forceren te dempen?</string>
+    <string name="nest_confirm_force_mute_body">Vraagt %1$s’s client om de microfoon te dempen. Sommige clients negeren dit commando mogelijk.</string>
+    <string name="nest_confirm_force_mute_confirm">Forceren dempen</string>
+    <string name="nest_confirm_cancel">Annuleren</string>
+    <string name="nest_toast_host_action_failed_title">Actie mislukt</string>
+    <string name="nest_toast_host_action_failed_template_null">De actie kon niet worden voorbereid.</string>
     <string name="nest_share_action">Ruimte delen</string>
     <string name="nest_minimize">Minimaliseren</string>
     <string name="nest_minimize_description">Minimaliseren om te blijven luisteren</string>
@@ -1033,6 +1045,11 @@
     <string name="call_failed_start">Kan gesprek niet starten</string>
     <string name="call_failed_accept">Kan gesprek niet accepteren</string>
     <string name="call_failed_session">Aanmaken oproepsessie mislukt</string>
+    <string name="call_permission_denied_title">Toestemming nodig</string>
+    <string name="call_permission_denied_voice">Amethyst heeft toegang tot de microfoon nodig om een spraakoproep te starten. Schakel dit in bij de app-instellingen.</string>
+    <string name="call_permission_denied_video">Amethyst heeft toegang tot camera en microfoon nodig om een video-oproep te starten. Schakel dit in bij de app-instellingen.</string>
+    <string name="call_permission_denied_open_settings">Instellingen openen</string>
+    <string name="call_permission_denied_cancel">Annuleren</string>
     <string name="call_settings">Gespreksinstellingen</string>
     <string name="call_settings_enable_calls">Spraak- en videogesprekken inschakelen</string>
     <string name="call_settings_enable_calls_description">Wanneer uitgeschakeld, worden belknoppen verborgen en worden inkomende gesprekken stil genegeerd.</string>
@@ -1054,6 +1071,10 @@
     <string name="always_on_notif_connecting">Verbinden met inbox-relays…</string>
     <string name="always_on_notif_setting_title">Altijd-aan meldingsdienst</string>
     <string name="always_on_notif_setting_description">Houdt een persistente verbinding met je inbox-relays voor directe melding. Toont een permanente notificatie. Gebruikt meer batterij maar zorgt dat je nooit een bericht mist.</string>
+    <string name="split_notifications_setting_title">Meldingen splitsen per gevolgden</string>
+    <string name="split_notifications_setting_description">Toon twee meldings-tabbladen — Volgend (mensen die je volgt) en Iedereen. De ongelezen-indicator licht alleen op voor activiteit van mensen die je volgt.</string>
+    <string name="notification_tab_following">Volgend</string>
+    <string name="notification_tab_everyone">Iedereen</string>
     <string name="battery_optimization_title">Batterij-optimalisatie actief</string>
     <string name="battery_optimization_description">Android kan relay-verbindingen op de achtergrond beperken. Schakel batterij-optimalisatie uit voor Amethyst voor betrouwbare meldingen.</string>
     <string name="battery_optimization_fix_now">Nu oplossen</string>
@@ -1078,14 +1099,24 @@
     <string name="warn_when_posts_have_reports_from_your_follows">Waarschuwen bij rapportages van volgers</string>
     <string name="filter_spam_from_strangers_title">Spamfilter</string>
     <string name="filter_spam_from_strangers_explainer">Verbergt identieke berichten van onbekenden die 5 keer of vaker voorkomen</string>
+    <string name="add_client_tag_title">Client-tag toevoegen aan mijn events</string>
+    <string name="add_client_tag_explainer">Wanneer ingeschakeld voegt Amethyst een NIP-89 client-tag toe aan events die je publiceert.</string>
     <string name="warn_when_posts_have_reports_from_your_follows_title">Waarschuwen bij rapportages</string>
     <string name="warn_when_posts_have_reports_from_your_follows_explainer">Toont waarschuwing wanneer een bericht 5 of meer rapportages van je volgers heeft</string>
+    <string name="report_warning_threshold_title">Drempel voor rapportage-waarschuwing</string>
+    <string name="report_warning_threshold_explainer">Toont waarschuwing wanneer berichten of profielen dit aantal rapportages van mensen die je volgt bereiken</string>
     <string name="show_sensitive_content_title">Gevoelige inhoud tonen</string>
     <string name="show_sensitive_content_explainer">Toont waarschuwing wanneer auteur inhoud als gevoelig heeft gemarkeerd</string>
     <string name="max_hashtag_limit_title">Maximum hashtags per bericht</string>
     <string name="max_hashtag_limit_explainer">Verbergt berichten met meer hashtags dan deze limiet. Stel in op 0 om uit te schakelen.</string>
     <string name="hide_community_rules_violations_title">Berichten verbergen die community-regels schenden</string>
     <string name="hide_community_rules_violations_explainer">Verwijdert berichten uit community-feeds wanneer de community een NIP-9B regelsdocument publiceert en een event daartegen zou falen. Heeft geen effect wanneer een community geen gestructureerde regels heeft.</string>
+    <string name="security_section_filtering_preferences">Filtervoorkeuren</string>
+    <string name="security_section_blocked_content">Geblokkeerde inhoud</string>
+    <string name="security_unlimited">∞</string>
+    <string name="security_blocked_users_empty">Je hebt nog geen gebruikers geblokkeerd.</string>
+    <string name="security_spamming_users_empty">Geen accounts zijn in deze sessie als spam gemarkeerd.</string>
+    <string name="security_hidden_words_empty">Geen verborgen woorden. Voeg hieronder een woord toe om berichten met dat woord te verbergen.</string>
     <string name="new_reaction_symbol">Nieuw reactie-symbool</string>
     <string name="no_reaction_type_setup_long_press_to_change">Geen reactietypes ingesteld. Houd ingedrukt om te wijzigen.</string>
     <string name="zapraiser">Zapraiser</string>
@@ -1263,6 +1294,7 @@
     <string name="spamming_users">Spammers</string>
     <string name="muted_button">Gedempt. Tik voor geluid</string>
     <string name="mute_button">Geluid aan. Tik voor dempen</string>
+    <string name="action_unmute">Demping opheffen</string>
     <string name="skip_back">%d seconden terug</string>
     <string name="skip_forward">%d seconden vooruit</string>
     <string name="picture_in_picture">Picture-in-Picture</string>
@@ -1282,6 +1314,8 @@
     <string name="geohash_exclusive_explainer">Alleen volgers van de locatie zien dit bericht.</string>
     <string name="hashtag_exclusive">Alleen hashtag-exclusief bericht</string>
     <string name="hashtag_exclusive_explainer">Alleen volgers van de hashtag zien dit bericht.</string>
+    <string name="external_url_scope">Reageer op een website</string>
+    <string name="external_id_scope">Reageer op een externe bron</string>
     <string name="long_form_reading_minutes">%1$d min lezen</string>
     <string name="loading_location">Locatie laden…</string>
     <string name="lack_location_permissions">Geen locatiemachtigingen</string>
@@ -1378,6 +1412,9 @@
     <string name="no_blossom_apps_found_description">Geen Blossom-app gevonden. Installeer een lokale Blossom-app om dit bestand te bekijken.</string>
     <string name="hidden_words">Verborgen woorden</string>
     <string name="hide_new_word_label">Nieuwe woorden of zinnen verbergen</string>
+    <string name="settings_muted_threads_title">Gedempte discussies</string>
+    <string name="settings_muted_threads_empty">Geen gedempte discussies</string>
+    <string name="settings_muted_threads_unknown">Onbekende discussie · %1$s</string>
     <string name="automatically_show_profile_picture">Profielfoto</string>
     <string name="automatically_show_profile_picture_description">Profielfoto\'s tonen</string>
     <string name="select_an_option">Selecteer een optie</string>
@@ -1607,6 +1644,12 @@
     <string name="home_tabs_settings">Start-tabbladen</string>
     <string name="home_tabs_settings_description">Kies welke tabbladen op het startscherm verschijnen. Wanneer slechts één tab actief is, wordt de tabbalk verborgen.</string>
     <string name="home_tab_everything">Alles</string>
+    <string name="profile_ui_settings">Profiel-weergave</string>
+    <string name="profile_ui_settings_description">Kies welke secties en feeds op gebruikersprofielschermen verschijnen. Standaard zijn alle opties ingeschakeld.</string>
+    <string name="profile_ui_setting_badges">Profielbadges</string>
+    <string name="profile_ui_setting_app_recommendations">App-aanbevelingen</string>
+    <string name="profile_ui_setting_zap_received_feed">Ontvangen zaps-feed</string>
+    <string name="profile_ui_setting_followers_feed">Volgers-feed</string>
     <string name="reactions_settings">Reactierij</string>
     <string name="reactions_settings_description">Configureer welke reactieknoppen worden getoond, hun volgorde en of tellers worden weergegeven.</string>
     <string name="reactions_settings_enabled">Ingeschakeld</string>
@@ -1641,6 +1684,8 @@
     <string name="video_player_settings_action_download_description">Video downloaden naar je apparaat (verborgen bij livestreams)</string>
     <string name="video_player_settings_action_pip">Picture-in-Picture</string>
     <string name="video_player_settings_action_pip_description">Video in zwevend venster afspelen (verborgen als niet ondersteund)</string>
+    <string name="video_player_settings_action_cast">Casten naar apparaat</string>
+    <string name="video_player_settings_action_cast_description">Video casten naar een Chromecast-ontvanger op je wifi (verborgen bij lokale bestanden)</string>
     <string name="profile_image_of_user">Profielfoto van %1$s</string>
     <string name="relay_info">Relay %1$s</string>
     <string name="expand_relay_list">Relay-lijst uitvouwen</string>
@@ -1759,6 +1804,18 @@
     <string name="git_repository">Git-repository: %1$s</string>
     <string name="git_web_address">Web:</string>
     <string name="git_clone_address">Klonen:</string>
+    <string name="git_status_open">Openen</string>
+    <string name="git_status_merged">Samengevoegd</string>
+    <string name="git_status_closed">Gesloten</string>
+    <string name="git_status_draft">Concept</string>
+    <string name="git_repo_tab_overview">Overzicht</string>
+    <string name="git_repo_tab_issues">Problemen</string>
+    <string name="git_repo_tab_patches">Patches &amp; PRs</string>
+    <string name="git_repo_section_about">Over</string>
+    <string name="git_repo_section_links">Links</string>
+    <string name="git_repo_section_maintainers">Beheerders</string>
+    <string name="git_repo_section_topics">Onderwerpen</string>
+    <string name="git_repo_personal_fork">Persoonlijke fork</string>
     <string name="nsite_title">Statische website: %1$s</string>
     <string name="nsite_root_site">Root-site</string>
     <string name="nsite_source">Bron:</string>
@@ -1856,8 +1913,11 @@
     <string name="favorite_dvms_title">Favoriete feed-algoritmes</string>
     <string name="favorite_dvms_explainer">Feed-algoritmes die je hier hebt gesterd, verschijnen als filterchips op de startfeed. Open Ontdekken om meer toe te voegen.</string>
     <string name="favorite_dvms_empty_headline">Pin je favoriete algoritmes</string>
+    <string name="favorite_dvms_empty_step1">Tik op “%1$s” hieronder om algoritmes te bekijken.</string>
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
+    <string name="favorite_dvms_empty_step2">Tik op het %1$s naast een feed om hem hier te bewaren.</string>
     <string name="favorite_dvms_empty_cta">Feeds toevoegen</string>
+    <string name="favorite_dvms_add_more">Meer toevoegen…</string>
     <string name="dvm_home_status_requesting">%1$s vragen voor een feed…</string>
     <string name="dvm_home_status_requesting_all">Je favoriete feed-algoritmes vragen voor feeds…</string>
     <string name="dvm_home_status_processing">Je feed verwerken…</string>
@@ -2250,6 +2310,10 @@
     <string name="playback_actions_dialog_title">Afspelen</string>
     <string name="video_quality_auto">Auto</string>
     <!-- LAN cast (Chromecast) feature -->
+    <string name="cast_to_device">Casten naar apparaat</string>
+    <string name="cast_stop_casting">Casten stoppen</string>
+    <string name="cast_to_device_dialog_title">Casten naar…</string>
+    <string name="cast_searching_for_devices">Zoeken naar apparaten op je wifi…</string>
     <!-- HLS multi-resolution video sharing -->
     <string name="share_hls_video">HLS-upload</string>
     <string name="share_hls_video_drawer_description">Publiceer multi-resolutie HLS naar je mediaserver</string>
@@ -2448,6 +2512,9 @@
     <string name="ai_writing_setting_description">Gebruikt een on-device AI-model om tekstcorrecties en toonwijzigingen voor te stellen.</string>
     <string name="tracked_broadcasts_setting_title">Getrackte uitzendingen</string>
     <string name="tracked_broadcasts_setting_description">Gebruik de tracked broadcaster bij het verzenden van events. Toont live voortgang en per-relay-status tijdens uitzenden.</string>
+    <string name="compose_settings">Opstel-instellingen</string>
+    <string name="auto_create_drafts_setting_title">Automatisch concepten aanmaken</string>
+    <string name="auto_create_drafts_setting_description">Slaat automatisch een concept op wanneer je typt of de opsteller verlaat met onverzonden tekst en stuurt dit naar je privé outbox-relays.</string>
     <string name="ai_writing_use_this">Gebruik dit</string>
     <string name="ai_writing_dismiss">Sluiten</string>
     <string name="ai_tone_correct">Corrigeren</string>

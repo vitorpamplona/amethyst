@@ -77,7 +77,7 @@ class SurgeDnsStore(
                 readRecords(file)
             } catch (t: Throwable) {
                 Log.w(TAG) { "Dropping corrupt DNS cache blob: ${t.message}" }
-                file.delete()
+                if (!file.delete()) Log.w(TAG) { "Failed to delete corrupt DNS cache blob at ${file.path}" }
                 return
             }
         // restore() uses putIfAbsent and never marks dirty, so we deliberately do NOT clear the
@@ -104,8 +104,8 @@ class SurgeDnsStore(
             file.parentFile?.mkdirs()
             writeRecords(tmp, records)
             if (!tmp.renameTo(file)) {
-                file.delete()
-                if (!tmp.renameTo(file)) {
+                // If delete fails the second rename will fail too; skip straight to the copy fallback.
+                if (!file.delete() || !tmp.renameTo(file)) {
                     tmp.copyTo(file, overwrite = true)
                 }
             }
@@ -117,13 +117,13 @@ class SurgeDnsStore(
         } finally {
             // Cleans up after both happy paths (copyTo fallback) and failure paths (writeRecords
             // crashed partway, leaving a partial blob) so a corrupt tmp can't accumulate.
-            if (tmp.exists()) tmp.delete()
+            if (tmp.exists() && !tmp.delete()) Log.w(TAG) { "Failed to delete DNS cache tmp file at ${tmp.path}" }
         }
     }
 
     /** Force-clear the on-disk cache. Useful for diagnostics or when the user wipes data. */
     fun clear() {
-        file.delete()
+        if (file.exists() && !file.delete()) Log.w(TAG) { "Failed to clear DNS cache blob at ${file.path}" }
     }
 
     private fun writeRecords(

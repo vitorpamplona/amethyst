@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -50,7 +51,10 @@ class RelayAuthenticator(
     val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
     val signWithAllLoggedInUsers: suspend (EventTemplate<RelayAuthEvent>) -> List<RelayAuthEvent>,
 ) : IAuthStatus {
-    private val authStatus = mutableMapOf<NormalizedRelayUrl, RelayAuthStatus>()
+    // Connection callbacks fire on the per-relay OkHttp dispatcher thread, so
+    // this state is mutated concurrently — LargeCache wraps a platform-tuned
+    // concurrent map (ConcurrentSkipListMap on jvmAndroid, CacheMap on Apple).
+    private val authStatus = LargeCache<NormalizedRelayUrl, RelayAuthStatus>()
 
     private val clientListener =
         object : RelayConnectionListener {
@@ -66,7 +70,7 @@ class RelayAuthenticator(
             }
 
             override fun onConnecting(relay: IRelayClient) {
-                authStatus[relay.url] = RelayAuthStatus()
+                authStatus.put(relay.url, RelayAuthStatus())
             }
 
             override fun onDisconnected(relay: IRelayClient) {
@@ -82,7 +86,7 @@ class RelayAuthenticator(
             val ev = RelayAuthEvent.build(relay.url, msg.challenge)
             signWithAllLoggedInUsers(ev).forEach { authEvent ->
                 // only send replies to new challenges to avoid infinite loop:
-                if (authStatus[relay.url]?.saveAuthSubmission(authEvent) == true) {
+                if (authStatus.get(relay.url)?.saveAuthSubmission(authEvent) == true) {
                     relay.sendIfConnected(AuthCmd(authEvent))
                 }
             }
@@ -94,12 +98,12 @@ class RelayAuthenticator(
         msg: OkMessage,
     ) {
         // if this is the OK of an auth event, renew all subscriptions and resend all outgoing events.
-        if (authStatus[relay.url]?.checkAuthResults(msg.eventId, msg.success) == true) {
+        if (authStatus.get(relay.url)?.checkAuthResults(msg.eventId, msg.success) == true) {
             client.syncFilters(relay)
         }
     }
 
-    override fun hasFinishedAuthentication(relay: NormalizedRelayUrl) = authStatus[relay]?.hasFinishedAllAuths() != false
+    override fun hasFinishedAuthentication(relay: NormalizedRelayUrl) = authStatus.get(relay)?.hasFinishedAllAuths() != false
 
     init {
         Log.d("RelayAuthenticator", "Init, Subscribe")

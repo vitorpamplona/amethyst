@@ -96,6 +96,16 @@
     native <methods>;
 }
 
+# kmp-tor — loads native Tor daemon via JNI reflection
+-keep class io.matthewnelson.** { *; }
+
+# Coil image loader — uses ServiceLoader for decoder/fetcher registration
+-keep class coil3.** { *; }
+
+# OkHttp/Okio — platform detection and I/O via reflection
+-keep class okhttp3.** { *; }
+-keep class okio.** { *; }
+
 # ============================================================================
 # Optimize sub-pass — disable the one that produces invalid okio bytecode
 # ============================================================================
@@ -185,3 +195,9 @@
 # to detect logging. We ship slf4j-nop; keep it intact so detection succeeds.
 -keep class org.slf4j.** { *; }
 -dontwarn org.slf4j.**
+
+# ============================================================================
+# Kotlin 2.3 stdlib stubs — compile-time classes with no JVM runtime class
+# ============================================================================
+-dontwarn kotlin.concurrent.atomics.**
+-dontwarn kotlin.jvm.internal.EnhancedNullability

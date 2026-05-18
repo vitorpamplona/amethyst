@@ -31,11 +31,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
-import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
+import com.vitorpamplona.amethyst.ui.components.util.LongPressCopyText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
@@ -88,9 +89,11 @@ fun DisplayLNAddress(
         Row(verticalAlignment = Alignment.CenterVertically) {
             LightningAddressIcon(modifier = Size16Modifier, tint = BitcoinOrange)
 
-            ClickableTextPrimary(
-                text = lud16,
+            LongPressCopyText(
+                displayText = lud16,
+                copyValue = lud16,
                 onClick = { zapExpanded = !zapExpanded },
+                overflow = TextOverflow.Ellipsis,
                 modifier =
                     Modifier
                         .padding(top = 1.dp, bottom = 1.dp, start = 5.dp),

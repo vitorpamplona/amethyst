@@ -110,7 +110,7 @@ fun NewMediaView(
                         onClose()
                     },
                     onPost = {
-                        postViewModel.upload(context, onClose, accountViewModel.toastManager::toast)
+                        postViewModel.upload(context, accountViewModel, onClose, accountViewModel.toastManager::toast)
                         postViewModel.selectedServer?.let {
                             account.settings.changeDefaultFileServer(it)
                         }

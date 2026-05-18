@@ -91,6 +91,9 @@ compose.desktop {
 
         jvmArgs += "-Xmx2g"
 
+        // VLC plugin path fallback — used if JNA setenv and bundled discovery both fail
+        jvmArgs += "-Dvlc.plugin.path=\$APPDIR/resources/vlc/plugins"
+
         // Forward platform-preview overrides from the gradle invocation to the
         // launched app's JVM so `./gradlew :desktopApp:run -Damethyst.platform=GNOME`
         // works in addition to the env-var form (`AMETHYST_PLATFORM=GNOME`).
@@ -101,7 +104,15 @@ compose.desktop {
         nativeDistributions {
             appResourcesRootDir.set(project.layout.projectDirectory.dir("src/jvmMain/appResources"))
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Rpm)
-            modules("java.management") // Required by kmp-tor TorRuntime
+            // Output of ./gradlew suggestRuntimeModules (+ java.management already present)
+            modules(
+                "java.instrument",   // Runtime instrumentation (agent/profiler hooks)
+                "java.management",   // Required by kmp-tor TorRuntime
+                "java.prefs",        // java.util.prefs (desktop persistence)
+                "java.sql",          // JDBC metadata (Jackson, SQLite driver)
+                "jdk.security.auth", // JAAS authentication callbacks
+                "jdk.unsupported",   // sun.misc.Unsafe (VLCJ ByteBufferFactory)
+            )
 
             packageName = "Amethyst"
             packageVersion = appVersion
@@ -143,6 +154,7 @@ compose.desktop {
         // whose declared return type the JVM verifier rejects (R8 doesn't hit
         // this — it generates bridges differently from ProGuard).
         buildTypes.release.proguard {
+            version.set("7.9.1") // Kotlin 2.3 metadata support
             configurationFiles.from(project.file("compose-rules.pro"))
         }
     }

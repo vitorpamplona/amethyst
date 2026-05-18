@@ -52,4 +52,6 @@ fun SelectNotificationProvider(sharedPrefs: UiSettingsFlow) {
 }
 
 @Composable
-fun PushNotificationSettingsRow(sharedPrefs: UiSettingsFlow) {}
+fun PushNotificationProviderTile(sharedPrefs: UiSettingsFlow) {}
+
+fun hasPushNotificationProvider(): Boolean = false

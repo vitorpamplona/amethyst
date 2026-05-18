@@ -27,7 +27,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.compose.currentWord
 import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
@@ -64,8 +63,6 @@ import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
 import com.vitorpamplona.quartz.nip94FileMetadata.thumbhash
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Stable
 open class EditPostViewModel : ViewModel() {
@@ -186,81 +183,83 @@ open class EditPostViewModel : ViewModel() {
         context: Context,
         stripMetadata: Boolean = true,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
+        accountViewModel.launchSigner {
             val myAccount = account
-            val myMultiOrchestrator = multiOrchestrator ?: return@launch
+            val myMultiOrchestrator = multiOrchestrator ?: return@launchSigner
 
             mediaUploadTracker.startUpload(myMultiOrchestrator.hasNonMedia())
 
-            val results =
-                myMultiOrchestrator.upload(
-                    alt,
-                    if (sensitiveContent) "" else null,
-                    MediaCompressor.intToCompressorQuality(mediaQuality),
-                    server,
-                    myAccount,
-                    context,
-                    useH265Codec,
-                    stripMetadata,
-                    onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
-                )
+            try {
+                val results =
+                    myMultiOrchestrator.upload(
+                        alt,
+                        if (sensitiveContent) "" else null,
+                        MediaCompressor.intToCompressorQuality(mediaQuality),
+                        server,
+                        myAccount,
+                        context,
+                        useH265Codec,
+                        stripMetadata,
+                        onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
+                    )
 
-            if (results.allGood) {
-                val urls =
-                    results.successful.mapNotNull { state ->
-                        if (state.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                            val nip95 =
-                                myAccount.createNip95(
-                                    byteArray = state.result.bytes,
-                                    headerInfo = state.result.fileHeader,
-                                    alt = alt,
-                                    contentWarningReason = if (sensitiveContent) "" else null,
-                                )
-                            nip95attachments = nip95attachments + nip95
-                            val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
+                if (results.allGood) {
+                    val urls =
+                        results.successful.mapNotNull { state ->
+                            if (state.result is UploadOrchestrator.OrchestratorResult.NIP95Result) {
+                                val nip95 =
+                                    myAccount.createNip95(
+                                        byteArray = state.result.bytes,
+                                        headerInfo = state.result.fileHeader,
+                                        alt = alt,
+                                        contentWarningReason = if (sensitiveContent) "" else null,
+                                    )
+                                nip95attachments = nip95attachments + nip95
+                                val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
 
-                            note?.let {
-                                "nostr:" + it.toNEvent()
+                                note?.let {
+                                    "nostr:" + it.toNEvent()
+                                }
+                            } else if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                                val iMeta =
+                                    IMetaTagBuilder(state.result.url)
+                                        .apply {
+                                            hash(state.result.fileHeader.hash)
+                                            size(state.result.fileHeader.size)
+                                            state.result.fileHeader.mimeType
+                                                ?.let { mimeType(it) }
+                                            state.result.fileHeader.dim
+                                                ?.let { dims(it) }
+                                            state.result.fileHeader.blurHash
+                                                ?.let { blurhash(it.blurhash) }
+                                            state.result.fileHeader.thumbHash
+                                                ?.let { thumbhash(it.thumbhash) }
+                                            state.result.magnet?.let { magnet(it) }
+                                            state.result.uploadedHash?.let { originalHash(it) }
+                                            alt?.let { alt(it) }
+                                            if (sensitiveContent) sensitiveContent("")
+                                        }.build()
+
+                                iMetaAttachments = iMetaAttachments.filter { it.url != iMeta.url } + iMeta
+
+                                state.result.url
+                            } else {
+                                null
                             }
-                        } else if (state.result is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                            val iMeta =
-                                IMetaTagBuilder(state.result.url)
-                                    .apply {
-                                        hash(state.result.fileHeader.hash)
-                                        size(state.result.fileHeader.size)
-                                        state.result.fileHeader.mimeType
-                                            ?.let { mimeType(it) }
-                                        state.result.fileHeader.dim
-                                            ?.let { dims(it) }
-                                        state.result.fileHeader.blurHash
-                                            ?.let { blurhash(it.blurhash) }
-                                        state.result.fileHeader.thumbHash
-                                            ?.let { thumbhash(it.thumbhash) }
-                                        state.result.magnet?.let { magnet(it) }
-                                        state.result.uploadedHash?.let { originalHash(it) }
-                                        alt?.let { alt(it) }
-                                        if (sensitiveContent) sensitiveContent("")
-                                    }.build()
-
-                            iMetaAttachments = iMetaAttachments.filter { it.url != iMeta.url } + iMeta
-
-                            state.result.url
-                        } else {
-                            null
                         }
-                    }
 
-                message = message.insertUrlAtCursor(urls.joinToString(" "))
-                urlPreview = findUrlInMessage()
+                    message = message.insertUrlAtCursor(urls.joinToString(" "))
+                    urlPreview = findUrlInMessage()
 
-                this@EditPostViewModel.multiOrchestrator = null
-            } else {
-                val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
+                    this@EditPostViewModel.multiOrchestrator = null
+                } else {
+                    val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
 
-                onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
+                    onError(stringRes(context, R.string.failed_to_upload_media_no_details), errorMessages.joinToString(".\n"))
+                }
+            } finally {
+                mediaUploadTracker.finishUpload()
             }
-
-            mediaUploadTracker.finishUpload()
         }
     }
 

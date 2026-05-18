@@ -3067,8 +3067,10 @@ class Account(
 
     fun isKnown(user: HexKey): Boolean = user in allFollows.flow.value.authors
 
-    private fun hasExcessiveHashtags(note: Note): Boolean {
-        val limit = settings.syncedSettings.security.maxHashtagLimit.value
+    fun maxHashtagLimit(): Int = settings.syncedSettings.security.maxHashtagLimit.value
+
+    fun hasExcessiveHashtags(note: Note): Boolean {
+        val limit = maxHashtagLimit()
         return limit > 0 && note.event?.hasMoreHashtagsThan(limit) == true
     }
 

@@ -10,6 +10,7 @@
     <string name="show_anyway">Show Anyway</string>
     <string name="post_was_hidden">This post was hidden because it mentions your hidden users or words</string>
     <string name="post_was_flagged_as_inappropriate_by">Post was muted or reported by</string>
+    <string name="post_was_hidden_due_to_too_many_hashtags">This post has more than %1$d hashtags</string>
     <string name="post_not_found">Event is loading or can\'t be found in your relay list</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Channel Image</string>
@@ -1541,6 +1542,7 @@
     <string name="copy_stack_to_clipboard">Copy Stack</string>
 
     <string name="copy_to_clipboard">Copy to clipboard</string>
+    <string name="copied_to_clipboard">Copied to clipboard</string>
     <string name="copy_nprofile_to_clipboard">Copy nprofile to clipboard</string>
     <string name="copy_npub_to_clipboard">Copy npub to clipboard</string>
     <string name="share_or_save">Share or Save</string>
@@ -1674,9 +1676,18 @@
     <string name="read_only_user">Read-only user</string>
     <string name="no_reactions_setup">No reactions setup</string>
 
+    <string name="notification_settings">Notifications</string>
+    <string name="notification_settings_section_delivery">Delivery</string>
+    <string name="notification_settings_section_display">In-app display</string>
+    <string name="notification_settings_section_categories">Categories</string>
+    <string name="notification_settings_categories_explainer">Tap a category to open Android notification settings for it — sound, importance, badges and Do Not Disturb live there.</string>
+    <string name="notification_channel_status_on">On</string>
+    <string name="notification_channel_status_silent">Silent</string>
+    <string name="notification_channel_status_off">Off</string>
+
     <string name="select_push_server">Select a UnifiedPush App</string>
-    <string name="push_server_title">Push Notification</string>
-    <string name="push_server_explainer">From installed UnifiedPush apps</string>
+    <string name="push_server_title">Push provider</string>
+    <string name="push_server_explainer">Pick a UnifiedPush app to deliver notifications when Amethyst is closed.</string>
     <string name="push_server_none">None</string>
     <string name="push_server_none_explainer">Disables Push Notifications</string>
     <string name="push_server_uses_app_explainer">Uses app %1$s</string>
