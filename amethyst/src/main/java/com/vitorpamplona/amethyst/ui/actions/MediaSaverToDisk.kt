@@ -274,7 +274,7 @@ object MediaSaverToDisk {
     // Android's MediaStore only accepts a fixed allow-list of MIME types.
     // MimeTypeMap returns variants like video/x-m4v that MediaProvider rejects,
     // so map them to the closest supported equivalent.
-    private fun normalizeMimeTypeForMediaStore(mimeType: String): String =
+    internal fun normalizeMimeTypeForMediaStore(mimeType: String): String =
         when (mimeType.lowercase()) {
             "video/x-m4v" -> "video/mp4"
             else -> mimeType
