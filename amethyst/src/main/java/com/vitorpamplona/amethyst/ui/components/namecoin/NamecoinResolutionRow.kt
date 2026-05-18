@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
+package com.vitorpamplona.amethyst.ui.components.namecoin
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -111,15 +111,16 @@ fun looksLikeNamecoinIdentifier(raw: String): Boolean {
 }
 
 /**
- * Inline Namecoin resolution indicator + result row, sandwiched between
- * the recipient text field and the local-cache suggestion dropdown in
- * [OnchainZapSendDialog].
+ * Inline Namecoin resolution indicator + result row. Designed to be
+ * mounted alongside any text input whose local-cache prefix search can
+ * race ahead of an on-chain `.bit` lookup (the onchain-zap recipient
+ * field and the global search bar both have this race).
  *
  * Behaviour:
  *  - Renders nothing when [searchInput] is not a `.bit` identifier.
  *  - Shows a small spinner row ("Resolving on Namecoin…") while the
  *    ElectrumX lookup is in flight (after a 300 ms debounce to match
- *    the dropdown's own debounce).
+ *    typical input-field debounce intervals).
  *  - On success, shows the resolved user as a tappable row with a
  *    `MaterialSymbols.Link` badge labelled "Namecoin"; tapping calls
  *    [onUserResolved].
@@ -132,12 +133,16 @@ fun looksLikeNamecoinIdentifier(raw: String): Boolean {
  * The composable is intentionally self-contained: it owns its own
  * [LaunchedEffect] keyed on [searchInput], so it cancels in-flight
  * lookups whenever the user keeps typing.
+ *
+ * @param modifier applied to the outer `Column` so callers can position
+ *   or pad the row (e.g. the search bar pads horizontally).
  */
 @Composable
 fun NamecoinResolutionRow(
     searchInput: String,
     accountViewModel: AccountViewModel,
     onUserResolved: (User) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val trimmed = remember(searchInput) { searchInput.trim().removePrefix("@") }
     if (!looksLikeNamecoinIdentifier(trimmed)) return
@@ -166,12 +171,14 @@ fun NamecoinResolutionRow(
             }
     }
 
-    Spacer(Modifier.size(8.dp))
-    when (val s = state) {
-        null, NamecoinResolveState.Loading -> ResolvingChip(trimmed)
-        is NamecoinResolveState.Resolved -> ResolvedRow(trimmed, s, accountViewModel, onUserResolved)
-        NamecoinResolveState.NotFound -> FailedRow("No record for $trimmed on Namecoin.")
-        is NamecoinResolveState.Error -> FailedRow(s.message)
+    Column(modifier = modifier) {
+        Spacer(Modifier.size(8.dp))
+        when (val s = state) {
+            null, NamecoinResolveState.Loading -> ResolvingChip(trimmed)
+            is NamecoinResolveState.Resolved -> ResolvedRow(trimmed, s, accountViewModel, onUserResolved)
+            NamecoinResolveState.NotFound -> FailedRow("No record for $trimmed on Namecoin.")
+            is NamecoinResolveState.Error -> FailedRow(s.message)
+        }
     }
 }
 

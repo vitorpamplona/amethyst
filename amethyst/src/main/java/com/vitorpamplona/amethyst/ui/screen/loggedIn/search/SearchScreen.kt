@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.search.SearchSource
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.TextSearchDataSourceSubscription
+import com.vitorpamplona.amethyst.ui.components.namecoin.NamecoinResolutionRow
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
@@ -194,6 +195,24 @@ private fun SearchBar(
 
     Column(modifier = Modifier.statusBarsPadding()) {
         SearchTextField(searchBarViewModel, Modifier)
+        // Inline Namecoin lookup feedback for the global search field.
+        // Mirrors the wiring in OnchainZapSendDialog: the local prefix
+        // search can race ahead of the on-chain resolution and show a
+        // cached sibling profile (e.g. "m@testls.bit") before the bare
+        // ".bit" host resolves to its `_@host` profile. Surfaces the
+        // in-flight state, the eventual on-chain match, and any failure
+        // explicitly. Tapping the resolved row navigates to the user and
+        // clears the search field, matching the existing bech32 auto-
+        // resolve behaviour in `SearchBarViewModel.directRouteResolver`.
+        NamecoinResolutionRow(
+            searchInput = searchBarViewModel.searchValue,
+            accountViewModel = accountViewModel,
+            onUserResolved = { user ->
+                nav.nav(routeFor(user))
+                searchBarViewModel.clear()
+            },
+            modifier = Modifier.padding(horizontal = 10.dp),
+        )
         SearchFilterRow(searchBarViewModel)
     }
 }
