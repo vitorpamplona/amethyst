@@ -159,6 +159,13 @@ class SchemelessUrlSegment(
 ) : Segment(segment)
 
 @Immutable
+class NowhereLinkSegment(
+    segment: String,
+    val host: String,
+    val tool: String?,
+) : Segment(segment)
+
+@Immutable
 class RegularTextSegment(
     segment: String,
 ) : Segment(segment)

@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.richtext.ImageGalleryParagraph
 import com.vitorpamplona.amethyst.commons.richtext.ImageSegment
 import com.vitorpamplona.amethyst.commons.richtext.InvoiceSegment
 import com.vitorpamplona.amethyst.commons.richtext.LinkSegment
+import com.vitorpamplona.amethyst.commons.richtext.NowhereLinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.ParagraphState
 import com.vitorpamplona.amethyst.commons.richtext.PdfSegment
 import com.vitorpamplona.amethyst.commons.richtext.PhoneSegment
@@ -481,6 +482,8 @@ private fun RenderWordWithoutPreview(
 
         is LinkSegment -> ClickableUrl(word.segmentText, word.segmentText)
 
+        is NowhereLinkSegment -> ClickableUrl(word.segmentText, word.segmentText)
+
         is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
 
         // Don't offer to pay invoices
@@ -530,6 +533,7 @@ private fun RenderWordWithPreview(
         is VideoSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
         is PdfSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
         is LinkSegment -> LoadUrlPreview(word.segmentText, word.segmentText, callbackUri, accountViewModel)
+        is NowhereLinkSegment -> NowhereLinkCard(word)
         is EmojiSegment -> RenderCustomEmoji(word.segmentText, state)
         is InvoiceSegment -> MayBeInvoicePreview(word.segmentText, accountViewModel)
         is WithdrawSegment -> MayBeWithdrawal(word.segmentText, accountViewModel)

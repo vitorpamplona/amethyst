@@ -332,9 +332,15 @@ class RichTextParser {
             }
         }
 
-        if (urls.withoutScheme.contains(word)) return SchemelessUrlSegment(word)
+        if (urls.withoutScheme.contains(word)) {
+            parseNowhereLink(word)?.let { return it }
+            return SchemelessUrlSegment(word)
+        }
 
-        if (urls.withScheme.contains(word)) return LinkSegment(word)
+        if (urls.withScheme.contains(word)) {
+            parseNowhereLink(word)?.let { return it }
+            return LinkSegment(word)
+        }
 
         if (urls.emails.contains(word)) return EmailSegment(word)
 
@@ -529,6 +535,29 @@ class RichTextParser {
         }
 
         fun isUrlWithoutScheme(url: String) = noProtocolUrlValidator.matches(url)
+
+        // Nowhere links (https://github.com/5t34k/nowhere) encode an entire mini-site in the URL
+        // fragment. Servers never see the fragment, so OpenGraph previews return nothing useful
+        // (and hostednowhere.com 403s scrapers). Detect them by host + presence of a fragment
+        // so the renderer can show a branded card instead of falling through to LoadUrlPreview.
+        private val nowhereHosts = listOf("nowhr.xyz", "hostednowhere.com")
+
+        fun parseNowhereLink(word: String): NowhereLinkSegment? {
+            val afterScheme =
+                when {
+                    word.startsWith("https://", ignoreCase = true) -> word.substring(8)
+                    word.startsWith("http://", ignoreCase = true) -> word.substring(7)
+                    else -> word
+                }
+            val slash = afterScheme.indexOf('/')
+            if (slash < 0) return null
+            val host = afterScheme.substring(0, slash).lowercase()
+            if (host !in nowhereHosts) return null
+            val hash = afterScheme.indexOf('#', slash)
+            if (hash < 0) return null
+            val pathSegment = afterScheme.substring(slash + 1, hash).substringBefore('/').takeIf { it.isNotEmpty() }
+            return NowhereLinkSegment(word, host, pathSegment)
+        }
     }
 }
 
