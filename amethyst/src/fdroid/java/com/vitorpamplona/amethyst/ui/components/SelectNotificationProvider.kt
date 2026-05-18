@@ -207,8 +207,7 @@ fun LoadDistributors(onInner: @Composable (String, ImmutableList<String>, Immuta
     )
 }
 
-@Composable
-fun HasPushNotificationProvider(): Boolean = true
+fun hasPushNotificationProvider(): Boolean = true
 
 @Composable
 fun PushNotificationProviderTile(sharedPrefs: UiSettingsFlow) {
