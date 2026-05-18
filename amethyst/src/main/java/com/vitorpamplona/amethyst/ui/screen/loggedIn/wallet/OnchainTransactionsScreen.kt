@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -50,6 +51,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -59,6 +62,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -165,6 +169,7 @@ fun OnchainTransactionsScreen(
                 EmptyMessage(padding, stringRes(R.string.wallet_no_transactions))
             }
             else -> {
+                val uriHandler = LocalUriHandler.current
                 LazyColumn(
                     modifier = Modifier.padding(padding),
                     state = listState,
@@ -174,7 +179,12 @@ fun OnchainTransactionsScreen(
                         TransactionFilterRow(currentFilter) { viewModel.setTransactionFilter(it) }
                     }
                     items(transactions, key = { it.tx.txid }) { txView ->
-                        OnchainTransactionItem(txView, accountViewModel, nav)
+                        OnchainTransactionItem(
+                            view = txView,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                            onClick = { handleTxClick(txView, nav, uriHandler) },
+                        )
                         HorizontalDivider()
                     }
                     if (isLoadingMore) {
@@ -268,6 +278,7 @@ private fun OnchainTransactionItem(
     view: OnchainTxView,
     accountViewModel: AccountViewModel,
     nav: INav,
+    onClick: () -> Unit,
 ) {
     val isIncoming = view.isIncoming
     val amountSats = view.tx.netValueSats.absoluteValue
@@ -295,6 +306,7 @@ private fun OnchainTransactionItem(
         modifier =
             Modifier
                 .fillMaxWidth()
+                .clickable(onClick = onClick)
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -387,6 +399,27 @@ private fun OnchainTransactionItem(
                     MaterialTheme.colorScheme.onBackground
                 },
         )
+    }
+}
+
+/**
+ * Dispatch a transaction-row tap: jump to the matched on-chain zap event's
+ * thread when we have one, otherwise open the tx on a public block explorer.
+ * Mempool.space works over Tor and clearnet; deriving the user's configured
+ * explorer URL would also need to know whether Bitcoin traffic is being
+ * routed over Tor right now, which the UI layer doesn't carry — stick with
+ * mempool.space as a sensible default.
+ */
+private fun handleTxClick(
+    view: OnchainTxView,
+    nav: INav,
+    uriHandler: UriHandler,
+) {
+    val zap = view.zap
+    if (zap != null) {
+        nav.nav(Route.Note(zap.id))
+    } else {
+        runCatching { uriHandler.openUri("https://mempool.space/tx/${view.tx.txid}") }
     }
 }
 

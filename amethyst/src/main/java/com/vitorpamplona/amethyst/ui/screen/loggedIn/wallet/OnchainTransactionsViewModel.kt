@@ -123,7 +123,7 @@ class OnchainTransactionsViewModel : ViewModel() {
             _hasMoreTransactions.value = true
             try {
                 val rows = withContext(Dispatchers.IO) { be.getTxsForAddress(addr, null) }
-                val views = rows.map { OnchainTxView(it, findZapForTxid(it.txid)) }
+                val views = rows.map { OnchainTxView(it, LocalCache.getOnchainZapByTxid(it.txid)) }
                 allTransactions.value = views
                 lastSeenTxid = rows.lastOrNull { it.confirmations > 0 }?.txid
                 _hasMoreTransactions.value = lastSeenTxid != null
@@ -148,7 +148,7 @@ class OnchainTransactionsViewModel : ViewModel() {
                 if (rows.isEmpty()) {
                     _hasMoreTransactions.value = false
                 } else {
-                    val views = rows.map { OnchainTxView(it, findZapForTxid(it.txid)) }
+                    val views = rows.map { OnchainTxView(it, LocalCache.getOnchainZapByTxid(it.txid)) }
                     allTransactions.value = allTransactions.value + views
                     lastSeenTxid = rows.lastOrNull { it.confirmations > 0 }?.txid ?: seen
                 }
@@ -162,24 +162,5 @@ class OnchainTransactionsViewModel : ViewModel() {
 
     fun clearError() {
         _error.value = null
-    }
-
-    /**
-     * Scan `LocalCache.notes` for the [OnchainZapEvent] that references this
-     * txid. NIP-BC is anti-spoofing-checked on consume, so any event we find
-     * here has already been accepted as authentic and matches our chain row.
-     * There's no txid-indexed map yet — the scan stays acceptable while
-     * on-chain zap volume is small.
-     */
-    private fun findZapForTxid(txid: String): OnchainZapEvent? {
-        var found: OnchainZapEvent? = null
-        LocalCache.notes.forEach { _, note ->
-            if (found != null) return@forEach
-            val ev = note.event
-            if (ev is OnchainZapEvent && ev.txid() == txid) {
-                found = ev
-            }
-        }
-        return found
     }
 }
