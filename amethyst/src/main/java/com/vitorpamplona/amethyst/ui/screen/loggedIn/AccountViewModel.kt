@@ -1067,7 +1067,7 @@ class AccountViewModel(
         }
     }
 
-    inline fun launchSigner(crossinline action: suspend () -> Unit) {
+    inline fun launchSigner(crossinline action: suspend () -> Unit) =
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 action()
@@ -1106,7 +1106,6 @@ class AccountViewModel(
                 )
             }
         }
-    }
 
     fun approveCommunityPost(
         post: Note,
