@@ -59,7 +59,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.service.notifications.PushDistributorHandler
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsBlockTile
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.ImmutableList
@@ -207,24 +207,34 @@ fun LoadDistributors(onInner: @Composable (String, ImmutableList<String>, Immuta
     )
 }
 
+fun hasPushNotificationProvider(): Boolean = true
+
 @Composable
-fun PushNotificationSettingsRow(sharedPrefs: UiSettingsFlow) {
+fun PushNotificationProviderTile(sharedPrefs: UiSettingsFlow) {
     val context = LocalContext.current
 
     LoadDistributors { currentDistributor, list, readableListWithExplainer ->
-        SettingsRow(
-            R.string.push_server_title,
-            R.string.push_server_explainer,
-            selectedItems = readableListWithExplainer,
-            selectedIndex = list.indexOf(currentDistributor),
-        ) { index ->
-            if (list[index] == "None") {
-                sharedPrefs.dontAskForNotificationPermissions()
-                sharedPrefs.dontShowPushNotificationSelector()
-                PushDistributorHandler.forceRemoveDistributor(context)
-            } else {
-                PushDistributorHandler.saveDistributor(list[index])
-            }
+        val selectedIndex = list.indexOf(currentDistributor).coerceAtLeast(0)
+        SettingsBlockTile(
+            icon = MaterialSymbols.CloudSync,
+            title = stringRes(R.string.push_server_title),
+            description = stringRes(R.string.push_server_explainer),
+        ) {
+            TextSpinner(
+                label = null,
+                placeholder = readableListWithExplainer[selectedIndex].title,
+                options = readableListWithExplainer,
+                onSelect = { index ->
+                    if (list[index] == "None") {
+                        sharedPrefs.dontAskForNotificationPermissions()
+                        sharedPrefs.dontShowPushNotificationSelector()
+                        PushDistributorHandler.forceRemoveDistributor(context)
+                    } else {
+                        PushDistributorHandler.saveDistributor(list[index])
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }

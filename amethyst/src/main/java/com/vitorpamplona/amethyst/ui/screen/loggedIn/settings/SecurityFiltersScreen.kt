@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,7 +30,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -40,7 +38,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.WarningType
 import com.vitorpamplona.amethyst.model.parseWarningType
@@ -122,7 +119,7 @@ private fun FilterSpamTile(accountViewModel: AccountViewModel) {
         .filterSpamFromStrangers
         .collectAsStateWithLifecycle()
 
-    SwitchTile(
+    SettingsSwitchTile(
         icon = MaterialSymbols.FilterAlt,
         title = R.string.filter_spam_from_strangers_title,
         description = R.string.filter_spam_from_strangers_explainer,
@@ -136,7 +133,7 @@ private fun HideCommunityViolationsTile(accountViewModel: AccountViewModel) {
     val hideViolations by accountViewModel.account.settings.hideCommunityRulesViolations
         .collectAsStateWithLifecycle()
 
-    SwitchTile(
+    SettingsSwitchTile(
         icon = MaterialSymbols.Shield,
         title = R.string.hide_community_rules_violations_title,
         description = R.string.hide_community_rules_violations_explainer,
@@ -151,7 +148,7 @@ private fun WarnReportsTile(accountViewModel: AccountViewModel) {
     val warnReports by security.warnAboutPostsWithReports.collectAsStateWithLifecycle()
     val threshold by security.reportWarningThreshold.collectAsStateWithLifecycle()
 
-    SwitchTile(
+    SettingsSwitchTile(
         icon = MaterialSymbols.Report,
         title = R.string.warn_when_posts_have_reports_from_your_follows_title,
         description = R.string.warn_when_posts_have_reports_from_your_follows_explainer,
@@ -191,24 +188,6 @@ private fun MaxHashtagsTile(accountViewModel: AccountViewModel) {
             unsetLabel = stringRes(R.string.security_unlimited),
             onValueChange = accountViewModel::updateMaxHashtagLimit,
         )
-    }
-}
-
-@Composable
-private fun SwitchTile(
-    icon: MaterialSymbol,
-    @StringRes title: Int,
-    @StringRes description: Int,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    SettingsControlRow(
-        icon = icon,
-        title = stringRes(title),
-        description = stringRes(description),
-        onClick = { onCheckedChange(!checked) },
-    ) {
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 

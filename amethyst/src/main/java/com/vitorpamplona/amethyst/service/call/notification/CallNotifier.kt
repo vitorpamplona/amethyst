@@ -60,7 +60,7 @@ import kotlinx.coroutines.withContext
  */
 object CallNotifier {
     private var callChannel: NotificationChannel? = null
-    private const val CALL_CHANNEL_ID = "com.vitorpamplona.amethyst.CALL_CHANNEL"
+    const val CALL_CHANNEL_ID = "com.vitorpamplona.amethyst.CALL_CHANNEL"
     private const val CALL_NOTIFICATION_ID = 0x50000
 
     fun getOrCreateCallChannel(applicationContext: Context): NotificationChannel {

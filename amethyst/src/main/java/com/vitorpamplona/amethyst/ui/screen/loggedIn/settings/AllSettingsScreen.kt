@@ -219,6 +219,12 @@ fun AllSettingsScreen(
                 )
                 SettingsDivider()
                 SettingsItem(
+                    title = R.string.notification_settings,
+                    icon = MaterialSymbols.Notifications,
+                    onClick = { nav.nav(Route.NotificationSettings) },
+                )
+                SettingsDivider()
+                SettingsItem(
                     title = R.string.compose_settings,
                     icon = MaterialSymbols.Edit,
                     onClick = { nav.nav(Route.ComposeSettings) },
