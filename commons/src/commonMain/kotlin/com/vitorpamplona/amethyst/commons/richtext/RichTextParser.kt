@@ -332,13 +332,15 @@ class RichTextParser {
             }
         }
 
-        if (urls.withoutScheme.contains(word) || urls.withScheme.contains(word)) {
+        if (urls.withoutScheme.contains(word)) {
             parseNowhereLink(word)?.let { return it }
+            return SchemelessUrlSegment(word)
         }
 
-        if (urls.withoutScheme.contains(word)) return SchemelessUrlSegment(word)
-
-        if (urls.withScheme.contains(word)) return LinkSegment(word)
+        if (urls.withScheme.contains(word)) {
+            parseNowhereLink(word)?.let { return it }
+            return LinkSegment(word)
+        }
 
         if (urls.emails.contains(word)) return EmailSegment(word)
 
