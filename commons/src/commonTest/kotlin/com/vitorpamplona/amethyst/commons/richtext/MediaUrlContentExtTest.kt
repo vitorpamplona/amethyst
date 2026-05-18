@@ -80,14 +80,15 @@ class MediaUrlContentExtTest {
 
     @Test
     fun bridgeOnInfersExtensionFromMimeType() {
-        val image = MediaUrlImage(url = "https://nostr.build/i/abc", hash = sha, mimeType = "image/png")
+        // BUD-01 allows `<sha>` without an extension; mimeType supplies one.
+        val image = MediaUrlImage(url = "https://nostr.build/i/$sha", hash = sha, mimeType = "image/png")
         val result = image.toCoilModel(useLocalBlossomBridge = true)
         assertTrue(result.startsWith("blossom:$sha.png?xs="), "expected png extension from mime, got $result")
     }
 
     @Test
     fun bridgeOnFallsBackToBinExtension() {
-        val image = MediaUrlImage(url = "https://nostr.build/i/abc", hash = sha)
+        val image = MediaUrlImage(url = "https://nostr.build/i/$sha", hash = sha)
         val result = image.toCoilModel(useLocalBlossomBridge = true)
         assertTrue(result.startsWith("blossom:$sha.bin?xs="), "expected bin extension fallback, got $result")
     }
@@ -100,7 +101,7 @@ class MediaUrlContentExtTest {
 
     @Test
     fun uppercaseHashNormalisedToLowercase() {
-        val image = MediaUrlImage(url = "https://cdn.example.com/foo.jpg", hash = sha.uppercase())
+        val image = MediaUrlImage(url = "https://cdn.example.com/${sha.uppercase()}.jpg", hash = sha.uppercase())
         val result = image.toCoilModel(useLocalBlossomBridge = true)
         assertTrue(result.startsWith("blossom:$sha.jpg?xs="), "expected lowercase sha, got $result")
     }
@@ -110,7 +111,7 @@ class MediaUrlContentExtTest {
         val authorPub = "a8f3721a0dc1b4d5c12f4cc7c54ae14071eb9c1b4f9b2cf0d4ab22c0e9f0c7e5"
         val image =
             MediaUrlImage(
-                url = "https://cdn.example.com/foo.jpg",
+                url = "https://cdn.example.com/$sha.jpg",
                 hash = sha,
                 authorPubKey = authorPub,
             )
@@ -122,12 +123,30 @@ class MediaUrlContentExtTest {
     fun invalidAuthorPubKeyDropped() {
         val image =
             MediaUrlImage(
-                url = "https://cdn.example.com/foo.jpg",
+                url = "https://cdn.example.com/$sha.jpg",
                 hash = sha,
                 authorPubKey = "not-a-pubkey",
             )
         val result = image.toCoilModel(useLocalBlossomBridge = true)
         assertEquals("blossom:$sha.jpg?xs=https://cdn.example.com", result)
+    }
+
+    @Test
+    fun bridgeOnSkipsNonBud01UrlEvenWithImetaHash() {
+        // The imeta `x` hash refers to a blob whose canonical Blossom location
+        // is /<sha>.<ext>, but the upstream URL serves it under a different
+        // path (https://i.nostr.build/M5AwJ.gif). Routing this through the
+        // local cache would set xs=https://i.nostr.build, and the cache would
+        // fetch https://i.nostr.build/<sha>.gif on miss, which 404s.
+        val url = "https://i.nostr.build/M5AwJ.gif"
+        val image = MediaUrlImage(url = url, hash = sha)
+        assertEquals(url, image.toCoilModel(useLocalBlossomBridge = true))
+    }
+
+    @Test
+    fun bridgeProfilePictureUrlSkipsNonBud01UrlEvenWithImetaHash() {
+        val url = "https://i.nostr.build/M5AwJ.gif"
+        assertEquals(url, bridgeProfilePictureUrl(url, useBridge = true))
     }
 
     @Test
