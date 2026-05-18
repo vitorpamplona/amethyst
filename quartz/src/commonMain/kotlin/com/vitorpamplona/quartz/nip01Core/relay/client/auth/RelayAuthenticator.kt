@@ -31,13 +31,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlin.concurrent.atomics.AtomicReference
-import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 interface IAuthStatus {
     fun hasFinishedAuthentication(relay: NormalizedRelayUrl): Boolean
@@ -47,36 +46,15 @@ object EmptyIAuthStatus : IAuthStatus {
     override fun hasFinishedAuthentication(relay: NormalizedRelayUrl) = true
 }
 
-@OptIn(ExperimentalAtomicApi::class)
 class RelayAuthenticator(
     val client: INostrClient,
     val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
     val signWithAllLoggedInUsers: suspend (EventTemplate<RelayAuthEvent>) -> List<RelayAuthEvent>,
 ) : IAuthStatus {
     // Connection callbacks fire on the per-relay OkHttp dispatcher thread, so
-    // this state is mutated concurrently — copy-on-write under AtomicReference.
-    private val authStatus: AtomicReference<Map<NormalizedRelayUrl, RelayAuthStatus>> =
-        AtomicReference(emptyMap())
-
-    private fun putAuthStatus(
-        relay: NormalizedRelayUrl,
-        status: RelayAuthStatus,
-    ) {
-        while (true) {
-            val current = authStatus.load()
-            val next = current + (relay to status)
-            if (authStatus.compareAndSet(current, next)) return
-        }
-    }
-
-    private fun removeAuthStatus(relay: NormalizedRelayUrl) {
-        while (true) {
-            val current = authStatus.load()
-            if (relay !in current) return
-            val next = current - relay
-            if (authStatus.compareAndSet(current, next)) return
-        }
-    }
+    // this state is mutated concurrently — LargeCache wraps a platform-tuned
+    // concurrent map (ConcurrentSkipListMap on jvmAndroid, CacheMap on Apple).
+    private val authStatus = LargeCache<NormalizedRelayUrl, RelayAuthStatus>()
 
     private val clientListener =
         object : RelayConnectionListener {
@@ -92,11 +70,11 @@ class RelayAuthenticator(
             }
 
             override fun onConnecting(relay: IRelayClient) {
-                putAuthStatus(relay.url, RelayAuthStatus())
+                authStatus.put(relay.url, RelayAuthStatus())
             }
 
             override fun onDisconnected(relay: IRelayClient) {
-                removeAuthStatus(relay.url)
+                authStatus.remove(relay.url)
             }
         }
 
@@ -108,7 +86,7 @@ class RelayAuthenticator(
             val ev = RelayAuthEvent.build(relay.url, msg.challenge)
             signWithAllLoggedInUsers(ev).forEach { authEvent ->
                 // only send replies to new challenges to avoid infinite loop:
-                if (authStatus.load()[relay.url]?.saveAuthSubmission(authEvent) == true) {
+                if (authStatus.get(relay.url)?.saveAuthSubmission(authEvent) == true) {
                     relay.sendIfConnected(AuthCmd(authEvent))
                 }
             }
@@ -120,12 +98,12 @@ class RelayAuthenticator(
         msg: OkMessage,
     ) {
         // if this is the OK of an auth event, renew all subscriptions and resend all outgoing events.
-        if (authStatus.load()[relay.url]?.checkAuthResults(msg.eventId, msg.success) == true) {
+        if (authStatus.get(relay.url)?.checkAuthResults(msg.eventId, msg.success) == true) {
             client.syncFilters(relay)
         }
     }
 
-    override fun hasFinishedAuthentication(relay: NormalizedRelayUrl) = authStatus.load()[relay]?.hasFinishedAllAuths() != false
+    override fun hasFinishedAuthentication(relay: NormalizedRelayUrl) = authStatus.get(relay)?.hasFinishedAllAuths() != false
 
     init {
         Log.d("RelayAuthenticator", "Init, Subscribe")
