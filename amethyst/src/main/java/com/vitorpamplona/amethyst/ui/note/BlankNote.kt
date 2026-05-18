@@ -107,6 +107,23 @@ fun HiddenNotePreview() {
     )
 }
 
+@Composable
+@Preview
+fun HiddenNoteExcessiveHashtagsPreview() {
+    ThemeComparisonColumn(
+        toPreview = {
+            HiddenNote(
+                reports = persistentSetOf(),
+                isHiddenAuthor = false,
+                hasExcessiveHashtags = true,
+                hashtagLimit = 8,
+                accountViewModel = mockAccountViewModel(),
+                nav = EmptyNav(),
+            ) {}
+        },
+    )
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun HiddenNote(
@@ -115,8 +132,11 @@ fun HiddenNote(
     accountViewModel: AccountViewModel,
     modifier: Modifier = Modifier,
     nav: INav,
+    hasExcessiveHashtags: Boolean = false,
+    hashtagLimit: Int = 0,
     onClick: () -> Unit,
 ) {
+    val hasReporters = isHiddenAuthor || reports.isNotEmpty()
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Row(
             modifier = Modifier.padding(horizontal = 20.dp),
@@ -127,26 +147,42 @@ fun HiddenNote(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(30.dp),
             ) {
-                Text(
-                    text = stringRes(R.string.post_was_flagged_as_inappropriate_by),
-                    color = Color.Gray,
-                )
-                FlowRow(modifier = Modifier.padding(top = 10.dp)) {
-                    if (isHiddenAuthor) {
-                        UserPicture(
-                            user = accountViewModel.userProfile(),
-                            size = Size35dp,
-                            nav = nav,
-                            accountViewModel = accountViewModel,
-                        )
-                    }
-                    reports.forEach {
-                        NoteAuthorPicture(
-                            baseNote = it,
-                            size = Size35dp,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
+                if (hasExcessiveHashtags) {
+                    Text(
+                        text = stringRes(R.string.post_was_hidden_due_to_too_many_hashtags, hashtagLimit),
+                        color = Color.Gray,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+
+                if (hasReporters || !hasExcessiveHashtags) {
+                    Text(
+                        text = stringRes(R.string.post_was_flagged_as_inappropriate_by),
+                        color = Color.Gray,
+                        modifier =
+                            if (hasExcessiveHashtags) {
+                                Modifier.padding(top = 10.dp)
+                            } else {
+                                Modifier
+                            },
+                    )
+                    FlowRow(modifier = Modifier.padding(top = 10.dp)) {
+                        if (isHiddenAuthor) {
+                            UserPicture(
+                                user = accountViewModel.userProfile(),
+                                size = Size35dp,
+                                nav = nav,
+                                accountViewModel = accountViewModel,
+                            )
+                        }
+                        reports.forEach {
+                            NoteAuthorPicture(
+                                baseNote = it,
+                                size = Size35dp,
+                                accountViewModel = accountViewModel,
+                                nav = nav,
+                            )
+                        }
                     }
                 }
 

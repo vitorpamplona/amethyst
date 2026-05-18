@@ -514,6 +514,8 @@ class AccountViewModel(
         val canPreview: Boolean = true,
         val isHiddenAuthor: Boolean = false,
         val relevantReports: ImmutableSet<Note> = persistentSetOf(),
+        val hasExcessiveHashtags: Boolean = false,
+        val hashtagLimit: Int = 0,
     )
 
     fun isNoteAcceptable(
@@ -546,12 +548,16 @@ class AccountViewModel(
                 // No need to process reports if nothing is wrong
                 NoteComposeReportState(isPostHidden, isAcceptable = true, canPreview = true, isHiddenAuthor = false)
             } else {
+                val hashtagLimit = account.maxHashtagLimit()
+                val hasExcessiveHashtags = account.hasExcessiveHashtags(note)
                 NoteComposeReportState(
-                    isPostHidden,
-                    newIsAcceptable,
-                    newCanPreview,
-                    false,
-                    account.getRelevantReports(note).toImmutableSet(),
+                    isPostHidden = isPostHidden,
+                    isAcceptable = newIsAcceptable,
+                    canPreview = newCanPreview,
+                    isHiddenAuthor = false,
+                    relevantReports = account.getRelevantReports(note).toImmutableSet(),
+                    hasExcessiveHashtags = hasExcessiveHashtags,
+                    hashtagLimit = hashtagLimit,
                 )
             }
         }
