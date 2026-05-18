@@ -132,18 +132,18 @@ private fun CategoriesSection() {
     val context = LocalContext.current
     val entries = NotificationChannels.contentChannels
 
-    // Ensure every channel exists so the system per-channel page has something
-    // to open even on a fresh install where the user hasn't received that kind
-    // of notification yet.
-    remember(entries) {
-        entries.forEach { runCatching { it.ensure(context) } }
+    // Read each channel's importance after every resume so toggling
+    // sound/importance in the system page reflects back here. The map IS
+    // the state — no key-bump trick needed.
+    var statuses by remember {
+        mutableStateOf<Map<String, NotificationChannels.ChannelStatus>>(emptyMap())
     }
-
-    // Re-read importance on resume so toggling sound/importance in the system
-    // page reflects back when the user returns.
-    var refreshKey by remember { mutableStateOf(0) }
     LifecycleResumeEffect(Unit) {
-        refreshKey++
+        statuses =
+            entries.associate {
+                val id = it.channelId(context)
+                id to NotificationChannels.statusOf(context, id)
+            }
         onPauseOrDispose {}
     }
 
@@ -151,15 +151,20 @@ private fun CategoriesSection() {
         entries.forEachIndexed { index, entry ->
             if (index > 0) SettingsDivider()
             val channelId = remember(entry) { entry.channelId(context) }
-            val status =
-                remember(refreshKey, channelId) {
-                    NotificationChannels.statusOf(context, channelId)
-                }
+            // Default to ON for channels not yet created — matches Android's
+            // own default importance, so the badge isn't misleading before the
+            // user has interacted with the channel.
+            val status = statuses[channelId] ?: NotificationChannels.ChannelStatus.ON
             SettingsItem(
                 title = entry.nameRes,
                 icon = entry.icon,
                 trailing = { ChannelStatusBadge(status) },
-                onClick = { NotificationChannels.openChannelSettings(context, channelId) },
+                onClick = {
+                    // Lazy-create the channel right before opening so the system
+                    // per-channel page has something to display; idempotent.
+                    entry.ensure(context)
+                    NotificationChannels.openChannelSettings(context, channelId)
+                },
             )
         }
     }
@@ -174,29 +179,26 @@ private fun CategoriesSection() {
 
 @Composable
 private fun ChannelStatusBadge(status: NotificationChannels.ChannelStatus) {
-    val (label, container, content) =
-        when (status) {
-            NotificationChannels.ChannelStatus.ON ->
-                Triple(
-                    R.string.notification_channel_status_on,
-                    MaterialTheme.colorScheme.secondaryContainer,
-                    MaterialTheme.colorScheme.onSecondaryContainer,
-                )
-            NotificationChannels.ChannelStatus.SILENT ->
-                Triple(
-                    R.string.notification_channel_status_silent,
-                    MaterialTheme.colorScheme.surfaceContainerHigh,
-                    MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            NotificationChannels.ChannelStatus.OFF ->
-                Triple(
-                    R.string.notification_channel_status_off,
-                    MaterialTheme.colorScheme.errorContainer,
-                    MaterialTheme.colorScheme.onErrorContainer,
-                )
-        }
-
-    StatusChip(label = stringRes(label), containerColor = container, contentColor = content)
+    when (status) {
+        NotificationChannels.ChannelStatus.ON ->
+            StatusChip(
+                label = stringRes(R.string.notification_channel_status_on),
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+        NotificationChannels.ChannelStatus.SILENT ->
+            StatusChip(
+                label = stringRes(R.string.notification_channel_status_silent),
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        NotificationChannels.ChannelStatus.OFF ->
+            StatusChip(
+                label = stringRes(R.string.notification_channel_status_off),
+                containerColor = MaterialTheme.colorScheme.errorContainer,
+                contentColor = MaterialTheme.colorScheme.onErrorContainer,
+            )
+    }
 }
 
 @Composable

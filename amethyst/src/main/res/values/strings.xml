@@ -1679,7 +1679,6 @@
     <string name="notification_settings_section_display">In-app display</string>
     <string name="notification_settings_section_categories">Categories</string>
     <string name="notification_settings_categories_explainer">Tap a category to open Android notification settings for it — sound, importance, badges and Do Not Disturb live there.</string>
-    <string name="notification_settings_open_system">Open Android notification settings</string>
     <string name="notification_channel_status_on">On</string>
     <string name="notification_channel_status_silent">Silent</string>
     <string name="notification_channel_status_off">Off</string>
