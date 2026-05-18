@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import kotlinx.collections.immutable.ImmutableList
@@ -90,10 +91,11 @@ open class NewMediaModel : ViewModel() {
 
     fun upload(
         context: Context,
+        accountViewModel: AccountViewModel,
         onSucess: () -> Unit,
         onError: (String, String) -> Unit,
     ) = try {
-        uploadUnsafe(context, onSucess, onError)
+        uploadUnsafe(context, accountViewModel, onSucess, onError)
     } catch (e: SignerExceptions.ReadOnlyException) {
         onError(
             stringRes(context, R.string.read_only_user),
@@ -103,6 +105,7 @@ open class NewMediaModel : ViewModel() {
 
     fun uploadUnsafe(
         context: Context,
+        accountViewModel: AccountViewModel,
         onSucess: () -> Unit,
         onError: (String, String) -> Unit,
     ) {
@@ -155,10 +158,13 @@ open class NewMediaModel : ViewModel() {
                             }
                         }.toMap()
 
+                // Sign + publish via launchSigner so SignerExceptions surface
+                // through the standard toastManager pipeline (and timed-out /
+                // rejected prompts get logged instead of crashing the process).
                 val nip95jobs =
                     nip95s.map {
                         // upload each file as an individual nip95 event.
-                        viewModelScope.launch(Dispatchers.IO) {
+                        accountViewModel.launchSigner {
                             val nip95 = myAccount.createNip95(it.bytes, headerInfo = it.fileHeader, caption, if (sensitiveContent) "" else null)
                             myAccount.consumeAndSendNip95(nip95.first, nip95.second)
                         }
@@ -166,9 +172,8 @@ open class NewMediaModel : ViewModel() {
 
                 val videoJobs =
                     videosAndOthers.map {
-                        // upload each file as an individual nip95 event.
-                        viewModelScope.launch(Dispatchers.IO) {
-                            account?.sendHeader(
+                        accountViewModel.launchSigner {
+                            myAccount.sendHeader(
                                 url = it.url,
                                 magnetUri = it.magnet,
                                 headerInfo = it.fileHeader,
@@ -182,8 +187,8 @@ open class NewMediaModel : ViewModel() {
                 val imageJobs =
                     if (imageUrls.isNotEmpty()) {
                         listOf(
-                            viewModelScope.launch(Dispatchers.IO) {
-                                account?.sendAllAsOnePictureEvent(
+                            accountViewModel.launchSigner {
+                                myAccount.sendAllAsOnePictureEvent(
                                     urlHeaderInfo = imageUrls,
                                     caption = caption,
                                     contentWarningReason = if (sensitiveContent) "" else null,
