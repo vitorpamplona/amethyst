@@ -33,30 +33,31 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.richtext.NowhereLinkSegment
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 
-// Maps the first path segment of a nowhere URL to its tool. The nowhere project ships eight
-// tools (event, fundraiser, store, petition, message, drop, art, forum) and the URL path
+// Maps the first path segment of a nowhere URL to a localized label. The nowhere project ships
+// eight tools (event, fundraiser, store, petition, message, drop, art, forum) and the URL path
 // uses the first letter as a discriminator (e.g. nowhr.xyz/s#... is a store). Unknown codes
-// fall through to a generic "Nowhere site" label.
-private val nowhereTools =
+// fall through to the generic "Nowhere site" label.
+private val nowhereToolLabels =
     mapOf(
-        "e" to "Event",
-        "f" to "Fundraiser",
-        "s" to "Store",
-        "p" to "Petition",
-        "m" to "Message",
-        "d" to "Drop",
-        "a" to "Art",
-        "fo" to "Forum",
+        "e" to R.string.nowhere_link_card_event,
+        "f" to R.string.nowhere_link_card_fundraiser,
+        "s" to R.string.nowhere_link_card_store,
+        "p" to R.string.nowhere_link_card_petition,
+        "m" to R.string.nowhere_link_card_message,
+        "d" to R.string.nowhere_link_card_drop,
+        "a" to R.string.nowhere_link_card_art,
+        "fo" to R.string.nowhere_link_card_forum,
     )
 
 @Composable
 fun NowhereLinkCard(segment: NowhereLinkSegment) {
     val uri = LocalUriHandler.current
-    val toolLabel = segment.tool?.let { nowhereTools[it.lowercase()] }
-    val title = toolLabel?.let { "Nowhere $it" } ?: "Nowhere site"
+    val titleRes = segment.tool?.lowercase()?.let { nowhereToolLabels[it] } ?: R.string.nowhere_link_card_generic
 
     Column(
         modifier =
@@ -69,7 +70,7 @@ fun NowhereLinkCard(segment: NowhereLinkSegment) {
                 }.padding(12.dp),
     ) {
         Text(
-            text = title,
+            text = stringRes(titleRes),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
         )

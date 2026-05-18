@@ -2882,4 +2882,15 @@
     <string name="community_rules_violation_quota_exceeded">You have already posted %1$d events of this kind today (limit %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">You don\'t pass this community\'s web-of-trust requirements.</string>
     <string name="community_rules_violation_stale_rules">The latest community rules document was rejected as stale.</string>
+
+    <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
+    <string name="nowhere_link_card_generic">Nowhere site</string>
+    <string name="nowhere_link_card_event">Nowhere Event</string>
+    <string name="nowhere_link_card_fundraiser">Nowhere Fundraiser</string>
+    <string name="nowhere_link_card_store">Nowhere Store</string>
+    <string name="nowhere_link_card_petition">Nowhere Petition</string>
+    <string name="nowhere_link_card_message">Nowhere Message</string>
+    <string name="nowhere_link_card_drop">Nowhere Drop</string>
+    <string name="nowhere_link_card_art">Nowhere Art</string>
+    <string name="nowhere_link_card_forum">Nowhere Forum</string>
 </resources>
