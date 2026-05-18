@@ -20,11 +20,14 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -37,7 +40,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -47,6 +53,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.service.notifications.BatteryOptimizationHelper
+import com.vitorpamplona.amethyst.service.notifications.NotificationChannels
 import com.vitorpamplona.amethyst.ui.components.PushNotificationProviderTile
 import com.vitorpamplona.amethyst.ui.components.hasPushNotificationProvider
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -73,39 +80,144 @@ fun NotificationSettingsScreen(
                     .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            if (hasPushNotificationProvider()) {
-                SettingsSection(R.string.notification_settings_section_push) {
-                    PushNotificationProviderTile(accountViewModel.settings.uiSettingsFlow)
-                }
-            }
-
-            val alwaysOn by accountViewModel.account.settings.alwaysOnNotificationService
-                .collectAsStateWithLifecycle()
-            val splitByFollows by accountViewModel.account.settings.splitNotificationsEnabled
-                .collectAsStateWithLifecycle()
-
-            SettingsSection(R.string.notification_settings_section_in_app) {
-                SettingsSwitchTile(
-                    icon = MaterialSymbols.Notifications,
-                    title = R.string.always_on_notif_setting_title,
-                    description = R.string.always_on_notif_setting_description,
-                    checked = alwaysOn,
-                    onCheckedChange = { accountViewModel.account.settings.toggleAlwaysOnNotificationService() },
-                )
-                SettingsDivider()
-                SettingsSwitchTile(
-                    icon = MaterialSymbols.Forum,
-                    title = R.string.split_notifications_setting_title,
-                    description = R.string.split_notifications_setting_description,
-                    checked = splitByFollows,
-                    onCheckedChange = { accountViewModel.account.settings.toggleSplitNotificationsEnabled() },
-                )
-            }
-
-            if (alwaysOn) {
-                BatteryOptimizationBanner()
-            }
+            DeliverySection(accountViewModel)
+            DisplaySection(accountViewModel)
+            CategoriesSection()
         }
+    }
+}
+
+@Composable
+private fun DeliverySection(accountViewModel: AccountViewModel) {
+    val alwaysOn by accountViewModel.account.settings.alwaysOnNotificationService
+        .collectAsStateWithLifecycle()
+
+    SettingsSection(R.string.notification_settings_section_delivery) {
+        if (hasPushNotificationProvider()) {
+            PushNotificationProviderTile(accountViewModel.settings.uiSettingsFlow)
+            SettingsDivider()
+        }
+        SettingsSwitchTile(
+            icon = MaterialSymbols.Notifications,
+            title = R.string.always_on_notif_setting_title,
+            description = R.string.always_on_notif_setting_description,
+            checked = alwaysOn,
+            onCheckedChange = { accountViewModel.account.settings.toggleAlwaysOnNotificationService() },
+        )
+    }
+
+    if (alwaysOn) {
+        BatteryOptimizationBanner()
+    }
+}
+
+@Composable
+private fun DisplaySection(accountViewModel: AccountViewModel) {
+    val splitByFollows by accountViewModel.account.settings.splitNotificationsEnabled
+        .collectAsStateWithLifecycle()
+
+    SettingsSection(R.string.notification_settings_section_display) {
+        SettingsSwitchTile(
+            icon = MaterialSymbols.Forum,
+            title = R.string.split_notifications_setting_title,
+            description = R.string.split_notifications_setting_description,
+            checked = splitByFollows,
+            onCheckedChange = { accountViewModel.account.settings.toggleSplitNotificationsEnabled() },
+        )
+    }
+}
+
+@Composable
+private fun CategoriesSection() {
+    val context = LocalContext.current
+    val entries = NotificationChannels.contentChannels
+
+    // Ensure every channel exists so the system per-channel page has something
+    // to open even on a fresh install where the user hasn't received that kind
+    // of notification yet.
+    remember(entries) {
+        entries.forEach { runCatching { it.ensure(context) } }
+    }
+
+    // Re-read importance on resume so toggling sound/importance in the system
+    // page reflects back when the user returns.
+    var refreshKey by remember { mutableStateOf(0) }
+    LifecycleResumeEffect(Unit) {
+        refreshKey++
+        onPauseOrDispose {}
+    }
+
+    SettingsSection(R.string.notification_settings_section_categories) {
+        entries.forEachIndexed { index, entry ->
+            if (index > 0) SettingsDivider()
+            val channelId = remember(entry) { entry.channelId(context) }
+            val status =
+                remember(refreshKey, channelId) {
+                    NotificationChannels.statusOf(context, channelId)
+                }
+            SettingsItem(
+                title = entry.nameRes,
+                icon = entry.icon,
+                trailing = { ChannelStatusBadge(status) },
+                onClick = { NotificationChannels.openChannelSettings(context, channelId) },
+            )
+        }
+    }
+
+    Text(
+        text = stringRes(R.string.notification_settings_categories_explainer),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 4.dp),
+    )
+}
+
+@Composable
+private fun ChannelStatusBadge(status: NotificationChannels.ChannelStatus) {
+    val (label, container, content) =
+        when (status) {
+            NotificationChannels.ChannelStatus.ON ->
+                Triple(
+                    R.string.notification_channel_status_on,
+                    MaterialTheme.colorScheme.secondaryContainer,
+                    MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+            NotificationChannels.ChannelStatus.SILENT ->
+                Triple(
+                    R.string.notification_channel_status_silent,
+                    MaterialTheme.colorScheme.surfaceContainerHigh,
+                    MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            NotificationChannels.ChannelStatus.OFF ->
+                Triple(
+                    R.string.notification_channel_status_off,
+                    MaterialTheme.colorScheme.errorContainer,
+                    MaterialTheme.colorScheme.onErrorContainer,
+                )
+        }
+
+    StatusChip(label = stringRes(label), containerColor = container, contentColor = content)
+}
+
+@Composable
+private fun StatusChip(
+    label: String,
+    containerColor: Color,
+    contentColor: Color,
+) {
+    Box(
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(50))
+                .background(containerColor)
+                .padding(horizontal = 10.dp, vertical = 2.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = contentColor,
+        )
     }
 }
 

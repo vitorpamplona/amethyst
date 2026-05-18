@@ -1675,8 +1675,14 @@
     <string name="no_reactions_setup">No reactions setup</string>
 
     <string name="notification_settings">Notifications</string>
-    <string name="notification_settings_section_in_app">In-app notifications</string>
-    <string name="notification_settings_section_push">Push notifications</string>
+    <string name="notification_settings_section_delivery">Delivery</string>
+    <string name="notification_settings_section_display">In-app display</string>
+    <string name="notification_settings_section_categories">Categories</string>
+    <string name="notification_settings_categories_explainer">Tap a category to open Android notification settings for it — sound, importance, badges and Do Not Disturb live there.</string>
+    <string name="notification_settings_open_system">Open Android notification settings</string>
+    <string name="notification_channel_status_on">On</string>
+    <string name="notification_channel_status_silent">Silent</string>
+    <string name="notification_channel_status_off">Off</string>
 
     <string name="select_push_server">Select a UnifiedPush App</string>
     <string name="push_server_title">Push provider</string>

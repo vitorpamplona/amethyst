@@ -122,7 +122,7 @@ object ScheduledPostNotifier {
         }
     }
 
-    private fun ensureChannel(context: Context) {
+    fun ensureChannel(context: Context) {
         if (channel != null) return
         channel =
             NotificationChannel(
