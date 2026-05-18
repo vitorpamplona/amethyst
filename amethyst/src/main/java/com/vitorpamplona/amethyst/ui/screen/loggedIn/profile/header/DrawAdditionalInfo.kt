@@ -44,7 +44,6 @@ import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -59,10 +58,9 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
-import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
-import com.vitorpamplona.amethyst.ui.components.appendLink
+import com.vitorpamplona.amethyst.ui.components.util.LongPressCopyText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.DrawPlayName
@@ -237,8 +235,9 @@ fun DrawAdditionalInfo(
                     modifier = Modifier.size(18.dp),
                 )
 
-                ClickableTextPrimary(
-                    text = website.removePrefix("https://").removePrefix("http://").removeSuffix("/"),
+                LongPressCopyText(
+                    displayText = website.removePrefix("https://").removePrefix("http://").removeSuffix("/"),
+                    copyValue = website,
                     onClick = {
                         runCatching {
                             if (website.contains("://")) {
@@ -248,6 +247,7 @@ fun DrawAdditionalInfo(
                             }
                         }
                     },
+                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(vertical = 1.dp, horizontal = 5.dp),
                 )
             }
@@ -264,9 +264,11 @@ fun DrawAdditionalInfo(
                         modifier = Modifier.size(18.dp),
                     )
 
-                    ClickableTextPrimary(
-                        text = identity.identity,
+                    LongPressCopyText(
+                        displayText = identity.identity,
+                        copyValue = identity.identity,
                         onClick = { runCatching { uri.openUri(identity.toProofUrl()) } },
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(horizontal = 5.dp),
                     )
                 }
@@ -343,21 +345,18 @@ fun DisplayNip05ProfileStatus(
                 ObserveAndRenderNIP05VerifiedSymbol(nip05State, 2, Size15Modifier, accountViewModel)
 
                 val uri = LocalUriHandler.current
-                val color = MaterialTheme.colorScheme.primary
+                val displayValue = nip05State.nip05.toDisplayValue()
 
-                Text(
-                    text =
-                        remember(nip05State) {
-                            buildAnnotatedString {
-                                appendLink(nip05State.nip05.toDisplayValue(), color) {
-                                    runCatching { uri.openUri("https://${nip05State.nip05.domain}") }
-                                }
-                            }
-                        },
-                    modifier = Modifier.padding(top = 1.dp, bottom = 1.dp),
+                LongPressCopyText(
+                    displayText = displayValue,
+                    copyValue = displayValue,
+                    onClick = {
+                        runCatching { uri.openUri("https://${nip05State.nip05.domain}") }
+                    },
                     softWrap = true,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 1.dp, bottom = 1.dp),
                 )
             }
         }
@@ -419,13 +418,15 @@ fun PaymentTargetRow(target: PaymentTarget) {
             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
             modifier = Modifier.padding(end = 4.dp),
         )
-        ClickableTextPrimary(
-            text = target.authority,
+        LongPressCopyText(
+            displayText = target.authority,
+            copyValue = target.authority,
             onClick = {
                 runCatching {
                     uri.openUri("payto://${target.type}/${target.authority}")
                 }
             },
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(vertical = 1.dp),
         )
     }
