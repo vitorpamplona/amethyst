@@ -77,11 +77,13 @@ fun WatchBlockAndReport(
                 normalNote(isHidden.canPreview)
             } else {
                 HiddenNote(
-                    isHidden.relevantReports,
-                    isHidden.isHiddenAuthor,
-                    accountViewModel,
-                    modifier,
-                    nav,
+                    reports = isHidden.relevantReports,
+                    isHiddenAuthor = isHidden.isHiddenAuthor,
+                    hasExcessiveHashtags = isHidden.hasExcessiveHashtags,
+                    hashtagLimit = isHidden.hashtagLimit,
+                    accountViewModel = accountViewModel,
+                    modifier = modifier,
+                    nav = nav,
                     onClick = { showAnyway.value = true },
                 )
             }
