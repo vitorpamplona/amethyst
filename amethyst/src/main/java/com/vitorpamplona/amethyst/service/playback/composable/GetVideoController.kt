@@ -53,6 +53,12 @@ fun GetVideoController(
     mediaItem: LoadedMediaItem,
     muted: Boolean = false,
     play: Boolean = false,
+    // Opt-out for callers whose lifecycle owner is already a background-playback
+    // surface (PiP): there, the 30s timer would fire as soon as the activity
+    // enters PiP mode and race the controller build / `RegisterBackgroundMedia`
+    // registration, killing the just-attached controller and blanking the
+    // window. The opt-out skips the timer entirely for those callers.
+    releaseOnBackgroundTimeout: Boolean = true,
     inner: @Composable (mediaControllerState: MediaControllerState) -> Unit,
 ) {
     val context = LocalContext.current
@@ -116,11 +122,13 @@ fun GetVideoController(
         }
     }.collectAsState(null)
 
-    ReleaseControllerWhenBackgroundedFor(
-        timeoutMs = BACKGROUND_RELEASE_TIMEOUT_MS,
-        controllerState = controllerState,
-        keepAlive = keepAlive,
-    )
+    if (releaseOnBackgroundTimeout) {
+        ReleaseControllerWhenBackgroundedFor(
+            timeoutMs = BACKGROUND_RELEASE_TIMEOUT_MS,
+            controllerState = controllerState,
+            keepAlive = keepAlive,
+        )
+    }
 
     controllerState?.let {
         inner(it)
