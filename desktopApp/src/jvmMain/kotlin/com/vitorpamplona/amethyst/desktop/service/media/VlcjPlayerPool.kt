@@ -55,6 +55,9 @@ object VlcjPlayerPool {
     private val idleThumbPlayers = ConcurrentLinkedQueue<EmbeddedMediaPlayer>()
     private const val MAX_THUMB_POOL_SIZE = 2
 
+    // Cached plugin path for audio factory creation (set during init)
+    private var cachedPluginPath: String? = null
+
     // Audio player pool (shared factory with --no-video)
     private var audioFactory: MediaPlayerFactory? = null
     private val allAudioPlayers = mutableListOf<MediaPlayer>()
@@ -76,12 +79,13 @@ object VlcjPlayerPool {
 
         return try {
             // Try bundled VLC first, then fall through to system VLC
+            val macOsDiscoverer = MacOsVlcDiscoverer()
             val discovery =
                 try {
                     val nd =
                         NativeDiscovery(
                             BundledVlcDiscoverer(),
-                            MacOsVlcDiscoverer(),
+                            macOsDiscoverer,
                         )
                     val found = nd.discover()
                     if (found) {
@@ -99,7 +103,34 @@ object VlcjPlayerPool {
                 val systemDiscovery = NativeDiscovery().discover()
                 println("VLC: system discovery ${if (systemDiscovery) "succeeded" else "failed"}")
             }
-            val f = MediaPlayerFactory("--no-xlib")
+
+            // Delete stale VLC plugin cache on macOS to avoid spam warnings
+            if ("mac" in System.getProperty("os.name").lowercase()) {
+                try {
+                    val cacheDir = java.io.File(System.getProperty("user.home"), "Library/Caches/org.videolan.vlc")
+                    cacheDir.listFiles()?.filter { it.name.startsWith("plugins") }?.forEach { it.delete() }
+                } catch (_: Throwable) {
+                    // Best-effort cache cleanup
+                }
+            }
+
+            // Build factory args — add --plugin-path fallback if env var wasn't set
+            val factoryArgs = mutableListOf("--no-xlib")
+            if (!macOsDiscoverer.envVarSet) {
+                val pluginPath =
+                    macOsDiscoverer.discoveredPluginPath
+                        ?: System.getProperty("vlc.plugin.path")
+                        ?: VlcResourceResolver.findVlcDir()?.let { "${it.absolutePath}/plugins" }
+                if (pluginPath != null) {
+                    factoryArgs += "--plugin-path=$pluginPath"
+                    println("VLC: using --plugin-path fallback: $pluginPath")
+                }
+            }
+
+            cachedPluginPath = macOsDiscoverer.discoveredPluginPath
+                ?: System.getProperty("vlc.plugin.path")
+
+            val f = MediaPlayerFactory(*factoryArgs.toTypedArray())
             factory = f
             available.set(true)
             println("VLC: MediaPlayerFactory created successfully")
@@ -184,7 +215,9 @@ object VlcjPlayerPool {
 
             val af =
                 audioFactory ?: try {
-                    MediaPlayerFactory("--no-video", "--no-xlib").also { audioFactory = it }
+                    val audioArgs = mutableListOf("--no-video", "--no-xlib")
+                    cachedPluginPath?.let { audioArgs += "--plugin-path=$it" }
+                    MediaPlayerFactory(*audioArgs.toTypedArray()).also { audioFactory = it }
                 } catch (_: Throwable) {
                     return null
                 }

@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.desktop.service.media
 
+import com.sun.jna.Function
 import com.sun.jna.NativeLibrary
-import uk.co.caprica.vlcj.binding.lib.LibC
 import uk.co.caprica.vlcj.binding.support.runtime.RuntimeUtil
 import uk.co.caprica.vlcj.factory.discovery.strategy.BaseNativeDiscoveryStrategy
 
@@ -36,6 +36,14 @@ class MacOsVlcDiscoverer :
         arrayOf("libvlc\\.dylib", "libvlccore\\.dylib"),
         arrayOf("%s/plugins"),
     ) {
+    /** Plugin path discovered during [setPluginPath], available after discovery. */
+    var discoveredPluginPath: String? = null
+        private set
+
+    /** Whether [setPluginPath] successfully set the process env var. */
+    var envVarSet: Boolean = false
+        private set
+
     override fun supported(): Boolean {
         val os = System.getProperty("os.name").lowercase()
         return "mac" in os
@@ -52,5 +60,22 @@ class MacOsVlcDiscoverer :
         return true
     }
 
-    override fun setPluginPath(pluginPath: String?): Boolean = LibC.INSTANCE.setenv(PLUGIN_ENV_NAME, pluginPath, 1) == 0
+    override fun setPluginPath(pluginPath: String?): Boolean {
+        if (pluginPath == null) return false
+        discoveredPluginPath = pluginPath
+        return try {
+            // Call setenv directly via JNA Function API. This bypasses vlcj's
+            // LibC interface binding which fails on macOS 13+ because dlsym
+            // can't resolve the versioned symbol `setenv$3b99ba0d`.
+            val setenv = Function.getFunction("c", "setenv")
+            val result = setenv.invokeInt(arrayOf<Any>(PLUGIN_ENV_NAME, pluginPath, 1)) == 0
+            envVarSet = result
+            result
+        } catch (_: Throwable) {
+            // JNA Function call also failed — VlcjPlayerPool will use
+            // --plugin-path factory arg as fallback.
+            envVarSet = false
+            false
+        }
+    }
 }
