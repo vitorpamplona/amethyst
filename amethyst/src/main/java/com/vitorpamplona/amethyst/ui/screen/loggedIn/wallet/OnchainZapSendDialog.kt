@@ -63,6 +63,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
@@ -158,10 +159,17 @@ fun OnchainZapSendDialog(
             accountViewModel.zapAmountChoices()
         }
 
+    // Mirror the dropdown's NIP-05 / Namecoin (.bit) resolution so Send can
+    // enable as soon as the typed name resolves, without forcing the user to
+    // tap the suggestion. Reuses the exact same path as the dropdown, so
+    // bare .bit names (e.g. testls.bit) and m@testls.bit both work.
+    val nip05Resolved by userSuggestions.nip05ResolutionFlow.collectAsStateWithLifecycle(initialValue = null)
+
     val resolvedRecipient: HexKey? =
         recipientPubKey
             ?: selectedUser?.pubkeyHex
             ?: searchInput.trim().takeIf { it.isNotEmpty() }?.let { decodePublicKeyAsHexOrNull(it) }
+            ?: nip05Resolved?.pubkeyHex
     val amountSats = amountInput.trim().toLongOrNull()
     val canSend =
         !sending &&
