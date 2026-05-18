@@ -420,3 +420,23 @@ fun VerticalDotsIcon() {
         tint = MaterialTheme.colorScheme.placeholderText,
     )
 }
+
+@Composable
+fun OnchainZappedIcon(modifier: Modifier) {
+    Icon(
+        symbol = MaterialSymbols.CurrencyBitcoin,
+        contentDescription = stringRes(R.string.onchain_zap_description),
+        tint = BitcoinOrange,
+        modifier = modifier,
+    )
+}
+
+@Composable
+fun PendingClockBadge(modifier: Modifier) {
+    Icon(
+        symbol = MaterialSymbols.Schedule,
+        contentDescription = stringRes(R.string.onchain_zap_pending),
+        tint = BitcoinOrange,
+        modifier = modifier,
+    )
+}

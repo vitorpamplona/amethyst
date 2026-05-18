@@ -1887,6 +1887,8 @@
     <string name="boost_or_quote_description">Boost Or Quote</string>
     <string name="like_description">Like</string>
     <string name="zap_description">Zap</string>
+    <string name="onchain_zap_description">On-chain Bitcoin zap</string>
+    <string name="onchain_zap_pending">Pending confirmation</string>
 
     <string name="change_reaction">Change Quick Reactions</string>
 

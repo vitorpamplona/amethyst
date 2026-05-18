@@ -20,11 +20,14 @@
  */
 package com.vitorpamplona.amethyst.commons.model
 
-import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 
 /**
  * Per-(note, txid) verified NIP-BC onchain zap state.
  *
+ * @property source The OnchainZapEvent note that contributed this entry. `source.author` is the
+ *                  sender shown in the reactions gallery. When pending → confirmed upgrades
+ *                  happen, the upgrading event's note replaces the existing `source`.
  * @property verifiedSats Satoshis verified to have paid the recipient's derived Taproot
  *                        address on chain. NEVER the sender-claimed `amount` tag.
  * @property confirmed True when the transaction has at least one confirmation. Unconfirmed
@@ -33,8 +36,9 @@ import androidx.compose.runtime.Immutable
  *                     SHOULD either exclude them from aggregate totals or clearly label
  *                     them as pending").
  */
-@Immutable
-data class OnchainZapAmount(
+@Stable
+data class OnchainZapEntry(
+    val source: Note,
     val verifiedSats: Long,
     val confirmed: Boolean,
 )

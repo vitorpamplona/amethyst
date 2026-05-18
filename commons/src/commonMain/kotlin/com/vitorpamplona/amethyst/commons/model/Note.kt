@@ -158,11 +158,13 @@ open class Note(
 
     /**
      * NIP-BC verified onchain zaps targeting this note.
-     * Key: Bitcoin txid (lowercase 64-char hex). Value: verified satoshis paid to the recipient
-     * (NOT the sender-claimed amount). Confirmed and pending entries live here together;
-     * `updateZapTotal` only counts confirmed amounts.
+     * Key: Bitcoin txid (lowercase 64-char hex). Value: verified entry with the source
+     * OnchainZapEvent note (so `source.author` identifies the sender), the verified
+     * satoshis paid to the recipient (NOT the sender-claimed amount), and a confirmed
+     * flag. Confirmed and pending entries live here together; `updateZapTotal` only
+     * counts confirmed amounts.
      */
-    var onchainZaps = mapOf<String, OnchainZapAmount>()
+    var onchainZaps = mapOf<String, OnchainZapEntry>()
         private set
 
     var zapPayments = mapOf<Note, Note?>()
@@ -430,27 +432,35 @@ open class Note(
     @Synchronized
     private fun innerAddOnchainZap(
         txid: String,
-        amount: OnchainZapAmount,
+        entry: OnchainZapEntry,
     ): Boolean {
         val existing = onchainZaps[txid]
-        // Allow upgrading pending → confirmed but never reduce already-stored confirmations.
-        if (existing != null && existing.confirmed && !amount.confirmed) return false
-        if (existing == amount) return false
-        onchainZaps = onchainZaps + Pair(txid, amount)
+        if (existing == null) {
+            onchainZaps = onchainZaps + Pair(txid, entry)
+            return true
+        }
+        // Same-state duplicate: keep the first source and amount we got.
+        if (existing.confirmed == entry.confirmed) return false
+        // Downgrade confirmed → pending: never accept.
+        if (existing.confirmed && !entry.confirmed) return false
+        // Upgrade pending → confirmed: replace, so the upgrading event's source wins.
+        onchainZaps = onchainZaps + Pair(txid, entry)
         return true
     }
 
     /**
      * Register a NIP-BC verified onchain zap targeting this note. `verifiedSats` MUST come
      * from on-chain verification (sum of outputs paying the recipient's derived Taproot
-     * address), not the sender-claimed `amount` tag.
+     * address), not the sender-claimed `amount` tag. `source` is the OnchainZapEvent's own
+     * note — `source.author` is the sender shown in the reactions gallery.
      */
     fun addOnchainZap(
+        source: Note,
         txid: String,
         verifiedSats: Long,
         confirmed: Boolean,
     ) {
-        val inserted = innerAddOnchainZap(txid, OnchainZapAmount(verifiedSats, confirmed))
+        val inserted = innerAddOnchainZap(txid, OnchainZapEntry(source, verifiedSats, confirmed))
         if (inserted) {
             updateZapTotal()
             flowSet?.zaps?.invalidateData()
