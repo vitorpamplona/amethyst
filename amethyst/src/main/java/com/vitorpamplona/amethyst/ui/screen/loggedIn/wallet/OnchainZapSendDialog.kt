@@ -414,6 +414,18 @@ private fun RecipientSection(
         modifier = Modifier.fillMaxWidth(),
     )
 
+    // Inline Namecoin lookup feedback. Local-cache suggestions can race
+    // ahead of the on-chain resolution (especially when the user has
+    // resolved a sibling `user@<host>.bit` earlier in the session and the
+    // current query is the bare host), so we surface the in-flight state +
+    // the eventual on-chain match in its own row, distinct from the
+    // generic dropdown. Failures are surfaced here too.
+    NamecoinResolutionRow(
+        searchInput = searchInput,
+        accountViewModel = accountViewModel,
+        onUserResolved = onSelectUser,
+    )
+
     if (searchInput.length > 2) {
         ShowUserSuggestionList(
             userSuggestions = userSuggestions,
