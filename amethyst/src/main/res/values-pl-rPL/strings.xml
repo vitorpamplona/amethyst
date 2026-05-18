@@ -1393,6 +1393,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="load_image_description">Kiedy załadować obrazki</string>
     <string name="copy_stack_to_clipboard">Skopiuj</string>
     <string name="copy_to_clipboard">Kopiuj do schowka</string>
+    <string name="copied_to_clipboard">Skopiowano do schowka</string>
     <string name="copy_nprofile_to_clipboard">Skopiuj nprofile do schowka</string>
     <string name="copy_npub_to_clipboard">Kopiuj npub do schowka</string>
     <string name="share_or_save">Udostępnij lub zapisz</string>
