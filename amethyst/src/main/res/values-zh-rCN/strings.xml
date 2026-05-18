@@ -2592,4 +2592,5 @@
     <string name="community_rules_violation_quota_exceeded">您今天已经发布了 %1$d 个此类事件 (限制 %2$d)。</string>
     <string name="community_rules_violation_wot_gate_failed">您没有通过该社区的信任网络要求。</string>
     <string name="community_rules_violation_stale_rules">最新的社区规则文件因陈旧而被拒绝。</string>
+    <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
 </resources>
