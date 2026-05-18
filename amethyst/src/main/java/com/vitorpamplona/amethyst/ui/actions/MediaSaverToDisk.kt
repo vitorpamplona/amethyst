@@ -205,7 +205,7 @@ object MediaSaverToDisk {
         contentSource: BufferedSource,
         contentResolver: ContentResolver,
     ) {
-        val cleanMimeType = contentType.substringBefore(";").trim()
+        val cleanMimeType = normalizeMimeTypeForMediaStore(contentType.substringBefore(";").trim())
 
         val (masterUri, baseDir) =
             when {
@@ -270,6 +270,15 @@ object MediaSaverToDisk {
     }
 
     private fun trimInlineMetaData(url: String): String = url.substringBefore("#")
+
+    // Android's MediaStore only accepts a fixed allow-list of MIME types.
+    // MimeTypeMap returns variants like video/x-m4v that MediaProvider rejects,
+    // so map them to the closest supported equivalent.
+    private fun normalizeMimeTypeForMediaStore(mimeType: String): String =
+        when (mimeType.lowercase()) {
+            "video/x-m4v" -> "video/mp4"
+            else -> mimeType
+        }
 
     private const val AMETHYST_SUBDIRECTORY = "Amethyst"
     private const val PDF_MIME_TYPE = "application/pdf"
