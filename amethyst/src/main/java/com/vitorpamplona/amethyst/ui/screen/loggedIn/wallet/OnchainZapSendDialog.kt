@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.ui.components.namecoin.NamecoinResolutionRow
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
