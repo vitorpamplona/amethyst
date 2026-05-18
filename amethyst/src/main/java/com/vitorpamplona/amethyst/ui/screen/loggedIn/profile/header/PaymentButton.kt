@@ -39,6 +39,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
@@ -63,12 +65,16 @@ fun PaymentButton(
         }
 
     LoadAddressableNote(address, accountViewModel) { note ->
-        val targets =
-            remember(note) {
-                (note?.event as? PaymentTargetsEvent)?.paymentTargets() ?: emptyList()
+        if (note != null) {
+            EventFinderFilterAssemblerSubscription(note, accountViewModel)
+            val event by observeNoteEvent<PaymentTargetsEvent>(note, accountViewModel)
+            val targets =
+                remember(event) {
+                    event?.paymentTargets() ?: emptyList()
+                }
+            if (targets.isNotEmpty()) {
+                PaymentButtonWithTargets(targets)
             }
-        if (targets.isNotEmpty()) {
-            PaymentButtonWithTargets(targets)
         }
     }
 }
