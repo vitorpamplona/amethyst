@@ -1853,6 +1853,7 @@
     <string name="route_video">Shorts</string>
     <string name="route_pictures">Pictures</string>
     <string name="route_calendars">Calendars</string>
+    <string name="route_calendar_collections">Calendar lists</string>
     <string name="route_chess">Chess</string>
     <string name="wallet">Wallet</string>
     <string name="wallet_balance">Balance</string>
@@ -1926,7 +1927,6 @@
     <string name="calendar_view_month">Month</string>
     <string name="calendar_view_week">Week</string>
     <string name="calendar_view_day">Day</string>
-    <string name="calendar_view_collections">Calendars</string>
 
     <string name="calendar_section_upcoming">Upcoming</string>
     <string name="calendar_section_past">Past</string>

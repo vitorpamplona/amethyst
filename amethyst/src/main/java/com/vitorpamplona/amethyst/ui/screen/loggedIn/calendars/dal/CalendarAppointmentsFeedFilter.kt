@@ -29,7 +29,12 @@ import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 
-class CalendarsFeedFilter(
+/**
+ * Feed of NIP-52 calendar *appointments* — kinds 31922 (date-slot) and 31923 (time-slot). The
+ * NIP calls kind 31924 a "calendar" (a list of appointments), so this filter intentionally does
+ * not load 31924; see [CalendarCollectionsFeedFilter] for that.
+ */
+class CalendarAppointmentsFeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code

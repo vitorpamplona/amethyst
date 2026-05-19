@@ -86,7 +86,9 @@ private fun PreloadFor(
 
         NavBarItem.PICTURES -> PicturesFilterAssemblerSubscription(accountViewModel)
 
-        NavBarItem.CALENDARS -> CalendarsFilterAssemblerSubscription(accountViewModel)
+        NavBarItem.CALENDARS,
+        NavBarItem.CALENDAR_COLLECTIONS,
+        -> CalendarsFilterAssemblerSubscription(accountViewModel)
 
         NavBarItem.SHORTS -> ShortsFilterAssemblerSubscription(accountViewModel)
 

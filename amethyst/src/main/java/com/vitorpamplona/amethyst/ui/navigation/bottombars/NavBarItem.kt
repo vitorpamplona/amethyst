@@ -51,6 +51,7 @@ enum class NavBarItem {
     ARTICLES,
     PICTURES,
     CALENDARS,
+    CALENDAR_COLLECTIONS,
     SHORTS,
     PUBLIC_CHATS,
     FOLLOW_PACKS,
@@ -207,6 +208,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 icon = MaterialSymbols.CalendarMonth,
                 resolveRoute = { Route.Calendars },
             ),
+        NavBarItem.CALENDAR_COLLECTIONS to
+            NavBarItemDef(
+                id = NavBarItem.CALENDAR_COLLECTIONS,
+                labelRes = R.string.route_calendar_collections,
+                icon = MaterialSymbols.AutoMirrored.FormatListBulleted,
+                resolveRoute = { Route.CalendarCollections },
+            ),
         NavBarItem.SHORTS to
             NavBarItemDef(
                 id = NavBarItem.SHORTS,
@@ -327,6 +335,7 @@ val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.ARTICLES,
         NavBarItem.PICTURES,
         NavBarItem.CALENDARS,
+        NavBarItem.CALENDAR_COLLECTIONS,
         NavBarItem.SHORTS,
         NavBarItem.PUBLIC_CHATS,
         NavBarItem.FOLLOW_PACKS,

@@ -23,6 +23,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars
 import androidx.annotation.StringRes
 import com.vitorpamplona.amethyst.R
 
+/**
+ * Lenses on the same appointment timeline. Calendar *collections* (kind 31924) live on their
+ * own screen ([CalendarCollectionsScreen]) since they're a sibling feed, not a different view
+ * of the appointment data.
+ */
 enum class CalendarsViewMode(
     @StringRes val labelRes: Int,
 ) {
@@ -30,5 +35,4 @@ enum class CalendarsViewMode(
     MONTH(R.string.calendar_view_month),
     WEEK(R.string.calendar_view_week),
     DAY(R.string.calendar_view_day),
-    COLLECTIONS(R.string.calendar_view_collections),
 }

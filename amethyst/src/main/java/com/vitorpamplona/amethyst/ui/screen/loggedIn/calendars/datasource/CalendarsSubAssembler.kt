@@ -44,7 +44,7 @@ class CalendarsSubAssembler(
     ): List<RelayBasedFilter> {
         val feedSettings = key.followsPerRelay()
 
-        return makeCalendarsFilter(feedSettings, since, key.feedStates.calendarsFeed.lastNoteCreatedAtIfFilled())
+        return makeCalendarsFilter(feedSettings, since, key.feedStates.calendarAppointmentsFeed.lastNoteCreatedAtIfFilled())
     }
 
     override fun user(key: CalendarsQueryState) = key.account.userProfile()
@@ -78,7 +78,7 @@ class CalendarsSubAssembler(
                     }
                 },
                 key.account.scope.launch(Dispatchers.IO) {
-                    key.feedStates.calendarsFeed.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
+                    key.feedStates.calendarAppointmentsFeed.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
                         invalidateFilters()
                     }
                 },

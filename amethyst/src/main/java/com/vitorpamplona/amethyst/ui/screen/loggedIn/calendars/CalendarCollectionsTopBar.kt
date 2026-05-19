@@ -1,0 +1,82 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars
+
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.text.font.FontWeight
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.TopFilter
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
+import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
+import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
+import com.vitorpamplona.amethyst.ui.screen.TopNavFilterState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
+
+@Composable
+fun CalendarCollectionsTopBar(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    UserDrawerSearchTopBar(accountViewModel, nav) {
+        val list by accountViewModel.account.settings.defaultCalendarsFollowList
+            .collectAsStateWithLifecycle()
+
+        CalendarCollectionsTopNavFilterBar(
+            followListsModel = accountViewModel.feedStates.feedListOptions,
+            listName = list,
+            accountViewModel = accountViewModel,
+            onChange = accountViewModel.account.settings::changeDefaultCalendarsFollowList,
+        )
+    }
+}
+
+@Composable
+private fun CalendarCollectionsTopNavFilterBar(
+    followListsModel: TopNavFilterState,
+    listName: TopFilter,
+    accountViewModel: AccountViewModel,
+    onChange: (FeedDefinition) -> Unit,
+) {
+    val allLists by followListsModel.kind3GlobalPeopleRoutes.collectAsStateWithLifecycle()
+
+    // We could reuse CalendarsTopNavFilterBar verbatim, but the screen title isn't shown by
+    // UserDrawerSearchTopBar's content slot — wrapping the spinner with the route title keeps
+    // the user oriented inside an otherwise filter-only header.
+    Text(
+        text = stringRes(R.string.route_calendar_collections),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        fontWeight = FontWeight.SemiBold,
+    )
+    FeedFilterSpinner(
+        placeholderCode = listName,
+        explainer = stringRes(R.string.select_list_to_filter),
+        options = allLists,
+        onSelect = onChange,
+        accountViewModel = accountViewModel,
+    )
+}

@@ -20,16 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
@@ -41,43 +34,41 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.datasource.CalendarsFilterAssemblerSubscription
 
+/**
+ * Top-level screen for browsing NIP-52 kind-31924 calendars (collections of appointments). Reuses
+ * the [CalendarsFilterAssembler] subscription so opening this screen also keeps the appointment
+ * subscription warm — both feeds share one relay subscription.
+ */
 @Composable
-fun CalendarsScreen(
+fun CalendarCollectionsScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    CalendarsScreen(
-        feedState = accountViewModel.feedStates.calendarAppointmentsFeed,
+    CalendarCollectionsScreen(
+        feedState = accountViewModel.feedStates.calendarCollectionsFeed,
         accountViewModel = accountViewModel,
         nav = nav,
     )
 }
 
 @Composable
-fun CalendarsScreen(
+fun CalendarCollectionsScreen(
     feedState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     WatchLifecycleAndUpdateModel(feedState)
-    WatchAccountForCalendarsScreen(feedState, accountViewModel)
+    WatchAccountForCalendarCollectionsScreen(feedState, accountViewModel)
     CalendarsFilterAssemblerSubscription(accountViewModel)
-
-    var viewMode by rememberSaveable { mutableStateOf(CalendarsViewMode.FEED) }
 
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
-            CalendarsTopBar(
-                viewMode = viewMode,
-                onViewModeChange = { viewMode = it },
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
+            CalendarCollectionsTopBar(accountViewModel, nav)
         },
         bottomBar = {
-            AppBottomBar(Route.Calendars, nav, accountViewModel) { route ->
-                if (route == Route.Calendars) {
+            AppBottomBar(Route.CalendarCollections, nav, accountViewModel) { route ->
+                if (route == Route.CalendarCollections) {
                     feedState.sendToTop()
                 } else {
                     nav.navBottomBar(route)
@@ -91,25 +82,12 @@ fun CalendarsScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                when (viewMode) {
-                    CalendarsViewMode.FEED ->
-                        CalendarFeedView(feedState, accountViewModel, nav)
-                    CalendarsViewMode.MONTH ->
-                        CalendarMonthView(feedState, accountViewModel, nav)
-                    CalendarsViewMode.WEEK ->
-                        CalendarWeekView(feedState, accountViewModel, nav)
-                    CalendarsViewMode.DAY ->
-                        CalendarDayView(feedState, accountViewModel, nav)
-                }
-            }
-        }
+        CalendarCollectionsView(feedState, accountViewModel, nav)
     }
 }
 
 @Composable
-private fun WatchAccountForCalendarsScreen(
+private fun WatchAccountForCalendarCollectionsScreen(
     feedState: FeedContentState,
     accountViewModel: AccountViewModel,
 ) {

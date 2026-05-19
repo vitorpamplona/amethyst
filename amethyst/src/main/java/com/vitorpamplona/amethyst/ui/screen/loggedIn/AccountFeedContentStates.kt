@@ -30,8 +30,8 @@ import com.vitorpamplona.amethyst.ui.feeds.ChannelFeedContentState
 import com.vitorpamplona.amethyst.ui.screen.TopNavFilterState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.dal.ArticlesFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.dal.BadgesFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.CalendarAppointmentsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.CalendarCollectionsFeedFilter
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.CalendarsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ChatroomListKnownFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.dal.ChatroomListNewFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list.dal.CommunitiesFeedFilter
@@ -101,7 +101,7 @@ class AccountFeedContentStates(
     val communitiesList = FeedContentState(CommunitiesFeedFilter(account), scope, LocalCache)
 
     val picturesFeed = FeedContentState(PictureFeedFilter(account), scope, LocalCache)
-    val calendarsFeed = FeedContentState(CalendarsFeedFilter(account), scope, LocalCache)
+    val calendarAppointmentsFeed = FeedContentState(CalendarAppointmentsFeedFilter(account), scope, LocalCache)
     val calendarCollectionsFeed = FeedContentState(CalendarCollectionsFeedFilter(account), scope, LocalCache)
     val productsFeed = FeedContentState(ProductsFeedFilter(account), scope, LocalCache)
     val shortsFeed = FeedContentState(ShortsFeedFilter(account), scope, LocalCache)
