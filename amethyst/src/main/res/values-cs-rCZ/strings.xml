@@ -8,6 +8,12 @@
     <string name="show_anyway">Přesto zobrazit</string>
     <string name="post_was_hidden">Tento příspěvek byl skryt, protože zmiňuje vaše skryté uživatele nebo slova</string>
     <string name="post_was_flagged_as_inappropriate_by">Příspěvek byl ztlumený nebo nahlášen</string>
+    <plurals name="post_was_hidden_due_to_too_many_hashtags">
+        <item quantity="one">Tento příspěvek má více než %1$d hashtag</item>
+        <item quantity="few">Tento příspěvek má více než %1$d hashtagy</item>
+        <item quantity="many">Tento příspěvek má více než %1$d hashtagů</item>
+        <item quantity="other">Tento příspěvek má více než %1$d hashtagů</item>
+    </plurals>
     <string name="post_not_found">Příspěvek se načítá nebo nemůže být nalezena ve vašem seznamu relací</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Obrázek kanálu</string>
@@ -1390,6 +1396,7 @@
     <string name="load_image_description">Kdy načíst obrázek</string>
     <string name="copy_stack_to_clipboard">Kopírovat zásobník</string>
     <string name="copy_to_clipboard">Kopírovat do schránky</string>
+    <string name="copied_to_clipboard">Zkopírováno do schránky</string>
     <string name="copy_nprofile_to_clipboard">Zkopírovat nprofile do schránky</string>
     <string name="copy_npub_to_clipboard">Kopírovat npub do schránky</string>
     <string name="share_or_save">Sdílet nebo Uložit</string>
@@ -1493,6 +1500,14 @@
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Nelze vytvořit bleskovou fakturu z %1$s: Prvek pr nebyl nalezen ve výsledném JSON.</string>
     <string name="read_only_user">Uživatel pouze pro čtení</string>
     <string name="no_reactions_setup">Žádné nastavení reakcí</string>
+    <string name="notification_settings">Oznámení</string>
+    <string name="notification_settings_section_delivery">Doručování</string>
+    <string name="notification_settings_section_display">Zobrazení v aplikaci</string>
+    <string name="notification_settings_section_categories">Kategorie</string>
+    <string name="notification_settings_categories_explainer">Klepněte na kategorii a otevřete pro ni nastavení oznámení Androidu — zvuk, důležitost, odznaky a režim Nerušit najdete tam.</string>
+    <string name="notification_channel_status_on">Zapnuto</string>
+    <string name="notification_channel_status_silent">Ztlumeno</string>
+    <string name="notification_channel_status_off">Vypnuto</string>
     <string name="select_push_server">Vyberte distributor push oznámení</string>
     <string name="push_server_title">Push oznámení</string>
     <string name="push_server_explainer">Z instalovaných aplikací UnifiedPush</string>
@@ -2624,28 +2639,12 @@
     <string name="community_rules_violation_wot_gate_failed">Nesplňuješ požadavky sítě důvěry této komunity.</string>
     <string name="community_rules_violation_stale_rules">Nejnovější dokument s pravidly komunity byl odmítnut jako zastaralý.</string>
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
-    <string name="copied_to_clipboard">Zkopírováno do schránky</string>
-    <string name="notification_channel_status_off">Vypnuto</string>
-    <string name="notification_channel_status_on">Zapnuto</string>
-    <string name="notification_channel_status_silent">Ztlumeno</string>
-    <string name="notification_settings">Oznámení</string>
-    <string name="notification_settings_categories_explainer">Klepněte na kategorii a otevřete pro ni nastavení oznámení Androidu — zvuk, důležitost, odznaky a režim Nerušit najdete tam.</string>
-    <string name="notification_settings_section_categories">Kategorie</string>
-    <string name="notification_settings_section_delivery">Doručování</string>
-    <string name="notification_settings_section_display">Zobrazení v aplikaci</string>
-    <string name="nowhere_link_card_art">Nowhere Umění</string>
-    <string name="nowhere_link_card_drop">Nowhere Drop</string>
-    <string name="nowhere_link_card_event">Nowhere Událost</string>
-    <string name="nowhere_link_card_forum">Nowhere Fórum</string>
-    <string name="nowhere_link_card_fundraiser">Nowhere Sbírka</string>
     <string name="nowhere_link_card_generic">Stránka Nowhere</string>
-    <string name="nowhere_link_card_message">Nowhere Zpráva</string>
-    <string name="nowhere_link_card_petition">Nowhere Petice</string>
+    <string name="nowhere_link_card_event">Nowhere Událost</string>
+    <string name="nowhere_link_card_fundraiser">Nowhere Sbírka</string>
     <string name="nowhere_link_card_store">Nowhere Obchod</string>
-    <plurals name="post_was_hidden_due_to_too_many_hashtags">
-        <item quantity="one">Tento příspěvek má více než %1$d hashtag</item>
-        <item quantity="few">Tento příspěvek má více než %1$d hashtagy</item>
-        <item quantity="many">Tento příspěvek má více než %1$d hashtagů</item>
-        <item quantity="other">Tento příspěvek má více než %1$d hashtagů</item>
-    </plurals>
+    <string name="nowhere_link_card_petition">Nowhere Petice</string>
+    <string name="nowhere_link_card_message">Nowhere Zpráva</string>
+    <string name="nowhere_link_card_art">Nowhere Umění</string>
+    <string name="nowhere_link_card_forum">Nowhere Fórum</string>
 </resources>

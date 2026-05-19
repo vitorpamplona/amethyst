@@ -1497,6 +1497,14 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Nie można utworzyć faktury od %1$s: Element pr nie został znaleziony w powstałym JSON.</string>
     <string name="read_only_user">\"Tylko do odczytu\"</string>
     <string name="no_reactions_setup">Nie ustawiono odzewu</string>
+    <string name="notification_settings">Powiadomienia</string>
+    <string name="notification_settings_section_delivery">Dostawa</string>
+    <string name="notification_settings_section_display">Wyświetlanie w aplikacji</string>
+    <string name="notification_settings_section_categories">Kategorie</string>
+    <string name="notification_settings_categories_explainer">Kliknij kategorię, aby otworzyć jej ustawienia powiadomień w systemie Android — znajdziesz tam opcje dotyczące dźwięku, priorytetu, ikon powiadomień oraz trybu „Nie przeszkadzać”.</string>
+    <string name="notification_channel_status_on">Wł.</string>
+    <string name="notification_channel_status_silent">Wyciszony</string>
+    <string name="notification_channel_status_off">Wył.</string>
     <string name="select_push_server">Wybierz aplikację UnifiedPush</string>
     <string name="push_server_title">Powiadomienia</string>
     <string name="push_server_explainer">Z zainstalowanych aplikacji UnifiedPush</string>
@@ -1643,6 +1651,10 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="wallet_invalid_uri">Nieprawidłowy URI połączenia NWC</string>
     <string name="wallet_move_up">W górę</string>
     <string name="wallet_move_down">W dół</string>
+    <string name="wallet_onchain_transactions">Transakcje w łańcuchu</string>
+    <string name="wallet_onchain_no_address">Brak dostępnego adresu w łańcuchu dla tego konta.</string>
+    <string name="wallet_onchain_no_backend">Nie skonfigurowano backendu łańcucha.</string>
+    <string name="wallet_onchain_pending">Oczekuje</string>
     <string name="route_security_filters">Filtry bezpieczeństwa</string>
     <string name="route_import_follows">Import Obserwowanych</string>
     <string name="new_post">Nowy post</string>
@@ -1678,6 +1690,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="boost_or_quote_description">Powtórz lub Zacytuj</string>
     <string name="like_description">Lubię</string>
     <string name="zap_description">Zap</string>
+    <string name="onchain_zap_description">Zap w łańcuchu Bitcoina</string>
+    <string name="onchain_zap_pending">Oczekujące na potwierdzenie</string>
     <string name="change_reaction">Zmień odzew</string>
     <string name="bottom_bar_settings">Dolny pasek nawigacji</string>
     <string name="bottom_bar_settings_description">Przeciągnij, aby zmienić kolejność. Przełącz, aby dodać lub usunąć element z dolnego paska. Gdy nie ma żadnych elementów, dolny pasek jest ukryty.</string>
@@ -2628,4 +2642,13 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="community_rules_violation_wot_gate_failed">Nie spełniasz wymogów dotyczących rankingu zaufania tej społeczności.</string>
     <string name="community_rules_violation_stale_rules">Najnowszy dokument zawierający zasady społeczności został odrzucony jako nieaktualny.</string>
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
+    <string name="nowhere_link_card_generic">Strona „Nowhere”</string>
+    <string name="nowhere_link_card_event">Wydarzenie „Nowhere”</string>
+    <string name="nowhere_link_card_fundraiser">Zbiórka funduszy „Nowhere”</string>
+    <string name="nowhere_link_card_store">Sklep „Nowhere”</string>
+    <string name="nowhere_link_card_petition">Petycja „Nowhere”</string>
+    <string name="nowhere_link_card_message">Komunikat „Nowhere”</string>
+    <string name="nowhere_link_card_drop">Zrzut „Nowhere”</string>
+    <string name="nowhere_link_card_art">Sztuka na „Nowhere”</string>
+    <string name="nowhere_link_card_forum">Forum „Nowhere”</string>
 </resources>
