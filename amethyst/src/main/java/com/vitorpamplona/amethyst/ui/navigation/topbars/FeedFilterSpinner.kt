@@ -336,10 +336,10 @@ private enum class FeedGroup(
     FEEDS(R.string.feed_group_feeds),
     RELAYS(R.string.feed_group_relays),
     HASHTAGS(R.string.feed_group_hashtags),
+    INTEREST_SETS(R.string.feed_group_interest_sets),
     LOCATIONS(R.string.feed_group_locations),
     COMMUNITIES(R.string.feed_group_communities),
     LISTS(R.string.feed_group_lists),
-    INTEREST_SETS(R.string.feed_group_interest_sets),
     DVMS(R.string.feed_group_dvms),
 }
 
