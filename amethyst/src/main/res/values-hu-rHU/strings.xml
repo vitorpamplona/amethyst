@@ -8,7 +8,6 @@
     <string name="show_anyway">Megjelenítés mindenképp</string>
     <string name="post_was_hidden">Ez a bejegyzés el lett rejtve, mert az Ön rejtett felhasználóit vagy szavait említi</string>
     <string name="post_was_flagged_as_inappropriate_by">A bejegyzés el lett némítva vagy be lett jelentve általa:</string>
-    <string name="post_was_hidden_due_to_too_many_hashtags">Ez a bejegyzés több mint %1$d kulcsszót tartalmaz</string>
     <string name="post_not_found">Az esemény épp betöltődik vagy nem található az átjátszólistában</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Csatorna profilképe</string>

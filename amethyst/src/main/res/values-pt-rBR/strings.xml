@@ -8,6 +8,10 @@
     <string name="show_anyway">Mostrar de qualquer maneira</string>
     <string name="post_was_hidden">Esta postagem foi ocultada porque menciona seus usuários ou palavras ocultas</string>
     <string name="post_was_flagged_as_inappropriate_by">A postagem foi sinalizada como imprópria por</string>
+    <plurals name="post_was_hidden_due_to_too_many_hashtags">
+        <item quantity="one">Esta publicação tem mais de %1$d hashtag</item>
+        <item quantity="other">Esta publicação tem mais de %1$d hashtags</item>
+    </plurals>
     <string name="post_not_found">postagem não encontrada</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Imagem do Canal</string>
@@ -1378,6 +1382,7 @@
     <string name="load_image_description">Quando carregar imagens</string>
     <string name="copy_stack_to_clipboard">Copiar a Pilha</string>
     <string name="copy_to_clipboard">Copiar para a Área de Transferência</string>
+    <string name="copied_to_clipboard">Copiado para a área de transferência</string>
     <string name="copy_nprofile_to_clipboard">Copiar nprofile para a área de transferência</string>
     <string name="copy_npub_to_clipboard">Copiar npub para a área de transferência</string>
     <string name="share_or_save">Compartilhar ou Salvar</string>
@@ -1481,6 +1486,14 @@
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Não foi possível criar uma fatura lightning a partir de %1$s: Elemento pr não encontrado no JSON resultante.</string>
     <string name="read_only_user">Usuário somente leitura</string>
     <string name="no_reactions_setup">Nenhuma configuração de reações</string>
+    <string name="notification_settings">Notificações</string>
+    <string name="notification_settings_section_delivery">Entrega</string>
+    <string name="notification_settings_section_display">Exibição no app</string>
+    <string name="notification_settings_section_categories">Categorias</string>
+    <string name="notification_settings_categories_explainer">Toque em uma categoria para abrir as configurações de notificação do Android — som, importância, selos e Não Perturbe ficam lá.</string>
+    <string name="notification_channel_status_on">Ativado</string>
+    <string name="notification_channel_status_silent">Silencioso</string>
+    <string name="notification_channel_status_off">Desativado</string>
     <string name="select_push_server">Selecione um Distribuidor de Notificações Push</string>
     <string name="push_server_title">Notificações Push</string>
     <string name="push_server_explainer">De aplicativos UnifiedPush instalados</string>
@@ -2598,26 +2611,12 @@
     <string name="community_rules_violation_wot_gate_failed">Você não atende aos requisitos da rede de confiança desta comunidade.</string>
     <string name="community_rules_violation_stale_rules">O documento mais recente de regras da comunidade foi rejeitado por estar desatualizado.</string>
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
-    <string name="copied_to_clipboard">Copiado para a área de transferência</string>
-    <string name="notification_channel_status_off">Desativado</string>
-    <string name="notification_channel_status_on">Ativado</string>
-    <string name="notification_channel_status_silent">Silencioso</string>
-    <string name="notification_settings">Notificações</string>
-    <string name="notification_settings_categories_explainer">Toque em uma categoria para abrir as configurações de notificação do Android — som, importância, selos e Não Perturbe ficam lá.</string>
-    <string name="notification_settings_section_categories">Categorias</string>
-    <string name="notification_settings_section_delivery">Entrega</string>
-    <string name="notification_settings_section_display">Exibição no app</string>
-    <string name="nowhere_link_card_art">Nowhere Arte</string>
-    <string name="nowhere_link_card_drop">Nowhere Drop</string>
-    <string name="nowhere_link_card_event">Nowhere Evento</string>
-    <string name="nowhere_link_card_forum">Nowhere Fórum</string>
-    <string name="nowhere_link_card_fundraiser">Nowhere Arrecadação</string>
     <string name="nowhere_link_card_generic">Site Nowhere</string>
-    <string name="nowhere_link_card_message">Nowhere Mensagem</string>
-    <string name="nowhere_link_card_petition">Nowhere Petição</string>
+    <string name="nowhere_link_card_event">Nowhere Evento</string>
+    <string name="nowhere_link_card_fundraiser">Nowhere Arrecadação</string>
     <string name="nowhere_link_card_store">Nowhere Loja</string>
-    <plurals name="post_was_hidden_due_to_too_many_hashtags">
-        <item quantity="one">Esta publicação tem mais de %1$d hashtag</item>
-        <item quantity="other">Esta publicação tem mais de %1$d hashtags</item>
-    </plurals>
+    <string name="nowhere_link_card_petition">Nowhere Petição</string>
+    <string name="nowhere_link_card_message">Nowhere Mensagem</string>
+    <string name="nowhere_link_card_art">Nowhere Arte</string>
+    <string name="nowhere_link_card_forum">Nowhere Fórum</string>
 </resources>

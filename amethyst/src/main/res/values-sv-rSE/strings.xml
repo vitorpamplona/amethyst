@@ -8,6 +8,10 @@
     <string name="show_anyway">Visa ändå</string>
     <string name="post_was_hidden">Detta inlägg doldes eftersom det nämner dina dolda användare eller ord</string>
     <string name="post_was_flagged_as_inappropriate_by">Inlägget flaggades som olämpligt av</string>
+    <plurals name="post_was_hidden_due_to_too_many_hashtags">
+        <item quantity="one">Det här inlägget har fler än %1$d hashtagg</item>
+        <item quantity="other">Det här inlägget har fler än %1$d hashtaggar</item>
+    </plurals>
     <string name="post_not_found">Inlägg hittades inte</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Kanal bild</string>
@@ -1377,6 +1381,7 @@
     <string name="load_image_description">När bilder ska laddas</string>
     <string name="copy_stack_to_clipboard">Kopiera stacken</string>
     <string name="copy_to_clipboard">Kopiera till Urklipp</string>
+    <string name="copied_to_clipboard">Kopierat till urklipp</string>
     <string name="copy_nprofile_to_clipboard">Kopiera nprofile till urklipp</string>
     <string name="copy_npub_to_clipboard">Kopiera npub till urklipp</string>
     <string name="share_or_save">Dela eller Spara</string>
@@ -1480,6 +1485,14 @@
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Det gick inte att skapa en blixtfaktura från %1$s: Elementet pr hittades inte i den resulterande JSON.</string>
     <string name="read_only_user">Skrivskyddad användare</string>
     <string name="no_reactions_setup">Inga reaktioner konfigurerade</string>
+    <string name="notification_settings">Aviseringar</string>
+    <string name="notification_settings_section_delivery">Leverans</string>
+    <string name="notification_settings_section_display">Visning i appen</string>
+    <string name="notification_settings_section_categories">Kategorier</string>
+    <string name="notification_settings_categories_explainer">Tryck på en kategori för att öppna Androids aviseringsinställningar — ljud, prioritet, märken och Stör ej finns där.</string>
+    <string name="notification_channel_status_on">På</string>
+    <string name="notification_channel_status_silent">Tyst</string>
+    <string name="notification_channel_status_off">Av</string>
     <string name="select_push_server">Välj en Push-meddelandetjänst</string>
     <string name="push_server_title">Push-meddelande</string>
     <string name="push_server_explainer">Från installerade UnifiedPush-appar</string>
@@ -2599,26 +2612,11 @@
     <string name="community_rules_violation_wot_gate_failed">Du uppfyller inte den här gemenskapens krav på förtroendenät.</string>
     <string name="community_rules_violation_stale_rules">Det senaste dokumentet med gemenskapsregler avvisades som föråldrat.</string>
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
-    <string name="copied_to_clipboard">Kopierat till urklipp</string>
-    <string name="notification_channel_status_off">Av</string>
-    <string name="notification_channel_status_on">På</string>
-    <string name="notification_channel_status_silent">Tyst</string>
-    <string name="notification_settings">Aviseringar</string>
-    <string name="notification_settings_categories_explainer">Tryck på en kategori för att öppna Androids aviseringsinställningar — ljud, prioritet, märken och Stör ej finns där.</string>
-    <string name="notification_settings_section_categories">Kategorier</string>
-    <string name="notification_settings_section_delivery">Leverans</string>
-    <string name="notification_settings_section_display">Visning i appen</string>
-    <string name="nowhere_link_card_art">Nowhere Konst</string>
-    <string name="nowhere_link_card_drop">Nowhere Drop</string>
-    <string name="nowhere_link_card_event">Nowhere Evenemang</string>
-    <string name="nowhere_link_card_forum">Nowhere Forum</string>
-    <string name="nowhere_link_card_fundraiser">Nowhere Insamling</string>
     <string name="nowhere_link_card_generic">Nowhere-webbplats</string>
-    <string name="nowhere_link_card_message">Nowhere Meddelande</string>
-    <string name="nowhere_link_card_petition">Nowhere Namninsamling</string>
+    <string name="nowhere_link_card_event">Nowhere Evenemang</string>
+    <string name="nowhere_link_card_fundraiser">Nowhere Insamling</string>
     <string name="nowhere_link_card_store">Nowhere Butik</string>
-    <plurals name="post_was_hidden_due_to_too_many_hashtags">
-        <item quantity="one">Det här inlägget har fler än %1$d hashtagg</item>
-        <item quantity="other">Det här inlägget har fler än %1$d hashtaggar</item>
-    </plurals>
+    <string name="nowhere_link_card_petition">Nowhere Namninsamling</string>
+    <string name="nowhere_link_card_message">Nowhere Meddelande</string>
+    <string name="nowhere_link_card_art">Nowhere Konst</string>
 </resources>
