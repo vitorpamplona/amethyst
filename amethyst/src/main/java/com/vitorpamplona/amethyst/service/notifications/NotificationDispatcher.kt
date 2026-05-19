@@ -24,10 +24,12 @@ import android.content.Context
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
@@ -173,15 +175,20 @@ class NotificationDispatcher(
                         //   matches the downstream per-channel policy. Calls
                         //   use a stricter 20s check in notifyIncomingCall so
                         //   they still pass through.
-                        // - event.notifies(pubkey) for any of our accounts —
-                        //   each kind decides which tag(s) name its recipients
-                        //   (lowercase `p` by default, plus uppercase `P` for
-                        //   NIP-22 root authors, etc.).
+                        // - isTaggedUser + tagsAnEventByUser for any account —
+                        //   same pair the in-app Notifications feed uses, so
+                        //   push and feed agree on what counts as a mention,
+                        //   reply, citation, fork, or community moderation.
                         val predicate = { event: Event ->
                             event.kind in NOTIFICATION_KINDS &&
                                 event.createdAt >= dispatcherSince &&
                                 event.createdAt >= TimeUtils.fifteenMinutesAgo() &&
-                                pubkeys.any { event.notifies(it) }
+                                pubkeys.any { pubkey ->
+                                    event.isTaggedUser(pubkey) &&
+                                        LocalCache.getNoteIfExists(event.id)?.let {
+                                            NotificationFeedFilter.tagsAnEventByUser(it, pubkey)
+                                        } == true
+                                }
                         }
 
                         LocalCache

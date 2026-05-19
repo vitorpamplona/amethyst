@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFind
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.note.showAmount
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
@@ -56,10 +57,13 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
@@ -147,15 +151,20 @@ class EventNotificationConsumer(
 
             if (!notificationManager().areNotificationsEnabled()) return@withWakeLock
 
-            // Ask the event which of our signing accounts it's notifying.
-            // Each kind declares its own notification semantics in
-            // [Event.notifies] (lowercase `p` by default, NIP-22 also checks
-            // uppercase `P`, etc.), so we don't hard-code tag names here.
+            // Match the in-app Notifications feed exactly: the event must
+            // p-tag the account AND pass NotificationFeedFilter.tagsAnEventByUser
+            // — the latter is the per-kind "is this actually for me" rule
+            // (reply-to-me, citation of my post, fork of my content, community
+            // moderation, reaction/repost targeting my note, etc.). Keeping
+            // these in lockstep means anything that surfaces in the feed will
+            // also be a push candidate and vice versa.
             LocalPreferences.allSavedAccounts().forEach { savedAccount ->
                 if (!savedAccount.hasPrivKey && !savedAccount.loggedInWithExternalSigner) return@forEach
 
                 val accountHex = npubToHexOrNull(savedAccount.npub) ?: return@forEach
-                if (!event.notifies(accountHex)) return@forEach
+                if (!event.isTaggedUser(accountHex)) return@forEach
+                val note = LocalCache.getNoteIfExists(event.id) ?: return@forEach
+                if (!NotificationFeedFilter.tagsAnEventByUser(note, accountHex)) return@forEach
 
                 val accountSettings = LocalPreferences.loadAccountConfigFromEncryptedStorage(savedAccount.npub) ?: return@forEach
                 try {
@@ -203,6 +212,17 @@ class EventNotificationConsumer(
         // 15-min rolling age window, so individual notify() methods don't need
         // to repeat either check.
         if (event.pubKey == account.signer.pubKey) return
+
+        // Mirror NotificationFeedFilter: reactions/zaps/reposts target a note
+        // via `replyTo`, not via thread-root tags on the wrapper event, so
+        // checking the wrapper's own thread misses them. Resolve the target
+        // and drop if its thread is muted.
+        if (event is ReactionEvent || event is LnZapEvent ||
+            event is RepostEvent || event is GenericRepostEvent
+        ) {
+            val target = LocalCache.getNoteIfExists(event.id)?.replyTo?.lastOrNull()
+            if (target != null && account.isThreadMuted(account.resolveThreadRoot(target))) return
+        }
 
         when (event) {
             is PrivateDmEvent -> notify(event, account)
