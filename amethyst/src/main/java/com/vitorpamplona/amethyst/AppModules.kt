@@ -24,10 +24,7 @@ import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
-import com.vitorpamplona.amethyst.commons.i2p.I2pSettings
 import com.vitorpamplona.amethyst.commons.model.NoteState
-import com.vitorpamplona.amethyst.commons.privacy.BlockReason
-import com.vitorpamplona.amethyst.commons.privacy.PrivacyRoute
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.services.lnurl.OkHttpLnurlEndpointResolver
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
@@ -39,13 +36,10 @@ import com.vitorpamplona.amethyst.model.nip03Timestamp.BitcoinExplorerEndpoint
 import com.vitorpamplona.amethyst.model.nip03Timestamp.IncomingOtsEventVerifier
 import com.vitorpamplona.amethyst.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.Nip11CachedRetriever
-import com.vitorpamplona.amethyst.model.preferences.I2pSharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.NamecoinSharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.OtsSharedPreferences
-import com.vitorpamplona.amethyst.model.preferences.PrivacySharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.TorSharedPreferences
 import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
-import com.vitorpamplona.amethyst.model.privacyOptions.PrivacyRoutingFlow
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.torState.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.model.torState.TorRelayState
@@ -62,7 +56,6 @@ import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.notifications.AlwaysOnNotificationServiceManager
 import com.vitorpamplona.amethyst.service.notifications.NotificationDispatcher
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
-import com.vitorpamplona.amethyst.service.okhttp.BlockedRouteException
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManagerForRelays
 import com.vitorpamplona.amethyst.service.okhttp.EncryptionKeyCache
@@ -87,7 +80,6 @@ import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.LocalBlossomCacheProbe
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
-import com.vitorpamplona.amethyst.ui.i2p.I2pManager
 import com.vitorpamplona.amethyst.ui.resourceCacheInit
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.AccountState
@@ -100,8 +92,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayLogger
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.stats.RelayReqStats
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.HiddenServiceKind
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.classifyHidden
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
@@ -164,18 +154,6 @@ class AppModules(
             TorSharedPreferences(prefs, appContext, applicationIOScope)
         }
 
-    private val i2pPrefsDeferred =
-        applicationIOScope.async {
-            val prefs = I2pSharedPreferences.i2pPreferences(appContext) ?: I2pSettings()
-            I2pSharedPreferences(prefs, appContext, applicationIOScope)
-        }
-
-    private val privacyPrefsDeferred =
-        applicationIOScope.async {
-            val initial = PrivacySharedPreferences.preferredClearnetTransport(appContext)
-            PrivacySharedPreferences(initial, appContext, applicationIOScope)
-        }
-
     // Blocking load of UI Preferences to avoid theme/language blinking
     val uiPrefs by lazy {
         Log.d("AppModules", "UiSharedPreferences Init")
@@ -186,21 +164,6 @@ class AppModules(
     val torPrefs by lazy {
         Log.d("AppModules", "TorSharedPreferences Init")
         runBlocking { torPrefsDeferred.await() }
-    }
-
-    // Blocking load of I2P settings — paired with torPrefs since both feed the
-    // privacy transport routing decision and we don't want clearnet to leak before
-    // either is restored.
-    val i2pPrefs by lazy {
-        Log.d("AppModules", "I2pSharedPreferences Init")
-        runBlocking { i2pPrefsDeferred.await() }
-    }
-
-    // Picks which transport (if any) carries clearnet traffic. Loaded blocking for
-    // the same reason as torPrefs/i2pPrefs.
-    val privacyPrefs by lazy {
-        Log.d("AppModules", "PrivacySharedPreferences Init")
-        runBlocking { privacyPrefsDeferred.await() }
     }
 
     // Namecoin ElectrumX server preferences (global, like Tor settings)
@@ -228,10 +191,6 @@ class AppModules(
     }
 
     val torManager = TorManager(torPrefs, appContext, applicationIOScope)
-
-    // I2P manager: EXTERNAL-only (i2pd / Java I2P at the configured SOCKS port).
-    // No embedded daemon in this branch; INTERNAL is reserved for a follow-up.
-    val i2pManager = I2pManager(i2pPrefs, applicationIOScope)
 
     // Whenever the underlying network identity changes (wifi↔cellular, regained from
     // offline, etc.) we clear any active Tor session bypass so the manager re-attempts
@@ -269,7 +228,6 @@ class AppModules(
         DualHttpClientManager(
             userAgent = appAgent,
             proxyPortProvider = torManager.activePortOrNull,
-            i2pProxyPortProvider = i2pManager.activePortOrNull,
             isMobileDataProvider = connManager.isMobileOrNull,
             keyCache = keyCache,
             scope = applicationIOScope,
@@ -285,15 +243,8 @@ class AppModules(
             },
         )
 
-    // Read-side facade over PrivacyRouter. Routes hidden services strictly to their
-    // matching daemon (Blocked when off) and clearnet to whichever transport the
-    // user picked as preferred.
-    val privacyRouting = PrivacyRoutingFlow(torPrefs.value, i2pPrefs.value, privacyPrefs)
-
-    // Resolves a transport per ad-hoc HTTP call (images, NIP-05, etc.) and hands
-    // back the matching OkHttpClient from okHttpClients. Hidden-service URLs fail
-    // closed via DualHttpClientManager.blockedException when their daemon is off.
-    val roleBasedHttpClientBuilder = RoleBasedHttpClientBuilder(okHttpClients, privacyRouting)
+    // Offers easy methods to know when connections are happening through Tor or not
+    val roleBasedHttpClientBuilder = RoleBasedHttpClientBuilder(okHttpClients, torPrefs.value)
 
     val electrumXClient by lazy {
         Log.d("AppModules", "ElectrumXClient Init")
@@ -369,40 +320,16 @@ class AppModules(
         DualHttpClientManagerForRelays(
             userAgent = appAgent,
             proxyPortProvider = torManager.activePortOrNull,
-            i2pProxyPortProvider = i2pManager.activePortOrNull,
             isMobileDataProvider = connManager.isMobileOrNull,
             scope = applicationIOScope,
             dns = surgeDns,
         )
 
-    // Connects the INostrClient class with okHttp.
-    //
-    // Hidden-service hostnames (.onion / .i2p) hard-pin to their matching
-    // network — same fail-closed contract PrivacyRouter applies to ad-hoc HTTP
-    // traffic. Clearnet relays still go through the existing TorRelayEvaluation
-    // (its per-relay-class booleans are richer than the global picker for the
-    // relay case, and don't conflict with the picker since the picker is about
-    // clearnet ad-hoc HTTP traffic, not the relay subscription pool).
+    // Connects the INostrClient class with okHttp
     val websocketBuilder =
         OkHttpWebSocket.Builder { url ->
-            when (url.classifyHidden()) {
-                HiddenServiceKind.ONION ->
-                    if (torManager.isSocksReady()) {
-                        okHttpClientForRelays.getHttpClient(true)
-                    } else {
-                        throw BlockedRouteException(BlockReason.ONION_REQUIRES_TOR)
-                    }
-                HiddenServiceKind.I2P ->
-                    if (i2pManager.isSocksReady()) {
-                        okHttpClientForRelays.getHttpClient(PrivacyRoute.I2p)
-                    } else {
-                        throw BlockedRouteException(BlockReason.I2P_REQUIRES_I2P)
-                    }
-                HiddenServiceKind.LOCALHOST, HiddenServiceKind.CLEARNET -> {
-                    val useTor = torEvaluatorFlow.flow.value.useTor(url)
-                    okHttpClientForRelays.getHttpClient(useTor)
-                }
-            }
+            val useTor = torEvaluatorFlow.flow.value.useTor(url)
+            okHttpClientForRelays.getHttpClient(useTor)
         }
 
     // Caches all events in Memory
@@ -655,7 +582,7 @@ class AppModules(
             diskCache = { diskCache },
             memoryCache = { memoryCache },
             blossomServerResolver = { blossomResolver },
-            callFactory = { roleBasedHttpClientBuilder.okHttpClientForImage(it) },
+            callFactory = { okHttpClients.getHttpClient(roleBasedHttpClientBuilder.shouldUseTorForImageDownload(it)) },
             thumbnailCache = thumbnailDiskCache,
             backgroundScope = applicationIOScope,
         )

@@ -46,8 +46,4 @@ fun NormalizedRelayUrl.toHttp() =
 
 fun NormalizedRelayUrl.isOnion() = url.contains(".onion/")
 
-fun NormalizedRelayUrl.isI2p() = RelayUrlNormalizer.isI2p(this.url)
-
 fun NormalizedRelayUrl.isLocalHost() = RelayUrlNormalizer.isLocalHost(this.url)
-
-fun NormalizedRelayUrl.classifyHidden(): HiddenServiceKind = RelayUrlNormalizer.classifyHidden(this.url)
