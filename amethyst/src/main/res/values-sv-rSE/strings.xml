@@ -2598,4 +2598,5 @@
     <string name="community_rules_violation_quota_exceeded">Du har redan publicerat %1$d händelser av den här typen idag (gräns %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Du uppfyller inte den här gemenskapens krav på förtroendenät.</string>
     <string name="community_rules_violation_stale_rules">Det senaste dokumentet med gemenskapsregler avvisades som föråldrat.</string>
+    <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
 </resources>
