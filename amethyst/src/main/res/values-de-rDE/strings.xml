@@ -8,6 +8,10 @@
     <string name="show_anyway">Trotzdem anzeigen</string>
     <string name="post_was_hidden">Dieser Beitrag wurde ausgeblendet, weil er Ihre ausgeblendeten Benutzer oder Wörter erwähnt</string>
     <string name="post_was_flagged_as_inappropriate_by">Der Beitrag wurde als unangemessen gekennzeichnet von</string>
+    <plurals name="post_was_hidden_due_to_too_many_hashtags">
+        <item quantity="one">Dieser Beitrag hat mehr als %1$d Hashtag</item>
+        <item quantity="other">Dieser Beitrag hat mehr als %1$d Hashtags</item>
+    </plurals>
     <string name="post_not_found">Ereignis wird geladen oder kann nicht in deiner Relay-Liste gefunden werden</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Kanalbild</string>
@@ -1383,6 +1387,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="load_image_description">Wann Bilder geladen werden sollen</string>
     <string name="copy_stack_to_clipboard">Stapel kopieren</string>
     <string name="copy_to_clipboard">In Zwischenablage kopieren</string>
+    <string name="copied_to_clipboard">In die Zwischenablage kopiert</string>
     <string name="copy_nprofile_to_clipboard">nprofile in die Zwischenablage kopieren</string>
     <string name="copy_npub_to_clipboard">Npub in Zwischenablage kopieren</string>
     <string name="share_or_save">Teilen oder Speichern</string>
@@ -1486,6 +1491,14 @@ anz der Bedingungen ist erforderlich</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Kann keine Blitzrechnung von %1$s erstellen: Element pr nicht im resultierenden JSON gefunden.</string>
     <string name="read_only_user">Nur-Lese-Benutzer</string>
     <string name="no_reactions_setup">Keine Reaktionen eingerichtet</string>
+    <string name="notification_settings">Benachrichtigungen</string>
+    <string name="notification_settings_section_delivery">Zustellung</string>
+    <string name="notification_settings_section_display">Anzeige in der App</string>
+    <string name="notification_settings_section_categories">Kategorien</string>
+    <string name="notification_settings_categories_explainer">Tippe auf eine Kategorie, um die Android-Benachrichtigungseinstellungen dafür zu öffnen — Ton, Wichtigkeit, Badges und „Nicht stören\" findest du dort.</string>
+    <string name="notification_channel_status_on">An</string>
+    <string name="notification_channel_status_silent">Lautlos</string>
+    <string name="notification_channel_status_off">Aus</string>
     <string name="select_push_server">Einen Push-Benachrichtigungsanbieter auswählen</string>
     <string name="push_server_title">Push-Benachrichtigungen</string>
     <string name="push_server_explainer">Von installierten UnifiedPush-Apps</string>
@@ -2603,26 +2616,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="community_rules_violation_wot_gate_failed">Du erfüllst die Web-of-Trust-Anforderungen dieser Community nicht.</string>
     <string name="community_rules_violation_stale_rules">Das aktuelle Community-Regeldokument wurde als veraltet abgelehnt.</string>
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
-    <string name="copied_to_clipboard">In die Zwischenablage kopiert</string>
-    <string name="notification_channel_status_off">Aus</string>
-    <string name="notification_channel_status_on">An</string>
-    <string name="notification_channel_status_silent">Lautlos</string>
-    <string name="notification_settings">Benachrichtigungen</string>
-    <string name="notification_settings_categories_explainer">Tippe auf eine Kategorie, um die Android-Benachrichtigungseinstellungen dafür zu öffnen — Ton, Wichtigkeit, Badges und „Nicht stören\" findest du dort.</string>
-    <string name="notification_settings_section_categories">Kategorien</string>
-    <string name="notification_settings_section_delivery">Zustellung</string>
-    <string name="notification_settings_section_display">Anzeige in der App</string>
-    <string name="nowhere_link_card_art">Nowhere Kunst</string>
-    <string name="nowhere_link_card_drop">Nowhere Drop</string>
-    <string name="nowhere_link_card_event">Nowhere Event</string>
-    <string name="nowhere_link_card_forum">Nowhere Forum</string>
-    <string name="nowhere_link_card_fundraiser">Nowhere Spendenaktion</string>
     <string name="nowhere_link_card_generic">Nowhere-Seite</string>
-    <string name="nowhere_link_card_message">Nowhere Nachricht</string>
-    <string name="nowhere_link_card_petition">Nowhere Petition</string>
+    <string name="nowhere_link_card_fundraiser">Nowhere Spendenaktion</string>
     <string name="nowhere_link_card_store">Nowhere Shop</string>
-    <plurals name="post_was_hidden_due_to_too_many_hashtags">
-        <item quantity="one">Dieser Beitrag hat mehr als %1$d Hashtag</item>
-        <item quantity="other">Dieser Beitrag hat mehr als %1$d Hashtags</item>
-    </plurals>
+    <string name="nowhere_link_card_message">Nowhere Nachricht</string>
+    <string name="nowhere_link_card_art">Nowhere Kunst</string>
 </resources>
