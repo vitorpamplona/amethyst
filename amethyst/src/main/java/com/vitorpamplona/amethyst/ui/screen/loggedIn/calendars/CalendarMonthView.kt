@@ -61,9 +61,11 @@ import com.vitorpamplona.amethyst.commons.model.nip52Calendar.computeMonthGridBa
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.groupByDayKeyExpanded
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
@@ -102,11 +104,15 @@ fun CalendarMonthView(
 
     var selectedDayKey by rememberSaveable { mutableStateOf<Long?>(null) }
 
-    Column(
+    val selectedEvents = selectedDayKey?.let { eventsByDay[it] }.orEmpty()
+
+    // Single LazyColumn — nav header + weekday header + grid scroll together with the
+    // disappearing top bar so the grid doesn't stay pinned mid-screen when the bar collapses.
+    LazyColumn(
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         modifier =
             Modifier
                 .fillMaxSize()
-                .disappearingScaffoldPadding()
                 .calendarSwipeNavigation(
                     key = visibleYear to visibleMonthValue,
                     onSwipeLeft = {
@@ -119,44 +125,49 @@ fun CalendarMonthView(
                     },
                 ),
     ) {
-        CalendarNavigationHeader(
-            title = formatMonthYear(visibleMonth.year, visibleMonth.monthValue - 1),
-            prevContentDescription = stringRes(R.string.calendar_nav_previous_month),
-            nextContentDescription = stringRes(R.string.calendar_nav_next_month),
-            onPrev = {
-                setVisibleMonth(visibleMonth.minusMonths(1))
-                selectedDayKey = null
-            },
-            onNext = {
-                setVisibleMonth(visibleMonth.plusMonths(1))
-                selectedDayKey = null
-            },
-            onToday = {
-                setVisibleMonth(YearMonth.from(LocalDate.now()))
-                selectedDayKey = null
-            },
-        )
+        item(key = "month-nav") {
+            CalendarNavigationHeader(
+                title = formatMonthYear(visibleMonth.year, visibleMonth.monthValue - 1),
+                prevContentDescription = stringRes(R.string.calendar_nav_previous_month),
+                nextContentDescription = stringRes(R.string.calendar_nav_next_month),
+                onPrev = {
+                    setVisibleMonth(visibleMonth.minusMonths(1))
+                    selectedDayKey = null
+                },
+                onNext = {
+                    setVisibleMonth(visibleMonth.plusMonths(1))
+                    selectedDayKey = null
+                },
+                onToday = {
+                    setVisibleMonth(YearMonth.from(LocalDate.now()))
+                    selectedDayKey = null
+                },
+            )
+        }
 
-        WeekdayHeader()
+        item(key = "month-weekday-header") {
+            WeekdayHeader()
+        }
 
-        MonthGrid(
-            visibleMonth = visibleMonth,
-            today = today,
-            barsByDay = barsByDay,
-            selectedDayKey = selectedDayKey,
-            onDayClick = { dayKey ->
-                selectedDayKey = if (selectedDayKey == dayKey) null else dayKey
-            },
-        )
+        item(key = "month-grid") {
+            MonthGrid(
+                visibleMonth = visibleMonth,
+                today = today,
+                barsByDay = barsByDay,
+                selectedDayKey = selectedDayKey,
+                onDayClick = { dayKey ->
+                    selectedDayKey = if (selectedDayKey == dayKey) null else dayKey
+                },
+            )
+        }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        item(key = "month-grid-spacer") {
+            Spacer(modifier = Modifier.height(8.dp))
+        }
 
-        val selectedEvents = selectedDayKey?.let { eventsByDay[it] }.orEmpty()
         if (selectedEvents.isNotEmpty()) {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(selectedEvents, key = { it.idHex }) { note ->
-                    CalendarEventListCard(note, accountViewModel, nav)
-                }
+            items(selectedEvents, key = { it.idHex }) { note ->
+                CalendarEventListCard(note, accountViewModel, nav)
             }
         }
     }

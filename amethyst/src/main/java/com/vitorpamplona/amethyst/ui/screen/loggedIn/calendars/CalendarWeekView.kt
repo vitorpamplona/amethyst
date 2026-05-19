@@ -57,9 +57,11 @@ import com.vitorpamplona.amethyst.commons.model.nip52Calendar.groupByDayKeyExpan
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -92,11 +94,18 @@ fun CalendarWeekView(
 
     val eventsByDay by remember(notes) { derivedStateOf { groupByDayKeyExpanded(notes) } }
 
-    Column(
+    val selectedDate = weekStart.plusDays(selectedDayIndex.toLong())
+    val dayNotes = eventsByDay[selectedDate.toEpochDay()].orEmpty()
+
+    // Single LazyColumn containing nav + strip + day-summary + events so the whole stack
+    // scrolls together with the [DisappearingScaffold]'s top bar. The previous Column-with-
+    // disappearingScaffoldPadding kept the strip pinned at a fixed offset, so when the top bar
+    // collapsed on scroll the strip stayed put and left a visual gap.
+    LazyColumn(
+        contentPadding = rememberFeedContentPadding(FeedPadding),
         modifier =
             Modifier
                 .fillMaxSize()
-                .disappearingScaffoldPadding()
                 .calendarSwipeNavigation(
                     key = weekStartEpochDay,
                     onSwipeLeft = {
@@ -109,49 +118,54 @@ fun CalendarWeekView(
                     },
                 ),
     ) {
-        CalendarNavigationHeader(
-            title = formatMonthYear(weekStart.year, weekStart.monthValue - 1),
-            prevContentDescription = stringRes(R.string.calendar_nav_previous_week),
-            nextContentDescription = stringRes(R.string.calendar_nav_next_week),
-            onPrev = {
-                weekStartEpochDay = weekStart.minusWeeks(1).toEpochDay()
-                selectedDayIndex = 0
-            },
-            onNext = {
-                weekStartEpochDay = weekStart.plusWeeks(1).toEpochDay()
-                selectedDayIndex = 0
-            },
-            onToday = {
-                weekStartEpochDay = startOfWeek(LocalDate.now()).toEpochDay()
-                selectedDayIndex = 0
-            },
-        )
+        item(key = "week-nav") {
+            CalendarNavigationHeader(
+                title = formatMonthYear(weekStart.year, weekStart.monthValue - 1),
+                prevContentDescription = stringRes(R.string.calendar_nav_previous_week),
+                nextContentDescription = stringRes(R.string.calendar_nav_next_week),
+                onPrev = {
+                    weekStartEpochDay = weekStart.minusWeeks(1).toEpochDay()
+                    selectedDayIndex = 0
+                },
+                onNext = {
+                    weekStartEpochDay = weekStart.plusWeeks(1).toEpochDay()
+                    selectedDayIndex = 0
+                },
+                onToday = {
+                    weekStartEpochDay = startOfWeek(LocalDate.now()).toEpochDay()
+                    selectedDayIndex = 0
+                },
+            )
+        }
 
-        WeekStrip(
-            weekStart = weekStart,
-            today = today,
-            selectedIndex = selectedDayIndex,
-            eventsByDay = eventsByDay,
-            onSelect = { selectedDayIndex = it },
-        )
+        item(key = "week-strip") {
+            WeekStrip(
+                weekStart = weekStart,
+                today = today,
+                selectedIndex = selectedDayIndex,
+                eventsByDay = eventsByDay,
+                onSelect = { selectedDayIndex = it },
+            )
+        }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        item(key = "week-spacer") {
+            Spacer(modifier = Modifier.height(8.dp))
+        }
 
-        val selectedDate = weekStart.plusDays(selectedDayIndex.toLong())
-        val dayNotes = eventsByDay[selectedDate.toEpochDay()].orEmpty()
-
-        DaySummaryHeader(selectedDate)
+        item(key = "week-day-summary") {
+            DaySummaryHeader(selectedDate)
+        }
 
         if (dayNotes.isEmpty()) {
-            CalendarEmptyState(
-                title = stringRes(R.string.calendar_empty_week_title),
-                subtitle = stringRes(R.string.calendar_empty_week_subtitle),
-            )
+            item(key = "week-empty") {
+                CalendarEmptyState(
+                    title = stringRes(R.string.calendar_empty_week_title),
+                    subtitle = stringRes(R.string.calendar_empty_week_subtitle),
+                )
+            }
         } else {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(dayNotes, key = { it.idHex }) { note ->
-                    CalendarEventListCard(note, accountViewModel, nav)
-                }
+            items(dayNotes, key = { it.idHex }) { note ->
+                CalendarEventListCard(note, accountViewModel, nav)
             }
         }
     }

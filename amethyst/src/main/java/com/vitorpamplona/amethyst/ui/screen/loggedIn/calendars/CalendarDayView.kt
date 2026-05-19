@@ -57,10 +57,12 @@ import com.vitorpamplona.amethyst.commons.model.nip52Calendar.groupByDayKeyExpan
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -91,58 +93,54 @@ fun CalendarDayView(
     val byDay by remember(notes) { derivedStateOf { groupByDayKeyExpanded(notes) } }
     val dayEvents = byDay[visibleDate.toEpochDay()].orEmpty()
 
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .disappearingScaffoldPadding()
-                .calendarSwipeNavigation(
-                    key = visibleEpochDay,
-                    onSwipeLeft = { visibleEpochDay = visibleDate.plusDays(1).toEpochDay() },
-                    onSwipeRight = { visibleEpochDay = visibleDate.minusDays(1).toEpochDay() },
-                ),
-    ) {
-        CalendarNavigationHeader(
-            title = formatLongDate(visibleDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond()),
-            prevContentDescription = stringRes(R.string.calendar_nav_previous_day),
-            nextContentDescription = stringRes(R.string.calendar_nav_next_day),
-            onPrev = { visibleEpochDay = visibleDate.minusDays(1).toEpochDay() },
-            onNext = { visibleEpochDay = visibleDate.plusDays(1).toEpochDay() },
-            onToday = { visibleEpochDay = LocalDate.now().toEpochDay() },
-        )
-
-        if (dayEvents.isEmpty()) {
-            CalendarEmptyState(
-                title = stringRes(R.string.calendar_empty_day_title),
-                subtitle = stringRes(R.string.calendar_empty_day_subtitle),
-            )
-            return@Column
-        }
-
-        DayTimeline(dayEvents, visibleEpochDay, nav)
-    }
-}
-
-@Composable
-private fun DayTimeline(
-    dayEvents: List<Note>,
-    visibleEpochDay: Long,
-    nav: INav,
-) {
     val sorted =
         remember(dayEvents) {
             // All-day events bubble to the top (Long.MIN_VALUE), then time-slot events in order.
             dayEvents.sortedBy { it.appointmentView()?.startSeconds ?: Long.MAX_VALUE }
         }
 
-    LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
-        items(sorted, key = { it.idHex }) { note ->
-            DayRow(
-                note = note,
-                visibleEpochDay = visibleEpochDay,
-                onClick = { nav.nav(Route.Note(note.idHex)) },
+    // Single LazyColumn — nav header is the first item so it scrolls with the disappearing
+    // top bar instead of staying pinned mid-screen when the bar collapses.
+    LazyColumn(
+        contentPadding = rememberFeedContentPadding(FeedPadding),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .calendarSwipeNavigation(
+                    key = visibleEpochDay,
+                    onSwipeLeft = { visibleEpochDay = visibleDate.plusDays(1).toEpochDay() },
+                    onSwipeRight = { visibleEpochDay = visibleDate.minusDays(1).toEpochDay() },
+                ),
+    ) {
+        item(key = "day-nav") {
+            CalendarNavigationHeader(
+                title = formatLongDate(visibleDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond()),
+                prevContentDescription = stringRes(R.string.calendar_nav_previous_day),
+                nextContentDescription = stringRes(R.string.calendar_nav_next_day),
+                onPrev = { visibleEpochDay = visibleDate.minusDays(1).toEpochDay() },
+                onNext = { visibleEpochDay = visibleDate.plusDays(1).toEpochDay() },
+                onToday = { visibleEpochDay = LocalDate.now().toEpochDay() },
             )
-            HorizontalDivider()
+        }
+
+        if (dayEvents.isEmpty()) {
+            item(key = "day-empty") {
+                CalendarEmptyState(
+                    title = stringRes(R.string.calendar_empty_day_title),
+                    subtitle = stringRes(R.string.calendar_empty_day_subtitle),
+                )
+            }
+        } else {
+            items(sorted, key = { it.idHex }) { note ->
+                Column(modifier = Modifier.padding(horizontal = 12.dp)) {
+                    DayRow(
+                        note = note,
+                        visibleEpochDay = visibleEpochDay,
+                        onClick = { nav.nav(Route.Note(note.idHex)) },
+                    )
+                    HorizontalDivider()
+                }
+            }
         }
     }
 }

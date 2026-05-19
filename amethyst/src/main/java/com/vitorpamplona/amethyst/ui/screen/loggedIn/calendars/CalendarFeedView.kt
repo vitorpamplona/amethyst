@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -44,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -62,7 +64,7 @@ fun CalendarFeedView(
         val state by feedState.feedContent.collectAsStateWithLifecycle()
 
         when (val s = state) {
-            is FeedState.Loaded -> CalendarFeedLoadedBody(s, accountViewModel, nav, filterAddresses)
+            is FeedState.Loaded -> CalendarFeedLoadedBody(s, feedState, accountViewModel, nav, filterAddresses)
             is FeedState.Empty -> CalendarFeedEmpty()
             is FeedState.Loading -> Box(modifier = Modifier.fillMaxSize())
             is FeedState.FeedError -> CalendarFeedError(s)
@@ -73,6 +75,7 @@ fun CalendarFeedView(
 @Composable
 private fun CalendarFeedLoadedBody(
     loaded: FeedState.Loaded,
+    feedState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: INav,
     filterAddresses: Set<com.vitorpamplona.quartz.nip01Core.core.Address>?,
@@ -85,7 +88,15 @@ private fun CalendarFeedLoadedBody(
         }
     }
 
+    // Without this the top-bar filter switch fires `sendToTop()`, but the LazyColumn never hears
+    // it — so the scroll position from the previous filter (e.g. mid-way through a tiny People
+    // List) is preserved when the user flips back to Global, leaving the user staring at the
+    // past-events section of a 100-item feed instead of the top.
+    val listState = rememberLazyListState()
+    WatchScrollToTop(feedState, listState)
+
     LazyColumn(
+        state = listState,
         contentPadding = rememberFeedContentPadding(FeedPadding),
         modifier = Modifier.fillMaxSize(),
     ) {
