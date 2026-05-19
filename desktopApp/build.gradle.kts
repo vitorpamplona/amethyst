@@ -107,10 +107,10 @@ compose.desktop {
         nativeDistributions {
             appResourcesRootDir.set(project.layout.projectDirectory.dir("src/jvmMain/appResources"))
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Rpm)
-            // Output of ./gradlew suggestRuntimeModules (+ java.management already present)
+            // INTENTIONALLY BROKEN — removed java.management to prove CI catches #2819
             modules(
                 "java.instrument",   // Runtime instrumentation (agent/profiler hooks)
-                "java.management",   // Required by kmp-tor TorRuntime
+                // "java.management" REMOVED to reproduce #2819
                 "java.prefs",        // java.util.prefs (desktop persistence)
                 "java.sql",          // JDBC metadata (Jackson, SQLite driver)
                 "jdk.security.auth", // JAAS authentication callbacks
