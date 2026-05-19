@@ -2599,4 +2599,26 @@
     <string name="community_rules_violation_wot_gate_failed">Du uppfyller inte den här gemenskapens krav på förtroendenät.</string>
     <string name="community_rules_violation_stale_rules">Det senaste dokumentet med gemenskapsregler avvisades som föråldrat.</string>
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
+    <string name="copied_to_clipboard">Kopierat till urklipp</string>
+    <string name="notification_channel_status_off">Av</string>
+    <string name="notification_channel_status_on">På</string>
+    <string name="notification_channel_status_silent">Tyst</string>
+    <string name="notification_settings">Aviseringar</string>
+    <string name="notification_settings_categories_explainer">Tryck på en kategori för att öppna Androids aviseringsinställningar — ljud, prioritet, märken och Stör ej finns där.</string>
+    <string name="notification_settings_section_categories">Kategorier</string>
+    <string name="notification_settings_section_delivery">Leverans</string>
+    <string name="notification_settings_section_display">Visning i appen</string>
+    <string name="nowhere_link_card_art">Nowhere Konst</string>
+    <string name="nowhere_link_card_drop">Nowhere Drop</string>
+    <string name="nowhere_link_card_event">Nowhere Evenemang</string>
+    <string name="nowhere_link_card_forum">Nowhere Forum</string>
+    <string name="nowhere_link_card_fundraiser">Nowhere Insamling</string>
+    <string name="nowhere_link_card_generic">Nowhere-webbplats</string>
+    <string name="nowhere_link_card_message">Nowhere Meddelande</string>
+    <string name="nowhere_link_card_petition">Nowhere Namninsamling</string>
+    <string name="nowhere_link_card_store">Nowhere Butik</string>
+    <plurals name="post_was_hidden_due_to_too_many_hashtags">
+        <item quantity="one">Det här inlägget har fler än %1$d hashtagg</item>
+        <item quantity="other">Det här inlägget har fler än %1$d hashtaggar</item>
+    </plurals>
 </resources>
