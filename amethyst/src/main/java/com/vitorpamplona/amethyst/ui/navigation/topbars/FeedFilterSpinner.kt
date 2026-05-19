@@ -338,9 +338,9 @@ private enum class FeedGroup(
     HASHTAGS(R.string.feed_group_hashtags),
     INTEREST_SETS(R.string.feed_group_interest_sets),
     LOCATIONS(R.string.feed_group_locations),
+    DVMS(R.string.feed_group_dvms),
     COMMUNITIES(R.string.feed_group_communities),
     LISTS(R.string.feed_group_lists),
-    DVMS(R.string.feed_group_dvms),
 }
 
 private fun FeedDefinition.group(): FeedGroup =
