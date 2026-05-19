@@ -97,6 +97,7 @@ fun OnchainTransactionsScreen(
     )
 
     val transactions by viewModel.filteredTransactions.collectAsState()
+    val hasAnyTransactions by viewModel.hasAnyTransactions.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val isLoadingMore by viewModel.isLoadingMore.collectAsState()
     val hasMore by viewModel.hasMoreTransactions.collectAsState()
@@ -150,7 +151,7 @@ fun OnchainTransactionsScreen(
             address == null -> {
                 EmptyMessage(padding, stringRes(R.string.wallet_onchain_no_address))
             }
-            isLoading && transactions.isEmpty() -> {
+            isLoading && !hasAnyTransactions -> {
                 Column(
                     modifier =
                         Modifier
@@ -167,13 +168,13 @@ fun OnchainTransactionsScreen(
                     )
                 }
             }
-            error != null && transactions.isEmpty() -> {
+            error != null && !hasAnyTransactions -> {
                 EmptyMessage(
                     padding,
                     error ?: stringRes(R.string.wallet_onchain_no_backend),
                 )
             }
-            transactions.isEmpty() -> {
+            !hasAnyTransactions -> {
                 EmptyMessage(padding, stringRes(R.string.wallet_no_transactions))
             }
             else -> {
@@ -182,18 +183,35 @@ fun OnchainTransactionsScreen(
                     modifier = Modifier.padding(padding),
                     state = listState,
                 ) {
-                    item { AddressHeader(address) }
                     item {
                         TransactionFilterRow(currentFilter) { viewModel.setTransactionFilter(it) }
                     }
-                    items(transactions, key = { it.tx.txid }) { txView ->
-                        OnchainTransactionItem(
-                            view = txView,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                            onClick = { handleTxClick(txView, nav, uriHandler) },
-                        )
-                        HorizontalDivider()
+                    if (transactions.isEmpty()) {
+                        item {
+                            Column(
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(24.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Text(
+                                    stringRes(R.string.wallet_no_transactions_for_filter),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    } else {
+                        items(transactions, key = { it.tx.txid }) { txView ->
+                            OnchainTransactionItem(
+                                view = txView,
+                                accountViewModel = accountViewModel,
+                                nav = nav,
+                                onClick = { handleTxClick(txView, nav, uriHandler) },
+                            )
+                            HorizontalDivider()
+                        }
                     }
                     if (isLoadingMore) {
                         item {
@@ -231,21 +249,6 @@ private fun EmptyMessage(
         Text(
             message,
             style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun AddressHeader(address: String?) {
-    if (address.isNullOrBlank()) return
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Text(
-            text = address,
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = FontFamily.Monospace,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
