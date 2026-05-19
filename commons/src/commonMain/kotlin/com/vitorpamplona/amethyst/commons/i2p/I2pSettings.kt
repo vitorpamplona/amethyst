@@ -41,17 +41,20 @@ data class I2pSettings(
     val mediaUploadsViaI2p: Boolean = false,
 )
 
+// EXTERNAL-only: this app does not embed an I2P router. Bootstrap on Android is
+// minutes-long for a fresh netDb and the protocol provides no shortcut analogous
+// to Tor's hardcoded directory authorities; we'd ship a "permanently warming up"
+// experience. Users who want I2P run i2pd or Java I2P independently and point
+// Amethyst at its SOCKS port (default 4447). See I2pManager.
 enum class I2pType(
     val screenCode: Int,
 ) {
     OFF(0),
-    INTERNAL(1),
     EXTERNAL(2),
 }
 
 fun parseI2pType(code: Int?): I2pType =
     when (code) {
-        I2pType.INTERNAL.screenCode -> I2pType.INTERNAL
         I2pType.EXTERNAL.screenCode -> I2pType.EXTERNAL
         else -> I2pType.OFF
     }

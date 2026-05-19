@@ -1103,7 +1103,6 @@
     <string name="use_i2p_explainer">Use an external I2P router (i2pd / Java I2P)</string>
 
     <string name="i2p_off">Off</string>
-    <string name="i2p_internal">Internal</string>
     <string name="i2p_external">External Router</string>
 
     <string name="i2p_socks_port">I2P Socks Port</string>

@@ -49,13 +49,13 @@ import com.vitorpamplona.amethyst.ui.tor.SwitchSettingsRow
 import kotlinx.collections.immutable.persistentListOf
 
 // Settings body for I2P. Mirrors PrivacySettingsBody (Tor) but without presets —
-// no canonical "default I2P configuration" exists yet, and the per-feature toggles
+// no canonical "default I2P configuration" exists, and the per-feature toggles
 // only take effect when I2P is also the preferred clearnet transport (see the
 // global picker above this section in PrivacyOptionsScreen).
 //
-// INTERNAL is intentionally hidden from the picker until an embedded I2P daemon
-// ships. EXTERNAL connects to a user-run i2pd / Java I2P installation on the
-// device (default SOCKS port 4447).
+// I2P is EXTERNAL-only: connects to a user-run i2pd / Java I2P installation on
+// the device (default SOCKS port 4447). We intentionally do not embed a router —
+// see commons I2pType for the rationale.
 @Composable
 fun I2pSettingsBody(dialogViewModel: I2pDialogViewModel) {
     Column(
@@ -69,11 +69,8 @@ fun I2pSettingsBody(dialogViewModel: I2pDialogViewModel) {
                 TitleExplainer(stringRes(I2pType.OFF.resourceId)),
                 TitleExplainer(stringRes(I2pType.EXTERNAL.resourceId)),
             ),
-            // OFF screenCode is 0, EXTERNAL is 2. Spinner indices are 0/1.
-            // Map: dropdown index 0 → OFF, 1 → EXTERNAL.
             when (dialogViewModel.i2pType.value) {
                 I2pType.OFF -> 0
-                I2pType.INTERNAL -> 0 // Treat any persisted INTERNAL as OFF until daemon ships.
                 I2pType.EXTERNAL -> 1
             },
         ) { idx ->

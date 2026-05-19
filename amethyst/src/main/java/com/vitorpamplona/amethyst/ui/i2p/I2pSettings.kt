@@ -28,6 +28,5 @@ val I2pType.resourceId: Int
     get() =
         when (this) {
             I2pType.OFF -> R.string.i2p_off
-            I2pType.INTERNAL -> R.string.i2p_internal
             I2pType.EXTERNAL -> R.string.i2p_external
         }

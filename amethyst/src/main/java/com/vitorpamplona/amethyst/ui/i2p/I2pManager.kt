@@ -35,18 +35,16 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 /**
- * Mirror of TorManager, but EXTERNAL-only for now — no embedded I2P daemon ships
- * with this branch. When [I2pType.EXTERNAL] is selected, this manager surfaces the
- * configured SOCKS port; otherwise it emits [I2pServiceStatus.Off].
+ * EXTERNAL-only I2P manager. Mirrors TorManager's status surface but never starts
+ * a daemon itself: I2P bootstrap on Android is structurally minutes-long (no
+ * equivalent of Tor's hardcoded directory authorities — the protocol requires
+ * NetDB peer discovery), so the embedded route would ship a permanently-warming
+ * experience. Users who want I2P run i2pd / Java I2P independently and point
+ * Amethyst at its SOCKS port via the Privacy Options screen.
  *
  * There is intentionally no Connecting state, no bootstrap timeout, and no
- * "session bypass": with EXTERNAL the daemon's lifecycle is the user's
- * responsibility (i2pd / Java I2P running on the device), and the connection
- * either works or it doesn't — there's no in-app bootstrap to bypass.
- *
- * When INTERNAL is wired up in a follow-up, it will land here as a third branch
- * that starts an embedded daemon and emits Connecting / Active over its
- * lifecycle, mirroring the Tor flow.
+ * "session bypass" — when EXTERNAL is selected the daemon's lifecycle is the
+ * user's responsibility and the connection either works or it doesn't.
  */
 class I2pManager(
     i2pPrefs: I2pSharedPreferences,
@@ -59,8 +57,6 @@ class I2pManager(
         ) { type, port ->
             when (type) {
                 I2pType.OFF -> I2pServiceStatus.Off
-                // Persisted INTERNAL is treated as Off until an embedded daemon ships.
-                I2pType.INTERNAL -> I2pServiceStatus.Off
                 I2pType.EXTERNAL -> if (port > 0) I2pServiceStatus.Active(port) else I2pServiceStatus.Off
             }
         }.catch { e ->

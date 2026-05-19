@@ -83,7 +83,13 @@ class I2pSharedPreferences(
             try {
                 val preferences = context.sharedPreferencesDataStore.data.first()
                 I2pSettings(
-                    i2pType = preferences[I2P_TYPE_KEY]?.let { I2pType.valueOf(it) } ?: I2pType.OFF,
+                    // A stored "INTERNAL" from an earlier branch is no longer a valid I2pType —
+                    // runCatching swallows the IllegalArgumentException so the user lands on OFF
+                    // and can re-enable EXTERNAL from the settings screen.
+                    i2pType =
+                        preferences[I2P_TYPE_KEY]
+                            ?.let { runCatching { I2pType.valueOf(it) }.getOrNull() }
+                            ?: I2pType.OFF,
                     externalSocksPort = preferences[EXTERNAL_SOCKS_PORT_KEY] ?: 4447,
                     i2pRelaysViaI2p = preferences[I2P_RELAYS_VIA_I2P_KEY] ?: true,
                     dmRelaysViaI2p = preferences[DM_RELAYS_VIA_I2P_KEY] ?: false,

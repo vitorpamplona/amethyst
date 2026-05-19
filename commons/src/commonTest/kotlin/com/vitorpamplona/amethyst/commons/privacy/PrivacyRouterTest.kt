@@ -38,7 +38,7 @@ class PrivacyRouterTest {
         i2pOn: Boolean = false,
         preferred: PrivacyTransport = PrivacyTransport.DIRECT,
         tor: TorSettings = TorSettings(torType = if (torOn) TorType.INTERNAL else TorType.OFF),
-        i2p: I2pSettings = I2pSettings(i2pType = if (i2pOn) I2pType.INTERNAL else I2pType.OFF),
+        i2p: I2pSettings = I2pSettings(i2pType = if (i2pOn) I2pType.EXTERNAL else I2pType.OFF),
     ) = PrivacySettings(
         tor = tor,
         i2p = i2p,
@@ -125,7 +125,7 @@ class PrivacyRouterTest {
             settings(
                 i2pOn = true,
                 preferred = PrivacyTransport.I2P,
-                i2p = I2pSettings(i2pType = I2pType.INTERNAL, videosViaI2p = true),
+                i2p = I2pSettings(i2pType = I2pType.EXTERNAL, videosViaI2p = true),
             )
         assertEquals(PrivacyRoute.I2p, PrivacyRouter.route(clearnet, FeatureRole.VIDEO, s))
     }
@@ -136,7 +136,7 @@ class PrivacyRouterTest {
             settings(
                 i2pOn = true,
                 preferred = PrivacyTransport.I2P,
-                i2p = I2pSettings(i2pType = I2pType.INTERNAL, videosViaI2p = false),
+                i2p = I2pSettings(i2pType = I2pType.EXTERNAL, videosViaI2p = false),
             )
         assertEquals(PrivacyRoute.Direct, PrivacyRouter.route(clearnet, FeatureRole.VIDEO, s))
     }
@@ -162,7 +162,7 @@ class PrivacyRouterTest {
                 torOn = false,
                 i2pOn = true,
                 preferred = PrivacyTransport.TOR,
-                i2p = I2pSettings(i2pType = I2pType.INTERNAL, imagesViaI2p = true),
+                i2p = I2pSettings(i2pType = I2pType.EXTERNAL, imagesViaI2p = true),
             )
         assertEquals(PrivacyRoute.Direct, PrivacyRouter.route(clearnet, FeatureRole.IMAGE, s))
     }
@@ -176,7 +176,7 @@ class PrivacyRouterTest {
                 i2pOn = true,
                 preferred = PrivacyTransport.I2P,
                 tor = TorSettings(torType = TorType.INTERNAL, imagesViaTor = true),
-                i2p = I2pSettings(i2pType = I2pType.INTERNAL, imagesViaI2p = true),
+                i2p = I2pSettings(i2pType = I2pType.EXTERNAL, imagesViaI2p = true),
             )
         assertEquals(PrivacyRoute.I2p, PrivacyRouter.route(clearnet, FeatureRole.IMAGE, s))
     }
