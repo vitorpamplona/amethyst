@@ -1010,6 +1010,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="invalid_port_number">Ungültige Portnummer</string>
     <string name="use_orbot">Orbot verwenden</string>
     <string name="disconnect_from_your_orbot_setup">Tor/Orbot trennen</string>
+    <!-- I2P daemon picker + per-feature toggles. Shape mirrors the Tor strings above.
+         Take effect only when I2P is also selected as the preferred clearnet transport. -->
+    <!-- Global picker: which transport carries clearnet traffic. -->
     <string name="app_notification_dms_channel_name">Private Nachrichten</string>
     <string name="app_notification_dms_channel_description">Benachrichtigt dich, wenn eine private Nachricht eingeht</string>
     <string name="app_notification_zaps_channel_name">Erhaltene Zaps</string>

@@ -302,6 +302,9 @@
     <string name="invalid_port_number">செல்லாத போர்ட் நம்பர்</string>
     <string name="use_orbot">Orbot-ஐ பயன்படுத்துங்கள்</string>
     <string name="disconnect_from_your_orbot_setup">Orbot இணைப்பது துண்டிக்க</string>
+    <!-- I2P daemon picker + per-feature toggles. Shape mirrors the Tor strings above.
+         Take effect only when I2P is also selected as the preferred clearnet transport. -->
+    <!-- Global picker: which transport carries clearnet traffic. -->
     <string name="app_notification_dms_channel_name">தனிப்பட்ட செய்திகள்</string>
     <string name="app_notification_dms_channel_description">தனிப்பட்ட செய்தி வருகையில் தெரிவிக்கவும்</string>
     <string name="app_notification_zaps_channel_name">ஜாப் பெறப்பட்டது</string>

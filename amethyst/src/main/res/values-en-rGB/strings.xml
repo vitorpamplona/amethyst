@@ -7,6 +7,9 @@
     <string name="scan_qr">Scan QR</string>
     <string name="show_anyway">Show Anyway</string>
     <string name="post_not_found_short">👀</string>
+    <!-- I2P daemon picker + per-feature toggles. Shape mirrors the Tor strings above.
+         Take effect only when I2P is also selected as the preferred clearnet transport. -->
+    <!-- Global picker: which transport carries clearnet traffic. -->
     <!-- Call notifications and UI -->
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <!-- Kind display names for relay subscription filter chips -->
