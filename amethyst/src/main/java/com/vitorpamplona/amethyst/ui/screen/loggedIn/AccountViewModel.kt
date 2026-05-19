@@ -141,6 +141,7 @@ import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlForm
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
@@ -1980,7 +1981,15 @@ class AccountViewModel(
             try {
                 val zapRequest =
                     if (defaultZapType() != LnZapEvent.ZapType.NONZAP) {
-                        account.createZapRequestFor(user, message, defaultZapType())
+                        // NIP-57 Appendix F: include amount + lnurl so the receipt can be validated.
+                        val splitLnurl = LnurlForm.toUrl(lnAddress)?.let(LnurlForm::urlToBech32)
+                        account.createZapRequestFor(
+                            user = user,
+                            message = message,
+                            zapType = defaultZapType(),
+                            amountMillisats = milliSats,
+                            lnurl = splitLnurl,
+                        )
                     } else {
                         null
                     }

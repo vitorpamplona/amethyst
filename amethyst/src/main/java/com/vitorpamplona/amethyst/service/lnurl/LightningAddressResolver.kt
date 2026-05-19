@@ -28,6 +28,8 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.lightning.Lud06
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointCache
+import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointInfo
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -210,6 +212,8 @@ class LightningAddressResolver {
     ): String {
         val mapper = jacksonObjectMapper()
 
+        val lnurlpUrl = assembleUrl(lnAddress)
+
         val lnAddressJson =
             fetchLightningAddressJson(
                 lnAddress,
@@ -248,6 +252,17 @@ class LightningAddressResolver {
         }
 
         val allowsNostr = lnurlp.get("allowsNostr")?.asBoolean() ?: false
+        val nostrPubkey = lnurlp.get("nostrPubkey")?.asText()?.ifBlank { null }
+
+        // Prime the receipt-validation cache so incoming zap receipts can be
+        // checked against this provider's nostrPubkey (NIP-57 Appendix F)
+        // without re-fetching the lnurlp endpoint.
+        if (lnurlpUrl != null) {
+            LnurlEndpointCache.put(
+                lnurlpUrl,
+                LnurlEndpointInfo(nostrPubkey = nostrPubkey, allowsNostr = allowsNostr),
+            )
+        }
 
         val invoice =
             fetchLightningInvoice(

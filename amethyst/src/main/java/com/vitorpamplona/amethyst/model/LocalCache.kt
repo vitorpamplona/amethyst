@@ -189,6 +189,10 @@ import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.validate.LnZapReceiptValidator
+import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointCache
+import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointResolver
+import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlForm
 import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
@@ -303,6 +307,16 @@ object LocalCache : ILocalCache, ICacheProvider {
      */
     @Volatile
     var onchainBackend: OnchainBackend? = null
+
+    /**
+     * Resolver for LNURL provider metadata used by [consume]`(LnZapEvent)` to
+     * validate NIP-57 Appendix F. `null` skips the receipt-signer check (the
+     * receipt is still accepted on signature verification alone — matches legacy
+     * behavior); set this in app init so receipts can be verified against the
+     * recipient's provider's advertised `nostrPubkey`.
+     */
+    @Volatile
+    var lnurlEndpointResolver: LnurlEndpointResolver? = null
 
     val relayHints = HintIndexer()
 
@@ -1709,37 +1723,123 @@ object LocalCache : ILocalCache, ICacheProvider {
             return false
         }
 
-        if (wasVerified || justVerify(event)) {
-            val existingZapRequest = event.zapRequest?.id?.let { getNoteIfExists(it) }
-            if (existingZapRequest == null || existingZapRequest.event == null) {
-                // tries to add it
-                event.zapRequest?.let {
-                    checkDeletionAndConsume(it, relay, false)
-                }
+        if (!(wasVerified || justVerify(event))) return false
+
+        val existingZapRequest = event.zapRequest?.id?.let { getNoteIfExists(it) }
+        if (existingZapRequest == null || existingZapRequest.event == null) {
+            // tries to add it
+            event.zapRequest?.let {
+                checkDeletionAndConsume(it, relay, false)
             }
+        }
 
-            val zapRequest = event.zapRequest?.id?.let { getNoteIfExists(it) }
+        val zapRequest = event.zapRequest?.id?.let { getNoteIfExists(it) }
 
-            if (zapRequest == null || zapRequest.event !is LnZapRequestEvent) {
-                Log.d("ZP") { "Zap Request not found. Unable to process Zap {${event.toJson()}}" }
+        if (zapRequest == null || zapRequest.event !is LnZapRequestEvent) {
+            Log.d("ZP") { "Zap Request not found. Unable to process Zap {${event.toJson()}}" }
+            return false
+        }
+
+        // NIP-57 Appendix F validation. Resolve the recipient's lnurl from their
+        // profile metadata, look up the LNURL provider's `nostrPubkey`, and check
+        // the receipt against it (signer + invoice amount + lnurl tag).
+        //
+        // Synchronous path: cache hit, or no resolver wired (fallback to legacy
+        // signature-only behavior). Failed MUST-checks drop the receipt entirely.
+        //
+        // Async path: cache miss + resolver available. Load the event so feeds
+        // and live channels see it, but defer the `addZap` credit until the
+        // resolver returns. On async MUST-fail we never credit; the receipt
+        // stays in cache as a visible artifact but contributes 0 to zap totals.
+        val recipientLnurl = recipientLnurl(event)
+        val recipientLnurlpUrl = recipientLnurl?.let { LnurlForm.toUrl(it) }
+        val cachedInfo = recipientLnurlpUrl?.let { LnurlEndpointCache.get(it) }
+
+        val author = getOrCreateUser(event.pubKey)
+        val repliesTo = computeReplyTo(event)
+
+        if (cachedInfo != null) {
+            val result =
+                LnZapReceiptValidator.validate(
+                    receipt = event,
+                    expectedNostrPubkey = cachedInfo.nostrPubkey,
+                    expectedLnurl = recipientLnurl,
+                )
+            if (result is LnZapReceiptValidator.Result.Invalid &&
+                result.reason != LnZapReceiptValidator.Result.Reason.MISMATCHED_LNURL
+            ) {
+                Log.w("ZP", "dropping zap receipt ${event.id}: ${result.reason} ${result.detail ?: ""}")
                 return false
             }
-
-            val author = getOrCreateUser(event.pubKey)
-            val repliesTo = computeReplyTo(event)
+            if (result is LnZapReceiptValidator.Result.Invalid) {
+                Log.w("ZP", "zap receipt ${event.id} has mismatched lnurl tag (accepting per SHOULD)")
+            }
 
             note.loadEvent(event, author, repliesTo)
-
             repliesTo.forEach { it.addZap(zapRequest, note) }
-
             attachZapToLiveActivityChannel(event, note, relay)
-
             refreshNewNoteObservers(note)
-
             return true
         }
 
-        return false
+        val resolver = lnurlEndpointResolver
+        if (resolver == null || recipientLnurlpUrl == null) {
+            // No resolver configured, or recipient has no lud16/lud06 on file.
+            // Legacy behavior: accept the receipt on signature verification alone.
+            note.loadEvent(event, author, repliesTo)
+            repliesTo.forEach { it.addZap(zapRequest, note) }
+            attachZapToLiveActivityChannel(event, note, relay)
+            refreshNewNoteObservers(note)
+            return true
+        }
+
+        // Async validation. Make the event visible immediately, but only credit
+        // it to repliesTo after the resolver confirms the LNURL provider's pubkey.
+        note.loadEvent(event, author, repliesTo)
+        attachZapToLiveActivityChannel(event, note, relay)
+        refreshNewNoteObservers(note)
+
+        Amethyst.instance.applicationIOScope.launch {
+            try {
+                val info = resolver.resolve(recipientLnurlpUrl)
+                if (info == null) {
+                    Log.w("ZP", "could not fetch lnurlp for ${event.id}; not crediting")
+                    return@launch
+                }
+                val result =
+                    LnZapReceiptValidator.validate(
+                        receipt = event,
+                        expectedNostrPubkey = info.nostrPubkey,
+                        expectedLnurl = recipientLnurl,
+                    )
+                if (result is LnZapReceiptValidator.Result.Invalid &&
+                    result.reason != LnZapReceiptValidator.Result.Reason.MISMATCHED_LNURL
+                ) {
+                    Log.w("ZP", "dropping zap receipt ${event.id}: ${result.reason} ${result.detail ?: ""}")
+                    return@launch
+                }
+                if (result is LnZapReceiptValidator.Result.Invalid) {
+                    Log.w("ZP", "zap receipt ${event.id} has mismatched lnurl tag (accepting per SHOULD)")
+                }
+                repliesTo.forEach { it.addZap(zapRequest, note) }
+            } catch (t: Throwable) {
+                Log.w("ZP", "validation failed for ${event.id}", t)
+            }
+        }
+
+        return true
+    }
+
+    /**
+     * Look up the recipient's lnurl from their kind:0 metadata. The recipient is
+     * the receipt's first `p` tag (which the LNURL provider sets to the original
+     * zap target). Returns null if we have no metadata, or the user has neither
+     * lud16 nor lud06.
+     */
+    private fun recipientLnurl(event: LnZapEvent): String? {
+        val recipientPubkey = event.zappedAuthor().firstOrNull() ?: return null
+        val user = getUserIfExists(recipientPubkey) ?: return null
+        return user.lnAddress()?.takeIf { it.isNotBlank() }
     }
 
     fun consume(

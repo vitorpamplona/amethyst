@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetupLnAddress
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlForm
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.utils.mapNotNullAsync
 import kotlinx.collections.immutable.ImmutableList
@@ -178,7 +179,7 @@ class ZapPaymentHandler(
 
         onProgress(0.02f)
 
-        val splitZapRequests = signAllZapRequests(note, pollOption, message, zapType, zapsToSend)
+        val splitZapRequests = signAllZapRequests(note, pollOption, message, zapType, zapsToSend, amountMilliSats)
 
         if (splitZapRequests.isEmpty()) {
             onProgress(0.00f)
@@ -237,8 +238,10 @@ class ZapPaymentHandler(
         message: String,
         zapType: LnZapEvent.ZapType,
         zapsToSend: List<MyZapSplitSetup>,
-    ): List<ZapRequestReady> =
-        mapNotNullAsync(zapsToSend) { next: MyZapSplitSetup ->
+        totalAmountMilliSats: Long,
+    ): List<ZapRequestReady> {
+        val totalWeight = zapsToSend.sumOf { it.weight }
+        return mapNotNullAsync(zapsToSend) { next: MyZapSplitSetup ->
             // makes sure the author receives the zap event
             val authorRelayList = note.author?.inboxRelays()?.toSet() ?: emptySet()
 
@@ -247,15 +250,31 @@ class ZapPaymentHandler(
 
             val noteEvent = note.event
 
+            // Per NIP-57 §6: the zap request SHOULD carry `amount` (in msats) and
+            // `lnurl` so the recipient's LNURL provider — and clients reading the
+            // resulting receipt — can validate them under Appendix F.
+            val splitAmount = calculateZapValue(totalAmountMilliSats, next.weight, totalWeight)
+            val splitLnurl = LnurlForm.toUrl(next.lnAddress)?.let(LnurlForm::urlToBech32)
+
             val zapRequest =
                 if (zapType != LnZapEvent.ZapType.NONZAP && noteEvent != null) {
-                    account.createZapRequestFor(noteEvent, pollOption, message, zapType, next.user, userRelayList + authorRelayList)
+                    account.createZapRequestFor(
+                        event = noteEvent,
+                        pollOption = pollOption,
+                        message = message,
+                        zapType = zapType,
+                        toUser = next.user,
+                        additionalRelays = userRelayList + authorRelayList,
+                        amountMillisats = splitAmount,
+                        lnurl = splitLnurl,
+                    )
                 } else {
                     null
                 }
 
             ZapRequestReady(next, zapRequest)
         }
+    }
 
     suspend fun assembleAllInvoices(
         requests: List<ZapRequestReady>,
