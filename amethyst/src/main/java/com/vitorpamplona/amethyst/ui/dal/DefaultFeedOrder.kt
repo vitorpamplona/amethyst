@@ -32,3 +32,12 @@ val DefaultFeedOrderEvent: Comparator<Event> =
 
 val DefaultFeedOrderCard: Comparator<Card> =
     compareByDescending<Card> { it.createdAt() }.thenBy { it.id() }
+
+// Snapshots createdAt once per note so the comparator stays consistent even if
+// another thread swaps a Note's event mid-sort (e.g. a newer AddressableEvent
+// arriving from a relay). Avoids TimSort's "Comparison method violates its
+// general contract!" IllegalArgumentException.
+fun Iterable<Note>.sortedByDefaultFeedOrder(): List<Note> =
+    map { it to (it.createdAt() ?: 0L) }
+        .sortedWith(compareByDescending<Pair<Note, Long>> { it.second }.thenBy { it.first.idHex })
+        .map { it.first }
