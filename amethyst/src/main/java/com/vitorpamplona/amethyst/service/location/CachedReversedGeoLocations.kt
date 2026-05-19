@@ -32,6 +32,14 @@ import com.vitorpamplona.quartz.utils.Log
 object CachedReversedGeoLocations {
     val locationNames = LruCache<String, String>(20)
 
+    // Geocoder.isPresent() reflects whether the system has a backing
+    // IGeocodeProvider registered — fixed at boot, safe to memoize. On AOSP /
+    // GrapheneOS without Google Play Services or microG configured no provider
+    // is registered and this returns false.
+    private val geocoderAvailable: Boolean by lazy { Geocoder.isPresent() }
+
+    fun isGeocoderAvailable(): Boolean = geocoderAvailable
+
     fun cached(geoHashStr: String): String? = locationNames[geoHashStr]
 
     fun geoLocate(
@@ -42,31 +50,24 @@ object CachedReversedGeoLocations {
     ) {
         locationNames[geoHashStr]?.let {
             onReady(it)
+            return
         }
 
-        if (Geocoder.isPresent()) {
-            ReverseGeolocation.execute(location, context) { cityNames ->
-                if (cityNames != null) {
-                    val cityName =
-                        cityNames.firstNotNullOfOrNull {
-                            val name = it.toCityCountry()
-                            if (!name.isBlank()) {
-                                name
-                            } else {
-                                null
-                            }
-                        }
-                    if (cityName != null) {
-                        locationNames.put(geoHashStr, cityName)
-                        onReady(cityName)
-                    }
-                } else {
-                    // error
-                    onReady(null)
+        if (!geocoderAvailable) {
+            Log.d("ReverseGeoLocation") { "Geocoder service not present on this device" }
+            onReady(null)
+            return
+        }
+
+        ReverseGeolocation.execute(location, context) { cityNames ->
+            val cityName =
+                cityNames?.firstNotNullOfOrNull {
+                    it.toCityCountry().takeIf { name -> name.isNotBlank() }
                 }
+            if (cityName != null) {
+                locationNames.put(geoHashStr, cityName)
             }
-        } else {
-            Log.d("ReverseGeoLocation", "Geocoder not present")
+            onReady(cityName)
         }
     }
 }
