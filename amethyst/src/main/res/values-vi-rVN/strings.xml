@@ -11,9 +11,6 @@
     <string name="pay">Thanh toán</string>
     <string name="note_to_receiver">Lưu ý cho người nhận</string>
     <string name="thank_you_so_much">Cảm ơn rất nhiều!</string>
-    <!-- I2P daemon picker + per-feature toggles. Shape mirrors the Tor strings above.
-         Take effect only when I2P is also selected as the preferred clearnet transport. -->
-    <!-- Global picker: which transport carries clearnet traffic. -->
     <!-- Call notifications and UI -->
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <!-- Kind display names for relay subscription filter chips -->
