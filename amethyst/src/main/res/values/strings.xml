@@ -1992,6 +1992,13 @@
     <string name="calendar_collection_delete">Delete calendar</string>
     <string name="calendar_collection_delete_confirm_title">Delete this calendar?</string>
     <string name="calendar_collection_delete_confirm_message">The calendar list will be removed. Events inside it are not deleted.</string>
+    <string name="calendar_event_pick_image">Pick image</string>
+    <string name="calendar_event_image_upload_failed">Image upload failed</string>
+    <string name="calendar_event_image_upload_failed_body">The picked image couldn\'t be uploaded. Try again or paste a URL.</string>
+    <string name="calendar_event_participants_section">Participants (%1$d)</string>
+    <string name="calendar_event_participant_input">npub or hex pubkey</string>
+    <string name="calendar_event_participant_invalid">Enter a valid npub… or 64-character hex pubkey.</string>
+    <string name="calendar_event_participant_remove">Remove participant</string>
     <string name="calendar_open_in_maps">Open in maps</string>
     <string name="route_calendar_event_detail">Event details</string>
     <string name="new_short_video">New Short Video</string>

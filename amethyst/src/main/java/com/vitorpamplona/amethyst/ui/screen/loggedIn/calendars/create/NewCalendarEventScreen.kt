@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -40,6 +41,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -51,6 +53,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -141,13 +144,7 @@ fun NewCalendarEventScreen(
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             )
 
-            OutlinedTextField(
-                value = vm.imageUrl.value,
-                onValueChange = { vm.imageUrl.value = it },
-                label = { Text(stringRes(R.string.calendar_event_image)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-            )
+            ImageRow(vm = vm, accountViewModel = accountViewModel)
 
             OutlinedTextField(
                 value = vm.hashtags.value,
@@ -156,6 +153,8 @@ fun NewCalendarEventScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
+
+            ParticipantsRow(vm = vm, accountViewModel = accountViewModel)
 
             if (!vm.isValid()) {
                 Text(
@@ -215,4 +214,176 @@ private fun FieldLabel(text: String) {
         fontWeight = FontWeight.SemiBold,
         modifier = Modifier.padding(start = 4.dp),
     )
+}
+
+/**
+ * URL field + gallery-picker icon. Tapping the icon launches the system picker; once the user
+ * picks an image we hand it to [NewCalendarEventViewModel.uploadAndSetImage], which sends it
+ * to the user's configured file server (Blossom / NIP-96 / NIP-95) and writes the resulting
+ * URL into [vm.imageUrl]. A small inline progress indicator covers the upload window.
+ */
+@Composable
+private fun ImageRow(
+    vm: NewCalendarEventViewModel,
+    accountViewModel: AccountViewModel,
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val launcher =
+        androidx.activity.compose.rememberLauncherForActivityResult(
+            contract =
+                androidx.activity.result.contract.ActivityResultContracts
+                    .GetContent(),
+        ) { uri ->
+            if (uri == null) return@rememberLauncherForActivityResult
+            val mime = context.contentResolver.getType(uri)
+            scope.launch {
+                val ok = vm.uploadAndSetImage(uri, mime, context)
+                if (!ok) {
+                    accountViewModel.toastManager.toast(
+                        com.vitorpamplona.amethyst.R.string.calendar_event_image_upload_failed,
+                        com.vitorpamplona.amethyst.R.string.calendar_event_image_upload_failed_body,
+                    )
+                }
+            }
+        }
+
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        OutlinedTextField(
+            value = vm.imageUrl.value,
+            onValueChange = { vm.imageUrl.value = it },
+            label = { Text(stringRes(R.string.calendar_event_image)) },
+            modifier = Modifier.weight(1f),
+            singleLine = true,
+            enabled = !vm.isUploadingImage.value,
+        )
+        if (vm.isUploadingImage.value) {
+            androidx.compose.material3.CircularProgressIndicator(
+                modifier = Modifier.padding(start = 8.dp).size(20.dp),
+                strokeWidth = 2.dp,
+            )
+        } else {
+            androidx.compose.material3.IconButton(onClick = { launcher.launch("image/*") }) {
+                com.vitorpamplona.amethyst.commons.icons.symbols.Icon(
+                    symbol = com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols.AddPhotoAlternate,
+                    contentDescription = stringRes(R.string.calendar_event_pick_image),
+                    modifier = Modifier.size(22.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Inline participant picker. The simplest workable shape: a single-line OutlinedTextField that
+ * accepts a 64-hex pubkey or an npub, and an "Add" button that pushes it into the list. The
+ * current participants render as a column of [UserRow] entries with an X button each.
+ *
+ * Search-by-display-name is an obvious follow-up but the field accepting npubs directly is the
+ * primary nostr-native flow today; copy-pasting an npub from a profile is how most users add
+ * collaborators in other apps.
+ */
+@Composable
+private fun ParticipantsRow(
+    vm: NewCalendarEventViewModel,
+    accountViewModel: AccountViewModel,
+) {
+    var draft by androidx.compose.runtime.saveable
+        .rememberSaveable { androidx.compose.runtime.mutableStateOf("") }
+    var error by androidx.compose.runtime.saveable
+        .rememberSaveable { androidx.compose.runtime.mutableStateOf<String?>(null) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        FieldLabel(stringRes(R.string.calendar_event_participants_section, vm.participants.size))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = draft,
+                onValueChange = {
+                    draft = it
+                    error = null
+                },
+                label = { Text(stringRes(R.string.calendar_event_participant_input)) },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                isError = error != null,
+            )
+            androidx.compose.material3.TextButton(
+                onClick = {
+                    val resolved = resolvePubKeyOrNull(draft.trim())
+                    if (resolved == null) {
+                        error = "invalid"
+                    } else {
+                        vm.addParticipant(resolved)
+                        draft = ""
+                    }
+                },
+                enabled = draft.isNotBlank(),
+            ) {
+                Text(stringRes(com.vitorpamplona.amethyst.R.string.add))
+            }
+        }
+        if (error != null) {
+            Text(
+                text = stringRes(R.string.calendar_event_participant_invalid),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+        vm.participants.forEach { pubKey ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                com.vitorpamplona.amethyst.ui.note.ClickableUserPicture(
+                    baseUserHex = pubKey,
+                    size = com.vitorpamplona.amethyst.ui.theme.Size30dp,
+                    accountViewModel = accountViewModel,
+                )
+                com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser(
+                    baseUserHex = pubKey,
+                    accountViewModel = accountViewModel,
+                ) { user ->
+                    if (user != null) {
+                        com.vitorpamplona.amethyst.ui.note.UsernameDisplay(
+                            baseUser = user,
+                            weight = Modifier.weight(1f).padding(horizontal = 8.dp),
+                            accountViewModel = accountViewModel,
+                        )
+                    } else {
+                        Text(
+                            text = pubKey.take(8) + "…" + pubKey.takeLast(8),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                        )
+                    }
+                }
+                androidx.compose.material3.IconButton(onClick = { vm.removeParticipant(pubKey) }) {
+                    com.vitorpamplona.amethyst.commons.icons.symbols.Icon(
+                        symbol = com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols.Close,
+                        contentDescription = stringRes(R.string.calendar_event_participant_remove),
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Accepts a 64-char hex pubkey or an npub; returns the canonical hex form. Returns null when
+ * the input doesn't parse so the screen can surface the validation error.
+ */
+private fun resolvePubKeyOrNull(input: String): String? {
+    if (input.length == 64 && input.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }) {
+        return input.lowercase()
+    }
+    if (input.startsWith("npub")) {
+        return runCatching {
+            (
+                com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+                    .uriToRoute(input)
+                    ?.entity as? com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+            )?.hex
+        }.getOrNull()
+    }
+    return null
 }

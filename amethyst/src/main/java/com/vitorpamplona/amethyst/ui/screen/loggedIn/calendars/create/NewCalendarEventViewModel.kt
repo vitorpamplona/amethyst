@@ -20,14 +20,21 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.create
 
+import android.content.Context
+import android.net.Uri
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
+import com.vitorpamplona.amethyst.service.uploads.UploadingState
+import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.parseIsoDateToUnixSeconds
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import java.text.SimpleDateFormat
@@ -36,9 +43,11 @@ import java.util.Locale
 import java.util.TimeZone
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.image as dayImage
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.locations as dayLocations
+import com.vitorpamplona.quartz.nip52Calendar.appt.day.participants as dayParticipants
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.summary as daySummary
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.image as timeImage
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.locations as timeLocations
+import com.vitorpamplona.quartz.nip52Calendar.appt.time.participants as timeParticipants
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.summary as timeSummary
 
 class NewCalendarEventViewModel : ViewModel() {
@@ -56,6 +65,10 @@ class NewCalendarEventViewModel : ViewModel() {
     val endSeconds = mutableStateOf(0L)
 
     val isPublishing = mutableStateOf(false)
+    val isUploadingImage = mutableStateOf(false)
+
+    /** Participant pubkeys to embed as `p` tags on the published event. */
+    val participants = androidx.compose.runtime.mutableStateListOf<String>()
 
     /**
      * When non-null, [publish] preserves this d-tag and kind so the broadcast replaces an
@@ -102,6 +115,8 @@ class NewCalendarEventViewModel : ViewModel() {
                 hashtags.value = existing.hashtags().joinToString(", ")
                 startSeconds.value = existing.start() ?: 0L
                 endSeconds.value = existing.end() ?: 0L
+                participants.clear()
+                participants.addAll(existing.participants().map { it.pubKey })
             }
             is CalendarDateSlotEvent -> {
                 isAllDay.value = true
@@ -112,6 +127,8 @@ class NewCalendarEventViewModel : ViewModel() {
                 hashtags.value = existing.hashtags().joinToString(", ")
                 startSeconds.value = parseIsoDateToUnixSeconds(existing.start()) ?: 0L
                 endSeconds.value = parseIsoDateToUnixSeconds(existing.end()) ?: 0L
+                participants.clear()
+                participants.addAll(existing.participants().map { it.pubKey })
             }
         }
     }
@@ -119,6 +136,51 @@ class NewCalendarEventViewModel : ViewModel() {
     fun isValid(): Boolean = title.value.isNotBlank() && startSeconds.value > 0L
 
     fun isEndAfterStart(): Boolean = endSeconds.value == 0L || endSeconds.value >= startSeconds.value
+
+    fun addParticipant(pubKeyHex: String) {
+        val trimmed = pubKeyHex.trim()
+        if (trimmed.isBlank() || trimmed in participants) return
+        participants.add(trimmed)
+    }
+
+    fun removeParticipant(pubKeyHex: String) {
+        participants.remove(pubKeyHex)
+    }
+
+    /**
+     * Picks a single image from the gallery → uploads to the user's default file server →
+     * writes the resulting URL into [imageUrl]. Returns true on success so the screen can
+     * surface a toast on failure. Wraps [UploadOrchestrator.upload] with sensible defaults
+     * (MEDIUM quality, strip metadata, no content warning) so the calendar create screen
+     * doesn't have to drag in NewMediaModel's full surface area.
+     */
+    suspend fun uploadAndSetImage(
+        uri: Uri,
+        mimeType: String?,
+        context: Context,
+    ): Boolean {
+        if (!::account.isInitialized) return false
+        isUploadingImage.value = true
+        try {
+            val server = account.settings.defaultFileServer ?: DEFAULT_MEDIA_SERVERS[0]
+            val result =
+                UploadOrchestrator().upload(
+                    uri = uri,
+                    mimeType = mimeType,
+                    alt = title.value.ifBlank { null },
+                    contentWarningReason = null,
+                    compressionQuality = CompressorQuality.MEDIUM,
+                    server = server,
+                    account = account,
+                    context = context,
+                )
+            val serverResult =
+                (result as? UploadingState.Finished)?.result as? UploadOrchestrator.OrchestratorResult.ServerResult
+            return serverResult?.url?.also { imageUrl.value = it } != null
+        } finally {
+            isUploadingImage.value = false
+        }
+    }
 
     suspend fun publish(): Boolean {
         if (!isValid() || !isEndAfterStart()) return false
@@ -132,6 +194,7 @@ class NewCalendarEventViewModel : ViewModel() {
             val parsedSummary = summary.value.trim().takeIf { it.isNotBlank() }
             val parsedImage = imageUrl.value.trim().takeIf { it.isNotBlank() }
             val parsedLocation = location.value.trim().takeIf { it.isNotBlank() }
+            val parsedParticipants = participants.map { PTag(it) }
             val tzId = TimeZone.getDefault().id
             val targetDTag = editAddress?.dTag
 
@@ -149,6 +212,7 @@ class NewCalendarEventViewModel : ViewModel() {
                             parsedImage?.let { dayImage(it) }
                             parsedLocation?.let { dayLocations(listOf(it)) }
                             if (parsedHashtags.isNotEmpty()) hashtags(parsedHashtags)
+                            if (parsedParticipants.isNotEmpty()) dayParticipants(parsedParticipants)
                         }
                     } else {
                         CalendarDateSlotEvent.build(
@@ -161,6 +225,7 @@ class NewCalendarEventViewModel : ViewModel() {
                             parsedImage?.let { dayImage(it) }
                             parsedLocation?.let { dayLocations(listOf(it)) }
                             if (parsedHashtags.isNotEmpty()) hashtags(parsedHashtags)
+                            if (parsedParticipants.isNotEmpty()) dayParticipants(parsedParticipants)
                         }
                     },
                 )
@@ -180,6 +245,7 @@ class NewCalendarEventViewModel : ViewModel() {
                             parsedImage?.let { timeImage(it) }
                             parsedLocation?.let { timeLocations(listOf(it)) }
                             if (parsedHashtags.isNotEmpty()) hashtags(parsedHashtags)
+                            if (parsedParticipants.isNotEmpty()) timeParticipants(parsedParticipants)
                         }
                     } else {
                         CalendarTimeSlotEvent.build(
@@ -194,6 +260,7 @@ class NewCalendarEventViewModel : ViewModel() {
                             parsedImage?.let { timeImage(it) }
                             parsedLocation?.let { timeLocations(listOf(it)) }
                             if (parsedHashtags.isNotEmpty()) hashtags(parsedHashtags)
+                            if (parsedParticipants.isNotEmpty()) timeParticipants(parsedParticipants)
                         }
                     },
                 )
