@@ -24,7 +24,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,8 +40,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -57,6 +54,15 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.calendarStartSeconds
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+
+// Thread-safe and hoisted: previously each CalendarDateBadge recompose allocated a new
+// SimpleDateFormat, which (a) is not thread-safe and (b) created 500 allocations while scrolling.
+private val MonthShortFormatter: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("MMM", Locale.getDefault())
 
 @Composable
 fun CalendarEventListCard(
@@ -200,16 +206,12 @@ private fun CalendarDateBadge(note: Note) {
         return
     }
 
-    val cal =
-        java.util.Calendar
-            .getInstance()
-            .apply { timeInMillis = start * 1000 }
-    val day = cal.get(java.util.Calendar.DAY_OF_MONTH).toString()
-    val month =
-        java.text
-            .SimpleDateFormat("MMM", java.util.Locale.getDefault())
-            .format(cal.time)
-            .uppercase()
+    val localDate =
+        remember(start) {
+            Instant.ofEpochSecond(start).atZone(ZoneId.systemDefault()).toLocalDate()
+        }
+    val day = localDate.dayOfMonth.toString()
+    val month = remember(localDate) { MonthShortFormatter.format(localDate).uppercase() }
 
     Column(
         modifier =
@@ -232,8 +234,3 @@ private fun CalendarDateBadge(note: Note) {
         )
     }
 }
-
-// kept for symmetry with other feeds
-@Suppress("unused")
-private val FeedCardPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp)
-private val IconTintPlaceholder = ColorFilter.tint(Color.Gray)

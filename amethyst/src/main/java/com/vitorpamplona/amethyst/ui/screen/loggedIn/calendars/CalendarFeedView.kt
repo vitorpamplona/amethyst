@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.calendarEndSeconds
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.calendarStartSeconds
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -158,10 +159,13 @@ fun partitionUpcomingPast(items: List<Note>): UpcomingPastSplit {
     val upcoming = mutableListOf<Note>()
     val past = mutableListOf<Note>()
     items.forEach {
-        val s = it.calendarStartSeconds()
-        if (s != null && s >= now) {
+        val s = it.calendarStartSeconds() ?: return@forEach
+        // An event that started yesterday but ends tomorrow is "happening now", not over.
+        // Fall back to start when end is missing so the legacy single-instant behaviour is kept.
+        val effectiveEnd = it.calendarEndSeconds() ?: s
+        if (effectiveEnd >= now) {
             upcoming.add(it)
-        } else if (s != null) {
+        } else {
             past.add(it)
         }
     }

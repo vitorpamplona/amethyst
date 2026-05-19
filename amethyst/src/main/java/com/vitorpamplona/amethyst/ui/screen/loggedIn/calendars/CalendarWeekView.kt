@@ -59,7 +59,9 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.calendarStartSeconds
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.Calendar
 
 @Composable
@@ -83,7 +85,9 @@ fun CalendarWeekView(
         mutableStateOf(startOfWeekMs(today))
     }
 
-    val eventsByDay by remember(notes, weekStartMs) {
+    // groupByDayKey only depends on `notes`; keying on weekStartMs would needlessly recreate
+    // the derived state on every week navigation.
+    val eventsByDay by remember(notes) {
         derivedStateOf { groupByDayKey(notes) }
     }
 
@@ -115,10 +119,10 @@ fun CalendarWeekView(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        val selectedDayKey = dayKeyForOffset(weekStartMs, selectedDayIndex)
-        val dayNotes = eventsByDay[selectedDayKey].orEmpty()
+        val selectedDate = localDateForOffset(weekStartMs, selectedDayIndex)
+        val dayNotes = eventsByDay[selectedDate.toEpochDay()].orEmpty()
 
-        DaySummaryHeader(selectedDayKey)
+        DaySummaryHeader(selectedDate)
 
         if (dayNotes.isEmpty()) {
             Box(
@@ -197,8 +201,8 @@ private fun WeekStrip(
         for (i in 0..6) {
             cal.timeInMillis = weekStartMs
             cal.add(Calendar.DAY_OF_YEAR, i)
-            val dayKey = dayKeyForOffset(weekStartMs, i)
-            val count = eventsByDay[dayKey]?.size ?: 0
+            val date = localDateForOffset(weekStartMs, i)
+            val count = eventsByDay[date.toEpochDay()]?.size ?: 0
             val isToday =
                 cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR) &&
                     cal.get(Calendar.DAY_OF_YEAR) == todayCal.get(Calendar.DAY_OF_YEAR)
@@ -260,9 +264,9 @@ private fun WeekStrip(
 }
 
 @Composable
-private fun DaySummaryHeader(dayKeyUtcSeconds: Long) {
+private fun DaySummaryHeader(date: LocalDate) {
     Text(
-        text = formatLongDate(dayKeyUtcSeconds),
+        text = formatLongDate(date.atStartOfDay(ZoneId.systemDefault()).toEpochSecond()),
         style = MaterialTheme.typography.titleSmall,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.primary,
@@ -285,21 +289,11 @@ private fun startOfWeekMs(cal: Calendar): Long {
     return c.timeInMillis
 }
 
-private fun dayKeyForOffset(
+private fun localDateForOffset(
     weekStartMs: Long,
     offset: Int,
-): Long {
-    val cal = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
-    val local = Calendar.getInstance()
-    local.timeInMillis = weekStartMs + offset * MILLIS_PER_DAY
-    cal.clear()
-    cal.set(local.get(Calendar.YEAR), local.get(Calendar.MONTH), local.get(Calendar.DAY_OF_MONTH), 0, 0, 0)
-    return cal.timeInMillis / 1000
-}
-
-@Suppress("unused")
-fun startOfWeekMsForNote(note: Note): Long? {
-    val s = note.calendarStartSeconds() ?: return null
-    val cal = Calendar.getInstance().apply { timeInMillis = s * 1000 }
-    return startOfWeekMs(cal)
-}
+): LocalDate =
+    Instant
+        .ofEpochMilli(weekStartMs + offset * MILLIS_PER_DAY)
+        .atZone(ZoneId.systemDefault())
+        .toLocalDate()

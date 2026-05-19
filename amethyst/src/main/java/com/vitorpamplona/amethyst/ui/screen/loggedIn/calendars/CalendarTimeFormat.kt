@@ -29,7 +29,6 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import java.util.TimeZone
 
 private val DayMonthFormat = SimpleDateFormat("EEE, MMM d", Locale.getDefault())
 private val FullDateFormat = SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault())
@@ -94,16 +93,6 @@ fun formatShortWeekday(weekdayZeroBased: Int): String {
     return WeekdayShortFormat.format(cal.time)
 }
 
-fun startOfDayLocal(unixSeconds: Long): Long {
-    val cal = Calendar.getInstance()
-    cal.timeInMillis = unixSeconds * 1000
-    cal.set(Calendar.HOUR_OF_DAY, 0)
-    cal.set(Calendar.MINUTE, 0)
-    cal.set(Calendar.SECOND, 0)
-    cal.set(Calendar.MILLISECOND, 0)
-    return cal.timeInMillis / 1000
-}
-
 private fun isSameDay(
     aMs: Long,
     bMs: Long,
@@ -112,15 +101,4 @@ private fun isSameDay(
     val cb = Calendar.getInstance().apply { timeInMillis = bMs }
     return ca.get(Calendar.YEAR) == cb.get(Calendar.YEAR) &&
         ca.get(Calendar.DAY_OF_YEAR) == cb.get(Calendar.DAY_OF_YEAR)
-}
-
-/** Returns the unix second of the calendar day in UTC for an event start. Used to group events into day buckets. */
-fun dayKeyUtc(unixSeconds: Long): Long {
-    val cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
-    cal.timeInMillis = unixSeconds * 1000
-    cal.set(Calendar.HOUR_OF_DAY, 0)
-    cal.set(Calendar.MINUTE, 0)
-    cal.set(Calendar.SECOND, 0)
-    cal.set(Calendar.MILLISECOND, 0)
-    return cal.timeInMillis / 1000
 }

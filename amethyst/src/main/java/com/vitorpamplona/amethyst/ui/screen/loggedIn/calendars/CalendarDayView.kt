@@ -62,6 +62,9 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import java.util.Calendar
 
 @Composable
@@ -85,11 +88,13 @@ fun CalendarDayView(
         mutableStateOf(startOfDayMs(today))
     }
 
-    val byDay by remember(notes, dayMs) {
+    // groupByDayKey only depends on `notes`; keying on dayMs would needlessly recreate
+    // the derived state on every day navigation.
+    val byDay by remember(notes) {
         derivedStateOf { groupByDayKey(notes) }
     }
 
-    val dayKey = dayKeyForMs(dayMs)
+    val dayKey = localDateForMs(dayMs).toEpochDay()
     val dayEvents = byDay[dayKey].orEmpty()
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -262,10 +267,4 @@ private fun startOfDayMs(cal: Calendar): Long {
     return c.timeInMillis
 }
 
-private fun dayKeyForMs(ms: Long): Long {
-    val cal = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
-    val local = Calendar.getInstance().apply { timeInMillis = ms }
-    cal.clear()
-    cal.set(local.get(Calendar.YEAR), local.get(Calendar.MONTH), local.get(Calendar.DAY_OF_MONTH), 0, 0, 0)
-    return cal.timeInMillis / 1000
-}
+private fun localDateForMs(ms: Long): LocalDate = Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).toLocalDate()

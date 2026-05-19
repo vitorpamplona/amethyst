@@ -24,32 +24,35 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
-import java.text.SimpleDateFormat
-import java.util.Locale
-import java.util.TimeZone
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
-private val IsoDateParser =
-    SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
-        timeZone = TimeZone.getTimeZone("UTC")
-        isLenient = false
-    }
+// java.time formatters are thread-safe; the SimpleDateFormat predecessor was shared by sort
+// (background) and grouping (UI) paths and could throw under concurrent use.
+private val IsoDateParser: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE
 
-/**
- * Calendar 31922 carries an ISO date string. Parsed in UTC so day-only events compare
- * predictably across viewers in different time zones.
- */
-fun parseIsoDateToUnixSeconds(date: String?): Long? {
+private fun parseIsoDate(date: String?): LocalDate? {
     if (date.isNullOrBlank()) return null
     return try {
-        IsoDateParser.parse(date)?.time?.div(1000)
+        LocalDate.parse(date, IsoDateParser)
     } catch (_: Throwable) {
         null
     }
 }
 
 /**
- * Unified start time as unix-seconds for any NIP-52 calendar appointment.
- * Returns null when neither slot kind is present or the start cannot be parsed.
+ * Calendar 31922 carries a calendar date (no instant). Anchor it at local midnight so that
+ * "Jan 15" lands on Jan 15 in the user's grid and ordering reflects their local zone — UTC
+ * anchoring made date-only events appear a day early west of UTC.
+ */
+fun parseIsoDateToUnixSeconds(date: String?): Long? = parseIsoDate(date)?.atStartOfDay(ZoneId.systemDefault())?.toEpochSecond()
+
+/**
+ * Unified start time as unix-seconds. For 31923 (time-slot) this is the event's instant; for
+ * 31922 (date-slot) it is local midnight of the calendar date. Both are suitable for ordering
+ * against [TimeUtils.now] and for relative-time rendering.
  */
 fun Note.calendarStartSeconds(): Long? =
     when (val e = event) {
@@ -66,32 +69,55 @@ fun Note.calendarEndSeconds(): Long? =
     }
 
 /**
- * Sort by: upcoming events ascending (closest first), then past events descending (most-recent first).
- * Falls back to createdAt + id when start is missing so the order remains stable.
+ * Calendar-day bucket key (days since 1970-01-01) for grouping events into day cells.
+ *
+ * For 31923, the event's instant is converted to the viewer's local date; for 31922, the ISO
+ * date string is parsed directly with no zone conversion (a calendar date for "Jan 15" must
+ * land on Jan 15 in every zone). Returns null when the start cannot be resolved.
  */
-val UpcomingFirstCalendarOrder: Comparator<Note> =
+fun Note.calendarLocalDayKey(): Long? =
+    when (val e = event) {
+        is CalendarTimeSlotEvent ->
+            e.start()?.let {
+                Instant
+                    .ofEpochSecond(it)
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate()
+                    .toEpochDay()
+            }
+        is CalendarDateSlotEvent -> parseIsoDate(e.start())?.toEpochDay()
+        else -> null
+    }
+
+/**
+ * Sort by: upcoming events ascending (closest first), then past events descending (most-recent
+ * first). [nowSeconds] is captured once per sort so the comparator stays transitive across the
+ * full sort run — reading the clock inside `compare` would violate the [Comparator] contract on
+ * boundary elements.
+ */
+fun upcomingFirstCalendarOrder(nowSeconds: Long): Comparator<Note> =
     Comparator { a, b ->
-        val now = TimeUtils.now()
         val sa = a.calendarStartSeconds()
         val sb = b.calendarStartSeconds()
 
-        when {
-            sa == null && sb == null -> compareCreatedAt(a, b)
-            sa == null -> 1
-            sb == null -> -1
-            else -> {
-                val aUpcoming = sa >= now
-                val bUpcoming = sb >= now
-                when {
-                    aUpcoming && !bUpcoming -> -1
-                    !aUpcoming && bUpcoming -> 1
-                    aUpcoming -> sa.compareTo(sb) // both future: nearest first
-                    else -> sb.compareTo(sa) // both past: most recent first
+        val primary =
+            when {
+                sa == null && sb == null -> compareCreatedAt(a, b)
+                sa == null -> 1
+                sb == null -> -1
+                else -> {
+                    val aUpcoming = sa >= nowSeconds
+                    val bUpcoming = sb >= nowSeconds
+                    when {
+                        aUpcoming && !bUpcoming -> -1
+                        !aUpcoming && bUpcoming -> 1
+                        aUpcoming -> sa.compareTo(sb) // both future: nearest first
+                        else -> sb.compareTo(sa) // both past: most recent first
+                    }
                 }
             }
-        }.let { primary ->
-            if (primary != 0) primary else a.idHex.compareTo(b.idHex)
-        }
+
+        if (primary != 0) primary else a.idHex.compareTo(b.idHex)
     }
 
 private fun compareCreatedAt(

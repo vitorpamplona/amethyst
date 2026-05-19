@@ -49,7 +49,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -62,7 +61,8 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.calendarStartSeconds
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.calendarLocalDayKey
+import java.time.LocalDate
 import java.util.Calendar
 
 @Composable
@@ -85,7 +85,9 @@ fun CalendarMonthView(
     var year by rememberSaveable { mutableStateOf(today.get(Calendar.YEAR)) }
     var month by rememberSaveable { mutableStateOf(today.get(Calendar.MONTH)) }
 
-    val eventsByDay by remember(notes, year, month) {
+    // groupByDayKey only depends on `notes`; keying on year/month would needlessly recreate
+    // the derived state on every month navigation.
+    val eventsByDay by remember(notes) {
         derivedStateOf { groupByDayKey(notes) }
     }
 
@@ -226,10 +228,8 @@ private fun MonthGrid(
                     val cellIndex = r * 7 + c
                     val dayNumber = cellIndex - firstWeekday + 1
                     if (dayNumber in 1..daysInMonth) {
-                        val dayCal = Calendar.getInstance()
-                        dayCal.clear()
-                        dayCal.set(year, month, dayNumber, 0, 0, 0)
-                        val dayKey = utcDayKey(year, month, dayNumber)
+                        // Calendar.MONTH is 0-based; LocalDate.of's month is 1-based.
+                        val dayKey = LocalDate.of(year, month + 1, dayNumber).toEpochDay()
                         val dayEvents = eventsByDay[dayKey].orEmpty()
                         DayCell(
                             modifier = Modifier.weight(1f),
@@ -326,32 +326,16 @@ private fun EventDotRow(eventCount: Int) {
     }
 }
 
+/**
+ * Buckets events by local calendar day (returned as `LocalDate.toEpochDay`). Time-slot events
+ * land on the viewer's local date; date-slot events use the ISO date verbatim so "Jan 15" stays
+ * on Jan 15 in every zone.
+ */
 fun groupByDayKey(notes: List<Note>): Map<Long, List<Note>> {
     val map = mutableMapOf<Long, MutableList<Note>>()
     notes.forEach {
-        val start = it.calendarStartSeconds() ?: return@forEach
-        val dayKey = utcDayKeyFromSeconds(start)
+        val dayKey = it.calendarLocalDayKey() ?: return@forEach
         map.getOrPut(dayKey) { mutableListOf() }.add(it)
     }
     return map
 }
-
-private fun utcDayKey(
-    year: Int,
-    month: Int,
-    day: Int,
-): Long {
-    val cal = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
-    cal.clear()
-    cal.set(year, month, day, 0, 0, 0)
-    return cal.timeInMillis / 1000
-}
-
-private fun utcDayKeyFromSeconds(unixSeconds: Long): Long {
-    val cal = Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
-    cal.timeInMillis = unixSeconds * 1000
-    return utcDayKey(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH))
-}
-
-@Suppress("unused")
-private val UnusedShape = RectangleShape

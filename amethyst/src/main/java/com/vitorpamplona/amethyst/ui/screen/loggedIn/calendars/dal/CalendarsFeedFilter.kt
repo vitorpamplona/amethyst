@@ -72,5 +72,11 @@ class CalendarsFeedFilter(
         }
     }
 
-    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(UpcomingFirstCalendarOrder)
+    override fun sort(items: Set<Note>): List<Note> =
+        items.sortedWith(
+            upcomingFirstCalendarOrder(
+                com.vitorpamplona.quartz.utils.TimeUtils
+                    .now(),
+            ),
+        )
 }
