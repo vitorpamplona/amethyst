@@ -62,8 +62,6 @@ import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
-import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
-import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
@@ -155,16 +153,28 @@ class EventNotificationConsumer(
             // p-tag the account AND pass NotificationFeedFilter.tagsAnEventByUser
             // — the latter is the per-kind "is this actually for me" rule
             // (reply-to-me, citation of my post, fork of my content, community
-            // moderation, reaction/repost targeting my note, etc.). Keeping
-            // these in lockstep means anything that surfaces in the feed will
-            // also be a push candidate and vice versa.
+            // moderation, reaction targeting my note, etc.). WakeUpEvent is the
+            // one exception: its [Event.notifies] is `true` unconditionally so
+            // every signed-in account processes it (the dispatcher bypasses
+            // the same way).
+            //
+            // One LocalCache lookup per event regardless of account count —
+            // the note is the same for every saved account.
+            val matchingNote: Note? =
+                if (event is WakeUpEvent) {
+                    null
+                } else {
+                    LocalCache.getNoteIfExists(event.id) ?: return@withWakeLock
+                }
+
             LocalPreferences.allSavedAccounts().forEach { savedAccount ->
                 if (!savedAccount.hasPrivKey && !savedAccount.loggedInWithExternalSigner) return@forEach
 
                 val accountHex = npubToHexOrNull(savedAccount.npub) ?: return@forEach
-                if (!event.isTaggedUser(accountHex)) return@forEach
-                val note = LocalCache.getNoteIfExists(event.id) ?: return@forEach
-                if (!NotificationFeedFilter.tagsAnEventByUser(note, accountHex)) return@forEach
+                if (matchingNote != null) {
+                    if (!event.isTaggedUser(accountHex)) return@forEach
+                    if (!NotificationFeedFilter.tagsAnEventByUser(matchingNote, accountHex)) return@forEach
+                }
 
                 val accountSettings = LocalPreferences.loadAccountConfigFromEncryptedStorage(savedAccount.npub) ?: return@forEach
                 try {
@@ -213,13 +223,13 @@ class EventNotificationConsumer(
         // to repeat either check.
         if (event.pubKey == account.signer.pubKey) return
 
-        // Mirror NotificationFeedFilter: reactions/zaps/reposts target a note
-        // via `replyTo`, not via thread-root tags on the wrapper event, so
-        // checking the wrapper's own thread misses them. Resolve the target
-        // and drop if its thread is muted.
-        if (event is ReactionEvent || event is LnZapEvent ||
-            event is RepostEvent || event is GenericRepostEvent
-        ) {
+        // Mirror NotificationFeedFilter: reactions and zaps target a note via
+        // `replyTo`, not via thread-root tags on the wrapper event, so checking
+        // the wrapper's own thread misses them. Resolve the target and drop if
+        // its thread is muted. (The feed extends this to reposts too, but
+        // RepostEvent / GenericRepostEvent aren't routed below — push doesn't
+        // notify on reposts at all today.)
+        if (event is ReactionEvent || event is LnZapEvent) {
             val target = LocalCache.getNoteIfExists(event.id)?.replyTo?.lastOrNull()
             if (target != null && account.isThreadMuted(account.resolveThreadRoot(target))) return
         }

@@ -175,20 +175,29 @@ class NotificationDispatcher(
                         //   matches the downstream per-channel policy. Calls
                         //   use a stricter 20s check in notifyIncomingCall so
                         //   they still pass through.
-                        // - isTaggedUser + tagsAnEventByUser for any account —
-                        //   same pair the in-app Notifications feed uses, so
+                        // - WakeUpEvent bypasses recipient matching: its
+                        //   [Event.notifies] is `true` unconditionally, meaning
+                        //   "wake every signed-in account" (p-tags on a WakeUp
+                        //   name referenced-event authors, not recipients).
+                        // - Everything else uses isTaggedUser + tagsAnEventByUser
+                        //   — same pair the in-app Notifications feed uses, so
                         //   push and feed agree on what counts as a mention,
                         //   reply, citation, fork, or community moderation.
-                        val predicate = { event: Event ->
-                            event.kind in NOTIFICATION_KINDS &&
-                                event.createdAt >= dispatcherSince &&
-                                event.createdAt >= TimeUtils.fifteenMinutesAgo() &&
-                                pubkeys.any { pubkey ->
-                                    event.isTaggedUser(pubkey) &&
-                                        LocalCache.getNoteIfExists(event.id)?.let {
-                                            NotificationFeedFilter.tagsAnEventByUser(it, pubkey)
-                                        } == true
-                                }
+                        //   Note: NIP-22 CommentEvents where the user is only
+                        //   the root author (uppercase `P`) no longer match —
+                        //   intentional alignment with the feed, which gates
+                        //   on lowercase `p` only.
+                        val predicate = predicate@{ event: Event ->
+                            if (event.kind !in NOTIFICATION_KINDS) return@predicate false
+                            if (event.createdAt < dispatcherSince) return@predicate false
+                            if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return@predicate false
+                            if (event is WakeUpEvent) return@predicate true
+
+                            val note = LocalCache.getNoteIfExists(event.id) ?: return@predicate false
+                            pubkeys.any { pubkey ->
+                                event.isTaggedUser(pubkey) &&
+                                    NotificationFeedFilter.tagsAnEventByUser(note, pubkey)
+                            }
                         }
 
                         LocalCache
