@@ -52,8 +52,13 @@ class CalendarReminderWorker(
     params: WorkerParameters,
 ) : CoroutineWorker(appContext, params) {
     override suspend fun doWork(): Result {
+        val prefs = CalendarReminderPrefs(applicationContext)
+        if (!prefs.isEnabled()) {
+            Log.d(TAG) { "Reminders disabled; skipping scan." }
+            return Result.success()
+        }
         val now = TimeUtils.now()
-        val windowEnd = now + LEAD_TIME_SECONDS
+        val windowEnd = now + prefs.leadMinutes() * 60L
         val store = CalendarReminderStore(applicationContext)
 
         // Walk every kind-31925 RSVP authored by an account on this device. We don't have a
@@ -67,7 +72,7 @@ class CalendarReminderWorker(
                     e is CalendarRSVPEvent && e.status() == RSVPStatusTag.STATUS.ACCEPTED
                 }.mapNotNull { it.event as? CalendarRSVPEvent }
 
-        Log.d(TAG) { "Worker scanning ${acceptedRsvps.size} accepted RSVPs (now=$now, lead=${LEAD_TIME_SECONDS}s)" }
+        Log.d(TAG) { "Worker scanning ${acceptedRsvps.size} accepted RSVPs (now=$now, lead=${prefs.leadMinutes()}m)" }
 
         acceptedRsvps.forEach { rsvp ->
             val targetAddress = rsvp.calendarEventAddress() ?: return@forEach
@@ -109,11 +114,6 @@ class CalendarReminderWorker(
     companion object {
         private const val TAG = "CalendarReminderWorker"
         private const val WORK_NAME = "calendar_reminder_worker"
-
-        // 15 minutes — the WorkManager periodic minimum is also 15 min, so the worst-case
-        // latency is one full cycle. Calendar apps typically use 5/10/15 min lead options;
-        // we hard-code 15 to match the worker cadence.
-        private const val LEAD_TIME_SECONDS = 15L * 60L
 
         // Don't bother remembering "I notified for this" entries for events whose start was
         // more than a day ago; they can't fire again so the entry is pure overhead.

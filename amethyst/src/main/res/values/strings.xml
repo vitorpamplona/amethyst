@@ -1999,6 +1999,12 @@
     <string name="calendar_event_participant_input">npub or hex pubkey</string>
     <string name="calendar_event_participant_invalid">Enter a valid npub… or 64-character hex pubkey.</string>
     <string name="calendar_event_participant_remove">Remove participant</string>
+    <string name="calendar_reminder_settings_title">Calendar reminders</string>
+    <string name="calendar_reminder_settings_enabled_title">Send reminders</string>
+    <string name="calendar_reminder_settings_enabled_subtitle">A notification fires when an event you\'re attending is about to start.</string>
+    <string name="calendar_reminder_settings_lead_title">Reminder lead time</string>
+    <string name="calendar_reminder_settings_lead_subtitle">How many minutes before the event you want to be notified.</string>
+    <string name="calendar_reminder_settings_lead_choice">%1$d min</string>
     <string name="calendar_open_in_maps">Open in maps</string>
     <string name="route_calendar_event_detail">Event details</string>
     <string name="new_short_video">New Short Video</string>
