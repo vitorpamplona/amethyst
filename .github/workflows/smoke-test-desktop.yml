@@ -125,13 +125,18 @@ jobs:
 
       - name: Install .deb
         run: |
-          set -euo pipefail
-          # --force-all: jpackage's post-install script runs xdg-desktop-menu
-          # which fails on CI runners ("No writable system menu directory").
-          # The menu registration is irrelevant for smoke testing.
-          sudo dpkg -i --force-all desktopApp/build/compose/binaries/main-release/deb/*.deb
+          # jpackage's post-install script runs xdg-desktop-menu which fails
+          # on CI runners ("No writable system menu directory"). The files are
+          # extracted successfully; only the menu registration fails. Allow the
+          # dpkg error, then verify the binary was actually installed.
+          sudo dpkg -i desktopApp/build/compose/binaries/main-release/deb/*.deb || true
           echo "Installed files:"
           dpkg -L amethyst | head -30
+          # Fail if the binary wasn't actually extracted
+          test -d /opt/amethyst || test -d /opt/Amethyst || {
+            echo "FAIL: /opt/amethyst not found after dpkg -i"
+            exit 1
+          }
 
       - name: Smoke test — app launches and stays alive
         run: |
