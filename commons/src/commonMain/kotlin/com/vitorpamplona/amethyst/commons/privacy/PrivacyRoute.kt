@@ -18,36 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.relay.normalizer
+package com.vitorpamplona.amethyst.commons.privacy
 
-import androidx.compose.runtime.Stable
+// Outcome of PrivacyRouter.route. Either an actionable transport, or Blocked
+// when a hidden-service hostname cannot be reached (matching daemon is OFF)
+// and we fail closed rather than leak the request over the clearnet.
+sealed interface PrivacyRoute {
+    data object Direct : PrivacyRoute
 
-@Stable
-data class NormalizedRelayUrl(
-    val url: String,
-) : Comparable<NormalizedRelayUrl> {
-    override fun compareTo(other: NormalizedRelayUrl) = url.compareTo(other.url)
+    data object Tor : PrivacyRoute
+
+    data object I2p : PrivacyRoute
+
+    // Hidden-service request whose matching daemon is disabled. Callers must
+    // surface this as a visible failure — don't fall back to DIRECT.
+    data class Blocked(
+        val reason: BlockReason,
+    ) : PrivacyRoute
 }
 
-fun NormalizedRelayUrl.displayUrl() =
-    url
-        .removePrefix("wss://")
-        .removePrefix("ws://")
-        .removeSuffix("/")
-
-fun NormalizedRelayUrl.toHttp() =
-    if (url.startsWith("wss://")) {
-        "https${url.drop(3)}"
-    } else if (url.startsWith("ws://")) {
-        "http${url.drop(2)}"
-    } else {
-        "https://$url"
-    }
-
-fun NormalizedRelayUrl.isOnion() = url.contains(".onion/")
-
-fun NormalizedRelayUrl.isI2p() = RelayUrlNormalizer.isI2p(this.url)
-
-fun NormalizedRelayUrl.isLocalHost() = RelayUrlNormalizer.isLocalHost(this.url)
-
-fun NormalizedRelayUrl.classifyHidden(): HiddenServiceKind = RelayUrlNormalizer.classifyHidden(this.url)
+enum class BlockReason {
+    ONION_REQUIRES_TOR,
+    I2P_REQUIRES_I2P,
+}

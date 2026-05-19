@@ -18,36 +18,31 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.relay.normalizer
+package com.vitorpamplona.amethyst.commons.i2p
 
-import androidx.compose.runtime.Stable
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isI2p
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 
-@Stable
-data class NormalizedRelayUrl(
-    val url: String,
-) : Comparable<NormalizedRelayUrl> {
-    override fun compareTo(other: NormalizedRelayUrl) = url.compareTo(other.url)
+class I2pRelayEvaluation(
+    val i2pSettings: I2pRelaySettings,
+    val trustedRelayList: Set<NormalizedRelayUrl>,
+    val dmRelayList: Set<NormalizedRelayUrl>,
+) {
+    fun useI2p(relay: NormalizedRelayUrl): Boolean =
+        if (i2pSettings.i2pType == I2pType.OFF) {
+            false
+        } else {
+            if (relay.isLocalHost()) {
+                false
+            } else if (relay.isI2p()) {
+                i2pSettings.i2pRelaysViaI2p
+            } else if (relay in dmRelayList) {
+                i2pSettings.dmRelaysViaI2p
+            } else if (relay in trustedRelayList) {
+                i2pSettings.trustedRelaysViaI2p
+            } else {
+                i2pSettings.newRelaysViaI2p
+            }
+        }
 }
-
-fun NormalizedRelayUrl.displayUrl() =
-    url
-        .removePrefix("wss://")
-        .removePrefix("ws://")
-        .removeSuffix("/")
-
-fun NormalizedRelayUrl.toHttp() =
-    if (url.startsWith("wss://")) {
-        "https${url.drop(3)}"
-    } else if (url.startsWith("ws://")) {
-        "http${url.drop(2)}"
-    } else {
-        "https://$url"
-    }
-
-fun NormalizedRelayUrl.isOnion() = url.contains(".onion/")
-
-fun NormalizedRelayUrl.isI2p() = RelayUrlNormalizer.isI2p(this.url)
-
-fun NormalizedRelayUrl.isLocalHost() = RelayUrlNormalizer.isLocalHost(this.url)
-
-fun NormalizedRelayUrl.classifyHidden(): HiddenServiceKind = RelayUrlNormalizer.classifyHidden(this.url)

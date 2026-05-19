@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
+import com.vitorpamplona.amethyst.commons.privacy.PrivacyRoute
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -36,6 +38,7 @@ class DualHttpClientManagerForRelays(
     isMobileDataProvider: StateFlow<Boolean?>,
     scope: CoroutineScope,
     dns: SurgeDns,
+    private val i2pProxyPortProvider: StateFlow<Int?> = MutableStateFlow(null),
 ) : IHttpClientManager {
     val factory = OkHttpClientFactoryForRelays(userAgent, dns)
 
@@ -58,7 +61,18 @@ class DualHttpClientManagerForRelays(
                 factory.buildHttpClient(isMobileDataProvider.value),
             )
 
+    val i2pHttpClient: StateFlow<OkHttpClient> =
+        combine(i2pProxyPortProvider, isMobileDataProvider) { proxy, mobile ->
+            factory.buildHttpClient(proxy, mobile)
+        }.stateIn(
+            scope,
+            SharingStarted.WhileSubscribed(1000),
+            factory.buildHttpClient(i2pProxyPortProvider.value, isMobileDataProvider.value),
+        )
+
     fun getCurrentProxy(): Proxy? = defaultHttpClient.value.proxy
+
+    fun getCurrentI2pProxy(): Proxy? = i2pHttpClient.value.proxy
 
     override fun getCurrentProxyPort(useProxy: Boolean): Int? =
         if (useProxy) {
@@ -72,5 +86,21 @@ class DualHttpClientManagerForRelays(
             defaultHttpClient.value
         } else {
             defaultHttpClientWithoutProxy.value
+        }
+
+    fun getHttpClient(route: PrivacyRoute): OkHttpClient =
+        when (route) {
+            PrivacyRoute.Direct -> defaultHttpClientWithoutProxy.value
+            PrivacyRoute.Tor -> defaultHttpClient.value
+            PrivacyRoute.I2p -> i2pHttpClient.value
+            is PrivacyRoute.Blocked -> throw DualHttpClientManager.blockedException(route.reason)
+        }
+
+    fun getCurrentProxyPort(route: PrivacyRoute): Int? =
+        when (route) {
+            PrivacyRoute.Direct -> null
+            PrivacyRoute.Tor -> (getCurrentProxy()?.address() as? InetSocketAddress)?.port
+            PrivacyRoute.I2p -> (getCurrentI2pProxy()?.address() as? InetSocketAddress)?.port
+            is PrivacyRoute.Blocked -> throw DualHttpClientManager.blockedException(route.reason)
         }
 }

@@ -48,6 +48,16 @@ class RelayUrlNormalizer {
 
         fun isOnion(url: String) = url.endsWith(".onion") || url.contains(".onion/")
 
+        fun isI2p(url: String) = url.endsWith(".i2p") || url.contains(".i2p/")
+
+        fun classifyHidden(url: String): HiddenServiceKind =
+            when {
+                isLocalHost(url) -> HiddenServiceKind.LOCALHOST
+                isOnion(url) -> HiddenServiceKind.ONION
+                isI2p(url) -> HiddenServiceKind.I2P
+                else -> HiddenServiceKind.CLEARNET
+            }
+
         fun isRelaySchemePrefix(url: String) = url.length > 6 && url[0] == 'w' && url[1] == 's'
 
         fun isRelaySchemePrefixSecure(url: String) = url[2] == 's' && url[3] == ':' && url[4] == '/' && url[5] == '/' && url[6] != '/'
@@ -149,7 +159,7 @@ class RelayUrlNormalizer {
                 return null
             }
 
-            return if (isOnion(trimmed) || isLocalHost(trimmed)) {
+            return if (isOnion(trimmed) || isI2p(trimmed) || isLocalHost(trimmed)) {
                 "ws://$trimmed"
             } else {
                 "wss://$trimmed"

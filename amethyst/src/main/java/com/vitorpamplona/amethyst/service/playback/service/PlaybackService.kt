@@ -34,7 +34,6 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.service.okhttp.DynamicCallFactory
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.service.playback.playerPool.ExoPlayerBuilder
@@ -44,15 +43,19 @@ import com.vitorpamplona.amethyst.service.playback.playerPool.SimultaneousPlayba
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.runBlocking
+import okhttp3.Call
 
 class PlaybackService : MediaSessionService() {
-    private var poolNoProxy: MediaSessionPool? = null
-    private var poolWithProxy: MediaSessionPool? = null
+    // One pool per distinct SOCKS port. With three privacy transports we have at
+    // most three pools (direct/0, Tor port, I2P port). Each pool's call factory is
+    // bound to its port so a transport switch via the privacy picker just creates
+    // a new pool instead of misrouting traffic through an old one.
+    private val poolsByPort = mutableMapOf<Int, MediaSessionPool>()
 
     @OptIn(UnstableApi::class)
     fun newPool(
         videoCache: VideoCache,
-        okHttpClient: DynamicCallFactory,
+        okHttpClient: Call.Factory,
         blossomServerResolver: BlossomServerResolver,
     ): MediaSessionPool {
         val dataSourceFactory = OkHttpDataSource.Factory(okHttpClient)
@@ -96,39 +99,20 @@ class PlaybackService : MediaSessionService() {
 
     @OptIn(UnstableApi::class)
     fun lazyPool(proxyPort: Int): MediaSessionPool {
-        return if (proxyPort <= 0) {
-            // no proxy
-            poolNoProxy?.let { return it }
+        // Normalize all "no proxy" intents onto port 0 so direct callers share a pool.
+        val key = if (proxyPort < 0) 0 else proxyPort
+        poolsByPort[key]?.let { return it }
 
-            val okHttpClient = Amethyst.instance.okHttpClients.getDynamicCallFactory(false)
-            val videoCache = Amethyst.instance.videoCache
-            val blossomServerResolver = Amethyst.instance.blossomResolver
+        val okHttpClient = Amethyst.instance.okHttpClients.getDynamicCallFactoryForPort(key)
+        val videoCache = Amethyst.instance.videoCache
+        val blossomServerResolver = Amethyst.instance.blossomResolver
 
-            // creates new
-            newPool(videoCache, okHttpClient, blossomServerResolver)
-                .also {
-                    poolNoProxy = it
-                    // Kick off the player pool warmup as soon as we know this pool is being used.
-                    // It runs async on the main looper, yielding between builds, so the very first
-                    // session still acquires synchronously while subsequent ones can grab a warm
-                    // ExoPlayer instead of paying the build cost on the main thread.
-                    it.exoPlayerPool.create(applicationContext)
-                }
-        } else {
-            poolWithProxy?.let { return it }
-
-            // creates brand new
-            // proxy port can change without affecting the pool because
-            // the choice of okhttp is resolved in newCall
-            val okHttpClient = Amethyst.instance.okHttpClients.getDynamicCallFactory(true)
-            val videoCache = Amethyst.instance.videoCache
-            val blossomServerResolver = Amethyst.instance.blossomResolver
-
-            newPool(videoCache, okHttpClient, blossomServerResolver)
-                .also {
-                    poolWithProxy = it
-                    it.exoPlayerPool.create(applicationContext)
-                }
+        return newPool(videoCache, okHttpClient, blossomServerResolver).also {
+            poolsByPort[key] = it
+            // Warm up the ExoPlayer pool for the first use of this transport so the very
+            // first session acquires synchronously while subsequent ones grab a warm
+            // ExoPlayer instead of paying the build cost on the main thread.
+            it.exoPlayerPool.create(applicationContext)
         }
     }
 
@@ -140,8 +124,8 @@ class PlaybackService : MediaSessionService() {
     override fun onDestroy() {
         Log.d("PlaybackService", "PlaybackService.onDestroy")
 
-        poolWithProxy?.destroy()
-        poolNoProxy?.destroy()
+        poolsByPort.values.forEach { it.destroy() }
+        poolsByPort.clear()
         super.onDestroy()
     }
 
@@ -161,12 +145,11 @@ class PlaybackService : MediaSessionService() {
         // 2. b. On screen video with volume on
         // 2. c. On screen video with volume off.
 
-        val playing = (poolWithProxy?.playingContent() ?: emptyList()) + (poolNoProxy?.playingContent() ?: emptyList())
+        val playing = poolsByPort.values.flatMap { it.playingContent() }
 
-        // if nothing is pl
         if (playing.isEmpty() && BackgroundMedia.hasInstance()) {
             BackgroundMedia.bgInstance?.id?.let { id ->
-                (poolNoProxy?.getSession(id) ?: poolWithProxy?.getSession(id))?.let {
+                poolsByPort.values.firstNotNullOfOrNull { it.getSession(id) }?.let {
                     super.onUpdateNotification(it, startInForegroundRequired)
                 }
             }
