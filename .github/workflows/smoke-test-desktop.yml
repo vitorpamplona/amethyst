@@ -1,0 +1,174 @@
+# ⚠️  WARNING: Before merging, change the trigger back to workflow_dispatch only.
+# The pull_request trigger is temporary so we can validate this workflow on the PR
+# and attach run results as proof-of-work. Production trigger should be:
+#
+#   on:
+#     workflow_dispatch:
+#     pull_request:
+#       paths:
+#         - 'desktopApp/build.gradle.kts'
+#         - 'desktopApp/compose-rules.pro'
+#         - '.github/workflows/smoke-test-desktop.yml'
+#
+name: Desktop Smoke Test
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # -------------------------------------------------------------------------
+  # 1) Compose UI test — verifies the composable tree renders (login screen)
+  #    under the dev classpath. Catches missing string resources, broken
+  #    composables, and basic dependency-graph issues.
+  # -------------------------------------------------------------------------
+  compose-ui-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: 21
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      - name: Install xvfb
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+
+      - name: Run desktop tests (including UI smoke test)
+        run: xvfb-run --auto-servernum ./gradlew :desktopApp:test
+
+  # -------------------------------------------------------------------------
+  # 2) Release .deb build + launch — builds the ProGuard'd, jlink'd .deb
+  #    package, installs it, and verifies the process stays alive for 10s.
+  #    Catches ProGuard stripping (JNI, reflection), missing jlink modules
+  #    (java.management, java.prefs), and native lib bundling issues.
+  # -------------------------------------------------------------------------
+  release-deb-launch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: 21
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      - name: Cache vlc-setup downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/vlcSetup
+          key: vlcsetup-Linux-${{ hashFiles('desktopApp/build.gradle.kts') }}
+          restore-keys: |
+            vlcsetup-Linux-
+
+      - name: Pre-fetch VLC + UPX archives
+        env:
+          VLC_VERSION: "3.0.20"
+          UPX_VERSION: "4.2.4"
+        run: |
+          set -euo pipefail
+          DEST="$HOME/.gradle/vlcSetup"
+          mkdir -p "$DEST"
+          fetch() {
+            local url="$1" out="$2"
+            if [[ -s "$out" ]]; then echo "cached: $out"; return 0; fi
+            echo "fetching: $url"
+            curl -fL --retry 10 --retry-delay 5 --retry-all-errors \
+                 --retry-max-time 900 --connect-timeout 30 \
+                 -o "$out.part" "$url"
+            mv "$out.part" "$out"
+          }
+          fetch "https://repo1.maven.org/maven2/ir/mahozad/vlc-plugins-linux/${VLC_VERSION}/vlc-plugins-linux-${VLC_VERSION}.jar" \
+                "$DEST/vlc-${VLC_VERSION}.jar"
+          fetch "https://github.com/upx/upx/releases/download/v${UPX_VERSION}/upx-${UPX_VERSION}-amd64_linux.tar.xz" \
+                "$DEST/upx-${UPX_VERSION}.tar.xz"
+
+      - name: Install xvfb + packaging deps
+        run: sudo apt-get update && sudo apt-get install -y xvfb fakeroot
+
+      - name: Build release .deb
+        uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0
+        with:
+          max_attempts: 2
+          timeout_minutes: 20
+          command: ./gradlew --no-daemon :desktopApp:packageReleaseDeb
+
+      - name: Relax libicu dependency
+        run: |
+          set -euo pipefail
+          chmod +x scripts/relax-deb-libicu.sh
+          scripts/relax-deb-libicu.sh desktopApp/build/compose/binaries/main-release/deb/*.deb
+
+      - name: Install .deb
+        run: |
+          set -euo pipefail
+          sudo dpkg -i desktopApp/build/compose/binaries/main-release/deb/*.deb
+          echo "Installed files:"
+          dpkg -L amethyst | head -30
+
+      - name: Smoke test — app launches and stays alive
+        run: |
+          set -euo pipefail
+
+          # Find the launcher binary
+          LAUNCHER=$(find /opt -name "Amethyst" -type f -executable 2>/dev/null | head -1)
+          if [[ -z "$LAUNCHER" ]]; then
+            # Fallback: search dpkg file list
+            LAUNCHER=$(dpkg -L amethyst | grep -E '/bin/[Aa]methyst$' | head -1)
+          fi
+          if [[ -z "$LAUNCHER" ]]; then
+            echo "FAIL: could not find Amethyst launcher binary"
+            dpkg -L amethyst
+            exit 1
+          fi
+          echo "Launcher: $LAUNCHER"
+
+          # Launch under xvfb with a timeout safety net
+          xvfb-run --auto-servernum timeout 30 "$LAUNCHER" &
+          APP_PID=$!
+          echo "PID: $APP_PID"
+
+          # Wait 10s — if the process is still alive, the app launched successfully
+          sleep 10
+
+          if kill -0 "$APP_PID" 2>/dev/null; then
+            echo "PASS: Application launched and stayed alive for 10s"
+            kill "$APP_PID" || true
+            wait "$APP_PID" 2>/dev/null || true
+          else
+            wait "$APP_PID" 2>/dev/null
+            EXIT_CODE=$?
+            echo "FAIL: Application exited with code $EXIT_CODE within 10s"
+            exit 1
+          fi
+
+      - name: Upload .deb artifact (for manual testing)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Release DEB (smoke-tested)
+          path: desktopApp/build/compose/binaries/main-release/deb/*.deb
