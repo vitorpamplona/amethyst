@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,20 +28,13 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.model.OnchainZapEntry
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
@@ -51,11 +43,8 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.WidthAuthorPictureModifier
-import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
-import com.vitorpamplona.amethyst.ui.theme.overPictureBackground
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -76,14 +65,17 @@ internal fun WatchOnchainZapsAndRenderGallery(
 ) {
     // Reuse the same flow the lightning gallery subscribes to. Note.addOnchainZap
     // invalidates flowSet.zaps, so this composable refreshes when on-chain zaps
-    // arrive or upgrade pending → confirmed.
+    // arrive or upgrade pending → confirmed. The flow also fires for lightning
+    // zap arrivals on the same note, so memoize the list snapshot.
     val zapsState by observeNoteZaps(baseNote, accountViewModel)
     val entries =
-        zapsState
-            ?.note
-            ?.onchainZaps
-            ?.values
-            ?.toImmutableList() ?: persistentListOf()
+        remember(zapsState) {
+            zapsState
+                ?.note
+                ?.onchainZaps
+                ?.values
+                ?.toImmutableList() ?: persistentListOf()
+        }
 
     if (entries.isNotEmpty()) {
         RenderOnchainZapGallery(entries, nav, accountViewModel)
@@ -136,56 +128,27 @@ private fun OnchainZapEntryRow(
         }
     val avatarAlpha = if (entry.confirmed) 1f else 0.6f
 
-    Row(
-        modifier =
-            Modifier.clickable { onOnchainZapEntryClick(entry, nav) },
-        verticalAlignment = Alignment.CenterVertically,
+    Box(
+        modifier = Size35Modifier.clickable { onOnchainZapEntryClick(entry, nav) },
+        contentAlignment = Alignment.BottomCenter,
     ) {
-        Box(
-            modifier = Size35Modifier,
-            contentAlignment = Alignment.BottomCenter,
-        ) {
-            // Only the avatar dims for pending entries. The amount overlay and clock
-            // badge stay at full opacity so they remain readable.
-            Box(modifier = Modifier.alpha(avatarAlpha)) {
-                WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
-                    user,
-                    accountViewModel,
-                )
-            }
+        // Only the avatar dims for pending entries. The amount overlay and clock
+        // badge stay at full opacity so they remain readable.
+        Box(modifier = Modifier.alpha(avatarAlpha)) {
+            WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
+                user,
+                accountViewModel,
+            )
+        }
 
-            // Amount overlay — same look as the lightning row's CrossfadeToDisplayAmount.
-            Box(
-                modifier =
-                    Modifier
-                        .size(Size35dp)
-                        .clip(CircleShape),
-                contentAlignment = Alignment.BottomCenter,
-            ) {
-                val overlayBg = MaterialTheme.colorScheme.overPictureBackground
-                Box(
-                    modifier = remember(overlayBg) { Modifier.width(Size35dp).background(overlayBg) },
-                    contentAlignment = Alignment.BottomCenter,
-                ) {
-                    Text(
-                        text = amountText,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.bitcoinColor,
-                        fontSize = 12.sp,
-                        modifier = bottomPadding1dp,
-                    )
-                }
-            }
+        CrossfadeToDisplayAmount(amountText)
 
-            if (!entry.confirmed) {
-                // TopStart so the badge doesn't collide with the FollowingIcon
-                // that WatchUserMetadataAndFollowsAndRenderUserProfilePicture
-                // paints at TopEnd for followed users.
-                Box(
-                    modifier = Modifier.align(Alignment.TopStart),
-                ) {
-                    PendingClockBadge(modifier = Modifier.size(14.dp))
-                }
+        if (!entry.confirmed) {
+            // TopStart so the badge doesn't collide with the FollowingIcon
+            // that WatchUserMetadataAndFollowsAndRenderUserProfilePicture
+            // paints at TopEnd for followed users.
+            Box(modifier = Modifier.align(Alignment.TopStart)) {
+                PendingClockBadge(modifier = Modifier.size(14.dp))
             }
         }
     }

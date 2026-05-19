@@ -94,9 +94,13 @@ class NoteOnchainZapTest {
         val secondSrc = sourceNote("2".repeat(64))
 
         target.addOnchainZap(firstSrc, "tx1", 100L, confirmed = true)
-        target.addOnchainZap(secondSrc, "tx1", 100L, confirmed = true)
+        // Mismatched verifiedSats so we can detect a regression that silently
+        // overwrites the first entry with the second.
+        target.addOnchainZap(secondSrc, "tx1", 999L, confirmed = true)
 
-        assertSame(firstSrc, target.onchainZaps["tx1"]?.source)
+        val entry = target.onchainZaps["tx1"]
+        assertSame(firstSrc, entry?.source)
+        assertEquals(100L, entry?.verifiedSats)
         assertEquals(BigDecimal.valueOf(100L), target.zapsAmount)
     }
 

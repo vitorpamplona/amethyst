@@ -310,7 +310,7 @@ open class Note(
     fun removeAllChildNotes(): List<Note> {
         val repliesChanged = replies.isNotEmpty()
         val reactionsChanged = reactions.isNotEmpty()
-        val zapsChanged = zaps.isNotEmpty() || zapPayments.isNotEmpty()
+        val zapsChanged = zaps.isNotEmpty() || zapPayments.isNotEmpty() || onchainZaps.isNotEmpty()
         val boostsChanged = boosts.isNotEmpty()
         val reportsChanged = reports.isNotEmpty()
 
@@ -435,15 +435,14 @@ open class Note(
         entry: OnchainZapEntry,
     ): Boolean {
         val existing = onchainZaps[txid]
-        if (existing == null) {
-            onchainZaps = onchainZaps + Pair(txid, entry)
-            return true
+        if (existing != null) {
+            // Same-state duplicate: keep the first source and amount we got.
+            if (existing.confirmed == entry.confirmed) return false
+            // Downgrade confirmed → pending: never accept. States differ here,
+            // so existing.confirmed alone is sufficient to identify the downgrade.
+            if (existing.confirmed) return false
+            // Else: existing pending + incoming confirmed — fall through to upgrade.
         }
-        // Same-state duplicate: keep the first source and amount we got.
-        if (existing.confirmed == entry.confirmed) return false
-        // Downgrade confirmed → pending: never accept.
-        if (existing.confirmed && !entry.confirmed) return false
-        // Upgrade pending → confirmed: replace, so the upgrading event's source wins.
         onchainZaps = onchainZaps + Pair(txid, entry)
         return true
     }
