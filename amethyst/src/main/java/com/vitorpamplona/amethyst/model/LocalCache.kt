@@ -271,7 +271,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.util.SortedSet
-import java.util.concurrent.ConcurrentHashMap
 
 interface ILocalCache {
     fun markAsSeen(
@@ -295,18 +294,6 @@ object LocalCache : ILocalCache, ICacheProvider {
     val ephemeralChannels = LargeCache<RoomId, EphemeralChatChannel>()
 
     val paymentTracker = NwcPaymentTracker()
-
-    /**
-     * Index from on-chain transaction id → the first [OnchainZapEvent] we
-     * accepted that claims it. Populated in [consume]`(OnchainZapEvent)` after
-     * the event passes verification. The wallet's on-chain history view uses
-     * it to attribute a Nostr sender/recipient to a chain row without scanning
-     * [notes] for every transaction.
-     */
-    private val onchainZapsByTxid = ConcurrentHashMap<String, OnchainZapEvent>()
-
-    /** Returns the cached [OnchainZapEvent] for [txid], if any. */
-    fun getOnchainZapByTxid(txid: String): OnchainZapEvent? = onchainZapsByTxid[txid]
 
     /**
      * Bitcoin chain backend used by [consume]`(OnchainZapEvent)` to verify NIP-BC zaps
@@ -1773,11 +1760,6 @@ object LocalCache : ILocalCache, ICacheProvider {
         val repliesTo = computeReplyTo(event)
         note.loadEvent(event, author, repliesTo)
         refreshNewNoteObservers(note)
-
-        // First sender to claim a txid wins the index — duplicates are rare
-        // (the verifier proves the tx pays the recipient) and keeping a single
-        // attribution matches what the on-chain wallet UI shows.
-        event.txid()?.let { onchainZapsByTxid.putIfAbsent(it, event) }
 
         // Verification needs a chain backend. Without one (e.g. before Account
         // wires its EsploraBackend) the event is still cached so subscriptions
