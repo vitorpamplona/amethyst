@@ -20,11 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars
 
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.TopFilter
@@ -63,15 +60,6 @@ private fun CalendarCollectionsTopNavFilterBar(
 ) {
     val allLists by followListsModel.kind3GlobalPeopleRoutes.collectAsStateWithLifecycle()
 
-    // We could reuse CalendarsTopNavFilterBar verbatim, but the screen title isn't shown by
-    // UserDrawerSearchTopBar's content slot — wrapping the spinner with the route title keeps
-    // the user oriented inside an otherwise filter-only header.
-    Text(
-        text = stringRes(R.string.route_calendar_collections),
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        fontWeight = FontWeight.SemiBold,
-    )
     FeedFilterSpinner(
         placeholderCode = listName,
         explainer = stringRes(R.string.select_list_to_filter),

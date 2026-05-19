@@ -200,6 +200,9 @@ class AccountFeedContentStates(
         longsFeed.updateFeedWith(newNotes)
         articlesFeed.updateFeedWith(newNotes)
 
+        calendarAppointmentsFeed.updateFeedWith(newNotes)
+        calendarCollectionsFeed.updateFeedWith(newNotes)
+
         notifications.updateFeedWith(newNotes)
         if (account.settings.splitNotificationsEnabled.value) {
             notificationsFollowing.updateFeedWith(newNotes)
@@ -251,6 +254,9 @@ class AccountFeedContentStates(
         nestsFeed.deleteFromFeed(newNotes)
         longsFeed.deleteFromFeed(newNotes)
         articlesFeed.deleteFromFeed(newNotes)
+
+        calendarAppointmentsFeed.deleteFromFeed(newNotes)
+        calendarCollectionsFeed.deleteFromFeed(newNotes)
 
         notifications.deleteFromFeed(newNotes)
         if (account.settings.splitNotificationsEnabled.value) {
