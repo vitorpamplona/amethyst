@@ -30,7 +30,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -78,11 +78,10 @@ fun PrivacyOptionsScreen(
 
     // Reset all three view models from disk-loaded state exactly once,
     // mirroring how the old screen reset only the Tor VM.
-    remember(torVm, i2pVm, pickerVm) {
+    LaunchedEffect(torVm, i2pVm, pickerVm) {
         torVm.reset(torSettingsFlow.toSettings())
         i2pVm.reset(i2pSettingsFlow.toSettings())
         pickerVm.reset(preferredTransport)
-        Unit
     }
 
     PrivacyOptionsScreenContents(
