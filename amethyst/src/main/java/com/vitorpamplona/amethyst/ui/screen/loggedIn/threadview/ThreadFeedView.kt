@@ -483,7 +483,7 @@ private fun FullBleedNoteCompose(
         )
 
     Column(
-        Modifier
+        modifier
             .fillMaxWidth()
             .padding(top = 10.dp),
     ) {
