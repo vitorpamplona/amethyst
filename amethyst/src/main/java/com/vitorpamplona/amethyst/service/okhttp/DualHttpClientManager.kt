@@ -32,7 +32,6 @@ import kotlinx.coroutines.flow.stateIn
 import okhttp3.Call
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.Proxy
 
@@ -126,15 +125,7 @@ class DualHttpClientManager(
     fun getDynamicCallFactory(useProxy: Boolean) = DynamicCallFactory(useProxy, this)
 
     companion object {
-        fun blockedException(reason: BlockReason): IOException =
-            IOException(
-                when (reason) {
-                    BlockReason.ONION_REQUIRES_TOR ->
-                        "Cannot reach .onion address: Tor is disabled. Enable Tor in Privacy Options."
-                    BlockReason.I2P_REQUIRES_I2P ->
-                        "Cannot reach .i2p address: I2P is disabled. Enable I2P in Privacy Options."
-                },
-            )
+        fun blockedException(reason: BlockReason): BlockedRouteException = BlockedRouteException(reason)
     }
 }
 
