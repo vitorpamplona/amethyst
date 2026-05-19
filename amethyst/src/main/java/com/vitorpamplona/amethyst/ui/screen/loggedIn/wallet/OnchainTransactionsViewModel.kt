@@ -25,6 +25,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.BitcoinAddressTx
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.OnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.TaprootAddress
@@ -71,17 +72,28 @@ class OnchainTransactionsViewModel : ViewModel() {
     /** Most recent confirmed txid we've already fetched; null until we've loaded a page. */
     private var lastSeenTxid: String? = null
 
-    private val allTransactions = MutableStateFlow<List<OnchainTxView>>(emptyList())
+    /** Raw chain-side rows, in display order (mempool + confirmed pages appended). */
+    private val chainTxs = MutableStateFlow<List<BitcoinAddressTx>>(emptyList())
+
+    /**
+     * Local txid → OnchainZapEvent index for this screen, auto-maintained by
+     * `LocalCache.observeEvents`. Two observation flows are merged: incoming
+     * zaps (signed by someone else, p-tag = me) and outgoing zaps (signed by
+     * me). Since `consume(OnchainZapEvent)` rejects self-zaps, the two never
+     * collide on the same txid.
+     */
+    private val zapsByTxid = MutableStateFlow<Map<String, OnchainZapEvent>>(emptyMap())
 
     private val _transactionFilter = MutableStateFlow(TransactionFilter.ALL)
     val transactionFilter = _transactionFilter.asStateFlow()
 
     val filteredTransactions =
-        combine(allTransactions, _transactionFilter) { txs, filter ->
+        combine(chainTxs, zapsByTxid, _transactionFilter) { txs, zaps, filter ->
+            val views = txs.map { OnchainTxView(it, zaps[it.txid]) }
             when (filter) {
-                TransactionFilter.ALL -> txs
-                TransactionFilter.ZAPS -> txs.filter { it.zap != null }
-                TransactionFilter.NON_ZAPS -> txs.filter { it.zap == null }
+                TransactionFilter.ALL -> views
+                TransactionFilter.ZAPS -> views.filter { it.zap != null }
+                TransactionFilter.NON_ZAPS -> views.filter { it.zap == null }
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -107,6 +119,25 @@ class OnchainTransactionsViewModel : ViewModel() {
         address = runCatching { TaprootAddress.fromPubKey(pubKey) }.getOrNull()
         backend = LocalCache.onchainBackend
         _displayAddress.value = address
+
+        // Stand up the reactive zap cache. The two filters cover both
+        // directions; LocalCache's filter index narrows the fanout, so we
+        // only get woken for kind-8333 events that mention us.
+        viewModelScope.launch(Dispatchers.IO) {
+            val incoming = Filter(kinds = listOf(OnchainZapEvent.KIND), tags = mapOf("p" to listOf(pubKey)))
+            val outgoing = Filter(kinds = listOf(OnchainZapEvent.KIND), authors = listOf(pubKey))
+            combine(
+                LocalCache.observeEvents<OnchainZapEvent>(incoming),
+                LocalCache.observeEvents<OnchainZapEvent>(outgoing),
+            ) { incomingZaps, outgoingZaps ->
+                val merged = HashMap<String, OnchainZapEvent>(incomingZaps.size + outgoingZaps.size)
+                (incomingZaps.asSequence() + outgoingZaps.asSequence()).forEach { z ->
+                    val txid = z.txid() ?: return@forEach
+                    merged[txid] = z
+                }
+                merged
+            }.collect { zapsByTxid.value = it }
+        }
     }
 
     fun setTransactionFilter(filter: TransactionFilter) {
@@ -123,8 +154,7 @@ class OnchainTransactionsViewModel : ViewModel() {
             _hasMoreTransactions.value = true
             try {
                 val rows = withContext(Dispatchers.IO) { be.getTxsForAddress(addr, null) }
-                val views = rows.map { OnchainTxView(it, findZapForTxid(it.txid)) }
-                allTransactions.value = views
+                chainTxs.value = rows
                 lastSeenTxid = rows.lastOrNull { it.confirmations > 0 }?.txid
                 _hasMoreTransactions.value = lastSeenTxid != null
             } catch (t: Throwable) {
@@ -148,8 +178,7 @@ class OnchainTransactionsViewModel : ViewModel() {
                 if (rows.isEmpty()) {
                     _hasMoreTransactions.value = false
                 } else {
-                    val views = rows.map { OnchainTxView(it, findZapForTxid(it.txid)) }
-                    allTransactions.value = allTransactions.value + views
+                    chainTxs.value = chainTxs.value + rows
                     lastSeenTxid = rows.lastOrNull { it.confirmations > 0 }?.txid ?: seen
                 }
             } catch (t: Throwable) {
@@ -162,22 +191,5 @@ class OnchainTransactionsViewModel : ViewModel() {
 
     fun clearError() {
         _error.value = null
-    }
-
-    /**
-     * Scan `LocalCache.notes` for the [OnchainZapEvent] that references this
-     * txid. NIP-BC verifies that the on-chain output actually pays the recipient
-     * before the event is consumed, so we won't see multiple competing events
-     * for the same txid in practice — last writer wins is fine.
-     */
-    private fun findZapForTxid(txid: String): OnchainZapEvent? {
-        var found: OnchainZapEvent? = null
-        LocalCache.notes.forEach { _, note ->
-            val ev = note.event
-            if (ev is OnchainZapEvent && ev.txid() == txid) {
-                found = ev
-            }
-        }
-        return found
     }
 }
