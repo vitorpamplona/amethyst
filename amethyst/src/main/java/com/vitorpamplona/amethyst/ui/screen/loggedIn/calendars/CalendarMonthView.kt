@@ -32,10 +32,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -48,7 +46,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -56,9 +53,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.MONTH_GRID_MAX_LANES
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.MonthGridBarSegment
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.computeMonthGridBars
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.groupByDayKeyExpanded
 import com.vitorpamplona.amethyst.ui.stringRes
 import java.time.LocalDate
@@ -94,6 +93,7 @@ fun CalendarMonthView(
     }
 
     val eventsByDay by remember(notes) { derivedStateOf { groupByDayKeyExpanded(notes) } }
+    val barsByDay by remember(notes) { derivedStateOf { computeMonthGridBars(notes) } }
 
     var selectedDayKey by rememberSaveable { mutableStateOf<Long?>(null) }
 
@@ -136,7 +136,7 @@ fun CalendarMonthView(
         MonthGrid(
             visibleMonth = visibleMonth,
             today = today,
-            eventsByDay = eventsByDay,
+            barsByDay = barsByDay,
             selectedDayKey = selectedDayKey,
             onDayClick = { dayKey ->
                 selectedDayKey = if (selectedDayKey == dayKey) null else dayKey
@@ -176,7 +176,7 @@ private fun WeekdayHeader() {
 private fun MonthGrid(
     visibleMonth: YearMonth,
     today: LocalDate,
-    eventsByDay: Map<Long, List<Note>>,
+    barsByDay: Map<Long, List<MonthGridBarSegment>>,
     selectedDayKey: Long?,
     onDayClick: (Long) -> Unit,
 ) {
@@ -196,16 +196,22 @@ private fun MonthGrid(
                     if (dayNumber in 1..daysInMonth) {
                         val date = visibleMonth.atDay(dayNumber)
                         val dayKey = date.toEpochDay()
+                        val cellBars = barsByDay[dayKey].orEmpty()
                         DayCell(
                             modifier = Modifier.weight(1f),
                             dayNumber = dayNumber,
                             isToday = isCurrentMonth && date == today,
                             isSelected = selectedDayKey == dayKey,
-                            eventCount = eventsByDay[dayKey]?.size ?: 0,
+                            bars = cellBars,
+                            // Anything past the visible lane cap collapses into a "+N" tail —
+                            // keeps each cell readable when a day has more than three events.
+                            extraEventCount = cellBars.count { it.lane >= MONTH_GRID_MAX_LANES },
+                            isWeekStart = c == 0,
+                            isWeekEnd = c == 6,
                             onClick = { onDayClick(dayKey) },
                         )
                     } else {
-                        Box(modifier = Modifier.weight(1f).height(56.dp))
+                        Box(modifier = Modifier.weight(1f).height(MONTH_CELL_HEIGHT))
                     }
                 }
             }
@@ -213,13 +219,18 @@ private fun MonthGrid(
     }
 }
 
+private val MONTH_CELL_HEIGHT = 72.dp
+
 @Composable
 private fun DayCell(
     modifier: Modifier,
     dayNumber: Int,
     isToday: Boolean,
     isSelected: Boolean,
-    eventCount: Int,
+    bars: List<MonthGridBarSegment>,
+    extraEventCount: Int,
+    isWeekStart: Boolean,
+    isWeekEnd: Boolean,
     onClick: () -> Unit,
 ) {
     val bg =
@@ -232,8 +243,11 @@ private fun DayCell(
     Box(
         modifier =
             modifier
-                .height(56.dp)
-                .padding(2.dp)
+                .height(MONTH_CELL_HEIGHT)
+                // Vertical-only padding so adjacent cells in a row touch horizontally — a
+                // multi-day bar that extends from the right edge of one cell to the left edge of
+                // the next visually merges into a single uninterrupted line.
+                .padding(vertical = 2.dp)
                 .background(bg, RoundedCornerShape(8.dp))
                 .border(
                     width = if (isToday) 1.5.dp else 0.5.dp,
@@ -242,9 +256,8 @@ private fun DayCell(
                 ).clickable(onClick = onClick),
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(4.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 2.dp, vertical = 4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
                 text = dayNumber.toString(),
@@ -257,35 +270,69 @@ private fun DayCell(
                         MaterialTheme.colorScheme.onSurface
                     },
             )
-            EventDotRow(eventCount)
+            Spacer(modifier = Modifier.height(2.dp))
+            EventBarLanes(
+                bars = bars,
+                extraEventCount = extraEventCount,
+                isWeekStart = isWeekStart,
+                isWeekEnd = isWeekEnd,
+            )
         }
     }
 }
 
+/**
+ * Renders up to [MONTH_GRID_MAX_LANES] horizontal bars stacked vertically. Each lane occupies a
+ * fixed height across every cell so a multi-day event sits on the same y-row in every column it
+ * covers — the visual continuity that makes "spans 3 days" readable at a glance.
+ *
+ * The bar is rounded only at the event's start (`isLeftEnd`) and end (`isRightEnd`). On week
+ * boundaries we also round so each row of the grid looks self-contained instead of bleeding into
+ * an unaligned next row.
+ */
 @Composable
-private fun EventDotRow(eventCount: Int) {
-    if (eventCount <= 0) {
-        Spacer(modifier = Modifier.height(6.dp))
-        return
-    }
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
-        modifier = Modifier.padding(bottom = 1.dp),
+private fun EventBarLanes(
+    bars: List<MonthGridBarSegment>,
+    extraEventCount: Int,
+    isWeekStart: Boolean,
+    isWeekEnd: Boolean,
+) {
+    val barColor = MaterialTheme.colorScheme.primary
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(1.dp),
     ) {
-        repeat(eventCount.coerceAtMost(3)) {
-            Box(
-                modifier =
-                    Modifier
-                        .size(5.dp)
-                        .background(MaterialTheme.colorScheme.primary, CircleShape),
-            )
+        for (i in 0 until MONTH_GRID_MAX_LANES) {
+            val seg = bars.firstOrNull { it.lane == i }
+            if (seg != null) {
+                val roundLeft = seg.isLeftEnd || isWeekStart
+                val roundRight = seg.isRightEnd || isWeekEnd
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(5.dp)
+                            .background(
+                                color = barColor,
+                                shape =
+                                    RoundedCornerShape(
+                                        topStart = if (roundLeft) 2.dp else 0.dp,
+                                        bottomStart = if (roundLeft) 2.dp else 0.dp,
+                                        topEnd = if (roundRight) 2.dp else 0.dp,
+                                        bottomEnd = if (roundRight) 2.dp else 0.dp,
+                                    ),
+                            ),
+                )
+            } else {
+                Spacer(modifier = Modifier.fillMaxWidth().height(5.dp))
+            }
         }
-        if (eventCount > 3) {
+        if (extraEventCount > 0) {
             Text(
-                text = "+",
+                text = "+$extraEventCount",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.graphicsLayer { translationY = -3f },
+                color = barColor,
+                fontWeight = FontWeight.SemiBold,
             )
         }
     }

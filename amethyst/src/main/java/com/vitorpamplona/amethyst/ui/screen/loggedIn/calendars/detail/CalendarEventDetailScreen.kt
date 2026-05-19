@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.types.CalendarRsvpRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.addToPhoneCalendar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.IcsExport
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.appointmentView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.datasource.CalendarsFilterAssemblerSubscription
@@ -153,6 +154,24 @@ fun CalendarEventDetailScreen(
                     //    in posts, in other clients). A single button with a chooser would be
                     //    cleaner, but two icons keep both actions one tap away.
                     if (event != null) {
+                        // Direct "Add to phone calendar" — opens the system event composer with
+                        // every field pre-filled. Falls back to the .ics share path if the device
+                        // has no calendar app registered for ACTION_INSERT (rare; Wear OS, some
+                        // GrapheneOS profiles).
+                        IconButton(onClick = {
+                            if (!addToPhoneCalendar(context, event)) {
+                                val ics = IcsExport.appointmentToIcs(event, targetAddress, TimeUtils.now())
+                                val filename = IcsExport.appointmentFilename(event, targetAddress)
+                                shareIcs(context, filename, ics)
+                            }
+                        }) {
+                            Icon(
+                                symbol = MaterialSymbols.EventAvailable,
+                                contentDescription = stringRes(R.string.calendar_add_to_phone_calendar),
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
                         IconButton(onClick = {
                             val ics = IcsExport.appointmentToIcs(event, targetAddress, TimeUtils.now())
                             val filename = IcsExport.appointmentFilename(event, targetAddress)
