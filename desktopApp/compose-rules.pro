@@ -121,9 +121,14 @@
 #         Reason:   Type 'okio/BufferedSource' is not assignable to
 #                   'okio/RealBufferedSource'.
 #
-# Disabling just this sub-pass keeps merging, inlining, peephole and
+# Disabling just these sub-passes keeps merging, inlining, peephole and
 # dead-code optimizations on. Everything else in `optimize` stays.
--optimizations !method/specialization/returntype
+#
+# `method/marking/static` converts instance methods to static when they
+# don't reference `this`. kmp-tor's `AsyncFs.of()` is called via
+# invokevirtual; after ProGuard marks it static the JVM throws
+# IncompatibleClassChangeError at launch (discovered by CI smoke test).
+-optimizations !method/specialization/returntype,!method/marking/static
 
 # ============================================================================
 # Desktop-only: Jackson — mobile module does not ship Jackson on Android

@@ -1,20 +1,11 @@
-# ⚠️  WARNING: Before merging, change the trigger back to workflow_dispatch only.
-# The pull_request trigger is temporary so we can validate this workflow on the PR
-# and attach run results as proof-of-work. Production trigger should be:
-#
-#   on:
-#     workflow_dispatch:
-#     pull_request:
-#       paths:
-#         - 'desktopApp/build.gradle.kts'
-#         - 'desktopApp/compose-rules.pro'
-#         - '.github/workflows/smoke-test-desktop.yml'
-#
 name: Desktop Smoke Test
 
 on:
   workflow_dispatch:
   pull_request:
+    paths:
+      - 'desktopApp/**'
+      - '.github/workflows/smoke-test-desktop.yml'
 
 permissions:
   contents: read
