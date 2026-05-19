@@ -8,6 +8,7 @@
     <string name="show_anyway">Megjelenítés mindenképp</string>
     <string name="post_was_hidden">Ez a bejegyzés el lett rejtve, mert az Ön rejtett felhasználóit vagy szavait említi</string>
     <string name="post_was_flagged_as_inappropriate_by">A bejegyzés el lett némítva vagy be lett jelentve általa:</string>
+    <string name="post_was_hidden_due_to_too_many_hashtags">Ez a bejegyzés több mint %1$d kulcsszót tartalmaz</string>
     <string name="post_not_found">Az esemény épp betöltődik vagy nem található az átjátszólistában</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Csatorna profilképe</string>
@@ -1383,6 +1384,7 @@
     <string name="load_image_description">Mikor töltse be a képeket</string>
     <string name="copy_stack_to_clipboard">Köteg másolása</string>
     <string name="copy_to_clipboard">Másolás a vágólapra</string>
+    <string name="copied_to_clipboard">Vágólapra másolva</string>
     <string name="copy_nprofile_to_clipboard">nprofile-kulcs vágólapra másolása</string>
     <string name="copy_npub_to_clipboard">Npub másolása a vágólapra</string>
     <string name="share_or_save">Megosztás vagy mentés</string>
@@ -1486,9 +1488,17 @@
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">Nem sikerült Lightning-számlát létrehozni a következőből: %1$s:  A „PR” elem nem található a kapott JSON-ban.</string>
     <string name="read_only_user">Csak olvasható felhasználó</string>
     <string name="no_reactions_setup">Nincs reakcióbeállítás</string>
+    <string name="notification_settings">Értesítések</string>
+    <string name="notification_settings_section_delivery">Kézbesítés</string>
+    <string name="notification_settings_section_display">Alkalmazáson belüli megjelenítés</string>
+    <string name="notification_settings_section_categories">Kategóriák</string>
+    <string name="notification_settings_categories_explainer">Koppintson egy kategóriára, hogy megnyissa az ahhoz tartozó Android értesítési beállításokat – itt találhatók a hang-, a fontossági-, az értesítési jelölők- és a „Ne zavarjanak” beállítások.</string>
+    <string name="notification_channel_status_on">Be</string>
+    <string name="notification_channel_status_silent">Néma</string>
+    <string name="notification_channel_status_off">Ki</string>
     <string name="select_push_server">UnifiedPush-alkalmazás kiválasztása</string>
-    <string name="push_server_title">Push-értesítés</string>
-    <string name="push_server_explainer">A telepített UnifiedPush-alkalmazásokból</string>
+    <string name="push_server_title">Push-szolgáltató</string>
+    <string name="push_server_explainer">Válasszon egy UnifiedPush alkalmazást, amely értesítéseket küld, ha az Amethyst be van zárva.</string>
     <string name="push_server_none">Nincs</string>
     <string name="push_server_none_explainer">Push-értesítések letiltása</string>
     <string name="push_server_uses_app_explainer">A következő alkalmazást használja: %1$s</string>
@@ -2605,4 +2615,13 @@
     <string name="community_rules_violation_wot_gate_failed">Ön nem felel meg a közösség bizalmi hálóra (Web-of-Trust) vonatkozó követelményeinek.</string>
     <string name="community_rules_violation_stale_rules">A legfrissebb közösségi szabálydokumentum elavultként el lett utasítva.</string>
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
+    <string name="nowhere_link_card_generic">Nowhere webhely</string>
+    <string name="nowhere_link_card_event">Nowhere esemény</string>
+    <string name="nowhere_link_card_fundraiser">Nowhere adománygyűjtés</string>
+    <string name="nowhere_link_card_store">Nowhere bolt</string>
+    <string name="nowhere_link_card_petition">Nowhere petíció</string>
+    <string name="nowhere_link_card_message">Nowhere üzenet</string>
+    <string name="nowhere_link_card_drop">Nowhere drop</string>
+    <string name="nowhere_link_card_art">Nowhere alkotás</string>
+    <string name="nowhere_link_card_forum">Nowhere fórum</string>
 </resources>
