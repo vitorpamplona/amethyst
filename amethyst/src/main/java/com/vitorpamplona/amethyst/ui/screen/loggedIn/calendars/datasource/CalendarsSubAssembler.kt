@@ -69,6 +69,13 @@ class CalendarsSubAssembler(
             listOf(
                 key.scope.launch(Dispatchers.IO) {
                     key.listNameFlow().collectLatest {
+                        // Calendar events are addressables stored in LocalCache's WeakReference
+                        // map: while the user is viewing list B the strong refs from list A's UI
+                        // are gone and the GC may reclaim those notes. If the EOSE cursor for the
+                        // list the user is switching back to still says "you have everything up
+                        // to T", the relay won't re-send the now-evicted events. Clearing the
+                        // cursor here forces a fresh fetch so the feed comes back whole.
+                        clearEoseFor(key)
                         invalidateFilters()
                     }
                 },
