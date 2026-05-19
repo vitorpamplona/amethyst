@@ -31,11 +31,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
  * Shared `[◀] title [▶]` header used by month / week / day view bodies. Tapping the title
@@ -62,10 +67,18 @@ fun CalendarNavigationHeader(
                 tint = MaterialTheme.colorScheme.onSurface,
             )
         }
+        // Title doubles as the "jump to today" affordance. Adding a TalkBack-only contentDescription
+        // makes that role discoverable for screen-reader users — the bare text alone reads as a
+        // label, not an action.
+        val jumpToToday = stringRes(R.string.calendar_nav_jump_to_today)
         Text(
             text = title,
             style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.weight(1f).clickable(onClick = onToday),
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .clickable(role = Role.Button, onClickLabel = jumpToToday, onClick = onToday)
+                    .semantics { contentDescription = "$title, $jumpToToday" },
             textAlign = TextAlign.Center,
             fontWeight = FontWeight.Bold,
         )

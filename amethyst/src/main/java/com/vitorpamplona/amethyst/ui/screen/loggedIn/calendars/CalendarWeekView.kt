@@ -44,17 +44,21 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.groupByDayKeyExpanded
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.groupByDayKeyExpanded
 import com.vitorpamplona.amethyst.ui.stringRes
 import java.time.LocalDate
 import java.time.ZoneId
@@ -182,6 +186,17 @@ private fun WeekStrip(
                     else -> MaterialTheme.colorScheme.onSurface
                 }
 
+            val dateLabel = formatLongDate(date.atStartOfDay(ZoneId.systemDefault()).toEpochSecond())
+            val baseA11y = pluralStringResource(R.plurals.calendar_day_a11y_events, count, dateLabel, count)
+            val todaySuffix = stringRes(R.string.calendar_day_a11y_today_suffix)
+            val selectedSuffix = stringRes(R.string.calendar_day_a11y_selected_suffix)
+            val a11y =
+                buildString {
+                    append(baseA11y)
+                    if (isToday) append(", ").append(todaySuffix)
+                    if (isSelected) append(", ").append(selectedSuffix)
+                }
+
             Column(
                 modifier =
                     Modifier
@@ -192,8 +207,9 @@ private fun WeekStrip(
                             width = 0.5.dp,
                             color = MaterialTheme.colorScheme.outlineVariant,
                             shape = RoundedCornerShape(10.dp),
-                        ).clickable { onSelect(i) }
-                        .padding(vertical = 6.dp),
+                        ).clickable(role = Role.Tab) { onSelect(i) }
+                        .padding(vertical = 6.dp)
+                        .semantics(mergeDescendants = true) { contentDescription = a11y },
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(

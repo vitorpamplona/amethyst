@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal
 
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.upcomingFirstCalendarOrder
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note

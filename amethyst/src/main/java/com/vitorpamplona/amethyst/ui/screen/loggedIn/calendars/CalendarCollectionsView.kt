@@ -34,6 +34,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,6 +42,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -48,15 +50,22 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.IcsExport
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.UserCardHeader
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Composable
 fun CalendarCollectionsView(
@@ -118,7 +127,7 @@ fun CalendarCollectionCard(
     val title = remember(note.idHex) { event.title() }
     val description = remember(note.idHex) { event.content.take(180) }
     val count = remember(note.idHex) { event.calendarEventAddresses().size }
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
 
     Card(
         modifier =
@@ -131,7 +140,7 @@ fun CalendarCollectionCard(
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
     ) {
         // Author header matches every other social card in the app.
-        com.vitorpamplona.amethyst.ui.screen.loggedIn.video.UserCardHeader(
+        UserCardHeader(
             baseNote = note,
             accountViewModel = accountViewModel,
             nav = nav,
@@ -172,19 +181,10 @@ fun CalendarCollectionCard(
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
-            androidx.compose.material3.IconButton(onClick = {
+            IconButton(onClick = {
                 val members = collectMembers(event)
-                val ics =
-                    com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.IcsExport
-                        .calendarToIcs(
-                            event,
-                            members,
-                            com.vitorpamplona.quartz.utils.TimeUtils
-                                .now(),
-                        )
-                val filename =
-                    com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.IcsExport
-                        .calendarFilename(event)
+                val ics = IcsExport.calendarToIcs(event, members, TimeUtils.now())
+                val filename = IcsExport.calendarFilename(event)
                 shareIcs(context, filename, ics)
             }) {
                 Icon(
@@ -201,19 +201,14 @@ fun CalendarCollectionCard(
 /**
  * Resolves a calendar's member addresses to their cached events, skipping members that haven't
  * arrived from relays yet or aren't appointments. Returns a list compatible with
- * [com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.IcsExport.calendarToIcs].
+ * [IcsExport.calendarToIcs].
  */
-private fun collectMembers(calendar: CalendarEvent): List<Pair<com.vitorpamplona.quartz.nip01Core.core.Address, Any>> =
+private fun collectMembers(calendar: CalendarEvent): List<Pair<Address, Any>> =
     calendar
         .calendarEventAddresses()
         .mapNotNull { addr ->
-            val cachedEvent =
-                com.vitorpamplona.amethyst.model.LocalCache.addressables
-                    .get(addr)
-                    ?.event
-            if (cachedEvent is com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent ||
-                cachedEvent is com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
-            ) {
+            val cachedEvent = LocalCache.addressables.get(addr)?.event
+            if (cachedEvent is CalendarTimeSlotEvent || cachedEvent is CalendarDateSlotEvent) {
                 addr to cachedEvent
             } else {
                 null

@@ -70,7 +70,9 @@ fun NewCalendarButton(nav: INav) {
                 ) {
                     Icon(
                         symbol = MaterialSymbols.CalendarMonth,
-                        contentDescription = stringRes(R.string.new_calendar_collection),
+                        // Spell out the full intent for screen readers — the bare "New collection"
+                        // string is ambiguous out of context.
+                        contentDescription = stringRes(R.string.calendar_fab_new_collection),
                         modifier = Size26Modifier,
                         tint = Color.White,
                     )
@@ -89,7 +91,7 @@ fun NewCalendarButton(nav: INav) {
                 ) {
                     Icon(
                         symbol = MaterialSymbols.Add,
-                        contentDescription = stringRes(R.string.new_calendar_event),
+                        contentDescription = stringRes(R.string.calendar_fab_new_event),
                         modifier = Size26Modifier,
                         tint = Color.White,
                     )
@@ -112,7 +114,7 @@ fun NewCalendarButton(nav: INav) {
             ) {
                 Icon(
                     symbol = MaterialSymbols.Close,
-                    contentDescription = stringRes(R.string.new_calendar_event),
+                    contentDescription = stringRes(R.string.calendar_fab_toggle),
                     modifier = Size26Modifier,
                     tint = Color.White,
                 )
@@ -125,7 +127,8 @@ fun NewCalendarButton(nav: INav) {
             ) {
                 Icon(
                     symbol = MaterialSymbols.Add,
-                    contentDescription = stringRes(R.string.new_calendar_event),
+                    // Top FAB toggles the sub-FABs in/out — describe that, not the sub-action.
+                    contentDescription = stringRes(R.string.calendar_fab_toggle),
                     modifier = Size26Modifier,
                     tint = Color.White,
                 )

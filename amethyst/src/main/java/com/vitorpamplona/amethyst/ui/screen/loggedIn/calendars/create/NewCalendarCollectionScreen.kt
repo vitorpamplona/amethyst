@@ -31,13 +31,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -140,24 +144,21 @@ private fun DeleteCalendarRow(
 ) {
     var confirming by rememberSaveable { mutableStateOf(false) }
 
-    androidx.compose.material3.OutlinedButton(
+    OutlinedButton(
         onClick = { confirming = true },
         modifier = Modifier.fillMaxWidth(),
-        colors =
-            androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-                contentColor = MaterialTheme.colorScheme.error,
-            ),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
     ) {
         Text(text = stringRes(R.string.calendar_collection_delete))
     }
 
     if (confirming) {
-        androidx.compose.material3.AlertDialog(
+        AlertDialog(
             onDismissRequest = { confirming = false },
             title = { Text(stringRes(R.string.calendar_collection_delete_confirm_title)) },
             text = { Text(stringRes(R.string.calendar_collection_delete_confirm_message)) },
             confirmButton = {
-                androidx.compose.material3.TextButton(onClick = {
+                TextButton(onClick = {
                     confirming = false
                     accountViewModel.launchSigner {
                         if (vm.deleteLoaded()) onDeleted()
@@ -170,7 +171,7 @@ private fun DeleteCalendarRow(
                 }
             },
             dismissButton = {
-                androidx.compose.material3.TextButton(onClick = { confirming = false }) {
+                TextButton(onClick = { confirming = false }) {
                     Text(stringRes(R.string.cancel))
                 }
             },

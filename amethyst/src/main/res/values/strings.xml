@@ -1969,6 +1969,17 @@
     <string name="calendar_continues">Continues</string>
     <string name="calendar_day_of_total">Day %1$d of %2$d</string>
     <string name="calendar_add_to_phone_calendar">Add to phone calendar</string>
+    <string name="calendar_nav_jump_to_today">Jump to today</string>
+    <plurals name="calendar_day_a11y_events">
+        <item quantity="zero">%1$s, no events</item>
+        <item quantity="one">%1$s, %2$d event</item>
+        <item quantity="other">%1$s, %2$d events</item>
+    </plurals>
+    <string name="calendar_day_a11y_today_suffix">today</string>
+    <string name="calendar_day_a11y_selected_suffix">selected</string>
+    <string name="calendar_fab_new_event">Create a new calendar event</string>
+    <string name="calendar_fab_new_collection">Create a new calendar collection</string>
+    <string name="calendar_fab_toggle">Show create options</string>
     <string name="calendar_untitled">(untitled)</string>
     <string name="calendar_all_day">All-day</string>
     <string name="calendar_rsvp_going_prefixed">✓ Going</string>

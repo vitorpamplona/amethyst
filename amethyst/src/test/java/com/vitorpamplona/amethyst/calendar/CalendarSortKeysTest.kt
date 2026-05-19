@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.amethyst.calendar
 
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.appointmentView
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.calendarEndSeconds
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.calendarLocalDayKey
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.calendarStartSeconds
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.parseIsoDateToUnixSeconds
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.upcomingFirstCalendarOrder
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.appointmentView
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.calendarEndSeconds
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.calendarLocalDayKey
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.calendarStartSeconds
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.parseIsoDateToUnixSeconds
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.upcomingFirstCalendarOrder
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import org.junit.Assert.assertEquals

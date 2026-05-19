@@ -46,12 +46,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.appointmentView
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.appointmentView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.UserCardHeader
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.time.Instant
@@ -155,10 +155,12 @@ fun CalendarEventListCard(
                         )
                     }
                 }
-                if (!view.image.isNullOrBlank()) {
+                val image = view.image
+                val summary = view.summary
+                if (!image.isNullOrBlank()) {
                     Spacer(modifier = Modifier.size(4.dp))
                     MyAsyncImage(
-                        imageUrl = view.image,
+                        imageUrl = image,
                         contentDescription = view.title,
                         contentScale = ContentScale.Crop,
                         mainImageModifier = Modifier.fillMaxWidth().height(120.dp),
@@ -168,9 +170,9 @@ fun CalendarEventListCard(
                         onError = { Box(modifier = Modifier.fillMaxWidth().height(120.dp)) },
                     )
                 }
-                if (!view.summary.isNullOrBlank() && view.image.isNullOrBlank()) {
+                if (!summary.isNullOrBlank() && image.isNullOrBlank()) {
                     Text(
-                        text = view.summary,
+                        text = summary,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,

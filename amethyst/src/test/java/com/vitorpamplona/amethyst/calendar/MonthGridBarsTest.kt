@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.calendar
 
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.computeMonthGridBars
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.computeMonthGridBars
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull

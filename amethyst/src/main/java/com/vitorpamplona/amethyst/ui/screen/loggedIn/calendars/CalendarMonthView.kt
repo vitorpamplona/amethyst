@@ -46,22 +46,27 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.MONTH_GRID_MAX_LANES
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.MonthGridBarSegment
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.computeMonthGridBars
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.groupByDayKeyExpanded
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.MONTH_GRID_MAX_LANES
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.MonthGridBarSegment
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.computeMonthGridBars
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.groupByDayKeyExpanded
 import com.vitorpamplona.amethyst.ui.stringRes
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.ZoneId
 
 @Composable
 fun CalendarMonthView(
@@ -197,17 +202,24 @@ private fun MonthGrid(
                         val date = visibleMonth.atDay(dayNumber)
                         val dayKey = date.toEpochDay()
                         val cellBars = barsByDay[dayKey].orEmpty()
+                        val isToday = isCurrentMonth && date == today
+                        val isSelected = selectedDayKey == dayKey
                         DayCell(
                             modifier = Modifier.weight(1f),
                             dayNumber = dayNumber,
-                            isToday = isCurrentMonth && date == today,
-                            isSelected = selectedDayKey == dayKey,
+                            isToday = isToday,
+                            isSelected = isSelected,
                             bars = cellBars,
                             // Anything past the visible lane cap collapses into a "+N" tail —
                             // keeps each cell readable when a day has more than three events.
                             extraEventCount = cellBars.count { it.lane >= MONTH_GRID_MAX_LANES },
                             isWeekStart = c == 0,
                             isWeekEnd = c == 6,
+                            // Full date label fed to the screen-reader content description so
+                            // TalkBack reads "Wednesday January 15 2025, 2 events" instead of
+                            // just "15".
+                            dateLabel = formatLongDate(date.atStartOfDay(ZoneId.systemDefault()).toEpochSecond()),
+                            totalEventCount = cellBars.size,
                             onClick = { onDayClick(dayKey) },
                         )
                     } else {
@@ -231,6 +243,8 @@ private fun DayCell(
     extraEventCount: Int,
     isWeekStart: Boolean,
     isWeekEnd: Boolean,
+    dateLabel: String,
+    totalEventCount: Int,
     onClick: () -> Unit,
 ) {
     val bg =
@@ -238,6 +252,17 @@ private fun DayCell(
             MaterialTheme.colorScheme.primaryContainer
         } else {
             MaterialTheme.colorScheme.surface
+        }
+
+    val baseDescription =
+        pluralStringResource(R.plurals.calendar_day_a11y_events, totalEventCount, dateLabel, totalEventCount)
+    val todaySuffix = stringRes(R.string.calendar_day_a11y_today_suffix)
+    val selectedSuffix = stringRes(R.string.calendar_day_a11y_selected_suffix)
+    val a11y =
+        buildString {
+            append(baseDescription)
+            if (isToday) append(", ").append(todaySuffix)
+            if (isSelected) append(", ").append(selectedSuffix)
         }
 
     Box(
@@ -253,7 +278,8 @@ private fun DayCell(
                     width = if (isToday) 1.5.dp else 0.5.dp,
                     color = if (isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                     shape = RoundedCornerShape(8.dp),
-                ).clickable(onClick = onClick),
+                ).clickable(role = Role.Button, onClick = onClick)
+                .semantics(mergeDescendants = true) { contentDescription = a11y },
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(horizontal = 2.dp, vertical = 4.dp),

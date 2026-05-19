@@ -51,15 +51,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.appointmentView
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.calendarLocalDayKeyRange
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.groupByDayKeyExpanded
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.appointmentView
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.calendarLocalDayKeyRange
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.groupByDayKeyExpanded
 import com.vitorpamplona.amethyst.ui.stringRes
 import java.time.LocalDate
 import java.time.ZoneId
@@ -164,15 +164,16 @@ private fun DayRow(
             null
         }
 
+    val startSeconds = view.startSeconds
     val timeLabel =
         when {
             view.isAllDay -> stringRes(R.string.calendar_all_day)
-            view.startSeconds != null && visibleEpochDay > (range?.first ?: visibleEpochDay) ->
+            startSeconds != null && visibleEpochDay > (range?.first ?: visibleEpochDay) ->
                 // Continuation day of a multi-day timed event — the "9:00 AM" of day 1 is
                 // misleading on day 2 since the event has been ongoing overnight. Show a
                 // continuation marker so the user reads it as "still happening".
                 stringRes(R.string.calendar_continues)
-            view.startSeconds != null -> formatTimeOfDay(view.startSeconds)
+            startSeconds != null -> formatTimeOfDay(startSeconds)
             else -> "—"
         }
 

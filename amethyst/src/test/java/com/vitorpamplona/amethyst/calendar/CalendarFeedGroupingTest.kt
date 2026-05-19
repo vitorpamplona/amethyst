@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.calendar
 
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.calendarLocalDayKeyRange
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.groupByDayKey
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.groupByDayKeyExpanded
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.calendarLocalDayKeyRange
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.groupByDayKey
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.groupByDayKeyExpanded
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.partitionUpcomingPast
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent

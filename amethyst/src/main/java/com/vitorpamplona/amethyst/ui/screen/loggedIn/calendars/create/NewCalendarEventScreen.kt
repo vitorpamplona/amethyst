@@ -33,26 +33,41 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
+import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size30dp
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -227,8 +242,8 @@ private fun ImageRow(
     vm: NewCalendarEventViewModel,
     accountViewModel: AccountViewModel,
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val launcher =
         androidx.activity.compose.rememberLauncherForActivityResult(
             contract =
@@ -241,8 +256,8 @@ private fun ImageRow(
                 val ok = vm.uploadAndSetImage(uri, mime, context)
                 if (!ok) {
                     accountViewModel.toastManager.toast(
-                        com.vitorpamplona.amethyst.R.string.calendar_event_image_upload_failed,
-                        com.vitorpamplona.amethyst.R.string.calendar_event_image_upload_failed_body,
+                        R.string.calendar_event_image_upload_failed,
+                        R.string.calendar_event_image_upload_failed_body,
                     )
                 }
             }
@@ -258,14 +273,14 @@ private fun ImageRow(
             enabled = !vm.isUploadingImage.value,
         )
         if (vm.isUploadingImage.value) {
-            androidx.compose.material3.CircularProgressIndicator(
+            CircularProgressIndicator(
                 modifier = Modifier.padding(start = 8.dp).size(20.dp),
                 strokeWidth = 2.dp,
             )
         } else {
-            androidx.compose.material3.IconButton(onClick = { launcher.launch("image/*") }) {
-                com.vitorpamplona.amethyst.commons.icons.symbols.Icon(
-                    symbol = com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols.AddPhotoAlternate,
+            IconButton(onClick = { launcher.launch("image/*") }) {
+                Icon(
+                    symbol = MaterialSymbols.AddPhotoAlternate,
                     contentDescription = stringRes(R.string.calendar_event_pick_image),
                     modifier = Modifier.size(22.dp),
                     tint = MaterialTheme.colorScheme.primary,
@@ -289,10 +304,8 @@ private fun ParticipantsRow(
     vm: NewCalendarEventViewModel,
     accountViewModel: AccountViewModel,
 ) {
-    var draft by androidx.compose.runtime.saveable
-        .rememberSaveable { androidx.compose.runtime.mutableStateOf("") }
-    var error by androidx.compose.runtime.saveable
-        .rememberSaveable { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    var draft by rememberSaveable { mutableStateOf("") }
+    var error by rememberSaveable { mutableStateOf<String?>(null) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         FieldLabel(stringRes(R.string.calendar_event_participants_section, vm.participants.size))
@@ -308,7 +321,7 @@ private fun ParticipantsRow(
                 singleLine = true,
                 isError = error != null,
             )
-            androidx.compose.material3.TextButton(
+            TextButton(
                 onClick = {
                     val resolved = resolvePubKeyOrNull(draft.trim())
                     if (resolved == null) {
@@ -320,7 +333,7 @@ private fun ParticipantsRow(
                 },
                 enabled = draft.isNotBlank(),
             ) {
-                Text(stringRes(com.vitorpamplona.amethyst.R.string.add))
+                Text(stringRes(R.string.add))
             }
         }
         if (error != null) {
@@ -332,17 +345,14 @@ private fun ParticipantsRow(
         }
         vm.participants.forEach { pubKey ->
             Row(verticalAlignment = Alignment.CenterVertically) {
-                com.vitorpamplona.amethyst.ui.note.ClickableUserPicture(
+                ClickableUserPicture(
                     baseUserHex = pubKey,
-                    size = com.vitorpamplona.amethyst.ui.theme.Size30dp,
+                    size = Size30dp,
                     accountViewModel = accountViewModel,
                 )
-                com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser(
-                    baseUserHex = pubKey,
-                    accountViewModel = accountViewModel,
-                ) { user ->
+                LoadUser(baseUserHex = pubKey, accountViewModel = accountViewModel) { user ->
                     if (user != null) {
-                        com.vitorpamplona.amethyst.ui.note.UsernameDisplay(
+                        UsernameDisplay(
                             baseUser = user,
                             weight = Modifier.weight(1f).padding(horizontal = 8.dp),
                             accountViewModel = accountViewModel,
@@ -355,9 +365,9 @@ private fun ParticipantsRow(
                         )
                     }
                 }
-                androidx.compose.material3.IconButton(onClick = { vm.removeParticipant(pubKey) }) {
-                    com.vitorpamplona.amethyst.commons.icons.symbols.Icon(
-                        symbol = com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols.Close,
+                IconButton(onClick = { vm.removeParticipant(pubKey) }) {
+                    Icon(
+                        symbol = MaterialSymbols.Close,
                         contentDescription = stringRes(R.string.calendar_event_participant_remove),
                         modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -378,11 +388,7 @@ private fun resolvePubKeyOrNull(input: String): String? {
     }
     if (input.startsWith("npub")) {
         return runCatching {
-            (
-                com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
-                    .uriToRoute(input)
-                    ?.entity as? com.vitorpamplona.quartz.nip19Bech32.entities.NPub
-            )?.hex
+            (Nip19Parser.uriToRoute(input)?.entity as? NPub)?.hex
         }.getOrNull()
     }
     return null

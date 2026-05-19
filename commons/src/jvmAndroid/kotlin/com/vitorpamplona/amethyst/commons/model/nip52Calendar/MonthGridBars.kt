@@ -18,10 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal
+package com.vitorpamplona.amethyst.commons.model.nip52Calendar
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.commons.model.Note
 
 /**
  * One bar drawn into one day cell, with `lane` controlling its vertical position so two

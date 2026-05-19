@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars
 
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.appointmentView
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.appointmentView
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
