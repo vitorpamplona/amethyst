@@ -30,21 +30,29 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 
 /**
- * Renders a 3-button RSVP row (Going / Maybe / Can't go) below a NIP-52 calendar event.
- * Tapping a button publishes a new kind 31925 with a random `d` tag — multiple taps create
- * multiple RSVPs, which is consistent with how the NIP describes "responses".
+ * Renders a 3-button RSVP row (Going / Maybe / Can't go) below a NIP-52 calendar appointment.
+ *
+ * Uses a deterministic d-tag derived from the target appointment's address so the user has
+ * exactly one RSVP per event from this client — tapping again replaces it rather than appending
+ * another addressable. The button matching the current status renders as filled-tonal; the
+ * others render outlined.
  */
 @Composable
 fun CalendarRsvpRow(
@@ -54,46 +62,117 @@ fun CalendarRsvpRow(
     eventId: String,
     accountViewModel: AccountViewModel,
 ) {
+    val myPubKey = accountViewModel.userProfile().pubkeyHex
+    val targetAddress = remember(eventKind, eventPubKey, eventDTag) { Address(eventKind, eventPubKey, eventDTag) }
+    val myRsvpAddress = remember(targetAddress, myPubKey) { rsvpAddressFor(myPubKey, targetAddress) }
+
+    val myRsvpNote = remember(myRsvpAddress) { LocalCache.getOrCreateAddressableNote(myRsvpAddress) }
+    val myRsvpState by myRsvpNote
+        .flow()
+        .metadata.stateFlow
+        .collectAsStateWithLifecycle()
+
+    val currentStatus = (myRsvpState.note.event as? CalendarRSVPEvent)?.status()
+
+    val onTap: (RSVPStatusTag.STATUS) -> Unit = { newStatus ->
+        sendRsvp(
+            accountViewModel = accountViewModel,
+            targetAddress = targetAddress,
+            eventId = eventId,
+            myPubKey = myPubKey,
+            status = newStatus,
+        )
+    }
+
     Row(
         modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        FilledTonalButton(
-            onClick = { sendRsvp(accountViewModel, eventKind, eventPubKey, eventDTag, eventId, RSVPStatusTag.STATUS.ACCEPTED) },
+        RsvpButton(
+            label = stringRes(R.string.calendar_rsvp_going),
+            status = RSVPStatusTag.STATUS.ACCEPTED,
+            currentStatus = currentStatus,
             modifier = Modifier.weight(1f),
+            onClick = onTap,
+        )
+        RsvpButton(
+            label = stringRes(R.string.calendar_rsvp_maybe),
+            status = RSVPStatusTag.STATUS.TENTATIVE,
+            currentStatus = currentStatus,
+            modifier = Modifier.weight(1f),
+            onClick = onTap,
+        )
+        RsvpButton(
+            label = stringRes(R.string.calendar_rsvp_not_going),
+            status = RSVPStatusTag.STATUS.DECLINED,
+            currentStatus = currentStatus,
+            modifier = Modifier.weight(1f),
+            onClick = onTap,
+        )
+    }
+}
+
+@Composable
+private fun RsvpButton(
+    label: String,
+    status: RSVPStatusTag.STATUS,
+    currentStatus: RSVPStatusTag.STATUS?,
+    modifier: Modifier,
+    onClick: (RSVPStatusTag.STATUS) -> Unit,
+) {
+    val selected = status == currentStatus
+    if (selected) {
+        FilledTonalButton(
+            onClick = { onClick(status) },
+            modifier = modifier,
             colors =
                 ButtonDefaults.filledTonalButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    containerColor = colorFor(status),
+                    contentColor = Color.White,
                 ),
         ) {
-            Text(text = stringRes(R.string.calendar_rsvp_going))
+            Text(text = label)
         }
+    } else {
         OutlinedButton(
-            onClick = { sendRsvp(accountViewModel, eventKind, eventPubKey, eventDTag, eventId, RSVPStatusTag.STATUS.TENTATIVE) },
-            modifier = Modifier.weight(1f),
+            onClick = { onClick(status) },
+            modifier = modifier,
         ) {
-            Text(text = stringRes(R.string.calendar_rsvp_maybe))
-        }
-        OutlinedButton(
-            onClick = { sendRsvp(accountViewModel, eventKind, eventPubKey, eventDTag, eventId, RSVPStatusTag.STATUS.DECLINED) },
-            modifier = Modifier.weight(1f),
-        ) {
-            Text(text = stringRes(R.string.calendar_rsvp_not_going))
+            Text(text = label)
         }
     }
 }
 
+@Composable
+private fun colorFor(status: RSVPStatusTag.STATUS) =
+    when (status) {
+        RSVPStatusTag.STATUS.ACCEPTED -> MaterialTheme.colorScheme.primary
+        RSVPStatusTag.STATUS.TENTATIVE -> MaterialTheme.colorScheme.tertiary
+        RSVPStatusTag.STATUS.DECLINED -> MaterialTheme.colorScheme.error
+    }
+
+/**
+ * Deterministic per-target d-tag so each user's RSVP for a given event is a single addressable.
+ * The format mirrors the a-tag coordinate so it's debuggable (`rsvp:31923:<pubkey>:<dtag>`).
+ */
+fun rsvpDTagFor(targetAddress: Address): String = "rsvp:${targetAddress.kind}:${targetAddress.pubKeyHex}:${targetAddress.dTag}"
+
+fun rsvpAddressFor(
+    myPubKey: String,
+    targetAddress: Address,
+): Address = Address(CalendarRSVPEvent.KIND, myPubKey, rsvpDTagFor(targetAddress))
+
 private fun sendRsvp(
     accountViewModel: AccountViewModel,
-    eventKind: Int,
-    eventPubKey: String,
-    eventDTag: String,
+    targetAddress: Address,
     eventId: String,
+    myPubKey: String,
     status: RSVPStatusTag.STATUS,
 ) {
-    val noteRelays = LocalCache.getNoteIfExists(eventId)?.relays?.firstOrNull()
-    val aTag = ATag(eventKind, eventPubKey, eventDTag, noteRelays)
-    val pTag = PTag(eventPubKey)
+    val relayHint = LocalCache.getNoteIfExists(eventId)?.relays?.firstOrNull()
+    val aTag = ATag(targetAddress, relayHint)
+    val pTag = PTag(targetAddress.pubKeyHex)
+    val dTag = rsvpDTagFor(targetAddress)
 
     accountViewModel.launchSigner {
         accountViewModel.account.signAndComputeBroadcast(
@@ -101,6 +180,7 @@ private fun sendRsvp(
                 calendarEventAddress = aTag,
                 status = status,
                 calendarEventAuthor = pTag,
+                dTag = dTag,
             ),
         )
     }

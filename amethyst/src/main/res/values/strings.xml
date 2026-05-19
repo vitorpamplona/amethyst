@@ -1922,6 +1922,9 @@
     <string name="new_picture">New Picture</string>
     <string name="new_calendar_event">New Calendar Event</string>
     <string name="new_calendar_collection">New Calendar</string>
+    <string name="edit_calendar_collection">Edit Calendar</string>
+    <string name="calendar_collection_events_section">Events in this calendar (%1$d)</string>
+    <string name="calendar_collection_no_events_yet">You haven\'t created any calendar events yet.</string>
 
     <string name="calendar_view_feed">Feed</string>
     <string name="calendar_view_month">Month</string>
