@@ -26,6 +26,7 @@ import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
+import com.vitorpamplona.amethyst.commons.services.lnurl.OkHttpLnurlEndpointResolver
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -360,6 +361,12 @@ class AppModules(
                     client = roleBasedHttpClientBuilder.okHttpClientForMoney(OkHttpBitcoinExplorer.MEMPOOL_API_URL),
                 ),
             )
+
+        // NIP-57 Appendix F: validates incoming zap receipts against the
+        // recipient's LNURL provider's advertised `nostrPubkey`. Reuses the
+        // money-tier http client so Tor preferences and proxy settings apply.
+        cache.lnurlEndpointResolver =
+            OkHttpLnurlEndpointResolver(roleBasedHttpClientBuilder::okHttpClientForMoney)
     }
 
     // Provides a relay pool

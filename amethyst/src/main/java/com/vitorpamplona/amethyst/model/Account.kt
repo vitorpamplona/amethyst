@@ -696,6 +696,8 @@ class Account(
         zapType: LnZapEvent.ZapType,
         toUser: User?,
         additionalRelays: Set<NormalizedRelayUrl>? = null,
+        amountMillisats: Long? = null,
+        lnurl: String? = null,
     ) = LnZapRequestEvent.create(
         zappedEvent = event,
         relays = nip65RelayList.inboxFlow.value + (additionalRelays ?: emptySet()),
@@ -704,6 +706,8 @@ class Account(
         message = message,
         zapType = zapType,
         toUserPubHex = toUser?.pubkeyHex,
+        amountMillisats = amountMillisats,
+        lnurl = lnurl,
     )
 
     suspend fun calculateIfNoteWasZappedByAccount(
@@ -743,6 +747,8 @@ class Account(
         user: User,
         message: String = "",
         zapType: LnZapEvent.ZapType,
+        amountMillisats: Long? = null,
+        lnurl: String? = null,
     ): LnZapRequestEvent {
         val zapRequest =
             LnZapRequestEvent.create(
@@ -751,6 +757,8 @@ class Account(
                 signer = signer,
                 message = message,
                 zapType = zapType,
+                amountMillisats = amountMillisats,
+                lnurl = lnurl,
             )
 
         cache.justConsumeMyOwnEvent(zapRequest)

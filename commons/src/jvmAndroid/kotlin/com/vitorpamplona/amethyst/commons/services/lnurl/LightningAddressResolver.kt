@@ -24,6 +24,8 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.lightning.Lud06
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointCache
+import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -122,6 +124,15 @@ class LightningAddressResolver(
                         ?: return@withContext Result.Error("No callback URL in LNURL response")
 
                 val allowsNostr = lnurlp.get("allowsNostr")?.asBoolean() ?: false
+                val nostrPubkey = lnurlp.get("nostrPubkey")?.asText()?.ifBlank { null }
+
+                // Prime the receipt-validation cache so incoming zap receipts can
+                // be checked against this provider's nostrPubkey (NIP-57 Appendix F)
+                // without re-fetching the lnurlp endpoint.
+                LnurlEndpointCache.put(
+                    url,
+                    LnurlEndpointInfo(nostrPubkey = nostrPubkey, allowsNostr = allowsNostr),
+                )
 
                 onProgress(0.5f)
 
