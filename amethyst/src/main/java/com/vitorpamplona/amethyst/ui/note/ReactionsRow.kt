@@ -597,6 +597,7 @@ private fun ReactionDetailGallery(
         ) {
             Column {
                 WatchZapAndRenderGallery(baseNote, backgroundColor, nav, accountViewModel)
+                WatchOnchainZapsAndRenderGallery(baseNote, nav, accountViewModel)
                 WatchBoostsAndRenderGallery(baseNote, nav, accountViewModel)
                 WatchReactionsAndRenderGallery(baseNote, nav, accountViewModel)
             }

@@ -1772,13 +1772,13 @@ object LocalCache : ILocalCache, ICacheProvider {
                 when (val result = verifier.verify(event)) {
                     is VerifiedOnchainZap.Confirmed -> {
                         repliesTo.forEach {
-                            it.addOnchainZap(result.txid, result.verifiedSats, confirmed = true)
+                            it.addOnchainZap(note, result.txid, result.verifiedSats, confirmed = true)
                         }
                     }
 
                     is VerifiedOnchainZap.Pending -> {
                         repliesTo.forEach {
-                            it.addOnchainZap(result.txid, result.verifiedSats, confirmed = false)
+                            it.addOnchainZap(note, result.txid, result.verifiedSats, confirmed = false)
                         }
                     }
 
