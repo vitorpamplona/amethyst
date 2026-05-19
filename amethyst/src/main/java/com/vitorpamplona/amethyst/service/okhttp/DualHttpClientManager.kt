@@ -124,6 +124,26 @@ class DualHttpClientManager(
 
     fun getDynamicCallFactory(useProxy: Boolean) = DynamicCallFactory(useProxy, this)
 
+    /**
+     * Resolves to the OkHttpClient whose attached SOCKS proxy matches [port]. Used
+     * by ExoPlayer's per-port pool to pick the correct transport — `0` / `null`
+     * means direct, the live Tor port maps to the Tor-proxied client, the live I2P
+     * port maps to the I2P-proxied client. Unknown non-zero ports fall back to
+     * direct rather than guess.
+     */
+    fun getHttpClientForPort(port: Int?): OkHttpClient {
+        if (port == null || port <= 0) return defaultHttpClientWithoutProxy.value
+        val torPort = (defaultHttpClient.value.proxy?.address() as? InetSocketAddress)?.port
+        val i2pPort = (i2pHttpClient.value.proxy?.address() as? InetSocketAddress)?.port
+        return when (port) {
+            torPort -> defaultHttpClient.value
+            i2pPort -> i2pHttpClient.value
+            else -> defaultHttpClientWithoutProxy.value
+        }
+    }
+
+    fun getDynamicCallFactoryForPort(port: Int) = PortBasedCallFactory(port, this)
+
     companion object {
         fun blockedException(reason: BlockReason): BlockedRouteException = BlockedRouteException(reason)
     }
@@ -137,4 +157,17 @@ class DynamicCallFactory(
     val manager: DualHttpClientManager,
 ) : Call.Factory {
     override fun newCall(request: Request): Call = manager.getHttpClient(useProxy).newCall(request)
+}
+
+/**
+ * Port-keyed version of [DynamicCallFactory]. Lets ExoPlayer's per-port pool
+ * route through Tor or I2P (or direct) based on the SOCKS port the caller asked
+ * for — resolved live so a proxy-port change without a pool rebuild still picks
+ * the right OkHttpClient.
+ */
+class PortBasedCallFactory(
+    val port: Int,
+    val manager: DualHttpClientManager,
+) : Call.Factory {
+    override fun newCall(request: Request): Call = manager.getHttpClientForPort(port).newCall(request)
 }

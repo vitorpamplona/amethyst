@@ -26,6 +26,8 @@ import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import com.vitorpamplona.amethyst.commons.i2p.I2pSettings
 import com.vitorpamplona.amethyst.commons.model.NoteState
+import com.vitorpamplona.amethyst.commons.privacy.BlockReason
+import com.vitorpamplona.amethyst.commons.privacy.PrivacyRoute
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.model.Account
@@ -58,6 +60,7 @@ import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.notifications.AlwaysOnNotificationServiceManager
 import com.vitorpamplona.amethyst.service.notifications.NotificationDispatcher
 import com.vitorpamplona.amethyst.service.notifications.PokeyReceiver
+import com.vitorpamplona.amethyst.service.okhttp.BlockedRouteException
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManagerForRelays
 import com.vitorpamplona.amethyst.service.okhttp.EncryptionKeyCache
@@ -95,6 +98,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayLogger
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.stats.RelayReqStats
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.HiddenServiceKind
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.classifyHidden
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
@@ -365,11 +370,34 @@ class AppModules(
             dns = surgeDns,
         )
 
-    // Connects the INostrClient class with okHttp
+    // Connects the INostrClient class with okHttp.
+    //
+    // Hidden-service hostnames (.onion / .i2p) hard-pin to their matching
+    // network — same fail-closed contract PrivacyRouter applies to ad-hoc HTTP
+    // traffic. Clearnet relays still go through the existing TorRelayEvaluation
+    // (its per-relay-class booleans are richer than the global picker for the
+    // relay case, and don't conflict with the picker since the picker is about
+    // clearnet ad-hoc HTTP traffic, not the relay subscription pool).
     val websocketBuilder =
         OkHttpWebSocket.Builder { url ->
-            val useTor = torEvaluatorFlow.flow.value.useTor(url)
-            okHttpClientForRelays.getHttpClient(useTor)
+            when (url.classifyHidden()) {
+                HiddenServiceKind.ONION ->
+                    if (torManager.isSocksReady()) {
+                        okHttpClientForRelays.getHttpClient(true)
+                    } else {
+                        throw BlockedRouteException(BlockReason.ONION_REQUIRES_TOR)
+                    }
+                HiddenServiceKind.I2P ->
+                    if (i2pManager.isSocksReady()) {
+                        okHttpClientForRelays.getHttpClient(PrivacyRoute.I2p)
+                    } else {
+                        throw BlockedRouteException(BlockReason.I2P_REQUIRES_I2P)
+                    }
+                HiddenServiceKind.LOCALHOST, HiddenServiceKind.CLEARNET -> {
+                    val useTor = torEvaluatorFlow.flow.value.useTor(url)
+                    okHttpClientForRelays.getHttpClient(useTor)
+                }
+            }
         }
 
     // Caches all events in Memory
@@ -588,7 +616,7 @@ class AppModules(
             diskCache = { diskCache },
             memoryCache = { memoryCache },
             blossomServerResolver = { blossomResolver },
-            callFactory = { okHttpClients.getHttpClient(roleBasedHttpClientBuilder.shouldUseTorForImageDownload(it)) },
+            callFactory = { roleBasedHttpClientBuilder.okHttpClientForImage(it) },
             thumbnailCache = thumbnailDiskCache,
             backgroundScope = applicationIOScope,
         )
