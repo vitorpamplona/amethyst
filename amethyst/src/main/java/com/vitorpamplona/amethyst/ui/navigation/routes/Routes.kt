@@ -81,6 +81,20 @@ sealed class Route {
 
     @Serializable object Pictures : Route()
 
+    @Serializable object Calendars : Route()
+
+    @Serializable object CalendarCollections : Route()
+
+    @Serializable
+    data class NewCalendarEvent(
+        val draft: String? = null,
+    ) : Route()
+
+    @Serializable
+    data class NewCalendarCollection(
+        val dTag: String? = null,
+    ) : Route()
+
     @Serializable object Products : Route()
 
     @Serializable object Shorts : Route()

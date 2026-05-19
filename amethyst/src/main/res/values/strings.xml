@@ -583,6 +583,7 @@
     <string name="profile_badges_description">Choose which of the badges you\'ve received appear on your profile.</string>
     <string name="profile_badges_empty">You haven\'t received any badges yet.</string>
     <string name="pictures">Pictures</string>
+    <string name="calendars">Calendars</string>
     <string name="shorts">Shorts</string>
     <string name="public_chats">Public Chats</string>
     <string name="follow_packs">Follow Packs</string>
@@ -1851,6 +1852,7 @@
     <string name="route_global">Global</string>
     <string name="route_video">Shorts</string>
     <string name="route_pictures">Pictures</string>
+    <string name="route_calendars">Calendars</string>
     <string name="route_chess">Chess</string>
     <string name="wallet">Wallet</string>
     <string name="wallet_balance">Balance</string>
@@ -1917,6 +1919,51 @@
     <string name="new_zap_poll">New Zap Poll</string>
     <string name="new_regular_poll">New Regular Poll</string>
     <string name="new_picture">New Picture</string>
+    <string name="new_calendar_event">New Calendar Event</string>
+    <string name="new_calendar_collection">New Calendar</string>
+
+    <string name="calendar_view_feed">Feed</string>
+    <string name="calendar_view_month">Month</string>
+    <string name="calendar_view_week">Week</string>
+    <string name="calendar_view_day">Day</string>
+    <string name="calendar_view_collections">Calendars</string>
+
+    <string name="calendar_section_upcoming">Upcoming</string>
+    <string name="calendar_section_past">Past</string>
+    <string name="calendar_section_today">Today</string>
+    <string name="calendar_empty_feed">No upcoming or past calendar events from your selected feed yet.</string>
+    <string name="calendar_empty_collections">No calendar collections yet.</string>
+
+    <string name="calendar_event_title">Title</string>
+    <string name="calendar_event_summary">Summary</string>
+    <string name="calendar_event_location">Location</string>
+    <string name="calendar_event_image">Image URL</string>
+    <string name="calendar_event_all_day">All-day event</string>
+    <string name="calendar_event_start">Starts</string>
+    <string name="calendar_event_end">Ends</string>
+    <string name="calendar_event_hashtags">Hashtags (comma-separated)</string>
+    <string name="calendar_event_pick_date">Pick date</string>
+    <string name="calendar_event_pick_time">Pick time</string>
+    <string name="calendar_event_publish">Publish</string>
+    <string name="calendar_event_publishing">Publishing…</string>
+    <string name="calendar_event_invalid">Title and start are required.</string>
+    <string name="calendar_event_end_before_start">End must be after start.</string>
+
+    <string name="calendar_collection_title">Title</string>
+    <string name="calendar_collection_description">Description</string>
+    <string name="calendar_collection_save">Save calendar</string>
+    <string name="calendar_collection_invalid">A title is required.</string>
+    <string name="calendar_collection_count">%1$d events</string>
+
+    <string name="calendar_rsvp_going">Going</string>
+    <string name="calendar_rsvp_maybe">Maybe</string>
+    <string name="calendar_rsvp_not_going">Can\'t go</string>
+    <string name="calendar_rsvp_responded">You marked yourself as %1$s</string>
+    <string name="calendar_rsvp_sending">Sending RSVP…</string>
+    <string name="calendar_rsvp_section">RSVPs</string>
+    <string name="calendar_participants_section">Participants</string>
+    <string name="calendar_event_in_calendars">In calendars</string>
+    <string name="calendar_open_in_maps">Open in maps</string>
     <string name="new_short_video">New Short Video</string>
     <string name="new_long_video">New Long Video</string>
 

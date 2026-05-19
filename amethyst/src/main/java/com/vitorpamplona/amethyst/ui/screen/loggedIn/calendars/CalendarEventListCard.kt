@@ -1,0 +1,239 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.calendarStartSeconds
+import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
+
+@Composable
+fun CalendarEventListCard(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    modifier: Modifier = Modifier,
+) {
+    val event = note.event
+    if (event !is CalendarTimeSlotEvent && event !is CalendarDateSlotEvent) return
+
+    val title =
+        when (event) {
+            is CalendarTimeSlotEvent -> event.title()
+            is CalendarDateSlotEvent -> event.title()
+            else -> null
+        }
+    val location =
+        when (event) {
+            is CalendarTimeSlotEvent -> event.location()
+            is CalendarDateSlotEvent -> event.location()
+            else -> null
+        }
+    val image =
+        when (event) {
+            is CalendarTimeSlotEvent -> event.image()
+            is CalendarDateSlotEvent -> event.image()
+            else -> null
+        }
+    val summary =
+        when (event) {
+            is CalendarTimeSlotEvent -> event.summary()
+            is CalendarDateSlotEvent -> event.summary()
+            else -> null
+        }
+
+    val range = remember(note.idHex) { formatCalendarRange(note) }
+
+    Card(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+                .clickable { nav.nav(Route.Note(note.idHex)) },
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.elevatedCardColors(),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            CalendarDateBadge(note)
+
+            Spacer(modifier = Modifier.size(12.dp))
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                title?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                range?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                location?.let {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            symbol = MaterialSymbols.LocationOn,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.size(4.dp))
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+                if (!image.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.size(4.dp))
+                    MyAsyncImage(
+                        imageUrl = image,
+                        contentDescription = title,
+                        contentScale = ContentScale.Crop,
+                        mainImageModifier = Modifier.fillMaxWidth().height(120.dp),
+                        loadedImageModifier = Modifier,
+                        accountViewModel = accountViewModel,
+                        onLoadingBackground = { Box(modifier = Modifier.fillMaxWidth().height(120.dp)) },
+                        onError = { Box(modifier = Modifier.fillMaxWidth().height(120.dp)) },
+                    )
+                }
+                if (!summary.isNullOrBlank() && image.isNullOrBlank()) {
+                    Text(
+                        text = summary,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CalendarDateBadge(note: Note) {
+    val start = remember(note.idHex) { note.calendarStartSeconds() }
+    if (start == null) {
+        Box(
+            modifier =
+                Modifier
+                    .size(width = 52.dp, height = 60.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                symbol = MaterialSymbols.CalendarMonth,
+                contentDescription = null,
+                modifier = Modifier.size(28.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
+        return
+    }
+
+    val cal =
+        java.util.Calendar
+            .getInstance()
+            .apply { timeInMillis = start * 1000 }
+    val day = cal.get(java.util.Calendar.DAY_OF_MONTH).toString()
+    val month =
+        java.text
+            .SimpleDateFormat("MMM", java.util.Locale.getDefault())
+            .format(cal.time)
+            .uppercase()
+
+    Column(
+        modifier =
+            Modifier
+                .size(width = 52.dp, height = 60.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text = month,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            text = day,
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+// kept for symmetry with other feeds
+@Suppress("unused")
+private val FeedCardPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp)
+private val IconTintPlaceholder = ColorFilter.tint(Color.Gray)
