@@ -159,12 +159,14 @@ class EventNotificationConsumer(
             // the same way).
             //
             // One LocalCache lookup per event regardless of account count —
-            // the note is the same for every saved account.
+            // the note is the same for every saved account. Use the Event
+            // overload so AddressableEvent kinds resolve to their replaceable
+            // note (id-keyed version has empty replyTo after insertion).
             val matchingNote: Note? =
                 if (event is WakeUpEvent) {
                     null
                 } else {
-                    LocalCache.getNoteIfExists(event.id) ?: return@withWakeLock
+                    LocalCache.getNoteIfExists(event) ?: return@withWakeLock
                 }
 
             LocalPreferences.allSavedAccounts().forEach { savedAccount ->
@@ -230,7 +232,7 @@ class EventNotificationConsumer(
         // RepostEvent / GenericRepostEvent aren't routed below — push doesn't
         // notify on reposts at all today.)
         if (event is ReactionEvent || event is LnZapEvent) {
-            val target = LocalCache.getNoteIfExists(event.id)?.replyTo?.lastOrNull()
+            val target = LocalCache.getNoteIfExists(event)?.replyTo?.lastOrNull()
             if (target != null && account.isThreadMuted(account.resolveThreadRoot(target))) return
         }
 

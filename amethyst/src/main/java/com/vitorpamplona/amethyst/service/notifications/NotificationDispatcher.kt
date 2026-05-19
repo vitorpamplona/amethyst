@@ -193,7 +193,15 @@ class NotificationDispatcher(
                             if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return@predicate false
                             if (event is WakeUpEvent) return@predicate true
 
-                            val note = LocalCache.getNoteIfExists(event.id) ?: return@predicate false
+                            // getNoteIfExists(event) — not (event.id) — so
+                            // AddressableEvent kinds (LongTextNote, WikiNote,
+                            // LiveChess*, VideoHorizontal/Vertical) resolve to
+                            // their address-keyed replaceable note. The id-keyed
+                            // version note has its replyTo moved away during
+                            // insertion (LocalCache.consumeBaseReplaceable), so
+                            // tagsAnEventByUser's replyTo check would otherwise
+                            // always miss for replies into addressable posts.
+                            val note = LocalCache.getNoteIfExists(event) ?: return@predicate false
                             pubkeys.any { pubkey ->
                                 event.isTaggedUser(pubkey) &&
                                     NotificationFeedFilter.tagsAnEventByUser(note, pubkey)
