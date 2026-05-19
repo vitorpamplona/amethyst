@@ -46,6 +46,8 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
+import com.vitorpamplona.quartz.nip18Reposts.quotes.quote
 import com.vitorpamplona.quartz.utils.Log
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
@@ -182,11 +184,30 @@ class MarmotManager(
     suspend fun buildTextMessage(
         nostrGroupId: HexKey,
         text: String,
+        replyToEventId: HexKey? = null,
+        replyToAuthorPubKey: HexKey? = null,
         persistOwn: Boolean = true,
     ): TextMessageBundle {
         val template =
             com.vitorpamplona.quartz.nip01Core.signers
-                .eventTemplate<Event>(kind = 9, description = text)
+                .eventTemplate<Event>(kind = 9, description = text) {
+                    if (replyToEventId != null) {
+                        // Mirror ChatEvent.reply(): NIP-18 q-tag references the
+                        // parent inner kind:9 by id (+ optional author, no
+                        // relay hint — the inner rumor never hits a relay
+                        // directly). Taking id+pubKey separately (rather than
+                        // the full parent Event) lets the push-notification
+                        // reply path produce a threaded reply from cold start,
+                        // when LocalCache hasn't been re-hydrated yet.
+                        quote(
+                            QEventTag(
+                                eventId = replyToEventId,
+                                relayHint = null,
+                                authorPubKeyHex = replyToAuthorPubKey,
+                            ),
+                        )
+                    }
+                }
         val innerEvent =
             com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
                 .assembleRumor<Event>(signer.pubKey, template)

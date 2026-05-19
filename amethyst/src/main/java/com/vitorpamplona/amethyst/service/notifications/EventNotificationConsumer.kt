@@ -586,6 +586,9 @@ class EventNotificationConsumer(
                 accountNpub = accountNpub,
                 accountPictureUrl = account.userProfile().profilePicture(),
                 chatroomMembers = null,
+                marmotNostrGroupId = nostrGroupId,
+                marmotReplyToInnerEventId = innerEvent.id,
+                marmotReplyToInnerAuthor = innerEvent.pubKey,
             )
     }
 

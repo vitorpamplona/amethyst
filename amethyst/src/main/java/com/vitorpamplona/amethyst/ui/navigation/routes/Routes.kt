@@ -404,6 +404,8 @@ sealed class Route {
 
     @Serializable data class MarmotGroupChat(
         val nostrGroupId: String,
+        val message: String? = null,
+        val replyId: HexKey? = null,
     ) : Route()
 
     @Serializable data class MarmotGroupInfo(

@@ -2133,6 +2133,28 @@ class Account(
     // --- Marmot Group Messaging ---
 
     /**
+     * Resolve the relay set for a Marmot group. Prefer the relays carried in
+     * the MLS GroupContext metadata so every member converges on the same
+     * canonical set; fall back to the account's outbox relays if the group
+     * has none (e.g. a group joined before MIP-01 metadata existed).
+     *
+     * Lives on Account (not AccountViewModel) so that headless callers —
+     * notifications' BroadcastReceiver, background workers — can resolve
+     * relays without spinning up a ViewModel.
+     */
+    fun marmotGroupRelays(nostrGroupId: HexKey): Set<NormalizedRelayUrl> {
+        val groupRelays =
+            marmotManager
+                ?.groupMetadata(nostrGroupId)
+                ?.relays
+                ?.mapNotNull {
+                    com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+                        .normalizeOrNull(it)
+                }?.toSet()
+        return if (!groupRelays.isNullOrEmpty()) groupRelays else outboxRelays.flow.value
+    }
+
+    /**
      * Send a message to a Marmot MLS group.
      * Encrypts the inner event and publishes the GroupEvent to group relays.
      */

@@ -60,12 +60,16 @@ object NotificationUtils {
 
     const val REPLY_ACTION = "com.vitorpamplona.amethyst.REPLY_ACTION"
     const val PUBLIC_REPLY_ACTION = "com.vitorpamplona.amethyst.PUBLIC_REPLY_ACTION"
+    const val MARMOT_REPLY_ACTION = "com.vitorpamplona.amethyst.MARMOT_REPLY_ACTION"
     const val MARK_READ_ACTION = "com.vitorpamplona.amethyst.MARK_READ_ACTION"
     const val KEY_REPLY_TEXT = "key_reply_text"
     const val KEY_NOTIFICATION_ID = "key_notification_id"
     const val KEY_ACCOUNT_NPUB = "key_account_npub"
     const val KEY_CHATROOM_MEMBERS = "key_chatroom_members"
     const val KEY_TARGET_EVENT_ID = "key_target_event_id"
+    const val KEY_MARMOT_GROUP_ID = "key_marmot_group_id"
+    const val KEY_MARMOT_REPLY_TO_INNER_ID = "key_marmot_reply_to_inner_id"
+    const val KEY_MARMOT_REPLY_TO_INNER_AUTHOR = "key_marmot_reply_to_inner_author"
 
     private const val DM_SUMMARY_ID = 0x10000
     private const val ZAP_SUMMARY_ID = 0x20000
@@ -374,6 +378,9 @@ object NotificationUtils {
         accountNpub: String? = null,
         accountPictureUrl: String? = null,
         chatroomMembers: String? = null,
+        marmotNostrGroupId: String? = null,
+        marmotReplyToInnerEventId: String? = null,
+        marmotReplyToInnerAuthor: String? = null,
     ) {
         getOrCreateDMChannel(applicationContext)
         val channelId = stringRes(applicationContext, R.string.app_notification_dms_channel_id)
@@ -390,6 +397,9 @@ object NotificationUtils {
             accountNpub = accountNpub,
             accountPictureUrl = accountPictureUrl,
             chatroomMembers = chatroomMembers,
+            marmotNostrGroupId = marmotNostrGroupId,
+            marmotReplyToInnerEventId = marmotReplyToInnerEventId,
+            marmotReplyToInnerAuthor = marmotReplyToInnerAuthor,
         )
     }
 
@@ -425,6 +435,9 @@ object NotificationUtils {
         accountNpub: String?,
         accountPictureUrl: String?,
         chatroomMembers: String?,
+        marmotNostrGroupId: String? = null,
+        marmotReplyToInnerEventId: String? = null,
+        marmotReplyToInnerAuthor: String? = null,
     ) {
         val notId = id.hashCode()
 
@@ -504,6 +517,50 @@ object NotificationUtils {
                     putExtra(KEY_NOTIFICATION_ID, notId)
                     putExtra(KEY_ACCOUNT_NPUB, accountNpub)
                     putExtra(KEY_CHATROOM_MEMBERS, chatroomMembers)
+                }
+
+            val replyPendingIntent =
+                PendingIntent.getBroadcast(
+                    applicationContext,
+                    notId,
+                    replyIntent,
+                    PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                )
+
+            val replyAction =
+                NotificationCompat.Action
+                    .Builder(R.drawable.amethyst, stringRes(applicationContext, R.string.app_notification_reply_label), replyPendingIntent)
+                    .addRemoteInput(remoteInput)
+                    .setAllowGeneratedReplies(true)
+                    .setSemanticAction(NotificationCompat.Action.SEMANTIC_ACTION_REPLY)
+                    .build()
+
+            builder.addAction(replyAction)
+        } else if (accountNpub != null && marmotNostrGroupId != null) {
+            // Marmot/MLS Reply action: sends the user's text as an encrypted
+            // kind:9 inside the Marmot group, replying to the inner event
+            // that triggered this notification. Mirrors the NIP-17 path
+            // above but routes through NotificationReplyReceiver's
+            // MARMOT_REPLY_ACTION branch so we never publish a plaintext
+            // public reply for an encrypted group message.
+            val remoteInput =
+                RemoteInput
+                    .Builder(KEY_REPLY_TEXT)
+                    .setLabel(stringRes(applicationContext, R.string.app_notification_reply_label))
+                    .build()
+
+            val replyIntent =
+                Intent(applicationContext, NotificationReplyReceiver::class.java).apply {
+                    action = MARMOT_REPLY_ACTION
+                    putExtra(KEY_NOTIFICATION_ID, notId)
+                    putExtra(KEY_ACCOUNT_NPUB, accountNpub)
+                    putExtra(KEY_MARMOT_GROUP_ID, marmotNostrGroupId)
+                    if (marmotReplyToInnerEventId != null) {
+                        putExtra(KEY_MARMOT_REPLY_TO_INNER_ID, marmotReplyToInnerEventId)
+                    }
+                    if (marmotReplyToInnerAuthor != null) {
+                        putExtra(KEY_MARMOT_REPLY_TO_INNER_AUTHOR, marmotReplyToInnerAuthor)
+                    }
                 }
 
             val replyPendingIntent =

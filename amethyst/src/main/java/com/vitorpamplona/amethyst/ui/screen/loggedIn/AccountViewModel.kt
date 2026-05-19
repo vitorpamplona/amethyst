@@ -1541,12 +1541,23 @@ class AccountViewModel(
     suspend fun sendMarmotGroupMessage(
         nostrGroupId: String,
         text: String,
+        replyToInnerEventId: HexKey? = null,
+        replyToInnerAuthorPubKey: HexKey? = null,
     ) {
         // Inner event construction lives on MarmotManager so CLI and UI don't drift.
         // persistOwn=false because Account.sendMarmotGroupMessage routes the outer
         // event through LocalCache which already handles own-message display.
-        val bundle = account.marmotManager?.buildTextMessage(nostrGroupId, text, persistOwn = false) ?: return
-        val relays = marmotGroupRelays(nostrGroupId)
+        val bundle =
+            account.marmotManager
+                ?.buildTextMessage(
+                    nostrGroupId = nostrGroupId,
+                    text = text,
+                    replyToEventId = replyToInnerEventId,
+                    replyToAuthorPubKey = replyToInnerAuthorPubKey,
+                    persistOwn = false,
+                )
+                ?: return
+        val relays = account.marmotGroupRelays(nostrGroupId)
         account.sendMarmotGroupMessage(nostrGroupId, bundle.innerEvent, relays)
     }
 
@@ -1576,7 +1587,7 @@ class AccountViewModel(
                     account.signer.pubKey,
                     template,
                 )
-        val relays = marmotGroupRelays(nostrGroupId)
+        val relays = account.marmotGroupRelays(nostrGroupId)
         account.sendMarmotGroupMessage(nostrGroupId, innerEvent, relays)
     }
 
@@ -1614,28 +1625,12 @@ class AccountViewModel(
     }
 
     suspend fun leaveMarmotGroup(nostrGroupId: String) {
-        val relays = marmotGroupRelays(nostrGroupId)
+        val relays = account.marmotGroupRelays(nostrGroupId)
         account.leaveMarmotGroup(nostrGroupId, relays)
     }
 
     suspend fun resetMarmotState() {
         account.resetMarmotState()
-    }
-
-    /**
-     * Get the relay set for a Marmot group from MLS GroupContext metadata.
-     * Falls back to outbox relays if the group has no configured relays.
-     */
-    private fun marmotGroupRelays(nostrGroupId: String): Set<NormalizedRelayUrl> {
-        val metadata = account.marmotManager?.groupMetadata(nostrGroupId)
-        val groupRelays =
-            metadata
-                ?.relays
-                ?.mapNotNull {
-                    com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-                        .normalizeOrNull(it)
-                }?.toSet()
-        return if (!groupRelays.isNullOrEmpty()) groupRelays else account.outboxRelays.flow.value
     }
 
     fun marmotGroupMembers(nostrGroupId: String): List<com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo> = account.marmotManager?.memberPubkeys(nostrGroupId) ?: emptyList()
@@ -1649,7 +1644,7 @@ class AccountViewModel(
         nostrGroupId: String,
         targetLeafIndex: Int,
     ) {
-        val relays = marmotGroupRelays(nostrGroupId)
+        val relays = account.marmotGroupRelays(nostrGroupId)
         account.removeMarmotGroupMember(nostrGroupId, targetLeafIndex, relays)
     }
 
@@ -1657,7 +1652,7 @@ class AccountViewModel(
         nostrGroupId: String,
         targetPubKey: String,
     ) {
-        val relays = marmotGroupRelays(nostrGroupId)
+        val relays = account.marmotGroupRelays(nostrGroupId)
         account.grantMarmotGroupAdmin(nostrGroupId, targetPubKey, relays)
     }
 
@@ -1665,7 +1660,7 @@ class AccountViewModel(
         nostrGroupId: String,
         targetPubKey: String,
     ) {
-        val relays = marmotGroupRelays(nostrGroupId)
+        val relays = account.marmotGroupRelays(nostrGroupId)
         account.revokeMarmotGroupAdmin(nostrGroupId, targetPubKey, relays)
     }
 
@@ -1697,7 +1692,7 @@ class AccountViewModel(
                         name = name,
                         description = description,
                     )
-        val relays = marmotGroupRelays(nostrGroupId)
+        val relays = account.marmotGroupRelays(nostrGroupId)
         account.updateMarmotGroupMetadata(nostrGroupId, updatedMetadata, relays)
     }
 

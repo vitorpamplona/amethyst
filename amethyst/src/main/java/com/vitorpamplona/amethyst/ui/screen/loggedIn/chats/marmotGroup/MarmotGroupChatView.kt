@@ -29,11 +29,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,6 +50,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
@@ -58,6 +62,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.Marm
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotFileUploader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -74,6 +79,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun MarmotGroupChatView(
     nostrGroupId: HexKey,
+    draftMessage: String? = null,
+    replyToInnerNote: HexKey? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -99,6 +106,27 @@ fun MarmotGroupChatView(
         onDispose { }
     }
 
+    val messageState = remember(nostrGroupId) { TextFieldState() }
+    val replyTo = remember(nostrGroupId) { mutableStateOf<Note?>(null) }
+
+    // Resolve the navigation-supplied replyId (e.g. tapping reply on an MLS
+    // message in the Notifications screen) into the actual Note once it has
+    // landed in LocalCache. checkGetOrCreateNote is a no-op for unknown ids.
+    if (replyToInnerNote != null) {
+        LaunchedEffect(replyToInnerNote) {
+            val parent = accountViewModel.checkGetOrCreateNote(replyToInnerNote)
+            if (parent != null) {
+                replyTo.value = parent
+            }
+        }
+    }
+
+    if (draftMessage != null) {
+        LaunchedEffect(draftMessage) {
+            messageState.setTextAndPlaceCursorAtEnd(draftMessage)
+        }
+    }
+
     Column(Modifier.fillMaxHeight()) {
         Column(
             modifier =
@@ -111,7 +139,7 @@ fun MarmotGroupChatView(
                 accountViewModel = accountViewModel,
                 nav = nav,
                 routeForLastRead = "MarmotGroup/$nostrGroupId",
-                onWantsToReply = { },
+                onWantsToReply = { note -> replyTo.value = note },
                 onWantsToEditDraft = { },
             )
         }
@@ -120,6 +148,8 @@ fun MarmotGroupChatView(
 
         MarmotGroupMessageComposer(
             nostrGroupId = nostrGroupId,
+            messageState = messageState,
+            replyTo = replyTo,
             accountViewModel = accountViewModel,
             nav = nav,
             onMessageSent = {
@@ -132,12 +162,13 @@ fun MarmotGroupChatView(
 @Composable
 fun MarmotGroupMessageComposer(
     nostrGroupId: HexKey,
+    messageState: TextFieldState,
+    replyTo: MutableState<Note?>,
     accountViewModel: AccountViewModel,
     nav: INav,
     onMessageSent: suspend () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    val messageState = remember { TextFieldState() }
     val canPost by remember { derivedStateOf { messageState.text.isNotBlank() } }
     val context = LocalContext.current
 
@@ -160,6 +191,12 @@ fun MarmotGroupMessageComposer(
             onUpload = { onMessageSent() },
             onCancel = uploadState::reset,
         )
+    }
+
+    replyTo.value?.let {
+        DisplayReplyingToNote(it, accountViewModel, nav) {
+            replyTo.value = null
+        }
     }
 
     Column(modifier = EditFieldModifier) {
@@ -191,10 +228,21 @@ fun MarmotGroupMessageComposer(
                 ) {
                     val text = messageState.text.toString().trim()
                     if (text.isNotEmpty()) {
+                        // Capture id+pubKey snapshot under the value? guard so
+                        // a slow send doesn't race a user-cleared reply state.
+                        val parentEvent = replyTo.value?.event
+                        val replyId = parentEvent?.id
+                        val replyAuthor = parentEvent?.pubKey
                         scope.launch(Dispatchers.IO) {
                             try {
-                                accountViewModel.sendMarmotGroupMessage(nostrGroupId, text)
+                                accountViewModel.sendMarmotGroupMessage(
+                                    nostrGroupId = nostrGroupId,
+                                    text = text,
+                                    replyToInnerEventId = replyId,
+                                    replyToInnerAuthorPubKey = replyAuthor,
+                                )
                                 messageState.clearText()
+                                replyTo.value = null
                                 onMessageSent()
                             } catch (e: Exception) {
                                 launch(Dispatchers.Main) {
