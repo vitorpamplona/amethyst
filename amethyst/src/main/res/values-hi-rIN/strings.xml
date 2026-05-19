@@ -2604,4 +2604,5 @@
     <string name="community_rules_violation_quota_exceeded">आप पहले से ही %1$d इस प्रकार के घटनाओं को प्रकाशित कर चुके है (सीमा %2$d)।</string>
     <string name="community_rules_violation_wot_gate_failed">आप इस समुदाय के विश्वासजाल आवश्यकताओं को पार नहीं कर सके।</string>
     <string name="community_rules_violation_stale_rules">समुदाय का नवीनतम नियम अभिलेख पुराना होने के कारण अस्वीकृत।</string>
+    <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
 </resources>

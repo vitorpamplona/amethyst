@@ -2635,4 +2635,5 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="community_rules_violation_quota_exceeded">Danes imate že %1$d dogodkov tega tipa (kind) (omejitev je %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Ne izpolnjuješ pogojev mreže zaupanja (WoT) te skupnosti.</string>
     <string name="community_rules_violation_stale_rules">Najnovejša pravila skupnosti so bila zavrnjena, ker so zastarela.</string>
+    <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
 </resources>

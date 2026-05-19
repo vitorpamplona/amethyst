@@ -2627,4 +2627,5 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="community_rules_violation_quota_exceeded">Dzisiaj opublikowałeś/aś %1$d zdarzeń tego typu (limit wynosi %2$d).</string>
     <string name="community_rules_violation_wot_gate_failed">Nie spełniasz wymogów dotyczących rankingu zaufania tej społeczności.</string>
     <string name="community_rules_violation_stale_rules">Najnowszy dokument zawierający zasady społeczności został odrzucony jako nieaktualny.</string>
+    <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
 </resources>
