@@ -390,29 +390,36 @@ private fun HeroImage(
 @Composable
 private fun LocationRow(location: String) {
     val context = LocalContext.current
-    // The whole row is the affordance — a single click target with a trailing chevron makes the
-    // action discoverable without the dead-button look the previous nested TextButton produced.
+    // NIP-52 `location` is free-text — a place name, an address, OR a meeting URL (Zoom, Jitsi,
+    // a livestream link). Treat http(s) URLs as web links so they open in the browser; otherwise
+    // hand to the maps app via the geo: intent.
+    val isUrl = remember(location) { isLocationUrl(location) }
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clickable {
                     runCatching {
-                        // `geo:0,0?q=<location>` is the Android geo intent; the user's installed
-                        // maps app handles it. When none is installed the runCatching swallows
-                        // the ActivityNotFoundException — we don't have anywhere useful to fall
-                        // back to.
-                        context.startActivity(
-                            Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode(location)}"))
-                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                        )
+                        val trimmed = location.trim()
+                        val intent =
+                            if (isUrl) {
+                                Intent(Intent.ACTION_VIEW, Uri.parse(trimmed))
+                            } else {
+                                // `geo:0,0?q=<location>` is the Android geo intent; the user's
+                                // installed maps app handles it.
+                                Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode(trimmed)}"))
+                            }
+                        // runCatching swallows ActivityNotFoundException when no handler is
+                        // installed — we don't have anywhere useful to fall back to.
+                        context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                     }
                 }.padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            symbol = MaterialSymbols.LocationOn,
-            contentDescription = stringRes(R.string.calendar_open_in_maps),
+            symbol = if (isUrl) MaterialSymbols.Link else MaterialSymbols.LocationOn,
+            contentDescription =
+                stringRes(if (isUrl) R.string.calendar_open_link else R.string.calendar_open_in_maps),
             modifier = Modifier.size(18.dp),
             tint = MaterialTheme.colorScheme.primary,
         )
@@ -630,6 +637,17 @@ private fun SectionTitle(text: String) {
 }
 
 private fun formatPubKeyShort(pubKey: String): String = if (pubKey.length <= 16) pubKey else pubKey.take(8) + "…" + pubKey.takeLast(8)
+
+/**
+ * Whether a NIP-52 `location` value should be treated as a clickable web link (Zoom, Jitsi,
+ * livestream URL) instead of a place name to look up in the maps app. Trims so `" https://… "`
+ * still classifies as a URL.
+ */
+private fun isLocationUrl(location: String): Boolean {
+    val trimmed = location.trim()
+    return trimmed.startsWith("http://", ignoreCase = true) ||
+        trimmed.startsWith("https://", ignoreCase = true)
+}
 
 /**
  * Reactive scan of [LocalCache] for kind-31925 RSVPs that a-tag [targetAddress]. Re-runs on

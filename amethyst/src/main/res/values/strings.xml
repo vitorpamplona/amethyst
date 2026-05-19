@@ -2034,6 +2034,7 @@
     <string name="calendar_filter_sheet_title">Show events from…</string>
     <string name="calendar_filter_no_calendars">You haven\'t created any calendars yet.</string>
     <string name="calendar_open_in_maps">Open in maps</string>
+    <string name="calendar_open_link">Open link</string>
     <string name="route_calendar_event_detail">Event details</string>
     <string name="new_short_video">New Short Video</string>
     <string name="new_long_video">New Long Video</string>
