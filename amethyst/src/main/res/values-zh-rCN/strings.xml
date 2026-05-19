@@ -1002,9 +1002,6 @@
     <string name="invalid_port_number">无效端口</string>
     <string name="use_orbot">使用 Orbot</string>
     <string name="disconnect_from_your_orbot_setup">断开 Tor/Orbot 连接</string>
-    <!-- I2P daemon picker + per-feature toggles. Shape mirrors the Tor strings above.
-         Take effect only when I2P is also selected as the preferred clearnet transport. -->
-    <!-- Global picker: which transport carries clearnet traffic. -->
     <string name="app_notification_dms_channel_name">私信</string>
     <string name="app_notification_dms_channel_description">收到私信时通知你</string>
     <string name="app_notification_zaps_channel_name">收到打闪</string>
