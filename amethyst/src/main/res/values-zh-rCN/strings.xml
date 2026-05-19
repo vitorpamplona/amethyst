@@ -8,7 +8,9 @@
     <string name="show_anyway">仍然显示</string>
     <string name="post_was_hidden">此帖被隐藏，因为它提到了你隐藏的用户或单词</string>
     <string name="post_was_flagged_as_inappropriate_by">帖文被标记为不当</string>
-    <string name="post_was_hidden_due_to_too_many_hashtags">此帖有超过 %1$d 个话题标签</string>
+    <plurals name="post_was_hidden_due_to_too_many_hashtags">
+        <item quantity="other">此帖有超过 %1$d 个话题标签</item>
+    </plurals>
     <string name="post_not_found">事件正在加载或无法在你的中继列表中找到</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">频道图片</string>

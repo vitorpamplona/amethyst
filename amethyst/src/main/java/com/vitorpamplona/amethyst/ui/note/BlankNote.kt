@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -149,7 +150,7 @@ fun HiddenNote(
             ) {
                 if (hasExcessiveHashtags) {
                     Text(
-                        text = stringRes(R.string.post_was_hidden_due_to_too_many_hashtags, hashtagLimit),
+                        text = pluralStringResource(R.plurals.post_was_hidden_due_to_too_many_hashtags, hashtagLimit, hashtagLimit),
                         color = Color.Gray,
                         textAlign = TextAlign.Center,
                     )

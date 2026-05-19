@@ -2603,4 +2603,26 @@ anz der Bedingungen ist erforderlich</string>
     <string name="community_rules_violation_wot_gate_failed">Du erfüllst die Web-of-Trust-Anforderungen dieser Community nicht.</string>
     <string name="community_rules_violation_stale_rules">Das aktuelle Community-Regeldokument wurde als veraltet abgelehnt.</string>
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
+    <string name="copied_to_clipboard">In die Zwischenablage kopiert</string>
+    <string name="notification_channel_status_off">Aus</string>
+    <string name="notification_channel_status_on">An</string>
+    <string name="notification_channel_status_silent">Lautlos</string>
+    <string name="notification_settings">Benachrichtigungen</string>
+    <string name="notification_settings_categories_explainer">Tippe auf eine Kategorie, um die Android-Benachrichtigungseinstellungen dafür zu öffnen — Ton, Wichtigkeit, Badges und „Nicht stören\" findest du dort.</string>
+    <string name="notification_settings_section_categories">Kategorien</string>
+    <string name="notification_settings_section_delivery">Zustellung</string>
+    <string name="notification_settings_section_display">Anzeige in der App</string>
+    <string name="nowhere_link_card_art">Nowhere Kunst</string>
+    <string name="nowhere_link_card_drop">Nowhere Drop</string>
+    <string name="nowhere_link_card_event">Nowhere Event</string>
+    <string name="nowhere_link_card_forum">Nowhere Forum</string>
+    <string name="nowhere_link_card_fundraiser">Nowhere Spendenaktion</string>
+    <string name="nowhere_link_card_generic">Nowhere-Seite</string>
+    <string name="nowhere_link_card_message">Nowhere Nachricht</string>
+    <string name="nowhere_link_card_petition">Nowhere Petition</string>
+    <string name="nowhere_link_card_store">Nowhere Shop</string>
+    <plurals name="post_was_hidden_due_to_too_many_hashtags">
+        <item quantity="one">Dieser Beitrag hat mehr als %1$d Hashtag</item>
+        <item quantity="other">Dieser Beitrag hat mehr als %1$d Hashtags</item>
+    </plurals>
 </resources>

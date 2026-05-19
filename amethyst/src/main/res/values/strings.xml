@@ -10,7 +10,10 @@
     <string name="show_anyway">Show Anyway</string>
     <string name="post_was_hidden">This post was hidden because it mentions your hidden users or words</string>
     <string name="post_was_flagged_as_inappropriate_by">Post was muted or reported by</string>
-    <string name="post_was_hidden_due_to_too_many_hashtags">This post has more than %1$d hashtags</string>
+    <plurals name="post_was_hidden_due_to_too_many_hashtags">
+        <item quantity="one">This post has more than %1$d hashtag</item>
+        <item quantity="other">This post has more than %1$d hashtags</item>
+    </plurals>
     <string name="post_not_found">Event is loading or can\'t be found in your relay list</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Channel Image</string>

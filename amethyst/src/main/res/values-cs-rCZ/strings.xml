@@ -2624,4 +2624,28 @@
     <string name="community_rules_violation_wot_gate_failed">Nesplňuješ požadavky sítě důvěry této komunity.</string>
     <string name="community_rules_violation_stale_rules">Nejnovější dokument s pravidly komunity byl odmítnut jako zastaralý.</string>
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
+    <string name="copied_to_clipboard">Zkopírováno do schránky</string>
+    <string name="notification_channel_status_off">Vypnuto</string>
+    <string name="notification_channel_status_on">Zapnuto</string>
+    <string name="notification_channel_status_silent">Ztlumeno</string>
+    <string name="notification_settings">Oznámení</string>
+    <string name="notification_settings_categories_explainer">Klepněte na kategorii a otevřete pro ni nastavení oznámení Androidu — zvuk, důležitost, odznaky a režim Nerušit najdete tam.</string>
+    <string name="notification_settings_section_categories">Kategorie</string>
+    <string name="notification_settings_section_delivery">Doručování</string>
+    <string name="notification_settings_section_display">Zobrazení v aplikaci</string>
+    <string name="nowhere_link_card_art">Nowhere Umění</string>
+    <string name="nowhere_link_card_drop">Nowhere Drop</string>
+    <string name="nowhere_link_card_event">Nowhere Událost</string>
+    <string name="nowhere_link_card_forum">Nowhere Fórum</string>
+    <string name="nowhere_link_card_fundraiser">Nowhere Sbírka</string>
+    <string name="nowhere_link_card_generic">Stránka Nowhere</string>
+    <string name="nowhere_link_card_message">Nowhere Zpráva</string>
+    <string name="nowhere_link_card_petition">Nowhere Petice</string>
+    <string name="nowhere_link_card_store">Nowhere Obchod</string>
+    <plurals name="post_was_hidden_due_to_too_many_hashtags">
+        <item quantity="one">Tento příspěvek má více než %1$d hashtag</item>
+        <item quantity="few">Tento příspěvek má více než %1$d hashtagy</item>
+        <item quantity="many">Tento příspěvek má více než %1$d hashtagů</item>
+        <item quantity="other">Tento příspěvek má více než %1$d hashtagů</item>
+    </plurals>
 </resources>
