@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFind
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.amethyst.ui.note.showAmount
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
@@ -56,6 +57,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
@@ -147,15 +149,34 @@ class EventNotificationConsumer(
 
             if (!notificationManager().areNotificationsEnabled()) return@withWakeLock
 
-            // Ask the event which of our signing accounts it's notifying.
-            // Each kind declares its own notification semantics in
-            // [Event.notifies] (lowercase `p` by default, NIP-22 also checks
-            // uppercase `P`, etc.), so we don't hard-code tag names here.
+            // Match the in-app Notifications feed exactly: the event must
+            // p-tag the account AND pass NotificationFeedFilter.tagsAnEventByUser
+            // — the latter is the per-kind "is this actually for me" rule
+            // (reply-to-me, citation of my post, fork of my content, community
+            // moderation, reaction targeting my note, etc.). WakeUpEvent is the
+            // one exception: its [Event.notifies] is `true` unconditionally so
+            // every signed-in account processes it (the dispatcher bypasses
+            // the same way).
+            //
+            // One LocalCache lookup per event regardless of account count —
+            // the note is the same for every saved account. Use the Event
+            // overload so AddressableEvent kinds resolve to their replaceable
+            // note (id-keyed version has empty replyTo after insertion).
+            val matchingNote: Note? =
+                if (event is WakeUpEvent) {
+                    null
+                } else {
+                    LocalCache.getNoteIfExists(event) ?: return@withWakeLock
+                }
+
             LocalPreferences.allSavedAccounts().forEach { savedAccount ->
                 if (!savedAccount.hasPrivKey && !savedAccount.loggedInWithExternalSigner) return@forEach
 
                 val accountHex = npubToHexOrNull(savedAccount.npub) ?: return@forEach
-                if (!event.notifies(accountHex)) return@forEach
+                if (matchingNote != null) {
+                    if (!event.isTaggedUser(accountHex)) return@forEach
+                    if (!NotificationFeedFilter.tagsAnEventByUser(matchingNote, accountHex)) return@forEach
+                }
 
                 val accountSettings = LocalPreferences.loadAccountConfigFromEncryptedStorage(savedAccount.npub) ?: return@forEach
                 try {
@@ -203,6 +224,17 @@ class EventNotificationConsumer(
         // 15-min rolling age window, so individual notify() methods don't need
         // to repeat either check.
         if (event.pubKey == account.signer.pubKey) return
+
+        // Mirror NotificationFeedFilter: reactions and zaps target a note via
+        // `replyTo`, not via thread-root tags on the wrapper event, so checking
+        // the wrapper's own thread misses them. Resolve the target and drop if
+        // its thread is muted. (The feed extends this to reposts too, but
+        // RepostEvent / GenericRepostEvent aren't routed below — push doesn't
+        // notify on reposts at all today.)
+        if (event is ReactionEvent || event is LnZapEvent) {
+            val target = LocalCache.getNoteIfExists(event)?.replyTo?.lastOrNull()
+            if (target != null && account.isThreadMuted(account.resolveThreadRoot(target))) return
+        }
 
         when (event) {
             is PrivateDmEvent -> notify(event, account)
