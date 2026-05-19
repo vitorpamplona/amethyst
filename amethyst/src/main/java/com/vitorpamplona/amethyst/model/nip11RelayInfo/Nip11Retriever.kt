@@ -45,7 +45,7 @@ class Nip11Retriever(
         relay: NormalizedRelayUrl,
         onInfo: (Nip11RelayInformation) -> Unit,
         onError: (NormalizedRelayUrl, ErrorCode, String?) -> Unit,
-    ) {
+    ) = withContext(Dispatchers.IO) {
         val url = relay.toHttp()
         try {
             val request: Request =
@@ -58,27 +58,25 @@ class Nip11Retriever(
             val client = okHttpClient(relay)
 
             client.newCall(request).executeAsync().use { response ->
-                withContext(Dispatchers.IO) {
-                    val body = response.body.string()
-                    try {
-                        if (response.isSuccessful) {
-                            if (body.startsWith("{")) {
-                                onInfo(Nip11RelayInformation.fromJson(body))
-                            } else {
-                                onError(relay, ErrorCode.FAIL_TO_PARSE_RESULT, body)
-                            }
+                val body = response.body.string()
+                try {
+                    if (response.isSuccessful) {
+                        if (body.startsWith("{")) {
+                            onInfo(Nip11RelayInformation.fromJson(body))
                         } else {
-                            onError(relay, ErrorCode.FAIL_WITH_HTTP_STATUS, response.code.toString())
+                            onError(relay, ErrorCode.FAIL_TO_PARSE_RESULT, body)
                         }
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        Log.e(
-                            "RelayInfoFail",
-                            "Resulting Message from Relay ${relay.url} in not parseable: $body",
-                            e,
-                        )
-                        onError(relay, ErrorCode.FAIL_TO_PARSE_RESULT, e.message)
+                    } else {
+                        onError(relay, ErrorCode.FAIL_WITH_HTTP_STATUS, response.code.toString())
                     }
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.e(
+                        "RelayInfoFail",
+                        "Resulting Message from Relay ${relay.url} in not parseable: $body",
+                        e,
+                    )
+                    onError(relay, ErrorCode.FAIL_TO_PARSE_RESULT, e.message)
                 }
             }
         } catch (e: Exception) {
