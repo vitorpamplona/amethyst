@@ -1921,6 +1921,8 @@
     <string name="new_regular_poll">New Regular Poll</string>
     <string name="new_picture">New Picture</string>
     <string name="new_calendar_event">New Calendar Event</string>
+    <string name="edit_calendar_event">Edit Calendar Event</string>
+    <string name="calendar_event_all_day_locked">Locked while editing — changing this would create a new event instead.</string>
     <string name="new_calendar_collection">New Calendar</string>
     <string name="edit_calendar_collection">Edit Calendar</string>
     <string name="calendar_collection_events_section">Events in this calendar (%1$d)</string>
@@ -1959,7 +1961,7 @@
     <string name="calendar_untitled">(untitled)</string>
     <string name="calendar_all_day">All-day</string>
     <string name="calendar_rsvp_going_prefixed">✓ Going</string>
-    <string name="calendar_rsvp_maybe_prefixed">? Maybe</string>
+    <string name="calendar_rsvp_maybe_prefixed">\? Maybe</string>
     <string name="calendar_rsvp_not_going_prefixed">✗ Can\'t go</string>
 
     <string name="calendar_collection_title">Title</string>

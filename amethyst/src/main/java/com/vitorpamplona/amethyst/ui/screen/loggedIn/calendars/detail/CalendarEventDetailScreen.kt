@@ -106,6 +106,8 @@ fun CalendarEventDetailScreen(
         .collectAsStateWithLifecycle()
     val event = noteState.note.event
 
+    val isOwnEvent = event?.pubKey == accountViewModel.userProfile().pubkeyHex
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -123,6 +125,28 @@ fun CalendarEventDetailScreen(
                             modifier = Modifier.size(20.dp),
                             tint = MaterialTheme.colorScheme.onSurface,
                         )
+                    }
+                },
+                actions = {
+                    // The Edit affordance is only meaningful when the current account is the
+                    // author — relays will reject a signed-by-stranger replacement.
+                    if (isOwnEvent && event != null) {
+                        IconButton(onClick = {
+                            nav.nav(
+                                Route.EditCalendarEvent(
+                                    kind = event.kind,
+                                    pubKeyHex = event.pubKey,
+                                    dTag = targetAddress.dTag,
+                                ),
+                            )
+                        }) {
+                            Icon(
+                                symbol = MaterialSymbols.Edit,
+                                contentDescription = stringRes(R.string.edit_calendar_event),
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
                     }
                 },
             )

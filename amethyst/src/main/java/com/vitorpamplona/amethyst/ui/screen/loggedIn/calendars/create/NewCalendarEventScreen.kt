@@ -57,14 +57,21 @@ import com.vitorpamplona.amethyst.ui.stringRes
 fun NewCalendarEventScreen(
     nav: INav,
     accountViewModel: AccountViewModel,
+    editKind: Int? = null,
+    editPubKeyHex: String? = null,
+    editDTag: String? = null,
 ) {
     val vm: NewCalendarEventViewModel = viewModel()
     vm.init(accountViewModel)
+    if (editKind != null && editPubKeyHex != null && editDTag != null) {
+        // loadForEdit is idempotent across recompositions; safe to call from the composable body.
+        vm.loadForEdit(accountViewModel, editKind, editPubKeyHex, editDTag)
+    }
 
     Scaffold(
         topBar = {
             SavingTopBar(
-                titleRes = R.string.new_calendar_event,
+                titleRes = if (vm.isEditing) R.string.edit_calendar_event else R.string.new_calendar_event,
                 onCancel = { nav.popBack() },
                 onPost = {
                     accountViewModel.launchSigner {
@@ -175,14 +182,26 @@ private fun AllDayToggleRow(vm: NewCalendarEventViewModel) {
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = stringRes(R.string.calendar_event_all_day),
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.weight(1f),
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringRes(R.string.calendar_event_all_day),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            if (vm.isEditing) {
+                // Toggling all-day mid-edit would mean a different event kind (31922 vs 31923)
+                // and a different addressable, leaving the original event live as a stale copy.
+                // The user can delete the appointment and re-create if they want to change kind.
+                Text(
+                    text = stringRes(R.string.calendar_event_all_day_locked),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
         Switch(
             checked = vm.isAllDay.value,
             onCheckedChange = { vm.isAllDay.value = it },
+            enabled = !vm.isEditing,
         )
     }
 }
