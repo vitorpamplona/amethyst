@@ -239,9 +239,6 @@
     <string name="wallet_connect_service_relay">錢包綁定中繼</string>
     <string name="pledge_amount_in_sats">聰數量</string>
     <string name="looking_for_event">"“正在查找事件%1$s”"</string>
-    <!-- I2P daemon picker + per-feature toggles. Shape mirrors the Tor strings above.
-         Take effect only when I2P is also selected as the preferred clearnet transport. -->
-    <!-- Global picker: which transport carries clearnet traffic. -->
     <!-- Call notifications and UI -->
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <!-- Kind display names for relay subscription filter chips -->
