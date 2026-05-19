@@ -116,7 +116,9 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderAttestorRecommendation
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioHeader
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderBadgeAward
+import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarCollectionEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarDateSlotEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarRSVPEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarTimeSlotEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCashuMint
 import com.vitorpamplona.amethyst.ui.note.types.RenderChannelMessage
@@ -254,6 +256,8 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
@@ -1187,6 +1191,14 @@ private fun RenderNoteRow(
 
         is CalendarDateSlotEvent -> {
             RenderCalendarDateSlotEvent(baseNote, accountViewModel, nav)
+        }
+
+        is CalendarEvent -> {
+            RenderCalendarCollectionEvent(baseNote, accountViewModel, nav)
+        }
+
+        is CalendarRSVPEvent -> {
+            RenderCalendarRSVPEvent(baseNote, accountViewModel, nav)
         }
 
         is GoalEvent -> {
