@@ -64,6 +64,11 @@ fun CalendarsScreen(
     CalendarsFilterAssemblerSubscription(accountViewModel)
 
     var viewMode by rememberSaveable { mutableStateOf(CalendarsViewMode.FEED) }
+    var filterDTag by rememberSaveable { mutableStateOf<String?>(null) }
+    // Resolve the selected calendar's member addresses (or null when "All"). Plumbed into each
+    // view so the membership filter is applied client-side after the feed loads — changing the
+    // filter doesn't trigger a relay refetch.
+    val filterAddresses = rememberCalendarFilterAddresses(filterDTag, accountViewModel)
 
     DisappearingScaffold(
         isInvertedLayout = false,
@@ -73,6 +78,13 @@ fun CalendarsScreen(
                 onViewModeChange = { viewMode = it },
                 accountViewModel = accountViewModel,
                 nav = nav,
+                trailing = {
+                    CalendarFilterChip(
+                        selectedDTag = filterDTag,
+                        onSelect = { filterDTag = it },
+                        accountViewModel = accountViewModel,
+                    )
+                },
             )
         },
         bottomBar = {
@@ -95,13 +107,13 @@ fun CalendarsScreen(
             Column(modifier = Modifier.fillMaxSize()) {
                 when (viewMode) {
                     CalendarsViewMode.FEED ->
-                        CalendarFeedView(feedState, accountViewModel, nav)
+                        CalendarFeedView(feedState, accountViewModel, nav, filterAddresses)
                     CalendarsViewMode.MONTH ->
-                        CalendarMonthView(feedState, accountViewModel, nav)
+                        CalendarMonthView(feedState, accountViewModel, nav, filterAddresses)
                     CalendarsViewMode.WEEK ->
-                        CalendarWeekView(feedState, accountViewModel, nav)
+                        CalendarWeekView(feedState, accountViewModel, nav, filterAddresses)
                     CalendarsViewMode.DAY ->
-                        CalendarDayView(feedState, accountViewModel, nav)
+                        CalendarDayView(feedState, accountViewModel, nav, filterAddresses)
                 }
             }
         }

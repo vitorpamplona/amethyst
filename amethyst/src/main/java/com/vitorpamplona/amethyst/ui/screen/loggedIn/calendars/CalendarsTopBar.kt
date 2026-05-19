@@ -51,6 +51,10 @@ fun CalendarsTopBar(
     onViewModeChange: (CalendarsViewMode) -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
+    // Optional trailing slot for screen-specific extras (the calendar-membership filter
+    // currently lives here). Kept generic so future controls can plug in the same way without
+    // top-bar surgery.
+    trailing: (@Composable () -> Unit)? = null,
 ) {
     Column {
         UserDrawerSearchTopBar(accountViewModel, nav) {
@@ -65,10 +69,17 @@ fun CalendarsTopBar(
             )
         }
 
-        CalendarsViewModeTabs(
-            current = viewMode,
-            onChange = onViewModeChange,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        ) {
+            CalendarsViewModeTabs(
+                current = viewMode,
+                onChange = onViewModeChange,
+                modifier = Modifier.weight(1f),
+            )
+            trailing?.invoke()
+        }
     }
 }
 
@@ -94,13 +105,13 @@ private fun CalendarsTopNavFilterBar(
 private fun CalendarsViewModeTabs(
     current: CalendarsViewMode,
     onChange: (CalendarsViewMode) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Row(
         modifier =
-            Modifier
-                .fillMaxWidth()
+            modifier
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+                .padding(vertical = 4.dp),
     ) {
         CalendarsViewMode.entries.forEach { mode ->
             FilterChip(

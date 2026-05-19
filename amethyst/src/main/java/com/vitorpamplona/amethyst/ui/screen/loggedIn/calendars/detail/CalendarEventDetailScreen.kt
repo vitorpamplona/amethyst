@@ -131,8 +131,11 @@ fun CalendarEventDetailScreen(
                 },
                 actions = {
                     val context = androidx.compose.ui.platform.LocalContext.current
-                    // Export to .ics — available regardless of authorship; anyone viewing the
-                    // event may want to drop it into their personal calendar.
+                    // Two share modes:
+                    //  - .ics for non-nostr calendar apps (Google Calendar / iOS / Outlook)
+                    //  - nostr:naddr… link for sharing inside the nostr ecosystem (in DMs,
+                    //    in posts, in other clients). A single button with a chooser would be
+                    //    cleaner, but two icons keep both actions one tap away.
                     if (event != null) {
                         IconButton(onClick = {
                             val ics =
@@ -152,6 +155,34 @@ fun CalendarEventDetailScreen(
                             Icon(
                                 symbol = MaterialSymbols.Share,
                                 contentDescription = stringRes(R.string.calendar_export_event),
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                        val shareTitle = stringRes(R.string.calendar_share_nostr_title)
+                        IconButton(onClick = {
+                            val naddr =
+                                com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+                                    .create(
+                                        targetAddress.kind,
+                                        targetAddress.pubKeyHex,
+                                        targetAddress.dTag,
+                                        null,
+                                    )
+                            val intent =
+                                android.content
+                                    .Intent(android.content.Intent.ACTION_SEND)
+                                    .setType("text/plain")
+                                    .putExtra(android.content.Intent.EXTRA_TEXT, "nostr:$naddr")
+                            context.startActivity(
+                                android.content.Intent
+                                    .createChooser(intent, shareTitle)
+                                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                            )
+                        }) {
+                            Icon(
+                                symbol = MaterialSymbols.AutoMirrored.Send,
+                                contentDescription = stringRes(R.string.calendar_share_nostr),
                                 modifier = Modifier.size(20.dp),
                                 tint = MaterialTheme.colorScheme.onSurface,
                             )

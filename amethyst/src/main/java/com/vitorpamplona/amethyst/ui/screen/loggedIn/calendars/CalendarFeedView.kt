@@ -56,12 +56,13 @@ fun CalendarFeedView(
     feedState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: INav,
+    filterAddresses: Set<com.vitorpamplona.quartz.nip01Core.core.Address>? = null,
 ) {
     RefresheableBox(feedState, true) {
         val state by feedState.feedContent.collectAsStateWithLifecycle()
 
         when (val s = state) {
-            is FeedState.Loaded -> CalendarFeedLoadedBody(s, accountViewModel, nav)
+            is FeedState.Loaded -> CalendarFeedLoadedBody(s, accountViewModel, nav, filterAddresses)
             is FeedState.Empty -> CalendarFeedEmpty()
             is FeedState.Loading -> Box(modifier = Modifier.fillMaxSize())
             is FeedState.FeedError -> CalendarFeedError(s)
@@ -74,12 +75,13 @@ private fun CalendarFeedLoadedBody(
     loaded: FeedState.Loaded,
     accountViewModel: AccountViewModel,
     nav: INav,
+    filterAddresses: Set<com.vitorpamplona.quartz.nip01Core.core.Address>?,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
-    val split by remember {
+    val split by remember(filterAddresses) {
         derivedStateOf {
-            partitionUpcomingPast(items.list)
+            partitionUpcomingPast(items.list.applyCalendarFilter(filterAddresses))
         }
     }
 
@@ -153,6 +155,20 @@ data class UpcomingPastSplit(
     val upcoming: List<Note>,
     val past: List<Note>,
 )
+
+/**
+ * Returns only notes whose appointment address is in [filterAddresses]. Pass null to skip
+ * filtering (the common path when "All" is selected). Lives here as a shared helper so each
+ * view body can keep its own collection logic and just opt-into the filter via one call.
+ */
+fun List<Note>.applyCalendarFilter(filterAddresses: Set<com.vitorpamplona.quartz.nip01Core.core.Address>?): List<Note> {
+    if (filterAddresses == null) return this
+    return filter { note ->
+        val addr =
+            (note.event as? com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent)?.address()
+        addr != null && addr in filterAddresses
+    }
+}
 
 /**
  * [nowSeconds] is taken as a parameter (rather than reading `TimeUtils.now()` internally) so the

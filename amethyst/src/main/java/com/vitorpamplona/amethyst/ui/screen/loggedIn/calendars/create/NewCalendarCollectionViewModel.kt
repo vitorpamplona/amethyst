@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -34,6 +35,9 @@ import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 /**
  * Lightweight projection of a calendar appointment authored by the current user, used to power
@@ -63,6 +67,8 @@ class NewCalendarCollectionViewModel : ViewModel() {
     val selectedAddresses = mutableStateListOf<Address>()
     val availableAppointments = mutableStateOf<List<OwnedAppointmentSummary>>(emptyList())
 
+    private var liveScanJob: Job? = null
+
     val isEditing: Boolean
         get() = dTag != null
 
@@ -86,6 +92,24 @@ class NewCalendarCollectionViewModel : ViewModel() {
         }
 
         availableAppointments.value = loadOwnedAppointments()
+
+        // Reactively re-scan when new events arrive in LocalCache. Without this, an appointment
+        // the user publishes from another screen (or that arrives from a relay) while the editor
+        // is open wouldn't appear in the picker until the screen reopens. The Job is stored so
+        // re-init in editing-mode doesn't stack subscribers (init() returns early after the
+        // first call anyway, but defence in depth).
+        liveScanJob?.cancel()
+        liveScanJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                LocalCache.live.newEventBundles.collect {
+                    availableAppointments.value = loadOwnedAppointments()
+                }
+            }
+    }
+
+    override fun onCleared() {
+        liveScanJob?.cancel()
+        super.onCleared()
     }
 
     fun toggle(address: Address) {

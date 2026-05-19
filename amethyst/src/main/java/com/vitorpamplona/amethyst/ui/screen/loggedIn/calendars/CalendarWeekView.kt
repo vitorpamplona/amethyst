@@ -65,6 +65,7 @@ fun CalendarWeekView(
     feedState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: INav,
+    filterAddresses: Set<com.vitorpamplona.quartz.nip01Core.core.Address>? = null,
 ) {
     val state by feedState.feedContent.collectAsStateWithLifecycle()
     val notes =
@@ -73,6 +74,7 @@ fun CalendarWeekView(
                 s.feed
                     .collectAsStateWithLifecycle()
                     .value.list
+                    .applyCalendarFilter(filterAddresses)
             else -> emptyList()
         }
 

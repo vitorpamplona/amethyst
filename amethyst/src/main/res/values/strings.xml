@@ -2005,6 +2005,11 @@
     <string name="calendar_reminder_settings_lead_title">Reminder lead time</string>
     <string name="calendar_reminder_settings_lead_subtitle">How many minutes before the event you want to be notified.</string>
     <string name="calendar_reminder_settings_lead_choice">%1$d min</string>
+    <string name="calendar_share_nostr">Share as nostr link</string>
+    <string name="calendar_share_nostr_title">Share calendar link</string>
+    <string name="calendar_filter_all">All calendars</string>
+    <string name="calendar_filter_sheet_title">Show events from…</string>
+    <string name="calendar_filter_no_calendars">You haven\'t created any calendars yet.</string>
     <string name="calendar_open_in_maps">Open in maps</string>
     <string name="route_calendar_event_detail">Event details</string>
     <string name="new_short_video">New Short Video</string>
