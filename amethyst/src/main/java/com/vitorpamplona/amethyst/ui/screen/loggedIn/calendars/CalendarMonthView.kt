@@ -59,7 +59,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.groupByDayKey
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.groupByDayKeyExpanded
 import com.vitorpamplona.amethyst.ui.stringRes
 import java.time.LocalDate
 import java.time.YearMonth
@@ -93,11 +93,26 @@ fun CalendarMonthView(
         visibleMonthValue = ym.monthValue
     }
 
-    val eventsByDay by remember(notes) { derivedStateOf { groupByDayKey(notes) } }
+    val eventsByDay by remember(notes) { derivedStateOf { groupByDayKeyExpanded(notes) } }
 
     var selectedDayKey by rememberSaveable { mutableStateOf<Long?>(null) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .calendarSwipeNavigation(
+                    key = visibleYear to visibleMonthValue,
+                    onSwipeLeft = {
+                        setVisibleMonth(visibleMonth.plusMonths(1))
+                        selectedDayKey = null
+                    },
+                    onSwipeRight = {
+                        setVisibleMonth(visibleMonth.minusMonths(1))
+                        selectedDayKey = null
+                    },
+                ),
+    ) {
         CalendarNavigationHeader(
             title = formatMonthYear(visibleMonth.year, visibleMonth.monthValue - 1),
             prevContentDescription = stringRes(R.string.calendar_nav_previous_month),

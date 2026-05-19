@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -55,7 +54,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.groupByDayKey
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.groupByDayKeyExpanded
 import com.vitorpamplona.amethyst.ui.stringRes
 import java.time.LocalDate
 import java.time.ZoneId
@@ -87,9 +86,24 @@ fun CalendarWeekView(
 
     var selectedDayIndex by rememberSaveable { mutableStateOf(0) }
 
-    val eventsByDay by remember(notes) { derivedStateOf { groupByDayKey(notes) } }
+    val eventsByDay by remember(notes) { derivedStateOf { groupByDayKeyExpanded(notes) } }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .calendarSwipeNavigation(
+                    key = weekStartEpochDay,
+                    onSwipeLeft = {
+                        weekStartEpochDay = weekStart.plusWeeks(1).toEpochDay()
+                        selectedDayIndex = 0
+                    },
+                    onSwipeRight = {
+                        weekStartEpochDay = weekStart.minusWeeks(1).toEpochDay()
+                        selectedDayIndex = 0
+                    },
+                ),
+    ) {
         CalendarNavigationHeader(
             title = formatMonthYear(weekStart.year, weekStart.monthValue - 1),
             prevContentDescription = stringRes(R.string.calendar_nav_previous_week),
@@ -124,16 +138,10 @@ fun CalendarWeekView(
         DaySummaryHeader(selectedDate)
 
         if (dayNotes.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(32.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = stringRes(R.string.calendar_no_events),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            CalendarEmptyState(
+                title = stringRes(R.string.calendar_empty_week_title),
+                subtitle = stringRes(R.string.calendar_empty_week_subtitle),
+            )
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(dayNotes, key = { it.idHex }) { note ->

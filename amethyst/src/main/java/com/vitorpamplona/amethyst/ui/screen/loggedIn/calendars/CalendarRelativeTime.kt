@@ -26,14 +26,18 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.CalendarAppointmentView
 
 /**
- * Localised "starts in 2 hours" / "started 5 minutes ago" / "ongoing" label for an appointment.
- * Returns null when the event has no parseable start (in which case there's nothing to anchor
- * a relative phrase to).
+ * Localised "starts in 2 hours" / "started 5 minutes ago" / "Happening now · ends in 2 hours"
+ * label for an appointment. Returns null when the event has no parseable start (nothing to
+ * anchor a relative phrase to).
  *
  * Uses [DateUtils.getRelativeTimeSpanString] for the underlying minute/hour/day phrasing — that
  * helper is locale-aware and ages from "just now" through "in N days" to absolute date for
  * far-out events. For all-day events we extend the resolution to DAY so we get "tomorrow",
  * "in 3 days" instead of an hour-precision phrase that would lie about the start moment.
+ *
+ * Ongoing events (start ≤ now ≤ end) get a composite "Happening now · ends in X" so a user
+ * mid-event sees how much time is left rather than the misleading "started X minutes ago" that
+ * DateUtils would produce on its own.
  */
 fun relativeTimeLabel(
     context: Context,
@@ -43,10 +47,17 @@ fun relativeTimeLabel(
     val start = view.startSeconds ?: return null
     val end = view.endSeconds
 
-    // If the event is happening right now (start ≤ now ≤ end), prefer an explicit "ongoing"
-    // label over the misleading "started X minutes ago" that DateUtils would produce.
     if (end != null && start <= nowSeconds && nowSeconds <= end) {
-        return context.getString(R.string.calendar_relative_ongoing)
+        val ongoing = context.getString(R.string.calendar_relative_ongoing)
+        val endsIn =
+            DateUtils
+                .getRelativeTimeSpanString(
+                    end * 1000L,
+                    nowSeconds * 1000L,
+                    if (view.isAllDay) DateUtils.DAY_IN_MILLIS else DateUtils.MINUTE_IN_MILLIS,
+                    DateUtils.FORMAT_ABBREV_RELATIVE,
+                ).toString()
+        return context.getString(R.string.calendar_relative_ongoing_with_end, ongoing, endsIn)
     }
 
     val minResolution =

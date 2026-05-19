@@ -1937,6 +1937,14 @@
     <string name="calendar_section_past">Past</string>
     <string name="calendar_empty_feed">No upcoming or past calendar events from your selected feed yet.</string>
     <string name="calendar_empty_collections">No calendar collections yet.</string>
+    <string name="calendar_empty_feed_title">Your calendar is empty</string>
+    <string name="calendar_empty_feed_subtitle">Events shared by people you follow appear here. Tap the + button to create your own.</string>
+    <string name="calendar_empty_collections_title">No collections yet</string>
+    <string name="calendar_empty_collections_subtitle">Group events together — a meetup series, a conference track, your team\'s roadmap. Tap + to create one.</string>
+    <string name="calendar_empty_day_title">Nothing scheduled</string>
+    <string name="calendar_empty_day_subtitle">No events on this day. Tap + to add one.</string>
+    <string name="calendar_empty_week_title">Nothing this week</string>
+    <string name="calendar_empty_week_subtitle">No events fall in this week.</string>
 
     <string name="calendar_event_title">Title</string>
     <string name="calendar_event_summary">Summary</string>
@@ -1958,6 +1966,8 @@
     <string name="calendar_nav_next_day">Next day</string>
     <string name="calendar_no_events_today">No events on this day</string>
     <string name="calendar_no_events">No events</string>
+    <string name="calendar_continues">Continues</string>
+    <string name="calendar_day_of_total">Day %1$d of %2$d</string>
     <string name="calendar_untitled">(untitled)</string>
     <string name="calendar_all_day">All-day</string>
     <string name="calendar_rsvp_going_prefixed">✓ Going</string>
@@ -1979,6 +1989,7 @@
     <string name="calendar_event_in_no_calendars">Not part of any calendar yet.</string>
     <string name="calendar_event_loading">Loading event…</string>
     <string name="calendar_relative_ongoing">Happening now</string>
+    <string name="calendar_relative_ongoing_with_end">%1$s · ends %2$s</string>
     <string name="calendar_export_share_title">Share calendar event</string>
     <string name="calendar_export_event">Export to calendar (.ics)</string>
     <string name="calendar_reminder_channel_id">calendar_reminders</string>

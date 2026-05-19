@@ -103,6 +103,48 @@ fun groupByDayKey(notes: List<Note>): Map<Long, List<Note>> {
 }
 
 /**
+ * Inclusive `[start, end]` range of day-keys an appointment covers. A single-day event yields
+ * one key; a multi-day event yields every day from start through end. Returns null when the
+ * note isn't a calendar appointment or has no parseable start.
+ *
+ * Capped at 366 days so a malformed event with a far-future end can't blow up month-view memory.
+ */
+fun Note.calendarLocalDayKeyRange(): LongRange? {
+    val startKey = calendarLocalDayKey() ?: return null
+    val endKey =
+        when (val e = event) {
+            is CalendarTimeSlotEvent ->
+                e.end()?.let {
+                    Instant
+                        .ofEpochSecond(it)
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDate()
+                        .toEpochDay()
+                } ?: startKey
+            is CalendarDateSlotEvent -> parseIsoDate(e.end())?.toEpochDay() ?: startKey
+            else -> startKey
+        }
+    val safeEnd = endKey.coerceAtLeast(startKey).coerceAtMost(startKey + 366)
+    return startKey..safeEnd
+}
+
+/**
+ * Like [groupByDayKey] but a multi-day appointment lands in every day it covers (not just the
+ * start day). Used by month/week/day views so a 3-day conference shows on all three rows; the
+ * upcoming/past list view still uses [groupByDayKey] semantics via its own ordering.
+ */
+fun groupByDayKeyExpanded(notes: List<Note>): Map<Long, List<Note>> {
+    val map = mutableMapOf<Long, MutableList<Note>>()
+    notes.forEach { note ->
+        val range = note.calendarLocalDayKeyRange() ?: return@forEach
+        for (key in range) {
+            map.getOrPut(key) { mutableListOf() }.add(note)
+        }
+    }
+    return map
+}
+
+/**
  * Sort by: upcoming events ascending (closest first), then past events descending (most-recent
  * first). [nowSeconds] is captured once per sort so the comparator stays transitive across the
  * full sort run — reading the clock inside `compare` would violate the [Comparator] contract on

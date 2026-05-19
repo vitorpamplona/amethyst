@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.detail
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,39 +45,52 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.ui.note.ReactionsRow
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.types.CalendarRsvpRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.IcsExport
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.appointmentView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.datasource.CalendarsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.formatCalendarRange
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.relativeTimeLabel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.shareIcs
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size30dp
+import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * Dedicated detail screen for a NIP-52 calendar appointment (kind 31922 or 31923). Renders the
@@ -102,10 +117,11 @@ fun CalendarEventDetailScreen(
 
     val targetAddress = remember(kind, pubKeyHex, dTag) { Address(kind, pubKeyHex, dTag) }
     val targetNote = remember(targetAddress) { LocalCache.getOrCreateAddressableNote(targetAddress) }
-    val noteState by targetNote
-        .flow()
-        .metadata.stateFlow
-        .collectAsStateWithLifecycle()
+    // [observeNote] issues a per-event relay subscription on top of the LocalCache flow. This
+    // is the prefetch path for deep links (notification tap, `nostr:naddr…` from another app):
+    // landing on the screen without the event cached now triggers a targeted relay fetch instead
+    // of waiting for the broader calendars feed to happen to include it.
+    val noteState by observeNote(targetNote, accountViewModel)
     val event = noteState.note.event
 
     val isOwnEvent = event?.pubKey == accountViewModel.userProfile().pubkeyHex
@@ -130,7 +146,7 @@ fun CalendarEventDetailScreen(
                     }
                 },
                 actions = {
-                    val context = androidx.compose.ui.platform.LocalContext.current
+                    val context = LocalContext.current
                     // Two share modes:
                     //  - .ics for non-nostr calendar apps (Google Calendar / iOS / Outlook)
                     //  - nostr:naddr… link for sharing inside the nostr ecosystem (in DMs,
@@ -138,19 +154,9 @@ fun CalendarEventDetailScreen(
                     //    cleaner, but two icons keep both actions one tap away.
                     if (event != null) {
                         IconButton(onClick = {
-                            val ics =
-                                com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.IcsExport
-                                    .appointmentToIcs(
-                                        event,
-                                        targetAddress,
-                                        com.vitorpamplona.quartz.utils.TimeUtils
-                                            .now(),
-                                    )
-                            val filename =
-                                com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.IcsExport
-                                    .appointmentFilename(event, targetAddress)
-                            com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars
-                                .shareIcs(context, filename, ics)
+                            val ics = IcsExport.appointmentToIcs(event, targetAddress, TimeUtils.now())
+                            val filename = IcsExport.appointmentFilename(event, targetAddress)
+                            shareIcs(context, filename, ics)
                         }) {
                             Icon(
                                 symbol = MaterialSymbols.Share,
@@ -162,22 +168,20 @@ fun CalendarEventDetailScreen(
                         val shareTitle = stringRes(R.string.calendar_share_nostr_title)
                         IconButton(onClick = {
                             val naddr =
-                                com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
-                                    .create(
-                                        targetAddress.kind,
-                                        targetAddress.pubKeyHex,
-                                        targetAddress.dTag,
-                                        null,
-                                    )
+                                NAddress.create(
+                                    targetAddress.kind,
+                                    targetAddress.pubKeyHex,
+                                    targetAddress.dTag,
+                                    null,
+                                )
                             val intent =
-                                android.content
-                                    .Intent(android.content.Intent.ACTION_SEND)
+                                Intent(Intent.ACTION_SEND)
                                     .setType("text/plain")
-                                    .putExtra(android.content.Intent.EXTRA_TEXT, "nostr:$naddr")
+                                    .putExtra(Intent.EXTRA_TEXT, "nostr:$naddr")
                             context.startActivity(
-                                android.content.Intent
+                                Intent
                                     .createChooser(intent, shareTitle)
-                                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                             )
                         }) {
                             Icon(
@@ -288,15 +292,10 @@ private fun EventBody(
                 color = MaterialTheme.colorScheme.primary,
             )
         }
-        val context = androidx.compose.ui.platform.LocalContext.current
+        val context = LocalContext.current
         val relative =
             remember(note.idHex, view.startSeconds) {
-                relativeTimeLabel(
-                    context,
-                    view,
-                    com.vitorpamplona.quartz.utils.TimeUtils
-                        .now(),
-                )
+                relativeTimeLabel(context, view, TimeUtils.now())
             }
         relative?.let {
             Text(
@@ -314,6 +313,18 @@ private fun EventBody(
             )
         }
     }
+
+    // Standard social actions (zap, reactions/likes, repost, reply count → thread/comments).
+    // Uses the shared [ReactionsRow] so the affordances look and behave the same as every other
+    // note-detail surface in the app — no calendar-specific reinvention.
+    ReactionsRow(
+        baseNote = note,
+        showReactionDetail = true,
+        addPadding = true,
+        editState = null,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
 
     HorizontalDivider()
 
@@ -359,7 +370,7 @@ private fun HeroImage(
 
 @Composable
 private fun LocationRow(location: String) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     // The whole row is the affordance — a single click target with a trailing chevron makes the
     // action discoverable without the dead-button look the previous nested TextButton produced.
     Row(
@@ -373,9 +384,8 @@ private fun LocationRow(location: String) {
                         // the ActivityNotFoundException — we don't have anywhere useful to fall
                         // back to.
                         context.startActivity(
-                            android.content
-                                .Intent(android.content.Intent.ACTION_VIEW, "geo:0,0?q=${android.net.Uri.encode(location)}".let(android.net.Uri::parse))
-                                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                            Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode(location)}"))
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                         )
                     }
                 }.padding(vertical = 4.dp),
@@ -505,9 +515,9 @@ private fun InCalendarsSection(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                com.vitorpamplona.amethyst.ui.note.ClickableUserPicture(
+                ClickableUserPicture(
                     baseUserHex = calendar.pubKey,
-                    size = com.vitorpamplona.amethyst.ui.theme.Size30dp,
+                    size = Size30dp,
                     accountViewModel = accountViewModel,
                 )
                 Text(
@@ -534,45 +544,39 @@ private fun UserRow(
     nav: INav,
     trailing: (@Composable () -> Unit)?,
 ) {
-    com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms
-        .LoadUser(baseUserHex = pubKey, accountViewModel = accountViewModel) { user ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                com.vitorpamplona.amethyst.ui.note.ClickableUserPicture(
-                    baseUserHex = pubKey,
-                    size = com.vitorpamplona.amethyst.ui.theme.Size35dp,
+    LoadUser(baseUserHex = pubKey, accountViewModel = accountViewModel) { user ->
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            ClickableUserPicture(
+                baseUserHex = pubKey,
+                size = Size35dp,
+                accountViewModel = accountViewModel,
+                onClick = { nav.nav(Route.Profile(pubKey)) },
+            )
+            if (user != null) {
+                UsernameDisplay(
+                    baseUser = user,
+                    weight = Modifier.weight(1f),
                     accountViewModel = accountViewModel,
-                    onClick = {
-                        nav.nav(
-                            com.vitorpamplona.amethyst.ui.navigation.routes.Route
-                                .Profile(pubKey),
-                        )
-                    },
                 )
-                if (user != null) {
-                    com.vitorpamplona.amethyst.ui.note.UsernameDisplay(
-                        baseUser = user,
-                        weight = Modifier.weight(1f),
-                        accountViewModel = accountViewModel,
-                    )
-                } else {
-                    // LoadUser is still resolving — show the npub-style fallback so the row
-                    // doesn't visibly collapse.
-                    Text(
-                        text = formatPubKeyShort(pubKey),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.weight(1f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                trailing?.invoke()
+            } else {
+                // LoadUser is still resolving — show the npub-style fallback so the row
+                // doesn't visibly collapse.
+                Text(
+                    text = formatPubKeyShort(pubKey),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
+            trailing?.invoke()
         }
+    }
 }
 
 @Composable
@@ -614,16 +618,16 @@ private fun formatPubKeyShort(pubKey: String): String = if (pubKey.length <= 16)
  * refresh. The scan is O(addressables) which is bounded by the relay subscription.
  */
 @Composable
-private fun rememberRsvpsFor(targetAddress: Address): androidx.compose.runtime.State<List<CalendarRSVPEvent>> =
-    androidx.compose.runtime.produceState(initialValue = findRsvpsFor(targetAddress), targetAddress) {
+private fun rememberRsvpsFor(targetAddress: Address): State<List<CalendarRSVPEvent>> =
+    produceState(initialValue = findRsvpsFor(targetAddress), targetAddress) {
         LocalCache.live.newEventBundles.collect {
             value = findRsvpsFor(targetAddress)
         }
     }
 
 @Composable
-private fun rememberCalendarsContaining(targetAddress: Address): androidx.compose.runtime.State<List<CalendarEvent>> =
-    androidx.compose.runtime.produceState(initialValue = findCalendarsContaining(targetAddress), targetAddress) {
+private fun rememberCalendarsContaining(targetAddress: Address): State<List<CalendarEvent>> =
+    produceState(initialValue = findCalendarsContaining(targetAddress), targetAddress) {
         LocalCache.live.newEventBundles.collect {
             value = findCalendarsContaining(targetAddress)
         }

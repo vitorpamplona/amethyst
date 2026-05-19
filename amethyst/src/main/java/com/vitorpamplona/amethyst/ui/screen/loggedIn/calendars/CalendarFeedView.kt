@@ -125,16 +125,10 @@ private fun SectionHeader(text: String) {
 
 @Composable
 private fun CalendarFeedEmpty() {
-    Box(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = stringRes(R.string.calendar_empty_feed),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
+    CalendarEmptyState(
+        title = stringRes(R.string.calendar_empty_feed_title),
+        subtitle = stringRes(R.string.calendar_empty_feed_subtitle),
+    )
 }
 
 @Composable

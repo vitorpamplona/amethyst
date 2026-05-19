@@ -102,16 +102,10 @@ private fun CollectionsBody(
 
 @Composable
 private fun EmptyCollections() {
-    Box(
-        modifier = Modifier.fillMaxSize().padding(32.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = stringRes(R.string.calendar_empty_collections),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
+    CalendarEmptyState(
+        title = stringRes(R.string.calendar_empty_collections_title),
+        subtitle = stringRes(R.string.calendar_empty_collections_subtitle),
+    )
 }
 
 @Composable

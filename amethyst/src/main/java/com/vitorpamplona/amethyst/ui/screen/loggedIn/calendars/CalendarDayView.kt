@@ -58,7 +58,8 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.appointmentView
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.groupByDayKey
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.calendarLocalDayKeyRange
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.groupByDayKeyExpanded
 import com.vitorpamplona.amethyst.ui.stringRes
 import java.time.LocalDate
 import java.time.ZoneId
@@ -87,10 +88,19 @@ fun CalendarDayView(
     var visibleEpochDay by rememberSaveable { mutableStateOf(today.toEpochDay()) }
     val visibleDate = LocalDate.ofEpochDay(visibleEpochDay)
 
-    val byDay by remember(notes) { derivedStateOf { groupByDayKey(notes) } }
+    val byDay by remember(notes) { derivedStateOf { groupByDayKeyExpanded(notes) } }
     val dayEvents = byDay[visibleDate.toEpochDay()].orEmpty()
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .calendarSwipeNavigation(
+                    key = visibleEpochDay,
+                    onSwipeLeft = { visibleEpochDay = visibleDate.plusDays(1).toEpochDay() },
+                    onSwipeRight = { visibleEpochDay = visibleDate.minusDays(1).toEpochDay() },
+                ),
+    ) {
         CalendarNavigationHeader(
             title = formatLongDate(visibleDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond()),
             prevContentDescription = stringRes(R.string.calendar_nav_previous_day),
@@ -101,26 +111,21 @@ fun CalendarDayView(
         )
 
         if (dayEvents.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(32.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = stringRes(R.string.calendar_no_events_today),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            CalendarEmptyState(
+                title = stringRes(R.string.calendar_empty_day_title),
+                subtitle = stringRes(R.string.calendar_empty_day_subtitle),
+            )
             return@Column
         }
 
-        DayTimeline(dayEvents, nav)
+        DayTimeline(dayEvents, visibleEpochDay, nav)
     }
 }
 
 @Composable
 private fun DayTimeline(
     dayEvents: List<Note>,
+    visibleEpochDay: Long,
     nav: INav,
 ) {
     val sorted =
@@ -131,7 +136,11 @@ private fun DayTimeline(
 
     LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
         items(sorted, key = { it.idHex }) { note ->
-            DayRow(note = note, onClick = { nav.nav(Route.Note(note.idHex)) })
+            DayRow(
+                note = note,
+                visibleEpochDay = visibleEpochDay,
+                onClick = { nav.nav(Route.Note(note.idHex)) },
+            )
             HorizontalDivider()
         }
     }
@@ -140,13 +149,29 @@ private fun DayTimeline(
 @Composable
 private fun DayRow(
     note: Note,
+    visibleEpochDay: Long,
     onClick: () -> Unit,
 ) {
     val view = note.appointmentView() ?: return
+    val range = note.calendarLocalDayKeyRange()
+    // Position within a multi-day event: today is "Day 2 of 4". Renders below the time label so
+    // a continuation day on a 3-day conference reads as "9:00 AM / Day 2 of 3" rather than
+    // looking like a fresh event.
+    val dayOfTotal =
+        if (range != null && range.last > range.first) {
+            (visibleEpochDay - range.first + 1).toInt() to (range.last - range.first + 1).toInt()
+        } else {
+            null
+        }
 
     val timeLabel =
         when {
             view.isAllDay -> stringRes(R.string.calendar_all_day)
+            view.startSeconds != null && visibleEpochDay > (range?.first ?: visibleEpochDay) ->
+                // Continuation day of a multi-day timed event — the "9:00 AM" of day 1 is
+                // misleading on day 2 since the event has been ongoing overnight. Show a
+                // continuation marker so the user reads it as "still happening".
+                stringRes(R.string.calendar_continues)
             view.startSeconds != null -> formatTimeOfDay(view.startSeconds)
             else -> "—"
         }
@@ -184,6 +209,14 @@ private fun DayRow(
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
+                )
+            }
+            dayOfTotal?.let { (day, total) ->
+                Text(
+                    text = stringRes(R.string.calendar_day_of_total, day, total),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
                 )
             }
             view.location?.let {

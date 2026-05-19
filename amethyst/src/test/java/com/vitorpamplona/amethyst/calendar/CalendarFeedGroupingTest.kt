@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.calendar
 
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.calendarLocalDayKeyRange
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.groupByDayKey
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.groupByDayKeyExpanded
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.partitionUpcomingPast
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
@@ -140,6 +142,47 @@ class CalendarFeedGroupingTest {
                 .toEpochDay()
         val grouped = groupByDayKey(listOf(timeSlotNote("x", startSeconds = seconds)))
         assertTrue(grouped.containsKey(expectedKey))
+    }
+
+    @Test
+    fun groupByDayKeyExpanded_singleDayEvent_landsOnlyOnStartDay() {
+        // Sanity: an event with no end (or end == start) doesn't multiply itself.
+        val note = dateSlotNote(id = "d", start = "2025-01-15")
+        val grouped = groupByDayKeyExpanded(listOf(note))
+        val key = LocalDate.of(2025, 1, 15).toEpochDay()
+        assertEquals(1, grouped.size)
+        assertEquals(1, grouped[key]?.size)
+    }
+
+    @Test
+    fun groupByDayKeyExpanded_multiDayDateSlot_landsOnEveryDay() {
+        // A 3-day date-slot event should appear in each of Jan 15, 16, 17.
+        val note = dateSlotNote(id = "d", start = "2025-01-15", end = "2025-01-17")
+        val grouped = groupByDayKeyExpanded(listOf(note))
+        val keys = listOf(15, 16, 17).map { LocalDate.of(2025, 1, it).toEpochDay() }
+        assertEquals(3, grouped.size)
+        for (k in keys) assertEquals(1, grouped[k]?.size)
+    }
+
+    @Test
+    fun groupByDayKeyExpanded_multiDayTimeSlot_landsOnEveryDayCovered() {
+        // Spans ~36 hours from 12:00 UTC Jan 15 to 00:00 UTC Jan 17. Whether that crosses 2 or 3
+        // local days depends on the runner zone; we just assert it covers more than one day.
+        val note = timeSlotNote(id = "t", startSeconds = 1736942400L, endSeconds = 1736942400L + 36 * 3600L)
+        val grouped = groupByDayKeyExpanded(listOf(note))
+        assertTrue("expected multi-day event to land on >1 day", grouped.size >= 2)
+    }
+
+    @Test
+    fun calendarLocalDayKeyRange_isCappedAt366Days() {
+        // Defence: a malformed event with end years in the future shouldn't expand to thousands
+        // of day-keys and blow up the month grid.
+        val absurdStart = 1736942400L
+        val absurdEnd = absurdStart + 365L * 86400L * 10 // 10 years
+        val note = timeSlotNote(id = "rogue", startSeconds = absurdStart, endSeconds = absurdEnd)
+        val range = note.calendarLocalDayKeyRange()
+        assertNotNull(range)
+        assertTrue((range!!.last - range.first) <= 366)
     }
 
     // ---- helpers ----

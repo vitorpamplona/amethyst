@@ -49,6 +49,8 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
+import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.UriParser
 import kotlinx.coroutines.CancellationException
@@ -192,7 +194,7 @@ fun uriToRoute(
                     routeFor(
                         note = LocalCache.getOrCreateAddressableNote(nip19.address()),
                         loggedIn = account,
-                    ) ?: Route.EventRedirect(nip19.aTag())
+                    ) ?: calendarDirectRoute(nip19) ?: Route.EventRedirect(nip19.aTag())
                 }
 
                 is NEmbed -> {
@@ -254,3 +256,19 @@ fun uriToRoute(
 
     return null
 }
+
+/**
+ * Direct route for an `naddr` whose event hasn't arrived in [LocalCache] yet. When a notification
+ * is tapped (or a `nostr:naddr…` deep link arrives) for a calendar appointment we know is kind
+ * 31922/31923, route straight to the dedicated detail screen instead of bouncing through
+ * [Route.EventRedirect]. The detail screen issues its own per-event subscription, so the user
+ * sees the calendar-specific loading placeholder while the event arrives, not the generic
+ * redirect screen.
+ */
+private fun calendarDirectRoute(nip19: NAddress): Route? =
+    when (nip19.kind) {
+        CalendarTimeSlotEvent.KIND,
+        CalendarDateSlotEvent.KIND,
+        -> Route.CalendarEventDetail(nip19.kind, nip19.author, nip19.dTag)
+        else -> null
+    }
