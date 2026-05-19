@@ -31,10 +31,14 @@ import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.OnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.TaprootAddress
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -64,6 +68,8 @@ data class OnchainTxView(
             if (isIncoming) z.pubKey else z.recipient()
         }
 }
+
+private const val SAMPLE_MILLIS = 500L
 
 class OnchainTransactionsViewModel : ViewModel() {
     private var address: String? = null
@@ -113,6 +119,21 @@ class OnchainTransactionsViewModel : ViewModel() {
     private val _displayAddress = MutableStateFlow<String?>(null)
     val displayAddress = _displayAddress.asStateFlow()
 
+    /**
+     * Oldest `blockTime` (or null = unconfirmed/unknown) across the currently
+     * loaded chain rows. The screen feeds this into the relay subscription so
+     * we only ask relays for zap events from that point onwards instead of
+     * pulling the user's entire NIP-BC history.
+     *
+     * Returns null while the page is empty (no constraint — fall back to the
+     * relay's full history for the first call) or when the oldest row is in
+     * the mempool (we don't have a timestamp to bound on).
+     */
+    val oldestBlockTime: StateFlow<Long?> =
+        chainTxs
+            .map { txs -> txs.minOfOrNull { it.blockTime ?: Long.MAX_VALUE }?.takeIf { it != Long.MAX_VALUE } }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     fun init(accountViewModel: AccountViewModel) {
         if (address != null) return
         val pubKey = accountViewModel.account.signer.pubKey
@@ -122,10 +143,13 @@ class OnchainTransactionsViewModel : ViewModel() {
 
         // Stand up the reactive zap cache. The two filters cover both
         // directions; LocalCache's filter index narrows the fanout, so we
-        // only get woken for kind-8333 events that mention us.
+        // only get woken for kind-8333 events that mention us. .sample(500)
+        // coalesces bursts so a relay flooding 50 historical zaps at once
+        // produces at most one UI update.
         viewModelScope.launch(Dispatchers.IO) {
             val incoming = Filter(kinds = listOf(OnchainZapEvent.KIND), tags = mapOf("p" to listOf(pubKey)))
             val outgoing = Filter(kinds = listOf(OnchainZapEvent.KIND), authors = listOf(pubKey))
+            @OptIn(FlowPreview::class)
             combine(
                 LocalCache.observeEvents<OnchainZapEvent>(incoming),
                 LocalCache.observeEvents<OnchainZapEvent>(outgoing),
@@ -136,7 +160,7 @@ class OnchainTransactionsViewModel : ViewModel() {
                     merged[txid] = z
                 }
                 merged
-            }.collect { zapsByTxid.value = it }
+            }.sample(SAMPLE_MILLIS).collect { zapsByTxid.value = it }
         }
     }
 

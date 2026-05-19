@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.datasource.OnchainZapsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import java.text.NumberFormat
@@ -87,6 +88,13 @@ fun OnchainTransactionsScreen(
         viewModel.init(accountViewModel)
         viewModel.fetchTransactions()
     }
+
+    val windowSince by viewModel.oldestBlockTime.collectAsState()
+    OnchainZapsFilterAssemblerSubscription(
+        user = accountViewModel.account.userProfile(),
+        windowSinceSeconds = windowSince,
+        accountViewModel = accountViewModel,
+    )
 
     val transactions by viewModel.filteredTransactions.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()

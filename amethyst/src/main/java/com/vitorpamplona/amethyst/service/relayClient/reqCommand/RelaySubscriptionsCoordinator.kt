@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.datasource.RelayInfo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.datasource.ShortsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.ThreadFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.datasource.OnchainZapsFilterAssembler
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.IAuthStatus
@@ -127,6 +128,9 @@ class RelaySubscriptionsCoordinator(
     // active when sending zaps via NWC
     val nwc = NWCPaymentFilterAssembler(client)
 
+    // active when the wallet's on-chain transactions screen is on top.
+    val onchainZaps = OnchainZapsFilterAssembler(client)
+
     val all =
         listOf(
             account,
@@ -167,6 +171,7 @@ class RelaySubscriptionsCoordinator(
             relayInfoNip66,
             chess,
             nwc,
+            onchainZaps,
         )
 
     fun destroy() = all.forEach { it.destroy() }
