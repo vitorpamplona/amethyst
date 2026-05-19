@@ -37,6 +37,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.stringRes
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.time.Instant
@@ -121,13 +123,13 @@ fun CalendarDateTimePickerButton(
                     } else {
                         commit(datePickerState.selectedDateMillis, includeTime = false, hour = 0, minute = 0, onChange = onChange)
                     }
-                }) { Text("OK") }
+                }) { Text(stringRes(R.string.confirm)) }
             },
             dismissButton = {
                 TextButton(onClick = {
                     reset()
                     showDate = false
-                }) { Text("Cancel") }
+                }) { Text(stringRes(R.string.cancel)) }
             },
         ) {
             DatePicker(state = datePickerState)
@@ -136,7 +138,7 @@ fun CalendarDateTimePickerButton(
 
     if (showTime) {
         TimePickerDialog(
-            title = { Text("Pick time") },
+            title = { Text(stringRes(R.string.calendar_event_pick_time)) },
             onDismissRequest = {
                 reset()
                 showTime = false
@@ -151,13 +153,13 @@ fun CalendarDateTimePickerButton(
                         onChange = onChange,
                     )
                     showTime = false
-                }) { Text("OK") }
+                }) { Text(stringRes(R.string.confirm)) }
             },
             dismissButton = {
                 TextButton(onClick = {
                     reset()
                     showTime = false
-                }) { Text("Cancel") }
+                }) { Text(stringRes(R.string.cancel)) }
             },
         ) {
             TimePicker(state = timePickerState)

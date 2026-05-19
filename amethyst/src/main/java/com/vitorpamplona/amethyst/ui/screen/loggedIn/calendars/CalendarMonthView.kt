@@ -53,12 +53,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.groupByDayKey
+import com.vitorpamplona.amethyst.ui.stringRes
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -96,8 +98,8 @@ fun CalendarMonthView(
     Column(modifier = Modifier.fillMaxSize()) {
         CalendarNavigationHeader(
             title = formatMonthYear(visibleMonth.year, visibleMonth.monthValue - 1),
-            prevContentDescription = "Previous month",
-            nextContentDescription = "Next month",
+            prevContentDescription = stringRes(R.string.calendar_nav_previous_month),
+            nextContentDescription = stringRes(R.string.calendar_nav_next_month),
             onPrev = {
                 setVisibleMonth(visibleMonth.minusMonths(1))
                 selectedDayKey = null

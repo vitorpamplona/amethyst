@@ -167,10 +167,13 @@ private fun AppointmentPickerRow(
     isSelected: Boolean,
     onToggle: () -> Unit,
 ) {
+    // `stringRes` must be called outside `remember` (it's @Composable). The date format is the
+    // only piece worth memoising — the localised "All-day" label is a single lookup per row.
+    val allDayLabel = stringRes(R.string.calendar_all_day)
     val whenLabel =
-        remember(summary.address, summary.startSeconds, summary.isAllDay) {
+        remember(summary.address, summary.startSeconds, summary.isAllDay, allDayLabel) {
             when {
-                summary.isAllDay -> "All-day"
+                summary.isAllDay -> allDayLabel
                 summary.startSeconds != null -> formatLongDate(summary.startSeconds)
                 else -> "—"
             }
@@ -190,7 +193,7 @@ private fun AppointmentPickerRow(
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(
-                text = summary.title,
+                text = summary.title.ifBlank { stringRes(R.string.calendar_untitled) },
                 style = MaterialTheme.typography.bodyLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

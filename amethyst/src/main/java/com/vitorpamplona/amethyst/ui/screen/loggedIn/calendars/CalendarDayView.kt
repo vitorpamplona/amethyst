@@ -50,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.model.Note
@@ -58,6 +59,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.appointmentView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.groupByDayKey
+import com.vitorpamplona.amethyst.ui.stringRes
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -89,8 +91,8 @@ fun CalendarDayView(
     Column(modifier = Modifier.fillMaxSize()) {
         CalendarNavigationHeader(
             title = formatLongDate(visibleDate.atStartOfDay(ZoneId.systemDefault()).toEpochSecond()),
-            prevContentDescription = "Previous day",
-            nextContentDescription = "Next day",
+            prevContentDescription = stringRes(R.string.calendar_nav_previous_day),
+            nextContentDescription = stringRes(R.string.calendar_nav_next_day),
             onPrev = { visibleEpochDay = visibleDate.minusDays(1).toEpochDay() },
             onNext = { visibleEpochDay = visibleDate.plusDays(1).toEpochDay() },
             onToday = { visibleEpochDay = LocalDate.now().toEpochDay() },
@@ -102,7 +104,7 @@ fun CalendarDayView(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "No events on this day",
+                    text = stringRes(R.string.calendar_no_events_today),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -142,7 +144,7 @@ private fun DayRow(
 
     val timeLabel =
         when {
-            view.isAllDay -> "All day"
+            view.isAllDay -> stringRes(R.string.calendar_all_day)
             view.startSeconds != null -> formatTimeOfDay(view.startSeconds)
             else -> "—"
         }

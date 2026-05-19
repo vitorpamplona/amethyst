@@ -133,14 +133,18 @@ class NewCalendarCollectionViewModel : ViewModel() {
                         is CalendarTimeSlotEvent ->
                             OwnedAppointmentSummary(
                                 address = e.address(),
-                                title = e.title().orEmpty().ifBlank { "(untitled)" },
+                                // `title` may be empty; the picker row substitutes a localised
+                                // "(untitled)" string at render time — the VM stays string-free.
+                                title = e.title().orEmpty(),
                                 startSeconds = e.start(),
                                 isAllDay = false,
                             )
                         is CalendarDateSlotEvent ->
                             OwnedAppointmentSummary(
                                 address = e.address(),
-                                title = e.title().orEmpty().ifBlank { "(untitled)" },
+                                // `title` may be empty; the picker row substitutes a localised
+                                // "(untitled)" string at render time — the VM stays string-free.
+                                title = e.title().orEmpty(),
                                 // Date-only events don't have an instant; null sorts last in the
                                 // upcoming-first comparator below.
                                 startSeconds = null,

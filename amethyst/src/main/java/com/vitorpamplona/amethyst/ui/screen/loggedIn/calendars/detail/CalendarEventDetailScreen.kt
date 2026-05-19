@@ -330,9 +330,9 @@ private fun RsvpsSection(targetAddress: Address) {
         rsvps.forEach { rsvp ->
             val statusLabel =
                 when (rsvp.status()) {
-                    RSVPStatusTag.STATUS.ACCEPTED -> "✓ Going"
-                    RSVPStatusTag.STATUS.TENTATIVE -> "? Maybe"
-                    RSVPStatusTag.STATUS.DECLINED -> "✗ Can't go"
+                    RSVPStatusTag.STATUS.ACCEPTED -> stringRes(R.string.calendar_rsvp_going_prefixed)
+                    RSVPStatusTag.STATUS.TENTATIVE -> stringRes(R.string.calendar_rsvp_maybe_prefixed)
+                    RSVPStatusTag.STATUS.DECLINED -> stringRes(R.string.calendar_rsvp_not_going_prefixed)
                     null -> "—"
                 }
             Text(
@@ -364,7 +364,7 @@ private fun InCalendarsSection(
         }
         calendars.forEach { calendar ->
             Text(
-                text = calendar.title() ?: "(untitled)",
+                text = calendar.title() ?: stringRes(R.string.calendar_untitled),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier =

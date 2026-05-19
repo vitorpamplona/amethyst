@@ -1945,8 +1945,22 @@
     <string name="calendar_event_end">Ends</string>
     <string name="calendar_event_hashtags">Hashtags (comma-separated)</string>
     <string name="calendar_event_pick_date">Pick date</string>
+    <string name="calendar_event_pick_time">Pick time</string>
     <string name="calendar_event_invalid">Title and start are required.</string>
     <string name="calendar_event_end_before_start">End must be after start.</string>
+    <string name="calendar_nav_previous_month">Previous month</string>
+    <string name="calendar_nav_next_month">Next month</string>
+    <string name="calendar_nav_previous_week">Previous week</string>
+    <string name="calendar_nav_next_week">Next week</string>
+    <string name="calendar_nav_previous_day">Previous day</string>
+    <string name="calendar_nav_next_day">Next day</string>
+    <string name="calendar_no_events_today">No events on this day</string>
+    <string name="calendar_no_events">No events</string>
+    <string name="calendar_untitled">(untitled)</string>
+    <string name="calendar_all_day">All-day</string>
+    <string name="calendar_rsvp_going_prefixed">✓ Going</string>
+    <string name="calendar_rsvp_maybe_prefixed">? Maybe</string>
+    <string name="calendar_rsvp_not_going_prefixed">✗ Can\'t go</string>
 
     <string name="calendar_collection_title">Title</string>
     <string name="calendar_collection_description">Description</string>
