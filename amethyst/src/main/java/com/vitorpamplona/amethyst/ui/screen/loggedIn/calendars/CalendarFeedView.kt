@@ -154,8 +154,15 @@ data class UpcomingPastSplit(
     val past: List<Note>,
 )
 
-fun partitionUpcomingPast(items: List<Note>): UpcomingPastSplit {
-    val now = TimeUtils.now()
+/**
+ * [nowSeconds] is taken as a parameter (rather than reading `TimeUtils.now()` internally) so the
+ * split can be unit-tested deterministically and so callers that already snapshot `now` for a
+ * sort don't read the clock twice.
+ */
+fun partitionUpcomingPast(
+    items: List<Note>,
+    nowSeconds: Long = TimeUtils.now(),
+): UpcomingPastSplit {
     val upcoming = mutableListOf<Note>()
     val past = mutableListOf<Note>()
     items.forEach {
@@ -163,7 +170,7 @@ fun partitionUpcomingPast(items: List<Note>): UpcomingPastSplit {
         // An event that started yesterday but ends tomorrow is "happening now", not over.
         // Fall back to start when end is missing so the legacy single-instant behaviour is kept.
         val effectiveEnd = it.calendarEndSeconds() ?: s
-        if (effectiveEnd >= now) {
+        if (effectiveEnd >= nowSeconds) {
             upcoming.add(it)
         } else {
             past.add(it)

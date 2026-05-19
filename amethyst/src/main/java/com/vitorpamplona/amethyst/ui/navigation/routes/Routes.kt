@@ -95,6 +95,18 @@ sealed class Route {
         val dTag: String? = null,
     ) : Route()
 
+    @Serializable data class CalendarEventDetail(
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
+    ) : Route() {
+        constructor(address: Address) : this(
+            kind = address.kind,
+            pubKeyHex = address.pubKeyHex,
+            dTag = address.dTag,
+        )
+    }
+
     @Serializable object Products : Route()
 
     @Serializable object Shorts : Route()

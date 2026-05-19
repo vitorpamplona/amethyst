@@ -70,13 +70,20 @@ fun CalendarEventListCard(
 ) {
     val view = note.appointmentView() ?: return
     val range = remember(note.idHex) { formatCalendarRange(note) }
+    val event = note.event ?: return
+    val detailRoute =
+        remember(event.id) {
+            val addr =
+                (event as? com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent)?.address()
+            addr?.let { Route.CalendarEventDetail(it) } ?: Route.Note(note.idHex)
+        }
 
     Card(
         modifier =
             modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 6.dp)
-                .clickable { nav.nav(Route.Note(note.idHex)) },
+                .clickable { nav.nav(detailRoute) },
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.elevatedCardColors(),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
