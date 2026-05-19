@@ -37,7 +37,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,16 +53,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.calendarLocalDayKey
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.groupByDayKey
 import java.time.LocalDate
-import java.util.Calendar
+import java.time.YearMonth
 
 @Composable
 fun CalendarMonthView(
@@ -81,43 +78,36 @@ fun CalendarMonthView(
             else -> emptyList()
         }
 
-    val today = remember { Calendar.getInstance() }
-    var year by rememberSaveable { mutableStateOf(today.get(Calendar.YEAR)) }
-    var month by rememberSaveable { mutableStateOf(today.get(Calendar.MONTH)) }
+    val today = remember { LocalDate.now() }
+    // YearMonth is not Parcelable/auto-saveable; persist the two ints and rebuild on each read.
+    var visibleYear by rememberSaveable { mutableStateOf(today.year) }
+    var visibleMonthValue by rememberSaveable { mutableStateOf(today.monthValue) }
+    val visibleMonth = YearMonth.of(visibleYear, visibleMonthValue)
 
-    // groupByDayKey only depends on `notes`; keying on year/month would needlessly recreate
-    // the derived state on every month navigation.
-    val eventsByDay by remember(notes) {
-        derivedStateOf { groupByDayKey(notes) }
+    fun setVisibleMonth(ym: YearMonth) {
+        visibleYear = ym.year
+        visibleMonthValue = ym.monthValue
     }
+
+    val eventsByDay by remember(notes) { derivedStateOf { groupByDayKey(notes) } }
 
     var selectedDayKey by rememberSaveable { mutableStateOf<Long?>(null) }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        MonthHeader(
-            year = year,
-            month = month,
+        CalendarNavigationHeader(
+            title = formatMonthYear(visibleMonth.year, visibleMonth.monthValue - 1),
+            prevContentDescription = "Previous month",
+            nextContentDescription = "Next month",
             onPrev = {
-                if (month == 0) {
-                    month = 11
-                    year -= 1
-                } else {
-                    month -= 1
-                }
+                setVisibleMonth(visibleMonth.minusMonths(1))
                 selectedDayKey = null
             },
             onNext = {
-                if (month == 11) {
-                    month = 0
-                    year += 1
-                } else {
-                    month += 1
-                }
+                setVisibleMonth(visibleMonth.plusMonths(1))
                 selectedDayKey = null
             },
             onToday = {
-                year = today.get(Calendar.YEAR)
-                month = today.get(Calendar.MONTH)
+                setVisibleMonth(YearMonth.from(LocalDate.now()))
                 selectedDayKey = null
             },
         )
@@ -125,8 +115,8 @@ fun CalendarMonthView(
         WeekdayHeader()
 
         MonthGrid(
-            year = year,
-            month = month,
+            visibleMonth = visibleMonth,
+            today = today,
             eventsByDay = eventsByDay,
             selectedDayKey = selectedDayKey,
             onDayClick = { dayKey ->
@@ -143,44 +133,6 @@ fun CalendarMonthView(
                     CalendarEventListCard(note, accountViewModel, nav)
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun MonthHeader(
-    year: Int,
-    month: Int,
-    onPrev: () -> Unit,
-    onNext: () -> Unit,
-    onToday: () -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconButton(onClick = onPrev) {
-            Icon(
-                symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                contentDescription = "Previous month",
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onSurface,
-            )
-        }
-        Text(
-            text = formatMonthYear(year, month),
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.weight(1f).clickable(onClick = onToday),
-            textAlign = TextAlign.Center,
-            fontWeight = FontWeight.Bold,
-        )
-        IconButton(onClick = onNext) {
-            Icon(
-                symbol = MaterialSymbols.ChevronRight,
-                contentDescription = "Next month",
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onSurface,
-            )
         }
     }
 }
@@ -203,40 +155,34 @@ private fun WeekdayHeader() {
 
 @Composable
 private fun MonthGrid(
-    year: Int,
-    month: Int,
+    visibleMonth: YearMonth,
+    today: LocalDate,
     eventsByDay: Map<Long, List<Note>>,
     selectedDayKey: Long?,
     onDayClick: (Long) -> Unit,
 ) {
-    val cal = Calendar.getInstance()
-    cal.clear()
-    cal.set(year, month, 1)
-    val firstWeekday = cal.get(Calendar.DAY_OF_WEEK) - Calendar.SUNDAY // 0..6
-    val daysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
-    val totalCells = ((firstWeekday + daysInMonth + 6) / 7) * 7
-    val rows = totalCells / 7
-
-    val todayCal = remember { Calendar.getInstance() }
-    val isCurrentMonth = year == todayCal.get(Calendar.YEAR) && month == todayCal.get(Calendar.MONTH)
-    val todayDay = todayCal.get(Calendar.DAY_OF_MONTH)
+    val firstOfMonth = visibleMonth.atDay(1)
+    // SUNDAY = 7 in DayOfWeek; we want Sunday = 0 to match `formatShortWeekday`.
+    val firstWeekdayIndex = firstOfMonth.dayOfWeek.value % 7
+    val daysInMonth = visibleMonth.lengthOfMonth()
+    val rows = ((firstWeekdayIndex + daysInMonth + 6) / 7)
+    val isCurrentMonth = visibleMonth == YearMonth.from(today)
 
     Column(modifier = Modifier.fillMaxWidth()) {
         for (r in 0 until rows) {
             Row(modifier = Modifier.fillMaxWidth()) {
                 for (c in 0..6) {
                     val cellIndex = r * 7 + c
-                    val dayNumber = cellIndex - firstWeekday + 1
+                    val dayNumber = cellIndex - firstWeekdayIndex + 1
                     if (dayNumber in 1..daysInMonth) {
-                        // Calendar.MONTH is 0-based; LocalDate.of's month is 1-based.
-                        val dayKey = LocalDate.of(year, month + 1, dayNumber).toEpochDay()
-                        val dayEvents = eventsByDay[dayKey].orEmpty()
+                        val date = visibleMonth.atDay(dayNumber)
+                        val dayKey = date.toEpochDay()
                         DayCell(
                             modifier = Modifier.weight(1f),
                             dayNumber = dayNumber,
-                            isToday = isCurrentMonth && dayNumber == todayDay,
+                            isToday = isCurrentMonth && date == today,
                             isSelected = selectedDayKey == dayKey,
-                            eventCount = dayEvents.size,
+                            eventCount = eventsByDay[dayKey]?.size ?: 0,
                             onClick = { onDayClick(dayKey) },
                         )
                     } else {
@@ -258,9 +204,10 @@ private fun DayCell(
     onClick: () -> Unit,
 ) {
     val bg =
-        when {
-            isSelected -> MaterialTheme.colorScheme.primaryContainer
-            else -> MaterialTheme.colorScheme.surface
+        if (isSelected) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.surface
         }
 
     Box(
@@ -302,12 +249,11 @@ private fun EventDotRow(eventCount: Int) {
         Spacer(modifier = Modifier.height(6.dp))
         return
     }
-    val displayedDots = eventCount.coerceAtMost(3)
     Row(
         horizontalArrangement = Arrangement.spacedBy(2.dp),
         modifier = Modifier.padding(bottom = 1.dp),
     ) {
-        repeat(displayedDots) {
+        repeat(eventCount.coerceAtMost(3)) {
             Box(
                 modifier =
                     Modifier
@@ -324,18 +270,4 @@ private fun EventDotRow(eventCount: Int) {
             )
         }
     }
-}
-
-/**
- * Buckets events by local calendar day (returned as `LocalDate.toEpochDay`). Time-slot events
- * land on the viewer's local date; date-slot events use the ISO date verbatim so "Jan 15" stays
- * on Jan 15 in every zone.
- */
-fun groupByDayKey(notes: List<Note>): Map<Long, List<Note>> {
-    val map = mutableMapOf<Long, MutableList<Note>>()
-    notes.forEach {
-        val dayKey = it.calendarLocalDayKey() ?: return@forEach
-        map.getOrPut(dayKey) { mutableListOf() }.add(it)
-    }
-    return map
 }

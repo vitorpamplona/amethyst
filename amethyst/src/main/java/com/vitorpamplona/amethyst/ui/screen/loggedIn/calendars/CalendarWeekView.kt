@@ -31,11 +31,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,21 +46,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import java.time.Instant
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.groupByDayKey
 import java.time.LocalDate
 import java.time.ZoneId
-import java.util.Calendar
 
 @Composable
 fun CalendarWeekView(
@@ -80,38 +74,39 @@ fun CalendarWeekView(
             else -> emptyList()
         }
 
-    val today = remember { Calendar.getInstance() }
-    var weekStartMs by rememberSaveable {
-        mutableStateOf(startOfWeekMs(today))
+    val today = remember { LocalDate.now() }
+    // Persist the week-start as an epoch-day Long (auto-saveable), reconstruct LocalDate on use.
+    var weekStartEpochDay by rememberSaveable {
+        mutableStateOf(startOfWeek(today).toEpochDay())
     }
-
-    // groupByDayKey only depends on `notes`; keying on weekStartMs would needlessly recreate
-    // the derived state on every week navigation.
-    val eventsByDay by remember(notes) {
-        derivedStateOf { groupByDayKey(notes) }
-    }
+    val weekStart = LocalDate.ofEpochDay(weekStartEpochDay)
 
     var selectedDayIndex by rememberSaveable { mutableStateOf(0) }
 
+    val eventsByDay by remember(notes) { derivedStateOf { groupByDayKey(notes) } }
+
     Column(modifier = Modifier.fillMaxSize()) {
-        WeekHeader(
-            weekStartMs = weekStartMs,
+        CalendarNavigationHeader(
+            title = formatMonthYear(weekStart.year, weekStart.monthValue - 1),
+            prevContentDescription = "Previous week",
+            nextContentDescription = "Next week",
             onPrev = {
-                weekStartMs -= MILLIS_PER_WEEK
+                weekStartEpochDay = weekStart.minusWeeks(1).toEpochDay()
                 selectedDayIndex = 0
             },
             onNext = {
-                weekStartMs += MILLIS_PER_WEEK
+                weekStartEpochDay = weekStart.plusWeeks(1).toEpochDay()
                 selectedDayIndex = 0
             },
             onToday = {
-                weekStartMs = startOfWeekMs(Calendar.getInstance())
+                weekStartEpochDay = startOfWeek(LocalDate.now()).toEpochDay()
                 selectedDayIndex = 0
             },
         )
 
         WeekStrip(
-            weekStartMs = weekStartMs,
+            weekStart = weekStart,
+            today = today,
             selectedIndex = selectedDayIndex,
             eventsByDay = eventsByDay,
             onSelect = { selectedDayIndex = it },
@@ -119,7 +114,7 @@ fun CalendarWeekView(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        val selectedDate = localDateForOffset(weekStartMs, selectedDayIndex)
+        val selectedDate = weekStart.plusDays(selectedDayIndex.toLong())
         val dayNotes = eventsByDay[selectedDate.toEpochDay()].orEmpty()
 
         DaySummaryHeader(selectedDate)
@@ -146,66 +141,20 @@ fun CalendarWeekView(
 }
 
 @Composable
-private fun WeekHeader(
-    weekStartMs: Long,
-    onPrev: () -> Unit,
-    onNext: () -> Unit,
-    onToday: () -> Unit,
-) {
-    val cal = Calendar.getInstance().apply { timeInMillis = weekStartMs }
-    val title = formatMonthYear(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH))
-
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconButton(onClick = onPrev) {
-            Icon(
-                symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                contentDescription = "Previous week",
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onSurface,
-            )
-        }
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.weight(1f).clickable(onClick = onToday),
-            textAlign = TextAlign.Center,
-            fontWeight = FontWeight.Bold,
-        )
-        IconButton(onClick = onNext) {
-            Icon(
-                symbol = MaterialSymbols.ChevronRight,
-                contentDescription = "Next week",
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onSurface,
-            )
-        }
-    }
-}
-
-@Composable
 private fun WeekStrip(
-    weekStartMs: Long,
+    weekStart: LocalDate,
+    today: LocalDate,
     selectedIndex: Int,
     eventsByDay: Map<Long, List<Note>>,
     onSelect: (Int) -> Unit,
 ) {
-    val cal = Calendar.getInstance()
-    val todayCal = remember { Calendar.getInstance() }
-
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
     ) {
         for (i in 0..6) {
-            cal.timeInMillis = weekStartMs
-            cal.add(Calendar.DAY_OF_YEAR, i)
-            val date = localDateForOffset(weekStartMs, i)
+            val date = weekStart.plusDays(i.toLong())
             val count = eventsByDay[date.toEpochDay()]?.size ?: 0
-            val isToday =
-                cal.get(Calendar.YEAR) == todayCal.get(Calendar.YEAR) &&
-                    cal.get(Calendar.DAY_OF_YEAR) == todayCal.get(Calendar.DAY_OF_YEAR)
+            val isToday = date == today
             val isSelected = i == selectedIndex
 
             val bg =
@@ -242,7 +191,7 @@ private fun WeekStrip(
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = cal.get(Calendar.DAY_OF_MONTH).toString(),
+                    text = date.dayOfMonth.toString(),
                     style = MaterialTheme.typography.titleMedium,
                     color = fg,
                     fontWeight = FontWeight.Bold,
@@ -274,26 +223,12 @@ private fun DaySummaryHeader(date: LocalDate) {
     )
 }
 
-private const val MILLIS_PER_DAY: Long = 24L * 60L * 60L * 1000L
-private const val MILLIS_PER_WEEK: Long = 7L * MILLIS_PER_DAY
-
-private fun startOfWeekMs(cal: Calendar): Long {
-    val c = cal.clone() as Calendar
-    c.firstDayOfWeek = Calendar.SUNDAY
-    c.set(Calendar.HOUR_OF_DAY, 0)
-    c.set(Calendar.MINUTE, 0)
-    c.set(Calendar.SECOND, 0)
-    c.set(Calendar.MILLISECOND, 0)
-    val dow = c.get(Calendar.DAY_OF_WEEK) - Calendar.SUNDAY
-    c.add(Calendar.DAY_OF_YEAR, -dow)
-    return c.timeInMillis
+/**
+ * Returns the Sunday on or before [date]. DST-safe because [LocalDate] arithmetic ignores zones.
+ * `DayOfWeek.SUNDAY.value` is 7 in java.time, so `% 7` collapses Sunday → 0 with the rest of the
+ * week following in order.
+ */
+private fun startOfWeek(date: LocalDate): LocalDate {
+    val daysFromSunday = date.dayOfWeek.value % 7
+    return date.minusDays(daysFromSunday.toLong())
 }
-
-private fun localDateForOffset(
-    weekStartMs: Long,
-    offset: Int,
-): LocalDate =
-    Instant
-        .ofEpochMilli(weekStartMs + offset * MILLIS_PER_DAY)
-        .atZone(ZoneId.systemDefault())
-        .toLocalDate()

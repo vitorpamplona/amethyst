@@ -90,6 +90,19 @@ fun Note.calendarLocalDayKey(): Long? =
     }
 
 /**
+ * Buckets appointments by local calendar day (returned as `LocalDate.toEpochDay`). Notes that
+ * are not calendar appointments or whose start can't be parsed are dropped.
+ */
+fun groupByDayKey(notes: List<Note>): Map<Long, List<Note>> {
+    val map = mutableMapOf<Long, MutableList<Note>>()
+    notes.forEach {
+        val dayKey = it.calendarLocalDayKey() ?: return@forEach
+        map.getOrPut(dayKey) { mutableListOf() }.add(it)
+    }
+    return map
+}
+
+/**
  * Sort by: upcoming events ascending (closest first), then past events descending (most-recent
  * first). [nowSeconds] is captured once per sort so the comparator stays transitive across the
  * full sort run — reading the clock inside `compare` would violate the [Comparator] contract on

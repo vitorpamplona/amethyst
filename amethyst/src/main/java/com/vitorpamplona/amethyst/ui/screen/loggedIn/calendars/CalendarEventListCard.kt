@@ -33,7 +33,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -51,9 +50,7 @@ import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.calendarStartSeconds
-import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
-import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.appointmentView
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -71,34 +68,7 @@ fun CalendarEventListCard(
     nav: INav,
     modifier: Modifier = Modifier,
 ) {
-    val event = note.event
-    if (event !is CalendarTimeSlotEvent && event !is CalendarDateSlotEvent) return
-
-    val title =
-        when (event) {
-            is CalendarTimeSlotEvent -> event.title()
-            is CalendarDateSlotEvent -> event.title()
-            else -> null
-        }
-    val location =
-        when (event) {
-            is CalendarTimeSlotEvent -> event.location()
-            is CalendarDateSlotEvent -> event.location()
-            else -> null
-        }
-    val image =
-        when (event) {
-            is CalendarTimeSlotEvent -> event.image()
-            is CalendarDateSlotEvent -> event.image()
-            else -> null
-        }
-    val summary =
-        when (event) {
-            is CalendarTimeSlotEvent -> event.summary()
-            is CalendarDateSlotEvent -> event.summary()
-            else -> null
-        }
-
+    val view = note.appointmentView() ?: return
     val range = remember(note.idHex) { formatCalendarRange(note) }
 
     Card(
@@ -115,7 +85,7 @@ fun CalendarEventListCard(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.Top,
         ) {
-            CalendarDateBadge(note)
+            CalendarDateBadge(view.startSeconds)
 
             Spacer(modifier = Modifier.size(12.dp))
 
@@ -123,7 +93,7 @@ fun CalendarEventListCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                title?.let {
+                view.title?.let {
                     Text(
                         text = it,
                         style = MaterialTheme.typography.titleMedium,
@@ -141,7 +111,7 @@ fun CalendarEventListCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                location?.let {
+                view.location?.let {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             symbol = MaterialSymbols.LocationOn,
@@ -159,11 +129,11 @@ fun CalendarEventListCard(
                         )
                     }
                 }
-                if (!image.isNullOrBlank()) {
+                if (!view.image.isNullOrBlank()) {
                     Spacer(modifier = Modifier.size(4.dp))
                     MyAsyncImage(
-                        imageUrl = image,
-                        contentDescription = title,
+                        imageUrl = view.image,
+                        contentDescription = view.title,
                         contentScale = ContentScale.Crop,
                         mainImageModifier = Modifier.fillMaxWidth().height(120.dp),
                         loadedImageModifier = Modifier,
@@ -172,9 +142,9 @@ fun CalendarEventListCard(
                         onError = { Box(modifier = Modifier.fillMaxWidth().height(120.dp)) },
                     )
                 }
-                if (!summary.isNullOrBlank() && image.isNullOrBlank()) {
+                if (!view.summary.isNullOrBlank() && view.image.isNullOrBlank()) {
                     Text(
-                        text = summary,
+                        text = view.summary,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
@@ -187,13 +157,10 @@ fun CalendarEventListCard(
 }
 
 @Composable
-private fun CalendarDateBadge(note: Note) {
-    val start = remember(note.idHex) { note.calendarStartSeconds() }
-    if (start == null) {
+private fun CalendarDateBadge(startSeconds: Long?) {
+    if (startSeconds == null) {
         Box(
-            modifier =
-                Modifier
-                    .size(width = 52.dp, height = 60.dp),
+            modifier = Modifier.size(width = 52.dp, height = 60.dp),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -207,16 +174,14 @@ private fun CalendarDateBadge(note: Note) {
     }
 
     val localDate =
-        remember(start) {
-            Instant.ofEpochSecond(start).atZone(ZoneId.systemDefault()).toLocalDate()
+        remember(startSeconds) {
+            Instant.ofEpochSecond(startSeconds).atZone(ZoneId.systemDefault()).toLocalDate()
         }
     val day = localDate.dayOfMonth.toString()
     val month = remember(localDate) { MonthShortFormatter.format(localDate).uppercase() }
 
     Column(
-        modifier =
-            Modifier
-                .size(width = 52.dp, height = 60.dp),
+        modifier = Modifier.size(width = 52.dp, height = 60.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {

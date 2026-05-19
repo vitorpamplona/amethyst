@@ -21,10 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars
 
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.calendarEndSeconds
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.calendarStartSeconds
-import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
-import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.appointmentView
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -37,12 +34,12 @@ private val TimeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
 private val WeekdayShortFormat = SimpleDateFormat("EEE", Locale.getDefault())
 
 fun formatCalendarRange(note: Note): String? {
-    val start = note.calendarStartSeconds() ?: return null
-    val end = note.calendarEndSeconds()
-    return when (note.event) {
-        is CalendarTimeSlotEvent -> formatTimeRange(start, end)
-        is CalendarDateSlotEvent -> formatDateRange(start, end)
-        else -> null
+    val view = note.appointmentView() ?: return null
+    val start = view.startSeconds ?: return null
+    return if (view.isAllDay) {
+        formatDateRange(start, view.endSeconds)
+    } else {
+        formatTimeRange(start, view.endSeconds)
     }
 }
 
