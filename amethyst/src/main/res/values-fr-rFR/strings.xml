@@ -628,6 +628,9 @@
     <string name="invalid_port_number">Numéro de port invalide</string>
     <string name="use_orbot">Utiliser Orbot</string>
     <string name="disconnect_from_your_orbot_setup">Déconnecter Tor/Orbot</string>
+    <!-- I2P daemon picker + per-feature toggles. Shape mirrors the Tor strings above.
+         Take effect only when I2P is also selected as the preferred clearnet transport. -->
+    <!-- Global picker: which transport carries clearnet traffic. -->
     <string name="app_notification_dms_channel_name">Messages privés</string>
     <string name="app_notification_dms_channel_description">Vous notifie lorsqu\'un message privé est reçu</string>
     <string name="app_notification_zaps_channel_name">Zaps reçus</string>
