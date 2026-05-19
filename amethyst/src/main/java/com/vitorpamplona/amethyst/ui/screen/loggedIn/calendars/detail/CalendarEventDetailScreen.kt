@@ -245,7 +245,6 @@ fun CalendarEventDetailScreen(
                     .imePadding()
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             if (event !is CalendarTimeSlotEvent && event !is CalendarDateSlotEvent) {
                 LoadingPlaceholder()
@@ -296,6 +295,8 @@ private fun EventBody(
 
     HeroImage(view.image, accountViewModel)
 
+    Spacer(modifier = Modifier.height(12.dp))
+
     Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         view.title?.let {
             Text(
@@ -335,7 +336,9 @@ private fun EventBody(
 
     // Standard social actions (zap, reactions/likes, repost, reply count → thread/comments).
     // Uses the shared [ReactionsRow] so the affordances look and behave the same as every other
-    // note-detail surface in the app — no calendar-specific reinvention.
+    // note-detail surface in the app — no calendar-specific reinvention. The row carries its
+    // own internal vertical padding, so we don't add any here; an outer spacedBy compounded with
+    // that padding made the row look like it had huge top/bottom margins.
     ReactionsRow(
         baseNote = note,
         showReactionDetail = true,
@@ -347,6 +350,8 @@ private fun EventBody(
 
     HorizontalDivider()
 
+    Spacer(modifier = Modifier.height(8.dp))
+
     CalendarRsvpRow(
         eventKind = event.kind,
         eventPubKey = event.pubKey,
@@ -355,15 +360,22 @@ private fun EventBody(
         accountViewModel = accountViewModel,
     )
 
+    Spacer(modifier = Modifier.height(8.dp))
+
     if (participants.isNotEmpty()) {
         HorizontalDivider()
+        Spacer(modifier = Modifier.height(12.dp))
         ParticipantsSection(participants, accountViewModel, nav)
+        Spacer(modifier = Modifier.height(12.dp))
     }
 
     HorizontalDivider()
+    Spacer(modifier = Modifier.height(12.dp))
     RsvpsSection(targetAddress, accountViewModel, nav)
+    Spacer(modifier = Modifier.height(12.dp))
 
     HorizontalDivider()
+    Spacer(modifier = Modifier.height(12.dp))
     InCalendarsSection(targetAddress, accountViewModel, nav)
 
     Spacer(modifier = Modifier.height(24.dp))
