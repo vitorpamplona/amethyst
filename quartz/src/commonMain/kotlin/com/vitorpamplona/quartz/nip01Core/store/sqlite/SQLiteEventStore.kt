@@ -106,6 +106,13 @@ class SQLiteEventStore(
                 // The DB can be corrupted if the OS shuts down before
                 // sync, which generally doesn't happen on Android.
                 db.execSQL("PRAGMA synchronous = OFF;")
+
+                // Without busy_timeout, BEGIN IMMEDIATE returns SQLITE_BUSY
+                // the instant another connection holds a conflicting lock —
+                // e.g. a WAL auto-checkpoint or a reader transiently
+                // upgrading its snapshot. With it, SQLite retries internally
+                // for up to N ms before giving up. Matches Room's default.
+                db.execSQL("PRAGMA busy_timeout = 5000;")
             },
             onMigrate = { db ->
                 val currentVersion = getUserVersion(db)
