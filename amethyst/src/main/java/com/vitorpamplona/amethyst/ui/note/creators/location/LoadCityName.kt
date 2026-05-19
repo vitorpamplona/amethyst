@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.location
 
+import android.content.Context
+import android.location.Location
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -30,7 +32,10 @@ import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.service.location.CachedReversedGeoLocations
 import com.vitorpamplona.amethyst.service.location.toGeoHash
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+
+private const val MAX_GEOLOCATE_RETRIES = 5
 
 @Composable
 fun LoadCityName(
@@ -40,34 +45,50 @@ fun LoadCityName(
 ) {
     var cityName by remember(geohashStr) { mutableStateOf(CachedReversedGeoLocations.cached(geohashStr)) }
 
-    if (cityName == null) {
-        if (onLoading != null) {
-            onLoading()
-        }
+    val resolved = cityName
+    if (resolved != null) {
+        content(resolved)
+    } else if (!CachedReversedGeoLocations.isGeocoderAvailable()) {
+        // Devices without a system Geocoder backend (e.g. AOSP / GrapheneOS
+        // without Google Play Services or microG) cannot reverse-geocode at
+        // all. Show the geohash directly instead of spinning forever.
+        content(geohashStr)
+    } else {
+        onLoading?.invoke()
 
         val context = LocalContext.current
 
-        LaunchedEffect(key1 = geohashStr, context) {
+        LaunchedEffect(geohashStr, context) {
             val location = runCatching { geohashStr.toGeoHash() }.getOrNull()?.toLocation()
-            if (location != null) {
-                launch {
-                    var notReady = true
-                    var myStep = 1000L
-                    while (notReady) {
-                        // Retries while the Reverse Geolocation service is offline.
-                        CachedReversedGeoLocations.geoLocate(geohashStr, location, context) { newCityName ->
-                            if (newCityName != cityName) {
-                                notReady = false
-                                cityName = newCityName
-                            }
-                        }
-                        myStep = myStep * 2L
-                        delay(myStep)
-                    }
-                }
+            if (location == null) {
+                cityName = geohashStr
+                return@LaunchedEffect
             }
+
+            var delayMs = 1000L
+            repeat(MAX_GEOLOCATE_RETRIES) {
+                val result = geoLocateOnce(geohashStr, location, context)
+                if (result != null) {
+                    cityName = result
+                    return@LaunchedEffect
+                }
+                delay(delayMs)
+                delayMs *= 2L
+            }
+            // Geocoder kept returning errors — give up and render the geohash
+            // so the loading indicator stops.
+            cityName = geohashStr
         }
-    } else {
-        cityName?.let { content(it) }
     }
 }
+
+private suspend fun geoLocateOnce(
+    geohashStr: String,
+    location: Location,
+    context: Context,
+): String? =
+    suspendCancellableCoroutine { cont ->
+        CachedReversedGeoLocations.geoLocate(geohashStr, location, context) { result ->
+            if (cont.isActive) cont.resume(result)
+        }
+    }
