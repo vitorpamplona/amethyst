@@ -1823,6 +1823,7 @@
     <string name="wallet_creating_invoice">Creating invoice…</string>
     <string name="wallet_copy_invoice">Copy Invoice</string>
     <string name="wallet_no_transactions">No transactions yet</string>
+    <string name="wallet_no_transactions_for_filter">No transactions match this filter</string>
     <string name="wallet_loading">Loading…</string>
     <string name="wallet_incoming">Received</string>
     <string name="wallet_outgoing">Sent</string>

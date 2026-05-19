@@ -103,6 +103,17 @@ class OnchainTransactionsViewModel : ViewModel() {
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    /**
+     * Whether the unfiltered chain-side list has any rows. Drives whether the
+     * filter chips stay on screen — once we've loaded at least one transaction
+     * the chips should remain visible even if the current filter excludes
+     * everything, so the user can switch filters without the row disappearing.
+     */
+    val hasAnyTransactions: StateFlow<Boolean> =
+        chainTxs
+            .map { it.isNotEmpty() }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
 
