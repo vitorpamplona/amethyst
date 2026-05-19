@@ -107,28 +107,23 @@
 -keep class okio.** { *; }
 
 # ============================================================================
-# Optimize sub-pass — disable the one that produces invalid okio bytecode
+# Optimization — disabled entirely
 # ============================================================================
-# ProGuard's `method/specialization/returntype` pass specialised
-# `Okio__OkioKt.buffer(Source): BufferedSource` to a synthetic bridge
-# `buffer$<hash>` whose declared return type was the more concrete
-# `RealBufferedSource` while the bytecode body returned the
-# `BufferedSource` super-interface. The JVM verifier rejected the bridge:
+# ProGuard's optimize pass causes multiple runtime crashes in the release
+# build that are invisible at compile time:
 #
-#     VerifyError: Bad return type
-#       Exception Details:
-#         Location: okio/Okio__OkioKt.buffer$5ae116e(...)
-#         Reason:   Type 'okio/BufferedSource' is not assignable to
-#                   'okio/RealBufferedSource'.
+# 1. `method/specialization/returntype` generates invalid okio bytecode:
+#    VerifyError on Okio__OkioKt.buffer() (bridge return type mismatch).
 #
-# Disabling just these sub-passes keeps merging, inlining, peephole and
-# dead-code optimizations on. Everything else in `optimize` stays.
+# 2. kmp-tor's `AsyncFs.of()` gets transformed (instance → static or
+#    inlined call-site mismatch), causing IncompatibleClassChangeError
+#    at launch. Discovered by CI smoke test (release-deb-launch job).
 #
-# `method/marking/static` converts instance methods to static when they
-# don't reference `this`. kmp-tor's `AsyncFs.of()` is called via
-# invokevirtual; after ProGuard marks it static the JVM throws
-# IncompatibleClassChangeError at launch (discovered by CI smoke test).
--optimizations !method/specialization/returntype,!method/marking/static
+# Disabling individual sub-passes (`!method/specialization/returntype`,
+# `!method/marking/static`) did not fully resolve (2). The interaction
+# between multiple optimization passes is the root cause. Shrink (dead
+# code removal) remains ON and provides the bulk of the size win.
+-dontoptimize
 
 # ============================================================================
 # Desktop-only: Jackson — mobile module does not ship Jackson on Android
