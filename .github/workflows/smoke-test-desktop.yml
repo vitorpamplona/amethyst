@@ -126,7 +126,10 @@ jobs:
       - name: Install .deb
         run: |
           set -euo pipefail
-          sudo dpkg -i desktopApp/build/compose/binaries/main-release/deb/*.deb
+          # --force-all: jpackage's post-install script runs xdg-desktop-menu
+          # which fails on CI runners ("No writable system menu directory").
+          # The menu registration is irrelevant for smoke testing.
+          sudo dpkg -i --force-all desktopApp/build/compose/binaries/main-release/deb/*.deb
           echo "Installed files:"
           dpkg -L amethyst | head -30
 
