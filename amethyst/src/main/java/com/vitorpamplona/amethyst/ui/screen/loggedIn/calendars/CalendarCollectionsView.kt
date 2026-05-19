@@ -56,11 +56,13 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.UserCardHeader
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
@@ -102,7 +104,12 @@ private fun CollectionsBody(
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
+    LazyColumn(
+        // Reserve top space for the surrounding [DisappearingScaffold]'s top bar — without this
+        // the first card scrolls under it on the initial render.
+        contentPadding = rememberFeedContentPadding(FeedPadding),
+        modifier = Modifier.fillMaxSize(),
+    ) {
         items(items.list, key = { it.idHex }) { note ->
             CalendarCollectionCard(note, accountViewModel, nav)
         }

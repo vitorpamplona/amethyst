@@ -106,6 +106,7 @@ fun CalendarMonthView(
         modifier =
             Modifier
                 .fillMaxSize()
+                .disappearingScaffoldPadding()
                 .calendarSwipeNavigation(
                     key = visibleYear to visibleMonthValue,
                     onSwipeLeft = {

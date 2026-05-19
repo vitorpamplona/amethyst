@@ -95,6 +95,7 @@ fun CalendarDayView(
         modifier =
             Modifier
                 .fillMaxSize()
+                .disappearingScaffoldPadding()
                 .calendarSwipeNavigation(
                     key = visibleEpochDay,
                     onSwipeLeft = { visibleEpochDay = visibleDate.plusDays(1).toEpochDay() },

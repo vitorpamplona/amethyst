@@ -96,6 +96,7 @@ fun CalendarWeekView(
         modifier =
             Modifier
                 .fillMaxSize()
+                .disappearingScaffoldPadding()
                 .calendarSwipeNavigation(
                     key = weekStartEpochDay,
                     onSwipeLeft = {
