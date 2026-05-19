@@ -42,22 +42,29 @@ object CalendarReminderNotifier {
     private const val REMINDER_NOT_ID_BASE = 0x80000
 
     /**
-     * @param eventId  the appointment's event id — used to derive a stable notification id so a
-     *                 second reminder for the same event collapses rather than stacking.
-     * @param title    the appointment title (or a fallback string).
-     * @param body     a short pre-formatted body, e.g. "Starts in 15 minutes".
+     * @param eventId   the appointment's event id — used to derive a stable notification id so a
+     *                  second reminder for the same event collapses rather than stacking.
+     * @param title     the appointment title (or a fallback string).
+     * @param body      a short pre-formatted body, e.g. "Starts in 15 minutes".
+     * @param deepLink  a `nostr:naddr…` URI for the calendar event. Tapping the notification
+     *                  hands this to MainActivity, which routes it via `uriToRoute` → the
+     *                  calendar detail screen (CalendarTimeSlotEvent / CalendarDateSlotEvent
+     *                  branches in RouteMaker resolve to Route.CalendarEventDetail).
      */
     fun notifyReminder(
         context: Context,
         eventId: String,
         title: String,
         body: String,
+        deepLink: String,
     ) {
         ensureChannel(context)
         val notId = idFor(eventId)
         val channelId = stringRes(context, R.string.calendar_reminder_channel_id)
         val tapIntent =
             Intent(context, MainActivity::class.java).apply {
+                action = Intent.ACTION_VIEW
+                data = android.net.Uri.parse(deepLink)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
         val tapPendingIntent =

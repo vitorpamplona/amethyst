@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.appointmentView
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.UserCardHeader
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.time.Instant
 import java.time.ZoneId
@@ -92,8 +93,13 @@ fun CalendarEventListCard(
         colors = CardDefaults.elevatedCardColors(),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
     ) {
+        // Author header matches the picture-feed / shorts card shape: avatar + display name +
+        // time-ago at the top of every social card in the app. Without this, calendar cards
+        // looked alien next to the rest of the feed.
+        UserCardHeader(baseNote = note, accountViewModel = accountViewModel, nav = nav)
+
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.Top,
         ) {
             CalendarDateBadge(view.startSeconds)

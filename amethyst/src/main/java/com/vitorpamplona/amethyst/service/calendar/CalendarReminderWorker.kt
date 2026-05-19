@@ -80,7 +80,9 @@ class CalendarReminderWorker(
                     ?: return@forEach
 
             if (start !in now..windowEnd) return@forEach
-            if (store.wasNotified(eventId)) return@forEach
+            // Keyed on (eventId, start) so a moved appointment re-fires when the new start
+            // enters the lead window — the old notification stays valid in the system tray.
+            if (store.wasNotified(eventId, start)) return@forEach
 
             val title = view.title ?: stringRes(applicationContext, R.string.calendar_reminder_default_title)
             val minutesAway = ((start - now).coerceAtLeast(0L) / 60L).toInt()
@@ -90,7 +92,11 @@ class CalendarReminderWorker(
                     R.string.calendar_reminder_body,
                     minutesAway,
                 )
-            CalendarReminderNotifier.notifyReminder(applicationContext, eventId, title, body)
+            val deepLink =
+                "nostr:" +
+                    com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+                        .create(targetAddress.kind, targetAddress.pubKeyHex, targetAddress.dTag, null)
+            CalendarReminderNotifier.notifyReminder(applicationContext, eventId, title, body, deepLink)
             store.markNotified(eventId, start)
             Log.d(TAG) { "Notified $eventId (starts in ${minutesAway}m)" }
         }

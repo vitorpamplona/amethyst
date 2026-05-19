@@ -39,7 +39,16 @@ class CalendarReminderStore(
     private val prefs: SharedPreferences =
         context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
 
-    fun wasNotified(eventId: String): Boolean = prefs.contains(keyFor(eventId))
+    /**
+     * Returns true when we've previously notified for this exact event-start pairing. If the
+     * author updates the appointment to a new start time, the stored value won't match and
+     * we'll fire a fresh reminder for the new time — that's the desired behaviour: a moved
+     * meeting shouldn't be silently skipped.
+     */
+    fun wasNotified(
+        eventId: String,
+        eventStartSeconds: Long,
+    ): Boolean = prefs.getLong(keyFor(eventId), Long.MIN_VALUE) == eventStartSeconds
 
     fun markNotified(
         eventId: String,

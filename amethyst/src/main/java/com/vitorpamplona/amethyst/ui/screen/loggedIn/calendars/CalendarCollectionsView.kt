@@ -95,7 +95,7 @@ private fun CollectionsBody(
     val items by loaded.feed.collectAsStateWithLifecycle()
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         items(items.list, key = { it.idHex }) { note ->
-            CalendarCollectionCard(note, nav)
+            CalendarCollectionCard(note, accountViewModel, nav)
         }
     }
 }
@@ -117,6 +117,7 @@ private fun EmptyCollections() {
 @Composable
 fun CalendarCollectionCard(
     note: Note,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val event = note.event as? CalendarEvent ?: return
@@ -135,8 +136,14 @@ fun CalendarCollectionCard(
         colors = CardDefaults.elevatedCardColors(),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
     ) {
+        // Author header matches every other social card in the app.
+        com.vitorpamplona.amethyst.ui.screen.loggedIn.video.UserCardHeader(
+            baseNote = note,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
         Row(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(

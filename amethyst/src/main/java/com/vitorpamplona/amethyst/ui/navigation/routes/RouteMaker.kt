@@ -149,6 +149,18 @@ fun routeForInner(
             Route.GitRepository(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag())
         }
 
+        // Calendar appointments route to their dedicated detail screen rather than the generic
+        // Route.Note that AddressableEvent would fall through to — without this the notification
+        // tap and `nostr:naddr…` deep links land on the bare note view instead of the calendar
+        // detail with RSVPs, participants, and the "in calendars" list.
+        is com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent -> {
+            Route.CalendarEventDetail(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag())
+        }
+
+        is com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent -> {
+            Route.CalendarEventDetail(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag())
+        }
+
         is GiftWrapEvent -> {
             noteEvent.innerEventId?.let {
                 routeFor(LocalCache.getOrCreateNote(it), loggedIn)

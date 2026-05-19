@@ -295,14 +295,14 @@ private fun EventBody(
 
     if (participants.isNotEmpty()) {
         HorizontalDivider()
-        ParticipantsSection(participants)
+        ParticipantsSection(participants, accountViewModel, nav)
     }
 
     HorizontalDivider()
-    RsvpsSection(targetAddress)
+    RsvpsSection(targetAddress, accountViewModel, nav)
 
     HorizontalDivider()
-    InCalendarsSection(targetAddress, nav)
+    InCalendarsSection(targetAddress, accountViewModel, nav)
 
     Spacer(modifier = Modifier.height(24.dp))
 }
@@ -367,26 +367,30 @@ private fun LocationRow(location: String) {
 }
 
 @Composable
-private fun ParticipantsSection(participants: List<PTag>) {
-    Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+private fun ParticipantsSection(
+    participants: List<PTag>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionTitle(stringRes(R.string.calendar_participants_section, participants.size))
         participants.forEach { p ->
-            Text(
-                text = formatPubKeyShort(p.pubKey),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            UserRow(p.pubKey, accountViewModel, nav, trailing = null)
         }
     }
 }
 
 @Composable
-private fun RsvpsSection(targetAddress: Address) {
-    val rsvps = remember(targetAddress) { findRsvpsFor(targetAddress) }
+private fun RsvpsSection(
+    targetAddress: Address,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    // Reactively re-scan when LocalCache emits new bundles. Without this, RSVPs that arrive
+    // from relays while the screen is open don't show up until the user leaves and returns.
+    val rsvps by rememberRsvpsFor(targetAddress)
 
-    Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionTitle(stringRes(R.string.calendar_rsvp_section, rsvps.size))
         if (rsvps.isEmpty()) {
             Text(
@@ -397,18 +401,11 @@ private fun RsvpsSection(targetAddress: Address) {
             return@Column
         }
         rsvps.forEach { rsvp ->
-            val statusLabel =
-                when (rsvp.status()) {
-                    RSVPStatusTag.STATUS.ACCEPTED -> stringRes(R.string.calendar_rsvp_going_prefixed)
-                    RSVPStatusTag.STATUS.TENTATIVE -> stringRes(R.string.calendar_rsvp_maybe_prefixed)
-                    RSVPStatusTag.STATUS.DECLINED -> stringRes(R.string.calendar_rsvp_not_going_prefixed)
-                    null -> "—"
-                }
-            Text(
-                text = "$statusLabel · ${formatPubKeyShort(rsvp.pubKey)}",
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+            UserRow(
+                pubKey = rsvp.pubKey,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                trailing = { RsvpStatusBadge(rsvp.status()) },
             )
         }
     }
@@ -417,11 +414,12 @@ private fun RsvpsSection(targetAddress: Address) {
 @Composable
 private fun InCalendarsSection(
     targetAddress: Address,
+    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val calendars = remember(targetAddress) { findCalendarsContaining(targetAddress) }
+    val calendars by rememberCalendarsContaining(targetAddress)
 
-    Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionTitle(stringRes(R.string.calendar_event_in_calendars, calendars.size))
         if (calendars.isEmpty()) {
             Text(
@@ -432,10 +430,7 @@ private fun InCalendarsSection(
             return@Column
         }
         calendars.forEach { calendar ->
-            Text(
-                text = calendar.title() ?: stringRes(R.string.calendar_untitled),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
+            Row(
                 modifier =
                     Modifier
                         .fillMaxWidth()
@@ -448,11 +443,97 @@ private fun InCalendarsSection(
                                 ),
                             )
                         }.padding(vertical = 4.dp),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                com.vitorpamplona.amethyst.ui.note.ClickableUserPicture(
+                    baseUserHex = calendar.pubKey,
+                    size = com.vitorpamplona.amethyst.ui.theme.Size30dp,
+                    accountViewModel = accountViewModel,
+                )
+                Text(
+                    text = calendar.title() ?: stringRes(R.string.calendar_untitled),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
+}
+
+/**
+ * Shared social-row layout: avatar (clickable → profile), display name, optional trailing slot
+ * for things like RSVP badges. Matches the visual language of every other user-list across the
+ * app.
+ */
+@Composable
+private fun UserRow(
+    pubKey: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    trailing: (@Composable () -> Unit)?,
+) {
+    com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms
+        .LoadUser(baseUserHex = pubKey, accountViewModel = accountViewModel) { user ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                com.vitorpamplona.amethyst.ui.note.ClickableUserPicture(
+                    baseUserHex = pubKey,
+                    size = com.vitorpamplona.amethyst.ui.theme.Size35dp,
+                    accountViewModel = accountViewModel,
+                    onClick = {
+                        nav.nav(
+                            com.vitorpamplona.amethyst.ui.navigation.routes.Route
+                                .Profile(pubKey),
+                        )
+                    },
+                )
+                if (user != null) {
+                    com.vitorpamplona.amethyst.ui.note.UsernameDisplay(
+                        baseUser = user,
+                        weight = Modifier.weight(1f),
+                        accountViewModel = accountViewModel,
+                    )
+                } else {
+                    // LoadUser is still resolving — show the npub-style fallback so the row
+                    // doesn't visibly collapse.
+                    Text(
+                        text = formatPubKeyShort(pubKey),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                trailing?.invoke()
+            }
+        }
+}
+
+@Composable
+private fun RsvpStatusBadge(status: RSVPStatusTag.STATUS?) {
+    val (label, color) =
+        when (status) {
+            RSVPStatusTag.STATUS.ACCEPTED ->
+                stringRes(R.string.calendar_rsvp_going_prefixed) to MaterialTheme.colorScheme.primary
+            RSVPStatusTag.STATUS.TENTATIVE ->
+                stringRes(R.string.calendar_rsvp_maybe_prefixed) to MaterialTheme.colorScheme.tertiary
+            RSVPStatusTag.STATUS.DECLINED ->
+                stringRes(R.string.calendar_rsvp_not_going_prefixed) to MaterialTheme.colorScheme.error
+            null -> "—" to MaterialTheme.colorScheme.onSurfaceVariant
+        }
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelMedium,
+        color = color,
+        fontWeight = FontWeight.SemiBold,
+    )
 }
 
 @Composable
@@ -469,9 +550,26 @@ private fun SectionTitle(text: String) {
 private fun formatPubKeyShort(pubKey: String): String = if (pubKey.length <= 16) pubKey else pubKey.take(8) + "…" + pubKey.takeLast(8)
 
 /**
- * Scans LocalCache for kind-31925 RSVPs that a-tag [targetAddress]. Snapshotted at call time —
- * see the class kdoc for the reactivity trade-off.
+ * Reactive scan of [LocalCache] for kind-31925 RSVPs that a-tag [targetAddress]. Re-runs on
+ * every new-event bundle so RSVPs that arrive while the screen is open appear without a manual
+ * refresh. The scan is O(addressables) which is bounded by the relay subscription.
  */
+@Composable
+private fun rememberRsvpsFor(targetAddress: Address): androidx.compose.runtime.State<List<CalendarRSVPEvent>> =
+    androidx.compose.runtime.produceState(initialValue = findRsvpsFor(targetAddress), targetAddress) {
+        LocalCache.live.newEventBundles.collect {
+            value = findRsvpsFor(targetAddress)
+        }
+    }
+
+@Composable
+private fun rememberCalendarsContaining(targetAddress: Address): androidx.compose.runtime.State<List<CalendarEvent>> =
+    androidx.compose.runtime.produceState(initialValue = findCalendarsContaining(targetAddress), targetAddress) {
+        LocalCache.live.newEventBundles.collect {
+            value = findCalendarsContaining(targetAddress)
+        }
+    }
+
 private fun findRsvpsFor(targetAddress: Address): List<CalendarRSVPEvent> =
     LocalCache.addressables
         .filterIntoSet { _, note ->
@@ -480,9 +578,6 @@ private fun findRsvpsFor(targetAddress: Address): List<CalendarRSVPEvent> =
         }.mapNotNull { it.event as? CalendarRSVPEvent }
         .sortedByDescending { it.createdAt }
 
-/**
- * Scans LocalCache for kind-31924 calendars whose `a` tags include [targetAddress].
- */
 private fun findCalendarsContaining(targetAddress: Address): List<CalendarEvent> =
     LocalCache.addressables
         .filterIntoSet { _, note ->
