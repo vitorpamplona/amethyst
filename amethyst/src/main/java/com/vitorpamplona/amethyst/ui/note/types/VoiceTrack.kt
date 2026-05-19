@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
+import com.vitorpamplona.amethyst.service.playback.composable.PauseControllerWhenInBackground
 import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 import com.vitorpamplona.amethyst.service.playback.composable.controls.AnimatedSaveButton
 import com.vitorpamplona.amethyst.service.playback.composable.controls.AnimatedShareButton
@@ -165,6 +166,7 @@ fun RenderAudioWithWaveform(
                     mediaItem = mediaItem,
                     muted = false,
                 ) { controller ->
+                    PauseControllerWhenInBackground(controller)
                     RenderVoicePlayer(
                         mediaItem = mediaItem,
                         controllerState = controller,

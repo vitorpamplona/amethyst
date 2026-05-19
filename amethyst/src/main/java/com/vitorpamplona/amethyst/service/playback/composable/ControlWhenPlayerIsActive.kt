@@ -118,6 +118,37 @@ fun ControlWhenPlayerIsActive(
     }
 }
 
+/**
+ * Pauses [mediaControllerState] when the host activity leaves the foreground.
+ *
+ * Standalone version of the ON_PAUSE arm of [ControlWhenPlayerIsActive] for
+ * callers (e.g. voice notes) that don't have the visibility mutex / auto-resume
+ * logic but still need to stop playback when the app backgrounds. Pairs with
+ * the 30s release timer in [GetVideoController] — pause immediately, release
+ * the controller after the timeout, reassemble on resume.
+ *
+ * Skips the explicit BackgroundMedia (PiP) instance: that one is opted in to
+ * keep-playing.
+ */
+@Composable
+fun PauseControllerWhenInBackground(mediaControllerState: MediaControllerState) {
+    val controller = mediaControllerState.controller
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, mediaControllerState) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_PAUSE &&
+                    controller.isPlaying &&
+                    !BackgroundMedia.isMutex(mediaControllerState)
+                ) {
+                    controller.pause()
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+}
+
 class PlayerEventListener(
     val view: View,
 ) : Player.Listener {

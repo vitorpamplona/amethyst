@@ -52,7 +52,13 @@ class PipVideoActivity : ComponentActivity() {
                 val muted = remember(mediaItemData) { DEFAULT_MUTED_SETTING.value }
 
                 GetMediaItem(mediaItemData) { mediaItem ->
-                    GetVideoController(mediaItem, muted, true) { controllerState ->
+                    GetVideoController(
+                        mediaItem = mediaItem,
+                        muted = muted,
+                        play = true,
+                        // PiP IS the opt-in for background playback — never release on background.
+                        releaseOnBackgroundTimeout = false,
+                    ) { controllerState ->
                         // PiP window is small, keep bandwidth low by forcing the lowest
                         // rendition. User can still manually change quality via controls.
                         ApplyInitialVideoQuality(
