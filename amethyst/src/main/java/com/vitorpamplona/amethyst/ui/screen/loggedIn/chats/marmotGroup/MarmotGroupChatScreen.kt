@@ -51,6 +51,9 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 @Composable
 fun MarmotGroupChatScreen(
     nostrGroupId: HexKey,
+    draftMessage: String? = null,
+    replyToInnerNote: HexKey? = null,
+    editFromDraft: HexKey? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -127,6 +130,9 @@ fun MarmotGroupChatScreen(
         Column(Modifier.padding(it)) {
             MarmotGroupChatView(
                 nostrGroupId = nostrGroupId,
+                draftMessage = draftMessage,
+                replyToInnerNote = replyToInnerNote,
+                editFromDraft = editFromDraft,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

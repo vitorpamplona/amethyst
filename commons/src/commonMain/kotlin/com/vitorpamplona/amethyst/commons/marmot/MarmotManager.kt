@@ -46,6 +46,8 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
+import com.vitorpamplona.quartz.nip18Reposts.quotes.quote
 import com.vitorpamplona.quartz.utils.Log
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
@@ -182,11 +184,25 @@ class MarmotManager(
     suspend fun buildTextMessage(
         nostrGroupId: HexKey,
         text: String,
+        replyTo: Event? = null,
         persistOwn: Boolean = true,
     ): TextMessageBundle {
         val template =
             com.vitorpamplona.quartz.nip01Core.signers
-                .eventTemplate<Event>(kind = 9, description = text)
+                .eventTemplate<Event>(kind = 9, description = text) {
+                    if (replyTo != null) {
+                        // Mirror ChatEvent.reply(): NIP-18 q-tag references the
+                        // parent inner kind:9 by id (+ author, no relay hint —
+                        // the inner rumor never hits a relay directly).
+                        quote(
+                            QEventTag(
+                                eventId = replyTo.id,
+                                relayHint = null,
+                                authorPubKeyHex = replyTo.pubKey,
+                            ),
+                        )
+                    }
+                }
         val innerEvent =
             com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
                 .assembleRumor<Event>(signer.pubKey, template)

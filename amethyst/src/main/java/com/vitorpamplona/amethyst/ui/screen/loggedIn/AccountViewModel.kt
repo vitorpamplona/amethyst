@@ -1541,11 +1541,15 @@ class AccountViewModel(
     suspend fun sendMarmotGroupMessage(
         nostrGroupId: String,
         text: String,
+        replyToInnerEvent: Event? = null,
     ) {
         // Inner event construction lives on MarmotManager so CLI and UI don't drift.
         // persistOwn=false because Account.sendMarmotGroupMessage routes the outer
         // event through LocalCache which already handles own-message display.
-        val bundle = account.marmotManager?.buildTextMessage(nostrGroupId, text, persistOwn = false) ?: return
+        val bundle =
+            account.marmotManager
+                ?.buildTextMessage(nostrGroupId, text, replyTo = replyToInnerEvent, persistOwn = false)
+                ?: return
         val relays = marmotGroupRelays(nostrGroupId)
         account.sendMarmotGroupMessage(nostrGroupId, bundle.innerEvent, relays)
     }

@@ -252,6 +252,15 @@ fun routeReplyTo(
     note: Note,
     account: Account,
 ): Route? {
+    // Marmot group messages must reply inside the encrypted group, not as a
+    // public kind:1111 comment. The inner kind:9 event has no group hint of
+    // its own — we detect the group via the gathering MarmotGroupChatroom,
+    // mirroring routeFor() above.
+    val marmotGroup = note.inGatherers?.firstNotNullOfOrNull { it as? MarmotGroupChatroom }
+    if (marmotGroup != null) {
+        return Route.MarmotGroupChat(marmotGroup.nostrGroupId, replyId = note.idHex)
+    }
+
     val noteEvent = note.event
     return when (noteEvent) {
         is ChannelMessageEvent -> {
