@@ -1986,6 +1986,12 @@
     <string name="calendar_reminder_channel_description">Heads-up when an event you\'re attending is about to start.</string>
     <string name="calendar_reminder_default_title">Calendar event</string>
     <string name="calendar_reminder_body">Starts in %1$d minutes</string>
+    <string name="calendar_add_to_calendar_action">Add to one of your calendars</string>
+    <string name="calendar_add_to_calendar_title">Add to a calendar</string>
+    <string name="calendar_add_to_calendar_none">You haven\'t created any calendars yet.</string>
+    <string name="calendar_collection_delete">Delete calendar</string>
+    <string name="calendar_collection_delete_confirm_title">Delete this calendar?</string>
+    <string name="calendar_collection_delete_confirm_message">The calendar list will be removed. Events inside it are not deleted.</string>
     <string name="calendar_open_in_maps">Open in maps</string>
     <string name="route_calendar_event_detail">Event details</string>
     <string name="new_short_video">New Short Video</string>

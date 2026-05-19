@@ -57,8 +57,14 @@ class NewCalendarCollectionViewModel : ViewModel() {
     /** Stable d-tag for the addressable: random for create, preserved when editing. */
     private var dTag: String? = null
 
+    /** The full original event in edit mode; needed to publish a NIP-09 deletion. */
+    private var loadedEvent: com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent? = null
+
     val selectedAddresses = mutableStateListOf<Address>()
     val availableAppointments = mutableStateOf<List<OwnedAppointmentSummary>>(emptyList())
+
+    val isEditing: Boolean
+        get() = dTag != null
 
     fun init(
         accountViewModel: AccountViewModel,
@@ -72,6 +78,7 @@ class NewCalendarCollectionViewModel : ViewModel() {
             val existingAddress = Address(CalendarEvent.KIND, account.userProfile().pubkeyHex, existingDTag)
             val existingNote = LocalCache.addressables.get(existingAddress)
             (existingNote?.event as? CalendarEvent)?.let { existing ->
+                loadedEvent = existing
                 title.value = existing.title().orEmpty()
                 description.value = existing.content
                 selectedAddresses.addAll(existing.calendarEventAddresses())
@@ -84,6 +91,17 @@ class NewCalendarCollectionViewModel : ViewModel() {
     fun toggle(address: Address) {
         if (selectedAddresses.remove(address)) return
         selectedAddresses.add(address)
+    }
+
+    /**
+     * Publishes a NIP-09 deletion event for the loaded calendar. No-op when called outside
+     * edit mode (we wouldn't have a target to delete). Returns true when the deletion was
+     * dispatched so the caller can pop back.
+     */
+    suspend fun deleteLoaded(): Boolean {
+        val target = loadedEvent ?: return false
+        account.delete(target, emptySet())
+        return true
     }
 
     fun isValid(): Boolean = title.value.isNotBlank()

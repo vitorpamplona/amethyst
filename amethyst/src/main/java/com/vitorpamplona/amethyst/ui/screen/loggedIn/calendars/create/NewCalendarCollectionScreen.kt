@@ -40,7 +40,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -121,7 +124,57 @@ fun NewCalendarCollectionScreen(
             }
 
             AppointmentPickerSection(vm)
+
+            if (vm.isEditing) {
+                DeleteCalendarRow(vm = vm, onDeleted = { nav.popBack() }, accountViewModel = accountViewModel)
+            }
         }
+    }
+}
+
+@Composable
+private fun DeleteCalendarRow(
+    vm: NewCalendarCollectionViewModel,
+    onDeleted: () -> Unit,
+    accountViewModel: AccountViewModel,
+) {
+    var confirming by rememberSaveable { mutableStateOf(false) }
+
+    androidx.compose.material3.OutlinedButton(
+        onClick = { confirming = true },
+        modifier = Modifier.fillMaxWidth(),
+        colors =
+            androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.error,
+            ),
+    ) {
+        Text(text = stringRes(R.string.calendar_collection_delete))
+    }
+
+    if (confirming) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { confirming = false },
+            title = { Text(stringRes(R.string.calendar_collection_delete_confirm_title)) },
+            text = { Text(stringRes(R.string.calendar_collection_delete_confirm_message)) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    confirming = false
+                    accountViewModel.launchSigner {
+                        if (vm.deleteLoaded()) onDeleted()
+                    }
+                }) {
+                    Text(
+                        text = stringRes(R.string.calendar_collection_delete),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { confirming = false }) {
+                    Text(stringRes(R.string.cancel))
+                }
+            },
+        )
     }
 }
 

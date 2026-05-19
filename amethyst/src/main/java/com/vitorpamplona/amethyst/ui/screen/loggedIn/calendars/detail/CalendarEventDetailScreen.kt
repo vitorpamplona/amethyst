@@ -41,11 +41,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -328,26 +329,30 @@ private fun HeroImage(
 @Composable
 private fun LocationRow(location: String) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    // The whole row is the affordance — a single click target with a trailing chevron makes the
+    // action discoverable without the dead-button look the previous nested TextButton produced.
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clickable {
                     runCatching {
-                        // `geo:0,0?q=<location>` is the Android geo intent; falls back to a web
-                        // search if no maps app handles geo:.
+                        // `geo:0,0?q=<location>` is the Android geo intent; the user's installed
+                        // maps app handles it. When none is installed the runCatching swallows
+                        // the ActivityNotFoundException — we don't have anywhere useful to fall
+                        // back to.
                         context.startActivity(
                             android.content
                                 .Intent(android.content.Intent.ACTION_VIEW, "geo:0,0?q=${android.net.Uri.encode(location)}".let(android.net.Uri::parse))
                                 .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
                         )
                     }
-                },
+                }.padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             symbol = MaterialSymbols.LocationOn,
-            contentDescription = null,
+            contentDescription = stringRes(R.string.calendar_open_in_maps),
             modifier = Modifier.size(18.dp),
             tint = MaterialTheme.colorScheme.primary,
         )
@@ -356,13 +361,14 @@ private fun LocationRow(location: String) {
             text = location,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f),
         )
-        Spacer(modifier = Modifier.weight(1f))
-        TextButton(onClick = {}) {
-            // The button-as-affordance is rendered via the Row's clickable above; the inner
-            // TextButton acts as a visual chip with the "open in maps" label.
-            Text(text = stringRes(R.string.calendar_open_in_maps))
-        }
+        Icon(
+            symbol = MaterialSymbols.ChevronRight,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -418,9 +424,31 @@ private fun InCalendarsSection(
     nav: INav,
 ) {
     val calendars by rememberCalendarsContaining(targetAddress)
+    var showAddSheet by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionTitle(stringRes(R.string.calendar_event_in_calendars, calendars.size))
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            SectionTitle(stringRes(R.string.calendar_event_in_calendars, calendars.size))
+            Spacer(modifier = Modifier.weight(1f))
+            // Affordance for adding/removing this event from the user's own calendars. Hidden
+            // when the user has no own calendars — the sheet would show an empty-state in that
+            // case anyway, but the IconButton would be a misleading entry point.
+            IconButton(onClick = { showAddSheet = true }) {
+                Icon(
+                    symbol = MaterialSymbols.Add,
+                    contentDescription = stringRes(R.string.calendar_add_to_calendar_action),
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+        if (showAddSheet) {
+            AddToCalendarSheet(
+                targetAddress = targetAddress,
+                accountViewModel = accountViewModel,
+                onDismiss = { showAddSheet = false },
+            )
+        }
         if (calendars.isEmpty()) {
             Text(
                 text = stringRes(R.string.calendar_event_in_no_calendars),
