@@ -123,6 +123,7 @@ fun CalendarCollectionCard(
     val title = remember(note.idHex) { event.title() }
     val description = remember(note.idHex) { event.content.take(180) }
     val count = remember(note.idHex) { event.calendarEventAddresses().size }
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     Card(
         modifier =
@@ -145,7 +146,7 @@ fun CalendarCollectionCard(
                 tint = MaterialTheme.colorScheme.primary,
             )
             Column(
-                modifier = Modifier.fillMaxWidth().padding(start = 14.dp),
+                modifier = Modifier.weight(1f).padding(start = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
@@ -170,6 +171,50 @@ fun CalendarCollectionCard(
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
+            androidx.compose.material3.IconButton(onClick = {
+                val members = collectMembers(event)
+                val ics =
+                    com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.IcsExport
+                        .calendarToIcs(
+                            event,
+                            members,
+                            com.vitorpamplona.quartz.utils.TimeUtils
+                                .now(),
+                        )
+                val filename =
+                    com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.IcsExport
+                        .calendarFilename(event)
+                shareIcs(context, filename, ics)
+            }) {
+                Icon(
+                    symbol = MaterialSymbols.Share,
+                    contentDescription = stringRes(R.string.calendar_export_event),
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
+
+/**
+ * Resolves a calendar's member addresses to their cached events, skipping members that haven't
+ * arrived from relays yet or aren't appointments. Returns a list compatible with
+ * [com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.IcsExport.calendarToIcs].
+ */
+private fun collectMembers(calendar: CalendarEvent): List<Pair<com.vitorpamplona.quartz.nip01Core.core.Address, Any>> =
+    calendar
+        .calendarEventAddresses()
+        .mapNotNull { addr ->
+            val cachedEvent =
+                com.vitorpamplona.amethyst.model.LocalCache.addressables
+                    .get(addr)
+                    ?.event
+            if (cachedEvent is com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent ||
+                cachedEvent is com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
+            ) {
+                addr to cachedEvent
+            } else {
+                null
+            }
+        }

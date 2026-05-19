@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.appointmentView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.datasource.CalendarsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.formatCalendarRange
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.relativeTimeLabel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -128,6 +129,33 @@ fun CalendarEventDetailScreen(
                     }
                 },
                 actions = {
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    // Export to .ics — available regardless of authorship; anyone viewing the
+                    // event may want to drop it into their personal calendar.
+                    if (event != null) {
+                        IconButton(onClick = {
+                            val ics =
+                                com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.IcsExport
+                                    .appointmentToIcs(
+                                        event,
+                                        targetAddress,
+                                        com.vitorpamplona.quartz.utils.TimeUtils
+                                            .now(),
+                                    )
+                            val filename =
+                                com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.dal.IcsExport
+                                    .appointmentFilename(event, targetAddress)
+                            com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars
+                                .shareIcs(context, filename, ics)
+                        }) {
+                            Icon(
+                                symbol = MaterialSymbols.Share,
+                                contentDescription = stringRes(R.string.calendar_export_event),
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
                     // The Edit affordance is only meaningful when the current account is the
                     // author — relays will reject a signed-by-stranger replacement.
                     if (isOwnEvent && event != null) {
@@ -226,6 +254,23 @@ private fun EventBody(
                 text = range,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        val context = androidx.compose.ui.platform.LocalContext.current
+        val relative =
+            remember(note.idHex, view.startSeconds) {
+                relativeTimeLabel(
+                    context,
+                    view,
+                    com.vitorpamplona.quartz.utils.TimeUtils
+                        .now(),
+                )
+            }
+        relative?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         view.location?.let { LocationRow(it) }
