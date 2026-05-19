@@ -24,6 +24,7 @@ import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
@@ -136,15 +137,19 @@ fun LongPressToQuickAction(
 ) {
     val popupExpanded = remember { mutableStateOf(false) }
 
-    content { popupExpanded.value = true }
+    // Box anchors the Popup to the note card; otherwise its parent resolves to the
+    // enclosing LazyColumn and `Alignment.Center` centers on the whole list.
+    Box {
+        content { popupExpanded.value = true }
 
-    if (popupExpanded.value) {
-        NoteQuickActionMenu(
-            note = baseNote,
-            onDismiss = { popupExpanded.value = false },
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+        if (popupExpanded.value) {
+            NoteQuickActionMenu(
+                note = baseNote,
+                onDismiss = { popupExpanded.value = false },
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
     }
 }
 
