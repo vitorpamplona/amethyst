@@ -853,29 +853,48 @@ a unit test for.
 
 ## 19. Follow-up: trustless NIP-BC onchain zap verification
 
-*Not in this plan. Tracked here so the design choices above stay aligned.*
+*Not in this plan. Tracked here so the design choices above stay aligned.
+Full implementation plan lives in `amethyst/plans/2026-05-14-onchain-zaps.md`
+under "Inline SPV proofs (`block` + `proof` tags) — pending".*
 
-The shipped `OnchainZapVerifier` (`quartz/.../nipBCOnchainZaps/verify/`)
-trusts `OnchainBackend.getTx(txid)` — i.e. Esplora — for both
-tx-existence-in-a-block and the output values used to compute
-`verifiedSats`. A malicious Esplora can fabricate or suppress zaps.
+### What the 2026-05-19 spec change buys us
 
-Closing that gap is a **separate plan** that builds on this one:
+`nostr-protocol/nips#2332` adds optional `["block", "<hash>", "<height>"]`
+and `["proof", "<raw-tx-hex>", "<merkle-proof-hex>"]` tags on `kind:8333`.
+The proof rides inline in the Nostr event, so the trustless-verify path
+needs **no new P2P messages on top of S1** — no `getdata MSG_BLOCK`, no
+BIP-37 `filterload`, no full-block parser. Just header lookup + merkle
+walk against bytes already in the event.
 
-- **Foundation reused:** `BitcoinPeer`, `PeerPool`, `HeaderStore`,
-  `HeaderValidator`, `LocalHeadersBitcoinExplorer`.
-- **New work (rough ~10–15 days on top of S1):** BIP-37 `filterload` /
-  `merkleblock` / matched-`tx` handling, or `getdata MSG_BLOCK` + stream
-  parse; partial-merkle-tree verification; new `OnchainBackend` variant
-  that asks the local stack for the inclusion proof and the matched tx
-  while keeping Esplora for UTXO listing / broadcast / fee estimates on
-  the *send* side.
-- **Net win:** zap-receive verification stops trusting Esplora. Zap-send
-  still needs an address-indexed server (no headers-only equivalent
-  exists), so that part of the trust story is unchanged.
-- **Filename:** `quartz/plans/YYYY-MM-DD-onchain-zap-merkle-proofs.md`,
-  written once S1 has shipped and we have real numbers on first-run sync,
-  store size, and battery cost.
+This collapses the original "follow-up plan" estimate from 10–15 days to
+**~3–4 days** of work after S1 ships and the spec's merkle-proof
+encoding is locked.
+
+### Foundation reused from S1
+
+- `LocalHeadersBitcoinExplorer.byHash(blockHash)` → validated header (for
+  the `merkleRoot`).
+- `HeaderStore` for the by-hash index.
+- `LocalHeadersBitcoinExplorer.tipHeight()` for confirmation count.
+
+### New work (in `nipBCOnchainZaps/`, not in `bitcoin/`)
+
+- `MerkleProofVerifier.verify(txid, proofBytes, expectedMerkleRoot)` — small
+  pure-function module. Test-vector-driven.
+- `OnchainZapVerifier` rewire to prefer the inline proof path when both
+  tags are present; fall back to `backend.getTx` on absence or proof
+  failure (never hard-reject).
+- `OnchainBackend.getMerkleProof(txid)` on the send side, plus a
+  post-confirmation worker in `OnchainZapSender` that publishes a second
+  `kind:8333` once the tx confirms, this time carrying `block` + `proof`.
+  Receivers dedupe by `(txid, target)` preferring the variant with a
+  valid SPV proof.
+
+Detailed phase breakdown (G.1–G.7), gap matrix, and design rationale
+live in the onchain-zaps plan referenced above. The previous text of
+this section (BIP-37 / full-block / partial-merkle-tree options) is
+obsolete now that the proof is carried inline — kept in git history if
+anyone needs to revisit the assumption.
 
 ## 20. References
 
