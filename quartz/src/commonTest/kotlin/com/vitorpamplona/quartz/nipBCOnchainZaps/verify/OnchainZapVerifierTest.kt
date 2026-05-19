@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nipBCOnchainZaps.verify
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.BitcoinAddressTx
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.BitcoinTx
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.BitcoinTxOutput
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.FeeEstimates
@@ -82,6 +83,11 @@ class OnchainZapVerifierTest {
         override suspend fun getTx(txid: String): BitcoinTx? = if (tx?.txid == txid) tx else null
 
         override suspend fun getUtxosForAddress(address: String): List<Utxo> = emptyList()
+
+        override suspend fun getTxsForAddress(
+            address: String,
+            afterTxid: String?,
+        ): List<BitcoinAddressTx> = emptyList()
 
         override suspend fun broadcast(rawTxHex: String): String = throw UnsupportedOperationException()
 

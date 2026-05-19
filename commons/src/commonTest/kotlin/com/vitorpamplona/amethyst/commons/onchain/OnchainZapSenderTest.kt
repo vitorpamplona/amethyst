@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.builder.OnchainZapBuilder
+import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.BitcoinAddressTx
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.BitcoinTx
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.FeeEstimates
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.OnchainBackend
@@ -68,6 +69,11 @@ class OnchainZapSenderTest {
         override suspend fun getTx(txid: String): BitcoinTx? = null
 
         override suspend fun getUtxosForAddress(address: String): List<Utxo> = utxos
+
+        override suspend fun getTxsForAddress(
+            address: String,
+            afterTxid: String?,
+        ): List<BitcoinAddressTx> = emptyList()
 
         override suspend fun broadcast(rawTxHex: String): String {
             if (broadcastFails) throw RuntimeException("relay rejected tx")
