@@ -373,7 +373,6 @@ fun BuildNavigation(
                 nostrGroupId = it.nostrGroupId,
                 draftMessage = it.message,
                 replyToInnerNote = it.replyId,
-                editFromDraft = it.draftId,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

@@ -184,21 +184,26 @@ class MarmotManager(
     suspend fun buildTextMessage(
         nostrGroupId: HexKey,
         text: String,
-        replyTo: Event? = null,
+        replyToEventId: HexKey? = null,
+        replyToAuthorPubKey: HexKey? = null,
         persistOwn: Boolean = true,
     ): TextMessageBundle {
         val template =
             com.vitorpamplona.quartz.nip01Core.signers
                 .eventTemplate<Event>(kind = 9, description = text) {
-                    if (replyTo != null) {
+                    if (replyToEventId != null) {
                         // Mirror ChatEvent.reply(): NIP-18 q-tag references the
-                        // parent inner kind:9 by id (+ author, no relay hint —
-                        // the inner rumor never hits a relay directly).
+                        // parent inner kind:9 by id (+ optional author, no
+                        // relay hint — the inner rumor never hits a relay
+                        // directly). Taking id+pubKey separately (rather than
+                        // the full parent Event) lets the push-notification
+                        // reply path produce a threaded reply from cold start,
+                        // when LocalCache hasn't been re-hydrated yet.
                         quote(
                             QEventTag(
-                                eventId = replyTo.id,
+                                eventId = replyToEventId,
                                 relayHint = null,
-                                authorPubKeyHex = replyTo.pubKey,
+                                authorPubKeyHex = replyToAuthorPubKey,
                             ),
                         )
                     }

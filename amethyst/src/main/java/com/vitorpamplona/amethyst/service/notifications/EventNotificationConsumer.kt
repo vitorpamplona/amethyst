@@ -588,6 +588,7 @@ class EventNotificationConsumer(
                 chatroomMembers = null,
                 marmotNostrGroupId = nostrGroupId,
                 marmotReplyToInnerEventId = innerEvent.id,
+                marmotReplyToInnerAuthor = innerEvent.pubKey,
             )
     }
 

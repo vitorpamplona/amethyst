@@ -81,7 +81,6 @@ fun MarmotGroupChatView(
     nostrGroupId: HexKey,
     draftMessage: String? = null,
     replyToInnerNote: HexKey? = null,
-    @Suppress("UNUSED_PARAMETER") editFromDraft: HexKey? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -128,11 +127,6 @@ fun MarmotGroupChatView(
         }
     }
 
-    // editFromDraft is accepted for route symmetry with NIP-17's
-    // Route.Room, but Marmot doesn't yet persist drafts, so it's currently
-    // unused. Suppressed at the parameter rather than via a fake binding
-    // so ktlint stays happy.
-
     Column(Modifier.fillMaxHeight()) {
         Column(
             modifier =
@@ -168,8 +162,8 @@ fun MarmotGroupChatView(
 @Composable
 fun MarmotGroupMessageComposer(
     nostrGroupId: HexKey,
-    messageState: TextFieldState = remember { TextFieldState() },
-    replyTo: MutableState<Note?> = remember { mutableStateOf(null) },
+    messageState: TextFieldState,
+    replyTo: MutableState<Note?>,
     accountViewModel: AccountViewModel,
     nav: INav,
     onMessageSent: suspend () -> Unit,
@@ -234,13 +228,18 @@ fun MarmotGroupMessageComposer(
                 ) {
                     val text = messageState.text.toString().trim()
                     if (text.isNotEmpty()) {
-                        val replyParent = replyTo.value?.event
+                        // Capture id+pubKey snapshot under the value? guard so
+                        // a slow send doesn't race a user-cleared reply state.
+                        val parentEvent = replyTo.value?.event
+                        val replyId = parentEvent?.id
+                        val replyAuthor = parentEvent?.pubKey
                         scope.launch(Dispatchers.IO) {
                             try {
                                 accountViewModel.sendMarmotGroupMessage(
                                     nostrGroupId = nostrGroupId,
                                     text = text,
-                                    replyToInnerEvent = replyParent,
+                                    replyToInnerEventId = replyId,
+                                    replyToInnerAuthorPubKey = replyAuthor,
                                 )
                                 messageState.clearText()
                                 replyTo.value = null

@@ -69,6 +69,7 @@ object NotificationUtils {
     const val KEY_TARGET_EVENT_ID = "key_target_event_id"
     const val KEY_MARMOT_GROUP_ID = "key_marmot_group_id"
     const val KEY_MARMOT_REPLY_TO_INNER_ID = "key_marmot_reply_to_inner_id"
+    const val KEY_MARMOT_REPLY_TO_INNER_AUTHOR = "key_marmot_reply_to_inner_author"
 
     private const val DM_SUMMARY_ID = 0x10000
     private const val ZAP_SUMMARY_ID = 0x20000
@@ -379,6 +380,7 @@ object NotificationUtils {
         chatroomMembers: String? = null,
         marmotNostrGroupId: String? = null,
         marmotReplyToInnerEventId: String? = null,
+        marmotReplyToInnerAuthor: String? = null,
     ) {
         getOrCreateDMChannel(applicationContext)
         val channelId = stringRes(applicationContext, R.string.app_notification_dms_channel_id)
@@ -397,6 +399,7 @@ object NotificationUtils {
             chatroomMembers = chatroomMembers,
             marmotNostrGroupId = marmotNostrGroupId,
             marmotReplyToInnerEventId = marmotReplyToInnerEventId,
+            marmotReplyToInnerAuthor = marmotReplyToInnerAuthor,
         )
     }
 
@@ -434,6 +437,7 @@ object NotificationUtils {
         chatroomMembers: String?,
         marmotNostrGroupId: String? = null,
         marmotReplyToInnerEventId: String? = null,
+        marmotReplyToInnerAuthor: String? = null,
     ) {
         val notId = id.hashCode()
 
@@ -553,6 +557,9 @@ object NotificationUtils {
                     putExtra(KEY_MARMOT_GROUP_ID, marmotNostrGroupId)
                     if (marmotReplyToInnerEventId != null) {
                         putExtra(KEY_MARMOT_REPLY_TO_INNER_ID, marmotReplyToInnerEventId)
+                    }
+                    if (marmotReplyToInnerAuthor != null) {
+                        putExtra(KEY_MARMOT_REPLY_TO_INNER_AUTHOR, marmotReplyToInnerAuthor)
                     }
                 }
 

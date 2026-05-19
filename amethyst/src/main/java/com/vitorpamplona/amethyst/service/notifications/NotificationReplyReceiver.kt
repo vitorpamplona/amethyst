@@ -29,10 +29,7 @@ import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -110,9 +107,10 @@ class NotificationReplyReceiver : BroadcastReceiver() {
                 val accountNpub = intent.getStringExtra(NotificationUtils.KEY_ACCOUNT_NPUB) ?: return
                 val nostrGroupId = intent.getStringExtra(NotificationUtils.KEY_MARMOT_GROUP_ID) ?: return
                 val replyToInnerId = intent.getStringExtra(NotificationUtils.KEY_MARMOT_REPLY_TO_INNER_ID)
+                val replyToInnerAuthor = intent.getStringExtra(NotificationUtils.KEY_MARMOT_REPLY_TO_INNER_AUTHOR)
 
                 runOnRelay(notificationManager, notificationId) {
-                    sendMarmotReply(accountNpub, nostrGroupId, replyToInnerId, replyText)
+                    sendMarmotReply(accountNpub, nostrGroupId, replyToInnerId, replyToInnerAuthor, replyText)
                 }
             }
         }
@@ -165,6 +163,7 @@ class NotificationReplyReceiver : BroadcastReceiver() {
         accountNpub: String,
         nostrGroupId: String,
         replyToInnerEventId: String?,
+        replyToInnerAuthor: String?,
         replyText: String,
     ) {
         val accountSettings = LocalPreferences.loadAccountConfigFromEncryptedStorage(accountNpub) ?: return
@@ -172,35 +171,20 @@ class NotificationReplyReceiver : BroadcastReceiver() {
 
         val manager = account.marmotManager ?: return
 
-        // Recover the parent inner event so the kind:9 reply carries the
-        // proper q-tag. Inner events live in LocalCache keyed by the inner
-        // id; if we somehow miss it (e.g. cache was pruned) the reply still
-        // goes through unthreaded — better than dropping the user's message.
-        val replyToInnerEvent: Event? =
-            replyToInnerEventId?.let { LocalCache.getNoteIfExists(it)?.event }
-
+        // Use id+author from the Intent so the reply is threaded even when
+        // LocalCache hasn't been rehydrated yet (cold-process broadcast
+        // receiver: Account.restoreAll runs async on init and may not have
+        // finished by the time we get here).
         val bundle =
             manager.buildTextMessage(
                 nostrGroupId = nostrGroupId,
                 text = replyText,
-                replyTo = replyToInnerEvent,
+                replyToEventId = replyToInnerEventId,
+                replyToAuthorPubKey = replyToInnerAuthor,
                 persistOwn = false,
             )
 
-        // Mirror AccountViewModel.marmotGroupRelays(): prefer the group's
-        // configured relays from MLS GroupContext metadata, fall back to
-        // the account's outbox set so a misconfigured group doesn't silently
-        // drop the reply.
-        val groupRelays: Set<NormalizedRelayUrl> =
-            manager
-                .groupMetadata(nostrGroupId)
-                ?.relays
-                ?.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
-                ?.toSet()
-                ?.takeIf { it.isNotEmpty() }
-                ?: account.outboxRelays.flow.value
-
-        account.sendMarmotGroupMessage(nostrGroupId, bundle.innerEvent, groupRelays)
+        account.sendMarmotGroupMessage(nostrGroupId, bundle.innerEvent, account.marmotGroupRelays(nostrGroupId))
     }
 
     private suspend fun sendPublicReply(
