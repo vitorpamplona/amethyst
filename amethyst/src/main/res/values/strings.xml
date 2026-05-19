@@ -1981,6 +1981,11 @@
     <string name="calendar_relative_ongoing">Happening now</string>
     <string name="calendar_export_share_title">Share calendar event</string>
     <string name="calendar_export_event">Export to calendar (.ics)</string>
+    <string name="calendar_reminder_channel_id">calendar_reminders</string>
+    <string name="calendar_reminder_channel_name">Calendar reminders</string>
+    <string name="calendar_reminder_channel_description">Heads-up when an event you\'re attending is about to start.</string>
+    <string name="calendar_reminder_default_title">Calendar event</string>
+    <string name="calendar_reminder_body">Starts in %1$d minutes</string>
     <string name="calendar_open_in_maps">Open in maps</string>
     <string name="route_calendar_event_detail">Event details</string>
     <string name="new_short_video">New Short Video</string>
