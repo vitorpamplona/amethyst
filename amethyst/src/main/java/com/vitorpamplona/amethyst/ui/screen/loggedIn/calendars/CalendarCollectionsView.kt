@@ -136,12 +136,16 @@ fun CalendarCollectionCard(
     val count = remember(note.idHex) { event.calendarEventAddresses().size }
     val context = LocalContext.current
 
+    // Calendar collections are addressable (kind 31924); route to the dedicated
+    // CalendarEventDetail screen instead of the generic Route.Note thread view, which
+    // didn't know how to render them as a list of member appointments.
+    val collectionRoute = remember(note.idHex, event) { Route.CalendarEventDetail(event.address()) }
     Card(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 6.dp)
-                .clickable { nav.nav(Route.Note(note.idHex)) },
+                .clickable { nav.nav(collectionRoute) },
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.elevatedCardColors(),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),

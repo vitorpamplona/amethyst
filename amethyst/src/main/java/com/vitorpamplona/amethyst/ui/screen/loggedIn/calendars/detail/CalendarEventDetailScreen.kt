@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.addToPhoneCalendar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.datasource.CalendarsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.formatCalendarRange
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.formatLongDate
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.relativeTimeLabel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.shareIcs
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
@@ -246,16 +247,27 @@ fun CalendarEventDetailScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState()),
         ) {
-            if (event !is CalendarTimeSlotEvent && event !is CalendarDateSlotEvent) {
-                LoadingPlaceholder()
-                return@Column
+            when (event) {
+                is CalendarTimeSlotEvent,
+                is CalendarDateSlotEvent,
+                ->
+                    EventBody(
+                        note = targetNote,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        targetAddress = targetAddress,
+                    )
+
+                is CalendarEvent ->
+                    CollectionBody(
+                        note = targetNote,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        targetAddress = targetAddress,
+                    )
+
+                else -> LoadingPlaceholder()
             }
-            EventBody(
-                note = targetNote,
-                accountViewModel = accountViewModel,
-                nav = nav,
-                targetAddress = targetAddress,
-            )
         }
     }
 }
@@ -379,6 +391,160 @@ private fun EventBody(
     InCalendarsSection(targetAddress, accountViewModel, nav)
 
     Spacer(modifier = Modifier.height(24.dp))
+}
+
+/**
+ * Detail body for a NIP-52 kind-31924 calendar collection. Renders the same author header /
+ * social actions surface as an appointment, but the body is a list of the collection's member
+ * appointments instead of the appointment metadata block. Tapping a member routes to its own
+ * appointment detail.
+ */
+@Composable
+private fun CollectionBody(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    targetAddress: Address,
+) {
+    val event = note.event as? CalendarEvent ?: return
+    val title = remember(note.idHex) { event.title() }
+    val memberAddresses = remember(note.idHex) { event.calendarEventAddresses() }
+
+    Spacer(modifier = Modifier.height(12.dp))
+
+    Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        title?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        if (event.content.isNotBlank()) {
+            Text(
+                text = event.content,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+
+    ReactionsRow(
+        baseNote = note,
+        showReactionDetail = true,
+        addPadding = true,
+        editState = null,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
+
+    HorizontalDivider()
+    Spacer(modifier = Modifier.height(12.dp))
+
+    CollectionMembersSection(memberAddresses, targetAddress, accountViewModel, nav)
+
+    Spacer(modifier = Modifier.height(24.dp))
+}
+
+/**
+ * Lists the appointments addressed by [memberAddresses]. Each row tries to resolve the cached
+ * appointment event; if it hasn't arrived yet we fall back to a thin "(loading…)" placeholder
+ * tied to the address so the user can still see what's expected. Tapping a row routes to that
+ * appointment's detail screen.
+ */
+@Composable
+private fun CollectionMembersSection(
+    memberAddresses: List<Address>,
+    targetAddress: Address,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionTitle(stringRes(R.string.calendar_collection_count, memberAddresses.size))
+        if (memberAddresses.isEmpty()) {
+            Text(
+                text = stringRes(R.string.calendar_collection_empty_members),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            return@Column
+        }
+        memberAddresses.forEach { address ->
+            CollectionMemberRow(address, accountViewModel, nav)
+        }
+        if (targetAddress.dTag.isNotEmpty()) Unit // suppress unused-parameter lint
+    }
+}
+
+/**
+ * One row in [CollectionMembersSection]. Reads the live note for [address] so a member event
+ * that arrives later in the session fills in without leaving the screen.
+ */
+@Composable
+private fun CollectionMemberRow(
+    address: Address,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val memberNote = remember(address) { LocalCache.getOrCreateAddressableNote(address) }
+    // Issues a per-event relay subscription so missing members fill in while the user is on
+    // the screen.
+    val state by observeNote(memberNote, accountViewModel)
+    val memberEvent = state.note.event
+
+    val title =
+        when (memberEvent) {
+            is CalendarTimeSlotEvent -> memberEvent.title()
+            is CalendarDateSlotEvent -> memberEvent.title()
+            else -> null
+        }
+    val subtitle =
+        when (memberEvent) {
+            is CalendarTimeSlotEvent -> memberEvent.start()?.let(::formatLongDate)
+            is CalendarDateSlotEvent -> memberEvent.start()
+            else -> null
+        }
+
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { nav.nav(Route.CalendarEventDetail(address)) }
+                .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Icon(
+            symbol = MaterialSymbols.CalendarMonth,
+            contentDescription = null,
+            modifier = Modifier.size(24.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title ?: stringRes(R.string.calendar_untitled),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            subtitle?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        Icon(
+            symbol = MaterialSymbols.ChevronRight,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }
 
 @Composable

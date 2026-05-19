@@ -1990,6 +1990,7 @@
     <string name="calendar_collection_description">Description</string>
     <string name="calendar_collection_invalid">A title is required.</string>
     <string name="calendar_collection_count">%1$d events</string>
+    <string name="calendar_collection_empty_members">No events in this calendar yet.</string>
 
     <string name="calendar_rsvp_going">Going</string>
     <string name="calendar_rsvp_maybe">Maybe</string>
