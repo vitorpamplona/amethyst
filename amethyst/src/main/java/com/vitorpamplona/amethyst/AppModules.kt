@@ -721,6 +721,12 @@ class AppModules(
         ScheduledPostWorker.schedule(appContext)
         ScheduledPostWorker.scheduleCatchUp(appContext)
 
+        // Periodic scan that posts "starting soon" notifications for NIP-52 appointments the
+        // user has RSVP'd to as ACCEPTED. 15-minute cadence matches both the WorkManager
+        // periodic minimum and the lead-time window.
+        com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
+            .schedule(appContext)
+
         // Watch for account login and start/stop always-on notification service
         applicationIOScope.launch {
             sessionManager.accountContent.collectLatest { state ->

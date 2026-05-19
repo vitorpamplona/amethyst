@@ -55,6 +55,17 @@ abstract class PerUserAndFollowListEoseManager<T, U : Any>(
 
     fun since(key: T) = latestEOSEs.since(user(key), list(key))
 
+    /**
+     * Drops the EOSE state for the (user, list) pair this key resolves to so the next subscription
+     * assembly will ask the relay from scratch instead of carrying over a stale `since` cursor.
+     * Use when the in-memory note store may have evicted previously-loaded events (e.g.
+     * [LargeSoftCache]'s WeakReference store under memory pressure) and a list switch needs to
+     * re-fetch them rather than rely on a cache that's no longer there.
+     */
+    protected fun clearEoseFor(key: T) {
+        latestEOSEs.clear(user(key), list(key))
+    }
+
     fun newEose(
         key: T,
         relay: NormalizedRelayUrl,

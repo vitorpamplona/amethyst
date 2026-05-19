@@ -27,6 +27,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.NavBarItem
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.datasource.ArticlesFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.datasource.BadgesFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.datasource.CalendarsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list.datasource.CommunitiesListFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.datasource.DiscoveryFilterAssemblerSubscription
@@ -84,6 +85,10 @@ private fun PreloadFor(
         NavBarItem.ARTICLES -> ArticlesFilterAssemblerSubscription(accountViewModel)
 
         NavBarItem.PICTURES -> PicturesFilterAssemblerSubscription(accountViewModel)
+
+        NavBarItem.CALENDARS,
+        NavBarItem.CALENDAR_COLLECTIONS,
+        -> CalendarsFilterAssemblerSubscription(accountViewModel)
 
         NavBarItem.SHORTS -> ShortsFilterAssemblerSubscription(accountViewModel)
 

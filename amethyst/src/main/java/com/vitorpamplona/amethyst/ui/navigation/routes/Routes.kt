@@ -81,6 +81,45 @@ sealed class Route {
 
     @Serializable object Pictures : Route()
 
+    @Serializable object Calendars : Route()
+
+    @Serializable object CalendarCollections : Route()
+
+    @Serializable
+    data class NewCalendarEvent(
+        val draft: String? = null,
+    ) : Route()
+
+    @Serializable
+    data class EditCalendarEvent(
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
+    ) : Route() {
+        constructor(address: Address) : this(
+            kind = address.kind,
+            pubKeyHex = address.pubKeyHex,
+            dTag = address.dTag,
+        )
+    }
+
+    @Serializable
+    data class NewCalendarCollection(
+        val dTag: String? = null,
+    ) : Route()
+
+    @Serializable data class CalendarEventDetail(
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
+    ) : Route() {
+        constructor(address: Address) : this(
+            kind = address.kind,
+            pubKeyHex = address.pubKeyHex,
+            dTag = address.dTag,
+        )
+    }
+
     @Serializable object Products : Route()
 
     @Serializable object Shorts : Route()
@@ -242,6 +281,8 @@ sealed class Route {
     @Serializable object CallSettings : Route()
 
     @Serializable object NotificationSettings : Route()
+
+    @Serializable object CalendarReminderSettings : Route()
 
     @Serializable object Lists : Route()
 

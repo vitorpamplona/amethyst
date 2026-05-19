@@ -97,6 +97,7 @@ object MaterialSymbols {
     val EmojiEmotions = MaterialSymbol("\uEA22")
     val Error = MaterialSymbol("\uF8B6")
     val ErrorOutline = MaterialSymbol("\uF8B6")
+    val EventAvailable = MaterialSymbol("\uE614")
     val ExpandLess = MaterialSymbol("\uE5CE")
     val ExpandMore = MaterialSymbol("\uE5CF")
     val Explore = MaterialSymbol("\uE87A")

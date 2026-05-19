@@ -163,6 +163,7 @@ class AccountSettings(
     val defaultDiscoveryFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultPollsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultPicturesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultCalendarsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultProductsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AroundMe),
     val defaultShortsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultPublicChatsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
@@ -525,6 +526,17 @@ class AccountSettings(
     fun changeDefaultPicturesFollowList(name: TopFilter) {
         if (defaultPicturesFollowList.value != name) {
             defaultPicturesFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultCalendarsFollowList(name: FeedDefinition) {
+        changeDefaultCalendarsFollowList(name.code)
+    }
+
+    fun changeDefaultCalendarsFollowList(name: TopFilter) {
+        if (defaultCalendarsFollowList.value != name) {
+            defaultCalendarsFollowList.tryEmit(name)
             saveAccountSettings()
         }
     }
