@@ -109,6 +109,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import net.engawapg.lib.zoomable.ZoomState
 import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
 
@@ -128,6 +129,11 @@ fun ZoomableImageDialog(
     // Used as the "target" of the grow animation so the image itself — not the dialog
     // viewport — aligns with the tapped thumbnail at progress = 0.
     var imageBounds by remember { mutableStateOf<Rect?>(null) }
+
+    // ZoomState of the currently-visible image, hoisted from RenderImageOrVideo so the
+    // grow/shrink animation can read live scale/offset and start the exit from the
+    // image's actual on-screen bounds when the user has zoomed in.
+    var currentZoomState by remember { mutableStateOf<ZoomState?>(null) }
 
     // Start the enter animation as soon as valid image bounds are available. Without
     // this gate, the animation can begin before onGloballyPositioned has reported real
@@ -209,6 +215,8 @@ fun ZoomableImageDialog(
                 sourceBounds = sourceBounds,
                 imageBounds = imageBounds,
                 onImageBoundsChanged = updateImageBounds,
+                currentZoomState = currentZoomState,
+                onZoomStateChanged = { currentZoomState = it },
                 progress = progressProvider,
                 onDismiss = dismissWithAnimation,
                 accountViewModel = accountViewModel,
@@ -225,6 +233,8 @@ private fun DialogContent(
     sourceBounds: Rect?,
     imageBounds: Rect?,
     onImageBoundsChanged: (Rect) -> Unit,
+    currentZoomState: ZoomState?,
+    onZoomStateChanged: (ZoomState) -> Unit,
     progress: () -> Float,
     onDismiss: () -> Unit,
     accountViewModel: AccountViewModel,
@@ -281,18 +291,32 @@ private fun DialogContent(
                             src.width > 0f && src.height > 0f &&
                             img.width > 0f && img.height > 0f
                         ) {
+                            // Account for user-applied zoom: the image is rendered at
+                            // imageBounds transformed by the inner zoomable (uniform scale
+                            // around the layout center, then offset). The exit animation
+                            // must start from those visible bounds, not the unzoomed layout
+                            // bounds — otherwise dismissing a zoomed-in image jumps.
+                            val zoom = currentZoomState
+                            val zScale = zoom?.scale ?: 1f
+                            val zOffX = zoom?.offsetX ?: 0f
+                            val zOffY = zoom?.offsetY ?: 0f
+                            val imgCenter = img.center
+                            val zoomedWidth = img.width * zScale
+                            val zoomedHeight = img.height * zScale
+                            val zoomedCenterX = imgCenter.x + zOffX
+                            val zoomedCenterY = imgCenter.y + zOffY
+
                             transformOrigin = TransformOrigin(0f, 0f)
                             // Uniform scale so non-square images keep their aspect ratio during
                             // the grow animation. max() so the image covers the source rect in
                             // at least one dimension; the other overflows centered on the tap.
-                            val startScale = maxOf(src.width / img.width, src.height / img.height)
+                            val startScale = maxOf(src.width / zoomedWidth, src.height / zoomedHeight)
                             val srcCenter = src.center
-                            val imgCenter = img.center
                             val p = progress()
                             scaleX = lerp(startScale, 1f, p)
                             scaleY = lerp(startScale, 1f, p)
-                            translationX = lerp(srcCenter.x - startScale * imgCenter.x, 0f, p)
-                            translationY = lerp(srcCenter.y - startScale * imgCenter.y, 0f, p)
+                            translationX = lerp(srcCenter.x - startScale * zoomedCenterX, 0f, p)
+                            translationY = lerp(srcCenter.y - startScale * zoomedCenterY, 0f, p)
                         } else {
                             // No source bounds: fall back to a plain fade.
                             alpha = progress()
@@ -305,6 +329,7 @@ private fun DialogContent(
                 ) { index ->
                     allImages.getOrNull(index)?.let { pageContent ->
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            val isCurrent = index == pagerState.currentPage
                             RenderImageOrVideo(
                                 content = pageContent,
                                 roundedCorner = false,
@@ -312,11 +337,9 @@ private fun DialogContent(
                                 controllerVisible = controllerVisible,
                                 accountViewModel = accountViewModel,
                                 onContentBoundsChanged =
-                                    if (index == pagerState.currentPage) {
-                                        onImageBoundsChanged
-                                    } else {
-                                        null
-                                    },
+                                    if (isCurrent) onImageBoundsChanged else null,
+                                onZoomStateChanged =
+                                    if (isCurrent) onZoomStateChanged else null,
                             )
                         }
                     }
@@ -330,6 +353,7 @@ private fun DialogContent(
                         controllerVisible = controllerVisible,
                         accountViewModel = accountViewModel,
                         onContentBoundsChanged = onImageBoundsChanged,
+                        onZoomStateChanged = onZoomStateChanged,
                     )
                 }
             }
@@ -517,6 +541,7 @@ private fun RenderImageOrVideo(
     controllerVisible: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
     onContentBoundsChanged: ((Rect) -> Unit)? = null,
+    onZoomStateChanged: ((ZoomState) -> Unit)? = null,
 ) {
     val contentScale =
         if (isFiniteHeight) {
@@ -534,6 +559,13 @@ private fun RenderImageOrVideo(
             Modifier.fillMaxWidth()
         }
 
+    // Hoist ZoomState so the parent dialog can read live scale/offset and start the
+    // exit animation from the image's actual on-screen bounds when zoomed in.
+    val zoomState = rememberZoomState()
+    LaunchedEffect(zoomState, onZoomStateChanged) {
+        onZoomStateChanged?.invoke(zoomState)
+    }
+
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = rowModifier) {
         when (content) {
             is MediaUrlImage -> {
@@ -541,7 +573,7 @@ private fun RenderImageOrVideo(
                     Modifier
                         .fillMaxWidth()
                         .zoomable(
-                            rememberZoomState(),
+                            zoomState,
                             onTap = {
                                 controllerVisible.value = !controllerVisible.value
                             },
@@ -606,7 +638,7 @@ private fun RenderImageOrVideo(
                     Modifier
                         .fillMaxWidth()
                         .zoomable(
-                            rememberZoomState(),
+                            zoomState,
                             onTap = {
                                 controllerVisible.value = !controllerVisible.value
                             },
