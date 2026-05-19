@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service.okhttp
 
+import com.vitorpamplona.amethyst.commons.privacy.BlockReason
+import com.vitorpamplona.amethyst.commons.privacy.PrivacyRoute
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -29,6 +32,7 @@ import kotlinx.coroutines.flow.stateIn
 import okhttp3.Call
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.Proxy
 
@@ -39,6 +43,10 @@ class DualHttpClientManager(
     keyCache: EncryptionKeyCache,
     scope: CoroutineScope,
     dns: SurgeDns,
+    // EXTERNAL-only for now (the i2pd / Java I2P SOCKS port). Null while I2P is
+    // OFF or not configured; tri-state routing falls back to Direct rather than
+    // hold a request when the daemon is unavailable on a clearnet feature.
+    private val i2pProxyPortProvider: StateFlow<Int?> = MutableStateFlow(null),
     shouldBridgeBlossomCache: (() -> Boolean)? = null,
 ) : IHttpClientManager {
     val factory = OkHttpClientFactory(keyCache, userAgent, dns, shouldBridgeBlossomCache)
@@ -62,7 +70,18 @@ class DualHttpClientManager(
                 factory.buildHttpClient(isMobileDataProvider.value),
             )
 
+    val i2pHttpClient: StateFlow<OkHttpClient> =
+        combine(i2pProxyPortProvider, isMobileDataProvider) { proxy, mobile ->
+            factory.buildHttpClient(proxy, mobile)
+        }.stateIn(
+            scope,
+            SharingStarted.WhileSubscribed(1000),
+            factory.buildHttpClient(i2pProxyPortProvider.value, isMobileDataProvider.value),
+        )
+
     fun getCurrentProxy(): Proxy? = defaultHttpClient.value.proxy
+
+    fun getCurrentI2pProxy(): Proxy? = i2pHttpClient.value.proxy
 
     override fun getCurrentProxyPort(useProxy: Boolean): Int? =
         if (useProxy) {
@@ -78,7 +97,45 @@ class DualHttpClientManager(
             defaultHttpClientWithoutProxy.value
         }
 
+    /**
+     * Route-aware client lookup. Direct → no proxy, Tor → Tor SOCKS, I2p → I2P
+     * SOCKS, Blocked → IOException so the request fails closed instead of
+     * silently leaking to the clearnet.
+     *
+     * If a daemon-required route lands here while its proxy port is null (daemon
+     * not yet started), the I2P / Tor client is still returned — the underlying
+     * OkHttp call will fail to connect rather than fall back to a direct route,
+     * which is consistent with the fail-closed contract.
+     */
+    fun getHttpClient(route: PrivacyRoute): OkHttpClient =
+        when (route) {
+            PrivacyRoute.Direct -> defaultHttpClientWithoutProxy.value
+            PrivacyRoute.Tor -> defaultHttpClient.value
+            PrivacyRoute.I2p -> i2pHttpClient.value
+            is PrivacyRoute.Blocked -> throw blockedException(route.reason)
+        }
+
+    fun getCurrentProxyPort(route: PrivacyRoute): Int? =
+        when (route) {
+            PrivacyRoute.Direct -> null
+            PrivacyRoute.Tor -> (getCurrentProxy()?.address() as? InetSocketAddress)?.port
+            PrivacyRoute.I2p -> (getCurrentI2pProxy()?.address() as? InetSocketAddress)?.port
+            is PrivacyRoute.Blocked -> throw blockedException(route.reason)
+        }
+
     fun getDynamicCallFactory(useProxy: Boolean) = DynamicCallFactory(useProxy, this)
+
+    companion object {
+        fun blockedException(reason: BlockReason): IOException =
+            IOException(
+                when (reason) {
+                    BlockReason.ONION_REQUIRES_TOR ->
+                        "Cannot reach .onion address: Tor is disabled. Enable Tor in Privacy Options."
+                    BlockReason.I2P_REQUIRES_I2P ->
+                        "Cannot reach .i2p address: I2P is disabled. Enable I2P in Privacy Options."
+                },
+            )
+    }
 }
 
 /**

@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.amethyst.service.uploads.blossom.bud10.LocalBlossomCacheProbe
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
+import com.vitorpamplona.amethyst.ui.i2p.I2pManager
 import com.vitorpamplona.amethyst.ui.resourceCacheInit
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.AccountState
@@ -218,6 +219,10 @@ class AppModules(
 
     val torManager = TorManager(torPrefs, appContext, applicationIOScope)
 
+    // I2P manager: EXTERNAL-only (i2pd / Java I2P at the configured SOCKS port).
+    // No embedded daemon in this branch; INTERNAL is reserved for a follow-up.
+    val i2pManager = I2pManager(i2pPrefs, applicationIOScope)
+
     // Whenever the underlying network identity changes (wifi↔cellular, regained from
     // offline, etc.) we clear any active Tor session bypass so the manager re-attempts
     // bootstrap on the new network. The remembered-approval window is unaffected: if Tor
@@ -254,6 +259,7 @@ class AppModules(
         DualHttpClientManager(
             userAgent = appAgent,
             proxyPortProvider = torManager.activePortOrNull,
+            i2pProxyPortProvider = i2pManager.activePortOrNull,
             isMobileDataProvider = connManager.isMobileOrNull,
             keyCache = keyCache,
             scope = applicationIOScope,
@@ -351,6 +357,7 @@ class AppModules(
         DualHttpClientManagerForRelays(
             userAgent = appAgent,
             proxyPortProvider = torManager.activePortOrNull,
+            i2pProxyPortProvider = i2pManager.activePortOrNull,
             isMobileDataProvider = connManager.isMobileOrNull,
             scope = applicationIOScope,
             dns = surgeDns,
