@@ -8,6 +8,7 @@
     <string name="show_anyway">仍然显示</string>
     <string name="post_was_hidden">此帖被隐藏，因为它提到了你隐藏的用户或单词</string>
     <string name="post_was_flagged_as_inappropriate_by">帖文被标记为不当</string>
+    <string name="post_was_hidden_due_to_too_many_hashtags">此帖有超过 %1$d 个话题标签</string>
     <string name="post_not_found">事件正在加载或无法在你的中继列表中找到</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">频道图片</string>
@@ -1377,6 +1378,7 @@
     <string name="load_image_description">何时加载图像</string>
     <string name="copy_stack_to_clipboard">复制 Stack</string>
     <string name="copy_to_clipboard">复制到剪贴板</string>
+    <string name="copied_to_clipboard">已复制到剪贴板</string>
     <string name="copy_nprofile_to_clipboard">复制 nprofile 到剪贴板</string>
     <string name="copy_npub_to_clipboard">复制 npub 到剪贴板</string>
     <string name="share_or_save">分享或保存</string>
@@ -1480,6 +1482,14 @@
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user">无法从 %1$s 创建闪电发票：在生成的 JSON 中找不到付款要求元素。</string>
     <string name="read_only_user">仅读用户</string>
     <string name="no_reactions_setup">没有设置回应</string>
+    <string name="notification_settings">通知</string>
+    <string name="notification_settings_section_delivery">发送</string>
+    <string name="notification_settings_section_display">应用内显示</string>
+    <string name="notification_settings_section_categories">分类</string>
+    <string name="notification_settings_categories_explainer">点击类别打开安卓通知设置 — — 可以在此找到声音、重要性、徽章和勿扰。</string>
+    <string name="notification_channel_status_on">开</string>
+    <string name="notification_channel_status_silent">静音</string>
+    <string name="notification_channel_status_off">关</string>
     <string name="select_push_server">选择一个统一推送应用</string>
     <string name="push_server_title">推送通知</string>
     <string name="push_server_explainer">从已安装的 UnifiedPush 应用中选择</string>
@@ -2593,4 +2603,13 @@
     <string name="community_rules_violation_wot_gate_failed">您没有通过该社区的信任网络要求。</string>
     <string name="community_rules_violation_stale_rules">最新的社区规则文件因陈旧而被拒绝。</string>
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
+    <string name="nowhere_link_card_generic">Nowhere 站点</string>
+    <string name="nowhere_link_card_event">Nowhere 事件</string>
+    <string name="nowhere_link_card_fundraiser">Nowhere 筹款人</string>
+    <string name="nowhere_link_card_store">Nowhere 商店</string>
+    <string name="nowhere_link_card_petition">Nowhere 申请</string>
+    <string name="nowhere_link_card_message">Nowhere 消息</string>
+    <string name="nowhere_link_card_drop">Nowhere Drop</string>
+    <string name="nowhere_link_card_art">Nowhere 艺术</string>
+    <string name="nowhere_link_card_forum">Nowhere 论坛</string>
 </resources>
