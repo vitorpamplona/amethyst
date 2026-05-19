@@ -96,7 +96,15 @@ fun CalendarEventListCard(
         // Author header matches the picture-feed / shorts card shape: avatar + display name +
         // time-ago at the top of every social card in the app. Without this, calendar cards
         // looked alien next to the rest of the feed.
-        UserCardHeader(baseNote = note, accountViewModel = accountViewModel, nav = nav)
+        UserCardHeader(
+            baseNote = note,
+            accountViewModel = accountViewModel,
+            nav = nav,
+            // Hide the "posted N ago" timestamp — would be visually identical to the event's
+            // own start time below and confuse users into reading the publication date as the
+            // event date.
+            showTimeAgo = false,
+        )
 
         Row(
             modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp),

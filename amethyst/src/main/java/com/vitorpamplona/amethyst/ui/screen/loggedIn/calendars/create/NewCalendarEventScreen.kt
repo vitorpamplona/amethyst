@@ -41,10 +41,11 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -62,12 +63,13 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size30dp
-import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
-import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightChat
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -304,45 +306,46 @@ private fun ParticipantsRow(
     vm: NewCalendarEventViewModel,
     accountViewModel: AccountViewModel,
 ) {
-    var draft by rememberSaveable { mutableStateOf("") }
-    var error by rememberSaveable { mutableStateOf<String?>(null) }
+    // Same suggestion machinery the badge-award / DM / new-post screens use: type a name, npub,
+    // hex, or nip-05; the LazyColumn below shows live matches from the local cache + relay
+    // search; tapping a row adds the user to the participants list.
+    val userSuggestions =
+        remember { UserSuggestionState(accountViewModel.account, accountViewModel.nip05ClientBuilder()) }
+    DisposableEffect(Unit) { onDispose { userSuggestions.reset() } }
+
+    var searchInput by rememberSaveable { mutableStateOf("") }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         FieldLabel(stringRes(R.string.calendar_event_participants_section, vm.participants.size))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = draft,
-                onValueChange = {
-                    draft = it
-                    error = null
+
+        OutlinedTextField(
+            value = searchInput,
+            onValueChange = {
+                searchInput = it
+                if (it.length > 2) {
+                    userSuggestions.processCurrentWord(it)
+                } else {
+                    userSuggestions.reset()
+                }
+            },
+            label = { Text(stringRes(R.string.calendar_event_participant_input)) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+        )
+
+        if (searchInput.length > 2) {
+            ShowUserSuggestionList(
+                userSuggestions = userSuggestions,
+                onSelect = { user ->
+                    vm.addParticipant(user.pubkeyHex)
+                    searchInput = ""
+                    userSuggestions.reset()
                 },
-                label = { Text(stringRes(R.string.calendar_event_participant_input)) },
-                modifier = Modifier.weight(1f),
-                singleLine = true,
-                isError = error != null,
-            )
-            TextButton(
-                onClick = {
-                    val resolved = resolvePubKeyOrNull(draft.trim())
-                    if (resolved == null) {
-                        error = "invalid"
-                    } else {
-                        vm.addParticipant(resolved)
-                        draft = ""
-                    }
-                },
-                enabled = draft.isNotBlank(),
-            ) {
-                Text(stringRes(R.string.add))
-            }
-        }
-        if (error != null) {
-            Text(
-                text = stringRes(R.string.calendar_event_participant_invalid),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
+                accountViewModel = accountViewModel,
+                modifier = SuggestionListDefaultHeightChat,
             )
         }
+
         vm.participants.forEach { pubKey ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ClickableUserPicture(
@@ -376,20 +379,4 @@ private fun ParticipantsRow(
             }
         }
     }
-}
-
-/**
- * Accepts a 64-char hex pubkey or an npub; returns the canonical hex form. Returns null when
- * the input doesn't parse so the screen can surface the validation error.
- */
-private fun resolvePubKeyOrNull(input: String): String? {
-    if (input.length == 64 && input.all { it.isDigit() || it in 'a'..'f' || it in 'A'..'F' }) {
-        return input.lowercase()
-    }
-    if (input.startsWith("npub")) {
-        return runCatching {
-            (Nip19Parser.uriToRoute(input)?.entity as? NPub)?.hex
-        }.getOrNull()
-    }
-    return null
 }

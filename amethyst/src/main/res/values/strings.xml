@@ -2019,7 +2019,7 @@
     <string name="calendar_event_image_upload_failed">Image upload failed</string>
     <string name="calendar_event_image_upload_failed_body">The picked image couldn\'t be uploaded. Try again or paste a URL.</string>
     <string name="calendar_event_participants_section">Participants (%1$d)</string>
-    <string name="calendar_event_participant_input">npub or hex pubkey</string>
+    <string name="calendar_event_participant_input">Search name, npub, or nip-05</string>
     <string name="calendar_event_participant_invalid">Enter a valid npub… or 64-character hex pubkey.</string>
     <string name="calendar_event_participant_remove">Remove participant</string>
     <string name="calendar_reminder_settings_title">Calendar reminders</string>

@@ -146,11 +146,14 @@ fun CalendarCollectionCard(
         colors = CardDefaults.elevatedCardColors(),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
     ) {
-        // Author header matches every other social card in the app.
+        // Author header matches every other social card in the app, but without the createdAt
+        // timestamp — the user cares about the collection's events, not when the metadata was
+        // last edited.
         UserCardHeader(
             baseNote = note,
             accountViewModel = accountViewModel,
             nav = nav,
+            showTimeAgo = false,
         )
         Row(
             modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 14.dp),
