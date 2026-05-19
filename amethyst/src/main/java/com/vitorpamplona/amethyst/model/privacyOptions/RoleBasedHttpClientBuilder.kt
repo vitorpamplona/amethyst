@@ -20,142 +20,81 @@
  */
 package com.vitorpamplona.amethyst.model.privacyOptions
 
-import com.vitorpamplona.amethyst.commons.tor.TorType
+import com.vitorpamplona.amethyst.commons.privacy.FeatureRole
+import com.vitorpamplona.amethyst.commons.privacy.PrivacyRoute
 import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManager
-import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import okhttp3.OkHttpClient
 import java.net.InetSocketAddress
 import java.net.Proxy
 import javax.net.SocketFactory
 
+/**
+ * Role-based router for ad-hoc HTTP traffic (images, videos, NIP-05, etc.).
+ *
+ * Delegates to [PrivacyRoutingFlow] for the per-call decision and to
+ * [DualHttpClientManager] for the actual OkHttpClient with the right SOCKS
+ * proxy attached. Hidden-service hostnames hard-pin to their matching
+ * daemon — [DualHttpClientManager.getHttpClient] throws on `Blocked` rather
+ * than silently leak to the clearnet.
+ *
+ * Legacy `shouldUseTorForX` methods remain, returning `true` iff the route
+ * would end up on Tor (call-site references in AppModules still depend on
+ * them as method-references); they no longer drive routing themselves.
+ */
 class RoleBasedHttpClientBuilder(
     val okHttpClient: DualHttpClientManager,
-    val torSettings: TorSettingsFlow,
+    val routing: PrivacyRoutingFlow,
 ) : IRoleBasedHttpClientBuilder {
-    fun shouldUseTorForImageDownload(url: String) =
-        shouldUseTorFor(
-            url,
-            torSettings.torType.value,
-            torSettings.imagesViaTor.value,
-        )
-
-    fun shouldUseTorFor(
+    private fun routeFor(
+        role: FeatureRole,
         url: String,
-        torType: TorType,
-        imagesViaTor: Boolean,
-    ) = when (torType) {
-        TorType.OFF -> false
-        TorType.INTERNAL -> shouldUseTor(url, imagesViaTor)
-        TorType.EXTERNAL -> shouldUseTor(url, imagesViaTor)
-    }
+    ): PrivacyRoute = routing.routeFor(role, url)
 
-    private fun shouldUseTor(
-        normalizedUrl: String,
-        final: Boolean,
-    ): Boolean =
-        if (RelayUrlNormalizer.isLocalHost(normalizedUrl)) {
-            false
-        } else if (RelayUrlNormalizer.isOnion(normalizedUrl)) {
-            true
-        } else {
-            final
-        }
+    override fun proxyPortForVideo(url: String): Int? = okHttpClient.getCurrentProxyPort(routeFor(FeatureRole.VIDEO, url))
 
-    fun shouldUseTorForVideoDownload() =
-        when (torSettings.torType.value) {
-            TorType.OFF -> false
-            TorType.INTERNAL -> torSettings.videosViaTor.value
-            TorType.EXTERNAL -> torSettings.videosViaTor.value
-        }
+    override fun okHttpClientForNip05(url: String): OkHttpClient = okHttpClient.getHttpClient(routeFor(FeatureRole.NIP05, url))
 
-    fun shouldUseTorForVideoDownload(url: String) =
-        when (torSettings.torType.value) {
-            TorType.OFF -> false
-            TorType.INTERNAL -> checkLocalHostOnionAndThen(url, torSettings.videosViaTor.value)
-            TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, torSettings.videosViaTor.value)
-        }
+    override fun okHttpClientForUploads(url: String): OkHttpClient = okHttpClient.getHttpClient(routeFor(FeatureRole.UPLOAD, url))
 
-    fun shouldUseTorForPreviewUrl(url: String) =
-        when (torSettings.torType.value) {
-            TorType.OFF -> false
-            TorType.INTERNAL -> checkLocalHostOnionAndThen(url, torSettings.urlPreviewsViaTor.value)
-            TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, torSettings.urlPreviewsViaTor.value)
-        }
+    override fun okHttpClientForImage(url: String): OkHttpClient = okHttpClient.getHttpClient(routeFor(FeatureRole.IMAGE, url))
 
-    fun shouldUseTorForTrustedRelays() =
-        when (torSettings.torType.value) {
-            TorType.OFF -> false
-            TorType.INTERNAL -> torSettings.trustedRelaysViaTor.value
-            TorType.EXTERNAL -> torSettings.trustedRelaysViaTor.value
-        }
+    override fun okHttpClientForVideo(url: String): OkHttpClient = okHttpClient.getHttpClient(routeFor(FeatureRole.VIDEO, url))
 
-    private fun checkLocalHostOnionAndThen(
-        url: String,
-        final: Boolean,
-    ): Boolean = checkLocalHostOnionAndThen(url, torSettings.onionRelaysViaTor.value, final)
+    override fun okHttpClientForMoney(url: String): OkHttpClient = okHttpClient.getHttpClient(routeFor(FeatureRole.MONEY, url))
 
-    private fun checkLocalHostOnionAndThen(
-        normalizedUrl: String,
-        isOnionRelaysActive: Boolean,
-        final: Boolean,
-    ): Boolean =
-        if (RelayUrlNormalizer.isLocalHost(normalizedUrl)) {
-            false
-        } else if (RelayUrlNormalizer.isOnion(normalizedUrl)) {
-            isOnionRelaysActive
-        } else {
-            final
-        }
+    override fun okHttpClientForPreview(url: String): OkHttpClient = okHttpClient.getHttpClient(routeFor(FeatureRole.URL_PREVIEW, url))
 
-    fun shouldUseTorForMoneyOperations(url: String) =
-        when (torSettings.torType.value) {
-            TorType.OFF -> false
-            TorType.INTERNAL -> checkLocalHostOnionAndThen(url, torSettings.moneyOperationsViaTor.value)
-            TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, torSettings.moneyOperationsViaTor.value)
-        }
+    // Push registration goes to a trusted relay. Reuse the URL_PREVIEW role for now —
+    // the legacy code used `shouldUseTorForTrustedRelays()` which was a no-URL
+    // global flag; under the new model we need a URL to compute a route, so the
+    // closest analogue is "treat it like any other clearnet ad-hoc HTTP call".
+    override fun okHttpClientForPushRegistration(url: String): OkHttpClient = okHttpClient.getHttpClient(routeFor(FeatureRole.URL_PREVIEW, url))
 
-    fun shouldUseTorForNIP05(url: String) =
-        when (torSettings.torType.value) {
-            TorType.OFF -> false
-            TorType.INTERNAL -> checkLocalHostOnionAndThen(url, torSettings.nip05VerificationsViaTor.value)
-            TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, torSettings.nip05VerificationsViaTor.value)
-        }
+    fun shouldUseTorForImageDownload(url: String) = routeFor(FeatureRole.IMAGE, url) is PrivacyRoute.Tor
 
-    fun shouldUseTorForUploads(url: String) =
-        when (torSettings.torType.value) {
-            TorType.OFF -> false
-            TorType.INTERNAL -> checkLocalHostOnionAndThen(url, torSettings.mediaUploadsViaTor.value)
-            TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, torSettings.mediaUploadsViaTor.value)
-        }
+    fun shouldUseTorForVideoDownload(url: String) = routeFor(FeatureRole.VIDEO, url) is PrivacyRoute.Tor
 
-    override fun proxyPortForVideo(url: String): Int? = okHttpClient.getCurrentProxyPort(shouldUseTorForVideoDownload(url))
+    fun shouldUseTorForPreviewUrl(url: String) = routeFor(FeatureRole.URL_PREVIEW, url) is PrivacyRoute.Tor
 
-    override fun okHttpClientForNip05(url: String): OkHttpClient = okHttpClient.getHttpClient(shouldUseTorForNIP05(url))
+    fun shouldUseTorForMoneyOperations(url: String) = routeFor(FeatureRole.MONEY, url) is PrivacyRoute.Tor
 
-    override fun okHttpClientForUploads(url: String): OkHttpClient = okHttpClient.getHttpClient(shouldUseTorForUploads(url))
+    fun shouldUseTorForNIP05(url: String) = routeFor(FeatureRole.NIP05, url) is PrivacyRoute.Tor
 
-    override fun okHttpClientForImage(url: String): OkHttpClient = okHttpClient.getHttpClient(shouldUseTorForImageDownload(url))
-
-    override fun okHttpClientForVideo(url: String): OkHttpClient = okHttpClient.getHttpClient(shouldUseTorForVideoDownload(url))
-
-    override fun okHttpClientForMoney(url: String): OkHttpClient = okHttpClient.getHttpClient(shouldUseTorForMoneyOperations(url))
-
-    override fun okHttpClientForPreview(url: String): OkHttpClient = okHttpClient.getHttpClient(shouldUseTorForPreviewUrl(url))
-
-    override fun okHttpClientForPushRegistration(url: String): OkHttpClient = okHttpClient.getHttpClient(shouldUseTorForTrustedRelays())
+    fun shouldUseTorForUploads(url: String) = routeFor(FeatureRole.UPLOAD, url) is PrivacyRoute.Tor
 
     /**
-     * Returns a [SocketFactory] that routes through the user's Tor proxy
-     * when NIP-05 verification traffic should use Tor.
+     * Returns a [SocketFactory] that routes through the user's Tor proxy when
+     * NIP-05 verification traffic should use Tor.
      *
-     * Used by [ElectrumxClient] so that Namecoin lookups respect the
-     * same proxy/Tor settings as HTTP-based NIP-05 verification,
-     * preventing IP leaks through direct socket connections.
+     * Used by ElectrumXClient so that Namecoin lookups respect the same proxy
+     * settings as HTTP-based NIP-05 verification, preventing IP leaks through
+     * direct socket connections.
+     *
+     * I2P-routed NIP-05 lookups are NOT bridged here yet — ElectrumX over I2P
+     * needs a SAM/streaming endpoint, not a plain SOCKS hop, and Namecoin name
+     * servers aren't deployed on I2P in practice. Falls through to default.
      */
     fun socketFactoryForNip05(): SocketFactory {
-        // ElectrumX servers are always external, so we use a dummy
-        // non-localhost, non-onion URL to query the Tor policy.
         val useTor = shouldUseTorForNIP05("https://electrumx.example.com")
         if (!useTor) return SocketFactory.getDefault()
 

@@ -275,13 +275,15 @@ class AppModules(
             },
         )
 
-    // Offers easy methods to know when connections are happening through Tor or not
-    val roleBasedHttpClientBuilder = RoleBasedHttpClientBuilder(okHttpClients, torPrefs.value)
-
-    // Read-side facade over PrivacyRouter consulted by upcoming HTTP/daemon work.
-    // Routes hidden services strictly to their matching daemon (Blocked when off)
-    // and clearnet to whichever transport the user picked as preferred.
+    // Read-side facade over PrivacyRouter. Routes hidden services strictly to their
+    // matching daemon (Blocked when off) and clearnet to whichever transport the
+    // user picked as preferred.
     val privacyRouting = PrivacyRoutingFlow(torPrefs.value, i2pPrefs.value, privacyPrefs)
+
+    // Resolves a transport per ad-hoc HTTP call (images, NIP-05, etc.) and hands
+    // back the matching OkHttpClient from okHttpClients. Hidden-service URLs fail
+    // closed via DualHttpClientManager.blockedException when their daemon is off.
+    val roleBasedHttpClientBuilder = RoleBasedHttpClientBuilder(okHttpClients, privacyRouting)
 
     val electrumXClient by lazy {
         Log.d("AppModules", "ElectrumXClient Init")
