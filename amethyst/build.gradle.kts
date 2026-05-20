@@ -7,19 +7,23 @@ plugins {
     alias(libs.plugins.serialization)
 }
 
-fun getCurrentBranch(): String {
-    return try {
-        val process = ProcessBuilder("git", "rev-parse", "--abbrev-ref", "HEAD")
-            .redirectErrorStream(true)
-            .start()
-        val branch = process.inputStream.bufferedReader().use { it.readText() }.trim()
+fun getCurrentBranch(): String =
+    try {
+        val process =
+            ProcessBuilder("git", "rev-parse", "--abbrev-ref", "HEAD")
+                .redirectErrorStream(true)
+                .start()
+        val branch =
+            process.inputStream
+                .bufferedReader()
+                .use { it.readText() }
+                .trim()
         process.waitFor()
         branch
     } catch (e: Exception) {
         println("Could not determine git branch: ${e.message}")
         "unknown"
     }
-}
 
 fun generateVersionName(baseVersion: String): String {
     val currentBranch = getCurrentBranch()
@@ -52,99 +56,109 @@ afterEvaluate {
 
 android {
     namespace = "com.vitorpamplona.amethyst"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
+    compileSdk =
+        libs.versions.android.compileSdk
+            .get()
+            .toInt()
 
     defaultConfig {
         applicationId = "com.vitorpamplona.amethyst"
-        minSdk = libs.versions.android.minSdk.get().toInt()
-        targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 446
+        minSdk =
+            libs.versions.android.minSdk
+                .get()
+                .toInt()
+        targetSdk =
+            libs.versions.android.targetSdk
+                .get()
+                .toInt()
+        versionCode = 447
         versionName = generateVersionName(libs.versions.app.get())
-        buildConfigField("String", "RELEASE_NOTES_ID", "\"b1b91d7ee0c5da9d081d1a53470248ee4585b058b11aa34fe28c0e3e07ac1e0a\"")
+        buildConfigField("String", "RELEASE_NOTES_ID", "\"8ec0d94550b5538115226c6858159b1115713c9c6ed942173bd4fd5d292d8ba6\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
         @Suppress("UnstableApiUsage")
-        resourceConfigurations += listOf(
-            "ar",
-            "ar-rSA",
-            "bn-rBD",
-            "cs",
-            "cs-rCZ",
-            "cy-rGB",
-            "da-rDK",
-            "de",
-            "de-rDE",
-            "el-rGR",
-            "en-rGB",
-            "eo",
-            "eo-rUY",
-            "es",
-            "es-rES",
-            "es-rMX",
-            "es-rUS",
-            "et-rEE",
-            "fa",
-            "fa-rIR",
-            "fi-rFI",
-            "fo-rFO",
-            "fr",
-            "fr-rCA",
-            "fr-rFR",
-            "gu-rIN",
-            "hi-rIN",
-            "hr-rHR",
-            "hu",
-            "hu-rHU",
-            "in",
-            "in-rID",
-            "it-rIT",
-            "iw-rIL",
-            "ja",
-            "ja-rJP",
-            "kk-rKZ",
-            "ko-rKR",
-            "ks-rIN",
-            "ku-rTR",
-            "lt-rLT",
-            "ne-rNP",
-            "nl",
-            "nl-rBE",
-            "nl-rNL",
-            "pcm-rNG",
-            "pl-rPL",
-            "pt-rBR",
-            "pt-rPT",
-            "ru",
-            "ru-rRU",
-            "ru-rUA",
-            "sa-rIN",
-            "sl-rSI",
-            "so-rSO",
-            "sr-rSP",
-            "ss-rZA",
-            "sv-rSE",
-            "sw-rKE",
-            "sw-rTZ",
-            "ta",
-            "ta-rIN",
-            "th",
-            "th-rTH",
-            "tr",
-            "tr-rTR",
-            "uk",
-            "uk-rUA",
-            "ur-rIN",
-            "uz-rUZ",
-            "vi-rVN",
-            "zh",
-            "zh-rCN",
-            "zh-rHK",
-            "zh-rSG",
-            "zh-rTW",
-        )
+        resourceConfigurations +=
+            listOf(
+                "ar",
+                "ar-rSA",
+                "bn-rBD",
+                "cs",
+                "cs-rCZ",
+                "cy-rGB",
+                "da-rDK",
+                "de",
+                "de-rDE",
+                "el-rGR",
+                "en-rGB",
+                "eo",
+                "eo-rUY",
+                "es",
+                "es-rES",
+                "es-rMX",
+                "es-rUS",
+                "et-rEE",
+                "fa",
+                "fa-rIR",
+                "fi-rFI",
+                "fo-rFO",
+                "fr",
+                "fr-rCA",
+                "fr-rFR",
+                "gu-rIN",
+                "hi-rIN",
+                "hr-rHR",
+                "hu",
+                "hu-rHU",
+                "in",
+                "in-rID",
+                "it-rIT",
+                "iw-rIL",
+                "ja",
+                "ja-rJP",
+                "kk-rKZ",
+                "ko-rKR",
+                "ks-rIN",
+                "ku-rTR",
+                "lt-rLT",
+                "ne-rNP",
+                "nl",
+                "nl-rBE",
+                "nl-rNL",
+                "pcm-rNG",
+                "pl-rPL",
+                "pt-rBR",
+                "pt-rPT",
+                "ru",
+                "ru-rRU",
+                "ru-rUA",
+                "sa-rIN",
+                "sl-rSI",
+                "so-rSO",
+                "sr-rSP",
+                "ss-rZA",
+                "sv-rSE",
+                "sw-rKE",
+                "sw-rTZ",
+                "ta",
+                "ta-rIN",
+                "th",
+                "th-rTH",
+                "tr",
+                "tr-rTR",
+                "uk",
+                "uk-rUA",
+                "ur-rIN",
+                "uz-rUZ",
+                "vi-rVN",
+                "zh",
+                "zh-rCN",
+                "zh-rHK",
+                "zh-rSG",
+                "zh-rTW",
+            )
     }
 
     // Opt-in fast-build flags. Default behavior is unchanged.
@@ -162,12 +176,21 @@ android {
     //                                 much faster and outputs/mapping/ (~260MB)
     //                                 is not produced. Local-dev and PR-CI use
     //                                 only — release pipelines must not set it.
-    val disableAbiSplits = providers.gradleProperty("disableAbiSplits")
-        .map { it.toBoolean() }.getOrElse(false)
-    val disableUniversalApk = providers.gradleProperty("disableUniversalApk")
-        .map { it.toBoolean() }.getOrElse(false)
-    val skipMapping = providers.gradleProperty("amethyst.skipMapping")
-        .map { it.toBoolean() }.getOrElse(false)
+    val disableAbiSplits =
+        providers
+            .gradleProperty("disableAbiSplits")
+            .map { it.toBoolean() }
+            .getOrElse(false)
+    val disableUniversalApk =
+        providers
+            .gradleProperty("disableUniversalApk")
+            .map { it.toBoolean() }
+            .getOrElse(false)
+    val skipMapping =
+        providers
+            .gradleProperty("amethyst.skipMapping")
+            .map { it.toBoolean() }
+            .getOrElse(false)
 
     buildTypes {
         getByName("release") {
@@ -348,9 +371,9 @@ dependencies {
     implementation(libs.zxing.embedded)
 
     // Markdown
-    //implementation "com.halilibo.compose-richtext:richtext-ui:0.16.0"
-    //implementation "com.halilibo.compose-richtext:richtext-ui-material:0.16.0"
-    //implementation "com.halilibo.compose-richtext:richtext-commonmark:0.16.0"
+    // implementation "com.halilibo.compose-richtext:richtext-ui:0.16.0"
+    // implementation "com.halilibo.compose-richtext:richtext-ui-material:0.16.0"
+    // implementation "com.halilibo.compose-richtext:richtext-commonmark:0.16.0"
 
     // Markdown (With fix for full-image bleeds)
     implementation(libs.markdown.ui)
@@ -382,7 +405,7 @@ dependencies {
     "playImplementation"(platform(libs.firebase.bom))
     "playImplementation"(libs.firebase.messaging)
 
-    //PushNotifications(FDroid)
+    // PushNotifications(FDroid)
     "fdroidImplementation"(libs.unifiedpush)
 
     // Google Cast SDK — Chromecast support. Play flavor only because the
