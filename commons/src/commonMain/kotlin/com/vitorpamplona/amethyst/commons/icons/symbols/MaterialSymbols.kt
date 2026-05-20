@@ -129,6 +129,7 @@ object MaterialSymbols {
     val HourglassEmpty = MaterialSymbol("\uE88B")
     val HourglassTop = MaterialSymbol("\uEA5B")
     val Image = MaterialSymbol("\uE3F4")
+    val Info = MaterialSymbol("\uE88E")
     val Key = MaterialSymbol("\uE73C")
     val KeyboardArrowDown = MaterialSymbol("\uE313")
     val KeyboardArrowUp = MaterialSymbol("\uE316")

@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -43,6 +44,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -60,6 +62,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -67,6 +70,7 @@ import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.TaprootAddress
 import kotlinx.coroutines.Dispatchers
@@ -180,6 +184,8 @@ private fun HeaderRow(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
+                Spacer(modifier = Modifier.width(8.dp))
+                PublicChip()
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -190,6 +196,56 @@ private fun HeaderRow(
         }
 
         BalanceBlock(state = balanceState, sats = balanceSats, orange = orange)
+    }
+}
+
+@Composable
+private fun PublicChip() {
+    var showDialog by remember { mutableStateOf(false) }
+    val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
+
+    Row(
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(onSurfaceVariant.copy(alpha = 0.12f))
+                .clickable { showDialog = true }
+                .padding(horizontal = 6.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Info,
+            contentDescription = null,
+            tint = onSurfaceVariant,
+            modifier = Modifier.size(12.dp),
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = stringRes(R.string.wallet_onchain_public_chip),
+            style = MaterialTheme.typography.labelSmall,
+            color = onSurfaceVariant,
+            fontWeight = FontWeight.Medium,
+        )
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            icon = {
+                Icon(
+                    symbol = MaterialSymbols.Info,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                )
+            },
+            title = { Text(stringRes(R.string.wallet_onchain_public_dialog_title)) },
+            text = { Text(stringRes(R.string.wallet_onchain_public_dialog_body)) },
+            confirmButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text(stringRes(R.string.wallet_onchain_public_dialog_confirm))
+                }
+            },
+        )
     }
 }
 
