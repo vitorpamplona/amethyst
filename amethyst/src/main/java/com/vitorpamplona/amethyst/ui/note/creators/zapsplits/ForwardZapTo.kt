@@ -31,11 +31,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,7 +42,7 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
-import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
+import com.vitorpamplona.amethyst.ui.components.OutlinedThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -126,7 +124,7 @@ fun ForwardZapTo(
             }
         }
 
-        ThinPaddingTextField(
+        OutlinedThinPaddingTextField(
             state = postViewModel.forwardZapToEditting,
             onTextChanged = postViewModel::onForwardZapTextChanged,
             inputTransformation = MentionPreservingInputTransformation,
@@ -140,11 +138,6 @@ fun ForwardZapTo(
                 )
             },
             singleLine = true,
-            colors =
-                TextFieldDefaults.colors(
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                ),
             textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
         )
     }
