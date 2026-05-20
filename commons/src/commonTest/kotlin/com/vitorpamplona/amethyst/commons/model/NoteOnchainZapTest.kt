@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model
 import java.math.BigDecimal
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -102,6 +103,28 @@ class NoteOnchainZapTest {
         assertSame(firstSrc, entry?.source)
         assertEquals(100L, entry?.verifiedSats)
         assertEquals(BigDecimal.valueOf(100L), target.zapsAmount)
+    }
+
+    @Test
+    fun hasZapsBoostsOrReactionsReturnsTrueWhenOnlyOnchainZapPresent() {
+        val target = freshNote()
+        val src = sourceNote("9".repeat(64))
+
+        assertFalse(target.hasZapsBoostsOrReactions())
+
+        target.addOnchainZap(source = src, txid = "tx1", verifiedSats = 6416L, confirmed = true)
+
+        assertTrue(target.hasZapsBoostsOrReactions())
+    }
+
+    @Test
+    fun hasZapsBoostsOrReactionsReturnsTrueWhenOnlyPendingOnchainZapPresent() {
+        val target = freshNote()
+        val src = sourceNote("8".repeat(64))
+
+        target.addOnchainZap(source = src, txid = "tx1", verifiedSats = 1000L, confirmed = false)
+
+        assertTrue(target.hasZapsBoostsOrReactions())
     }
 
     @Test

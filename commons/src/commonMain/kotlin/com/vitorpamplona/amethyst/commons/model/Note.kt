@@ -278,7 +278,7 @@ open class Note(
         }
     }
 
-    fun hasZapsBoostsOrReactions(): Boolean = reactions.isNotEmpty() || zaps.isNotEmpty() || boosts.isNotEmpty()
+    fun hasZapsBoostsOrReactions(): Boolean = reactions.isNotEmpty() || zaps.isNotEmpty() || boosts.isNotEmpty() || onchainZaps.isNotEmpty()
 
     fun countReactions(): Int {
         var total = 0
