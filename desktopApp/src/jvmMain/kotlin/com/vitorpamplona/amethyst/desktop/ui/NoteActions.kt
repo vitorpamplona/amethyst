@@ -103,6 +103,14 @@ enum class ZapType(
     PUBLIC("Public", "Everyone sees your zap"),
     PRIVATE("Private", "Only recipient sees your identity"),
     ANONYMOUS("Anonymous", "No identity attached"),
+    ;
+
+    fun toLnZapType(): LnZapEvent.ZapType =
+        when (this) {
+            PUBLIC -> LnZapEvent.ZapType.PUBLIC
+            PRIVATE -> LnZapEvent.ZapType.PRIVATE
+            ANONYMOUS -> LnZapEvent.ZapType.ANONYMOUS
+        }
 }
 
 /**
@@ -563,6 +571,8 @@ fun NoteActionsRow(
     onReplyClick: () -> Unit,
     onZapFeedback: (ZapFeedback) -> Unit,
     modifier: Modifier = Modifier,
+    relayHint: NormalizedRelayUrl? = null,
+    authorRelayHint: NormalizedRelayUrl? = null,
     zapCount: Int = 0,
     zapAmountSats: Long = 0,
     zapReceipts: List<ZapReceipt> = emptyList(),
@@ -617,8 +627,7 @@ fun NoteActionsRow(
                     if (!isLiked) {
                         scope.launch {
                             reactToNote(
-                                // TODO: Bring a hint to where the event came from
-                                event = EventHintBundle(event, null),
+                                event = EventHintBundle(event, relayHint, authorRelayHint),
                                 reaction = "+",
                                 account = account,
                                 relayManager = relayManager,
@@ -658,8 +667,7 @@ fun NoteActionsRow(
                     if (!isReposted) {
                         scope.launch {
                             repostNote(
-                                // TODO: Bring a hint to where the event came from
-                                event = EventHintBundle(event, null),
+                                event = EventHintBundle(event, relayHint, authorRelayHint),
                                 account = account,
                                 relayManager = relayManager,
                             )
@@ -896,7 +904,7 @@ fun NoteActionsRow(
                             amountSats = amountSats,
                             message = message,
                             nwcConnection = nwcConnection,
-                            // TODO: pass zapType to ZapAction for PRIVATE/ANONYMOUS zap support
+                            zapType = zapType.toLnZapType(),
                         )
                     isZapping = false
                     onZapFeedback(feedback)
@@ -1028,15 +1036,15 @@ private suspend fun zapNote(
     amountSats: Long,
     message: String = "",
     nwcConnection: Nip47WalletConnect.Nip47URINorm? = null,
+    zapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PUBLIC,
 ): ZapFeedback =
     withContext(Dispatchers.IO) {
         // Get author's lightning address from cache
         var user = localCache.getUserIfExists(event.pubKey)
         var lnAddress = user?.lnAddress()
 
-        // TODO: Use UserFinderFilterAssemblerSubscription pattern from Amethyst
-        // to proactively load metadata when zap button is displayed.
-        // For now, fetch on-demand if missing.
+        // On-demand fetch: desktop doesn't have Android's always-on feed subscriptions
+        // that load metadata as a side effect. The 5s timeout is acceptable UX for desktop.
         if (lnAddress == null) {
             lnAddress = fetchUserLightningAddress(event.pubKey, relayManager, localCache)
         }
@@ -1062,6 +1070,7 @@ private suspend fun zapNote(
                 relays = relays,
                 signer = account.signer,
                 resolver = resolver,
+                zapType = zapType,
             )
 
         when (result) {
