@@ -137,6 +137,7 @@ fun OnchainZapSendDialog(
     recipientPubKey: HexKey? = null,
     zappedEvent: EventHintBundle<out Event>? = null,
     prefillAmountSats: Long? = null,
+    prefillComment: String = "",
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -152,7 +153,7 @@ fun OnchainZapSendDialog(
     var searchInput by remember { mutableStateOf("") }
     var selectedUser by remember { mutableStateOf<User?>(null) }
     var amountInput by remember { mutableStateOf(prefillAmountSats?.toString().orEmpty()) }
-    var comment by remember { mutableStateOf("") }
+    var comment by remember { mutableStateOf(prefillComment) }
     var feeTier by remember { mutableStateOf(FeeTier.NORMAL) }
     var fees by remember { mutableStateOf<FeeEstimates?>(null) }
 

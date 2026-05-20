@@ -824,6 +824,7 @@
     <string name="quick_zap_amounts_onchain">Quick On-chain Zap Amounts</string>
     <string name="quick_zap_amounts_onchain_explainer">On-chain zaps pay miner fees, so amounts are usually larger than Lightning. Tap an amount to remove it.</string>
     <string name="new_amount_in_sats_onchain">New on-chain amount in sats</string>
+    <string name="send_onchain_instead">Send on-chain instead</string>
     <string name="zap_privacy_section">Zap Privacy</string>
     <string name="zap_type_section_explainer">Controls how your identity is shown when you send a zap.</string>
     <string name="wallet_connect_connect_app">Connect Wallet</string>
