@@ -1859,6 +1859,10 @@
     <string name="wallet_onchain_no_address">No on-chain address available for this account.</string>
     <string name="wallet_onchain_no_backend">No chain backend is configured.</string>
     <string name="wallet_onchain_pending">Pending</string>
+    <string name="wallet_onchain_public_chip">Public</string>
+    <string name="wallet_onchain_public_dialog_title">This wallet is public</string>
+    <string name="wallet_onchain_public_dialog_body">Your Taproot address is derived from your Nostr public key, so anyone who knows your npub can see this wallet\'s balance and transaction history on the blockchain.\n\nTo preserve your privacy, fund and drain this wallet from and to non-private accounts, like exchanges. Never mix these funds with your cold wallets, and treat them as money you can lose, since anyone in control of your nsec can spend it.</string>
+    <string name="wallet_onchain_public_dialog_confirm">Got it</string>
     <string name="route_security_filters">Security Filters</string>
     <string name="route_import_follows">Import Follows</string>
 

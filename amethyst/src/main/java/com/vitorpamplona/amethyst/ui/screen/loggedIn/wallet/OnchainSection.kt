@@ -62,6 +62,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -69,6 +70,7 @@ import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.TaprootAddress
 import kotlinx.coroutines.Dispatchers
@@ -219,7 +221,7 @@ private fun PublicChip() {
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
-            text = "Public",
+            text = stringRes(R.string.wallet_onchain_public_chip),
             style = MaterialTheme.typography.labelSmall,
             color = onSurfaceVariant,
             fontWeight = FontWeight.Medium,
@@ -236,22 +238,11 @@ private fun PublicChip() {
                     modifier = Modifier.size(24.dp),
                 )
             },
-            title = { Text("This wallet is public") },
-            text = {
-                Text(
-                    "Your Taproot address is derived from your Nostr public key, " +
-                        "so anyone who knows your npub can see this wallet's balance " +
-                        "and transaction history on the blockchain.\n\n" +
-                        "To preserve your privacy, fund and drain this wallet from " +
-                        "and to non-private accounts, like exchanges. Never mix " +
-                        "these funds with your cold wallets, and treat them as " +
-                        "money you can lose, since anyone in control of your nsec " +
-                        "can spend it.",
-                )
-            },
+            title = { Text(stringRes(R.string.wallet_onchain_public_dialog_title)) },
+            text = { Text(stringRes(R.string.wallet_onchain_public_dialog_body)) },
             confirmButton = {
                 TextButton(onClick = { showDialog = false }) {
-                    Text("Got it")
+                    Text(stringRes(R.string.wallet_onchain_public_dialog_confirm))
                 }
             },
         )
