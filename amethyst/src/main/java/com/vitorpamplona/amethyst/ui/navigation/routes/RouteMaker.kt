@@ -54,6 +54,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.location.isGeohashedScoped
 import com.vitorpamplona.quartz.nip73ExternalIds.topics.isHashtagScoped
+import com.vitorpamplona.quartz.nip73ExternalIds.urls.isUrlScoped
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
@@ -329,6 +330,8 @@ fun routeReplyTo(
                 Route.GeoPost(replyTo = note.idHex)
             } else if (noteEvent.isHashtagScoped()) {
                 Route.HashtagPost(replyTo = note.idHex)
+            } else if (noteEvent.isUrlScoped()) {
+                Route.UrlPost(replyTo = note.idHex)
             } else {
                 Route.GenericCommentPost(replyTo = note.idHex)
             }
@@ -399,6 +402,8 @@ suspend fun routeEditDraftTo(
                 Route.GeoPost(draft = note.idHex)
             } else if (draft.isHashtagScoped()) {
                 Route.HashtagPost(draft = note.idHex)
+            } else if (draft.isUrlScoped()) {
+                Route.UrlPost(draft = note.idHex)
             } else {
                 Route.GenericCommentPost(draft = note.idHex)
             }

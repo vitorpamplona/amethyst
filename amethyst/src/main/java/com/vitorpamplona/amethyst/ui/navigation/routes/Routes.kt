@@ -358,6 +358,10 @@ sealed class Route {
         val hashtag: String,
     ) : Route()
 
+    @Serializable data class Url(
+        val url: String,
+    ) : Route()
+
     @Serializable data class Geohash(
         val geohash: String,
     ) : Route()
@@ -542,6 +546,16 @@ sealed class Route {
     @Serializable
     data class HashtagPost(
         val hashtag: String? = null,
+        val message: String? = null,
+        val attachment: String? = null,
+        val replyTo: String? = null,
+        val quote: String? = null,
+        val draft: String? = null,
+    ) : Route()
+
+    @Serializable
+    data class UrlPost(
+        val url: String? = null,
         val message: String? = null,
         val attachment: String? = null,
         val replyTo: String? = null,

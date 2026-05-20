@@ -55,10 +55,14 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.isTaggedAddressableNote
+import com.vitorpamplona.quartz.nip01Core.tags.references.HttpUrlFormatter
+import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
+import com.vitorpamplona.quartz.nip73ExternalIds.urls.UrlId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
@@ -158,6 +162,7 @@ fun NoteDropDownMenu(
         val clipboardManager = LocalClipboard.current
         val actContext = LocalContext.current
         val scope = rememberCoroutineScope()
+        val discussionUrls = remember(note) { note.discussionUrls() }
 
         // Follow section
         M3ActionSection {
@@ -229,6 +234,20 @@ fun NoteDropDownMenu(
                 val shareIntent = Intent.createChooser(sendIntent, stringRes(actContext, R.string.quick_action_share))
                 actContext.startActivity(shareIntent)
                 onDismiss()
+            }
+        }
+
+        if (discussionUrls.isNotEmpty()) {
+            M3ActionSection {
+                discussionUrls.take(5).forEach { url ->
+                    M3ActionRow(
+                        icon = MaterialSymbols.Link,
+                        text = stringRes(R.string.link_discussion_for, HttpUrlFormatter.displayUrl(url)),
+                    ) {
+                        nav.nav(Route.Url(url))
+                        onDismiss()
+                    }
+                }
             }
         }
 
@@ -366,6 +385,22 @@ fun NoteDropDownMenu(
             onDismiss()
         }
     }
+}
+
+private fun Note.discussionUrls(): List<String> {
+    val event = event ?: return emptyList()
+    val references = event.tags.references()
+    val urlsInContent =
+        if (event.isContentEncoded()) {
+            emptyList()
+        } else {
+            findURLs(event.content)
+        }
+
+    return (references + urlsInContent)
+        .mapNotNull { url ->
+            runCatching { UrlId.toScope(url) }.getOrNull()
+        }.distinct()
 }
 
 @Composable

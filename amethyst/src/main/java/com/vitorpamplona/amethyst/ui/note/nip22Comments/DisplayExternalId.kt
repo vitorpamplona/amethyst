@@ -30,7 +30,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.LinkInteractionListener
 import androidx.compose.ui.text.buildAnnotatedString
@@ -43,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -68,7 +68,7 @@ fun DisplayExternalId(
         }
 
         is UrlId -> {
-            DisplayUrlExternalId(externalId)
+            DisplayUrlExternalId(externalId, nav)
         }
 
         else -> {
@@ -78,13 +78,15 @@ fun DisplayExternalId(
 }
 
 @Composable
-fun DisplayUrlExternalId(externalId: UrlId) {
-    val uriHandler = LocalUriHandler.current
+fun DisplayUrlExternalId(
+    externalId: UrlId,
+    nav: INav,
+) {
     DisplayExternalIdChip(
         symbol = MaterialSymbols.Link,
         contentDescription = stringRes(id = R.string.external_url_scope),
         label = externalId.url,
-        linkInteractionListener = { runCatching { uriHandler.openUri(externalId.url) } },
+        linkInteractionListener = { nav.nav(Route.Url(externalId.url)) },
     )
 }
 
