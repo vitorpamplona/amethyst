@@ -29,6 +29,7 @@ import androidx.work.WorkerParameters
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.appointmentView
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
@@ -92,9 +93,10 @@ class CalendarReminderWorker(
             val title = view.title ?: stringRes(applicationContext, R.string.calendar_reminder_default_title)
             val minutesAway = ((start - now).coerceAtLeast(0L) / 60L).toInt()
             val body =
-                stringRes(
+                pluralStringRes(
                     applicationContext,
-                    R.string.calendar_reminder_body,
+                    R.plurals.calendar_reminder_body,
+                    minutesAway,
                     minutesAway,
                 )
             val deepLink =

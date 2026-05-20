@@ -1741,7 +1741,9 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="calendar_collection_title">Tytuł</string>
     <string name="calendar_collection_description">Opis</string>
     <string name="calendar_collection_invalid">Tytuł jest wymagany.</string>
-    <string name="calendar_collection_count">Wydarzeń: %1$d</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="other">Wydarzeń: %1$d</item>
+    </plurals>
     <string name="calendar_collection_empty_members">Brak wydarzeń w tym kalendarzu.</string>
     <string name="calendar_rsvp_going">Będę</string>
     <string name="calendar_rsvp_maybe">Może</string>
@@ -1760,7 +1762,9 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="calendar_reminder_channel_name">Przypomnienia w kalendarzu</string>
     <string name="calendar_reminder_channel_description">Powiadomienie, gdy wydarzenie, w którym bierzesz udział, ma się właśnie rozpocząć.</string>
     <string name="calendar_reminder_default_title">Wydarzenie w kalendarzu</string>
-    <string name="calendar_reminder_body">Rozpoczęcie za %1$d min.</string>
+    <plurals name="calendar_reminder_body">
+        <item quantity="other">Rozpoczęcie za %1$d min.</item>
+    </plurals>
     <string name="calendar_add_to_calendar_action">Dodaj do jednego z kalendarzy</string>
     <string name="calendar_add_to_calendar_title">Dodaj do kalendarza</string>
     <string name="calendar_add_to_calendar_none">Nie utworzyłeś jeszcze żadnych kalendarzy.</string>

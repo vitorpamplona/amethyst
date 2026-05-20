@@ -55,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -460,7 +461,7 @@ private fun CollectionMembersSection(
     nav: INav,
 ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionTitle(stringRes(R.string.calendar_collection_count, memberAddresses.size))
+        SectionTitle(pluralStringResource(R.plurals.calendar_collection_count, memberAddresses.size, memberAddresses.size))
         if (memberAddresses.isEmpty()) {
             Text(
                 text = stringRes(R.string.calendar_collection_empty_members),

@@ -31,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -40,7 +41,6 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
@@ -87,8 +87,9 @@ fun RenderCalendarCollectionEvent(
         }
 
         Spacer(modifier = StdVertSpacer)
+        val eventCount = event.calendarEventAddresses().size
         Text(
-            text = stringRes(R.string.calendar_collection_count, event.calendarEventAddresses().size),
+            text = pluralStringResource(R.plurals.calendar_collection_count, eventCount, eventCount),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 12.dp),
