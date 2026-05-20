@@ -10,9 +10,9 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
         maven {
-            url = "https://jitpack.io"
+            url = uri("https://jitpack.io")
             content {
-                includeModule 'com.github.UnifiedPush', 'android-connector'
+                includeModule("com.github.UnifiedPush", "android-connector")
             }
         }
     }
@@ -24,21 +24,21 @@ dependencyResolutionManagement {
         mavenLocal()
         google()
         mavenCentral()
-        maven { url = "https://jitpack.io" }
-        maven { url = "https://raw.githubusercontent.com/guardianproject/gpmaven/master" }
-        maven { url = "https://mvn.0110.be/releases" }
+        maven { url = uri("https://jitpack.io") }
+        maven { url = uri("https://raw.githubusercontent.com/guardianproject/gpmaven/master") }
+        maven { url = uri("https://mvn.0110.be/releases") }
     }
 }
 
 rootProject.name = "Amethyst"
-include ':amethyst'
-include ':benchmark'
-include ':quartz'
-include ':geode'
-include ':commons'
-include ':quic'
-include ':nestsClient'
-include ':desktopApp'
-include ':cli'
-include ':quic-interop'
-project(':quic-interop').projectDir = file('quic/interop')
+include(":amethyst")
+include(":benchmark")
+include(":quartz")
+include(":geode")
+include(":commons")
+include(":quic")
+include(":nestsClient")
+include(":desktopApp")
+include(":cli")
+include(":quic-interop")
+project(":quic-interop").projectDir = file("quic/interop")

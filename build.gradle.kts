@@ -1,3 +1,5 @@
+import com.diffplug.gradle.spotless.SpotlessExtensionPredeclare
+
 plugins {
     alias(libs.plugins.androidApplication) apply false
     alias(libs.plugins.androidLibrary) apply false
@@ -13,37 +15,42 @@ plugins {
 }
 
 // Shared app version for all subprojects — read from gradle/libs.versions.toml.
-// Android versionCode stays local in amethyst/build.gradle (must be monotonic int).
+// Android versionCode stays local in amethyst/build.gradle.kts (must be monotonic int).
 // Desktop packageVersion inherits via project.version in desktopApp/build.gradle.kts.
+val appVersion = libs.versions.app.get()
+
 allprojects {
-    version = libs.versions.app.get()
+    version = appVersion
 
     configurations.configureEach {
-        resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+        resolutionStrategy.cacheChangingModulesFor(0, "seconds")
     }
 
-    apply plugin: 'com.diffplug.spotless'
+    apply(plugin = "com.diffplug.spotless")
 
     if (project === rootProject) {
         spotless {
             predeclareDeps()
         }
-        spotlessPredeclare {
+        configure<SpotlessExtensionPredeclare> {
             kotlin {
-                ktlint('1.7.1')
+                ktlint("1.7.1")
             }
         }
     } else {
         spotless {
             kotlin {
-                target 'src/**/*.kt'
+                target("src/**/*.kt")
 
-                ktlint('1.7.1')
-                licenseHeaderFile rootProject.file('.spotless/copyright.kt'), "@file:|package|import|class|object|sealed|open|interface|abstract "
+                ktlint("1.7.1")
+                licenseHeaderFile(
+                    rootProject.file(".spotless/copyright.kt"),
+                    "@file:|package|import|class|object|sealed|open|interface|abstract ",
+                )
             }
 
-            groovyGradle {
-                target '*.gradle'
+            kotlinGradle {
+                target("*.gradle.kts")
             }
         }
     }
@@ -55,30 +62,28 @@ subprojects {
             tasks.named("preBuild") {
                 dependsOn("spotlessApply")
             }
-        } catch (UnknownTaskException ignored) {
+        } catch (ignored: UnknownTaskException) {
             tasks.matching {
                 it.name.startsWith("pre") && it.name.endsWith("Build")
             }.configureEach {
                 dependsOn("spotlessApply")
             }
         }
-
     }
 }
 
-tasks.register('installGitHook', Copy) {
-    def dotGit = new File(rootProject.rootDir, '.git')
-    def hooksDir
-    if (dotGit.isFile()) {
+val installGitHook = tasks.register<Copy>("installGitHook") {
+    val dotGit = File(rootProject.rootDir, ".git")
+    val hooksDir: File = if (dotGit.isFile) {
         // Git worktree: .git is a file with "gitdir: <path>"
-        def gitDir = new File(dotGit.text.trim().replace('gitdir: ', ''))
-        hooksDir = new File(gitDir, 'hooks')
+        val gitDir = File(dotGit.readText().trim().replace("gitdir: ", ""))
+        File(gitDir, "hooks")
     } else {
-        hooksDir = new File(dotGit, 'hooks')
+        File(dotGit, "hooks")
     }
-    from new File(rootProject.rootDir, '.git-hooks/pre-commit')
-    from new File(rootProject.rootDir, '.git-hooks/pre-push')
-    into { hooksDir }
-    filePermissions { unix(0777) }
+    from(File(rootProject.rootDir, ".git-hooks/pre-commit"))
+    from(File(rootProject.rootDir, ".git-hooks/pre-push"))
+    into(hooksDir)
+    filePermissions { unix("0777") }
 }
-tasks.getByPath(':amethyst:preBuild').dependsOn installGitHook
+tasks.getByPath(":amethyst:preBuild").dependsOn(installGitHook)
