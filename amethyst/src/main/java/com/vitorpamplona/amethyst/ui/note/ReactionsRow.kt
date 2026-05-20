@@ -85,7 +85,6 @@ import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
@@ -100,7 +99,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
-import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.R
@@ -112,6 +110,8 @@ import com.vitorpamplona.amethyst.model.ReactionRowAction
 import com.vitorpamplona.amethyst.model.ReactionRowItem
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReactionCount
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReactions
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteReferences
@@ -129,16 +129,13 @@ import com.vitorpamplona.amethyst.ui.components.AnimatedBorderTextCornerRadius
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
-import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
-import com.vitorpamplona.amethyst.ui.components.M3ActionRow
-import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.components.toasts.multiline.UserBasedErrorMessage
-import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeReplyTo
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.PaymentTargetsDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -352,15 +349,9 @@ fun PayReaction(
 ) {
     val authorPubkey = baseNote.author?.pubkeyHex ?: return
     val address = remember(authorPubkey) { PaymentTargetsEvent.createAddress(authorPubkey) }
-    val context = LocalContext.current
-    val clipboardManager = LocalClipboard.current
-    val scope = rememberCoroutineScope()
 
     LoadAddressableNote(address, accountViewModel) { note ->
-        val targets = remember(note) { (note?.event as? PaymentTargetsEvent)?.paymentTargets() ?: emptyList() }
-
         var expanded by remember { mutableStateOf(false) }
-        var errorMessage by remember { mutableStateOf<String?>(null) }
 
         ClickableBox(
             modifier = iconSizeModifier,
@@ -374,58 +365,12 @@ fun PayReaction(
             )
         }
 
-        if (expanded) {
-            M3ActionDialog(
-                title = stringRes(R.string.payment_targets),
-                onDismiss = { expanded = false },
-            ) {
-                M3ActionSection {
-                    if (targets.isEmpty()) {
-                        M3ActionRow(
-                            icon = MaterialSymbols.AccountBalanceWallet,
-                            text = stringRes(R.string.no_payment_targets_message),
-                            enabled = false,
-                            onClick = {},
-                        )
-                    } else {
-                        targets.forEach { target ->
-                            M3ActionRow(
-                                icon = MaterialSymbols.AccountBalanceWallet,
-                                text = "${target.type.replaceFirstChar(Char::titlecase)}: ${target.authority}",
-                                onClick = {
-                                    expanded = false
-                                    try {
-                                        val intent = Intent(Intent.ACTION_VIEW, "payto://${target.type}/${target.authority}".toUri())
-                                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                        context.startActivity(intent)
-                                    } catch (e: Exception) {
-                                        if (e is kotlinx.coroutines.CancellationException) throw e
-                                        errorMessage = stringRes(context, R.string.no_payment_app_found)
-                                    }
-                                },
-                            )
-                            M3ActionRow(
-                                icon = MaterialSymbols.ContentCopy,
-                                text = stringRes(R.string.copy_to_clipboard),
-                                onClick = {
-                                    expanded = false
-                                    scope.launch {
-                                        clipboardManager.setText(target.authority)
-                                    }
-                                },
-                            )
-                        }
-                    }
-                }
-            }
-        }
+        if (expanded && note != null) {
+            EventFinderFilterAssemblerSubscription(note, accountViewModel)
+            val event by observeNoteEvent<PaymentTargetsEvent>(note, accountViewModel)
+            val targets = remember(event) { event?.paymentTargets() ?: emptyList() }
 
-        errorMessage?.let { msg ->
-            ErrorMessageDialog(
-                title = stringRes(R.string.error_dialog_payment_error),
-                textContent = msg,
-                onDismiss = { errorMessage = null },
-            )
+            PaymentTargetsDialog(targets = targets, onDismiss = { expanded = false })
         }
     }
 }

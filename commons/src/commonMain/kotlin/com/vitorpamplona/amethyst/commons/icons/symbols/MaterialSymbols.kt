@@ -175,7 +175,7 @@ object MaterialSymbols {
     val Public = MaterialSymbol("\uE80B")
     val PublicOff = MaterialSymbol("\uF1CA")
     val PushPin = MaterialSymbol("\uF10D")
-    val QrCode2 = MaterialSymbol("\uEF6B")
+    val QrCode2 = MaterialSymbol("\uE00A")
     val RadioButtonChecked = MaterialSymbol("\uE837")
     val RadioButtonUnchecked = MaterialSymbol("\uE836")
     val Recommend = MaterialSymbol("\uE9D2")

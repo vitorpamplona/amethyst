@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
+import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
@@ -99,12 +100,7 @@ fun PaymentButton(
 
 @Composable
 fun PaymentButtonWithTargets(targets: List<PaymentTarget>) {
-    val context = LocalContext.current
-    val clipboardManager = LocalClipboard.current
-    val scope = rememberCoroutineScope()
     var expanded by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    var qrContent by remember { mutableStateOf<String?>(null) }
 
     FilledTonalButton(
         modifier =
@@ -121,11 +117,34 @@ fun PaymentButtonWithTargets(targets: List<PaymentTarget>) {
     }
 
     if (expanded) {
-        M3ActionDialog(
-            title = stringRes(R.string.payment_targets),
-            onDismiss = { expanded = false },
-        ) {
-            M3ActionSection {
+        PaymentTargetsDialog(targets = targets, onDismiss = { expanded = false })
+    }
+}
+
+@Composable
+fun PaymentTargetsDialog(
+    targets: List<PaymentTarget>,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var qrContent by remember { mutableStateOf<String?>(null) }
+
+    M3ActionDialog(
+        title = stringRes(R.string.payment_targets),
+        onDismiss = onDismiss,
+    ) {
+        M3ActionSection {
+            if (targets.isEmpty()) {
+                M3ActionRow(
+                    icon = MaterialSymbols.AccountBalanceWallet,
+                    text = stringRes(R.string.no_payment_targets_message),
+                    enabled = false,
+                    onClick = {},
+                )
+            } else {
                 targets.forEach { target ->
                     PaymentTargetRow(
                         target = target,
@@ -146,7 +165,7 @@ fun PaymentButtonWithTargets(targets: List<PaymentTarget>) {
                                 val intent = Intent(Intent.ACTION_VIEW, "payto://${target.type}/${target.authority}".toUri())
                                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                                 context.startActivity(intent)
-                                expanded = false
+                                onDismiss()
                             } catch (e: Exception) {
                                 if (e is kotlinx.coroutines.CancellationException) throw e
                                 errorMessage = stringRes(context, R.string.no_payment_app_found)
