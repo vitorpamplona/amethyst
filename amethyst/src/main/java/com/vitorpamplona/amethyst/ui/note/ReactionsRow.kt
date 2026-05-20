@@ -1982,6 +1982,7 @@ fun ZapAmountChoicePopupContent(
                 modifier = Modifier.padding(horizontal = 5.dp, vertical = 5.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalArrangement = Arrangement.Center,
+                itemVerticalAlignment = CenterVertically,
             ) {
                 zapAmountChoices.forEach { amountInSats ->
                     ZapAmountChip(
