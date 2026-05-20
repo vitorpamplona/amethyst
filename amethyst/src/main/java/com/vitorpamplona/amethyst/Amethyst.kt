@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst
 
 import android.app.Application
+import com.vitorpamplona.amethyst.service.crashreports.MainThreadCrashGuard
 import com.vitorpamplona.amethyst.service.logging.Logging
 import com.vitorpamplona.amethyst.service.nests.AppForegroundRecycleHook
 import com.vitorpamplona.quartz.utils.Log
@@ -40,6 +41,12 @@ class Amethyst : Application() {
     override fun onCreate() {
         super.onCreate()
         Log.d("AmethystApp") { "onCreate $this" }
+
+        // Wrap the main thread's Looper.loop() so we can survive a narrow set
+        // of known Compose framework crashes (currently: the LegacyCursorAnchorInfo
+        // IllegalArgumentException). Must be installed before any UI is shown.
+        MainThreadCrashGuard.install()
+
         instance = AppModules(this)
 
         // After-background foreground recycle: when the app returns to
