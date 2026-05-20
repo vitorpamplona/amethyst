@@ -1729,9 +1729,6 @@
     <string name="calendar_collection_title">Cím</string>
     <string name="calendar_collection_description">Leírás</string>
     <string name="calendar_collection_invalid">A cím megadása kötelező.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="other">%1$d esemény</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Ebben a naptárban még nincsenek események.</string>
     <string name="calendar_rsvp_going">Ott leszek</string>
     <string name="calendar_rsvp_maybe">Talán</string>
@@ -1750,9 +1747,6 @@
     <string name="calendar_reminder_channel_name">Naptár-emlékeztetők</string>
     <string name="calendar_reminder_channel_description">Értesítés, ha egy esemény, amin Ön részt vesz, hamarosan elkezdődik.</string>
     <string name="calendar_reminder_default_title">Naptáresemény</string>
-    <plurals name="calendar_reminder_body">
-        <item quantity="other">%1$d perc múlva kezdődik</item>
-    </plurals>
     <string name="calendar_add_to_calendar_action">Vegye fel az egyik naptárba</string>
     <string name="calendar_add_to_calendar_title">Hozzáadás egy naptárhoz</string>
     <string name="calendar_add_to_calendar_none">Ön még nem hozott létre egyetlen naptárat sem.</string>
