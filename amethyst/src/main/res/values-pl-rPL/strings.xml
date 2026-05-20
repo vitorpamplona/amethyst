@@ -1783,7 +1783,12 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="calendar_reminder_settings_enabled_subtitle">Powiadomienie pojawia się, gdy zbliża się rozpoczęcie wydarzenia, w którym bierzesz udział.</string>
     <string name="calendar_reminder_settings_lead_title">Przypomnienie o terminie realizacji</string>
     <string name="calendar_reminder_settings_lead_subtitle">Ile minut przed wydarzeniem chcesz zostać powiadomiony.</string>
-    <string name="calendar_reminder_settings_lead_choice">%1$d min.</string>
+    <plurals name="calendar_reminder_settings_lead_choice">
+        <item quantity="one">%1$d min.</item>
+        <item quantity="few">%1$d min.</item>
+        <item quantity="many">%1$d min.</item>
+        <item quantity="other">%1$d min.</item>
+    </plurals>
     <string name="calendar_share_nostr">Udostępnij jako link nostr</string>
     <string name="calendar_share_nostr_title">Udostępnij link do kalendarza</string>
     <string name="calendar_filter_all">Wszystkie kalendarze</string>

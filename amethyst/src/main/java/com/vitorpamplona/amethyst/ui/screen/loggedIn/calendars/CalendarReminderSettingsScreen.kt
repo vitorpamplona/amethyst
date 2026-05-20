@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -137,7 +138,7 @@ fun CalendarReminderSettingsScreen(nav: INav) {
                         },
                         enabled = enabled,
                         label = {
-                            Text(stringRes(R.string.calendar_reminder_settings_lead_choice, choice))
+                            Text(pluralStringResource(R.plurals.calendar_reminder_settings_lead_choice, choice, choice))
                         },
                     )
                 }

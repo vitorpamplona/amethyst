@@ -1771,7 +1771,10 @@
     <string name="calendar_reminder_settings_enabled_subtitle">Értesítés, ha egy esemény, amin Ön részt vesz, hamarosan elkezdődik.</string>
     <string name="calendar_reminder_settings_lead_title">Emlékeztető értesítési ideje</string>
     <string name="calendar_reminder_settings_lead_subtitle">Hány perccel az esemény előtt szeretne értesítést kapni.</string>
-    <string name="calendar_reminder_settings_lead_choice">%1$d perc</string>
+    <plurals name="calendar_reminder_settings_lead_choice">
+        <item quantity="one">%1$d perc</item>
+        <item quantity="other">%1$d perc</item>
+    </plurals>
     <string name="calendar_share_nostr">Megosztás mint nostr-hivatkozás</string>
     <string name="calendar_share_nostr_title">Naptár-hivatkozás megosztása</string>
     <string name="calendar_filter_all">Összes naptár</string>
