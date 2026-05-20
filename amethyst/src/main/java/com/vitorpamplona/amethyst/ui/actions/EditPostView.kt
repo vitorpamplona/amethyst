@@ -36,16 +36,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -63,7 +63,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -81,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.components.BechLink
 import com.vitorpamplona.amethyst.ui.components.LoadUrlPreview
+import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -300,8 +300,9 @@ fun EditPostView(
                                                 stringRes(id = R.string.lightning_invoice),
                                                 stringRes(id = R.string.lightning_create_and_add_invoice),
                                                 onNewInvoice = {
-                                                    postViewModel.message =
-                                                        TextFieldValue(postViewModel.message.text + "\n\n" + it)
+                                                    postViewModel.message.setTextAndPlaceCursorAtEnd(
+                                                        postViewModel.message.text.toString() + "\n\n" + it,
+                                                    )
                                                     postViewModel.wantsInvoice = false
                                                 },
                                                 onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
@@ -309,43 +310,6 @@ fun EditPostView(
                                         }
                                     }
                                 }
-
-                                /*
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = Size5dp, horizontal = Size10dp),
-                                ) {
-                                    Column {
-                                        Text(
-                                            text = stringRes(R.string.message_to_author),
-                                            fontSize = 18.sp,
-                                            fontWeight = FontWeight.W500,
-                                        )
-
-                                        HorizontalDivider(thickness = DividerThickness)
-
-                                        MyTextField(
-                                            value = postViewModel.subject,
-                                            onValueChange = { postViewModel.updateSubject(it) },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            placeholder = {
-                                                Text(
-                                                    text = stringRes(R.string.message_to_author_placeholder),
-                                                    color = MaterialTheme.colorScheme.placeholderText,
-                                                )
-                                            },
-                                            visualTransformation =
-                                                UrlUserTagTransformation(
-                                                    MaterialTheme.colorScheme.primary,
-                                                ),
-                                            colors =
-                                                OutlinedTextFieldDefaults.colors(
-                                                    unfocusedBorderColor = Color.Transparent,
-                                                    focusedBorderColor = Color.Transparent,
-                                                ),
-                                        )
-                                    }
-                                }*/
                             }
                         }
 
@@ -416,9 +380,11 @@ private fun MessageField(postViewModel: EditPostViewModel) {
         }
     }
 
-    OutlinedTextField(
-        value = postViewModel.message,
-        onValueChange = { postViewModel.updateMessage(it) },
+    ThinPaddingTextField(
+        state = postViewModel.message,
+        onTextChanged = { postViewModel.onMessageChanged() },
+        inputTransformation = MentionPreservingInputTransformation,
+        outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
         keyboardOptions =
             KeyboardOptions.Default.copy(
                 capitalization = KeyboardCapitalization.Sentences,
@@ -443,11 +409,10 @@ private fun MessageField(postViewModel: EditPostViewModel) {
             )
         },
         colors =
-            OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color.Transparent,
-                unfocusedBorderColor = Color.Transparent,
+            TextFieldDefaults.colors(
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
             ),
-        visualTransformation = UrlUserTagTransformation(MaterialTheme.colorScheme.primary),
         textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
     )
 }
