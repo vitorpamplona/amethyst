@@ -28,7 +28,7 @@ android {
 
     sourceSets {
         getByName("androidTest") {
-            resources.srcDirs("../quartz/src/androidDeviceTest/resources")
+            resources.directories.add(file("../quartz/src/androidDeviceTest/resources").path)
         }
     }
 
