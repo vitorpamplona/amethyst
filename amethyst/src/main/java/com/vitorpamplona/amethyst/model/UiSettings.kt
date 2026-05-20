@@ -52,6 +52,7 @@ data class UiSettings(
     val showProfileAppRecommendations: Boolean = true,
     val showProfileZapReceivedFeed: Boolean = true,
     val showProfileFollowersFeed: Boolean = true,
+    val dontShowOnchainPublicWarning: Boolean = false,
 )
 
 enum class ThemeType(
