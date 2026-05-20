@@ -1949,7 +1949,10 @@
     <string name="calendar_collection_title">Title</string>
     <string name="calendar_collection_description">Description</string>
     <string name="calendar_collection_invalid">A title is required.</string>
-    <string name="calendar_collection_count">%1$d events</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d event</item>
+        <item quantity="other">%1$d events</item>
+    </plurals>
     <string name="calendar_collection_empty_members">No events in this calendar yet.</string>
 
     <string name="calendar_rsvp_going">Going</string>
@@ -1969,7 +1972,10 @@
     <string name="calendar_reminder_channel_name">Calendar reminders</string>
     <string name="calendar_reminder_channel_description">Heads-up when an event you\'re attending is about to start.</string>
     <string name="calendar_reminder_default_title">Calendar event</string>
-    <string name="calendar_reminder_body">Starts in %1$d minutes</string>
+    <plurals name="calendar_reminder_body">
+        <item quantity="one">Starts in %1$d minute</item>
+        <item quantity="other">Starts in %1$d minutes</item>
+    </plurals>
     <string name="calendar_add_to_calendar_action">Add to one of your calendars</string>
     <string name="calendar_add_to_calendar_title">Add to a calendar</string>
     <string name="calendar_add_to_calendar_none">You haven\'t created any calendars yet.</string>

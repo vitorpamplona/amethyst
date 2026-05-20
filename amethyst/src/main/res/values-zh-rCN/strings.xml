@@ -1721,7 +1721,9 @@
     <string name="calendar_collection_title">标题</string>
     <string name="calendar_collection_description">描述</string>
     <string name="calendar_collection_invalid">标题是必需的。</string>
-    <string name="calendar_collection_count">%1$d 个活动</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="other">%1$d 个活动</item>
+    </plurals>
     <string name="calendar_collection_empty_members">此日历中尚无活动。</string>
     <string name="calendar_rsvp_going">参加</string>
     <string name="calendar_rsvp_maybe">可能</string>
@@ -1740,7 +1742,9 @@
     <string name="calendar_reminder_channel_name">日历提醒</string>
     <string name="calendar_reminder_channel_description">您正参加的活动即将开始时进行提醒。</string>
     <string name="calendar_reminder_default_title">日历活动</string>
-    <string name="calendar_reminder_body">在 %1$d 分钟内开始</string>
+    <plurals name="calendar_reminder_body">
+        <item quantity="other">在 %1$d 分钟内开始</item>
+    </plurals>
     <string name="calendar_add_to_calendar_action">添加到您日历中的一个</string>
     <string name="calendar_add_to_calendar_title">添加到日历</string>
     <string name="calendar_add_to_calendar_none">您尚未创建任何日历。</string>
