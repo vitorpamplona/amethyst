@@ -354,6 +354,7 @@ fun ZapCustomDialog(
     }
 
     if (sendOnchain) {
+        val zappedEventHint = remember(baseNote) { baseNote.toEventHint<Event>() }
         OnchainZapSendDialog(
             accountViewModel = accountViewModel,
             onDismiss = {
@@ -361,7 +362,7 @@ fun ZapCustomDialog(
                 onClose()
             },
             recipientPubKey = baseNote.author?.pubkeyHex,
-            zappedEvent = baseNote.toEventHint<Event>(),
+            zappedEvent = zappedEventHint,
             prefillAmountSats = postViewModel.value(),
             prefillComment = postViewModel.customMessage.text,
         )

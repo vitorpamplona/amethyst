@@ -1245,11 +1245,12 @@ fun ZapReaction(
         }
 
         onchainZapRequest?.let { request ->
+            val zappedEventHint = remember(baseNote) { baseNote.toEventHint<Event>() }
             OnchainZapSendDialog(
                 accountViewModel = accountViewModel,
                 onDismiss = { onchainZapRequest = null },
                 recipientPubKey = baseNote.author?.pubkeyHex,
-                zappedEvent = baseNote.toEventHint<Event>(),
+                zappedEvent = zappedEventHint,
                 prefillAmountSats = request.amountSats,
             )
         }

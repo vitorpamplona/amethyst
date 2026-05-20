@@ -80,6 +80,27 @@ object OnchainZapSplitter {
         splits: List<Pair<HexKey, Double>>,
         dustThresholdSats: Long,
     ): List<OnchainZapShare> {
+        val shares = computeShares(totalSats, splits)
+        val belowDust = shares.filter { it.sats < dustThresholdSats }
+        if (belowDust.isNotEmpty()) throw DustRecipientException(belowDust, dustThresholdSats)
+        return shares
+    }
+
+    /**
+     * Same allocation as [distribute] but never throws on dust. Returns every
+     * share (including below-dust ones) so a UI preview can render the full
+     * shape and the caller can decide what to do with offenders. Use
+     * [distribute] for the actual send path where below-dust must hard-fail.
+     */
+    fun distributeUnchecked(
+        totalSats: Long,
+        splits: List<Pair<HexKey, Double>>,
+    ): List<OnchainZapShare> = computeShares(totalSats, splits)
+
+    private fun computeShares(
+        totalSats: Long,
+        splits: List<Pair<HexKey, Double>>,
+    ): List<OnchainZapShare> {
         require(totalSats > 0) { "total must be positive" }
         require(splits.isNotEmpty()) { "splits must be non-empty" }
         require(splits.none { it.second <= 0.0 }) { "weights must be positive" }
@@ -96,23 +117,24 @@ object OnchainZapSplitter {
             shares[i] = s
             assigned += s
         }
+        // Each floor() loses < 1 sat, so the total remainder is strictly less
+        // than `splits.size` — well within Int range for any plausible N.
         val remainder = totalSats - assigned
+        check(remainder < splits.size) { "remainder $remainder exceeds splits.size ${splits.size}" }
         if (remainder > 0) {
             val orderByWeight =
                 splits.indices.sortedWith(
                     compareByDescending<Int> { splits[it].second }.thenBy { it },
                 )
             for (k in 0 until remainder.toInt()) {
+                // remainder < splits.size, so k % size is just k — kept
+                // defensively in case the bound ever loosens.
                 shares[orderByWeight[k % orderByWeight.size]] += 1
             }
         }
 
-        val result =
-            splits.mapIndexed { i, (pubKey, weight) ->
-                OnchainZapShare(recipientPubKey = pubKey, sats = shares[i], weight = weight)
-            }
-        val belowDust = result.filter { it.sats < dustThresholdSats }
-        if (belowDust.isNotEmpty()) throw DustRecipientException(belowDust, dustThresholdSats)
-        return result
+        return splits.mapIndexed { i, (pubKey, weight) ->
+            OnchainZapShare(recipientPubKey = pubKey, sats = shares[i], weight = weight)
+        }
     }
 }

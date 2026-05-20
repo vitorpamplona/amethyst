@@ -211,6 +211,7 @@ fun ReusableZapButton(
         }
 
         if (showOnchainDialog) {
+            val zappedEventHint = remember(baseNote) { baseNote.toEventHint<Event>() }
             OnchainZapSendDialog(
                 accountViewModel = accountViewModel,
                 onDismiss = {
@@ -218,7 +219,7 @@ fun ReusableZapButton(
                     onchainZapAmount = null
                 },
                 recipientPubKey = baseNote.author?.pubkeyHex,
-                zappedEvent = baseNote.toEventHint<Event>(),
+                zappedEvent = zappedEventHint,
                 prefillAmountSats = onchainZapAmount,
             )
         }

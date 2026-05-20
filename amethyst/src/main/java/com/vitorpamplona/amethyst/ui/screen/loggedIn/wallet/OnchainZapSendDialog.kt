@@ -93,6 +93,7 @@ import com.vitorpamplona.quartz.nipBCOnchainZaps.builder.OnchainZapBuilder
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.FeeEstimates
 import com.vitorpamplona.quartz.utils.BigDecimal
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.NumberFormat
@@ -184,10 +185,24 @@ fun OnchainZapSendDialog(
     var useSplits by remember(zappedEventId) { mutableStateOf(onchainSplits.isNotEmpty()) }
     val splitMode = useSplits && onchainSplits.isNotEmpty()
 
+    // Fetch fee estimates with bounded retry. Covers two boot races:
+    //  - LocalCache.onchainBackend is null briefly while AppModules wires it up
+    //  - feeEstimates() throws on a flaky network
+    // Without retry, the Send button would stay permanently disabled because
+    // the build path needs a fee rate.
     LaunchedEffect(Unit) {
-        val backend = LocalCache.onchainBackend ?: return@LaunchedEffect
-        fees =
-            runCatching { withContext(Dispatchers.IO) { backend.feeEstimates() } }.getOrNull()
+        repeat(4) { attempt ->
+            if (fees != null) return@LaunchedEffect
+            val backend = LocalCache.onchainBackend
+            if (backend != null) {
+                val newFees = runCatching { withContext(Dispatchers.IO) { backend.feeEstimates() } }.getOrNull()
+                if (newFees != null) {
+                    fees = newFees
+                    return@LaunchedEffect
+                }
+            }
+            if (attempt < 3) delay(1_000L * (attempt + 1))
+        }
     }
 
     val presetAmounts by accountViewModel.account.settings.syncedSettings.zaps.onchainZapAmountChoices
@@ -208,44 +223,28 @@ fun OnchainZapSendDialog(
 
     // Preview the per-recipient share allocation. Always compute the full
     // list (even when some shares would land below dust) so the UI can show
-    // every recipient's amount; the dust offenders are flagged separately
-    // and gate the Send button.
+    // every recipient's amount; below-dust offenders are flagged separately
+    // and gate the Send button so the user can't tap into a guaranteed
+    // BUILDING-stage failure.
     val previewShares =
         remember(splitMode, onchainSplits, amountSats) {
             if (!splitMode || amountSats == null || amountSats <= 0) {
                 null
             } else {
                 runCatching {
-                    OnchainZapSplitter.distribute(
-                        totalSats = amountSats,
-                        splits = onchainSplits,
-                        dustThresholdSats = OnchainZapBuilder.DUST_THRESHOLD_SATS,
-                    )
-                }.getOrElse { e ->
-                    if (e is DustRecipientException) {
-                        // Re-run with a 0 dust threshold to get the full shape
-                        // for the preview; the real send still uses the proper
-                        // dust check via [DustRecipientException].
-                        runCatching {
-                            OnchainZapSplitter.distribute(
-                                totalSats = amountSats,
-                                splits = onchainSplits,
-                                dustThresholdSats = 0L,
-                            )
-                        }.getOrNull()
-                    } else {
-                        null
-                    }
-                }
+                    OnchainZapSplitter.distributeUnchecked(amountSats, onchainSplits)
+                }.getOrNull()
             }
         }
     val belowDustShares =
-        previewShares.orEmpty().filter { it.sats < OnchainZapBuilder.DUST_THRESHOLD_SATS }
+        remember(previewShares) {
+            previewShares.orEmpty().filter { it.sats < OnchainZapBuilder.DUST_THRESHOLD_SATS }
+        }
 
     val canSend =
         !sending &&
             result == null &&
-            (splitMode || resolvedRecipient != null) &&
+            (splitMode || (resolvedRecipient != null && resolvedRecipient != senderPubKey)) &&
             amountSats != null &&
             amountSats > 0 &&
             fees != null &&
@@ -748,6 +747,12 @@ private fun SplitsRecipientSection(
     SectionLabel("Splits among ${splits.size} recipients")
 
     val totalWeight = splits.sumOf { it.second }
+    // Index the preview by pubkey once — the splits list scan would otherwise
+    // be O(N²) for the per-row sat amount lookup.
+    val previewByPubKey =
+        remember(previewShares) {
+            previewShares?.associateBy { it.recipientPubKey }
+        }
 
     Surface(
         shape = MaterialTheme.shapes.medium,
@@ -756,7 +761,7 @@ private fun SplitsRecipientSection(
     ) {
         Column(modifier = Modifier.padding(vertical = 4.dp)) {
             splits.forEach { (pubKey, weight) ->
-                val share = previewShares?.firstOrNull { it.recipientPubKey == pubKey }
+                val share = previewByPubKey?.get(pubKey)
                 Row(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -819,9 +824,10 @@ private fun formatWeight(
     return if (pct >= 99.95) {
         "100%"
     } else {
-        // One decimal place keeps "33.3%" readable without floating-point noise.
-        val rounded = (pct * 10).toLong() / 10.0
-        "$rounded%"
+        // Round to a tenth of a percent. Drop the trailing ".0" so whole
+        // percentages render as "50%" instead of "50.0%".
+        val tenths = (pct * 10).toLong()
+        if (tenths % 10 == 0L) "${tenths / 10}%" else "${tenths / 10}.${tenths % 10}%"
     }
 }
 

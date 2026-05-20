@@ -154,6 +154,21 @@ class OnchainZapSplitterTest {
     }
 
     @Test
+    fun distributeUncheckedReturnsBelowDustShares() {
+        // 1000 sats split 1:99 → 10 and 990. distribute() throws on the 10;
+        // distributeUnchecked() returns both, leaving dust handling to caller.
+        val shares =
+            OnchainZapSplitter.distributeUnchecked(
+                totalSats = 1000L,
+                splits = listOf(a to 1.0, b to 99.0),
+            )
+        assertEquals(2, shares.size)
+        assertEquals(10L, shares[0].sats)
+        assertEquals(990L, shares[1].sats)
+        assertEquals(1000L, shares.sumOf { it.sats })
+    }
+
+    @Test
     fun floatingPointWeightsSumExactly() {
         // 0.1 + 0.2 = 0.30000000000000004 in IEEE-754. Make sure that doesn't
         // leak a missing or extra sat.
