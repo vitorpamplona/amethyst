@@ -272,4 +272,86 @@ class OnchainZapSenderTest {
             assertEquals(OnchainZapSendStage.SIGNING, result.stage)
             assertEquals(null, backend.broadcastedHex)
         }
+
+    @Test
+    fun sendSplitProducesOneReceiptPerRecipient() =
+        runTest {
+            val r1 = xOnly("000000000000000000000000000000000000000000000000000000000000000d")
+            val r2 = xOnly("000000000000000000000000000000000000000000000000000000000000000e")
+            val r3 = xOnly("000000000000000000000000000000000000000000000000000000000000000f")
+            val backend = FakeBackend(listOf(Utxo("1".repeat(64), 0, 1_000_000L, 6)))
+            val publishedReceipts = mutableListOf<OnchainZapEvent>()
+
+            val result =
+                OnchainZapSender.sendSplit(
+                    backend = backend,
+                    signer = senderSigner,
+                    senderPubKey = senderPubKey,
+                    recipients =
+                        listOf(
+                            OnchainZapShare(r1, 50_000L, 5.0),
+                            OnchainZapShare(r2, 30_000L, 3.0),
+                            OnchainZapShare(r3, 20_000L, 2.0),
+                        ),
+                    feeRateSatPerVByte = 5.0,
+                    comment = "thanks all",
+                    zappedEvent = null,
+                ) { template ->
+                    val event = senderSigner.sign<OnchainZapEvent>(template)
+                    publishedReceipts += event
+                    event
+                }
+
+            assertIs<OnchainZapSendResult.Success>(result)
+            assertEquals(3, publishedReceipts.size)
+            assertEquals(2, result.extraReceiptEventIds.size)
+
+            // All receipts must reference the SAME txid.
+            val broadcastTxid = BitcoinTransaction.parse(backend.broadcastedHex!!).txid()
+            assertEquals(broadcastTxid, result.txid)
+            assertTrue(publishedReceipts.all { it.txid() == broadcastTxid })
+
+            // Per-recipient receipts carry the right pubkey + sat amount.
+            val byRecipient = publishedReceipts.associateBy { it.recipient() }
+            assertEquals(50_000L, byRecipient[r1]?.claimedAmountInSats())
+            assertEquals(30_000L, byRecipient[r2]?.claimedAmountInSats())
+            assertEquals(20_000L, byRecipient[r3]?.claimedAmountInSats())
+        }
+
+    @Test
+    fun sendSplitPartialPublishFailureKeepsBroadcastedReceiptIds() =
+        runTest {
+            val r1 = xOnly("000000000000000000000000000000000000000000000000000000000000000d")
+            val r2 = xOnly("000000000000000000000000000000000000000000000000000000000000000e")
+            val r3 = xOnly("000000000000000000000000000000000000000000000000000000000000000f")
+            val backend = FakeBackend(listOf(Utxo("1".repeat(64), 0, 1_000_000L, 6)))
+            var calls = 0
+
+            val result =
+                OnchainZapSender.sendSplit(
+                    backend = backend,
+                    signer = senderSigner,
+                    senderPubKey = senderPubKey,
+                    recipients =
+                        listOf(
+                            OnchainZapShare(r1, 50_000L, 1.0),
+                            OnchainZapShare(r2, 30_000L, 1.0),
+                            OnchainZapShare(r3, 20_000L, 1.0),
+                        ),
+                    feeRateSatPerVByte = 5.0,
+                    comment = "",
+                    zappedEvent = null,
+                ) { template ->
+                    calls++
+                    if (calls == 2) throw RuntimeException("relay rejected receipt")
+                    senderSigner.sign(template)
+                }
+
+            assertIs<OnchainZapSendResult.Failure>(result)
+            assertEquals(OnchainZapSendStage.PUBLISHING, result.stage)
+            // Tx is on-chain.
+            assertTrue(result.broadcastTxid != null)
+            // Exactly one receipt was published before the failure.
+            assertEquals(1, result.publishedReceiptEventIds.size)
+        }
 }

@@ -48,6 +48,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -81,6 +82,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.OnchainZapSendDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
@@ -89,6 +91,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.CancellationException
@@ -156,6 +159,11 @@ fun ZapCustomDialog(
         remember(accountViewModel) { mutableStateOf(accountViewModel.defaultZapType()) }
 
     val presetAmounts = remember(accountViewModel) { accountViewModel.zapAmountChoices() }
+
+    // True while the on-chain hand-off sheet is open. Dismissing the on-chain
+    // sheet closes the whole zap flow — the user has already committed to a
+    // payment method, no "go back to Lightning" is offered here.
+    var sendOnchain by remember { mutableStateOf(false) }
 
     Dialog(
         onDismissRequest = { onClose() },
@@ -326,8 +334,38 @@ fun ZapCustomDialog(
                     )
                     onClose()
                 }
+
+                // Hand off to the on-chain dialog with the entered amount +
+                // message prefilled. Disabled while the amount is empty so the
+                // user can't open a sheet that immediately gates on its own
+                // empty field.
+                TextButton(
+                    onClick = { sendOnchain = true },
+                    enabled = postViewModel.canSend() && !baseNote.isDraft(),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
+                ) {
+                    Text(text = stringRes(id = R.string.send_onchain_instead))
+                }
             }
         }
+    }
+
+    if (sendOnchain) {
+        val zappedEventHint = remember(baseNote) { baseNote.toEventHint<Event>() }
+        OnchainZapSendDialog(
+            accountViewModel = accountViewModel,
+            onDismiss = {
+                sendOnchain = false
+                onClose()
+            },
+            recipientPubKey = baseNote.author?.pubkeyHex,
+            zappedEvent = zappedEventHint,
+            prefillAmountSats = postViewModel.value(),
+            prefillComment = postViewModel.customMessage.text,
+        )
     }
 }
 

@@ -41,6 +41,8 @@ class UpdateZapAmountViewModel : ViewModel() {
 
     var nextAmount by mutableStateOf(TextFieldValue(""))
     var amountSet by mutableStateOf(listOf<Long>())
+    var nextOnchainAmount by mutableStateOf(TextFieldValue(""))
+    var onchainAmountSet by mutableStateOf(listOf<Long>())
     var walletConnectRelay by mutableStateOf(TextFieldValue(""))
     var walletConnectPubkey by mutableStateOf(TextFieldValue(""))
     var walletConnectSecret by mutableStateOf(TextFieldValue(""))
@@ -59,6 +61,7 @@ class UpdateZapAmountViewModel : ViewModel() {
 
     fun load() {
         this.amountSet = accountViewModel.account.settings.syncedSettings.zaps.zapAmountChoices.value
+        this.onchainAmountSet = accountViewModel.account.settings.syncedSettings.zaps.onchainZapAmountChoices.value
         this.selectedZapType = accountViewModel.account.settings.syncedSettings.zaps.defaultZapType.value
 
         val nip47 = accountViewModel.account.settings.defaultZapPaymentRequest()
@@ -81,6 +84,19 @@ class UpdateZapAmountViewModel : ViewModel() {
 
     fun removeAmount(amount: Long) {
         amountSet = amountSet - amount
+    }
+
+    fun addOnchainAmount() {
+        val newValue = nextOnchainAmount.text.trim().toLongOrNull()
+        if (newValue != null) {
+            onchainAmountSet = onchainAmountSet + newValue
+        }
+
+        nextOnchainAmount = TextFieldValue("")
+    }
+
+    fun removeOnchainAmount(amount: Long) {
+        onchainAmountSet = onchainAmountSet - amount
     }
 
     fun sendPost() {
@@ -116,13 +132,15 @@ class UpdateZapAmountViewModel : ViewModel() {
                 null
             }
 
-        accountViewModel.account.updateZapAmounts(amountSet, selectedZapType, nip47Update)
+        accountViewModel.account.updateZapAmounts(amountSet, onchainAmountSet, selectedZapType, nip47Update)
 
         nextAmount = TextFieldValue("")
+        nextOnchainAmount = TextFieldValue("")
     }
 
     fun cancel() {
         nextAmount = TextFieldValue("")
+        nextOnchainAmount = TextFieldValue("")
     }
 
     fun hasChanged(): Boolean {
@@ -130,6 +148,7 @@ class UpdateZapAmountViewModel : ViewModel() {
         return (
             selectedZapType != accountViewModel.account.settings.syncedSettings.zaps.defaultZapType.value ||
                 amountSet != accountViewModel.account.settings.syncedSettings.zaps.zapAmountChoices.value ||
+                onchainAmountSet != accountViewModel.account.settings.syncedSettings.zaps.onchainZapAmountChoices.value ||
                 walletConnectPubkey.text != (defaultUri?.pubKeyHex ?: "") ||
                 walletConnectRelay.text != (defaultUri?.relayUri?.url ?: "") ||
                 walletConnectSecret.text != (defaultUri?.secret ?: "")

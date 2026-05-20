@@ -60,15 +60,20 @@ sealed interface OnchainZapSendResult {
      * The transaction was broadcast and the zap receipt was published.
      *
      * @property txid The broadcast Bitcoin transaction id.
-     * @property receiptEventId The id of the published kind:8333 event.
+     * @property receiptEventId The id of the first published kind:8333 event.
+     *   For a split zap, additional receipts (one per recipient) are also
+     *   published; see [extraReceiptEventIds].
      * @property feeSats Miner fee paid.
      * @property changeSats Change returned to the sender (0 if none).
+     * @property extraReceiptEventIds Receipt ids for the remaining recipients
+     *   when this was a split zap. Empty for a single-recipient zap.
      */
     data class Success(
         val txid: String,
         val receiptEventId: HexKey,
         val feeSats: Long,
         val changeSats: Long,
+        val extraReceiptEventIds: List<HexKey> = emptyList(),
     ) : OnchainZapSendResult
 
     /**
@@ -82,6 +87,12 @@ sealed interface OnchainZapSendResult {
         val cause: Throwable? = null,
         /** Non-null when the payment was broadcast but a later stage failed. */
         val broadcastTxid: String? = null,
+        /**
+         * Receipt ids that DID publish before the failure, in the order they
+         * were sent. Empty for non-publishing failures and for single-recipient
+         * publishes that fail on the first receipt.
+         */
+        val publishedReceiptEventIds: List<HexKey> = emptyList(),
     ) : OnchainZapSendResult
 }
 
@@ -229,6 +240,142 @@ object OnchainZapSender {
             receiptEventId = receiptId,
             feeSats = built.feeSats,
             changeSats = built.changeSats,
+        )
+    }
+
+    /**
+     * Send an onchain split zap: pays N recipients with one Bitcoin transaction
+     * (one output per recipient) and publishes one kind:8333 receipt per
+     * recipient, all sharing the same `i <txid>` tag.
+     *
+     * Per-recipient shares MUST be precomputed (e.g. via
+     * [OnchainZapSplitter.distribute]) so the on-chain output amounts and the
+     * `amount` tags on the receipts agree exactly.
+     *
+     * Failure semantics: if any receipt fails to publish, the transaction is
+     * already on-chain; the result reports the broadcast txid, the ids of any
+     * receipts that *did* publish, and the publishing-stage failure.
+     */
+    suspend fun sendSplit(
+        backend: OnchainBackend,
+        signer: NostrSigner,
+        senderPubKey: HexKey,
+        recipients: List<OnchainZapShare>,
+        feeRateSatPerVByte: Double,
+        comment: String,
+        zappedEvent: EventHintBundle<out Event>?,
+        publish: suspend (EventTemplate<OnchainZapEvent>) -> Event,
+    ): OnchainZapSendResult {
+        require(recipients.isNotEmpty()) { "recipients must be non-empty" }
+
+        // 1. Load the sender's UTXOs.
+        val utxos =
+            try {
+                val address = TaprootAddress.fromPubKey(senderPubKey)
+                backend.getUtxosForAddress(address)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                return fail(OnchainZapSendStage.LOADING_UTXOS, "Could not load your Bitcoin balance", e)
+            }
+
+        // 2. Coin-select and assemble the multi-output PSBT.
+        val built =
+            try {
+                OnchainZapBuilder.buildSplit(
+                    senderPubKey = senderPubKey,
+                    recipients = recipients.map { it.recipientPubKey to it.sats },
+                    feeRateSatPerVByte = feeRateSatPerVByte,
+                    availableUtxos = utxos,
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                return fail(OnchainZapSendStage.BUILDING, e.message ?: "Could not build the transaction", e)
+            }
+
+        // 3. Sign, verify, and finalize. Same fund-safety contract as [send].
+        val rawTxHex =
+            try {
+                val signedHex = signer.signPsbt(built.psbt.toHex())
+                val signedPsbt = Psbt.parse(signedHex)
+
+                val expectedTx = built.psbt.global.get(Psbt.PSBT_GLOBAL_UNSIGNED_TX)
+                val returnedTx = signedPsbt.global.get(Psbt.PSBT_GLOBAL_UNSIGNED_TX)
+                if (expectedTx == null || returnedTx == null || !expectedTx.contentEquals(returnedTx)) {
+                    return fail(
+                        OnchainZapSendStage.SIGNING,
+                        "The signer returned a different transaction than the one it was asked to sign",
+                    )
+                }
+
+                built.psbt.unsignedTx.inputs.indices.forEach { i ->
+                    val sig =
+                        signedPsbt.inputTapKeySig(i)
+                            ?: return fail(
+                                OnchainZapSendStage.SIGNING,
+                                "The signer did not sign every input",
+                            )
+                    built.psbt.setInputTapKeySig(i, sig)
+                }
+
+                if (!PsbtSignatureVerifier.verifyAllKeyPathInputs(built.psbt)) {
+                    return fail(
+                        OnchainZapSendStage.SIGNING,
+                        "The signed transaction has invalid signatures",
+                    )
+                }
+                PsbtFinalizer.finalizeToHex(built.psbt)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                return fail(OnchainZapSendStage.SIGNING, e.message ?: "Could not sign the transaction", e)
+            }
+
+        // 4. Broadcast.
+        val txid =
+            try {
+                backend.broadcast(rawTxHex)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                return fail(OnchainZapSendStage.BROADCASTING, "Could not broadcast the transaction", e)
+            }
+
+        // 5. Publish one receipt per recipient. If any one fails, surface the
+        // failure but keep the txid + receipts that did publish so the user
+        // (and any retry tooling) has the full picture.
+        val publishedIds = ArrayList<HexKey>(recipients.size)
+        for (share in recipients) {
+            try {
+                val template =
+                    if (zappedEvent != null) {
+                        OnchainZapEvent.build(txid, share.recipientPubKey, share.sats, zappedEvent, comment)
+                    } else {
+                        OnchainZapEvent.buildProfileZap(txid, share.recipientPubKey, share.sats, comment)
+                    }
+                publishedIds.add(publish(template).id)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                return OnchainZapSendResult.Failure(
+                    stage = OnchainZapSendStage.PUBLISHING,
+                    message =
+                        "Payment sent (${publishedIds.size} of ${recipients.size} receipts published), " +
+                            "but the next receipt could not be published",
+                    cause = e,
+                    broadcastTxid = txid,
+                    publishedReceiptEventIds = publishedIds.toList(),
+                )
+            }
+        }
+
+        return OnchainZapSendResult.Success(
+            txid = txid,
+            receiptEventId = publishedIds.first(),
+            feeSats = built.feeSats,
+            changeSats = built.changeSats,
+            extraReceiptEventIds = publishedIds.drop(1),
         )
     }
 

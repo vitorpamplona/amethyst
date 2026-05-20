@@ -306,7 +306,96 @@ fun UpdateZapAmountContent(
             )
         }
 
-        // ── Section 2: Zap Privacy ────────────────────────────────────────────
+        // ── Section 2: Quick On-chain Zap Amounts ─────────────────────────────
+
+        Text(
+            text = stringRes(R.string.quick_zap_amounts_onchain),
+            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.titleSmall,
+            modifier = SettingsCategorySpacingModifier,
+        )
+        Text(
+            text = stringRes(R.string.quick_zap_amounts_onchain_explainer),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.placeholderText,
+            modifier = Modifier.padding(bottom = 6.dp),
+        )
+
+        FlowRow(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .animateContentSize(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            postViewModel.onchainAmountSet.forEach { amountInSats ->
+                InputChip(
+                    selected = false,
+                    onClick = { postViewModel.removeOnchainAmount(amountInSats) },
+                    label = {
+                        Text(
+                            text = "₿ ${showAmount(amountInSats.toBigDecimal().setScale(1))}",
+                        )
+                    },
+                    trailingIcon = {
+                        Icon(
+                            symbol = MaterialSymbols.Close,
+                            contentDescription = stringRes(R.string.remove),
+                            modifier = Modifier.size(InputChipDefaults.AvatarSize),
+                        )
+                    },
+                    colors =
+                        InputChipDefaults.inputChipColors(
+                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                            labelColor = MaterialTheme.colorScheme.primary,
+                            trailingIconColor = MaterialTheme.colorScheme.primary,
+                        ),
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            OutlinedTextField(
+                label = { Text(text = stringRes(R.string.new_amount_in_sats_onchain)) },
+                value = postViewModel.nextOnchainAmount,
+                onValueChange = { postViewModel.nextOnchainAmount = it },
+                keyboardOptions =
+                    KeyboardOptions.Default.copy(
+                        capitalization = KeyboardCapitalization.None,
+                        keyboardType = KeyboardType.Number,
+                    ),
+                placeholder = {
+                    Text(
+                        text = "10000, 50000, 250000",
+                        color = MaterialTheme.colorScheme.placeholderText,
+                    )
+                },
+                trailingIcon = {
+                    IconButton(
+                        onClick = postViewModel::addOnchainAmount,
+                        shape = ButtonBorder,
+                        enabled = postViewModel.nextOnchainAmount.text.isNotBlank(),
+                    ) {
+                        Icon(
+                            symbol = MaterialSymbols.AddCircle,
+                            contentDescription = stringRes(R.string.add),
+                            modifier = Size20Modifier,
+                        )
+                    }
+                },
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+        }
+
+        // ── Section 3: Zap Privacy ────────────────────────────────────────────
 
         Text(
             text = stringRes(R.string.zap_privacy_section),

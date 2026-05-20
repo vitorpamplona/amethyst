@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
@@ -59,11 +60,13 @@ import com.vitorpamplona.amethyst.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.OnchainZapSendDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ModifierWidth3dp
 import com.vitorpamplona.amethyst.ui.theme.Size14Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -104,6 +107,12 @@ fun ReusableZapButton(
     callbacks: ZapButtonCallbacks = ZapButtonCallbacks(),
 ) {
     var wantsToZap by remember { mutableStateOf<ImmutableList<Long>?>(null) }
+    var onchainZapAmount by remember { mutableStateOf<Long?>(null) }
+    var showOnchainDialog by remember { mutableStateOf(false) }
+
+    val onchainZapAmountChoices by
+        accountViewModel.account.settings.syncedSettings.zaps.onchainZapAmountChoices
+            .collectAsStateWithLifecycle()
 
     // Makes sure the user is loaded to get his ln address ahead of time (for DVM buttons)
     if (config.showUserFinderSubscription) {
@@ -192,6 +201,26 @@ fun ReusableZapButton(
                         nav.nav(Route.ManualZapSplitPayment(uid))
                     }
                 },
+                onchainZapAmountChoices = onchainZapAmountChoices,
+                onOnchainAmount = { amount ->
+                    wantsToZap = null
+                    onchainZapAmount = amount
+                    showOnchainDialog = true
+                },
+            )
+        }
+
+        if (showOnchainDialog) {
+            val zappedEventHint = remember(baseNote) { baseNote.toEventHint<Event>() }
+            OnchainZapSendDialog(
+                accountViewModel = accountViewModel,
+                onDismiss = {
+                    showOnchainDialog = false
+                    onchainZapAmount = null
+                },
+                recipientPubKey = baseNote.author?.pubkeyHex,
+                zappedEvent = zappedEventHint,
+                prefillAmountSats = onchainZapAmount,
             )
         }
 

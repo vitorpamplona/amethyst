@@ -40,6 +40,7 @@ class AccountSyncedSettings(
     val zaps =
         AccountZapPreferences(
             MutableStateFlow(internalSettings.zaps.zapAmountChoices.toImmutableList()),
+            MutableStateFlow(internalSettings.zaps.onchainZapAmountChoices.toImmutableList()),
             MutableStateFlow(internalSettings.zaps.defaultZapType),
         )
     val languages =
@@ -69,6 +70,7 @@ class AccountSyncedSettings(
             zaps =
                 AccountZapPreferencesInternal(
                     zaps.zapAmountChoices.value,
+                    zaps.onchainZapAmountChoices.value,
                     zaps.defaultZapType.value,
                 ),
             languages =
@@ -105,6 +107,11 @@ class AccountSyncedSettings(
         val newZapChoices = syncedSettingsInternal.zaps.zapAmountChoices.toImmutableList()
         if (!equalImmutableLists(zaps.zapAmountChoices.value, newZapChoices)) {
             zaps.zapAmountChoices.tryEmit(newZapChoices)
+        }
+
+        val newOnchainZapChoices = syncedSettingsInternal.zaps.onchainZapAmountChoices.toImmutableList()
+        if (!equalImmutableLists(zaps.onchainZapAmountChoices.value, newOnchainZapChoices)) {
+            zaps.onchainZapAmountChoices.tryEmit(newOnchainZapChoices)
         }
 
         if (zaps.defaultZapType.value != syncedSettingsInternal.zaps.defaultZapType) {
@@ -175,6 +182,7 @@ class AccountVideoPlayerPreferences(
 @Stable
 class AccountZapPreferences(
     var zapAmountChoices: MutableStateFlow<ImmutableList<Long>>,
+    var onchainZapAmountChoices: MutableStateFlow<ImmutableList<Long>>,
     val defaultZapType: MutableStateFlow<LnZapEvent.ZapType>,
 )
 
