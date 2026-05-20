@@ -50,6 +50,31 @@ class DustRecipientException(
  *   - any share that lands below dust is reported via [DustRecipientException]
  */
 object OnchainZapSplitter {
+    /**
+     * Clean raw `["zap", pubkey, relay, weight]` splits for the on-chain path:
+     *
+     * 1. drop the sender's own pubkey (the on-chain builder refuses self-pays,
+     *    and a self-share would otherwise abort the whole zap when the user
+     *    zaps their own post — common, since most splits include the author)
+     * 2. merge duplicates by pubkey, summing their weights (Lightning splits
+     *    can repeat a pubkey; on-chain we want exactly one output per pubkey
+     *    so each recipient gets one receipt with one consolidated amount)
+     *
+     * The returned list preserves first-seen input order.
+     */
+    fun prepare(
+        rawSplits: List<Pair<HexKey, Double>>,
+        senderPubKey: HexKey,
+    ): List<Pair<HexKey, Double>> {
+        val merged = linkedMapOf<HexKey, Double>()
+        for ((pubKey, weight) in rawSplits) {
+            if (pubKey == senderPubKey) continue
+            if (weight <= 0.0) continue
+            merged[pubKey] = (merged[pubKey] ?: 0.0) + weight
+        }
+        return merged.entries.map { it.key to it.value }
+    }
+
     fun distribute(
         totalSats: Long,
         splits: List<Pair<HexKey, Double>>,

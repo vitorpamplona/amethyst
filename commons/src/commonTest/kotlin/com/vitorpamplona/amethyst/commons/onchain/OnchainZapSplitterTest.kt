@@ -112,6 +112,33 @@ class OnchainZapSplitterTest {
     }
 
     @Test
+    fun prepareDropsSenderAndMergesDuplicates() {
+        val cleaned =
+            OnchainZapSplitter.prepare(
+                rawSplits = listOf(a to 1.0, b to 2.0, a to 1.0, c to 0.0, b to 1.0),
+                senderPubKey = c,
+            )
+        // sender c is dropped, a is merged (1+1=2), b is merged (2+1=3), c=0 filtered too.
+        assertEquals(listOf(a to 2.0, b to 3.0), cleaned)
+    }
+
+    @Test
+    fun prepareDropsSenderEvenIfOnlyEntry() {
+        val cleaned = OnchainZapSplitter.prepare(listOf(a to 1.0), senderPubKey = a)
+        assertTrue(cleaned.isEmpty())
+    }
+
+    @Test
+    fun prepareSkipsNegativeOrZeroWeights() {
+        val cleaned =
+            OnchainZapSplitter.prepare(
+                rawSplits = listOf(a to 1.0, b to 0.0, c to -1.0),
+                senderPubKey = "deadbeef".repeat(8),
+            )
+        assertEquals(listOf(a to 1.0), cleaned)
+    }
+
+    @Test
     fun fractionalWeightsWork() {
         val shares =
             OnchainZapSplitter.distribute(
@@ -124,5 +151,18 @@ class OnchainZapSplitterTest {
         assertTrue(shares[0].sats in 49_900..50_100)
         assertTrue(shares[1].sats in 29_900..30_100)
         assertTrue(shares[2].sats in 19_900..20_100)
+    }
+
+    @Test
+    fun floatingPointWeightsSumExactly() {
+        // 0.1 + 0.2 = 0.30000000000000004 in IEEE-754. Make sure that doesn't
+        // leak a missing or extra sat.
+        val shares =
+            OnchainZapSplitter.distribute(
+                totalSats = 1_000_000L,
+                splits = listOf(a to 0.1, b to 0.2),
+                dustThresholdSats = 330L,
+            )
+        assertEquals(1_000_000L, shares.sumOf { it.sats })
     }
 }

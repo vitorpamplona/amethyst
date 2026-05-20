@@ -196,4 +196,87 @@ class OnchainZapBuilderTest {
         val result = OnchainZapBuilder.build(senderPubKey, recipientPubKey, 25_000L, 2.0, utxos)
         assertTrue(result.selectedUtxos.all { it.confirmations > 0 }, "must not select the 0-conf UTXO")
     }
+
+    @Test
+    fun buildSplitProducesOneOutputPerRecipientPlusChange() {
+        // Three distinct recipients derived from low-entropy private keys; not
+        // for production use but fine for shape assertions.
+        val r1 =
+            Secp256k1Instance
+                .compressedPubKeyFor("000000000000000000000000000000000000000000000000000000000000000b".hexToByteArray())
+                .copyOfRange(1, 33)
+                .toHexKey()
+        val r2 =
+            Secp256k1Instance
+                .compressedPubKeyFor("000000000000000000000000000000000000000000000000000000000000000c".hexToByteArray())
+                .copyOfRange(1, 33)
+                .toHexKey()
+        val r3 =
+            Secp256k1Instance
+                .compressedPubKeyFor("000000000000000000000000000000000000000000000000000000000000000d".hexToByteArray())
+                .copyOfRange(1, 33)
+                .toHexKey()
+
+        val utxos = listOf(utxo(1_000_000L, 1))
+        val result =
+            OnchainZapBuilder.buildSplit(
+                senderPubKey = senderPubKey,
+                recipients = listOf(r1 to 50_000L, r2 to 30_000L, r3 to 20_000L),
+                feeRateSatPerVByte = 5.0,
+                availableUtxos = utxos,
+            )
+
+        assertEquals(100_000L, result.recipientSats)
+        assertTrue(result.changeSats > 0, "should have a change output")
+
+        // Conservation: inputs == sum(outputs) + fee.
+        val inputSum = result.selectedUtxos.sumOf { it.valueSats }
+        assertEquals(inputSum, result.recipientSats + result.changeSats + result.feeSats)
+
+        // 3 recipient outputs + 1 change.
+        val tx = result.psbt.unsignedTx
+        assertEquals(4, tx.outputs.size)
+        assertEquals(50_000L, tx.outputs[0].valueSats)
+        assertEquals(TaprootAddress.scriptPubKeyHexForRecipient(r1).lowercase(), tx.outputs[0].scriptPubKey.toHexKey())
+        assertEquals(30_000L, tx.outputs[1].valueSats)
+        assertEquals(TaprootAddress.scriptPubKeyHexForRecipient(r2).lowercase(), tx.outputs[1].scriptPubKey.toHexKey())
+        assertEquals(20_000L, tx.outputs[2].valueSats)
+        assertEquals(TaprootAddress.scriptPubKeyHexForRecipient(r3).lowercase(), tx.outputs[2].scriptPubKey.toHexKey())
+        // Change is always the last output.
+        assertEquals(result.changeSats, tx.outputs[3].valueSats)
+        assertEquals(senderScriptHex, tx.outputs[3].scriptPubKey.toHexKey())
+    }
+
+    @Test
+    fun buildSplitRejectsDuplicateRecipients() {
+        val utxos = listOf(utxo(1_000_000L, 1))
+        val ex =
+            assertFailsWith<IllegalArgumentException> {
+                OnchainZapBuilder.buildSplit(
+                    senderPubKey = senderPubKey,
+                    recipients = listOf(recipientPubKey to 10_000L, recipientPubKey to 5_000L),
+                    feeRateSatPerVByte = 5.0,
+                    availableUtxos = utxos,
+                )
+            }
+        assertTrue(ex.message!!.contains("distinct"))
+    }
+
+    @Test
+    fun buildSplitRejectsBelowDustRecipient() {
+        val r2 =
+            Secp256k1Instance
+                .compressedPubKeyFor("000000000000000000000000000000000000000000000000000000000000000c".hexToByteArray())
+                .copyOfRange(1, 33)
+                .toHexKey()
+        val utxos = listOf(utxo(1_000_000L, 1))
+        assertFailsWith<IllegalArgumentException> {
+            OnchainZapBuilder.buildSplit(
+                senderPubKey = senderPubKey,
+                recipients = listOf(recipientPubKey to 50_000L, r2 to 100L),
+                feeRateSatPerVByte = 5.0,
+                availableUtxos = utxos,
+            )
+        }
+    }
 }

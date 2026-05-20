@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.onchain.DustRecipientException
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage
+import com.vitorpamplona.amethyst.commons.onchain.OnchainZapShare
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSplitter
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
@@ -161,24 +162,25 @@ fun OnchainZapSendDialog(
     // Pull pubkey-based zap splits off the zapped event. Lightning-address-only
     // splits are dropped because we can't derive a Taproot output from an
     // lnAddress — they appear in [skippedLnSplits] so the UI can warn the user
-    // that those recipients won't be paid on-chain.
+    // that those recipients won't be paid on-chain. The sender's own pubkey is
+    // also dropped (zapping your own post is common; the on-chain builder
+    // refuses self-pays) and duplicate pubkeys are merged.
+    val senderPubKey = accountViewModel.account.signer.pubKey
+    val zappedEventId = zappedEvent?.event?.id
+    val rawSplits =
+        remember(zappedEventId) {
+            zappedEvent?.event?.zapSplitSetup().orEmpty()
+        }
     val onchainSplits =
-        remember(zappedEvent) {
-            zappedEvent
-                ?.event
-                ?.zapSplitSetup()
-                .orEmpty()
-                .filterIsInstance<ZapSplitSetup>()
+        remember(zappedEventId, senderPubKey) {
+            val raw = rawSplits.filterIsInstance<ZapSplitSetup>().map { it.pubKeyHex to it.weight }
+            OnchainZapSplitter.prepare(raw, senderPubKey)
         }
     val skippedLnSplits =
-        remember(zappedEvent) {
-            zappedEvent
-                ?.event
-                ?.zapSplitSetup()
-                .orEmpty()
-                .filterIsInstance<ZapSplitSetupLnAddress>()
+        remember(zappedEventId) {
+            rawSplits.filterIsInstance<ZapSplitSetupLnAddress>()
         }
-    var useSplits by remember(zappedEvent) { mutableStateOf(onchainSplits.isNotEmpty()) }
+    var useSplits by remember(zappedEventId) { mutableStateOf(onchainSplits.isNotEmpty()) }
     val splitMode = useSplits && onchainSplits.isNotEmpty()
 
     LaunchedEffect(Unit) {
@@ -202,13 +204,51 @@ fun OnchainZapSendDialog(
             ?: searchInput.trim().takeIf { it.isNotEmpty() }?.let { decodePublicKeyAsHexOrNull(it) }
             ?: nip05Resolved?.pubkeyHex
     val amountSats = amountInput.trim().toLongOrNull()
+
+    // Preview the per-recipient share allocation. Always compute the full
+    // list (even when some shares would land below dust) so the UI can show
+    // every recipient's amount; the dust offenders are flagged separately
+    // and gate the Send button.
+    val previewShares =
+        remember(splitMode, onchainSplits, amountSats) {
+            if (!splitMode || amountSats == null || amountSats <= 0) {
+                null
+            } else {
+                runCatching {
+                    OnchainZapSplitter.distribute(
+                        totalSats = amountSats,
+                        splits = onchainSplits,
+                        dustThresholdSats = OnchainZapBuilder.DUST_THRESHOLD_SATS,
+                    )
+                }.getOrElse { e ->
+                    if (e is DustRecipientException) {
+                        // Re-run with a 0 dust threshold to get the full shape
+                        // for the preview; the real send still uses the proper
+                        // dust check via [DustRecipientException].
+                        runCatching {
+                            OnchainZapSplitter.distribute(
+                                totalSats = amountSats,
+                                splits = onchainSplits,
+                                dustThresholdSats = 0L,
+                            )
+                        }.getOrNull()
+                    } else {
+                        null
+                    }
+                }
+            }
+        }
+    val belowDustShares =
+        previewShares.orEmpty().filter { it.sats < OnchainZapBuilder.DUST_THRESHOLD_SATS }
+
     val canSend =
         !sending &&
             result == null &&
             (splitMode || resolvedRecipient != null) &&
             amountSats != null &&
             amountSats > 0 &&
-            fees != null
+            fees != null &&
+            (!splitMode || (previewShares != null && belowDustShares.isEmpty()))
 
     ModalBottomSheet(
         onDismissRequest = { if (!sending) onDismiss() },
@@ -261,8 +301,8 @@ fun OnchainZapSendDialog(
                             if (splitMode) {
                                 SplitsRecipientSection(
                                     splits = onchainSplits,
+                                    previewShares = previewShares,
                                     skippedLnSplits = skippedLnSplits,
-                                    amountSats = amountSats,
                                     onDisable = { useSplits = false },
                                     accountViewModel = accountViewModel,
                                 )
@@ -345,7 +385,7 @@ fun OnchainZapSendDialog(
                                                 try {
                                                     OnchainZapSplitter.distribute(
                                                         totalSats = amount,
-                                                        splits = onchainSplits.map { it.pubKeyHex to it.weight },
+                                                        splits = onchainSplits,
                                                         dustThresholdSats = OnchainZapBuilder.DUST_THRESHOLD_SATS,
                                                     )
                                                 } catch (e: DustRecipientException) {
@@ -698,32 +738,15 @@ private fun SendButton(
 
 @Composable
 private fun SplitsRecipientSection(
-    splits: List<ZapSplitSetup>,
+    splits: List<Pair<HexKey, Double>>,
+    previewShares: List<OnchainZapShare>?,
     skippedLnSplits: List<ZapSplitSetupLnAddress>,
-    amountSats: Long?,
     onDisable: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
     SectionLabel("Splits among ${splits.size} recipients")
 
-    // Compute per-recipient shares for the live preview. Below-dust splits are
-    // surfaced inline so the user sees why Send might fail before they tap it.
-    val shares =
-        remember(splits, amountSats) {
-            if (amountSats == null || amountSats <= 0) {
-                null
-            } else {
-                runCatching {
-                    OnchainZapSplitter.distribute(
-                        totalSats = amountSats,
-                        splits = splits.map { it.pubKeyHex to it.weight },
-                        dustThresholdSats = OnchainZapBuilder.DUST_THRESHOLD_SATS,
-                    )
-                }.getOrElse { e ->
-                    if (e is DustRecipientException) e.belowDust else null
-                }
-            }
-        }
+    val totalWeight = splits.sumOf { it.second }
 
     Surface(
         shape = MaterialTheme.shapes.medium,
@@ -731,21 +754,21 @@ private fun SplitsRecipientSection(
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(modifier = Modifier.padding(vertical = 4.dp)) {
-            splits.forEach { split ->
-                val share = shares?.firstOrNull { it.recipientPubKey == split.pubKeyHex }
+            splits.forEach { (pubKey, weight) ->
+                val share = previewShares?.firstOrNull { it.recipientPubKey == pubKey }
                 Row(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     UserPicture(
-                        userHex = split.pubKeyHex,
+                        userHex = pubKey,
                         size = 28.dp,
                         accountViewModel = accountViewModel,
                         nav = EmptyNav(),
                     )
                     Spacer(Modifier.size(8.dp))
                     Text(
-                        text = "${formatWeight(split.weight, splits)}",
+                        text = formatWeight(weight, totalWeight),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f),
@@ -789,10 +812,9 @@ private fun SplitsRecipientSection(
 
 private fun formatWeight(
     weight: Double,
-    all: List<ZapSplitSetup>,
+    totalWeight: Double,
 ): String {
-    val total = all.sumOf { it.weight }
-    val pct = (weight / total) * 100.0
+    val pct = (weight / totalWeight) * 100.0
     return if (pct >= 99.95) {
         "100%"
     } else {

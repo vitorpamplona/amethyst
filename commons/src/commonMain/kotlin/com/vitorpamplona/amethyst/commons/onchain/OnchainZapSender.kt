@@ -87,6 +87,12 @@ sealed interface OnchainZapSendResult {
         val cause: Throwable? = null,
         /** Non-null when the payment was broadcast but a later stage failed. */
         val broadcastTxid: String? = null,
+        /**
+         * Receipt ids that DID publish before the failure, in the order they
+         * were sent. Empty for non-publishing failures and for single-recipient
+         * publishes that fail on the first receipt.
+         */
+        val publishedReceiptEventIds: List<HexKey> = emptyList(),
     ) : OnchainZapSendResult
 }
 
@@ -359,6 +365,7 @@ object OnchainZapSender {
                             "but the next receipt could not be published",
                     cause = e,
                     broadcastTxid = txid,
+                    publishedReceiptEventIds = publishedIds.toList(),
                 )
             }
         }
