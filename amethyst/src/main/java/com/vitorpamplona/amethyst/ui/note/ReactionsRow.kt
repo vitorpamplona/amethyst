@@ -1991,11 +1991,18 @@ fun ZapAmountChoicePopupContent(
                         onLongClick = onChangeAmount,
                     )
                 }
-                ClickableBox(modifier = reactionBox, onClick = onChangeAmount) {
+                ClickableBox(
+                    modifier =
+                        Modifier
+                            .padding(horizontal = 4.dp, vertical = 6.dp)
+                            .size(32.dp)
+                            .padding(7.dp),
+                    onClick = onChangeAmount,
+                ) {
                     Icon(
                         symbol = MaterialSymbols.Tune,
                         contentDescription = stringRes(R.string.quick_zap_amounts),
-                        modifier = Size28Modifier,
+                        modifier = Size18Modifier,
                         tint = MaterialTheme.colorScheme.placeholderText,
                     )
                 }
