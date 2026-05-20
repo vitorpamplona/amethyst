@@ -603,12 +603,14 @@ class Account(
 
     suspend fun updateZapAmounts(
         amountSet: List<Long>,
+        onchainAmountSet: List<Long>,
         selectedZapType: LnZapEvent.ZapType,
         nip47Update: Nip47WalletConnect.Nip47URINorm?,
     ) {
         var changed = false
 
         if (settings.changeZapAmounts(amountSet)) changed = true
+        if (settings.changeOnchainZapAmounts(onchainAmountSet)) changed = true
         if (settings.changeDefaultZapType(selectedZapType)) changed = true
         if (settings.changeZapPaymentRequest(nip47Update)) changed = true
 

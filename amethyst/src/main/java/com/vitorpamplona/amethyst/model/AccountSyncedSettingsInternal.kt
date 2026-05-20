@@ -38,6 +38,7 @@ val DefaultReactions =
     )
 
 val DefaultZapAmounts = listOf(100L, 500L, 1000L)
+val DefaultOnchainZapAmounts = listOf(10_000L, 50_000L, 250_000L)
 val DefaultReportWarningThreshold = 5
 
 @Serializable
@@ -153,6 +154,7 @@ class AccountReactionPreferencesInternal(
 @Serializable
 class AccountZapPreferencesInternal(
     var zapAmountChoices: List<Long> = DefaultZapAmounts,
+    var onchainZapAmountChoices: List<Long> = DefaultOnchainZapAmounts,
     val defaultZapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PUBLIC,
 )
 

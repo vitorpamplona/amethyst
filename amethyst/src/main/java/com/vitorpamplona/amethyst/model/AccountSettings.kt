@@ -267,6 +267,15 @@ class AccountSettings(
         return false
     }
 
+    fun changeOnchainZapAmounts(newAmounts: List<Long>): Boolean {
+        if (syncedSettings.zaps.onchainZapAmountChoices.value != newAmounts) {
+            syncedSettings.zaps.onchainZapAmountChoices.tryEmit(newAmounts.toImmutableList())
+            saveAccountSettings()
+            return true
+        }
+        return false
+    }
+
     fun changeReactionTypes(newTypes: List<String>): Boolean {
         if (syncedSettings.reactions.reactionChoices.value != newTypes) {
             syncedSettings.reactions.reactionChoices.tryEmit(newTypes.toImmutableList())

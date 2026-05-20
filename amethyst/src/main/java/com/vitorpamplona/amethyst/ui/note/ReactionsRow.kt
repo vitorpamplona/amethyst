@@ -136,6 +136,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.routeReplyTo
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.PaymentTargetsDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.OnchainZapSendDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -172,6 +173,7 @@ import com.vitorpamplona.amethyst.ui.theme.reactionBox
 import com.vitorpamplona.amethyst.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.ui.theme.selectedReactionBoxModifier
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
@@ -1121,6 +1123,11 @@ private fun likeClick(
     }
 }
 
+@Immutable
+private data class OnchainZapRequest(
+    val amountSats: Long?,
+)
+
 @Composable
 @OptIn(ExperimentalFoundationApi::class, ExperimentalUuidApi::class)
 fun ZapReaction(
@@ -1135,6 +1142,9 @@ fun ZapReaction(
 ) {
     var wantsToZap by remember { mutableStateOf(false) }
     var wantsToSetCustomZap by remember { mutableStateOf(false) }
+    // null = closed; OnchainZapRequest(amount=null) = open with no prefill;
+    // OnchainZapRequest(amount=N) = open prefilled to N sats.
+    var onchainZapRequest by remember { mutableStateOf<OnchainZapRequest?>(null) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -1207,6 +1217,10 @@ fun ZapReaction(
                         nav.nav(Route.UpdateZapAmount())
                     }
                 },
+                onOnchainAmount = { amount ->
+                    wantsToZap = false
+                    onchainZapRequest = OnchainZapRequest(amount)
+                },
                 onError = { _, message, user ->
                     scope.launch {
                         zappingProgress = 0f
@@ -1227,6 +1241,16 @@ fun ZapReaction(
                         nav.nav(Route.ManualZapSplitPayment(uid))
                     }
                 },
+            )
+        }
+
+        onchainZapRequest?.let { request ->
+            OnchainZapSendDialog(
+                accountViewModel = accountViewModel,
+                onDismiss = { onchainZapRequest = null },
+                recipientPubKey = baseNote.author?.pubkeyHex,
+                zappedEvent = baseNote.toEventHint<Event>(),
+                prefillAmountSats = request.amountSats,
             )
         }
 
@@ -1834,12 +1858,29 @@ fun ZapAmountChoicePopup(
     onError: (title: String, text: String, user: User?) -> Unit,
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
+    onOnchainAmount: ((Long?) -> Unit)? = null,
 ) {
     val zapAmountChoices by
         accountViewModel.account.settings.syncedSettings.zaps.zapAmountChoices
             .collectAsStateWithLifecycle()
+    val onchainZapAmountChoices by
+        accountViewModel.account.settings.syncedSettings.zaps.onchainZapAmountChoices
+            .collectAsStateWithLifecycle()
 
-    ZapAmountChoicePopup(baseNote, zapAmountChoices, accountViewModel, popupYOffset, onZapStarts, onDismiss, onChangeAmount, onError, onProgress, onPayViaIntent)
+    ZapAmountChoicePopup(
+        baseNote = baseNote,
+        zapAmountChoices = zapAmountChoices,
+        accountViewModel = accountViewModel,
+        popupYOffset = popupYOffset,
+        onZapStarts = onZapStarts,
+        onDismiss = onDismiss,
+        onChangeAmount = onChangeAmount,
+        onError = onError,
+        onProgress = onProgress,
+        onPayViaIntent = onPayViaIntent,
+        onchainZapAmountChoices = if (onOnchainAmount != null) onchainZapAmountChoices else persistentListOf(),
+        onOnchainAmount = onOnchainAmount ?: {},
+    )
 }
 
 @Composable
@@ -1854,9 +1895,11 @@ fun ZapAmountChoicePopup(
     onError: (title: String, text: String, user: User?) -> Unit,
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
+    onchainZapAmountChoices: ImmutableList<Long> = persistentListOf(),
+    onOnchainAmount: (Long?) -> Unit = {},
 ) {
     val visibilityState = rememberVisibilityState(onDismiss)
-    ZapAmountChoicePopup(baseNote, zapAmountChoices, accountViewModel, popupYOffset, visibilityState, onZapStarts, onChangeAmount, onError, onProgress, onPayViaIntent)
+    ZapAmountChoicePopup(baseNote, zapAmountChoices, onchainZapAmountChoices, accountViewModel, popupYOffset, visibilityState, onZapStarts, onChangeAmount, onOnchainAmount, onError, onProgress, onPayViaIntent)
 }
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
@@ -1864,11 +1907,13 @@ fun ZapAmountChoicePopup(
 fun ZapAmountChoicePopup(
     baseNote: Note,
     zapAmountChoices: ImmutableList<Long>,
+    onchainZapAmountChoices: ImmutableList<Long>,
     accountViewModel: AccountViewModel,
     popupYOffset: Dp,
     visibilityState: MutableTransitionState<Boolean>,
     onZapStarts: () -> Unit,
     onChangeAmount: () -> Unit,
+    onOnchainAmount: (Long?) -> Unit,
     onError: (title: String, text: String, user: User?) -> Unit,
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
@@ -1889,6 +1934,7 @@ fun ZapAmountChoicePopup(
         ) {
             ZapAmountChoicePopupContent(
                 zapAmountChoices = zapAmountChoices,
+                onchainZapAmountChoices = onchainZapAmountChoices,
                 onZap = { amountInSats ->
                     onZapStarts()
                     accountViewModel.zap(
@@ -1905,6 +1951,10 @@ fun ZapAmountChoicePopup(
                     visibilityState.targetState = false
                 },
                 onChangeAmount = onChangeAmount,
+                onOnchainAmount = { amount ->
+                    onOnchainAmount(amount)
+                    visibilityState.targetState = false
+                },
             )
         }
     }
@@ -1916,6 +1966,8 @@ fun ZapAmountChoicePopupContent(
     zapAmountChoices: ImmutableList<Long>,
     onZap: (Long) -> Unit,
     onChangeAmount: () -> Unit,
+    onchainZapAmountChoices: ImmutableList<Long> = persistentListOf(),
+    onOnchainAmount: (Long?) -> Unit = {},
 ) {
     Box(HalfPadding, contentAlignment = Center) {
         ElevatedCard(
@@ -1923,33 +1975,66 @@ fun ZapAmountChoicePopupContent(
             elevation = CardDefaults.elevatedCardElevation(defaultElevation = 8.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         ) {
-            FlowRow(
-                modifier = Modifier.padding(horizontal = 5.dp, vertical = 5.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalArrangement = Arrangement.Center,
-                itemVerticalAlignment = CenterVertically,
-            ) {
-                zapAmountChoices.forEach { amountInSats ->
-                    ZapAmountChip(
-                        amountInSats = amountInSats,
-                        onClick = { onZap(amountInSats) },
-                        onLongClick = onChangeAmount,
-                    )
-                }
-                ClickableBox(
-                    modifier =
-                        Modifier
-                            .padding(horizontal = 4.dp, vertical = 6.dp)
-                            .size(32.dp)
-                            .padding(7.dp),
-                    onClick = onChangeAmount,
+            Column {
+                FlowRow(
+                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 5.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalArrangement = Arrangement.Center,
+                    itemVerticalAlignment = CenterVertically,
                 ) {
-                    Icon(
-                        symbol = MaterialSymbols.Tune,
-                        contentDescription = stringRes(R.string.quick_zap_amounts),
-                        modifier = Size18Modifier,
-                        tint = MaterialTheme.colorScheme.placeholderText,
-                    )
+                    zapAmountChoices.forEach { amountInSats ->
+                        ZapAmountChip(
+                            amountInSats = amountInSats,
+                            onClick = { onZap(amountInSats) },
+                            onLongClick = onChangeAmount,
+                        )
+                    }
+                    ClickableBox(
+                        modifier =
+                            Modifier
+                                .padding(horizontal = 4.dp, vertical = 6.dp)
+                                .size(32.dp)
+                                .padding(7.dp),
+                        onClick = onChangeAmount,
+                    ) {
+                        Icon(
+                            symbol = MaterialSymbols.Tune,
+                            contentDescription = stringRes(R.string.quick_zap_amounts),
+                            modifier = Size18Modifier,
+                            tint = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    }
+                }
+                if (onchainZapAmountChoices.isNotEmpty()) {
+                    FlowRow(
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 5.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalArrangement = Arrangement.Center,
+                        itemVerticalAlignment = CenterVertically,
+                    ) {
+                        onchainZapAmountChoices.forEach { amountInSats ->
+                            OnchainZapAmountChip(
+                                amountInSats = amountInSats,
+                                onClick = { onOnchainAmount(amountInSats) },
+                                onLongClick = onChangeAmount,
+                            )
+                        }
+                        ClickableBox(
+                            modifier =
+                                Modifier
+                                    .padding(horizontal = 4.dp, vertical = 6.dp)
+                                    .size(32.dp)
+                                    .padding(7.dp),
+                            onClick = { onOnchainAmount(null) },
+                        ) {
+                            Icon(
+                                symbol = MaterialSymbols.Tune,
+                                contentDescription = stringRes(R.string.quick_zap_amounts_onchain),
+                                modifier = Size18Modifier,
+                                tint = MaterialTheme.colorScheme.placeholderText,
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -1992,14 +2077,52 @@ private fun ZapAmountChip(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun OnchainZapAmountChip(
+    amountInSats: Long,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
+    Surface(
+        shape = ButtonBorder,
+        color = BitcoinOrange,
+        modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = CenterVertically,
+        ) {
+            Icon(
+                symbol = MaterialSymbols.CurrencyBitcoin,
+                contentDescription = null,
+                modifier = Size18Modifier,
+                tint = Color.White,
+            )
+            Spacer(Modifier.width(2.dp))
+            Text(
+                text = showAmount(amountInSats.toBigDecimal().setScale(1)),
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
 @Preview
 @Composable
 fun ZapAmountChoicePopupPreview() {
     ThemeComparisonColumn {
         ZapAmountChoicePopupContent(
             zapAmountChoices = persistentListOf(50L, 100L, 500L, 1_000L, 5_000L, 10_000L, 100_000L),
+            onchainZapAmountChoices = persistentListOf(10_000L, 50_000L, 250_000L),
             onZap = {},
             onChangeAmount = {},
+            onOnchainAmount = {},
         )
     }
 }

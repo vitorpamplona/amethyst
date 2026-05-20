@@ -127,6 +127,7 @@ fun OnchainZapSendDialog(
     onDismiss: () -> Unit,
     recipientPubKey: HexKey? = null,
     zappedEvent: EventHintBundle<out Event>? = null,
+    prefillAmountSats: Long? = null,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -141,7 +142,7 @@ fun OnchainZapSendDialog(
 
     var searchInput by remember { mutableStateOf("") }
     var selectedUser by remember { mutableStateOf<User?>(null) }
-    var amountInput by remember { mutableStateOf("") }
+    var amountInput by remember { mutableStateOf(prefillAmountSats?.toString().orEmpty()) }
     var comment by remember { mutableStateOf("") }
     var feeTier by remember { mutableStateOf(FeeTier.NORMAL) }
     var fees by remember { mutableStateOf<FeeEstimates?>(null) }
@@ -155,10 +156,8 @@ fun OnchainZapSendDialog(
             runCatching { withContext(Dispatchers.IO) { backend.feeEstimates() } }.getOrNull()
     }
 
-    val presetAmounts =
-        remember(accountViewModel) {
-            accountViewModel.zapAmountChoices()
-        }
+    val presetAmounts by accountViewModel.account.settings.syncedSettings.zaps.onchainZapAmountChoices
+        .collectAsStateWithLifecycle()
 
     // Mirror the dropdown's NIP-05 / Namecoin (.bit) resolution so Send can
     // enable as soon as the typed name resolves, without forcing the user to
