@@ -37,6 +37,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.stringRes
 import java.text.DateFormat
@@ -45,7 +46,6 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.Date
-import java.util.Locale
 
 /**
  * Tap-to-edit button that opens a Material3 DatePicker (and, when [includeTime] is true,
@@ -67,15 +67,16 @@ fun CalendarDateTimePickerButton(
     var showDate by remember { mutableStateOf(false) }
     var showTime by remember { mutableStateOf(false) }
 
+    val locale = LocalConfiguration.current.locales[0]
     val pretty =
         if (unixSeconds <= 0L) {
             placeholder
         } else if (includeTime) {
             DateFormat
-                .getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
+                .getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, locale)
                 .format(Date(unixSeconds * 1000))
         } else {
-            SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault()).format(Date(unixSeconds * 1000))
+            SimpleDateFormat("EEEE, MMMM d, yyyy", locale).format(Date(unixSeconds * 1000))
         }
 
     val initialMillis = if (unixSeconds > 0L) unixSeconds * 1000L else System.currentTimeMillis()
