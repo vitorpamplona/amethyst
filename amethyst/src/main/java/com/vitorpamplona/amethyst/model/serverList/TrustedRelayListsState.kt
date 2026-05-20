@@ -24,6 +24,8 @@ import com.vitorpamplona.amethyst.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.model.localRelays.LocalRelayListState
 import com.vitorpamplona.amethyst.model.nip17Dms.DmRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListState
+import com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays.IndexerRelayListState
+import com.vitorpamplona.amethyst.model.nip51Lists.proxyRelays.ProxyRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.searchRelays.SearchRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayListState
 import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
@@ -43,6 +45,8 @@ class TrustedRelayListsState(
     val localRelayList: LocalRelayListState,
     val dmRelayList: DmRelayListState,
     val searchRelayListState: SearchRelayListState,
+    val indexerRelayList: IndexerRelayListState,
+    val proxyRelayList: ProxyRelayListState,
     val trustedRelayList: TrustedRelayListState,
     val broadcastRelayList: BroadcastRelayListState,
     val scope: CoroutineScope,
@@ -57,6 +61,8 @@ class TrustedRelayListsState(
                 localRelayList.flow,
                 dmRelayList.flow,
                 searchRelayListState.flowNoDefaults,
+                indexerRelayList.flowNoDefaults,
+                proxyRelayList.flow,
                 trustedRelayList.flow,
                 broadcastRelayList.flow,
             ),
@@ -70,6 +76,8 @@ class TrustedRelayListsState(
                         localRelayList.flow.value,
                         dmRelayList.flow.value,
                         searchRelayListState.flowNoDefaults.value,
+                        indexerRelayList.flowNoDefaults.value,
+                        proxyRelayList.flow.value,
                         trustedRelayList.flow.value,
                         broadcastRelayList.flow.value,
                     ),
@@ -86,6 +94,8 @@ class TrustedRelayListsState(
                         localRelayList.flow.value,
                         dmRelayList.flow.value,
                         searchRelayListState.flowNoDefaults.value,
+                        indexerRelayList.flowNoDefaults.value,
+                        proxyRelayList.flow.value,
                         trustedRelayList.flow.value,
                         broadcastRelayList.flow.value,
                     ),
