@@ -29,19 +29,22 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.actions.UrlUserTagTransformation
+import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
+import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
+import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -123,9 +126,11 @@ fun ForwardZapTo(
             }
         }
 
-        OutlinedTextField(
-            value = postViewModel.forwardZapToEditting.value,
-            onValueChange = { postViewModel.updateZapForwardTo(it) },
+        ThinPaddingTextField(
+            state = postViewModel.forwardZapToEditting,
+            onTextChanged = postViewModel::onForwardZapTextChanged,
+            inputTransformation = MentionPreservingInputTransformation,
+            outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
             label = { Text(text = stringRes(R.string.zap_split_search_and_add_user)) },
             modifier = Modifier.fillMaxWidth(),
             placeholder = {
@@ -135,9 +140,10 @@ fun ForwardZapTo(
                 )
             },
             singleLine = true,
-            visualTransformation =
-                UrlUserTagTransformation(
-                    MaterialTheme.colorScheme.primary,
+            colors =
+                TextFieldDefaults.colors(
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
                 ),
             textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
         )
