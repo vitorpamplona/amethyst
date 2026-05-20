@@ -50,6 +50,7 @@ val UserMetadataForKeyKinds =
 fun filterUserMetadataForKey(
     authors: Set<User>,
     indexRelays: Set<NormalizedRelayUrl>,
+    cannotConnectRelays: Set<NormalizedRelayUrl>,
     since: EOSEAccountFast<User>,
 ): List<RelayBasedFilter> {
     val perRelayUsers =
@@ -59,7 +60,7 @@ fun filterUserMetadataForKey(
                     key.outboxRelays()
                         ?: (key.allUsedRelays() + LocalCache.relayHints.hintsForKey(key.pubkeyHex) + indexRelays)
 
-                relays.forEach {
+                (relays - cannotConnectRelays).forEach {
                     add(it, key)
                 }
             }
