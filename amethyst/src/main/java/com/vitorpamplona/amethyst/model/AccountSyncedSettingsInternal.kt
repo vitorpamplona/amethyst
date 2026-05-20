@@ -67,6 +67,16 @@ val DefaultReactionRowItems =
         ReactionRowItem(ReactionRowAction.Share, showCounter = false),
     )
 
+// Existing accounts have a reaction-row list serialized before some actions
+// existed (e.g. Pay was added later). Append any default items the saved list
+// is missing so new actions surface without forcing a settings reset — the
+// user's existing order/toggles for actions they already have are preserved.
+fun mergeWithDefaultReactionRowItems(saved: List<ReactionRowItem>): List<ReactionRowItem> {
+    val knownActions = saved.mapTo(mutableSetOf()) { it.action }
+    val missing = DefaultReactionRowItems.filter { it.action !in knownActions }
+    return if (missing.isEmpty()) saved else saved + missing
+}
+
 @Serializable
 enum class VideoPlayerAction {
     Fullscreen,

@@ -35,7 +35,7 @@ class AccountSyncedSettings(
     val reactions =
         AccountReactionPreferences(
             MutableStateFlow(internalSettings.reactions.reactionChoices.toImmutableList()),
-            MutableStateFlow(internalSettings.reactions.reactionRowItems.toImmutableList()),
+            MutableStateFlow(mergeWithDefaultReactionRowItems(internalSettings.reactions.reactionRowItems).toImmutableList()),
         )
     val zaps =
         AccountZapPreferences(
@@ -96,7 +96,8 @@ class AccountSyncedSettings(
             reactions.reactionChoices.tryEmit(newReactionChoices)
         }
 
-        val newReactionRowItems = syncedSettingsInternal.reactions.reactionRowItems.toImmutableList()
+        val newReactionRowItems =
+            mergeWithDefaultReactionRowItems(syncedSettingsInternal.reactions.reactionRowItems).toImmutableList()
         if (!equalImmutableLists(reactions.reactionRowItems.value, newReactionRowItems)) {
             reactions.reactionRowItems.tryEmit(newReactionRowItems)
         }
