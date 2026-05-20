@@ -1242,8 +1242,7 @@ fun ZapReaction(
                         )
                     }
                 },
-                onLongClick = { nav.nav(Route.UpdateZapAmount()) },
-                onDoubleClick = { wantsToSetCustomZap = true },
+                onLongClick = { wantsToSetCustomZap = true },
             ),
     ) {
         if (wantsToZap) {
@@ -1260,6 +1259,12 @@ fun ZapReaction(
                     scope.launch {
                         wantsToZap = false
                         nav.nav(Route.UpdateZapAmount())
+                    }
+                },
+                onCustomAmount = {
+                    scope.launch {
+                        wantsToZap = false
+                        wantsToSetCustomZap = true
                     }
                 },
                 onError = { _, message, user ->
@@ -1886,6 +1891,7 @@ fun ZapAmountChoicePopup(
     onZapStarts: () -> Unit,
     onDismiss: () -> Unit,
     onChangeAmount: () -> Unit,
+    onCustomAmount: () -> Unit,
     onError: (title: String, text: String, user: User?) -> Unit,
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
@@ -1894,7 +1900,7 @@ fun ZapAmountChoicePopup(
         accountViewModel.account.settings.syncedSettings.zaps.zapAmountChoices
             .collectAsStateWithLifecycle()
 
-    ZapAmountChoicePopup(baseNote, zapAmountChoices, accountViewModel, popupYOffset, onZapStarts, onDismiss, onChangeAmount, onError, onProgress, onPayViaIntent)
+    ZapAmountChoicePopup(baseNote, zapAmountChoices, accountViewModel, popupYOffset, onZapStarts, onDismiss, onChangeAmount, onCustomAmount, onError, onProgress, onPayViaIntent)
 }
 
 @Composable
@@ -1906,12 +1912,13 @@ fun ZapAmountChoicePopup(
     onZapStarts: () -> Unit,
     onDismiss: () -> Unit,
     onChangeAmount: () -> Unit,
+    onCustomAmount: () -> Unit,
     onError: (title: String, text: String, user: User?) -> Unit,
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
 ) {
     val visibilityState = rememberVisibilityState(onDismiss)
-    ZapAmountChoicePopup(baseNote, zapAmountChoices, accountViewModel, popupYOffset, visibilityState, onZapStarts, onChangeAmount, onError, onProgress, onPayViaIntent)
+    ZapAmountChoicePopup(baseNote, zapAmountChoices, accountViewModel, popupYOffset, visibilityState, onZapStarts, onChangeAmount, onCustomAmount, onError, onProgress, onPayViaIntent)
 }
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
@@ -1924,6 +1931,7 @@ fun ZapAmountChoicePopup(
     visibilityState: MutableTransitionState<Boolean>,
     onZapStarts: () -> Unit,
     onChangeAmount: () -> Unit,
+    onCustomAmount: () -> Unit,
     onError: (title: String, text: String, user: User?) -> Unit,
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
@@ -1960,6 +1968,10 @@ fun ZapAmountChoicePopup(
                     visibilityState.targetState = false
                 },
                 onChangeAmount = onChangeAmount,
+                onCustomAmount = {
+                    visibilityState.targetState = false
+                    onCustomAmount()
+                },
             )
         }
     }
@@ -1971,6 +1983,7 @@ fun ZapAmountChoicePopupContent(
     zapAmountChoices: ImmutableList<Long>,
     onZap: (Long) -> Unit,
     onChangeAmount: () -> Unit,
+    onCustomAmount: () -> Unit,
 ) {
     Box(HalfPadding, contentAlignment = Center) {
         ElevatedCard(
@@ -1988,7 +2001,7 @@ fun ZapAmountChoicePopupContent(
                     ZapAmountChip(
                         amountInSats = amountInSats,
                         onClick = { onZap(amountInSats) },
-                        onLongClick = onChangeAmount,
+                        onLongClick = onCustomAmount,
                     )
                 }
                 ClickableBox(
@@ -2055,6 +2068,7 @@ fun ZapAmountChoicePopupPreview() {
             zapAmountChoices = persistentListOf(50L, 100L, 500L, 1_000L, 5_000L, 10_000L, 100_000L),
             onZap = {},
             onChangeAmount = {},
+            onCustomAmount = {},
         )
     }
 }
