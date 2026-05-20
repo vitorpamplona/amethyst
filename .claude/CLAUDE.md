@@ -306,6 +306,29 @@ actual fun openExternalUrl(url: String) {
 }
 ```
 
+## Icons
+
+The Material Symbols font bundled at
+`commons/src/commonMain/composeResources/font/material_symbols_outlined.ttf`
+is a **subset** that only contains the glyphs referenced from
+`commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/icons/symbols/MaterialSymbols.kt`.
+
+**MANDATORY:** Whenever you add a new icon — i.e. introduce a
+`MaterialSymbol("\uXXXX")` codepoint that wasn't already referenced anywhere in
+`MaterialSymbols.kt` — you MUST regenerate the subset font by running:
+
+```bash
+./tools/material-symbols-subset/subset.sh
+```
+
+Commit the regenerated `material_symbols_outlined.ttf` alongside your
+`MaterialSymbols.kt` change. Without this step the new icon renders as tofu (□)
+at runtime because the glyph is not in the bundled font.
+
+Reusing a codepoint already present in `MaterialSymbols.kt` does NOT require
+regenerating. See `tools/material-symbols-subset/README.md` for details and
+prerequisites (`pip install fonttools brotli`).
+
 ## Code Formatting
 After completing any task that modifies Kotlin files, always run:
 ```
