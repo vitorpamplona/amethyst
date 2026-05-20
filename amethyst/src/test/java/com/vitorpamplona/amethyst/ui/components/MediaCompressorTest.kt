@@ -154,6 +154,88 @@ class MediaCompressorTest {
         }
 
     @Test
+    fun `AVIF media should skip image compressor`() =
+        runTest {
+            // setup
+            val mediaQuality = CompressorQuality.MEDIUM
+            val uri = mockk<Uri>()
+            val contentType = "image/avif"
+
+            mockkObject(MediaCompressorFileUtils)
+            every { MediaCompressorFileUtils.from(any(), any()) } returns File("test")
+            coEvery { Compressor.compress(any(), any(), any(), any()) } returns File("test")
+
+            // execute
+            val result =
+                MediaCompressor().compress(
+                    uri,
+                    contentType,
+                    applicationContext = mockk<Context>(relaxed = true),
+                    mediaQuality = mediaQuality,
+                )
+
+            // verify
+            coVerify(exactly = 0) { Compressor.compress(any(), any(), any(), any()) }
+            assertEquals(uri, result.uri)
+            assertEquals(contentType, result.contentType)
+            assertEquals(null, result.size)
+        }
+
+    @Test
+    fun `AVIF sequence media should skip image compressor`() =
+        runTest {
+            // setup
+            val mediaQuality = CompressorQuality.HIGH
+            val uri = mockk<Uri>()
+            val contentType = "image/avif-sequence"
+
+            mockkObject(MediaCompressorFileUtils)
+            every { MediaCompressorFileUtils.from(any(), any()) } returns File("test")
+            coEvery { Compressor.compress(any(), any(), any(), any()) } returns File("test")
+
+            val result =
+                MediaCompressor().compress(
+                    uri,
+                    contentType,
+                    applicationContext = mockk<Context>(relaxed = true),
+                    mediaQuality = mediaQuality,
+                )
+
+            coVerify(exactly = 0) { Compressor.compress(any(), any(), any(), any()) }
+            assertEquals(uri, result.uri)
+            assertEquals(contentType, result.contentType)
+            assertEquals(null, result.size)
+        }
+
+    @Test
+    fun `Avif extension without mime should skip image compressor`() =
+        runTest {
+            // setup
+            val mediaQuality = CompressorQuality.MEDIUM
+            val uri = mockk<Uri>()
+            val contentType = "image"
+
+            every { uri.path } returns "/tmp/sample.avif"
+
+            mockkObject(MediaCompressorFileUtils)
+            every { MediaCompressorFileUtils.from(any(), any()) } returns File("test")
+            coEvery { Compressor.compress(any(), any(), any(), any()) } returns File("test")
+
+            val result =
+                MediaCompressor().compress(
+                    uri,
+                    contentType,
+                    applicationContext = mockk<Context>(relaxed = true),
+                    mediaQuality = mediaQuality,
+                )
+
+            coVerify(exactly = 0) { Compressor.compress(any(), any(), any(), any()) }
+            assertEquals(uri, result.uri)
+            assertEquals(contentType, result.contentType)
+            assertEquals(null, result.size)
+        }
+
+    @Test
     fun `Image compression should return back same uri on exception`() =
         runTest {
             // setup

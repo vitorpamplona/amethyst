@@ -41,6 +41,20 @@ class MediaCompressorResult(
 )
 
 class MediaCompressor {
+    private fun isAvif(
+        contentType: String?,
+        uri: Uri,
+    ): Boolean {
+        val mimeIsAvif =
+            contentType?.startsWith("image/", ignoreCase = true) == true &&
+                contentType.contains("avif", ignoreCase = true)
+        if (mimeIsAvif) return true
+
+        val uriPath = uri.path ?: return false
+        return uriPath.endsWith(".avif", ignoreCase = true) ||
+            uriPath.endsWith(".avif-sequence", ignoreCase = true)
+    }
+
     // ALL ERRORS ARE IGNORED. The original file is returned.
     suspend fun compress(
         uri: Uri,
@@ -77,9 +91,16 @@ class MediaCompressor {
             }
 
             contentType?.startsWith("image", ignoreCase = true) == true &&
-                !contentType.contains("gif") &&
-                !contentType.contains("svg") -> {
+                !contentType.contains("gif", ignoreCase = true) &&
+                !contentType.contains("svg", ignoreCase = true) &&
+                !isAvif(contentType, uri) -> {
                 compressImage(uri, contentType, applicationContext, mediaQuality)
+            }
+
+            isAvif(contentType, uri) -> {
+                // AVIF upload should preserve original bytes and mime type to avoid JPEG
+                // re-encoding and quality loss.
+                MediaCompressorResult(uri, contentType, null)
             }
 
             else -> {

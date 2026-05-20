@@ -42,6 +42,20 @@ data class StrippingResult(
 object MetadataStripper {
     private const val DEFAULT_REMUX_BUFFER_SIZE = 8 * 1024 * 1024
 
+    private fun isAvif(
+        mimeType: String?,
+        uri: Uri,
+    ): Boolean {
+        val mimeIsAvif =
+            mimeType?.startsWith("image/", ignoreCase = true) == true &&
+                mimeType.contains("avif", ignoreCase = true)
+        if (mimeIsAvif) return true
+
+        val uriPath = uri.path ?: return false
+        return uriPath.endsWith(".avif", ignoreCase = true) ||
+            uriPath.endsWith(".avif-sequence", ignoreCase = true)
+    }
+
     private val SENSITIVE_EXIF_TAGS =
         arrayOf(
             ExifInterface.TAG_GPS_LATITUDE,
@@ -398,6 +412,9 @@ object MetadataStripper {
         context: Context,
     ): StrippingResult =
         when {
+            // ExifInterface does not support AVIF metadata rewriting reliably, so keep the
+            // original media and mark this as handled to avoid blocking uploads.
+            isAvif(mimeType, uri) -> StrippingResult(uri, true)
             mimeType?.startsWith("image/", ignoreCase = true) == true -> stripImageMetadata(uri, context)
             mimeType?.startsWith("video/", ignoreCase = true) == true -> stripVideoMetadata(uri, context)
             mimeType?.equals("audio/mpeg", ignoreCase = true) == true -> stripMp3Metadata(uri, context)
