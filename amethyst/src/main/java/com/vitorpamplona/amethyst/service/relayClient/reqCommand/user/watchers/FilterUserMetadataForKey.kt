@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -43,6 +44,7 @@ val UserMetadataForKeyKinds =
         AdvertisedRelayListEvent.KIND,
         ChatMessageRelayListEvent.KIND,
         KeyPackageRelayListEvent.KIND,
+        PaymentTargetsEvent.KIND,
     )
 
 fun filterUserMetadataForKey(
