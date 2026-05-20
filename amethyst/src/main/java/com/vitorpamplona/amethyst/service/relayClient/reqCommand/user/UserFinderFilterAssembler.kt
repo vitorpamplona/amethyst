@@ -48,7 +48,7 @@ class UserFinderFilterAssembler(
     val group =
         listOf(
             UserOutboxFinderSubAssembler(client, cache, failureTracker, ::allKeys),
-            UserWatcherSubAssembler(client, cache, ::allKeys),
+            UserWatcherSubAssembler(client, cache, failureTracker, ::allKeys),
             UserReportsSubAssembler(client, cache, ::allKeys),
             UserCardsSubAssembler(client, cache, ::allKeys),
         )
