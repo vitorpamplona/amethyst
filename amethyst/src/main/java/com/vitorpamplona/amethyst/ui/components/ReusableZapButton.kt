@@ -170,9 +170,6 @@ fun ReusableZapButton(
                 onChangeAmount = {
                     wantsToZap = null
                 },
-                onCustomAmount = {
-                    wantsToZap = null
-                },
                 onError = { _, message, user ->
                     scope.launch {
                         zappingProgress = 0f

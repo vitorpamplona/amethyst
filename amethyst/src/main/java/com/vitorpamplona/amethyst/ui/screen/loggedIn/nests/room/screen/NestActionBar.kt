@@ -437,9 +437,10 @@ private fun EndCluster(
  * applies the user's configured zap amount choices the same way the
  * normal note ⚡ button does (single-tap fires the default amount;
  * multi-choice opens [ZapAmountChoicePopup]; an unconfigured account
- * opens [ZapCustomDialog]). Inside the multi-choice popup the Tune
- * button jumps to the [Route.UpdateZapAmount] settings screen and
- * long-press on a chip opens [ZapCustomDialog].
+ * opens [ZapCustomDialog]). Long-press routes to the
+ * [Route.UpdateZapAmount] settings screen via the activity's
+ * [BouncingIntentNav] (no-op when the route can't be expressed as a
+ * `nostr:` URI — same fallback as the chat panel uses).
  */
 @OptIn(ExperimentalUuidApi::class)
 @Composable
@@ -534,12 +535,6 @@ private fun NestZapButton(
                 scope.launch {
                     wantsToZap = false
                     nav.nav(Route.UpdateZapAmount())
-                }
-            },
-            onCustomAmount = {
-                scope.launch {
-                    wantsToZap = false
-                    wantsToSetCustomZap = true
                 }
             },
             onError = { _, message, user ->
