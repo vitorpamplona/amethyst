@@ -1995,7 +1995,10 @@
     <string name="calendar_reminder_settings_enabled_subtitle">A notification fires when an event you\'re attending is about to start.</string>
     <string name="calendar_reminder_settings_lead_title">Reminder lead time</string>
     <string name="calendar_reminder_settings_lead_subtitle">How many minutes before the event you want to be notified.</string>
-    <string name="calendar_reminder_settings_lead_choice">%1$d min</string>
+    <plurals name="calendar_reminder_settings_lead_choice">
+        <item quantity="one">%1$d min</item>
+        <item quantity="other">%1$d min</item>
+    </plurals>
     <string name="calendar_share_nostr">Share as nostr link</string>
     <string name="calendar_share_nostr_title">Share calendar link</string>
     <string name="calendar_filter_all">All calendars</string>

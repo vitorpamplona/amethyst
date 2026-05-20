@@ -1763,7 +1763,9 @@
     <string name="calendar_reminder_settings_enabled_subtitle">您正参加的活动即将开始时发出通知。</string>
     <string name="calendar_reminder_settings_lead_title">提前相隔时间</string>
     <string name="calendar_reminder_settings_lead_subtitle">您想要在活动前几分钟被通知。</string>
-    <string name="calendar_reminder_settings_lead_choice">%1$d 分钟</string>
+    <plurals name="calendar_reminder_settings_lead_choice">
+        <item quantity="other">%1$d 分钟</item>
+    </plurals>
     <string name="calendar_share_nostr">作为 nostr 链接分享</string>
     <string name="calendar_share_nostr_title">共享日历链接</string>
     <string name="calendar_filter_all">所有日历</string>

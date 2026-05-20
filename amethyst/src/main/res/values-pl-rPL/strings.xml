@@ -665,7 +665,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="nest_participant_follow">Obserwuj</string>
     <string name="nest_participant_unfollow">Nie obserwuj</string>
     <string name="nest_participant_mute">Wycisz</string>
-    <string name="nest_participant_unmute">Włącz dźwięk</string>
+    <string name="nest_participant_unmute">Odblokuj</string>
     <string name="nest_force_mute_note">Klienci, którzy nie obsługują tej opcji, mogą ją pominąć.</string>
     <string name="nest_confirm_kick_title">Wyrzucić z pokoju?</string>
     <string name="nest_confirm_kick_body">%1$s zostanie usunięty/ta z platformy audio i wykreślony/na z listy uczestników. Ponowne dołączenie będzie możliwe, po otrzymaniu linku do pokoju.</string>
@@ -1728,6 +1728,12 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="calendar_day_of_total">Dzień %1$d z %2$d</string>
     <string name="calendar_add_to_phone_calendar">Dodaj do kalendarza w telefonie</string>
     <string name="calendar_nav_jump_to_today">Przejdź do dzisiaj</string>
+    <plurals name="calendar_day_a11y_events">
+        <item quantity="one">%1$s, %2$d wydarzenie</item>
+        <item quantity="few">%1$s, %2$d wydarzeń</item>
+        <item quantity="many">%1$s, wydarzeń %2$d</item>
+        <item quantity="other">%1$s, %2$d wydarzeń</item>
+    </plurals>
     <string name="calendar_day_a11y_today_suffix">dziś</string>
     <string name="calendar_day_a11y_selected_suffix">zaznaczone</string>
     <string name="calendar_fab_new_event">Utwórz nowe wydarzenie kalendarza</string>
@@ -1741,9 +1747,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="calendar_collection_title">Tytuł</string>
     <string name="calendar_collection_description">Opis</string>
     <string name="calendar_collection_invalid">Tytuł jest wymagany.</string>
-    <plurals name="calendar_collection_count">
-        <item quantity="other">Wydarzeń: %1$d</item>
-    </plurals>
     <string name="calendar_collection_empty_members">Brak wydarzeń w tym kalendarzu.</string>
     <string name="calendar_rsvp_going">Będę</string>
     <string name="calendar_rsvp_maybe">Może</string>
@@ -1762,9 +1765,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="calendar_reminder_channel_name">Przypomnienia w kalendarzu</string>
     <string name="calendar_reminder_channel_description">Powiadomienie, gdy wydarzenie, w którym bierzesz udział, ma się właśnie rozpocząć.</string>
     <string name="calendar_reminder_default_title">Wydarzenie w kalendarzu</string>
-    <plurals name="calendar_reminder_body">
-        <item quantity="other">Rozpoczęcie za %1$d min.</item>
-    </plurals>
     <string name="calendar_add_to_calendar_action">Dodaj do jednego z kalendarzy</string>
     <string name="calendar_add_to_calendar_title">Dodaj do kalendarza</string>
     <string name="calendar_add_to_calendar_none">Nie utworzyłeś jeszcze żadnych kalendarzy.</string>
@@ -1783,7 +1783,12 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="calendar_reminder_settings_enabled_subtitle">Powiadomienie pojawia się, gdy zbliża się rozpoczęcie wydarzenia, w którym bierzesz udział.</string>
     <string name="calendar_reminder_settings_lead_title">Przypomnienie o terminie realizacji</string>
     <string name="calendar_reminder_settings_lead_subtitle">Ile minut przed wydarzeniem chcesz zostać powiadomiony.</string>
-    <string name="calendar_reminder_settings_lead_choice">%1$d min.</string>
+    <plurals name="calendar_reminder_settings_lead_choice">
+        <item quantity="one">%1$d min.</item>
+        <item quantity="few">%1$d min.</item>
+        <item quantity="many">%1$d min.</item>
+        <item quantity="other">%1$d min.</item>
+    </plurals>
     <string name="calendar_share_nostr">Udostępnij jako link nostr</string>
     <string name="calendar_share_nostr_title">Udostępnij link do kalendarza</string>
     <string name="calendar_filter_all">Wszystkie kalendarze</string>
