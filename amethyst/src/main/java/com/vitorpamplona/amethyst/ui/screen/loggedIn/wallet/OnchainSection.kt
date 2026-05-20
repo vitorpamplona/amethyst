@@ -242,9 +242,11 @@ private fun PublicChip() {
                     "Your Taproot address is derived from your Nostr public key, " +
                         "so anyone who knows your npub can see this wallet's balance " +
                         "and transaction history on the blockchain.\n\n" +
-                        "To preserve your privacy, use private channels — not Nostr " +
-                        "events — when funding or draining this wallet, and avoid " +
-                        "linking deposits or withdrawals to identifiable activity.",
+                        "To preserve your privacy, fund and drain this wallet from " +
+                        "and to non-private accounts, like exchanges. Never mix " +
+                        "these funds with your cold wallets, and treat them as " +
+                        "money you can lose, since anyone in control of your nsec " +
+                        "can spend it.",
                 )
             },
             confirmButton = {
