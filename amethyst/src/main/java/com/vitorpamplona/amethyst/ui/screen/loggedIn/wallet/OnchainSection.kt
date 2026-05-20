@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -43,6 +44,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -180,6 +182,8 @@ private fun HeaderRow(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
+                Spacer(modifier = Modifier.width(8.dp))
+                PublicChip()
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -190,6 +194,65 @@ private fun HeaderRow(
         }
 
         BalanceBlock(state = balanceState, sats = balanceSats, orange = orange)
+    }
+}
+
+@Composable
+private fun PublicChip() {
+    var showDialog by remember { mutableStateOf(false) }
+    val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
+
+    Row(
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(onSurfaceVariant.copy(alpha = 0.12f))
+                .clickable { showDialog = true }
+                .padding(horizontal = 6.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Info,
+            contentDescription = null,
+            tint = onSurfaceVariant,
+            modifier = Modifier.size(12.dp),
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = "Public",
+            style = MaterialTheme.typography.labelSmall,
+            color = onSurfaceVariant,
+            fontWeight = FontWeight.Medium,
+        )
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            icon = {
+                Icon(
+                    symbol = MaterialSymbols.Info,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                )
+            },
+            title = { Text("This wallet is public") },
+            text = {
+                Text(
+                    "Your Taproot address is derived from your Nostr public key, " +
+                        "so anyone who knows your npub can see this wallet's balance " +
+                        "and transaction history on the blockchain.\n\n" +
+                        "To preserve your privacy, use private channels — not Nostr " +
+                        "events — when funding or draining this wallet, and avoid " +
+                        "linking deposits or withdrawals to identifiable activity.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("Got it")
+                }
+            },
+        )
     }
 }
 
