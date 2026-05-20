@@ -608,18 +608,7 @@ private fun AmountSection(
 ) {
     SectionLabel("Amount")
 
-    OutlinedTextField(
-        value = amountInput,
-        onValueChange = { onAmountChange(it.filter(Char::isDigit)) },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        placeholder = { Text("0") },
-        suffix = { Text("sats", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-        modifier = Modifier.fillMaxWidth(),
-    )
-
     if (presetAmounts.isNotEmpty()) {
-        Spacer(Modifier.height(8.dp))
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -632,7 +621,18 @@ private fun AmountSection(
                 )
             }
         }
+        Spacer(Modifier.height(8.dp))
     }
+
+    OutlinedTextField(
+        value = amountInput,
+        onValueChange = { onAmountChange(it.filter(Char::isDigit)) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        placeholder = { Text("0") },
+        suffix = { Text("sats", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

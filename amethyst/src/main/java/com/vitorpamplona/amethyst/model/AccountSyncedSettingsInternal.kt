@@ -38,7 +38,7 @@ val DefaultReactions =
     )
 
 val DefaultZapAmounts = listOf(100L, 500L, 1000L)
-val DefaultOnchainZapAmounts = listOf(10_000L, 50_000L, 250_000L)
+val DefaultOnchainZapAmounts = listOf(10_000L)
 val DefaultReportWarningThreshold = 5
 
 @Serializable
