@@ -30,6 +30,8 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.service.uploads.AVIF_MIME_TYPE
+import com.vitorpamplona.amethyst.service.uploads.AVIF_SEQUENCE_MIME_TYPE
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.service.uploads.PreviewMetadataCalculator
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -239,7 +241,9 @@ class Nip96Uploader {
     // carries a real extension — otherwise the server gets "name." and echoes it back, which
     // breaks HLS URL rewriting.
     private fun fallbackExtensionForMimeType(mimeType: String): String? =
-        when (mimeType.lowercase()) {
+        when (mimeType.substringBefore(";").trim().lowercase()) {
+            AVIF_MIME_TYPE -> "avif"
+            AVIF_SEQUENCE_MIME_TYPE -> "avif"
             "application/vnd.apple.mpegurl", "application/x-mpegurl", "audio/x-mpegurl", "audio/mpegurl" -> "m3u8"
             "video/mp2t" -> "ts"
             "video/iso.segment", "video/mp4" -> "mp4"

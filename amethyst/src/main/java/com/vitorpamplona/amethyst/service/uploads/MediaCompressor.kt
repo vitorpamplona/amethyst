@@ -78,7 +78,8 @@ class MediaCompressor {
 
             contentType?.startsWith("image", ignoreCase = true) == true &&
                 !contentType.contains("gif") &&
-                !contentType.contains("svg") -> {
+                !contentType.contains("svg") &&
+                !contentType.isAvifMimeType() -> {
                 compressImage(uri, contentType, applicationContext, mediaQuality)
             }
 

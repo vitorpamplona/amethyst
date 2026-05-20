@@ -154,6 +154,38 @@ class MediaCompressorTest {
         }
 
     @Test
+    fun `AVIF images should not be converted to JPEG compressor output`() =
+        runTest {
+            val mediaQuality = CompressorQuality.MEDIUM
+            val uri = mockk<Uri>()
+            val contentTypes =
+                listOf(
+                    "image/avif",
+                    "image/avif; codecs=avif",
+                    "image/avif-sequence",
+                )
+
+            mockkObject(MediaCompressorFileUtils)
+            every { MediaCompressorFileUtils.from(any(), any()) } returns File("test")
+            coEvery { Compressor.compress(any(), any(), any(), any()) } returns File("compressed")
+
+            contentTypes.forEach { contentType ->
+                val result =
+                    MediaCompressor().compress(
+                        uri,
+                        contentType,
+                        applicationContext = mockk<Context>(relaxed = true),
+                        mediaQuality = mediaQuality,
+                    )
+
+                assertEquals(uri, result.uri)
+                assertEquals(contentType, result.contentType)
+                assertEquals(null, result.size)
+            }
+            coVerify(exactly = 0) { Compressor.compress(any(), any(), any(), any()) }
+        }
+
+    @Test
     fun `Image compression should return back same uri on exception`() =
         runTest {
             // setup
