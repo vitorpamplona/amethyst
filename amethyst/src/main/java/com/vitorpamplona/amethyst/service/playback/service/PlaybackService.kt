@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.amethyst.service.playback.service
 
+import android.app.ForegroundServiceStartNotAllowedException
+import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import androidx.annotation.OptIn
 import androidx.core.net.toUri
 import androidx.media3.common.C
@@ -136,6 +139,29 @@ class PlaybackService : MediaSessionService() {
         super.onCreate()
         Log.d("PlaybackService", "PlaybackService.onCreate")
     }
+
+    override fun onStartCommand(
+        intent: Intent?,
+        flags: Int,
+        startId: Int,
+    ): Int =
+        try {
+            super.onStartCommand(intent, flags, startId)
+        } catch (e: IllegalStateException) {
+            // Media3's MediaSessionService.onStartCommand can call stopSelfSafely() when there is
+            // no active playback to handle a delivered intent (e.g. a MEDIA_BUTTON from a headset
+            // arriving while the app is backgrounded). stopSelfSafely() invokes startForeground()
+            // to detach the foreground notification before stopping, which Android 12+ rejects
+            // from the background with ForegroundServiceStartNotAllowedException. There is no
+            // playback to keep alive in this path, so swallow it and stop the service.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && e is ForegroundServiceStartNotAllowedException) {
+                Log.w("PlaybackService") { "Foreground service start not allowed; stopping PlaybackService" }
+                stopSelf()
+                START_NOT_STICKY
+            } else {
+                throw e
+            }
+        }
 
     override fun onDestroy() {
         Log.d("PlaybackService", "PlaybackService.onDestroy")
