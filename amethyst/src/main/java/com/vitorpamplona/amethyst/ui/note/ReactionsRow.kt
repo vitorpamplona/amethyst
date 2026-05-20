@@ -1976,66 +1976,40 @@ fun ZapAmountChoicePopupContent(
             elevation = CardDefaults.elevatedCardElevation(defaultElevation = 8.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         ) {
-            Column {
-                FlowRow(
-                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 5.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalArrangement = Arrangement.Center,
-                    itemVerticalAlignment = CenterVertically,
-                ) {
-                    zapAmountChoices.forEach { amountInSats ->
-                        ZapAmountChip(
-                            amountInSats = amountInSats,
-                            onClick = { onZap(amountInSats) },
-                            onLongClick = onChangeAmount,
-                        )
-                    }
-                    ClickableBox(
-                        modifier =
-                            Modifier
-                                .padding(horizontal = 4.dp, vertical = 6.dp)
-                                .size(32.dp)
-                                .padding(7.dp),
-                        onClick = onChangeAmount,
-                    ) {
-                        Icon(
-                            symbol = MaterialSymbols.Tune,
-                            contentDescription = stringRes(R.string.quick_zap_amounts),
-                            modifier = Size18Modifier,
-                            tint = MaterialTheme.colorScheme.placeholderText,
-                        )
-                    }
+            FlowRow(
+                modifier = Modifier.padding(horizontal = 5.dp, vertical = 5.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalArrangement = Arrangement.Center,
+                itemVerticalAlignment = CenterVertically,
+            ) {
+                zapAmountChoices.forEach { amountInSats ->
+                    ZapAmountChip(
+                        amountInSats = amountInSats,
+                        onClick = { onZap(amountInSats) },
+                        onLongClick = onChangeAmount,
+                    )
                 }
-                if (onchainZapAmountChoices.isNotEmpty()) {
-                    FlowRow(
-                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 5.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalArrangement = Arrangement.Center,
-                        itemVerticalAlignment = CenterVertically,
-                    ) {
-                        onchainZapAmountChoices.forEach { amountInSats ->
-                            OnchainZapAmountChip(
-                                amountInSats = amountInSats,
-                                onClick = { onOnchainAmount(amountInSats) },
-                                onLongClick = onChangeAmount,
-                            )
-                        }
-                        ClickableBox(
-                            modifier =
-                                Modifier
-                                    .padding(horizontal = 4.dp, vertical = 6.dp)
-                                    .size(32.dp)
-                                    .padding(7.dp),
-                            onClick = { onOnchainAmount(null) },
-                        ) {
-                            Icon(
-                                symbol = MaterialSymbols.Tune,
-                                contentDescription = stringRes(R.string.quick_zap_amounts_onchain),
-                                modifier = Size18Modifier,
-                                tint = MaterialTheme.colorScheme.placeholderText,
-                            )
-                        }
-                    }
+                onchainZapAmountChoices.forEach { amountInSats ->
+                    OnchainZapAmountChip(
+                        amountInSats = amountInSats,
+                        onClick = { onOnchainAmount(amountInSats) },
+                        onLongClick = onChangeAmount,
+                    )
+                }
+                ClickableBox(
+                    modifier =
+                        Modifier
+                            .padding(horizontal = 4.dp, vertical = 6.dp)
+                            .size(32.dp)
+                            .padding(7.dp),
+                    onClick = onChangeAmount,
+                ) {
+                    Icon(
+                        symbol = MaterialSymbols.Tune,
+                        contentDescription = stringRes(R.string.quick_zap_amounts),
+                        modifier = Size18Modifier,
+                        tint = MaterialTheme.colorScheme.placeholderText,
+                    )
                 }
             }
         }

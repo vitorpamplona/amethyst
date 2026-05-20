@@ -306,7 +306,40 @@ fun UpdateZapAmountContent(
             )
         }
 
-        // ── Section 2: Quick On-chain Zap Amounts ─────────────────────────────
+        // ── Section 2: Zap Privacy ────────────────────────────────────────────
+
+        Text(
+            text = stringRes(R.string.zap_privacy_section),
+            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.titleSmall,
+            modifier = SettingsCategorySpacingModifier,
+        )
+        Text(
+            text = stringRes(R.string.zap_type_section_explainer),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.placeholderText,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TextSpinner(
+                label = stringRes(id = R.string.zap_type_explainer),
+                placeholder =
+                    zapTypes
+                        .firstOrNull { it.first == accountViewModel.defaultZapType() }
+                        ?.second
+                        ?: zapTypes.firstOrNull()?.second
+                        ?: "",
+                options = zapOptions,
+                onSelect = { postViewModel.selectedZapType = zapTypes[it].first },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
+        // ── Section 3: Quick On-chain Zap Amounts ─────────────────────────────
 
         Text(
             text = stringRes(R.string.quick_zap_amounts_onchain),
@@ -395,40 +428,7 @@ fun UpdateZapAmountContent(
             )
         }
 
-        // ── Section 3: Zap Privacy ────────────────────────────────────────────
-
-        Text(
-            text = stringRes(R.string.zap_privacy_section),
-            color = MaterialTheme.colorScheme.primary,
-            style = MaterialTheme.typography.titleSmall,
-            modifier = SettingsCategorySpacingModifier,
-        )
-        Text(
-            text = stringRes(R.string.zap_type_section_explainer),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.placeholderText,
-            modifier = Modifier.padding(bottom = 8.dp),
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextSpinner(
-                label = stringRes(id = R.string.zap_type_explainer),
-                placeholder =
-                    zapTypes
-                        .firstOrNull { it.first == accountViewModel.defaultZapType() }
-                        ?.second
-                        ?: zapTypes.firstOrNull()?.second
-                        ?: "",
-                options = zapOptions,
-                onSelect = { postViewModel.selectedZapType = zapTypes[it].first },
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-
-        // ── Section 3: Nostr Wallet Connect ───────────────────────────────────
+        // ── Section 4: Nostr Wallet Connect ───────────────────────────────────
 
         HorizontalDivider(
             modifier = Modifier.padding(vertical = 16.dp),
