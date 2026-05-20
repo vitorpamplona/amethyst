@@ -52,6 +52,7 @@ class UiSettingsFlow(
     val showProfileAppRecommendations: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val showProfileZapReceivedFeed: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val showProfileFollowersFeed: MutableStateFlow<Boolean> = MutableStateFlow(true),
+    val dontShowOnchainPublicWarning: MutableStateFlow<Boolean> = MutableStateFlow(false),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
@@ -78,6 +79,7 @@ class UiSettingsFlow(
             showProfileAppRecommendations,
             showProfileZapReceivedFeed,
             showProfileFollowersFeed,
+            dontShowOnchainPublicWarning,
         )
 
     // emits at every change in any of the propertyes.
@@ -108,6 +110,7 @@ class UiSettingsFlow(
                 flows[20] as Boolean,
                 flows[21] as Boolean,
                 flows[22] as Boolean,
+                flows[23] as Boolean,
             )
         }
 
@@ -136,6 +139,7 @@ class UiSettingsFlow(
             showProfileAppRecommendations.value,
             showProfileZapReceivedFeed.value,
             showProfileFollowersFeed.value,
+            dontShowOnchainPublicWarning.value,
         )
 
     fun update(torSettings: UiSettings): Boolean {
@@ -233,6 +237,10 @@ class UiSettingsFlow(
             showProfileFollowersFeed.tryEmit(torSettings.showProfileFollowersFeed)
             any = true
         }
+        if (dontShowOnchainPublicWarning.value != torSettings.dontShowOnchainPublicWarning) {
+            dontShowOnchainPublicWarning.tryEmit(torSettings.dontShowOnchainPublicWarning)
+            any = true
+        }
 
         return any
     }
@@ -246,6 +254,12 @@ class UiSettingsFlow(
     fun dontAskForNotificationPermissions() {
         if (!dontAskForNotificationPermissions.value) {
             dontAskForNotificationPermissions.tryEmit(true)
+        }
+    }
+
+    fun dontShowOnchainPublicWarning() {
+        if (!dontShowOnchainPublicWarning.value) {
+            dontShowOnchainPublicWarning.tryEmit(true)
         }
     }
 
@@ -275,6 +289,7 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.showProfileAppRecommendations),
                 MutableStateFlow(uiSettings.showProfileZapReceivedFeed),
                 MutableStateFlow(uiSettings.showProfileFollowersFeed),
+                MutableStateFlow(uiSettings.dontShowOnchainPublicWarning),
             )
     }
 }

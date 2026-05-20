@@ -26,6 +26,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -62,6 +63,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -360,7 +362,15 @@ private fun ActionRow(
 ) {
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
+    val sharedPrefs = accountViewModel.settings.uiSettingsFlow
+    val dontShowCopyWarning by sharedPrefs.dontShowOnchainPublicWarning.collectAsStateWithLifecycle()
     var showSendDialog by remember { mutableStateOf(false) }
+    var showCopyWarning by remember { mutableStateOf(false) }
+
+    val copyAddress = {
+        scope.launch { clipboard.setText(address) }
+        Unit
+    }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -368,7 +378,13 @@ private fun ActionRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         OutlinedButton(
-            onClick = { scope.launch { clipboard.setText(address) } },
+            onClick = {
+                if (dontShowCopyWarning) {
+                    copyAddress()
+                } else {
+                    showCopyWarning = true
+                }
+            },
             modifier = Modifier.height(36.dp),
             shape = RoundedCornerShape(8.dp),
         ) {
@@ -409,4 +425,62 @@ private fun ActionRow(
             onDismiss = { showSendDialog = false },
         )
     }
+
+    if (showCopyWarning) {
+        CopyPublicAddressDialog(
+            onConfirm = {
+                showCopyWarning = false
+                copyAddress()
+            },
+            onDontShowAgain = {
+                sharedPrefs.dontShowOnchainPublicWarning()
+                showCopyWarning = false
+                copyAddress()
+            },
+            onDismiss = { showCopyWarning = false },
+        )
+    }
+}
+
+@Composable
+private fun CopyPublicAddressDialog(
+    onConfirm: () -> Unit,
+    onDontShowAgain: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                symbol = MaterialSymbols.Info,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+            )
+        },
+        title = { Text(stringRes(R.string.wallet_onchain_public_dialog_title)) },
+        text = { Text(stringRes(R.string.wallet_onchain_public_dialog_body)) },
+        confirmButton = {
+            Row(
+                modifier = Modifier.padding(all = 8.dp).fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(onClick = onDontShowAgain) {
+                    Text(stringRes(R.string.quick_action_dont_show_again_button))
+                }
+                Button(
+                    onClick = onConfirm,
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                ) {
+                    Icon(
+                        symbol = MaterialSymbols.ContentCopy,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringRes(R.string.wallet_onchain_copy_dialog_confirm))
+                }
+            }
+        },
+    )
 }
