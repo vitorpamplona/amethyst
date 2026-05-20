@@ -127,6 +127,7 @@ import com.vitorpamplona.amethyst.ui.note.types.AudioTrackHeader
 import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBlockedRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBroadcastRelayList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayContactList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayDMRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayFollowList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayIndexerRelayList
@@ -228,6 +229,7 @@ import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
@@ -623,6 +625,8 @@ private fun FullBleedNoteCompose(
                     DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is FollowListEvent) {
                     DisplayFollowList(baseNote, false, accountViewModel, nav)
+                } else if (noteEvent is ContactListEvent) {
+                    DisplayContactList(baseNote, accountViewModel, nav)
                 } else if (noteEvent is AudioTrackEvent) {
                     AudioTrackHeader(noteEvent, baseNote, ContentScale.FillWidth, accountViewModel, nav)
                 } else if (noteEvent is AudioHeaderEvent) {
