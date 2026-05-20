@@ -2426,6 +2426,9 @@
     <string name="remove_user_from_the_list">Remove user from the list</string>
     <string name="follow_list_item_label">Follow Pack</string>
     <string name="members">Members</string>
+    <string name="contact_list_containing_label">Follow list containing %1$d user(s):</string>
+    <string name="contact_list_screen_title">Follow list</string>
+    <string name="contact_list_screen_title_with_count">Follow list (%1$d)</string>
 
     <string name="people_list_title">Follow List Metadata</string>
     <string name="people_list_explainer">Follow lists metadata can be seen by anyone on Nostr. Only your private members are encrypted.</string>

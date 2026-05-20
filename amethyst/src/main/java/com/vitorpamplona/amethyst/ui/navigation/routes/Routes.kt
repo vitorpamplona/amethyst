@@ -350,6 +350,10 @@ sealed class Route {
         val id: String,
     ) : Route()
 
+    @Serializable data class ContactListUsers(
+        val noteId: String,
+    ) : Route()
+
     @Serializable data class Hashtag(
         val hashtag: String,
     ) : Route()
