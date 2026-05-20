@@ -23,14 +23,17 @@ package com.vitorpamplona.amethyst.service.uploads
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.ImageDecoder
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.os.Build
 import com.vitorpamplona.amethyst.commons.blurhash.toBlurhash
 import com.vitorpamplona.amethyst.commons.thumbhash.toThumbhash
 import com.vitorpamplona.amethyst.service.images.BlurhashWrapper
 import com.vitorpamplona.amethyst.service.images.ThumbhashWrapper
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.Log
+import java.nio.ByteBuffer
 
 /**
  * Result of precomputing placeholder metadata during an upload. The bitmap or video thumbnail is
@@ -61,6 +64,33 @@ object PreviewMetadataCalculator {
             inPreferredConfig = Bitmap.Config.ARGB_8888
         }
 
+    private fun decodeImageBitmapFromBytes(
+        data: ByteArray,
+        mimeType: String?,
+    ): Bitmap? =
+        if (mimeType.isAvifMimeType() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ImageDecoder.decodeBitmap(ImageDecoder.createSource(ByteBuffer.wrap(data))) { decoder, _, _ ->
+                decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+            }
+        } else {
+            BitmapFactory.decodeByteArray(data, 0, data.size, createBitmapOptions())
+        }
+
+    private fun decodeImageBitmapFromUri(
+        context: Context,
+        uri: Uri,
+        mimeType: String?,
+    ): Bitmap? =
+        if (mimeType.isAvifMimeType() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, uri)) { decoder, _, _ ->
+                decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+            }
+        } else {
+            context.contentResolver.openInputStream(uri)?.use { stream ->
+                BitmapFactory.decodeStream(stream, null, createBitmapOptions())
+            }
+        }
+
     fun computeFromBytes(
         data: ByteArray,
         mimeType: String?,
@@ -68,7 +98,7 @@ object PreviewMetadataCalculator {
     ): PreviewHashes =
         when {
             isImage(mimeType) -> {
-                val bitmap = BitmapFactory.decodeByteArray(data, 0, data.size, createBitmapOptions())
+                val bitmap = decodeImageBitmapFromBytes(data, mimeType)
                 processImage(bitmap, dimPrecomputed)
             }
 
@@ -98,10 +128,7 @@ object PreviewMetadataCalculator {
         return try {
             when {
                 isImage(mimeType) -> {
-                    context.contentResolver.openInputStream(uri)?.use { stream ->
-                        val bitmap = BitmapFactory.decodeStream(stream, null, createBitmapOptions())
-                        processImage(bitmap, dimPrecomputed)
-                    } ?: PreviewHashes(dim = dimPrecomputed)
+                    processImage(decodeImageBitmapFromUri(context, uri, mimeType), dimPrecomputed)
                 }
 
                 isVideo(mimeType) -> {

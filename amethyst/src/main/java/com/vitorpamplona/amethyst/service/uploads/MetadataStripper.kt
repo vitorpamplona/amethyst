@@ -27,6 +27,7 @@ import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
 import android.media.MediaMuxer
 import android.net.Uri
+import android.os.Build
 import androidx.core.net.toUri
 import androidx.exifinterface.media.ExifInterface
 import com.vitorpamplona.quartz.utils.Log
@@ -298,6 +299,49 @@ object MetadataStripper {
         }
     }
 
+    fun stripAvifMetadata(
+        uri: Uri,
+        context: Context,
+    ): StrippingResult {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return StrippingResult(uri, false)
+
+        var tempFile: File? = null
+        return try {
+            tempFile = File.createTempFile("checked_avif_", ".avif", context.cacheDir)
+
+            val inputStream =
+                context.contentResolver.openInputStream(uri)
+                    ?: run {
+                        if (!tempFile.delete()) {
+                            Log.w("MetadataStripper") { "Failed to delete temp file: ${tempFile.absolutePath}" }
+                        }
+                        return StrippingResult(uri, false)
+                    }
+            inputStream.use { input ->
+                tempFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            val exif = ExifInterface(tempFile.absolutePath)
+            val hasSensitiveExif = SENSITIVE_EXIF_TAGS.any { !exif.getAttribute(it).isNullOrBlank() }
+
+            if (!tempFile.delete()) {
+                Log.w("MetadataStripper") { "Failed to delete temp file: ${tempFile.absolutePath}" }
+            }
+            tempFile = null
+
+            StrippingResult(uri, !hasSensitiveExif)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            if (tempFile?.delete() == false) {
+                Log.w("MetadataStripper") { "Failed to delete temp file: ${tempFile.absolutePath}" }
+            }
+            Log.d("MetadataStripper") { "Failed to inspect AVIF metadata: ${e.message}" }
+            StrippingResult(uri, false)
+        }
+    }
+
     fun stripMp3Metadata(
         uri: Uri,
         context: Context,
@@ -398,6 +442,7 @@ object MetadataStripper {
         context: Context,
     ): StrippingResult =
         when {
+            mimeType.isAvifMimeType() -> stripAvifMetadata(uri, context)
             mimeType?.startsWith("image/", ignoreCase = true) == true -> stripImageMetadata(uri, context)
             mimeType?.startsWith("video/", ignoreCase = true) == true -> stripVideoMetadata(uri, context)
             mimeType?.equals("audio/mpeg", ignoreCase = true) == true -> stripMp3Metadata(uri, context)
