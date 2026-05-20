@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.model.nip56Reports.ReportAction
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSender
+import com.vitorpamplona.amethyst.commons.onchain.OnchainZapShare
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsOrchestrator
@@ -795,6 +796,34 @@ class Account(
             senderPubKey = signer.pubKey,
             recipientPubKey = recipientPubKey,
             amountSats = amountSats,
+            feeRateSatPerVByte = feeRateSatPerVByte,
+            comment = comment,
+            zappedEvent = zappedEvent,
+        ) { template -> signAndComputeBroadcast(template) }
+    }
+
+    /**
+     * Send a NIP-BC onchain split zap: a single Bitcoin transaction paying
+     * each recipient their precomputed share, plus one kind:8333 receipt per
+     * recipient. See [OnchainZapSender.sendSplit] for failure semantics.
+     */
+    suspend fun sendOnchainZapWithSplits(
+        recipients: List<OnchainZapShare>,
+        feeRateSatPerVByte: Double,
+        comment: String = "",
+        zappedEvent: EventHintBundle<out Event>? = null,
+    ): OnchainZapSendResult {
+        val backend =
+            cache.onchainBackend
+                ?: return OnchainZapSendResult.Failure(
+                    OnchainZapSendStage.LOADING_UTXOS,
+                    "Bitcoin chain backend is not configured",
+                )
+        return OnchainZapSender.sendSplit(
+            backend = backend,
+            signer = signer,
+            senderPubKey = signer.pubKey,
+            recipients = recipients,
             feeRateSatPerVByte = feeRateSatPerVByte,
             comment = comment,
             zappedEvent = zappedEvent,

@@ -1,0 +1,93 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.onchain
+
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+
+/** A per-recipient share of an onchain split zap. */
+data class OnchainZapShare(
+    val recipientPubKey: HexKey,
+    val sats: Long,
+    val weight: Double,
+)
+
+/** Thrown when one or more recipient shares fall below the configured dust threshold. */
+class DustRecipientException(
+    val belowDust: List<OnchainZapShare>,
+    val dustThresholdSats: Long,
+) : RuntimeException(
+        "Recipients below dust threshold ($dustThresholdSats sats): " +
+            belowDust.joinToString { "${it.recipientPubKey.take(8)}…=${it.sats}" },
+    )
+
+/**
+ * Distributes a total amount of sats across weighted recipients using integer
+ * math, leaving every share `>= dustThresholdSats` or throwing.
+ *
+ * Distribution rules:
+ *   - share_i = floor(totalSats * weight_i / totalWeight)
+ *   - the rounding remainder is added one-sat at a time to the recipients with
+ *     the largest weights (largest first; ties broken by input order) so the
+ *     sum of shares equals `totalSats` exactly
+ *   - any share that lands below dust is reported via [DustRecipientException]
+ */
+object OnchainZapSplitter {
+    fun distribute(
+        totalSats: Long,
+        splits: List<Pair<HexKey, Double>>,
+        dustThresholdSats: Long,
+    ): List<OnchainZapShare> {
+        require(totalSats > 0) { "total must be positive" }
+        require(splits.isNotEmpty()) { "splits must be non-empty" }
+        require(splits.none { it.second <= 0.0 }) { "weights must be positive" }
+
+        val totalWeight = splits.sumOf { it.second }
+
+        // Floor every share, then distribute the leftover one sat at a time in
+        // descending-weight order — gives the largest recipients the rounding
+        // benefit and avoids drifting the small ones below dust by accident.
+        val shares = LongArray(splits.size)
+        var assigned = 0L
+        splits.forEachIndexed { i, (_, weight) ->
+            val s = (totalSats * weight / totalWeight).toLong()
+            shares[i] = s
+            assigned += s
+        }
+        val remainder = totalSats - assigned
+        if (remainder > 0) {
+            val orderByWeight =
+                splits.indices.sortedWith(
+                    compareByDescending<Int> { splits[it].second }.thenBy { it },
+                )
+            for (k in 0 until remainder.toInt()) {
+                shares[orderByWeight[k % orderByWeight.size]] += 1
+            }
+        }
+
+        val result =
+            splits.mapIndexed { i, (pubKey, weight) ->
+                OnchainZapShare(recipientPubKey = pubKey, sats = shares[i], weight = weight)
+            }
+        val belowDust = result.filter { it.sats < dustThresholdSats }
+        if (belowDust.isNotEmpty()) throw DustRecipientException(belowDust, dustThresholdSats)
+        return result
+    }
+}
