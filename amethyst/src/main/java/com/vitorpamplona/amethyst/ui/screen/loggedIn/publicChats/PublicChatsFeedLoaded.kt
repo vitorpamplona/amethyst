@@ -35,6 +35,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -76,6 +77,12 @@ fun PublicChatsFeedLoaded(
         remember(items.list, followedSet) {
             items.list.filter { it.idHex !in followedSet }
         }
+
+    LaunchedEffect(pinned.firstOrNull()?.idHex, unpinned.firstOrNull()?.idHex) {
+        if (listState.firstVisibleItemIndex <= 1) {
+            listState.animateScrollToItem(0)
+        }
+    }
 
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),
