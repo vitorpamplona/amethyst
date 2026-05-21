@@ -33,18 +33,28 @@ import java.util.concurrent.ConcurrentHashMap
  * for the core request/response matching logic.
  *
  * Flow:
- * 1. When sending payment request: [registerRequest] stores callback
- * 2. When response arrives: [onResponseReceived] retrieves and removes pending request
+ * 1. When sending payment request: [registerRequest] stores callback and the
+ *    expected wallet-service pubkey
+ * 2. When response arrives: [onResponseReceived] retrieves the pending request
+ *    only if the response author matches the expected wallet-service pubkey
  * 3. Caller invokes callback and links notes via Note.addZapPayment()
+ *
+ * Author verification is required because the relay subscription filters by
+ * request id only (matching Primal's filter shape). An attacker who observes
+ * the request on the relay could otherwise forge a response with their own
+ * keypair and trick the client into displaying attacker-controlled data.
  */
 class NwcPaymentTracker {
     /**
      * Data for a pending payment request.
      *
+     * @property expectedServicePubkey Pubkey of the wallet service we sent
+     *   the request to. Only a response signed by this key is accepted.
      * @property zappedNote The note being zapped, if payment is for a zap
      * @property onResponse Callback to invoke when wallet responds
      */
     data class PendingRequest(
+        val expectedServicePubkey: HexKey,
         val zappedNote: Note?,
         val onResponse: suspend (LnZapPaymentResponseEvent) -> Unit,
     )
@@ -55,27 +65,57 @@ class NwcPaymentTracker {
      * Registers a pending payment request.
      *
      * @param requestId Event ID of the LnZapPaymentRequestEvent
+     * @param expectedServicePubkey Wallet service pubkey from the request's `p` tag
      * @param zappedNote The note being zapped (null if not a zap payment)
      * @param onResponse Callback invoked when response arrives
      */
     fun registerRequest(
         requestId: HexKey,
+        expectedServicePubkey: HexKey,
         zappedNote: Note?,
         onResponse: suspend (LnZapPaymentResponseEvent) -> Unit,
     ) {
-        awaitingRequests[requestId] = PendingRequest(zappedNote, onResponse)
+        awaitingRequests[requestId] = PendingRequest(expectedServicePubkey, zappedNote, onResponse)
+    }
+
+    /** Outcome of matching a response event against the pending-requests table. */
+    sealed interface MatchResult {
+        /** No pending request for this request id (or the id was null). */
+        data object NoMatch : MatchResult
+
+        /** A pending request exists but the response author does not match. */
+        data class WrongAuthor(
+            val expected: HexKey,
+            val actual: HexKey,
+        ) : MatchResult
+
+        /** Response is authentic; the pending request has been removed. */
+        data class Matched(
+            val pending: PendingRequest,
+        ) : MatchResult
     }
 
     /**
-     * Called when a payment response event is received.
-     * Retrieves and removes the pending request for the given request ID.
+     * Looks up the pending request for the given response. Only consumes (and
+     * returns [MatchResult.Matched]) when the response author matches the
+     * stored [PendingRequest.expectedServicePubkey] — a forged response is
+     * left in the map so the legitimate one can still resolve it.
      *
-     * @param requestId The 'e' tag from the response, pointing to original request
-     * @return PendingRequest if found, null otherwise
+     * @param requestId The `e` tag from the response, pointing to original request
+     * @param responseAuthor The `pubkey` field of the response event
      */
-    fun onResponseReceived(requestId: HexKey?): PendingRequest? {
-        if (requestId == null) return null
-        return awaitingRequests.remove(requestId)
+    fun onResponseReceived(
+        requestId: HexKey?,
+        responseAuthor: HexKey,
+    ): MatchResult {
+        if (requestId == null) return MatchResult.NoMatch
+        val pending = awaitingRequests[requestId] ?: return MatchResult.NoMatch
+        if (pending.expectedServicePubkey != responseAuthor) {
+            return MatchResult.WrongAuthor(pending.expectedServicePubkey, responseAuthor)
+        }
+        // Author matches — atomically remove and return.
+        val removed = awaitingRequests.remove(requestId) ?: return MatchResult.NoMatch
+        return MatchResult.Matched(removed)
     }
 
     /**
