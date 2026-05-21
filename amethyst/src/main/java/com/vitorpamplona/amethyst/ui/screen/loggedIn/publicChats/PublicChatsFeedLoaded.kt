@@ -23,14 +23,19 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -47,30 +52,58 @@ fun PublicChatsFeedLoaded(
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
+    val followedSet by accountViewModel.account.publicChatList.flowSet
+        .collectAsStateWithLifecycle()
+
+    val pinned =
+        remember(followedSet) {
+            followedSet.mapNotNull { idHex ->
+                LocalCache.getNoteIfExists(idHex)?.takeIf { it.event is ChannelCreateEvent }
+            }
+        }
 
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
+        items(
+            pinned,
+            key = { item -> "pinned-" + item.idHex },
+            contentType = { item -> item.event?.kind ?: -1 },
+        ) { item ->
+            PublicChatRow(item, accountViewModel, nav)
+        }
+
         itemsIndexed(
             items.list,
             key = { _, item -> item.idHex },
             contentType = { _, item -> item.event?.kind ?: -1 },
         ) { _, item ->
-            Row(Modifier.fillMaxWidth().animateItem()) {
-                ChannelCardCompose(
-                    baseNote = item,
-                    routeForLastRead = "PublicChatsFeed",
-                    modifier = Modifier.fillMaxWidth(),
-                    forceEventKind = ChannelCreateEvent.KIND,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
+            if (item.idHex !in followedSet) {
+                PublicChatRow(item, accountViewModel, nav)
             }
-
-            HorizontalDivider(
-                thickness = DividerThickness,
-            )
         }
     }
+}
+
+@Composable
+private fun LazyItemScope.PublicChatRow(
+    item: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Row(Modifier.fillMaxWidth().animateItem()) {
+        ChannelCardCompose(
+            baseNote = item,
+            routeForLastRead = "PublicChatsFeed",
+            modifier = Modifier.fillMaxWidth(),
+            forceEventKind = ChannelCreateEvent.KIND,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
+
+    HorizontalDivider(
+        thickness = DividerThickness,
+    )
 }

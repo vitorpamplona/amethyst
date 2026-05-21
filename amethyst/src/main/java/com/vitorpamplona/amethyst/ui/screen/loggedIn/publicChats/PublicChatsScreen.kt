@@ -106,10 +106,8 @@ fun WatchAccountForPublicChatsScreen(
     val hiddenUsers =
         accountViewModel.account.hiddenUsers.flow
             .collectAsStateWithLifecycle()
-    val followedChats by accountViewModel.account.publicChatList.flowSet
-        .collectAsStateWithLifecycle()
 
-    LaunchedEffect(accountViewModel, listState, hiddenUsers, followedChats) {
+    LaunchedEffect(accountViewModel, listState, hiddenUsers) {
         publicChatsFeedState.checkKeysInvalidateDataAndSendToTop()
     }
 }
