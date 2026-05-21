@@ -62,6 +62,11 @@ fun PublicChatsFeedLoaded(
             }
         }
 
+    val unpinned =
+        remember(items.list, followedSet) {
+            items.list.filter { it.idHex !in followedSet }
+        }
+
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
@@ -75,13 +80,11 @@ fun PublicChatsFeedLoaded(
         }
 
         itemsIndexed(
-            items.list,
+            unpinned,
             key = { _, item -> item.idHex },
             contentType = { _, item -> item.event?.kind ?: -1 },
         ) { _, item ->
-            if (item.idHex !in followedSet) {
-                PublicChatRow(item, accountViewModel, nav)
-            }
+            PublicChatRow(item, accountViewModel, nav)
         }
     }
 }
