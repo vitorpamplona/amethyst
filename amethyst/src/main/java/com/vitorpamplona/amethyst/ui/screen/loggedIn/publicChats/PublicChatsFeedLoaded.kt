@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,6 +31,7 @@ import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -49,7 +52,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.ChannelCardCompose
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 
 @Composable
@@ -87,6 +89,12 @@ fun PublicChatsFeedLoaded(
             PublicChatRow(item, pinned = true, accountViewModel, nav)
         }
 
+        if (pinned.isNotEmpty() && unpinned.isNotEmpty()) {
+            item(key = "pinned-unpinned-gap", contentType = "section-gap") {
+                Box(Modifier.fillMaxWidth().height(8.dp))
+            }
+        }
+
         itemsIndexed(
             unpinned,
             key = { _, item -> item.idHex },
@@ -114,15 +122,11 @@ private fun LazyItemScope.PublicChatRow(
             nav = nav,
         )
         if (pinned) {
-            Icon(
-                symbol = MaterialSymbols.PushPin,
-                contentDescription = null,
+            PinBadge(
                 modifier =
                     Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(10.dp)
-                        .size(16.dp),
-                tint = MaterialTheme.colorScheme.placeholderText,
+                        .align(Alignment.TopStart)
+                        .padding(start = 14.dp, top = 14.dp),
             )
         }
     }
@@ -130,4 +134,25 @@ private fun LazyItemScope.PublicChatRow(
     HorizontalDivider(
         thickness = DividerThickness,
     )
+}
+
+@Composable
+private fun PinBadge(modifier: Modifier = Modifier) {
+    Box(
+        modifier =
+            modifier
+                .size(22.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                    shape = CircleShape,
+                ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            symbol = MaterialSymbols.PushPin,
+            contentDescription = null,
+            modifier = Modifier.size(14.dp),
+            tint = MaterialTheme.colorScheme.onSurface,
+        )
+    }
 }
