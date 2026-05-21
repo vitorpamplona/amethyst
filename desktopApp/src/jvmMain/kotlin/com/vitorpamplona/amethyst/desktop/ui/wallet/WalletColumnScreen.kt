@@ -200,9 +200,11 @@ fun WalletColumnScreen(
                     )
 
                     TextButton(onClick = {
-                        accountManager.clearNwcConnection()
-                        balanceSats = null
-                        scope.launch { snackbarHostState.showSnackbar("Wallet disconnected") }
+                        scope.launch {
+                            accountManager.clearNwcConnection(account.npub)
+                            balanceSats = null
+                            snackbarHostState.showSnackbar("Wallet disconnected")
+                        }
                     }) {
                         Text("Disconnect", color = MaterialTheme.colorScheme.error)
                     }
@@ -222,12 +224,13 @@ fun WalletColumnScreen(
         ConnectWalletDialog(
             onDismiss = { showConnectDialog = false },
             onConnect = { uri ->
-                val result = accountManager.setNwcConnection(uri)
-                if (result.isSuccess) {
-                    showConnectDialog = false
-                    scope.launch { snackbarHostState.showSnackbar("Wallet connected!") }
+                scope.launch {
+                    val result = accountManager.setNwcConnection(account.npub, uri)
+                    if (result.isSuccess) {
+                        showConnectDialog = false
+                        snackbarHostState.showSnackbar("Wallet connected!")
+                    }
                 }
-                result.isSuccess
             },
         )
     }
@@ -378,7 +381,7 @@ private fun WalletBalanceCard(
 @Composable
 private fun ConnectWalletDialog(
     onDismiss: () -> Unit,
-    onConnect: (String) -> Boolean,
+    onConnect: (String) -> Unit,
 ) {
     var nwcUri by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
@@ -429,7 +432,10 @@ private fun ConnectWalletDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    if (!onConnect(nwcUri)) {
+                    val trimmed = nwcUri.trim()
+                    if (trimmed.startsWith("nostr+walletconnect://")) {
+                        onConnect(trimmed)
+                    } else {
                         error = "Invalid NWC URI. Expected: nostr+walletconnect://..."
                     }
                 },
