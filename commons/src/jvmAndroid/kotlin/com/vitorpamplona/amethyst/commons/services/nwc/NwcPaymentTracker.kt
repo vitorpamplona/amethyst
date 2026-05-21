@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Tracks pending NIP-47 (Nostr Wallet Connect) payment requests awaiting responses.
@@ -53,11 +54,17 @@ class NwcPaymentTracker {
      * @property zappedNote The note being zapped, if payment is for a zap
      * @property onResponse Callback to invoke when wallet responds
      */
-    data class PendingRequest(
+    class PendingRequest(
         val expectedServicePubkey: HexKey,
         val zappedNote: Note?,
         val onResponse: suspend (LnZapPaymentResponseEvent) -> Unit,
-    )
+    ) {
+        // Number of kind-23195 events that targeted this request id with the
+        // right `e` tag but the wrong author. Surfaced to the UI when a
+        // request times out so an actual attack can be distinguished from
+        // an unresponsive wallet.
+        val spoofAttempts = AtomicInteger(0)
+    }
 
     private val awaitingRequests = ConcurrentHashMap<HexKey, PendingRequest>(10)
 
@@ -111,11 +118,21 @@ class NwcPaymentTracker {
         if (requestId == null) return MatchResult.NoMatch
         val pending = awaitingRequests[requestId] ?: return MatchResult.NoMatch
         if (pending.expectedServicePubkey != responseAuthor) {
+            pending.spoofAttempts.incrementAndGet()
             return MatchResult.WrongAuthor(pending.expectedServicePubkey, responseAuthor)
         }
         // Author matches — atomically remove and return.
         val removed = awaitingRequests.remove(requestId) ?: return MatchResult.NoMatch
         return MatchResult.Matched(removed)
+    }
+
+    /**
+     * Number of spoofed (wrong-author) replies that arrived for this request.
+     * Returns 0 if the request is unknown or has already been resolved.
+     */
+    fun spoofAttemptsFor(requestId: HexKey?): Int {
+        if (requestId == null) return 0
+        return awaitingRequests[requestId]?.spoofAttempts?.get() ?: 0
     }
 
     /**

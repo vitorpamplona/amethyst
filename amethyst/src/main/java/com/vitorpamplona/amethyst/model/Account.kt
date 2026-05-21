@@ -735,10 +735,23 @@ class Account(
         walletUri: Nip47WalletConnect.Nip47URINorm,
         request: Request,
         onResponse: (Response?) -> Unit,
-    ) {
+    ): HexKey {
         val (event, relay) = nip47SignerState.sendNwcRequestToWallet(walletUri, request, onResponse)
         client.publish(event, setOf(relay))
+        return event.id
     }
+
+    /**
+     * Number of spoofed (wrong-author) NIP-47 replies that have arrived for
+     * the given request id. 0 if the request is unknown or already resolved.
+     */
+    fun nwcSpoofAttempts(requestId: HexKey): Int = LocalCache.paymentTracker.spoofAttemptsFor(requestId)
+
+    /**
+     * Removes a pending NIP-47 request from the tracker. Call this when the
+     * UI gives up waiting (timeout) so the entry doesn't stick around.
+     */
+    fun cleanupNwcRequest(requestId: HexKey) = LocalCache.paymentTracker.cleanup(requestId)
 
     suspend fun sendZapPaymentRequestFor(
         bolt11: String,
