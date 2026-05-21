@@ -37,8 +37,8 @@ val DefaultReactions =
         "\uD83D\uDE31",
     )
 
-val DefaultZapAmounts = listOf(100L, 500L, 1000L)
-val DefaultOnchainZapAmounts = listOf(10_000L)
+val DefaultZapAmounts = listOf(21L, 50L, 100L)
+val DefaultOnchainZapAmounts = listOf(5_000L)
 val DefaultReportWarningThreshold = 5
 
 @Serializable

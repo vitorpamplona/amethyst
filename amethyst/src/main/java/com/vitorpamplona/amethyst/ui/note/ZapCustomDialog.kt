@@ -236,7 +236,7 @@ fun ZapCustomDialog(
                         ),
                     placeholder = {
                         Text(
-                            text = "100, 1000, 5000",
+                            text = "21, 50, 100",
                             color = MaterialTheme.colorScheme.placeholderText,
                         )
                     },

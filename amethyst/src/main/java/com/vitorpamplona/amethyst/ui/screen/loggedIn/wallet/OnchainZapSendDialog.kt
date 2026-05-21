@@ -99,6 +99,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.NumberFormat
 
+// UX floor for onchain zaps. Below this any on-chain transaction is dominated
+// by miner fees — the recipient nets close to nothing even at low fee rates,
+// so quietly funneling the user to a Lightning zap is the friendlier outcome.
+// This is stricter than the protocol-level [OnchainZapBuilder.DUST_THRESHOLD_SATS]
+// (330 sats), which only guards against creating outputs the network rejects.
+private const val MIN_ONCHAIN_ZAP_SATS = 1_000L
+
 private enum class FeeTier(
     val label: String,
     val etaLabel: String,
@@ -242,12 +249,14 @@ fun OnchainZapSendDialog(
             previewShares.orEmpty().filter { it.sats < OnchainZapBuilder.DUST_THRESHOLD_SATS }
         }
 
+    val belowMinimum = amountSats != null && amountSats > 0 && amountSats < MIN_ONCHAIN_ZAP_SATS
+
     val canSend =
         !sending &&
             result == null &&
             (splitMode || (resolvedRecipient != null && resolvedRecipient != senderPubKey)) &&
             amountSats != null &&
-            amountSats > 0 &&
+            amountSats >= MIN_ONCHAIN_ZAP_SATS &&
             fees != null &&
             (!splitMode || (previewShares != null && belowDustShares.isEmpty()))
 
@@ -353,6 +362,7 @@ fun OnchainZapSendDialog(
                                 amountInput = amountInput,
                                 onAmountChange = { amountInput = it },
                                 presetAmounts = presetAmounts,
+                                belowMinimum = belowMinimum,
                             )
 
                             SectionSpacer()
@@ -610,6 +620,7 @@ private fun AmountSection(
     amountInput: String,
     onAmountChange: (String) -> Unit,
     presetAmounts: List<Long>,
+    belowMinimum: Boolean,
 ) {
     SectionLabel("Amount")
 
@@ -636,8 +647,20 @@ private fun AmountSection(
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         placeholder = { Text("0") },
         suffix = { Text("sats", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+        isError = belowMinimum,
         modifier = Modifier.fillMaxWidth(),
     )
+
+    if (belowMinimum) {
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text =
+                "Minimum on-chain zap is ${NumberFormat.getNumberInstance().format(MIN_ONCHAIN_ZAP_SATS)} sats — " +
+                    "smaller amounts are eaten by miner fees. Use a Lightning zap instead.",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.error,
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
