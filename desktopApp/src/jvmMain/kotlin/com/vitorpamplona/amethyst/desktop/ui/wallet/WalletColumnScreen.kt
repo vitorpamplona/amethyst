@@ -119,22 +119,26 @@ fun WalletColumnScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Centered home content
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Column(
-                modifier = Modifier.widthIn(max = 360.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+        if (nwcConnection == null) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
             ) {
-                if (nwcConnection == null) {
-                    NoWalletContent(onConnect = { showConnectDialog = true })
-                } else {
+                NoWalletContent(onConnect = { showConnectDialog = true })
+            }
+        } else {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Column(
+                    modifier = Modifier.widthIn(max = 360.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
                     WalletBalanceCard(
                         balanceSats = balanceSats,
                         isLoading = isLoadingBalance,
