@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -258,6 +259,7 @@ fun OnchainZapSendDialog(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .fillMaxHeight()
                     .imePadding()
                     .navigationBarsPadding(),
         ) {
@@ -268,6 +270,7 @@ fun OnchainZapSendDialog(
                     Column(
                         modifier =
                             Modifier
+                                .weight(1f, fill = false)
                                 .verticalScroll(rememberScrollState())
                                 .padding(horizontal = 20.dp, vertical = 12.dp),
                     ) {
@@ -280,6 +283,7 @@ fun OnchainZapSendDialog(
                     Column(
                         modifier =
                             Modifier
+                                .weight(1f, fill = false)
                                 .verticalScroll(rememberScrollState())
                                 .padding(horizontal = 20.dp, vertical = 12.dp),
                     ) {
@@ -295,6 +299,7 @@ fun OnchainZapSendDialog(
                         Column(
                             modifier =
                                 Modifier
+                                    .weight(1f, fill = false)
                                     .verticalScroll(rememberScrollState())
                                     .padding(horizontal = 20.dp),
                         ) {
