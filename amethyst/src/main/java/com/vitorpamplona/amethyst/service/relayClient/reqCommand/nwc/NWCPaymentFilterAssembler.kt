@@ -48,5 +48,17 @@ class NWCPaymentFilterAssembler(
 
     override fun invalidateKeys() = invalidateFilters()
 
+    /**
+     * Synchronously sends the REQ frame to the relay, bypassing the 500ms
+     * BundledUpdate debounce. Used for NIP-47 RPC where the response is an
+     * ephemeral event (kind 23195) and the subscription must be active on the
+     * relay before we publish the request event — otherwise the relay drops
+     * the response with no replay.
+     */
+    fun subscribeAndFlush(query: NWCPaymentQueryState) {
+        subscribe(query)
+        group.forEach { it.forceInvalidate() }
+    }
+
     override fun destroy() = group.forEach { it.destroy() }
 }

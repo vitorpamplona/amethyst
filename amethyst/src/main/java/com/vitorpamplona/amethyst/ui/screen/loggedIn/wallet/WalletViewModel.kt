@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -171,6 +172,19 @@ class WalletViewModel : ViewModel() {
 
     private val _receiveState = MutableStateFlow<ReceiveState>(ReceiveState.Idle)
     val receiveState = _receiveState.asStateFlow()
+
+    // A null `Response` means the wallet service replied but the payload could
+    // not be decrypted (wrong key, unexpected format). Any other unexpected
+    // subtype means the response shape didn't match any known NIP-47 result.
+    // Both used to be swallowed silently — now we surface them so the user
+    // can distinguish "wallet never answered" from "wallet answered with
+    // something we can't read".
+    private fun unreadableResponseError(response: Response?): String =
+        if (response == null) {
+            "Could not decrypt the wallet's reply — the wallet may be using a different key"
+        } else {
+            "Wallet returned an unrecognized reply for ${response.resultType}"
+        }
 
     private fun launchTimeout(onTimeout: () -> Unit): Job =
         viewModelScope.launch(Dispatchers.IO) {
@@ -315,7 +329,9 @@ class WalletViewModel : ViewModel() {
                         }
 
                         else -> {
-                            updateWalletInfo(walletId) { it.copy(isLoading = false) }
+                            updateWalletInfo(walletId) {
+                                it.copy(error = unreadableResponseError(response), isLoading = false)
+                            }
                         }
                     }
                 }
@@ -376,13 +392,16 @@ class WalletViewModel : ViewModel() {
                         is GetBalanceSuccessResponse -> {
                             _balanceSats.value = (response.result?.balance ?: 0L) / 1000L
                             updateWalletInfo(walletId) { it.copy(balanceSats = _balanceSats.value) }
+                            _error.value = null
                         }
 
                         is NwcErrorResponse -> {
                             _error.value = response.error?.message ?: "Balance request failed"
                         }
 
-                        else -> {}
+                        else -> {
+                            _error.value = unreadableResponseError(response)
+                        }
                     }
                     _isLoading.value = false
                 }
@@ -444,13 +463,16 @@ class WalletViewModel : ViewModel() {
                                 } else {
                                     txs.size >= pageSize
                                 }
+                            _error.value = null
                         }
 
                         is NwcErrorResponse -> {
                             _error.value = response.error?.message ?: "Failed to load transactions"
                         }
 
-                        else -> {}
+                        else -> {
+                            _error.value = unreadableResponseError(response)
+                        }
                     }
                     _isLoading.value = false
                 }
@@ -498,7 +520,9 @@ class WalletViewModel : ViewModel() {
                             _error.value = response.error?.message ?: "Failed to load more transactions"
                         }
 
-                        else -> {}
+                        else -> {
+                            _error.value = unreadableResponseError(response)
+                        }
                     }
                     _isLoadingMore.value = false
                 }
