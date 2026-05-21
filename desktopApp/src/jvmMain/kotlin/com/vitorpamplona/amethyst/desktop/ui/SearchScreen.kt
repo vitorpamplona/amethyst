@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.feeds.custom.canBecomeFeed
 import com.vitorpamplona.amethyst.commons.feeds.custom.toFeedDefinition
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.MockNamecoinHistoryProvider
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinResolveState
 import com.vitorpamplona.amethyst.commons.nip64Chess.RelaySyncStatus
 import com.vitorpamplona.amethyst.commons.search.AdvancedSearchBarState
@@ -99,6 +100,7 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.createMetadataSubscripti
 import com.vitorpamplona.amethyst.desktop.subscriptions.createSearchPeopleSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
+import com.vitorpamplona.amethyst.desktop.ui.namecoin.NamecoinPreviousValuesPanel
 import com.vitorpamplona.amethyst.desktop.ui.relay.LocalAccountRelays
 import com.vitorpamplona.amethyst.desktop.ui.relay.LocalRelayCategories
 import com.vitorpamplona.amethyst.desktop.ui.relay.SearchRelayEditor
@@ -652,6 +654,36 @@ fun SearchScreen(
                                     fontFamily = FontFamily.Monospace,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(start = 8.dp),
+                                )
+                            }
+                            // Previous-value panel — driven by the mock
+                            // provider until the on-chain name-history
+                            // extractor lands. Visibility/filtering is
+                            // controlled by the two NamecoinSettings
+                            // toggles (within-current-owner / across-expiry).
+                            val historyOrNull =
+                                remember(
+                                    ncState.result.namecoinName,
+                                    namecoinPrefs?.current?.showHistoryWithinCurrentOwner,
+                                    namecoinPrefs?.current?.showHistoryAcrossExpiry,
+                                ) {
+                                    val s = namecoinPrefs?.current
+                                    if (s == null || !s.anyHistoryEnabled) {
+                                        null
+                                    } else {
+                                        MockNamecoinHistoryProvider
+                                            .forName(ncState.result.namecoinName)
+                                            .filterByToggles(
+                                                showWithinCurrentOwner =
+                                                    s.showHistoryWithinCurrentOwner,
+                                                showAcrossExpiry = s.showHistoryAcrossExpiry,
+                                            )
+                                    }
+                                }
+                            if (historyOrNull != null && historyOrNull.hasEntries) {
+                                NamecoinPreviousValuesPanel(
+                                    history = historyOrNull,
+                                    onNavigateToProfile = onNavigateToProfile,
                                 )
                             }
                         }

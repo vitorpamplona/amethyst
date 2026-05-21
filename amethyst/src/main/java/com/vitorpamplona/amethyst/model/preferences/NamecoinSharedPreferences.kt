@@ -64,6 +64,10 @@ class NamecoinSharedPreferences(
         val KEY_CORE_RPC = stringPreferencesKey("namecoin.coreRpc")
         val KEY_FALLBACK_CUSTOM_EX = booleanPreferencesKey("namecoin.fallback.customElectrumx")
         val KEY_FALLBACK_DEFAULT_EX = booleanPreferencesKey("namecoin.fallback.defaultElectrumx")
+        val KEY_HISTORY_WITHIN_CURRENT_OWNER =
+            booleanPreferencesKey("namecoin.showHistoryWithinCurrentOwner")
+        val KEY_HISTORY_ACROSS_EXPIRY =
+            booleanPreferencesKey("namecoin.showHistoryAcrossExpiry")
     }
 
     /**
@@ -92,6 +96,26 @@ class NamecoinSharedPreferences(
 
     suspend fun setEnabled(enabled: Boolean) {
         val updated = current.copy(enabled = enabled)
+        persist(updated)
+    }
+
+    /**
+     * Toggle display of prior pubkey values published by the **current**
+     * owner (no expiry boundary). See
+     * [NamecoinSettings.showHistoryWithinCurrentOwner].
+     */
+    suspend fun setShowHistoryWithinCurrentOwner(value: Boolean) {
+        val updated = current.copy(showHistoryWithinCurrentOwner = value)
+        persist(updated)
+    }
+
+    /**
+     * Toggle display of prior pubkey values from earlier owners that sit
+     * **across an expiry gap** from the current value. See
+     * [NamecoinSettings.showHistoryAcrossExpiry].
+     */
+    suspend fun setShowHistoryAcrossExpiry(value: Boolean) {
+        val updated = current.copy(showHistoryAcrossExpiry = value)
         persist(updated)
     }
 
@@ -185,6 +209,9 @@ class NamecoinSharedPreferences(
                 prefs[KEY_CORE_RPC] = json.encodeToString(settings.namecoinCoreRpc)
                 prefs[KEY_FALLBACK_CUSTOM_EX] = settings.fallbackToCustomElectrumx
                 prefs[KEY_FALLBACK_DEFAULT_EX] = settings.fallbackToDefaultElectrumx
+                prefs[KEY_HISTORY_WITHIN_CURRENT_OWNER] =
+                    settings.showHistoryWithinCurrentOwner
+                prefs[KEY_HISTORY_ACROSS_EXPIRY] = settings.showHistoryAcrossExpiry
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -225,6 +252,11 @@ class NamecoinSharedPreferences(
                 } ?: NamecoinCoreRpcConfig()
             val fallbackCustom = prefs[KEY_FALLBACK_CUSTOM_EX] ?: false
             val fallbackDefault = prefs[KEY_FALLBACK_DEFAULT_EX] ?: false
+            // Defaults are intentionally `false` so users who never
+            // visited Namecoin Settings don't suddenly see new UI
+            // appear under their search bar after upgrade.
+            val showWithin = prefs[KEY_HISTORY_WITHIN_CURRENT_OWNER] ?: false
+            val showAcross = prefs[KEY_HISTORY_ACROSS_EXPIRY] ?: false
             NamecoinSettings(
                 enabled = enabled,
                 customServers = servers,
@@ -232,6 +264,8 @@ class NamecoinSharedPreferences(
                 namecoinCoreRpc = coreRpc,
                 fallbackToCustomElectrumx = fallbackCustom,
                 fallbackToDefaultElectrumx = fallbackDefault,
+                showHistoryWithinCurrentOwner = showWithin,
+                showHistoryAcrossExpiry = showAcross,
             )
         } catch (e: Exception) {
             if (e is CancellationException) throw e

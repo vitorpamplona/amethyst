@@ -117,6 +117,12 @@ fun NamecoinSettingsScreen(
                     scope.launch { namecoinPrefs.setFallbackToDefaultElectrumx(enabled) }
                 },
                 onTestCoreRpc = { cfg -> namecoinCoreRpcClient().probe(cfg) },
+                onToggleHistoryWithinCurrentOwner = { value ->
+                    scope.launch { namecoinPrefs.setShowHistoryWithinCurrentOwner(value) }
+                },
+                onToggleHistoryAcrossExpiry = { value ->
+                    scope.launch { namecoinPrefs.setShowHistoryAcrossExpiry(value) }
+                },
             )
         }
     }

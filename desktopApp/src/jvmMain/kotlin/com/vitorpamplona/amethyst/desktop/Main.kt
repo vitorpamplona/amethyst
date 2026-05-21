@@ -1942,6 +1942,16 @@ fun RelaySettingsScreen(
                                         )
                             }
                         },
+                    onToggleHistoryWithinCurrentOwner = { value ->
+                        namecoinScope.launch {
+                            namecoinPrefsHere.setShowHistoryWithinCurrentOwner(value)
+                        }
+                    },
+                    onToggleHistoryAcrossExpiry = { value ->
+                        namecoinScope.launch {
+                            namecoinPrefsHere.setShowHistoryAcrossExpiry(value)
+                        }
+                    },
                 )
                 Spacer(Modifier.height(24.dp))
                 HorizontalDivider()

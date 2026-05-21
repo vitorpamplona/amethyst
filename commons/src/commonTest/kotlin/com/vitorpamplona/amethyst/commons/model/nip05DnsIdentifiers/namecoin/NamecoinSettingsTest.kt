@@ -239,4 +239,36 @@ class NamecoinSettingsTest {
             )
         assertEquals(NamecoinBackend.NAMECOIN_CORE_RPC, s.backend)
     }
+
+    // ── History display toggles ────────────────────────────────────
+
+    @Test
+    fun `history toggles default to off`() {
+        val d = NamecoinSettings.DEFAULT
+        assertFalse(d.showHistoryWithinCurrentOwner)
+        assertFalse(d.showHistoryAcrossExpiry)
+        assertFalse(d.anyHistoryEnabled)
+    }
+
+    @Test
+    fun `anyHistoryEnabled is true when within-owner is on`() {
+        val s = NamecoinSettings.DEFAULT.copy(showHistoryWithinCurrentOwner = true)
+        assertTrue(s.anyHistoryEnabled)
+    }
+
+    @Test
+    fun `anyHistoryEnabled is true when across-expiry is on`() {
+        val s = NamecoinSettings.DEFAULT.copy(showHistoryAcrossExpiry = true)
+        assertTrue(s.anyHistoryEnabled)
+    }
+
+    @Test
+    fun `anyHistoryEnabled is true when both are on`() {
+        val s =
+            NamecoinSettings.DEFAULT.copy(
+                showHistoryWithinCurrentOwner = true,
+                showHistoryAcrossExpiry = true,
+            )
+        assertTrue(s.anyHistoryEnabled)
+    }
 }

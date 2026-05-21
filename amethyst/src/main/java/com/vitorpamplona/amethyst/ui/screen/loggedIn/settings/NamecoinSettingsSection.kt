@@ -113,6 +113,8 @@ fun NamecoinSettingsSection(
     onTestCoreRpc: suspend (NamecoinCoreRpcConfig) -> RpcProbeResult = { _ ->
         RpcProbeResult(success = false, elapsedMs = 0, error = "not wired")
     },
+    onToggleHistoryWithinCurrentOwner: (Boolean) -> Unit = {},
+    onToggleHistoryAcrossExpiry: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.padding(16.dp)) {
@@ -172,6 +174,19 @@ fun NamecoinSettingsSection(
                 )
 
                 Spacer(Modifier.height(16.dp))
+
+                // ── History display toggles ────────────────────────
+                HistoryDisplayToggles(
+                    settings = settings,
+                    onToggleWithinCurrentOwner = onToggleHistoryWithinCurrentOwner,
+                    onToggleAcrossExpiry = onToggleHistoryAcrossExpiry,
+                )
+
+                Spacer(Modifier.height(12.dp))
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                )
+                Spacer(Modifier.height(12.dp))
 
                 // ── Active servers display ─────────────────────────
                 ActiveServersDisplay(settings = settings)
@@ -604,6 +619,94 @@ private fun SectionHeader(
         }
         Switch(
             checked = enabled,
+            onCheckedChange = onToggle,
+        )
+    }
+}
+
+/**
+ * Two independent toggles for the "previous values" panel that
+ * appears under a resolved `.bit` name in search.
+ *
+ * - **Within current owner** — prior pubkey updates made by the
+ *   *currently registered* owner. Lower risk: these are previous
+ *   states of the same identity (e.g. they rotated keys).
+ * - **Across expiry** — pubkey values from earlier registrations
+ *   that sit on the other side of a name expiry gap. Different
+ *   people. The panel marks each gap explicitly so the user can't
+ *   accidentally read them as continuous identity.
+ *
+ * Both default to off, so users who never visit Settings continue to
+ * see only the currently-resolved value with no surprise UI.
+ */
+@Composable
+private fun HistoryDisplayToggles(
+    settings: NamecoinSettings,
+    onToggleWithinCurrentOwner: (Boolean) -> Unit,
+    onToggleAcrossExpiry: (Boolean) -> Unit,
+) {
+    Column {
+        Text(
+            "Previous values",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium,
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            "When a Namecoin name resolves in search, optionally show its prior " +
+                "Nostr pubkey values. Hidden by default to keep the UI quiet.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(8.dp))
+
+        HistoryToggleRow(
+            title = "Current owner's previous values",
+            subtitle =
+                "Earlier Nostr pubkeys this name pointed at while held by the " +
+                    "current owner (no expiry between them).",
+            checked = settings.showHistoryWithinCurrentOwner,
+            onToggle = onToggleWithinCurrentOwner,
+        )
+        Spacer(Modifier.height(8.dp))
+        HistoryToggleRow(
+            title = "Earlier owners (after expiry)",
+            subtitle =
+                "Pubkeys this name pointed at before it expired and was re-" +
+                    "registered — each entry is a different person, marked with a " +
+                    "divider.",
+            checked = settings.showHistoryAcrossExpiry,
+            onToggle = onToggleAcrossExpiry,
+        )
+    }
+}
+
+@Composable
+private fun HistoryToggleRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onToggle: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(
+            checked = checked,
             onCheckedChange = onToggle,
         )
     }
