@@ -163,8 +163,24 @@ open class Note(
      * amount, the on-chain verified amount, and a verification status.
      * Unverified, pending, and confirmed entries live here together; `updateZapTotal`
      * only counts CONFIRMED amounts.
+     *
+     * `@Volatile` ensures cross-thread visibility: writes happen on `applicationIOScope`
+     * (inside the @Synchronized inner methods) and reads happen on the Compose Main
+     * thread (gallery recomposition + the reverification driver's `any { … }` check).
      */
+    @Volatile
     var onchainZaps = mapOf<String, OnchainZapEntry>()
+        private set
+
+    /**
+     * Anti-resurrection blocklist for hard-rejected NIP-BC onchain zaps.
+     * Key: txid. Value: set of source author pubkeys whose attempts for that txid have
+     * been verified-and-rejected on this note. Used by `LocalCache.consume(OnchainZapEvent)`
+     * to skip the optimistic UI attachment for known-bad (txid, sender) pairs that would
+     * otherwise re-flicker into the gallery on every fresh event id.
+     */
+    @Volatile
+    var rejectedOnchainZapTxidsBySource = mapOf<String, Set<HexKey>>()
         private set
 
     var zapPayments = mapOf<Note, Note?>()
@@ -436,21 +452,40 @@ open class Note(
     ): Boolean {
         val existing = onchainZaps[txid]
         if (existing != null) {
-            // Same-state duplicate: keep the first source/amount/status we got.
-            if (existing.status == entry.status) return false
-            // Reject downgrades. The status enum is naturally ordered
-            // UNVERIFIED < PENDING < CONFIRMED — accept only forward transitions.
-            if (entry.status.ordinal <= existing.status.ordinal) return false
+            // Reject downgrades using the explicit OnchainZapStatus.level (not ordinal)
+            // so the upgrade contract survives future enum reordering or insertions.
+            if (entry.status.level < existing.status.level) return false
+            // Same level: accept only when the on-chain verified amount has grown
+            // (e.g. the indexer revised its view of the tx's recipient outputs).
+            // Otherwise treat as a duplicate and keep the first source we got.
+            if (entry.status.level == existing.status.level && entry.verifiedSats <= existing.verifiedSats) return false
         }
         onchainZaps = onchainZaps + Pair(txid, entry)
         return true
     }
 
     @Synchronized
-    private fun innerRemoveOnchainZap(txid: String): Boolean {
-        if (!onchainZaps.containsKey(txid)) return false
+    private fun innerRemoveOnchainZapForSource(
+        txid: String,
+        sourceAuthorPubKey: HexKey?,
+    ): Boolean {
+        val existing = onchainZaps[txid] ?: return false
+        // Anti-spoof: only remove the entry if its source matches the rejecting event.
+        // Otherwise a malicious third party could erase a legitimate CONFIRMED entry
+        // by publishing a spoofed kind:8333 with the same txid but a bystander recipient.
+        if (existing.source.author?.pubkeyHex != sourceAuthorPubKey) return false
         onchainZaps = onchainZaps - txid
         return true
+    }
+
+    @Synchronized
+    private fun innerRecordOnchainZapRejection(
+        txid: String,
+        sourceAuthorPubKey: HexKey,
+    ) {
+        val current = rejectedOnchainZapTxidsBySource[txid].orEmpty()
+        if (sourceAuthorPubKey in current) return
+        rejectedOnchainZapTxidsBySource = rejectedOnchainZapTxidsBySource + Pair(txid, current + sourceAuthorPubKey)
     }
 
     /**
@@ -458,7 +493,7 @@ open class Note(
      * note — `source.author` is the sender shown in the reactions gallery.
      *
      * Call with [OnchainZapStatus.UNVERIFIED] (and `verifiedSats = 0`) at consumption time
-     * to attach the zap optimistically so the user immediately sees their outgoing zap
+     * to attach the zap optimistically so the user immediately sees their own outgoing zap
      * is processing. Call again with [OnchainZapStatus.PENDING] or [OnchainZapStatus.CONFIRMED]
      * (and the verified output sum) once the chain backend confirms it.
      *
@@ -480,16 +515,36 @@ open class Note(
     }
 
     /**
-     * Remove a previously-attached onchain zap entry. Used when verification produced a
-     * hard rejection (e.g. the transaction paid zero to the recipient — a spoof attempt).
+     * Remove a previously-attached onchain zap entry whose source matches [sourceAuthorPubKey].
+     * Used when verification produced a hard rejection (e.g. the transaction paid zero to the
+     * recipient — a spoof attempt). The source-scoped match prevents a malicious third party
+     * from erasing a legitimate CONFIRMED entry by publishing a spoofed kind:8333 with the
+     * same txid but a different recipient pubkey.
      */
-    fun removeOnchainZap(txid: String) {
-        val removed = innerRemoveOnchainZap(txid)
+    fun removeOnchainZapForSource(
+        txid: String,
+        sourceAuthorPubKey: HexKey?,
+    ) {
+        val removed = innerRemoveOnchainZapForSource(txid, sourceAuthorPubKey)
+        if (sourceAuthorPubKey != null) {
+            innerRecordOnchainZapRejection(txid, sourceAuthorPubKey)
+        }
         if (removed) {
             updateZapTotal()
             flowSet?.zaps?.invalidateData()
         }
     }
+
+    /**
+     * True if a previous verification rejected an onchain zap for this exact (txid, source)
+     * pair on this note. `LocalCache.consume(OnchainZapEvent)` uses this to skip the
+     * optimistic gallery attachment for known-bad senders, preventing attach-then-remove
+     * flicker when an attacker re-publishes the same spoof under a fresh event id.
+     */
+    fun wasOnchainZapRejectedForSource(
+        txid: String,
+        sourceAuthorPubKey: HexKey,
+    ): Boolean = sourceAuthorPubKey in rejectedOnchainZapTxidsBySource[txid].orEmpty()
 
     @Synchronized
     private fun innerAddZapPayment(

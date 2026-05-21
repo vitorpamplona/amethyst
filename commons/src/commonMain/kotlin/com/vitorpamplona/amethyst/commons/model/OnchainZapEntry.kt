@@ -30,16 +30,22 @@ import androidx.compose.runtime.Stable
  * consume the kind:8333 event milliseconds after broadcasting the transaction.
  * Tracking the verification status as a state machine lets us attach the zap
  * to the thread optimistically and upgrade it as the chain catches up.
+ *
+ * [level] establishes the monotonic upgrade order independently of declaration
+ * order. The `Note.addOnchainZap` upgrade guard compares [level] (not
+ * `ordinal`), so future contributors can safely reorder or insert states.
  */
-enum class OnchainZapStatus {
+enum class OnchainZapStatus(
+    val level: Int,
+) {
     /** Not yet checked against the chain (or the chain didn't have the tx yet). */
-    UNVERIFIED,
+    UNVERIFIED(0),
 
     /** Verified against the chain, 0 confirmations (in mempool). */
-    PENDING,
+    PENDING(1),
 
     /** Verified against the chain, ≥1 confirmation. */
-    CONFIRMED,
+    CONFIRMED(2),
 }
 
 /**
@@ -49,9 +55,11 @@ enum class OnchainZapStatus {
  *                  sender shown in the reactions gallery. When an entry is upgraded
  *                  (UNVERIFIED → PENDING/CONFIRMED, PENDING → CONFIRMED), the upgrading
  *                  event's note replaces the existing `source`.
- * @property claimedSats Sender-claimed amount from the kind:8333 event's `amount` tag. Shown to
- *                       the user while the zap is UNVERIFIED so they have feedback that
- *                       a zap is processing.
+ * @property claimedSats Sender-claimed amount from the kind:8333 event's `amount` tag. This
+ *                       value is UNTRUSTED — only display it for the signed-in user's own
+ *                       outgoing zaps (where the user knows what they sent). Never render
+ *                       it for incoming zaps from other senders, as a spoofed amount tag
+ *                       would mislead the viewer.
  * @property verifiedSats Satoshis verified to have paid the recipient's derived Taproot
  *                        address on chain. Zero while [status] is [OnchainZapStatus.UNVERIFIED].
  *                        NEVER the sender-claimed `amount` tag.
@@ -64,16 +72,4 @@ data class OnchainZapEntry(
     val claimedSats: Long,
     val verifiedSats: Long,
     val status: OnchainZapStatus,
-) {
-    /**
-     * Amount to display to the user. Once verified we always prefer the on-chain truth; while
-     * unverified we fall back to the sender-claimed amount so the user has some feedback.
-     */
-    val displaySats: Long
-        get() =
-            if (status == OnchainZapStatus.UNVERIFIED) {
-                claimedSats
-            } else {
-                verifiedSats
-            }
-}
+)

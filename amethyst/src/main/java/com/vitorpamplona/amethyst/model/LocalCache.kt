@@ -263,15 +263,25 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -285,6 +295,13 @@ interface ILocalCache {
         // Default no-op; implementations may override to track seen events per relay
     }
 }
+
+/**
+ * Polling interval for the shared onchain chain-tip flow. Aligned with
+ * `CachingOnchainBackend.tipHeightTtlSeconds` (60s) — polling faster would
+ * just hit the cache and do no useful work.
+ */
+private const val ONCHAIN_TIP_POLL_INTERVAL_MS = 60_000L
 
 object LocalCache : ILocalCache, ICacheProvider {
     val antiSpam = AntiSpamFilter()
@@ -1851,6 +1868,13 @@ object LocalCache : ILocalCache, ICacheProvider {
         val note = getOrCreateNote(event.id)
         val alreadyLoaded = note.event != null
 
+        // `relay == null` means this event was generated locally by the signed-in user
+        // and routed through `justConsumeMyOwnEvent` — see `Account.sendOnchainZap` →
+        // `LocalCache.justConsumeMyOwnEvent`. Only these get the optimistic gallery
+        // attachment; for incoming zaps from others, the sender-claimed `amount` tag
+        // is untrusted and could mislead the viewer until the chain verifier responds.
+        val isOwnEvent = relay == null
+
         if (!alreadyLoaded) {
             if (!(wasVerified || justVerify(event))) return false
 
@@ -1862,30 +1886,49 @@ object LocalCache : ILocalCache, ICacheProvider {
             val repliesTo = computeReplyTo(event)
             note.loadEvent(event, author, repliesTo)
 
-            // Optimistic attachment: surface the zap on the thread immediately, even
-            // before the chain confirms it. Crucial for the sender's own outgoing zap,
-            // where consumption happens milliseconds after broadcast and the chain
-            // backend usually hasn't indexed the tx yet.
-            val txid = event.txid()
-            val claimedSats = event.claimedAmountInSats() ?: 0L
-            if (txid != null) {
-                repliesTo.forEach {
-                    it.addOnchainZap(note, txid, claimedSats, verifiedSats = 0L, OnchainZapStatus.UNVERIFIED)
+            if (isOwnEvent) {
+                // Optimistic attachment for the sender's own zap: surface it on the
+                // thread immediately, before the chain backend has indexed the tx.
+                // Crucial because `OnchainZapSender.send` consumes the kind:8333
+                // milliseconds after broadcasting the tx — the verifier would
+                // otherwise return TX_NOT_FOUND and the entry would never appear
+                // until a later re-verification pass.
+                val txid = event.txid()
+                if (txid != null) {
+                    // Clamp claimedSats to a non-negative value. `amount` tag parses
+                    // via toLongOrNull() with no sign check, so a malicious sender
+                    // could otherwise put "-1" in the gallery as a negative-sats badge.
+                    val claimedSats = (event.claimedAmountInSats() ?: 0L).coerceAtLeast(0L)
+                    repliesTo.forEach {
+                        if (!it.wasOnchainZapRejectedForSource(txid, event.pubKey)) {
+                            it.addOnchainZap(note, txid, claimedSats, verifiedSats = 0L, OnchainZapStatus.UNVERIFIED)
+                        }
+                    }
                 }
             }
 
             refreshNewNoteObservers(note)
-        } else {
-            // A later arrival of the same event. The note is already cached, but the
-            // verifier may not have produced a CONFIRMED result yet. Fall through to
-            // re-run verification — `verifyAndUpgradeOnchainZap` is a no-op once an
-            // entry on every target note has reached CONFIRMED.
         }
 
-        // Verification needs a chain backend. Without one (e.g. before Account
-        // wires its EsploraBackend) the event stays cached so subscriptions
-        // and profile zap views see it, but it can't contribute to Note totals.
+        // Verification needs a chain backend. Without one (e.g. before AppModules
+        // wires its EsploraBackend) the event stays cached so subscriptions and
+        // profile zap views see it, but it can't contribute to Note totals.
         val backend = onchainBackend ?: return !alreadyLoaded
+
+        // Re-arrival path: on a later relay echo of the same event, skip the verifier
+        // launch entirely if every target note already holds a CONFIRMED entry for this
+        // txid. Avoids the relay-echo fan-out where the same kind:8333 is delivered N
+        // times and spawns N redundant verifier coroutines (each potentially hitting
+        // Esplora for any uncached lookup).
+        val txid = event.txid()
+        if (alreadyLoaded && txid != null) {
+            val repliesTo = computeReplyTo(event)
+            val allConfirmed =
+                repliesTo.isNotEmpty() &&
+                    repliesTo.all { it.onchainZaps[txid]?.status == OnchainZapStatus.CONFIRMED }
+            if (allConfirmed) return false
+        }
+
         val verifier = OnchainZapVerifier(backend)
         val repliesTo = computeReplyTo(event)
 
@@ -1899,7 +1942,9 @@ object LocalCache : ILocalCache, ICacheProvider {
     /**
      * Run the chain verifier for a single onchain zap event and apply the result to every
      * target note. Designed to be safe to call repeatedly — the [Note] entries upgrade
-     * monotonically (UNVERIFIED → PENDING → CONFIRMED) and won't move backwards.
+     * monotonically (UNVERIFIED → PENDING → CONFIRMED) and won't move backwards, and
+     * source-scoped removal prevents one event's rejection from erasing another sender's
+     * legitimate entry that happens to share a txid.
      */
     private suspend fun verifyAndUpgradeOnchainZap(
         event: OnchainZapEvent,
@@ -1907,8 +1952,8 @@ object LocalCache : ILocalCache, ICacheProvider {
         repliesTo: List<Note>,
         verifier: OnchainZapVerifier,
     ) {
-        val txid = event.txid() ?: return
-        val claimedSats = event.claimedAmountInSats() ?: 0L
+        // Clamp claimedSats to non-negative; see consume() for rationale.
+        val claimedSats = (event.claimedAmountInSats() ?: 0L).coerceAtLeast(0L)
         try {
             when (val result = verifier.verify(event)) {
                 is VerifiedOnchainZap.Confirmed -> {
@@ -1930,16 +1975,21 @@ object LocalCache : ILocalCache, ICacheProvider {
                         // reverifyOnchainZapsForNote() call (e.g. on chain tip change)
                         // can promote it.
                         Log.d("OnchainZap") { "tx not yet indexed for ${event.id} (${result.txid}); will retry" }
-                    } else {
-                        // Permanent — e.g. ZERO_VERIFIED_AMOUNT means the tx did not
-                        // actually pay the recipient. Drop the optimistic entry so
-                        // spoof attempts disappear from the gallery.
+                    } else if (result.txid.isNotEmpty()) {
+                        // Hard rejection — e.g. ZERO_VERIFIED_AMOUNT means this sender's
+                        // tx did not pay the recipient. Drop only entries whose source
+                        // matches THIS event (Note.removeOnchainZapForSource enforces
+                        // the match), so a spoofer can't erase a legitimate CONFIRMED
+                        // entry that happens to share the same txid.
                         Log.d("OnchainZap") { "rejected ${result.txid}: ${result.reason}" }
-                        repliesTo.forEach { it.removeOnchainZap(result.txid) }
+                        repliesTo.forEach { it.removeOnchainZapForSource(result.txid, event.pubKey) }
                     }
                 }
             }
         } catch (t: Throwable) {
+            // Never swallow cancellation — it must propagate so screen-scoped callers
+            // (the gallery's reverification driver) can tear down cleanly.
+            if (t is CancellationException) throw t
             Log.w("OnchainZap", "verification failed for ${event.id}", t)
         }
     }
@@ -1948,6 +1998,10 @@ object LocalCache : ILocalCache, ICacheProvider {
      * Re-run onchain-zap verification for every non-CONFIRMED entry attached to [note].
      * Safe to call from a screen-visibility hook or a chain-tip change observer; each
      * verifier call is bounded by the chain backend's cache TTLs.
+     *
+     * Runs the per-entry verifier calls in parallel (capped by [reverifySemaphore])
+     * so a thread root with many pending entries finishes within typical screen
+     * dwell time instead of N × RTT sequentially.
      */
     suspend fun reverifyOnchainZapsForNote(note: Note) {
         val backend = onchainBackend ?: return
@@ -1956,11 +2010,47 @@ object LocalCache : ILocalCache, ICacheProvider {
         if (pendingEntries.isEmpty()) return
 
         val verifier = OnchainZapVerifier(backend)
-        pendingEntries.forEach { entry ->
-            val sourceEvent = entry.source.event as? OnchainZapEvent ?: return@forEach
-            val repliesTo = computeReplyTo(sourceEvent)
-            verifyAndUpgradeOnchainZap(sourceEvent, entry.source, repliesTo, verifier)
+        coroutineScope {
+            pendingEntries
+                .mapNotNull { entry ->
+                    val sourceEvent = entry.source.event as? OnchainZapEvent ?: return@mapNotNull null
+                    async {
+                        reverifySemaphore.withPermit {
+                            val repliesTo = computeReplyTo(sourceEvent)
+                            verifyAndUpgradeOnchainZap(sourceEvent, entry.source, repliesTo, verifier)
+                        }
+                    }
+                }.awaitAll()
         }
+    }
+
+    /**
+     * Caps the parallelism of [reverifyOnchainZapsForNote] so a thread with many
+     * pending entries doesn't blast public Esplora endpoints with a burst of
+     * simultaneous requests.
+     */
+    private val reverifySemaphore = Semaphore(permits = 4)
+
+    /**
+     * Shared poller for the current bitcoin chain tip height. Each gallery that
+     * holds non-CONFIRMED onchain zaps subscribes to this flow and re-verifies its
+     * entries whenever the tip advances. Lazy + `WhileSubscribed` so the HTTP call
+     * only fires when at least one UI surface needs it.
+     *
+     * Lazy initialization is required because [Amethyst.instance] may not exist
+     * when the `LocalCache` singleton is class-loaded.
+     */
+    val onchainTipHeightFlow: StateFlow<Long?> by lazy {
+        flow {
+            while (true) {
+                emit(onchainBackend?.let { runCatching { it.tipHeight() }.getOrNull() })
+                delay(ONCHAIN_TIP_POLL_INTERVAL_MS)
+            }
+        }.stateIn(
+            Amethyst.instance.applicationIOScope,
+            SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000L),
+            initialValue = null,
+        )
     }
 
     private fun attachZapToLiveActivityChannel(

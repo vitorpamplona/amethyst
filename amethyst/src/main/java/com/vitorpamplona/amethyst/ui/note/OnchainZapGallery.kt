@@ -29,14 +29,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.OnchainZapEntry
 import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -79,7 +82,35 @@ internal fun WatchOnchainZapsAndRenderGallery(
         }
 
     if (entries.isNotEmpty()) {
+        // Drive periodic re-verification of any non-CONFIRMED entries while this
+        // gallery is on screen — covers home feed, profile, notifications, channels,
+        // single-note view, threads. Keyed on baseNote.idHex so the subscription is
+        // stable across recompositions and pauses cleanly when the gallery scrolls
+        // off-screen (WhileSubscribed on the shared tip flow).
+        DriveOnchainZapReverification(baseNote, entries)
         RenderOnchainZapGallery(entries, nav, accountViewModel)
+    }
+}
+
+/**
+ * Subscribes to the shared chain-tip flow and re-runs onchain-zap verification for
+ * [note] whenever the tip advances, while [entries] still contains non-CONFIRMED
+ * items. First-view kick happens via the StateFlow's initial null → first-tip
+ * transition.
+ */
+@Composable
+private fun DriveOnchainZapReverification(
+    note: Note,
+    entries: ImmutableList<OnchainZapEntry>,
+) {
+    val hasPending = remember(entries) { entries.any { it.status != OnchainZapStatus.CONFIRMED } }
+    if (!hasPending) return
+
+    val tip by LocalCache.onchainTipHeightFlow.collectAsStateWithLifecycle()
+    LaunchedEffect(note.idHex, hasPending, tip) {
+        if (tip != null) {
+            LocalCache.reverifyOnchainZapsForNote(note)
+        }
     }
 }
 
@@ -123,13 +154,23 @@ private fun OnchainZapEntryRow(
     accountViewModel: AccountViewModel,
 ) {
     val user = entry.source.author
-    val displaySats = entry.displaySats
-    val amountText =
-        remember(displaySats) {
-            showAmount(BigDecimal.valueOf(displaySats))
-        }
     val isConfirmed = entry.status == OnchainZapStatus.CONFIRMED
     val avatarAlpha = if (isConfirmed) 1f else 0.6f
+
+    // Anti-spoof: `claimedSats` comes from the kind:8333 `amount` tag, which is
+    // attacker-controlled for incoming zaps. Only show the claimed amount for the
+    // signed-in user's own outgoing zap (where the user knows what they sent) —
+    // otherwise show the on-chain verified amount, or nothing while still unverified.
+    val displaySats =
+        when {
+            isConfirmed || entry.status == OnchainZapStatus.PENDING -> entry.verifiedSats
+            user != null && accountViewModel.isLoggedUser(user.pubkeyHex) -> entry.claimedSats
+            else -> 0L
+        }
+    val amountText =
+        remember(displaySats) {
+            if (displaySats > 0L) showAmount(BigDecimal.valueOf(displaySats)) else ""
+        }
 
     Box(
         modifier = Size35Modifier.clickable { onOnchainZapEntryClick(entry, nav) },
@@ -144,7 +185,9 @@ private fun OnchainZapEntryRow(
             )
         }
 
-        CrossfadeToDisplayAmount(amountText)
+        if (amountText.isNotEmpty()) {
+            CrossfadeToDisplayAmount(amountText)
+        }
 
         if (!isConfirmed) {
             // TopStart so the badge doesn't collide with the FollowingIcon
