@@ -2099,7 +2099,15 @@ object LocalCache : ILocalCache, ICacheProvider {
         wasVerified: Boolean,
     ): Boolean {
         val requestId = event.requestId()
-        val pending = paymentTracker.onResponseReceived(requestId) ?: return false
+        val pending =
+            paymentTracker.onResponseReceived(requestId) ?: run {
+                Log.w(
+                    "LocalCache",
+                    "NWC response ${event.id} from ${event.pubKey} references request e=$requestId but no pending request is registered. " +
+                        "The response was either delivered after timeout, the user holds a stale subscription, or the wallet service set the wrong e tag.",
+                )
+                return false
+            }
 
         val zappedNote = pending.zappedNote
         val responseCallback = pending.onResponse
