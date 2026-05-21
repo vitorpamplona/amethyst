@@ -20,19 +20,26 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats
 
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -42,6 +49,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.ChannelCardCompose
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 
 @Composable
@@ -76,7 +84,7 @@ fun PublicChatsFeedLoaded(
             key = { item -> "pinned-" + item.idHex },
             contentType = { item -> item.event?.kind ?: -1 },
         ) { item ->
-            PublicChatRow(item, accountViewModel, nav)
+            PublicChatRow(item, pinned = true, accountViewModel, nav)
         }
 
         itemsIndexed(
@@ -84,7 +92,7 @@ fun PublicChatsFeedLoaded(
             key = { _, item -> item.idHex },
             contentType = { _, item -> item.event?.kind ?: -1 },
         ) { _, item ->
-            PublicChatRow(item, accountViewModel, nav)
+            PublicChatRow(item, pinned = false, accountViewModel, nav)
         }
     }
 }
@@ -92,10 +100,11 @@ fun PublicChatsFeedLoaded(
 @Composable
 private fun LazyItemScope.PublicChatRow(
     item: Note,
+    pinned: Boolean,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    Row(Modifier.fillMaxWidth().animateItem()) {
+    Box(Modifier.fillMaxWidth().animateItem()) {
         ChannelCardCompose(
             baseNote = item,
             routeForLastRead = "PublicChatsFeed",
@@ -104,6 +113,18 @@ private fun LazyItemScope.PublicChatRow(
             accountViewModel = accountViewModel,
             nav = nav,
         )
+        if (pinned) {
+            Icon(
+                symbol = MaterialSymbols.PushPin,
+                contentDescription = null,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(10.dp)
+                        .size(16.dp),
+                tint = MaterialTheme.colorScheme.placeholderText,
+            )
+        }
     }
 
     HorizontalDivider(
