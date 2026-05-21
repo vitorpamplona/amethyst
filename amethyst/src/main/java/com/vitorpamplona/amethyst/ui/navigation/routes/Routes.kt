@@ -81,6 +81,8 @@ sealed class Route {
 
     @Serializable object Pictures : Route()
 
+    @Serializable object SoftwareApps : Route()
+
     @Serializable object Calendars : Route()
 
     @Serializable object CalendarCollections : Route()
