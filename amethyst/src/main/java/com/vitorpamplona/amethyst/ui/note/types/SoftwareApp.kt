@@ -38,6 +38,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,6 +56,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.LinkIcon
@@ -306,6 +310,122 @@ fun RenderSoftwareRelease(
                 text = pluralStringResource(R.plurals.nip82_assets_count, n, n),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.placeholderText,
+            )
+            Spacer(Modifier.height(6.dp))
+            BundledAssetsList(
+                assetIds = assets.map { it.eventId },
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+    }
+}
+
+@Composable
+private fun BundledAssetsList(
+    assetIds: List<String>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        assetIds.forEach { id ->
+            key(id) {
+                LoadAssetNote(id, accountViewModel) { assetNote ->
+                    if (assetNote != null) {
+                        SoftwareAssetRow(assetNote, accountViewModel)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LoadAssetNote(
+    eventId: String,
+    accountViewModel: AccountViewModel,
+    content: @Composable (Note?) -> Unit,
+) {
+    val note by produceState<Note?>(initialValue = accountViewModel.getNoteIfExists(eventId), eventId) {
+        if (value == null) {
+            value = accountViewModel.checkGetOrCreateNote(eventId)
+        }
+    }
+    content(note)
+}
+
+@Composable
+private fun SoftwareAssetRow(
+    note: Note,
+    accountViewModel: AccountViewModel,
+) {
+    // Subscribe so a missing asset event is fetched from the relay and we recompose when it arrives.
+    val eventState = observeNoteEvent<SoftwareAssetEvent>(note, accountViewModel)
+    val event = eventState.value ?: return
+
+    val uri = LocalUriHandler.current
+    val version = remember(event) { event.version() }
+    val mimeType = remember(event) { event.mimeType() }
+    val sizeBytes = remember(event) { event.sizeInBytes() }
+    val platforms = remember(event) { event.platforms() }
+    val downloadUrl = remember(event) { event.url() }
+    val variant = remember(event) { event.variant() }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .border(1.dp, MaterialTheme.colorScheme.subtleBorder, RoundedCornerShape(8.dp))
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+    ) {
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                mimeType?.let {
+                    Text(
+                        text = prettyMime(it),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Spacer(Modifier.width(6.dp))
+                }
+                version?.let {
+                    Text(
+                        text = stringRes(R.string.nip82_version_label, it),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray,
+                    )
+                }
+                variant?.let {
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "· $it",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray,
+                    )
+                }
+                sizeBytes?.let {
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "· ${formatBytes(it.toLong())}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray,
+                    )
+                }
+            }
+            if (platforms.isNotEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    items(platforms) { Chip(it) }
+                }
+            }
+        }
+        downloadUrl?.let {
+            Spacer(Modifier.width(8.dp))
+            ClickableTextPrimary(
+                text = stringRes(R.string.nip82_download),
+                onClick = { runCatching { uri.openUri(it) } },
             )
         }
     }
