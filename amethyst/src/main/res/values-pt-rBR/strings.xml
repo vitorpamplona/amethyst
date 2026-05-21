@@ -2752,10 +2752,10 @@
         <item quantity="other">%1$d eventos</item>
     </plurals>
     <plurals name="calendar_day_a11y_events">
-        <item quantity="zero">%1$s, sem eventos</item>
         <item quantity="one">%1$s, %2$d evento</item>
         <item quantity="other">%1$s, %2$d eventos</item>
     </plurals>
+    <string name="calendar_day_a11y_no_events">%1$s, sem eventos</string>
     <plurals name="calendar_reminder_body">
         <item quantity="one">Começa em %1$d minuto</item>
         <item quantity="other">Começa em %1$d minutos</item>

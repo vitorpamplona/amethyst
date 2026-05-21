@@ -46,7 +46,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -266,8 +265,7 @@ private fun DayCell(
             MaterialTheme.colorScheme.surface
         }
 
-    val baseDescription =
-        pluralStringResource(R.plurals.calendar_day_a11y_events, totalEventCount, dateLabel, totalEventCount)
+    val baseDescription = calendarDayA11yLabel(dateLabel, totalEventCount)
     val todaySuffix = stringRes(R.string.calendar_day_a11y_today_suffix)
     val selectedSuffix = stringRes(R.string.calendar_day_a11y_selected_suffix)
     val a11y =

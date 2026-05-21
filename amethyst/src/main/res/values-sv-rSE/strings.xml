@@ -2752,10 +2752,10 @@
         <item quantity="other">%1$d händelser</item>
     </plurals>
     <plurals name="calendar_day_a11y_events">
-        <item quantity="zero">%1$s, inga händelser</item>
         <item quantity="one">%1$s, %2$d händelse</item>
         <item quantity="other">%1$s, %2$d händelser</item>
     </plurals>
+    <string name="calendar_day_a11y_no_events">%1$s, inga händelser</string>
     <plurals name="calendar_reminder_body">
         <item quantity="one">Börjar om %1$d minut</item>
         <item quantity="other">Börjar om %1$d minuter</item>

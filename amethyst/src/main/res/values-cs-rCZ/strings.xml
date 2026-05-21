@@ -2784,12 +2784,12 @@
         <item quantity="other">%1$d událostí</item>
     </plurals>
     <plurals name="calendar_day_a11y_events">
-        <item quantity="zero">%1$s, žádné události</item>
         <item quantity="one">%1$s, %2$d událost</item>
         <item quantity="few">%1$s, %2$d události</item>
         <item quantity="many">%1$s, %2$d událostí</item>
         <item quantity="other">%1$s, %2$d událostí</item>
     </plurals>
+    <string name="calendar_day_a11y_no_events">%1$s, žádné události</string>
     <plurals name="calendar_reminder_body">
         <item quantity="one">Začíná za %1$d minutu</item>
         <item quantity="few">Začíná za %1$d minuty</item>
