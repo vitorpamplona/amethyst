@@ -32,7 +32,10 @@ import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 class PublicChatsFeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code
+    override fun feedKey(): String =
+        account.userProfile().pubkeyHex + "-" + followList().code + "-" +
+            account.publicChatList.flowSet.value
+                .hashCode()
 
     override fun limit() = 200
 
@@ -105,6 +108,8 @@ class PublicChatsFeedFilter(
     }
 
     override fun sort(items: Set<Note>): List<Note> {
+        val followedSet = account.publicChatList.flowSet.value
+
         val lastNote =
             items.associateWith { note ->
                 LocalCache.getPublicChatChannelIfExists(note.idHex)?.lastNote?.createdAt() ?: 0L
@@ -117,6 +122,8 @@ class PublicChatsFeedFilter(
 
         val comparator: Comparator<Note> =
             compareByDescending<Note> {
+                it.idHex in followedSet
+            }.thenByDescending {
                 lastNote[it]
             }.thenByDescending {
                 createdNote[it]
