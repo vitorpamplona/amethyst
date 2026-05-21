@@ -24,24 +24,26 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
 fun ChannelFinderFilterAssemblerSubscription(
     channel: Channel,
     accountViewModel: AccountViewModel,
-) = ChannelFinderFilterAssemblerSubscription(channel, accountViewModel.dataSources().channelFinder)
+) = ChannelFinderFilterAssemblerSubscription(channel, accountViewModel.account, accountViewModel.dataSources().channelFinder)
 
 @Composable
 fun ChannelFinderFilterAssemblerSubscription(
     channel: Channel,
+    account: Account,
     dataSource: ChannelFinderFilterAssemblyGroup,
 ) {
     // different screens get different states
     // even if they are tracking the same tag.
     val state =
-        remember(channel) {
-            ChannelFinderQueryState(channel)
+        remember(channel, account) {
+            ChannelFinderQueryState(channel, account)
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)
