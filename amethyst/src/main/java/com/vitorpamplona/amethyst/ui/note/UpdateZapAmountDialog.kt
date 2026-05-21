@@ -284,7 +284,7 @@ fun UpdateZapAmountContent(
                     ),
                 placeholder = {
                     Text(
-                        text = "100, 1000, 5000",
+                        text = "21, 50, 100",
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
@@ -406,7 +406,7 @@ fun UpdateZapAmountContent(
                     ),
                 placeholder = {
                     Text(
-                        text = "10000, 50000, 250000",
+                        text = "5000, 25000, 100000",
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 },
