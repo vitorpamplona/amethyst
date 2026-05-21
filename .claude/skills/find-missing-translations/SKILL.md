@@ -74,7 +74,14 @@ Before presenting results, **scan the missing English strings** for two red-flag
 1. **Hardcoded `"1"` next to a noun.** A new English string like `"1 reply"`, `"1 follower"`, or `"1 minute ago"` almost always belongs in a `<plurals>` resource — not a `<string>`. Hardcoding `1` in English forces every translator to either also hardcode `1` (breaking languages where the `one` category covers other numbers, e.g. some Slavic languages) or to silently change the meaning.
 2. **A `%d` / `%1$d` placeholder in a clearly singular/plural sentence** (e.g. `"%1$d reply"`, `"%d follower"`). Even though the placeholder is parameterised, English-only `one`/`other` agreement won't survive translation into languages that need `few`/`many`.
 
-Also **audit existing `<plurals>` resources** for the same anti-pattern — any locale's `quantity="one"` item that hardcodes the literal `1` (instead of using a `%d` / `%1$d` placeholder) is broken for languages where the `one` CLDR category covers more than just `n=1` (Russian, Ukrainian, Croatian, etc.). Flag and offer to fix:
+Also **audit existing `<plurals>` resources** for two anti-patterns:
+
+1. **`quantity="one"` items that hardcode the literal `1`** (instead of using a `%d` / `%1$d` placeholder) — broken for languages where the `one` CLDR category covers more than just `n=1` (Russian, Ukrainian, Croatian, etc.).
+2. **`quantity="zero"` items in any locale that doesn't natively use the `zero` CLDR category** — i.e. **everything except Arabic (`ar`) and Welsh (`cy`)**. ICU/CLDR maps `count=0` to `other` for English and all the locales we ship to (cs, de, pt-BR, sv, etc.), so `<item quantity="zero">` is **dead code** there: `getQuantityString(id, 0)` will pick `other`, never the zero entry, and the visible runtime string ends up `"…0 items"` instead of the intended `"…no items"`.
+
+If a UX genuinely wants special "no items" wording at count=0, that has to be a call-site `if (count == 0)` branch to a separate `<string>`, **not** a `quantity="zero"` plural item.
+
+Flag and offer to fix:
 
 ```bash
 # Scan every locale's strings.xml for <item quantity="one"> entries that
@@ -95,6 +102,27 @@ for f in amethyst/src/main/res/values/strings.xml amethyst/src/main/res/values-*
   ' "$f"
 done
 ```
+
+Then scan for dead `quantity="zero"` entries. CLDR's `zero` category is integer-bearing only in **Arabic (`ar`)** and **Welsh (`cy`)**. In every other locale, count=0 falls through to `other`, so a `<item quantity="zero">` entry is dead and likely a translator/author bug (or it silently never fires):
+
+```bash
+for f in amethyst/src/main/res/values/strings.xml amethyst/src/main/res/values-*/strings.xml; do
+  # Skip Arabic and Welsh — they natively use the zero category.
+  case "$f" in
+    *values-ar*|*values-cy*) continue ;;
+  esac
+  awk -v file="$f" '
+    /<plurals/ { in_plurals = 1; name = $0; sub(/.*name="/, "", name); sub(/".*/, "", name) }
+    in_plurals && /quantity="zero"/ {
+      text = $0; sub(/^[^>]*>/, "", text); sub(/<.*$/, "", text)
+      print file ":  <plurals name=\"" name "\">  zero=\"" text "\""
+    }
+    /<\/plurals>/ { in_plurals = 0 }
+  ' "$f"
+done
+```
+
+For each hit, warn the user that the entry is unreachable in that locale. The fix is to **remove the `<item quantity="zero">`** and, if the UX wanted distinct wording for count=0, add a separate `<string>` plus an `if (count == 0)` branch at the call site (see "Plurals: handle with care" below).
 
 Quick scan over the missing keys:
 
@@ -147,6 +175,14 @@ When adding or proposing **`<plurals>`** entries, follow these rules:
   - Arabic (`ar`): `zero`, `one`, `two`, `few`, `many`, `other`
   - German / Swedish / Brazilian Portuguese: `one`, `other`
 - When a missing string contains a count placeholder and is conceptually a singular/plural pair, **flag it before translating** — it may belong as a `<plurals>` resource rather than a single `<string>`. Surface this to the user before proposing translations.
+- **Do not use `quantity="zero"` outside Arabic (`ar`) and Welsh (`cy`).** CLDR's `zero` category is integer-bearing only in those two languages. Android calls `PluralRules.select(0)` for the device locale; in English/German/Czech/Polish/Russian/Swedish/Portuguese/etc. it returns `other`, so the explicit `<item quantity="zero">` is never picked at runtime and the user sees `"…0 items"` instead of the intended wording. If the design calls for "no items" at count=0, model it as a separate `<string>` and an `if (count == 0)` branch at the call site:
+  ```kotlin
+  val label = if (count == 0) {
+      stringRes(R.string.foo_no_items, dateLabel)
+  } else {
+      pluralStringResource(R.plurals.foo_items, count, dateLabel, count)
+  }
+  ```
 - Reference: [Android `<plurals>` docs](https://developer.android.com/guide/topics/resources/string-resource#Plurals) and [CLDR plural rules](https://unicode-org.github.io/cldr-staging/charts/latest/supplemental/language_plural_rules.html).
 
 **Then ask the user:** "Would you like me to translate these missing strings into [list of target locales]?"
@@ -166,3 +202,4 @@ When adding translated strings to locale files:
 - **Inserting strings in a specific position** — always append at the bottom; ordering is handled separately
 - **Hardcoding `"1"` in a `<plurals>` `quantity="one"` item** — always use the count placeholder; otherwise non-English `one` categories produce wrong text
 - **Copying English's `one`/`other` set into every locale** — each language must include all CLDR plural categories it uses (e.g. Czech needs `one`, `few`, `many`, `other`)
+- **Using `<item quantity="zero">` to special-case count=0** — outside Arabic and Welsh, this entry is unreachable: ICU/CLDR maps 0 → `other`, so the runtime never picks the zero item and the user sees `"…0 items"`. Special-case at the call site with a separate `<string>` instead.

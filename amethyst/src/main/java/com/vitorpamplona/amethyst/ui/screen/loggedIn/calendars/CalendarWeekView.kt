@@ -44,7 +44,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -202,7 +201,7 @@ private fun WeekStrip(
                 }
 
             val dateLabel = formatLongDate(date.atStartOfDay(ZoneId.systemDefault()).toEpochSecond())
-            val baseA11y = pluralStringResource(R.plurals.calendar_day_a11y_events, count, dateLabel, count)
+            val baseA11y = calendarDayA11yLabel(dateLabel, count)
             val todaySuffix = stringRes(R.string.calendar_day_a11y_today_suffix)
             val selectedSuffix = stringRes(R.string.calendar_day_a11y_selected_suffix)
             val a11y =
