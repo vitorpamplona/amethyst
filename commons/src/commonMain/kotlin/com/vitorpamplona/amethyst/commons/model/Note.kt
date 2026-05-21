@@ -157,12 +157,12 @@ open class Note(
     var zapsAmount: BigDecimal = BigDecimal.ZERO
 
     /**
-     * NIP-BC verified onchain zaps targeting this note.
-     * Key: Bitcoin txid (lowercase 64-char hex). Value: verified entry with the source
-     * OnchainZapEvent note (so `source.author` identifies the sender), the verified
-     * satoshis paid to the recipient (NOT the sender-claimed amount), and a confirmed
-     * flag. Confirmed and pending entries live here together; `updateZapTotal` only
-     * counts confirmed amounts.
+     * NIP-BC onchain zaps targeting this note.
+     * Key: Bitcoin txid (lowercase 64-char hex). Value: entry with the source
+     * OnchainZapEvent note (so `source.author` identifies the sender), the sender-claimed
+     * amount, the on-chain verified amount, and a verification status.
+     * Unverified, pending, and confirmed entries live here together; `updateZapTotal`
+     * only counts CONFIRMED amounts.
      */
     var onchainZaps = mapOf<String, OnchainZapEntry>()
         private set
@@ -436,31 +436,56 @@ open class Note(
     ): Boolean {
         val existing = onchainZaps[txid]
         if (existing != null) {
-            // Same-state duplicate: keep the first source and amount we got.
-            if (existing.confirmed == entry.confirmed) return false
-            // Downgrade confirmed → pending: never accept. States differ here,
-            // so existing.confirmed alone is sufficient to identify the downgrade.
-            if (existing.confirmed) return false
-            // Else: existing pending + incoming confirmed — fall through to upgrade.
+            // Same-state duplicate: keep the first source/amount/status we got.
+            if (existing.status == entry.status) return false
+            // Reject downgrades. The status enum is naturally ordered
+            // UNVERIFIED < PENDING < CONFIRMED — accept only forward transitions.
+            if (entry.status.ordinal <= existing.status.ordinal) return false
         }
         onchainZaps = onchainZaps + Pair(txid, entry)
         return true
     }
 
+    @Synchronized
+    private fun innerRemoveOnchainZap(txid: String): Boolean {
+        if (!onchainZaps.containsKey(txid)) return false
+        onchainZaps = onchainZaps - txid
+        return true
+    }
+
     /**
-     * Register a NIP-BC verified onchain zap targeting this note. `verifiedSats` MUST come
-     * from on-chain verification (sum of outputs paying the recipient's derived Taproot
-     * address), not the sender-claimed `amount` tag. `source` is the OnchainZapEvent's own
+     * Register a NIP-BC onchain zap targeting this note. `source` is the OnchainZapEvent's own
      * note — `source.author` is the sender shown in the reactions gallery.
+     *
+     * Call with [OnchainZapStatus.UNVERIFIED] (and `verifiedSats = 0`) at consumption time
+     * to attach the zap optimistically so the user immediately sees their outgoing zap
+     * is processing. Call again with [OnchainZapStatus.PENDING] or [OnchainZapStatus.CONFIRMED]
+     * (and the verified output sum) once the chain backend confirms it.
+     *
+     * `verifiedSats` MUST come from on-chain verification (sum of outputs paying the
+     * recipient's derived Taproot address), not the sender-claimed `amount` tag.
      */
     fun addOnchainZap(
         source: Note,
         txid: String,
+        claimedSats: Long,
         verifiedSats: Long,
-        confirmed: Boolean,
+        status: OnchainZapStatus,
     ) {
-        val inserted = innerAddOnchainZap(txid, OnchainZapEntry(source, verifiedSats, confirmed))
+        val inserted = innerAddOnchainZap(txid, OnchainZapEntry(source, claimedSats, verifiedSats, status))
         if (inserted) {
+            updateZapTotal()
+            flowSet?.zaps?.invalidateData()
+        }
+    }
+
+    /**
+     * Remove a previously-attached onchain zap entry. Used when verification produced a
+     * hard rejection (e.g. the transaction paid zero to the recipient — a spoof attempt).
+     */
+    fun removeOnchainZap(txid: String) {
+        val removed = innerRemoveOnchainZap(txid)
+        if (removed) {
             updateZapTotal()
             flowSet?.zaps?.invalidateData()
         }
@@ -679,9 +704,9 @@ open class Note(
         }
 
         // NIP-BC onchain zaps — verified amounts only, confirmed only.
-        // Pending/unconfirmed entries are tracked but excluded from the total per spec.
+        // Unverified/pending entries are tracked but excluded from the total per spec.
         onchainZaps.values.forEach { entry ->
-            if (entry.confirmed) {
+            if (entry.status == OnchainZapStatus.CONFIRMED) {
                 sumOfAmounts += BigDecimal.valueOf(entry.verifiedSats)
             }
         }

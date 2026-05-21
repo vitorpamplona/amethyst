@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.OnchainZapEntry
+import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -122,18 +123,20 @@ private fun OnchainZapEntryRow(
     accountViewModel: AccountViewModel,
 ) {
     val user = entry.source.author
+    val displaySats = entry.displaySats
     val amountText =
-        remember(entry.verifiedSats) {
-            showAmount(BigDecimal.valueOf(entry.verifiedSats))
+        remember(displaySats) {
+            showAmount(BigDecimal.valueOf(displaySats))
         }
-    val avatarAlpha = if (entry.confirmed) 1f else 0.6f
+    val isConfirmed = entry.status == OnchainZapStatus.CONFIRMED
+    val avatarAlpha = if (isConfirmed) 1f else 0.6f
 
     Box(
         modifier = Size35Modifier.clickable { onOnchainZapEntryClick(entry, nav) },
         contentAlignment = Alignment.BottomCenter,
     ) {
-        // Only the avatar dims for pending entries. The amount overlay and clock
-        // badge stay at full opacity so they remain readable.
+        // Only the avatar dims for unverified/pending entries. The amount overlay
+        // and clock badge stay at full opacity so they remain readable.
         Box(modifier = Modifier.alpha(avatarAlpha)) {
             WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
                 user,
@@ -143,7 +146,7 @@ private fun OnchainZapEntryRow(
 
         CrossfadeToDisplayAmount(amountText)
 
-        if (!entry.confirmed) {
+        if (!isConfirmed) {
             // TopStart so the badge doesn't collide with the FollowingIcon
             // that WatchUserMetadataAndFollowsAndRenderUserProfilePicture
             // paints at TopEnd for followed users.

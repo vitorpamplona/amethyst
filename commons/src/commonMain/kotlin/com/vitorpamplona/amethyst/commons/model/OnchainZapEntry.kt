@@ -23,22 +23,57 @@ package com.vitorpamplona.amethyst.commons.model
 import androidx.compose.runtime.Stable
 
 /**
- * Per-(note, txid) verified NIP-BC onchain zap state.
+ * NIP-BC onchain zap verification state.
+ *
+ * The chain backend may not have indexed the transaction at the moment we first
+ * see the zap event — especially for the sender's own outgoing zaps, where we
+ * consume the kind:8333 event milliseconds after broadcasting the transaction.
+ * Tracking the verification status as a state machine lets us attach the zap
+ * to the thread optimistically and upgrade it as the chain catches up.
+ */
+enum class OnchainZapStatus {
+    /** Not yet checked against the chain (or the chain didn't have the tx yet). */
+    UNVERIFIED,
+
+    /** Verified against the chain, 0 confirmations (in mempool). */
+    PENDING,
+
+    /** Verified against the chain, ≥1 confirmation. */
+    CONFIRMED,
+}
+
+/**
+ * Per-(note, txid) NIP-BC onchain zap state.
  *
  * @property source The OnchainZapEvent note that contributed this entry. `source.author` is the
- *                  sender shown in the reactions gallery. When pending → confirmed upgrades
- *                  happen, the upgrading event's note replaces the existing `source`.
+ *                  sender shown in the reactions gallery. When an entry is upgraded
+ *                  (UNVERIFIED → PENDING/CONFIRMED, PENDING → CONFIRMED), the upgrading
+ *                  event's note replaces the existing `source`.
+ * @property claimedSats Sender-claimed amount from the kind:8333 event's `amount` tag. Shown to
+ *                       the user while the zap is UNVERIFIED so they have feedback that
+ *                       a zap is processing.
  * @property verifiedSats Satoshis verified to have paid the recipient's derived Taproot
- *                        address on chain. NEVER the sender-claimed `amount` tag.
- * @property confirmed True when the transaction has at least one confirmation. Unconfirmed
- *                     zaps are tracked but excluded from aggregate totals per the NIP-BC
- *                     spec ("Unconfirmed transactions MAY be displayed as pending...
- *                     SHOULD either exclude them from aggregate totals or clearly label
- *                     them as pending").
+ *                        address on chain. Zero while [status] is [OnchainZapStatus.UNVERIFIED].
+ *                        NEVER the sender-claimed `amount` tag.
+ * @property status See [OnchainZapStatus]. Only [OnchainZapStatus.CONFIRMED] entries are added
+ *                  to the note's aggregate zap total.
  */
 @Stable
 data class OnchainZapEntry(
     val source: Note,
+    val claimedSats: Long,
     val verifiedSats: Long,
-    val confirmed: Boolean,
-)
+    val status: OnchainZapStatus,
+) {
+    /**
+     * Amount to display to the user. Once verified we always prefer the on-chain truth; while
+     * unverified we fall back to the sender-claimed amount so the user has some feedback.
+     */
+    val displaySats: Long
+        get() =
+            if (status == OnchainZapStatus.UNVERIFIED) {
+                claimedSats
+            } else {
+                verifiedSats
+            }
+}

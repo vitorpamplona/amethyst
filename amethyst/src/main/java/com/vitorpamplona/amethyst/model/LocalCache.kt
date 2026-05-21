@@ -26,6 +26,7 @@ import android.util.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Channel
+import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
@@ -1848,52 +1849,118 @@ object LocalCache : ILocalCache, ICacheProvider {
         wasVerified: Boolean,
     ): Boolean {
         val note = getOrCreateNote(event.id)
-        if (note.event != null) return false
+        val alreadyLoaded = note.event != null
 
-        if (!(wasVerified || justVerify(event))) return false
+        if (!alreadyLoaded) {
+            if (!(wasVerified || justVerify(event))) return false
 
-        // Anti-spoofing: NIP-BC requires rejecting self-zaps.
-        val recipient = event.recipient() ?: return false
-        if (event.pubKey.equals(recipient, ignoreCase = true)) return false
+            // Anti-spoofing: NIP-BC requires rejecting self-zaps.
+            val recipient = event.recipient() ?: return false
+            if (event.pubKey.equals(recipient, ignoreCase = true)) return false
 
-        val author = getOrCreateUser(event.pubKey)
-        val repliesTo = computeReplyTo(event)
-        note.loadEvent(event, author, repliesTo)
-        refreshNewNoteObservers(note)
+            val author = getOrCreateUser(event.pubKey)
+            val repliesTo = computeReplyTo(event)
+            note.loadEvent(event, author, repliesTo)
 
-        // Verification needs a chain backend. Without one (e.g. before Account
-        // wires its EsploraBackend) the event is still cached so subscriptions
-        // and profile zap views see it, but it can't contribute to Note totals.
-        val backend = onchainBackend ?: return true
-        val verifier = OnchainZapVerifier(backend)
-
-        Amethyst.instance.applicationIOScope.launch {
-            try {
-                when (val result = verifier.verify(event)) {
-                    is VerifiedOnchainZap.Confirmed -> {
-                        repliesTo.forEach {
-                            it.addOnchainZap(note, result.txid, result.verifiedSats, confirmed = true)
-                        }
-                    }
-
-                    is VerifiedOnchainZap.Pending -> {
-                        repliesTo.forEach {
-                            it.addOnchainZap(note, result.txid, result.verifiedSats, confirmed = false)
-                        }
-                    }
-
-                    is VerifiedOnchainZap.Rejected -> {
-                        Log.d("OnchainZap") {
-                            "rejected ${result.txid}: ${result.reason}"
-                        }
-                    }
+            // Optimistic attachment: surface the zap on the thread immediately, even
+            // before the chain confirms it. Crucial for the sender's own outgoing zap,
+            // where consumption happens milliseconds after broadcast and the chain
+            // backend usually hasn't indexed the tx yet.
+            val txid = event.txid()
+            val claimedSats = event.claimedAmountInSats() ?: 0L
+            if (txid != null) {
+                repliesTo.forEach {
+                    it.addOnchainZap(note, txid, claimedSats, verifiedSats = 0L, OnchainZapStatus.UNVERIFIED)
                 }
-            } catch (t: Throwable) {
-                Log.w("OnchainZap", "verification failed for ${event.id}", t)
             }
+
+            refreshNewNoteObservers(note)
+        } else {
+            // A later arrival of the same event. The note is already cached, but the
+            // verifier may not have produced a CONFIRMED result yet. Fall through to
+            // re-run verification — `verifyAndUpgradeOnchainZap` is a no-op once an
+            // entry on every target note has reached CONFIRMED.
         }
 
-        return true
+        // Verification needs a chain backend. Without one (e.g. before Account
+        // wires its EsploraBackend) the event stays cached so subscriptions
+        // and profile zap views see it, but it can't contribute to Note totals.
+        val backend = onchainBackend ?: return !alreadyLoaded
+        val verifier = OnchainZapVerifier(backend)
+        val repliesTo = computeReplyTo(event)
+
+        Amethyst.instance.applicationIOScope.launch {
+            verifyAndUpgradeOnchainZap(event, note, repliesTo, verifier)
+        }
+
+        return !alreadyLoaded
+    }
+
+    /**
+     * Run the chain verifier for a single onchain zap event and apply the result to every
+     * target note. Designed to be safe to call repeatedly — the [Note] entries upgrade
+     * monotonically (UNVERIFIED → PENDING → CONFIRMED) and won't move backwards.
+     */
+    private suspend fun verifyAndUpgradeOnchainZap(
+        event: OnchainZapEvent,
+        source: Note,
+        repliesTo: List<Note>,
+        verifier: OnchainZapVerifier,
+    ) {
+        val txid = event.txid() ?: return
+        val claimedSats = event.claimedAmountInSats() ?: 0L
+        try {
+            when (val result = verifier.verify(event)) {
+                is VerifiedOnchainZap.Confirmed -> {
+                    repliesTo.forEach {
+                        it.addOnchainZap(source, result.txid, claimedSats, result.verifiedSats, OnchainZapStatus.CONFIRMED)
+                    }
+                }
+
+                is VerifiedOnchainZap.Pending -> {
+                    repliesTo.forEach {
+                        it.addOnchainZap(source, result.txid, claimedSats, result.verifiedSats, OnchainZapStatus.PENDING)
+                    }
+                }
+
+                is VerifiedOnchainZap.Rejected -> {
+                    if (result.reason == VerifiedOnchainZap.Rejected.Reason.TX_NOT_FOUND) {
+                        // Transient — the tx may not have propagated to the backend's
+                        // indexer yet. Leave the entry as UNVERIFIED so a later
+                        // reverifyOnchainZapsForNote() call (e.g. on chain tip change)
+                        // can promote it.
+                        Log.d("OnchainZap") { "tx not yet indexed for ${event.id} (${result.txid}); will retry" }
+                    } else {
+                        // Permanent — e.g. ZERO_VERIFIED_AMOUNT means the tx did not
+                        // actually pay the recipient. Drop the optimistic entry so
+                        // spoof attempts disappear from the gallery.
+                        Log.d("OnchainZap") { "rejected ${result.txid}: ${result.reason}" }
+                        repliesTo.forEach { it.removeOnchainZap(result.txid) }
+                    }
+                }
+            }
+        } catch (t: Throwable) {
+            Log.w("OnchainZap", "verification failed for ${event.id}", t)
+        }
+    }
+
+    /**
+     * Re-run onchain-zap verification for every non-CONFIRMED entry attached to [note].
+     * Safe to call from a screen-visibility hook or a chain-tip change observer; each
+     * verifier call is bounded by the chain backend's cache TTLs.
+     */
+    suspend fun reverifyOnchainZapsForNote(note: Note) {
+        val backend = onchainBackend ?: return
+        val pendingEntries =
+            note.onchainZaps.values.filter { it.status != OnchainZapStatus.CONFIRMED }
+        if (pendingEntries.isEmpty()) return
+
+        val verifier = OnchainZapVerifier(backend)
+        pendingEntries.forEach { entry ->
+            val sourceEvent = entry.source.event as? OnchainZapEvent ?: return@forEach
+            val repliesTo = computeReplyTo(sourceEvent)
+            verifyAndUpgradeOnchainZap(sourceEvent, entry.source, repliesTo, verifier)
+        }
     }
 
     private fun attachZapToLiveActivityChannel(
