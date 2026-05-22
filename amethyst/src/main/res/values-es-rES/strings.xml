@@ -8,6 +8,10 @@
     <string name="show_anyway">Mostrar de todos modos</string>
     <string name="post_was_hidden">Esta publicación se ocultó porque menciona tus usuarios o palabras ocultas</string>
     <string name="post_was_flagged_as_inappropriate_by">Post marcado como inapropiado por</string>
+    <plurals name="post_was_hidden_due_to_too_many_hashtags">
+        <item quantity="one">Esta publicación tiene más de %1$d hashtag</item>
+        <item quantity="other">Esta publicación tiene más de %1$d hashtags</item>
+    </plurals>
     <string name="post_not_found">El evento se está cargando o no se puede encontrar en la lista de relés</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Imagen del canal</string>
@@ -30,6 +34,7 @@
     <string name="copy_text">Copiar texto</string>
     <string name="copy_user_pubkey">Copiar PubKey del usuario</string>
     <string name="copy_note_id">Copiar ID de la nota</string>
+    <string name="copy_raw_json">Copiar JSON sin procesar</string>
     <string name="broadcast">Transmisión</string>
     <string name="timestamp_it">Poner marca de tiempo</string>
     <string name="timestamp_pending">Marca de tiempo: confirmaciones pendientes</string>
@@ -49,6 +54,10 @@
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Estás usando una clave pública, que es solo de lectura. Inicia sesión con una clave privada para poder impulsar publicaciones.</string>
     <string name="login_with_a_private_key_to_like_posts">Estás usando una clave pública, que es solo de lectura. Inicia sesión con una clave privada para indicar que te gustan las publicaciones.</string>
     <string name="no_zap_amount_setup_long_press_to_change">Falta la configuración de zaps por defecto. Mantén pulsado unos segundos para cambiarla</string>
+    <string name="chat_zap_amount_suffix">zapeó %1$s sats</string>
+    <string name="chat_zap_anonymous">Anónimo</string>
+    <string name="chat_raid_is_raiding">está en una incursión</string>
+    <string name="chat_clip_created_a_clip">creó un clip</string>
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">Estás usando una clave pública, que es solo de lectura. Inicia sesión con una clave privada para poder enviar zaps.</string>
     <string name="login_with_a_private_key_to_be_able_to_follow">Estás usando una clave pública, que es solo de lectura. Inicia sesión con una clave privada para poder seguir a otros usuarios.</string>
     <string name="login_with_a_private_key_to_be_able_to_unfollow">Estás usando una clave pública, que es solo de lectura. Inicia sesión con una clave privada para poder dejar de seguir a otros usuarios.</string>
@@ -153,6 +162,8 @@
     <string name="pronouns">Pronombres</string>
     <string name="ln_address">Dirección LN</string>
     <string name="ln_url_outdated">Dirección LN (antigua)</string>
+    <string name="stale_relay_hint_label">Los relés de origen pueden ser obsoletos</string>
+    <string name="stale_relay_hint_icon_description">Aviso de relé obsoleto</string>
     <string name="download_to_phone">Guardar en el teléfono</string>
     <string name="save_to_gallery">Guardar en la galería</string>
     <string name="image_saved_to_the_gallery">Imagen guardada en la galería</string>
@@ -161,6 +172,8 @@
     <string name="failed_to_save_the_image">Error al guardar la imagen</string>
     <string name="video_saved_to_the_gallery">Video guardado en la galería de videos del teléfono</string>
     <string name="failed_to_save_the_video">Error al guardar el video</string>
+    <string name="pdf_saved_to_the_gallery">PDF guardado en Descargas/Amethyst</string>
+    <string name="failed_to_save_the_pdf">Error al guardar el PDF</string>
     <string name="upload_image">Cargar imagen</string>
     <string name="upload_file">Cargar archivo</string>
     <string name="take_a_picture">Hacer una foto</string>
@@ -270,6 +283,8 @@
         Son ideales para comunidades abiertas en torno a temas específicos. Algunos de estos grupos son efímeros
     y, por lo tanto, los mensajes del chat desaparecen con el tiempo</string>
     <string name="public_chat">Chat público</string>
+    <string name="marmot_group">Grupo MLS</string>
+    <string name="marmot_group_no_messages_yet">Aún no hay mensajes</string>
     <string name="public_chat_title">Metadatos públicos del chat</string>
     <string name="public_chat_explainer">Los chats públicos son visibles para todos en Nostr y cualquiera
         puede participar en ellos. Son ideales para comunidades abiertas alrededor de temas específicos.
@@ -334,6 +349,11 @@
     <string name="private_conversation_notification">"&lt;Unable to decrypt private message&gt;\n\nTe citaron en una conversación privada o encriptada entre %1$s y %2$s."</string>
     <string name="account_switch_add_account_dialog_title">Agregar cuenta nueva</string>
     <string name="drawer_accounts">Cuentas</string>
+    <string name="drawer_section_navigate">Navegar</string>
+    <string name="drawer_section_you">Tú</string>
+    <string name="drawer_section_feeds">Tablones</string>
+    <string name="drawer_section_create">Crear</string>
+    <string name="drawer_section_system">Sistema</string>
     <string name="account_switch_select_account">Seleccionar cuenta</string>
     <string name="account_switch_add_account_btn">Agregar cuenta nueva</string>
     <string name="account_switch_active_account">Cuenta activa</string>
@@ -356,6 +376,8 @@
     <string name="quick_action_block_dialog_btn">Bloquear</string>
     <string name="quick_action_delete_dialog_btn">Eliminar</string>
     <string name="quick_action_block">Bloquear</string>
+    <string name="quick_action_mute_thread">Silenciar hilo</string>
+    <string name="quick_action_unmute_thread">Reactivar hilo</string>
     <string name="quick_action_report">Reportar</string>
     <string name="quick_action_delete_button">Eliminar</string>
     <string name="quick_action_dont_show_again_button">No mostrar de nuevo</string>
@@ -385,9 +407,49 @@
     <string name="migrate_bookmarks_button">Mover todo a marcadores nuevos</string>
     <string name="migrate_bookmarks_success">Los marcadores se migraron correctamente</string>
     <string name="drafts">Borradores</string>
+    <string name="scheduled_posts">Publicaciones programadas</string>
+    <string name="schedule_post">Programar</string>
+    <string name="schedule_post_time_label">Hora programada</string>
+    <string name="schedule_post_helper">Las publicaciones se realizan en ~15 minutos a partir de la hora programada.</string>
+    <string name="schedule_post_pick_time">Elegir hora programada</string>
+    <string name="schedule_post_pick_label">Programación para…</string>
+    <string name="schedule_post_publishes_in">Se publica en %1$s</string>
+    <string name="schedule_post_was_due">Se venció hace %1$s</string>
+    <string name="schedule_post_picker_time_title">Hora</string>
+    <string name="schedule_post_button_add">Programar publicación</string>
+    <string name="schedule_post_button_remove">Cancelar programación</string>
+    <string name="schedule_post_warning_title">Las notificaciones siempre activas están deshabilitadas</string>
+    <string name="schedule_post_warning_single">Las publicaciones programadas pueden no realizarse hasta que vuelvas a abrir la aplicación. Habilita la activación en \"Configuración → Preferencias de interfaz de usuario\" para garantizar una programación en segundo plano fiable.</string>
+    <string name="schedule_post_warning_multi">Las publicaciones programadas pueden no realizarse hasta que vuelvas a abrir la aplicación. Las publicaciones programadas de otras cuentas no se activarán mientras esta cuenta esté activa. Habilita la activación en \"Configuración → Preferencias de interfaz de usuario\" para garantizar una programación en segundo plano fiable.</string>
+    <string name="schedule_post_preset_in_one_hour">En 1 hora</string>
+    <string name="schedule_post_preset_tomorrow_morning">Mañana a las 9 a. m.</string>
+    <string name="schedule_post_preset_next_monday_morning">El próximo lunes a las 9 a. m.</string>
+    <string name="schedule_post_always_on_prompt_title">¿Habilitar notificaciones siempre activas?</string>
+    <string name="schedule_post_always_on_prompt_message">Las publicaciones programadas solo se realizan de forma fiable cuando las notificaciones siempre activas están habilitadas. De lo contrario, es posible que no se activen hasta que vuelvas a abrir la app.</string>
+    <string name="schedule_post_always_on_prompt_open_settings">Abrir configuración</string>
+    <string name="schedule_post_always_on_prompt_continue">Continuar de todos modos</string>
+    <string name="scheduled_posts_at_time">%1$s · en %2$s</string>
+    <string name="scheduled_posts_at_time_past">%1$s · hace %2$s</string>
+    <string name="scheduled_posts_day_tomorrow">Mañana</string>
+    <string name="scheduled_posts_logout_toast_zero">Sesión cerrada</string>
+    <plurals name="scheduled_posts_logout_toast">
+        <item quantity="one">Sesión cerrada · %d publicación programada eliminada</item>
+        <item quantity="other">Sesión cerrada · %d publicaciones programadas eliminadas</item>
+    </plurals>
+    <string name="scheduled_posts_notification_sent_title">Se realizó la publicación programada</string>
+    <string name="scheduled_posts_notification_failed_title">Fallo en la publicación programada</string>
+    <string name="app_notification_scheduled_posts_channel_name">Publicaciones programadas</string>
+    <string name="app_notification_scheduled_posts_channel_description">Notificaciones cuando una publicación programada se realiza o no.</string>
+    <string name="scheduled_posts_action_send_now">Enviar ahora</string>
     <string name="polls">Encuestas</string>
     <string name="open_polls">Abiertas</string>
     <string name="closed_polls">Cerradas</string>
+    <string name="new_community_rules_limits_save">Guardar límites</string>
+    <string name="new_community_rules_banned_section">Usuarios bloqueados</string>
+    <string name="new_community_rules_banned_hint">Estas claves públicas no pueden publicar en la comunidad.</string>
+    <string name="new_community_rules_banned_add">Agregar un usuario bloqueado</string>
+    <string name="new_community_rules_banned_placeholder">Nombre, npub, o NIP-05</string>
+    <string name="new_community_rules_wot_section">Portal de red de confianza (opcional)</string>
     <string name="pictures">Imágenes</string>
     <string name="shorts">Cortos</string>
     <string name="longs">Videos</string>

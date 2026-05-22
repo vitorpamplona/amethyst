@@ -797,6 +797,10 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="wallet_connect_manual_config">Zaawansowane: wprowadź szczegóły połączenia ręcznie</string>
     <string name="quick_zap_amounts">Kwoty Quick Zap</string>
     <string name="quick_zap_amounts_explainer">Wyświetlane po naciśnięciu przycisku zap. Dotknij kwoty, aby ją usunąć. Jeśli pozostawisz to pole puste, za każdym razem otworzy się okno dialogowe umożliwiające wprowadzenie kwoty.</string>
+    <string name="quick_zap_amounts_onchain">Szybkie kwoty zapoów On-chain</string>
+    <string name="quick_zap_amounts_onchain_explainer">Transakcje on-chain są obciążone opłatami minerów, więc kwoty są zazwyczaj wyższe niż w sieci Lightning. Kliknij kwotę, aby ją usunąć.</string>
+    <string name="new_amount_in_sats_onchain">Nowa kwota on-chain w satoszach</string>
+    <string name="send_onchain_instead">Zamiast tego wyślij on-chain</string>
     <string name="zap_privacy_section">Prywatność Zap</string>
     <string name="zap_type_section_explainer">Kontroluje sposób wyświetlania Twojej tożsamości podczas wysyłania zapa.</string>
     <string name="wallet_connect_connect_app">Podłącz portfel</string>
@@ -1669,6 +1673,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="wallet_onchain_public_dialog_title">Ten portfel jest publiczny</string>
     <string name="wallet_onchain_public_dialog_body">Twój adres Taproot jest generowany na podstawie Twojego klucza publicznego Nostr, więc każdy, kto zna Twój klucz npub, może sprawdzić saldo tego portfela oraz historię transakcji w łańcuchu bloków.\n\nAby zachować prywatność, zasilaj ten portfel i wypłacaj z niego środki wyłącznie z kont publicznych, takich jak giełdy. Nigdy nie mieszaj tych środków ze środkami z portfeli offline i traktuj je jako pieniądze, które możesz stracić, ponieważ każdy, kto ma dostęp do Twojego klucza nsec, może je wydać.</string>
     <string name="wallet_onchain_public_dialog_confirm">Rozumiem</string>
+    <string name="wallet_onchain_copy_dialog_confirm">Skopiuj adres</string>
     <string name="route_security_filters">Filtry bezpieczeństwa</string>
     <string name="route_import_follows">Import Obserwowanych</string>
     <string name="new_post">Nowy post</string>
@@ -1734,6 +1739,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
         <item quantity="many">%1$s, wydarzeń %2$d</item>
         <item quantity="other">%1$s, %2$d wydarzeń</item>
     </plurals>
+    <string name="calendar_day_a11y_no_events">%1$s, brak wydarzeń</string>
     <string name="calendar_day_a11y_today_suffix">dziś</string>
     <string name="calendar_day_a11y_selected_suffix">zaznaczone</string>
     <string name="calendar_fab_new_event">Utwórz nowe wydarzenie kalendarza</string>
@@ -2173,6 +2179,9 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="remove_user_from_the_list">Usuń użytkownika z listy</string>
     <string name="follow_list_item_label">Kategoria profili</string>
     <string name="members">Uczestnicy</string>
+    <string name="contact_list_containing_label">Lista obserwowanych zawiera %1$d użytkownika(ów):</string>
+    <string name="contact_list_screen_title">Lista obserwowanych</string>
+    <string name="contact_list_screen_title_with_count">Lista obserwowanych (%1$d)</string>
     <string name="people_list_title">Metadane listy profili</string>
     <string name="people_list_explainer">Metadane listy obserwowanych są widoczne dla wszystkich użytkowników w sieci Nostr. Tylko Twoi uczestnicy prywatni są zaszyfrowani.</string>
     <string name="follow_pack_title">Metadane pakietu subskrybentów</string>
