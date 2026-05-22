@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.model.nip25Reactions.ReactionAction
 import com.vitorpamplona.amethyst.commons.model.nip51Bookmarks.BookmarkAction
 import com.vitorpamplona.amethyst.commons.model.nip57Zaps.ZapAction
 import com.vitorpamplona.amethyst.commons.services.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
@@ -125,6 +126,8 @@ sealed class ActivePopup {
     data object EmojiPicker : ActivePopup()
 
     data object RepostOptions : ActivePopup()
+
+    data object Boosts : ActivePopup()
 }
 
 /**
@@ -442,25 +445,52 @@ fun ZapReceiptsDialog(
 fun ZapReceiptsPopup(
     note: Note,
     localCache: DesktopLocalCache,
+    relayManager: DesktopRelayConnectionManager,
     onDismiss: () -> Unit,
+    onNavigateToProfile: (String) -> Unit = {},
 ) {
+    var metadataVersion by remember { mutableIntStateOf(0) }
+
+    // Fetch missing metadata for zap senders
+    LaunchedEffect(note.idHex) {
+        val pubKeys =
+            note.zaps.keys
+                .mapNotNull { it.event?.pubKey }
+                .distinct()
+                .filter { localCache.getUserIfExists(it)?.profilePicture() == null }
+        if (pubKeys.isNotEmpty()) {
+            fetchMetadataForUsers(pubKeys, relayManager, localCache) { metadataVersion++ }
+        }
+    }
+
+    @Suppress("UNUSED_EXPRESSION")
+    metadataVersion
+
+    data class ZapEntry(
+        val pubKey: String,
+        val pictureUrl: String?,
+        val name: String,
+        val amount: Long,
+        val message: String?,
+    )
+
     val zapEntries =
-        remember(note.zaps) {
+        remember(note.zaps, metadataVersion) {
             note.zaps
                 .mapNotNull { (request, receipt) ->
-                    val sender =
-                        request.author?.toBestDisplayName()
-                            ?: request.event?.pubKey?.take(12)
-                            ?: return@mapNotNull null
+                    val pubKey = request.event?.pubKey ?: return@mapNotNull null
+                    val user = request.author
+                    val name = user?.toBestDisplayName() ?: pubKey.take(12)
+                    val pictureUrl = user?.profilePicture()
                     val amount =
                         (receipt?.event as? LnZapEvent)?.amount?.toLong()
                             ?: return@mapNotNull null
                     val message = request.event?.content?.ifBlank { null }
-                    Triple(sender, amount, message)
-                }.sortedByDescending { it.second }
+                    ZapEntry(pubKey, pictureUrl, name, amount, message)
+                }.sortedByDescending { it.amount }
         }
 
-    val totalSats = remember(zapEntries) { zapEntries.sumOf { it.second } }
+    val totalSats = remember(zapEntries) { zapEntries.sumOf { it.amount } }
 
     Popup(
         alignment = Alignment.TopCenter,
@@ -508,21 +538,30 @@ fun ZapReceiptsPopup(
                     HorizontalDivider()
 
                     // Sorted receipts
-                    zapEntries.take(10).forEach { (sender, amount, message) ->
+                    zapEntries.take(10).forEach { entry ->
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier =
+                                Modifier.fillMaxWidth().clickable {
+                                    onDismiss()
+                                    onNavigateToProfile(entry.pubKey)
+                                },
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
+                            UserAvatar(
+                                userHex = entry.pubKey,
+                                pictureUrl = entry.pictureUrl,
+                                size = 24.dp,
+                            )
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = sender,
+                                    text = entry.name,
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
-                                if (!message.isNullOrBlank()) {
+                                if (!entry.message.isNullOrBlank()) {
                                     Text(
-                                        text = message,
+                                        text = entry.message,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 1,
@@ -530,7 +569,7 @@ fun ZapReceiptsPopup(
                                 }
                             }
                             Text(
-                                text = "${formatSats(amount)} sats",
+                                text = "${formatSats(entry.amount)} sats",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -557,9 +596,28 @@ fun ZapReceiptsPopup(
 fun ReactionsPopup(
     note: Note,
     localCache: DesktopLocalCache,
+    relayManager: DesktopRelayConnectionManager,
     onDismiss: () -> Unit,
+    onNavigateToProfile: (String) -> Unit = {},
 ) {
-    val totalCount = remember(note.reactions) { note.countReactions() }
+    var metadataVersion by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(note.idHex) {
+        val pubKeys =
+            note.reactions.values
+                .flatten()
+                .mapNotNull { it.event?.pubKey }
+                .distinct()
+                .filter { localCache.getUserIfExists(it)?.profilePicture() == null }
+        if (pubKeys.isNotEmpty()) {
+            fetchMetadataForUsers(pubKeys, relayManager, localCache) { metadataVersion++ }
+        }
+    }
+
+    @Suppress("UNUSED_EXPRESSION")
+    metadataVersion
+
+    val totalCount = remember(note.reactions, metadataVersion) { note.countReactions() }
 
     Popup(
         alignment = Alignment.TopCenter,
@@ -613,18 +671,31 @@ fun ReactionsPopup(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
-                            // Sender names
+                            // Sender avatars + names
                             reactionNotes.take(5).forEach { reactionNote ->
-                                val senderName =
-                                    reactionNote.author?.toBestDisplayName()
-                                        ?: reactionNote.event?.pubKey?.take(12)
-                                        ?: "Unknown"
-                                Text(
-                                    text = senderName,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(start = 24.dp),
-                                )
+                                val pubKey = reactionNote.event?.pubKey ?: return@forEach
+                                val user = reactionNote.author
+                                val senderName = user?.toBestDisplayName() ?: pubKey.take(12)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    modifier =
+                                        Modifier.padding(start = 24.dp).clickable {
+                                            onDismiss()
+                                            onNavigateToProfile(pubKey)
+                                        },
+                                ) {
+                                    UserAvatar(
+                                        userHex = pubKey,
+                                        pictureUrl = user?.profilePicture(),
+                                        size = 20.dp,
+                                    )
+                                    Text(
+                                        text = senderName,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                             }
                             if (reactionNotes.size > 5) {
                                 Text(
@@ -635,6 +706,111 @@ fun ReactionsPopup(
                                 )
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Floating popup showing who boosted (reposted) a note.
+ * Shows kind 6/1621 reposts only (matching Android — quotes are not aggregated on Note).
+ * Uses Popup + ElevatedCard for rich scrollable content.
+ */
+@Composable
+fun BoostsPopup(
+    note: Note,
+    localCache: DesktopLocalCache,
+    relayManager: DesktopRelayConnectionManager,
+    onDismiss: () -> Unit,
+    onNavigateToThread: (String) -> Unit = {},
+    onNavigateToProfile: (String) -> Unit = {},
+) {
+    var metadataVersion by remember { mutableIntStateOf(0) }
+
+    data class BoostEntry(
+        val pubKey: String,
+        val pictureUrl: String?,
+        val name: String,
+    )
+
+    LaunchedEffect(note.idHex) {
+        val pubKeys =
+            note.boosts
+                .mapNotNull { it.event?.pubKey }
+                .distinct()
+                .filter { localCache.getUserIfExists(it)?.profilePicture() == null }
+        if (pubKeys.isNotEmpty()) {
+            fetchMetadataForUsers(pubKeys, relayManager, localCache) { metadataVersion++ }
+        }
+    }
+
+    @Suppress("UNUSED_EXPRESSION")
+    metadataVersion
+
+    val boostEntries =
+        remember(note.boosts, metadataVersion) {
+            note.boosts.mapNotNull { boostNote ->
+                val pubKey = boostNote.event?.pubKey ?: return@mapNotNull null
+                val user = boostNote.author
+                BoostEntry(pubKey, user?.profilePicture(), user?.toBestDisplayName() ?: pubKey.take(12))
+            }
+        }
+
+    Popup(
+        alignment = Alignment.TopCenter,
+        offset = IntOffset(0, -40),
+        onDismissRequest = onDismiss,
+        properties = PopupProperties(focusable = true),
+    ) {
+        ElevatedCard(
+            modifier = Modifier.widthIn(max = 280.dp),
+        ) {
+            Column(
+                modifier =
+                    Modifier
+                        .verticalScroll(rememberScrollState())
+                        .heightIn(max = 300.dp)
+                        .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (boostEntries.isEmpty()) {
+                    Text(
+                        "No reposts yet",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    Text(
+                        "${boostEntries.size} repost${if (boostEntries.size != 1) "s" else ""}",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+
+                    HorizontalDivider()
+
+                    boostEntries.take(10).forEach { entry ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier =
+                                Modifier.clickable {
+                                    onDismiss()
+                                    onNavigateToProfile(entry.pubKey)
+                                },
+                        ) {
+                            UserAvatar(userHex = entry.pubKey, pictureUrl = entry.pictureUrl, size = 24.dp)
+                            Text(entry.name, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                        }
+                    }
+                    if (boostEntries.size > 10) {
+                        Text(
+                            text = "and ${boostEntries.size - 10} more...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
@@ -744,6 +920,8 @@ fun NoteActionsRow(
     isBookmarked: Boolean = false,
     bookmarkList: BookmarkListEvent? = null,
     onBookmarkChanged: (BookmarkListEvent) -> Unit = {},
+    onNavigateToThread: (String) -> Unit = {},
+    onNavigateToProfile: (String) -> Unit = {},
 ) {
     var isLiked by remember { mutableStateOf(false) }
     var isReposted by remember { mutableStateOf(false) }
@@ -756,6 +934,9 @@ fun NoteActionsRow(
 
     // Mutually exclusive popup state
     var activePopup by remember { mutableStateOf<ActivePopup>(ActivePopup.None) }
+
+    // Quote compose state
+    var quoteEvent by remember { mutableStateOf<Event?>(null) }
 
     Row(
         modifier = modifier,
@@ -846,7 +1027,9 @@ fun NoteActionsRow(
                     ReactionsPopup(
                         note = note,
                         localCache = localCache,
+                        relayManager = relayManager,
                         onDismiss = { activePopup = ActivePopup.None },
+                        onNavigateToProfile = onNavigateToProfile,
                     )
                 }
 
@@ -908,7 +1091,11 @@ fun NoteActionsRow(
                                         }
                                     }
                                 },
-                                onLongClick = { /* no long-press action for repost */ },
+                                onLongClick = {
+                                    if (note != null) {
+                                        activePopup = ActivePopup.Boosts
+                                    }
+                                },
                                 indication = ripple(bounded = false, radius = 16.dp),
                                 interactionSource = remember { MutableInteractionSource() },
                             ).onPointerEvent(PointerEventType.Press) { pointerEvent ->
@@ -957,10 +1144,20 @@ fun NoteActionsRow(
                         text = { Text("Quote") },
                         onClick = {
                             activePopup = ActivePopup.None
-                            // Copy note link to clipboard for quoting
-                            val noteLink = "nostr:${NNote.create(event.id)}"
-                            copyToClipboard(noteLink)
+                            quoteEvent = event
                         },
+                    )
+                }
+
+                // Boosts popup (long-press)
+                if (activePopup is ActivePopup.Boosts && note != null) {
+                    BoostsPopup(
+                        note = note,
+                        localCache = localCache,
+                        relayManager = relayManager,
+                        onDismiss = { activePopup = ActivePopup.None },
+                        onNavigateToThread = onNavigateToThread,
+                        onNavigateToProfile = onNavigateToProfile,
                     )
                 }
             }
@@ -1026,7 +1223,9 @@ fun NoteActionsRow(
                     ZapReceiptsPopup(
                         note = note,
                         localCache = localCache,
+                        relayManager = relayManager,
                         onDismiss = { activePopup = ActivePopup.None },
+                        onNavigateToProfile = onNavigateToProfile,
                     )
                 }
             }
@@ -1192,6 +1391,16 @@ fun NoteActionsRow(
             localCache = localCache,
             relayManager = relayManager,
             onDismiss = { showZapReceiptsDialog = false },
+        )
+    }
+
+    // Quote compose dialog
+    if (quoteEvent != null) {
+        ComposeNoteDialog(
+            onDismiss = { quoteEvent = null },
+            relayManager = relayManager,
+            account = account,
+            quoteOf = quoteEvent,
         )
     }
 }

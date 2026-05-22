@@ -175,6 +175,11 @@ class DesktopRelaySubscriptionsCoordinator(
                     kinds = listOf(com.vitorpamplona.quartz.nip18Reposts.RepostEvent.KIND),
                     tags = mapOf("e" to noteIds),
                 ),
+                // Replies (kind 1) targeting these notes
+                Filter(
+                    kinds = listOf(com.vitorpamplona.quartz.nip10Notes.TextNoteEvent.KIND),
+                    tags = mapOf("e" to noteIds),
+                ),
             )
 
         val listener =
