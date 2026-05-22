@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -45,15 +46,20 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
+import com.vitorpamplona.amethyst.ui.note.ClickableNote
+import com.vitorpamplona.amethyst.ui.note.LongPressToQuickAction
+import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
+import com.vitorpamplona.amethyst.ui.note.calculateBackgroundColor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.ChannelCardCompose
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip28Chats.RenderPublicChatChannelThumb
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.amethyst.ui.theme.StdPadding
 
 @Composable
 fun PublicChatsFeedLoaded(
@@ -66,12 +72,8 @@ fun PublicChatsFeedLoaded(
     val followedSet by accountViewModel.account.publicChatList.flowSet
         .collectAsStateWithLifecycle()
 
-    val pinned =
-        remember(followedSet) {
-            followedSet.mapNotNull { idHex ->
-                LocalCache.getNoteIfExists(idHex)?.takeIf { it.event is ChannelCreateEvent }
-            }
-        }
+    val pinned by accountViewModel.account.publicChatList.flowSetNote
+        .collectAsStateWithLifecycle()
 
     val unpinned =
         remember(items.list, followedSet) {
@@ -91,7 +93,6 @@ fun PublicChatsFeedLoaded(
         items(
             pinned,
             key = { item -> "pinned-" + item.idHex },
-            contentType = { item -> item.event?.kind ?: -1 },
         ) { item ->
             PublicChatRow(item, pinned = true, accountViewModel, nav)
         }
@@ -105,7 +106,6 @@ fun PublicChatsFeedLoaded(
         itemsIndexed(
             unpinned,
             key = { _, item -> item.idHex },
-            contentType = { _, item -> item.event?.kind ?: -1 },
         ) { _, item ->
             PublicChatRow(item, pinned = false, accountViewModel, nav)
         }
@@ -114,20 +114,34 @@ fun PublicChatsFeedLoaded(
 
 @Composable
 private fun LazyItemScope.PublicChatRow(
-    item: Note,
+    baseNote: Note,
     pinned: Boolean,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val modifier = Modifier.fillMaxWidth()
+
     Box(Modifier.fillMaxWidth().animateItem()) {
-        ChannelCardCompose(
-            baseNote = item,
-            routeForLastRead = "PublicChatsFeed",
-            modifier = Modifier.fillMaxWidth(),
-            forceEventKind = ChannelCreateEvent.KIND,
+        WatchNoteEvent(
+            baseNote = baseNote,
             accountViewModel = accountViewModel,
-            nav = nav,
+            onBlank = {
+                RenderChannel(baseNote, modifier, accountViewModel, nav)
+            },
+            onNoteEventFound = {
+                CheckHiddenFeedWatchBlockAndReport(
+                    note = baseNote,
+                    modifier = modifier,
+                    ignoreAllBlocksAndReports = false,
+                    showHiddenWarning = false,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                ) { _ ->
+                    RenderChannel(baseNote, modifier, accountViewModel, nav)
+                }
+            },
         )
+
         if (pinned) {
             PinBadge(
                 modifier =
@@ -141,6 +155,40 @@ private fun LazyItemScope.PublicChatRow(
     HorizontalDivider(
         thickness = DividerThickness,
     )
+}
+
+@Composable
+private fun RenderChannel(
+    baseNote: Note,
+    modifier: Modifier,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    LongPressToQuickAction(baseNote, accountViewModel, nav) { showPopup ->
+        ClickableNote(
+            baseNote = baseNote,
+            backgroundColor =
+                calculateBackgroundColor(
+                    createdAt = baseNote.createdAt(),
+                    routeForLastRead = "PublicChatsFeed",
+                    parentBackgroundColor = null,
+                    accountViewModel = accountViewModel,
+                ),
+            modifier = modifier,
+            accountViewModel = accountViewModel,
+            showPopup = showPopup,
+            nav = nav,
+        ) {
+            Column(StdPadding) {
+                SensitivityWarning(
+                    note = baseNote,
+                    accountViewModel = accountViewModel,
+                ) {
+                    RenderPublicChatChannelThumb(baseNote, accountViewModel, nav)
+                }
+            }
+        }
+    }
 }
 
 @Composable

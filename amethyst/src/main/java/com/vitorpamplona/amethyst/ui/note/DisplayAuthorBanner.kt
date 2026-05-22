@@ -21,23 +21,44 @@
 package com.vitorpamplona.amethyst.ui.note
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
+import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.SimpleImageBorder
 
 @Composable
 fun DisplayAuthorBanner(
-    note: Note,
+    baseNote: Note,
     accountViewModel: AccountViewModel,
     modifier: Modifier = SimpleImageBorder,
 ) {
-    WatchAuthor(note, accountViewModel) {
+    val noteAuthor = baseNote.author
+    if (noteAuthor != null) {
         BannerImage(
-            it,
+            noteAuthor,
             modifier,
             accountViewModel,
         )
+    } else {
+        val authorState by observeNote(baseNote, accountViewModel)
+        CrossfadeIfEnabled(authorState.note.author, accountViewModel = accountViewModel) { author ->
+            if (author != null) {
+                BannerImage(
+                    author,
+                    modifier,
+                    accountViewModel,
+                )
+            } else {
+                BannerImage(
+                    null as String?,
+                    modifier,
+                    accountViewModel,
+                )
+            }
+        }
     }
 }
