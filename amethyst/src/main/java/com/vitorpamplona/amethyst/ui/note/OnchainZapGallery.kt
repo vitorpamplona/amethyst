@@ -69,45 +69,62 @@ internal fun WatchOnchainZapsAndRenderGallery(
 ) {
     // Reuse the same flow the lightning gallery subscribes to. Note.addOnchainZap
     // invalidates flowSet.zaps, so this composable refreshes when on-chain zaps
-    // arrive or upgrade pending → confirmed. The flow also fires for lightning
-    // zap arrivals on the same note, so memoize the list snapshot.
+    // arrive or upgrade pending → confirmed. The flow ALSO fires for lightning
+    // zap arrivals on the same note — memoize on the onchainZaps map reference
+    // (a fresh immutable map per onchain mutation, stable across lightning-only
+    // updates) so a busy lightning thread doesn't churn this gallery's state.
     val zapsState by observeNoteZaps(baseNote, accountViewModel)
+    val onchainZapsMap = zapsState?.note?.onchainZaps
     val entries =
-        remember(zapsState) {
-            zapsState
-                ?.note
-                ?.onchainZaps
-                ?.values
-                ?.toImmutableList() ?: persistentListOf()
+        remember(onchainZapsMap) {
+            onchainZapsMap?.values?.toImmutableList() ?: persistentListOf()
         }
 
     if (entries.isNotEmpty()) {
-        // Drive periodic re-verification of any non-CONFIRMED entries while this
-        // gallery is on screen — covers home feed, profile, notifications, channels,
-        // single-note view, threads. Keyed on baseNote.idHex so the subscription is
-        // stable across recompositions and pauses cleanly when the gallery scrolls
-        // off-screen (WhileSubscribed on the shared tip flow).
+        // Drive re-verification of any non-CONFIRMED entries while this gallery
+        // is on screen — covers home feed, profile, notifications, channels,
+        // single-note view, threads. Per-note in-flight gating inside the cache
+        // dedupes the work when multiple gallery instances for the same note
+        // (lazy-list off/on screen flicker, split feed) all fire together.
         DriveOnchainZapReverification(baseNote, entries)
         RenderOnchainZapGallery(entries, nav, accountViewModel)
     }
 }
 
 /**
- * Subscribes to the shared chain-tip flow and re-runs onchain-zap verification for
- * [note] whenever the tip advances, while [entries] still contains non-CONFIRMED
- * items. First-view kick happens via the StateFlow's initial null → first-tip
- * transition.
+ * Drives on-chain zap re-verification for [note] while the gallery is composed.
+ *
+ * Three triggers fire reverify:
+ * 1. First view of this note (independent of tip availability — covers the cold-
+ *    start case where the chain backend isn't wired yet, or `tipHeight()` is slow).
+ * 2. A new pending entry arrives (`entries.size` changes).
+ * 3. The chain tip advances (the shared StateFlow emits a new value).
+ *
+ * The cache's per-note + per-event gates dedupe concurrent calls; this composable
+ * doesn't need its own throttling.
  */
 @Composable
 private fun DriveOnchainZapReverification(
     note: Note,
     entries: ImmutableList<OnchainZapEntry>,
 ) {
-    val hasPending = remember(entries) { entries.any { it.status != OnchainZapStatus.CONFIRMED } }
-    if (!hasPending) return
+    val pendingCount = remember(entries) { entries.count { it.status != OnchainZapStatus.CONFIRMED } }
+    if (pendingCount == 0) return
 
+    // First-view kick — unconditional, doesn't wait for the tip flow. Keyed on
+    // (idHex, pendingCount) so a brand-new pending entry arriving while the
+    // gallery is still on screen also kicks an immediate reverify instead of
+    // waiting up to a full tip-poll interval.
+    LaunchedEffect(note.idHex, pendingCount) {
+        LocalCache.reverifyOnchainZapsForNote(note)
+    }
+
+    // Tip-change kick — subscribes to the shared poller (lazy, WhileSubscribed
+    // so only one HTTP poller runs across the whole UI no matter how many
+    // galleries are visible). Skips the first emission (null) to avoid
+    // duplicating the first-view kick above.
     val tip by LocalCache.onchainTipHeightFlow.collectAsStateWithLifecycle()
-    LaunchedEffect(note.idHex, hasPending, tip) {
+    LaunchedEffect(note.idHex, tip) {
         if (tip != null) {
             LocalCache.reverifyOnchainZapsForNote(note)
         }

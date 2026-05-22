@@ -173,15 +173,16 @@ open class Note(
         private set
 
     /**
-     * Anti-resurrection blocklist for hard-rejected NIP-BC onchain zaps.
-     * Key: txid. Value: set of source author pubkeys whose attempts for that txid have
-     * been verified-and-rejected on this note. Used by `LocalCache.consume(OnchainZapEvent)`
-     * to skip the optimistic UI attachment for known-bad (txid, sender) pairs that would
-     * otherwise re-flicker into the gallery on every fresh event id.
+     * True when the NIP-BC chain verifier has reached a terminal verdict for THIS
+     * note's OnchainZapEvent — i.e. on-chain Confirmed, or hard-rejected for a reason
+     * other than `TX_NOT_FOUND`. `LocalCache.consume()` uses this to skip re-launching
+     * the verifier on relay echoes once the chain has spoken definitively.
+     *
+     * Stays `false` for transient states (`UNVERIFIED`, `PENDING`, `TX_NOT_FOUND`) so
+     * the gallery's reverify driver can still upgrade them as the chain advances.
      */
     @Volatile
-    var rejectedOnchainZapTxidsBySource = mapOf<String, Set<HexKey>>()
-        private set
+    var onchainZapResolved: Boolean = false
 
     var zapPayments = mapOf<Note, Note?>()
         private set
@@ -346,6 +347,7 @@ open class Note(
         reports = mapOf()
         zaps = mapOf()
         onchainZaps = mapOf()
+        onchainZapResolved = false
         zapPayments = mapOf()
         zapsAmount = BigDecimal.ZERO
         relays = listOf()
@@ -452,13 +454,17 @@ open class Note(
     ): Boolean {
         val existing = onchainZaps[txid]
         if (existing != null) {
+            // Exact structural duplicate (same source Note + same fields) — typical
+            // relay echo of the same event. Skip the rewrite to avoid spurious
+            // flowSet invalidation.
+            if (entry == existing) return false
             // Reject downgrades using the explicit OnchainZapStatus.level (not ordinal)
             // so the upgrade contract survives future enum reordering or insertions.
             if (entry.status.level < existing.status.level) return false
-            // Same level: accept only when the on-chain verified amount has grown
-            // (e.g. the indexer revised its view of the tx's recipient outputs).
-            // Otherwise treat as a duplicate and keep the first source we got.
-            if (entry.status.level == existing.status.level && entry.verifiedSats <= existing.verifiedSats) return false
+            // Same level: accept only when verifiedSats grows OR the source differs
+            // (legitimate alternate signer republishing a split-zap receipt). A strictly
+            // smaller verifiedSats is a backend downgrade and we ignore it.
+            if (entry.status.level == existing.status.level && entry.verifiedSats < existing.verifiedSats) return false
         }
         onchainZaps = onchainZaps + Pair(txid, entry)
         return true
@@ -467,25 +473,21 @@ open class Note(
     @Synchronized
     private fun innerRemoveOnchainZapForSource(
         txid: String,
-        sourceAuthorPubKey: HexKey?,
+        sourceAuthorPubKey: HexKey,
     ): Boolean {
         val existing = onchainZaps[txid] ?: return false
         // Anti-spoof: only remove the entry if its source matches the rejecting event.
         // Otherwise a malicious third party could erase a legitimate CONFIRMED entry
         // by publishing a spoofed kind:8333 with the same txid but a bystander recipient.
+        // Also refuse to remove a CONFIRMED entry — once chain-verified, only a fresh
+        // CONFIRMED replacement should change it; a transient backend hiccup must not
+        // wipe a previously-CONFIRMED entry just because some other target on the same
+        // event is still UNVERIFIED.
+        if (existing.status == OnchainZapStatus.CONFIRMED) return false
+        if (existing.source.author?.pubkeyHex == null) return false
         if (existing.source.author?.pubkeyHex != sourceAuthorPubKey) return false
         onchainZaps = onchainZaps - txid
         return true
-    }
-
-    @Synchronized
-    private fun innerRecordOnchainZapRejection(
-        txid: String,
-        sourceAuthorPubKey: HexKey,
-    ) {
-        val current = rejectedOnchainZapTxidsBySource[txid].orEmpty()
-        if (sourceAuthorPubKey in current) return
-        rejectedOnchainZapTxidsBySource = rejectedOnchainZapTxidsBySource + Pair(txid, current + sourceAuthorPubKey)
     }
 
     /**
@@ -519,32 +521,19 @@ open class Note(
      * Used when verification produced a hard rejection (e.g. the transaction paid zero to the
      * recipient — a spoof attempt). The source-scoped match prevents a malicious third party
      * from erasing a legitimate CONFIRMED entry by publishing a spoofed kind:8333 with the
-     * same txid but a different recipient pubkey.
+     * same txid but a different recipient pubkey. Per-target CONFIRMED check also prevents
+     * a transient backend reject from erasing an already-confirmed entry.
      */
     fun removeOnchainZapForSource(
         txid: String,
-        sourceAuthorPubKey: HexKey?,
+        sourceAuthorPubKey: HexKey,
     ) {
         val removed = innerRemoveOnchainZapForSource(txid, sourceAuthorPubKey)
-        if (sourceAuthorPubKey != null) {
-            innerRecordOnchainZapRejection(txid, sourceAuthorPubKey)
-        }
         if (removed) {
             updateZapTotal()
             flowSet?.zaps?.invalidateData()
         }
     }
-
-    /**
-     * True if a previous verification rejected an onchain zap for this exact (txid, source)
-     * pair on this note. `LocalCache.consume(OnchainZapEvent)` uses this to skip the
-     * optimistic gallery attachment for known-bad senders, preventing attach-then-remove
-     * flicker when an attacker re-publishes the same spoof under a fresh event id.
-     */
-    fun wasOnchainZapRejectedForSource(
-        txid: String,
-        sourceAuthorPubKey: HexKey,
-    ): Boolean = sourceAuthorPubKey in rejectedOnchainZapTxidsBySource[txid].orEmpty()
 
     @Synchronized
     private fun innerAddZapPayment(
