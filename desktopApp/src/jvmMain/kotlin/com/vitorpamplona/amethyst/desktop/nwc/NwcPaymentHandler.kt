@@ -209,17 +209,19 @@ class NwcPaymentHandler(
         timeoutMs: Long = 30_000,
     ): BalanceResult {
         val secret = nwcConnection.secret ?: return BalanceResult.Error("NWC connection has no secret")
+
         val nwcSigner = NostrSignerInternal(KeyPair(secret.hexToByteArray()))
         val client = Nip47Client.fromNip47URI(nwcConnection)
         val requestEvent = client.getBalance()
 
         return withTimeoutOrNull(timeoutMs) {
-            // Subscribe BEFORE publishing to avoid race with fast wallet responses
             waitForGenericResponse(
                 requestId = requestEvent.id,
                 nwcConnection = nwcConnection,
                 nwcSigner = nwcSigner,
-                onSubscribed = { relayManager.publishToRelay(nwcConnection.relayUri, requestEvent) },
+                onSubscribed = {
+                    relayManager.publishToRelay(nwcConnection.relayUri, requestEvent)
+                },
             ) { response ->
                 when (response) {
                     is GetBalanceSuccessResponse -> {
@@ -261,6 +263,7 @@ class NwcPaymentHandler(
         timeoutMs: Long = 30_000,
     ): InvoiceResult {
         val secret = nwcConnection.secret ?: return InvoiceResult.Error("NWC connection has no secret")
+
         val nwcSigner = NostrSignerInternal(KeyPair(secret.hexToByteArray()))
         val client = Nip47Client.fromNip47URI(nwcConnection)
         val requestEvent = client.makeInvoice(amountMsats, description)
@@ -319,6 +322,7 @@ class NwcPaymentHandler(
                 subId = subId,
                 filters = listOf(filter),
                 onEvent = { event, _ ->
+                    println("NWC rpc event received: kind=${event.kind} id=${event.id.take(8)} from=${event.pubKey.take(8)}")
                     if (event is LnZapPaymentResponseEvent && event.requestId() == requestId) {
                         @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
                         kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {

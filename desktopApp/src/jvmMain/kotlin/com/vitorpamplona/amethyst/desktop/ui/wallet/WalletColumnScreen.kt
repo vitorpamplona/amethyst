@@ -112,7 +112,15 @@ fun WalletColumnScreen(
                     balanceSats = result.balanceMsats / 1000
                 }
 
-                else -> {}
+                is NwcPaymentHandler.BalanceResult.Error -> {
+                    println("NWC balance error: ${result.message}")
+                    snackbarHostState.showSnackbar("Balance error: ${result.message}")
+                }
+
+                is NwcPaymentHandler.BalanceResult.Timeout -> {
+                    println("NWC balance timeout")
+                    snackbarHostState.showSnackbar("Balance request timed out")
+                }
             }
             isLoadingBalance = false
         }
@@ -204,10 +212,9 @@ fun WalletColumnScreen(
                     )
 
                     TextButton(onClick = {
-                        scope.launch {
+                        appScope.launch {
                             accountManager.clearNwcConnection(account.npub)
                             balanceSats = null
-                            snackbarHostState.showSnackbar("Wallet disconnected")
                         }
                     }) {
                         Text("Disconnect", color = MaterialTheme.colorScheme.error)

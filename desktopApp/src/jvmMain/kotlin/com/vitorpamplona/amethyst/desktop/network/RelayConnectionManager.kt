@@ -145,6 +145,26 @@ open class RelayConnectionManager(
     }
 
     /**
+     * Waits for a relay to appear in connectedRelays, adding it if needed.
+     * Returns true if connected within the timeout, false otherwise.
+     */
+    suspend fun ensureRelayConnected(
+        relay: NormalizedRelayUrl,
+        timeoutMs: Long = 10_000,
+    ): Boolean {
+        if (relay in connectedRelays.value) return true
+        if (relay !in availableRelays.value) {
+            updateRelayStatus(relay) { it.copy(connected = false, error = null) }
+        }
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (System.currentTimeMillis() < deadline) {
+            if (relay in connectedRelays.value) return true
+            delay(200)
+        }
+        return relay in connectedRelays.value
+    }
+
+    /**
      * Sends an event to a specific relay (for NWC).
      * Adds the relay if not already in the list.
      */
