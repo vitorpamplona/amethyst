@@ -255,4 +255,19 @@ class MediaUrlContentExtTest {
         val image = MediaUrlImage(url = url, hash = null)
         assertEquals(url, image.toCoilModel(useLocalBlossomBridge = true))
     }
+
+    @Test
+    fun bridgeOnUsesUrlShaNotImetaWhenTheyDiffer() {
+        // On resizing CDNs the imeta `x` (post-resize) can differ from the
+        // `ox` (original) embedded in the URL. The upstream file is named
+        // after the URL's sha, so the cache request must use that — using
+        // the imeta `x` would point xs= at a non-existent path on miss.
+        val urlSha = "f24026b7281e598973a775adefb1b9a13b9f037a94ac98dd48ccc91b83f4b7b3"
+        val imetaX = "6932a918de1bfae3bf6611794ff54dd677013d22b760a9212117a0bd9079badf"
+        val image = MediaUrlImage(url = "https://image.nostr.build/$urlSha.png", hash = imetaX)
+        assertEquals(
+            "blossom:$urlSha.png?xs=https://image.nostr.build",
+            image.toCoilModel(useLocalBlossomBridge = true),
+        )
+    }
 }
