@@ -16,7 +16,7 @@
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Csatorna profilképe</string>
     <string name="referenced_event_not_found">A hivatkozott esemény nem található</string>
-    <string name="could_not_decrypt_the_message">Nem sikerült az üzenetet visszafejteni</string>
+    <string name="could_not_decrypt_the_message">Nem sikerült visszafejteni az üzenetet</string>
     <string name="group_picture">Csoport profilképe</string>
     <string name="explicit_content">Szókimondó tartalom</string>
     <string name="relay_notice">Átjátszóval kapcsolatos megjegyzések</string>
@@ -785,6 +785,10 @@
     <string name="wallet_connect_manual_config">Speciális: kapcsolat részleteinek kézi megadása</string>
     <string name="quick_zap_amounts">Gyors Zap-összegek</string>
     <string name="quick_zap_amounts_explainer">A zap gomb megnyomásakor jelenik meg. Érintse meg az összeget, hogy eltávolítsa. Ha üresen hagyja, akkor minden alkalommal megnyílik a párbeszédablak az összeg beírásához.</string>
+    <string name="quick_zap_amounts_onchain">Gyors láncon belüli Zap összegek</string>
+    <string name="quick_zap_amounts_onchain_explainer">A láncon belüli Zapek bányászdíjat fizetnek, ezért az összegek általában nagyobbak, mint Lightning esetén. Koppintson egy összegre a eltávolításához.</string>
+    <string name="new_amount_in_sats_onchain">Új láncon belüli összeg Satoshiban</string>
+    <string name="send_onchain_instead">Küldés inkább láncon belül</string>
     <string name="zap_privacy_section">Zap adatvédelem</string>
     <string name="zap_type_section_explainer">Állítsa be, hogy hogyan jelenjen meg a személyazonossága a zap elküldésekor.</string>
     <string name="wallet_connect_connect_app">Pénztárca összekapcsolása</string>
@@ -1454,8 +1458,8 @@
     <string name="automatically_show_profile_picture">Profilkép</string>
     <string name="automatically_show_profile_picture_description">Profilképek megjelenítése</string>
     <string name="select_an_option">Válasszon egy lehetőséget</string>
-    <string name="error_dialog_pay_invoice_error">Sikertelen számla-kifizetés</string>
-    <string name="error_dialog_pay_withdraw_error">Sikertelen pénzkivétel a pénztárcából</string>
+    <string name="error_dialog_pay_invoice_error">Nem sikerült kifizetni a számlát</string>
+    <string name="error_dialog_pay_withdraw_error">Nem sikerült a pénzkivétel a pénztárcából</string>
     <string name="error_parsing_nip47_title">Nem sikerült beállítani a Wallet Connectet</string>
     <string name="error_parsing_nip47">Hiba a NIP-47 kapcsolati karakterlánc elemzésekor. Ellenőrizze, hogy a pénztárca-szolgáltatónál a következő helyes-e: %1$s. Hiba: %2$s</string>
     <string name="error_parsing_nip47_no_error">Hiba a NIP-47 kapcsolati karakterlánc elemzésekor. Ellenőrizze, hogy a pénztárca-szolgáltatónál a következő helyes-e: %1$s.</string>
@@ -1653,6 +1657,11 @@
     <string name="wallet_onchain_no_address">Ehhez a fiókhoz nincs elérhető láncon belüli cím.</string>
     <string name="wallet_onchain_no_backend">Nincs beállítva lánc-háttérprogram.</string>
     <string name="wallet_onchain_pending">Függőben</string>
+    <string name="wallet_onchain_public_chip">Nyilvános</string>
+    <string name="wallet_onchain_public_dialog_title">Ez a pénztárca nyilvános</string>
+    <string name="wallet_onchain_public_dialog_body">A Taproot-cím az Ön Nostr nyilvános kulcsából van levezetve, ezért bárki, aki ismeri az npub-ot, láthatja a pénztárca egyenlegét és tranzakciótörténetét a blokkláncon.\n\nAz adatvédelem megőrzése érdekében ezt a pénztárcát kizárólag nem privát számlákról, például kriptovaluta-váltókról töltse fel és ürítse ki. Soha ne keverje ezeket az összegeket a hideg pénztárcákkal, és olyan pénzként kezelje őket, amelyet elveszíthet, mivel bárki, aki hozzáfér az nsec-hez, elköltheti.</string>
+    <string name="wallet_onchain_public_dialog_confirm">Megértettem</string>
+    <string name="wallet_onchain_copy_dialog_confirm">Cím másolása</string>
     <string name="route_security_filters">Biztonsági szűrők</string>
     <string name="route_import_follows">Követettek importálása</string>
     <string name="new_post">Új bejegyzés</string>
@@ -1716,6 +1725,7 @@
         <item quantity="one">%1$s, %2$d esemény</item>
         <item quantity="other">%1$s, %2$d esemény</item>
     </plurals>
+    <string name="calendar_day_a11y_no_events">%1$s, nincsenek események</string>
     <string name="calendar_day_a11y_today_suffix">ma</string>
     <string name="calendar_day_a11y_selected_suffix">kiválasztva</string>
     <string name="calendar_fab_new_event">Új naptáresemény létrehozása</string>
@@ -1729,6 +1739,10 @@
     <string name="calendar_collection_title">Cím</string>
     <string name="calendar_collection_description">Leírás</string>
     <string name="calendar_collection_invalid">A cím megadása kötelező.</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d esemény</item>
+        <item quantity="other">%1$d esemény</item>
+    </plurals>
     <string name="calendar_collection_empty_members">Ebben a naptárban még nincsenek események.</string>
     <string name="calendar_rsvp_going">Ott leszek</string>
     <string name="calendar_rsvp_maybe">Talán</string>
@@ -1747,6 +1761,10 @@
     <string name="calendar_reminder_channel_name">Naptár-emlékeztetők</string>
     <string name="calendar_reminder_channel_description">Értesítés, ha egy esemény, amin Ön részt vesz, hamarosan elkezdődik.</string>
     <string name="calendar_reminder_default_title">Naptáresemény</string>
+    <plurals name="calendar_reminder_body">
+        <item quantity="one">%1$d perc múlva kezdődik</item>
+        <item quantity="other">%1$d perc múlva kezdődik</item>
+    </plurals>
     <string name="calendar_add_to_calendar_action">Vegye fel az egyik naptárba</string>
     <string name="calendar_add_to_calendar_title">Hozzáadás egy naptárhoz</string>
     <string name="calendar_add_to_calendar_none">Ön még nem hozott létre egyetlen naptárat sem.</string>
@@ -2153,6 +2171,9 @@
     <string name="remove_user_from_the_list">Felhasználó törlése a listáról</string>
     <string name="follow_list_item_label">Követési csomag</string>
     <string name="members">Tagok</string>
+    <string name="contact_list_containing_label">A követési lista %1$d felhasználót tartalmaz:</string>
+    <string name="contact_list_screen_title">Követési lista</string>
+    <string name="contact_list_screen_title_with_count">Követési lista (%1$d)</string>
     <string name="people_list_title">Követési lista metaadatai</string>
     <string name="people_list_explainer">A követési listák metaadatai a Nostr-on bárki számára láthatók. Csak a privát tagok adatai vannak titkosítva.</string>
     <string name="follow_pack_title">Követési csomag metaadatai</string>

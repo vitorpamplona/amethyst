@@ -778,6 +778,10 @@
     <string name="wallet_connect_manual_config">高级：手动输入连接详情</string>
     <string name="quick_zap_amounts">快速打闪金额</string>
     <string name="quick_zap_amounts_explainer">按下打闪按钮时显示。点击接即可删除它。 如果留空，每次都会打开对话框来插入金融。</string>
+    <string name="quick_zap_amounts_onchain">链上快速打闪金额</string>
+    <string name="quick_zap_amounts_onchain_explainer">链上打闪支付矿工费，所以金额通常大于 Lightning 网络。点击一个金额去掉它。</string>
+    <string name="new_amount_in_sats_onchain">新的链上金额（sats）</string>
+    <string name="send_onchain_instead">在链上发送</string>
     <string name="zap_privacy_section">打闪隐私</string>
     <string name="zap_type_section_explainer">控制发送打闪时如何显示您的身份。</string>
     <string name="wallet_connect_connect_app">连接钱包</string>
@@ -1646,6 +1650,11 @@
     <string name="wallet_onchain_no_address">此账户没有链上地址可用。</string>
     <string name="wallet_onchain_no_backend">没有配置链后端。</string>
     <string name="wallet_onchain_pending">待确认</string>
+    <string name="wallet_onchain_public_chip">公开</string>
+    <string name="wallet_onchain_public_dialog_title">这个钱包是公开的</string>
+    <string name="wallet_onchain_public_dialog_body">您的Taproot地址衍生自您的Nostr公钥， 因此任何知道您的 npub的人都可以在区块链上看到这个钱包的余额和交易历史。\n\n为了保护您的隐私，这个钱包的资金流入和资金流出请使用非私密账户，例如交易所。 永远不要将这些资金与你的冷钱包混合，把它们当作你可能丢失的钱， 因为任何控制你 nsec 的人都可以花这些钱。</string>
+    <string name="wallet_onchain_public_dialog_confirm">明白了</string>
+    <string name="wallet_onchain_copy_dialog_confirm">复制地址</string>
     <string name="route_security_filters">安全滤镜</string>
     <string name="route_import_follows">导入关注</string>
     <string name="new_post">新帖子</string>
@@ -1708,6 +1717,7 @@
     <plurals name="calendar_day_a11y_events">
         <item quantity="other">%1$s, %2$d 个活动</item>
     </plurals>
+    <string name="calendar_day_a11y_no_events">%1$s，无活动</string>
     <string name="calendar_day_a11y_today_suffix">今天</string>
     <string name="calendar_day_a11y_selected_suffix">已选中</string>
     <string name="calendar_fab_new_event">创建新的日历活动</string>
@@ -2150,6 +2160,9 @@
     <string name="remove_user_from_the_list">从列表中删除用户</string>
     <string name="follow_list_item_label">关注包</string>
     <string name="members">成员</string>
+    <string name="contact_list_containing_label">包含 %1$d 个用户的关注列表：</string>
+    <string name="contact_list_screen_title">关注列表</string>
+    <string name="contact_list_screen_title_with_count">关注列表(%1$d)</string>
     <string name="people_list_title">关注列表元数据</string>
     <string name="people_list_explainer">关注列表元数据可以被Nostr上的任何人看到。只有您的私人成员是加密的。</string>
     <string name="follow_pack_title">关注包元数据</string>
