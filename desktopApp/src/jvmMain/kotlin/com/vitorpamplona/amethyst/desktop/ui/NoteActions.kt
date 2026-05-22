@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,19 +31,28 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -49,8 +61,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.onPointerEvent
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import com.vitorpamplona.amethyst.commons.icons.Bookmark
 import com.vitorpamplona.amethyst.commons.icons.BookmarkFilled
 import com.vitorpamplona.amethyst.commons.icons.Reply
@@ -58,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.icons.Repost
 import com.vitorpamplona.amethyst.commons.icons.Zap
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip18Reposts.RepostAction
 import com.vitorpamplona.amethyst.commons.model.nip25Reactions.ReactionAction
 import com.vitorpamplona.amethyst.commons.model.nip51Bookmarks.BookmarkAction
@@ -90,6 +112,22 @@ import kotlin.coroutines.resume
 private val ZAP_AMOUNTS = listOf(21L, 100L, 500L, 1000L, 5000L, 10000L)
 
 /**
+ * Mutually exclusive popup state for note action bar.
+ * Only one popup can be open at a time.
+ */
+sealed class ActivePopup {
+    data object None : ActivePopup()
+
+    data object ZapReceipts : ActivePopup()
+
+    data object Reactions : ActivePopup()
+
+    data object EmojiPicker : ActivePopup()
+
+    data object RepostOptions : ActivePopup()
+}
+
+/**
  * Feedback from a zap operation for UI display.
  */
 sealed class ZapFeedback {
@@ -115,6 +153,7 @@ sealed class ZapFeedback {
 /**
  * Data class representing a zap receipt for display.
  */
+@Immutable
 data class ZapReceipt(
     val senderPubKey: String,
     val amountSats: Long,
@@ -396,6 +435,214 @@ fun ZapReceiptsDialog(
 }
 
 /**
+ * Floating popup showing zap receipts from a Note's zaps map.
+ * Uses Popup + ElevatedCard for rich scrollable content.
+ */
+@Composable
+fun ZapReceiptsPopup(
+    note: Note,
+    localCache: DesktopLocalCache,
+    onDismiss: () -> Unit,
+) {
+    val zapEntries =
+        remember(note.zaps) {
+            note.zaps
+                .mapNotNull { (request, receipt) ->
+                    val sender =
+                        request.author?.toBestDisplayName()
+                            ?: request.event?.pubKey?.take(12)
+                            ?: return@mapNotNull null
+                    val amount =
+                        (receipt?.event as? LnZapEvent)?.amount?.toLong()
+                            ?: return@mapNotNull null
+                    val message = request.event?.content?.ifBlank { null }
+                    Triple(sender, amount, message)
+                }.sortedByDescending { it.second }
+        }
+
+    val totalSats = remember(zapEntries) { zapEntries.sumOf { it.second } }
+
+    Popup(
+        alignment = Alignment.TopCenter,
+        offset = IntOffset(0, -40),
+        onDismissRequest = onDismiss,
+        properties = PopupProperties(focusable = true),
+    ) {
+        ElevatedCard(
+            modifier = Modifier.widthIn(max = 280.dp),
+        ) {
+            Column(
+                modifier =
+                    Modifier
+                        .verticalScroll(rememberScrollState())
+                        .heightIn(max = 300.dp)
+                        .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (zapEntries.isEmpty()) {
+                    Text(
+                        "No zaps yet",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    // Header: total sats
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Icon(
+                            Zap,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Text(
+                            "${formatSats(totalSats)} sats",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+
+                    HorizontalDivider()
+
+                    // Sorted receipts
+                    zapEntries.take(10).forEach { (sender, amount, message) ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = sender,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                if (!message.isNullOrBlank()) {
+                                    Text(
+                                        text = message,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "${formatSats(amount)} sats",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                    if (zapEntries.size > 10) {
+                        Text(
+                            text = "and ${zapEntries.size - 10} more...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Floating popup showing reactions grouped by emoji from a Note's reactions map.
+ * Uses Popup + ElevatedCard for rich scrollable content.
+ */
+@Composable
+fun ReactionsPopup(
+    note: Note,
+    localCache: DesktopLocalCache,
+    onDismiss: () -> Unit,
+) {
+    val totalCount = remember(note.reactions) { note.countReactions() }
+
+    Popup(
+        alignment = Alignment.TopCenter,
+        offset = IntOffset(0, -40),
+        onDismissRequest = onDismiss,
+        properties = PopupProperties(focusable = true),
+    ) {
+        ElevatedCard(
+            modifier = Modifier.widthIn(max = 280.dp),
+        ) {
+            Column(
+                modifier =
+                    Modifier
+                        .verticalScroll(rememberScrollState())
+                        .heightIn(max = 300.dp)
+                        .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (note.reactions.isEmpty()) {
+                    Text(
+                        "No reactions yet",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    // Header: total count
+                    Text(
+                        "$totalCount reaction${if (totalCount != 1) "s" else ""}",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+
+                    HorizontalDivider()
+
+                    // Group by emoji
+                    note.reactions.forEach { (emoji, reactionNotes) ->
+                        val displayEmoji = if (emoji == "+") "\u2764\ufe0f" else emoji
+                        Column {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            ) {
+                                Text(
+                                    displayEmoji,
+                                    fontSize = 16.sp,
+                                )
+                                Text(
+                                    "${reactionNotes.size}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            // Sender names
+                            reactionNotes.take(5).forEach { reactionNote ->
+                                val senderName =
+                                    reactionNote.author?.toBestDisplayName()
+                                        ?: reactionNote.event?.pubKey?.take(12)
+                                        ?: "Unknown"
+                                Text(
+                                    text = senderName,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(start = 24.dp),
+                                )
+                            }
+                            if (reactionNotes.size > 5) {
+                                Text(
+                                    text = "and ${reactionNotes.size - 5} more...",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(start = 24.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
  * Fetches metadata for multiple users in a single subscription.
  */
 private suspend fun fetchMetadataForUsers(
@@ -470,9 +717,13 @@ private suspend fun fetchMetadataForUsers(
     }
 }
 
+private val EMOJI_OPTIONS = listOf("+", "\u2764\ufe0f", "\ud83e\udd19", "\ud83d\udd25", "\ud83d\udc40", "\ud83d\ude02")
+
 /**
  * Action buttons row for a note (react, reply, repost, zap, bookmark).
+ * Supports click (action), long-press (view details popup), and right-click (customize).
  */
+@OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
 @Composable
 fun NoteActionsRow(
     event: Event,
@@ -482,6 +733,7 @@ fun NoteActionsRow(
     onReplyClick: () -> Unit,
     onZapFeedback: (ZapFeedback) -> Unit,
     modifier: Modifier = Modifier,
+    note: Note? = null,
     zapCount: Int = 0,
     zapAmountSats: Long = 0,
     zapReceipts: List<ZapReceipt> = emptyList(),
@@ -502,16 +754,27 @@ fun NoteActionsRow(
     var showZapReceiptsDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
+    // Mutually exclusive popup state
+    var activePopup by remember { mutableStateOf<ActivePopup>(ActivePopup.None) }
+
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Reply button with count
+        // Reply button with count — long-press = same as click (open thread)
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(
-                onClick = onReplyClick,
-                modifier = Modifier.size(32.dp),
+            Box(
+                modifier =
+                    Modifier
+                        .size(32.dp)
+                        .combinedClickable(
+                            onClick = onReplyClick,
+                            onLongClick = onReplyClick,
+                            indication = ripple(bounded = false, radius = 16.dp),
+                            interactionSource = remember { MutableInteractionSource() },
+                        ),
+                contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     Reply,
@@ -529,37 +792,91 @@ fun NoteActionsRow(
             }
         }
 
-        // Like button with count
+        // Like button with count — long-press = reactions popup, right-click = emoji picker
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(
-                onClick = {
-                    if (!isLiked) {
-                        scope.launch {
-                            reactToNote(
-                                // TODO: Bring a hint to where the event came from
-                                event = EventHintBundle(event, null),
-                                reaction = "+",
-                                account = account,
-                                relayManager = relayManager,
-                            )
-                            isLiked = true
-                            localReactionCount++
-                        }
+            Box {
+                Box(
+                    modifier =
+                        Modifier
+                            .size(32.dp)
+                            .combinedClickable(
+                                onClick = {
+                                    if (!isLiked) {
+                                        scope.launch {
+                                            reactToNote(
+                                                event = EventHintBundle(event, null),
+                                                reaction = "+",
+                                                account = account,
+                                                relayManager = relayManager,
+                                            )
+                                            isLiked = true
+                                            localReactionCount++
+                                        }
+                                    }
+                                },
+                                onLongClick = {
+                                    if (note != null) {
+                                        activePopup = ActivePopup.Reactions
+                                    }
+                                },
+                                indication = ripple(bounded = false, radius = 16.dp),
+                                interactionSource = remember { MutableInteractionSource() },
+                            ).onPointerEvent(PointerEventType.Press) { pointerEvent ->
+                                if (pointerEvent.buttons.isSecondaryPressed) {
+                                    activePopup = ActivePopup.EmojiPicker
+                                }
+                            },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        if (isLiked) MaterialSymbols.Favorite else MaterialSymbols.FavoriteBorder,
+                        contentDescription = if (isLiked) "Unlike" else "Like",
+                        tint =
+                            if (isLiked) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+
+                // Reactions popup (long-press)
+                if (activePopup is ActivePopup.Reactions && note != null) {
+                    ReactionsPopup(
+                        note = note,
+                        localCache = localCache,
+                        onDismiss = { activePopup = ActivePopup.None },
+                    )
+                }
+
+                // Emoji picker (right-click)
+                DropdownMenu(
+                    expanded = activePopup is ActivePopup.EmojiPicker,
+                    onDismissRequest = { activePopup = ActivePopup.None },
+                ) {
+                    EMOJI_OPTIONS.forEach { emoji ->
+                        val displayEmoji = if (emoji == "+") "\u2764\ufe0f" else emoji
+                        DropdownMenuItem(
+                            text = { Text(displayEmoji, fontSize = 20.sp) },
+                            onClick = {
+                                activePopup = ActivePopup.None
+                                if (!isLiked) {
+                                    scope.launch {
+                                        reactToNote(
+                                            event = EventHintBundle(event, null),
+                                            reaction = emoji,
+                                            account = account,
+                                            relayManager = relayManager,
+                                        )
+                                        isLiked = true
+                                        localReactionCount++
+                                    }
+                                }
+                            },
+                        )
                     }
-                },
-                modifier = Modifier.size(32.dp),
-            ) {
-                Icon(
-                    if (isLiked) MaterialSymbols.Favorite else MaterialSymbols.FavoriteBorder,
-                    contentDescription = if (isLiked) "Unlike" else "Like",
-                    tint =
-                        if (isLiked) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    modifier = Modifier.size(18.dp),
-                )
+                }
             }
             if (localReactionCount > 0) {
                 Text(
@@ -570,36 +887,82 @@ fun NoteActionsRow(
             }
         }
 
-        // Repost button with count
+        // Repost button with count — right-click = repost options
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(
-                onClick = {
-                    if (!isReposted) {
-                        scope.launch {
-                            repostNote(
-                                // TODO: Bring a hint to where the event came from
-                                event = EventHintBundle(event, null),
-                                account = account,
-                                relayManager = relayManager,
-                            )
-                            isReposted = true
-                            localRepostCount++
-                        }
-                    }
-                },
-                modifier = Modifier.size(32.dp),
-            ) {
-                Icon(
-                    Repost,
-                    contentDescription = "Repost",
-                    tint =
-                        if (isReposted) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
+            Box {
+                Box(
+                    modifier =
+                        Modifier
+                            .size(32.dp)
+                            .combinedClickable(
+                                onClick = {
+                                    if (!isReposted) {
+                                        scope.launch {
+                                            repostNote(
+                                                event = EventHintBundle(event, null),
+                                                account = account,
+                                                relayManager = relayManager,
+                                            )
+                                            isReposted = true
+                                            localRepostCount++
+                                        }
+                                    }
+                                },
+                                onLongClick = { /* no long-press action for repost */ },
+                                indication = ripple(bounded = false, radius = 16.dp),
+                                interactionSource = remember { MutableInteractionSource() },
+                            ).onPointerEvent(PointerEventType.Press) { pointerEvent ->
+                                if (pointerEvent.buttons.isSecondaryPressed) {
+                                    activePopup = ActivePopup.RepostOptions
+                                }
+                            },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Repost,
+                        contentDescription = "Repost",
+                        tint =
+                            if (isReposted) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+
+                // Repost options (right-click)
+                DropdownMenu(
+                    expanded = activePopup is ActivePopup.RepostOptions,
+                    onDismissRequest = { activePopup = ActivePopup.None },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Repost") },
+                        onClick = {
+                            activePopup = ActivePopup.None
+                            if (!isReposted) {
+                                scope.launch {
+                                    repostNote(
+                                        event = EventHintBundle(event, null),
+                                        account = account,
+                                        relayManager = relayManager,
+                                    )
+                                    isReposted = true
+                                    localRepostCount++
+                                }
+                            }
                         },
-                    modifier = Modifier.size(18.dp),
-                )
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Quote") },
+                        onClick = {
+                            activePopup = ActivePopup.None
+                            // Copy note link to clipboard for quoting
+                            val noteLink = "nostr:${NNote.create(event.id)}"
+                            copyToClipboard(noteLink)
+                        },
+                    )
+                }
             }
             if (localRepostCount > 0) {
                 Text(
@@ -610,32 +973,61 @@ fun NoteActionsRow(
             }
         }
 
-        // Zap button with amount (clickable to show receipts)
+        // Zap button with amount — long-press = zap receipts popup, right-click = custom zap dialog
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(32.dp), contentAlignment = Alignment.Center) {
-                if (isZapping) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                } else {
-                    IconButton(
-                        onClick = { showZapDialog = true },
-                        modifier = Modifier.size(32.dp),
-                    ) {
-                        Icon(
-                            Zap,
-                            contentDescription = "Zap",
-                            tint =
-                                if (zapAmountSats > 0) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                            modifier = Modifier.size(18.dp),
+            Box {
+                Box(modifier = Modifier.size(32.dp), contentAlignment = Alignment.Center) {
+                    if (isZapping) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary,
                         )
+                    } else {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .size(32.dp)
+                                    .combinedClickable(
+                                        onClick = { showZapDialog = true },
+                                        onLongClick = {
+                                            if (note != null) {
+                                                activePopup = ActivePopup.ZapReceipts
+                                            } else {
+                                                showZapReceiptsDialog = true
+                                            }
+                                        },
+                                        indication = ripple(bounded = false, radius = 16.dp),
+                                        interactionSource = remember { MutableInteractionSource() },
+                                    ).onPointerEvent(PointerEventType.Press) { pointerEvent ->
+                                        if (pointerEvent.buttons.isSecondaryPressed) {
+                                            showZapDialog = true
+                                        }
+                                    },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Zap,
+                                contentDescription = "Zap",
+                                tint =
+                                    if (zapAmountSats > 0) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
                     }
+                }
+
+                // Zap receipts popup (long-press)
+                if (activePopup is ActivePopup.ZapReceipts && note != null) {
+                    ZapReceiptsPopup(
+                        note = note,
+                        localCache = localCache,
+                        onDismiss = { activePopup = ActivePopup.None },
+                    )
                 }
             }
             if (zapAmountSats > 0) {
@@ -792,7 +1184,7 @@ fun NoteActionsRow(
         )
     }
 
-    // Zap receipts dialog
+    // Zap receipts dialog (from clicking the amount text)
     if (showZapReceiptsDialog) {
         ZapReceiptsDialog(
             receipts = zapReceipts,
