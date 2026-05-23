@@ -63,15 +63,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.nwc.NwcPaymentHandler
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.amethyst.desktop.ui.auth.QrCodeCanvas
+import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
+import com.vitorpamplona.quartz.lightning.Lud06
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -453,6 +457,73 @@ private fun ConnectWalletDialog(
     )
 }
 
+/**
+ * Sealed state machine for send dialog — supports BOLT11, LNURL, and lightning addresses.
+ */
+private sealed class SendState {
+    data object Idle : SendState()
+
+    data class Resolving(
+        val url: String,
+    ) : SendState()
+
+    data class NeedsAmount(
+        val originalInput: String,
+        val callbackUrl: String,
+        val minSats: Long,
+        val maxSats: Long,
+        val commentAllowed: Int,
+    ) : SendState()
+
+    data class FetchingInvoice(
+        val callbackUrl: String,
+        val amountMilliSats: Long,
+        val comment: String,
+    ) : SendState()
+
+    data class ReadyToPay(
+        val bolt11: String,
+    ) : SendState()
+
+    data object Paying : SendState()
+
+    data class Error(
+        val message: String,
+        val retryState: SendState,
+    ) : SendState()
+}
+
+/**
+ * Classifies payment input as BOLT11, LNURL, lightning address, or unknown.
+ */
+private fun classifyAndProcess(input: String): SendState {
+    val trimmed =
+        input
+            .trim()
+            .removePrefix("lightning:")
+            .removePrefix("LIGHTNING:")
+            .trim()
+    if (trimmed.isBlank()) return SendState.Idle
+
+    // 1. BOLT11 invoice
+    LnInvoiceUtil.findInvoice(trimmed)?.let { return SendState.ReadyToPay(it) }
+
+    // 2. LNURL bech32
+    if (trimmed.lowercase().startsWith("lnurl")) {
+        Lud06().toLnUrlp(trimmed)?.let { return SendState.Resolving(it) }
+    }
+
+    // 3. Lightning address (user@domain)
+    if (trimmed.contains("@") && trimmed.contains(".")) {
+        val parts = trimmed.split("@")
+        if (parts.size == 2 && parts[0].isNotBlank() && parts[1].contains(".")) {
+            return SendState.Resolving("https://${parts[1]}/.well-known/lnurlp/${parts[0]}")
+        }
+    }
+
+    return SendState.Idle
+}
+
 @Composable
 private fun SendDialog(
     onDismiss: () -> Unit,
@@ -460,12 +531,104 @@ private fun SendDialog(
     paymentHandler: NwcPaymentHandler,
     nwcConnection: Nip47URINorm,
 ) {
-    var invoice by remember { mutableStateOf("") }
-    var isSending by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var input by remember { mutableStateOf("") }
+    var sendState by remember { mutableStateOf<SendState>(SendState.Idle) }
+    var amount by remember { mutableStateOf("") }
+    var comment by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
+    val mapper = remember { jacksonObjectMapper() }
 
-    Dialog(onDismissRequest = { if (!isSending) onDismiss() }) {
+    val isLoading =
+        sendState is SendState.Resolving ||
+            sendState is SendState.FetchingInvoice ||
+            sendState is SendState.Paying
+
+    // Auto-resolve LNURL endpoint
+    LaunchedEffect(sendState) {
+        val state = sendState
+        if (state is SendState.Resolving) {
+            try {
+                val httpClient = DesktopHttpClient.currentClient()
+                val request =
+                    okhttp3.Request
+                        .Builder()
+                        .url(state.url)
+                        .build()
+                val response =
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        httpClient.newCall(request).execute()
+                    }
+                val body = response.body?.string()
+                if (body == null) {
+                    sendState = SendState.Error("Failed to reach payment server", SendState.Idle)
+                    return@LaunchedEffect
+                }
+                val json = mapper.readTree(body)
+                val callback = json.get("callback")?.asText()?.ifBlank { null }
+                if (callback == null) {
+                    val errorMsg = json.get("reason")?.asText() ?: json.get("message")?.asText() ?: "Invalid LNURL endpoint"
+                    sendState = SendState.Error(errorMsg, SendState.Idle)
+                    return@LaunchedEffect
+                }
+                val minMsats = json.get("minSendable")?.asLong() ?: 1000L
+                val maxMsats = json.get("maxSendable")?.asLong() ?: 100_000_000L
+                val commentLen = json.get("commentAllowed")?.asInt() ?: 0
+                val minSats = minMsats / 1000
+                val maxSats = maxMsats / 1000
+                // Fixed amount: prepopulate
+                if (minSats == maxSats) {
+                    amount = minSats.toString()
+                }
+                sendState = SendState.NeedsAmount(input, callback, minSats, maxSats, commentLen)
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                sendState = SendState.Error("Failed to resolve: ${e.message}", SendState.Idle)
+            }
+        }
+    }
+
+    // Auto-fetch invoice from callback
+    LaunchedEffect(sendState) {
+        val state = sendState
+        if (state is SendState.FetchingInvoice) {
+            try {
+                val httpClient = DesktopHttpClient.currentClient()
+                val urlBinder = if (state.callbackUrl.contains("?")) "&" else "?"
+                val encodedComment = java.net.URLEncoder.encode(state.comment, "utf-8")
+                val url = "${state.callbackUrl}${urlBinder}amount=${state.amountMilliSats}&comment=$encodedComment"
+                val request =
+                    okhttp3.Request
+                        .Builder()
+                        .url(url)
+                        .build()
+                val response =
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        httpClient.newCall(request).execute()
+                    }
+                val body = response.body?.string()
+                if (body == null) {
+                    sendState = SendState.Error("Failed to fetch invoice", SendState.Idle)
+                    return@LaunchedEffect
+                }
+                val json = mapper.readTree(body)
+                val pr = json.get("pr")?.asText()?.ifBlank { null }
+                if (pr != null) {
+                    sendState = SendState.ReadyToPay(pr)
+                } else {
+                    val reason = json.get("reason")?.asText() ?: json.get("message")?.asText() ?: "No invoice returned"
+                    sendState = SendState.Error(reason, SendState.Idle)
+                }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                sendState = SendState.Error("Invoice fetch failed: ${e.message}", SendState.Idle)
+            }
+        }
+    }
+
+    // Auto-pay when ReadyToPay (only for LNURL flow — BOLT11 uses button click)
+    // For direct BOLT11 paste, user clicks Pay explicitly
+
+    Dialog(onDismissRequest = { if (!isLoading) onDismiss() }) {
         Card(
             modifier = Modifier.width(480.dp),
             shape = RoundedCornerShape(16.dp),
@@ -478,7 +641,7 @@ private fun SendDialog(
                         style = MaterialTheme.typography.headlineSmall,
                         modifier = Modifier.weight(1f),
                     )
-                    IconButton(onClick = { if (!isSending) onDismiss() }) {
+                    IconButton(onClick = { if (!isLoading) onDismiss() }) {
                         Icon(
                             MaterialSymbols.Close,
                             contentDescription = "Close",
@@ -489,43 +652,101 @@ private fun SendDialog(
 
                 Spacer(Modifier.height(16.dp))
 
+                // Input field
                 OutlinedTextField(
-                    value = invoice,
+                    value = input,
                     onValueChange = {
-                        invoice = it
-                        errorMessage = null
+                        input = it
+                        sendState = SendState.Idle
                     },
-                    label = { Text("BOLT11 Invoice") },
-                    placeholder = { Text("lnbc...") },
+                    label = { Text("Invoice, LNURL, or lightning address") },
+                    placeholder = { Text("lnbc..., lnurl1..., or user@domain") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = false,
-                    maxLines = 6,
+                    maxLines = 4,
+                    enabled = sendState is SendState.Idle || sendState is SendState.Error,
                 )
 
                 Spacer(Modifier.height(8.dp))
 
-                OutlinedButton(onClick = {
-                    val clipboard = Toolkit.getDefaultToolkit().systemClipboard
-                    val text =
-                        try {
-                            clipboard.getData(DataFlavor.stringFlavor) as? String
-                        } catch (_: Exception) {
-                            null
+                if (sendState is SendState.Idle || sendState is SendState.Error) {
+                    OutlinedButton(onClick = {
+                        val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+                        val text =
+                            try {
+                                clipboard.getData(DataFlavor.stringFlavor) as? String
+                            } catch (_: Exception) {
+                                null
+                            }
+                        if (text != null) {
+                            input = text
+                            sendState = classifyAndProcess(text)
                         }
-                    if (text != null) {
-                        invoice = text
-                        errorMessage = null
+                    }) {
+                        Text("Paste from Clipboard")
                     }
-                }) {
-                    Text("Paste from Clipboard")
                 }
 
-                // Inline error — copiable
-                if (errorMessage != null) {
+                // Resolving spinner
+                if (sendState is SendState.Resolving) {
+                    Spacer(Modifier.height(12.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Resolving payment request...", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+
+                // Amount + comment form (LNURL flow)
+                val needsAmount = sendState as? SendState.NeedsAmount
+                if (needsAmount != null) {
+                    Spacer(Modifier.height(12.dp))
+                    val isFixed = needsAmount.minSats == needsAmount.maxSats
+                    OutlinedTextField(
+                        value = amount,
+                        onValueChange = { new -> if (new.all { it.isDigit() }) amount = new },
+                        label = {
+                            Text(
+                                if (isFixed) {
+                                    "Amount (${formatSats(needsAmount.minSats)} sats)"
+                                } else {
+                                    "Amount (${formatSats(needsAmount.minSats)} - ${formatSats(needsAmount.maxSats)} sats)"
+                                },
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        readOnly = isFixed,
+                    )
+                    if (needsAmount.commentAllowed > 0) {
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = comment,
+                            onValueChange = { if (it.length <= needsAmount.commentAllowed) comment = it },
+                            label = { Text("Comment (optional)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                        )
+                    }
+                }
+
+                // Fetching invoice spinner
+                if (sendState is SendState.FetchingInvoice) {
+                    Spacer(Modifier.height(12.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Fetching invoice...", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+
+                // Error display
+                val errorState = sendState as? SendState.Error
+                if (errorState != null) {
                     Spacer(Modifier.height(12.dp))
                     SelectionContainer {
                         Text(
-                            text = errorMessage!!,
+                            text = errorState.message,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error,
                             modifier = Modifier.fillMaxWidth(),
@@ -535,47 +756,75 @@ private fun SendDialog(
 
                 Spacer(Modifier.height(16.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    TextButton(onClick = onDismiss, enabled = !isSending) {
-                        Text("Cancel")
+                // Action button
+                val canPay =
+                    when (sendState) {
+                        is SendState.Idle -> input.isNotBlank()
+                        is SendState.NeedsAmount -> amount.isNotBlank()
+                        is SendState.ReadyToPay -> true
+                        is SendState.Error -> true
+                        else -> false
                     }
-                    Spacer(Modifier.width(8.dp))
-                    Button(
-                        onClick = {
-                            isSending = true
-                            errorMessage = null
-                            scope.launch {
-                                val result = paymentHandler.payInvoice(bolt11 = invoice, nwcConnection = nwcConnection)
-                                when (result) {
-                                    is NwcPaymentHandler.PaymentResult.Success -> onSuccess()
-                                    is NwcPaymentHandler.PaymentResult.Error -> {
-                                        errorMessage = result.message
-                                        isSending = false
-                                    }
-                                    is NwcPaymentHandler.PaymentResult.Timeout -> {
-                                        errorMessage = "Payment timed out"
-                                        isSending = false
+
+                Button(
+                    onClick = {
+                        when (val state = sendState) {
+                            is SendState.Idle -> {
+                                sendState = classifyAndProcess(input)
+                            }
+                            is SendState.NeedsAmount -> {
+                                val amountSats = amount.toLongOrNull() ?: 0L
+                                if (amountSats < state.minSats || amountSats > state.maxSats) {
+                                    sendState =
+                                        SendState.Error(
+                                            "Amount must be between ${formatSats(state.minSats)} and ${formatSats(state.maxSats)} sats",
+                                            state,
+                                        )
+                                } else {
+                                    sendState = SendState.FetchingInvoice(state.callbackUrl, amountSats * 1000, comment)
+                                }
+                            }
+                            is SendState.ReadyToPay -> {
+                                sendState = SendState.Paying
+                                scope.launch {
+                                    val result = paymentHandler.payInvoice(bolt11 = state.bolt11, nwcConnection = nwcConnection)
+                                    when (result) {
+                                        is NwcPaymentHandler.PaymentResult.Success -> onSuccess()
+                                        is NwcPaymentHandler.PaymentResult.Error -> {
+                                            sendState = SendState.Error(result.message, SendState.Idle)
+                                        }
+                                        is NwcPaymentHandler.PaymentResult.Timeout -> {
+                                            sendState = SendState.Error("Payment timed out", SendState.Idle)
+                                        }
                                     }
                                 }
                             }
-                        },
-                        enabled = invoice.isNotBlank() && !isSending,
-                    ) {
-                        if (isSending) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onPrimary,
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Sending...")
-                        } else {
-                            Text("Pay Invoice")
+                            is SendState.Error -> {
+                                sendState = state.retryState
+                            }
+                            else -> {}
                         }
+                    },
+                    enabled = canPay && !isLoading,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(if (sendState is SendState.Paying) "Paying..." else "Processing...")
+                    } else {
+                        Text(
+                            when (sendState) {
+                                is SendState.Error -> "Retry"
+                                is SendState.NeedsAmount -> "Pay"
+                                is SendState.ReadyToPay -> "Pay Invoice"
+                                else -> "Continue"
+                            },
+                        )
                     }
                 }
             }
