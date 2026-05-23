@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -253,25 +254,12 @@ fun WalletColumnScreen(
     if (showSendDialog && nwcConnection != null) {
         SendDialog(
             onDismiss = { showSendDialog = false },
-            onSend = { invoice ->
-                scope.launch {
-                    val result = paymentHandler.payInvoice(bolt11 = invoice, nwcConnection = nwcConnection)
-                    when (result) {
-                        is NwcPaymentHandler.PaymentResult.Success -> {
-                            showSendDialog = false
-                            snackbarHostState.showSnackbar("Payment successful!")
-                        }
-
-                        is NwcPaymentHandler.PaymentResult.Error -> {
-                            snackbarHostState.showSnackbar("Error: ${result.message}")
-                        }
-
-                        is NwcPaymentHandler.PaymentResult.Timeout -> {
-                            snackbarHostState.showSnackbar("Payment timed out")
-                        }
-                    }
-                }
+            onSuccess = {
+                showSendDialog = false
+                scope.launch { snackbarHostState.showSnackbar("Payment successful!") }
             },
+            paymentHandler = paymentHandler,
+            nwcConnection = nwcConnection,
         )
     }
 
@@ -468,25 +456,54 @@ private fun ConnectWalletDialog(
 @Composable
 private fun SendDialog(
     onDismiss: () -> Unit,
-    onSend: (String) -> Unit,
+    onSuccess: () -> Unit,
+    paymentHandler: NwcPaymentHandler,
+    nwcConnection: Nip47URINorm,
 ) {
     var invoice by remember { mutableStateOf("") }
     var isSending by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
 
-    AlertDialog(
-        onDismissRequest = { if (!isSending) onDismiss() },
-        title = { Text("Send Payment") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Dialog(onDismissRequest = { if (!isSending) onDismiss() }) {
+        Card(
+            modifier = Modifier.width(480.dp),
+            shape = RoundedCornerShape(16.dp),
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                // Header
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Send Payment",
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(onClick = { if (!isSending) onDismiss() }) {
+                        Icon(
+                            MaterialSymbols.Close,
+                            contentDescription = "Close",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
                 OutlinedTextField(
                     value = invoice,
-                    onValueChange = { invoice = it },
+                    onValueChange = {
+                        invoice = it
+                        errorMessage = null
+                    },
                     label = { Text("BOLT11 Invoice") },
                     placeholder = { Text("lnbc...") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = false,
                     maxLines = 6,
                 )
+
+                Spacer(Modifier.height(8.dp))
+
                 OutlinedButton(onClick = {
                     val clipboard = Toolkit.getDefaultToolkit().systemClipboard
                     val text =
@@ -495,33 +512,75 @@ private fun SendDialog(
                         } catch (_: Exception) {
                             null
                         }
-                    if (text != null) invoice = text
+                    if (text != null) {
+                        invoice = text
+                        errorMessage = null
+                    }
                 }) {
                     Text("Paste from Clipboard")
                 }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    isSending = true
-                    onSend(invoice)
-                },
-                enabled = invoice.isNotBlank() && !isSending,
-            ) {
-                if (isSending) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Sending...")
-                } else {
-                    Text("Pay Invoice")
+
+                // Inline error — copiable
+                if (errorMessage != null) {
+                    Spacer(Modifier.height(12.dp))
+                    SelectionContainer {
+                        Text(
+                            text = errorMessage!!,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextButton(onClick = onDismiss, enabled = !isSending) {
+                        Text("Cancel")
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            isSending = true
+                            errorMessage = null
+                            scope.launch {
+                                val result = paymentHandler.payInvoice(bolt11 = invoice, nwcConnection = nwcConnection)
+                                when (result) {
+                                    is NwcPaymentHandler.PaymentResult.Success -> onSuccess()
+                                    is NwcPaymentHandler.PaymentResult.Error -> {
+                                        errorMessage = result.message
+                                        isSending = false
+                                    }
+                                    is NwcPaymentHandler.PaymentResult.Timeout -> {
+                                        errorMessage = "Payment timed out"
+                                        isSending = false
+                                    }
+                                }
+                            }
+                        },
+                        enabled = invoice.isNotBlank() && !isSending,
+                    ) {
+                        if (isSending) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Sending...")
+                        } else {
+                            Text("Pay Invoice")
+                        }
+                    }
                 }
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss, enabled = !isSending) { Text("Cancel") }
-        },
-    )
+        }
+    }
 }
 
 @Composable

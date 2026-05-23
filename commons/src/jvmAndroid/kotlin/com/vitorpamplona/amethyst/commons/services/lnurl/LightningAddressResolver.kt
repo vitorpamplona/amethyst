@@ -143,7 +143,7 @@ class LightningAddressResolver(
                         milliSats = milliSats,
                         message = message,
                         zapRequest = if (allowsNostr) zapRequest else null,
-                    ) ?: return@withContext Result.Error("Failed to fetch invoice from callback")
+                    ) ?: return@withContext Result.Error("Failed to connect to payment server")
 
                 onProgress(0.7f)
 
@@ -157,7 +157,9 @@ class LightningAddressResolver(
                 val pr = invoiceResponse?.get("pr")?.asText()?.ifBlank { null }
 
                 if (pr == null) {
-                    val reason = invoiceResponse?.get("reason")?.asText()?.ifBlank { null }
+                    val reason =
+                        invoiceResponse?.get("reason")?.asText()?.ifBlank { null }
+                            ?: invoiceResponse?.get("message")?.asText()?.ifBlank { null }
                     return@withContext Result.Error(reason ?: "No invoice in response")
                 }
 
@@ -221,11 +223,8 @@ class LightningAddressResolver(
 
                 val request = Request.Builder().url(url).build()
                 httpClient.newCall(request).execute().use { response ->
-                    if (response.isSuccessful) {
-                        response.body?.string()
-                    } else {
-                        null
-                    }
+                    // Return body even on error — caller extracts "reason" or "message" from JSON
+                    response.body?.string()
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
