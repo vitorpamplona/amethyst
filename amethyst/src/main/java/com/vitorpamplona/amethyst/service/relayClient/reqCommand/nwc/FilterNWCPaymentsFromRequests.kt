@@ -24,17 +24,16 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 
-fun filterNWCPaymentsFromRequests(
-    serviceKeys: Set<HexKey>,
-    paymentRequests: Set<HexKey>,
-    fromUsers: Set<HexKey>,
-): Filter =
+// The request event id (#e) is a unique 32-byte identifier — sufficient on
+// its own to match the response. Adding `authors` or `#p` makes the filter
+// strictly stricter at the relay, which causes silent timeouts on services
+// or relays that don't set / index those fields the way NIP-47 expects
+// (e.g. wallets that omit the `p` tag, relays that don't index single-letter
+// tags on ephemeral kinds). Primal's client uses the same minimal filter
+// (kinds + #e), and the wallet's identity is still authenticated end-to-end
+// by NIP-04 decryption against the per-connection shared secret.
+fun filterNWCPaymentsFromRequests(paymentRequests: Set<HexKey>): Filter =
     Filter(
         kinds = listOf(LnZapPaymentResponseEvent.KIND),
-        authors = serviceKeys.sorted(),
-        tags =
-            mapOf(
-                "e" to paymentRequests.sorted(),
-                "p" to fromUsers.sorted(),
-            ),
+        tags = mapOf("e" to paymentRequests.sorted()),
     )

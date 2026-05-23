@@ -144,8 +144,6 @@ class NwcSignerState(
 
         val filter =
             NWCPaymentQueryState(
-                fromServiceHex = walletService.pubKeyHex,
-                toUserHex = event.pubKey,
                 replyingToHex = event.id,
                 relay = walletService.relayUri,
             )
@@ -185,8 +183,6 @@ class NwcSignerState(
 
         val filter =
             NWCPaymentQueryState(
-                fromServiceHex = walletService.pubKeyHex,
-                toUserHex = event.pubKey,
                 replyingToHex = event.id,
                 relay = walletService.relayUri,
             )

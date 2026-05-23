@@ -26,11 +26,12 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-// This allows multiple screen to be listening to tags, even the same tag
+// This allows multiple screen to be listening to tags, even the same tag.
+// The subscription filter only needs the request event id (#e) — the wallet
+// service's identity is authenticated by NIP-04 decryption against the
+// per-connection shared secret, not by relay-side `authors`/`#p` filtering.
 @Stable
 class NWCPaymentQueryState(
-    val fromServiceHex: HexKey,
-    val toUserHex: HexKey,
     val replyingToHex: HexKey,
     val relay: NormalizedRelayUrl,
 )

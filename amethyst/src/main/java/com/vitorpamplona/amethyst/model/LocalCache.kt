@@ -2075,6 +2075,12 @@ object LocalCache : ILocalCache, ICacheProvider {
         if (note.event != null) return false
 
         if (wasVerified || justVerify(event)) {
+            val expectedServicePubkey =
+                event.walletServicePubKey() ?: run {
+                    Log.w("LocalCache", "NWC request ${event.id} has no `p` tag; cannot register for response.")
+                    return false
+                }
+
             note.loadEvent(event, author, emptyList())
 
             relay?.let {
@@ -2083,7 +2089,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
             zappedNote?.addZapPayment(note, null)
 
-            paymentTracker.registerRequest(event.id, zappedNote, onResponse)
+            paymentTracker.registerRequest(event.id, expectedServicePubkey, zappedNote, onResponse)
 
             refreshNewNoteObservers(note)
 
@@ -2100,13 +2106,28 @@ object LocalCache : ILocalCache, ICacheProvider {
     ): Boolean {
         val requestId = event.requestId()
         val pending =
-            paymentTracker.onResponseReceived(requestId) ?: run {
-                Log.w(
-                    "LocalCache",
-                    "NWC response ${event.id} from ${event.pubKey} references request e=$requestId but no pending request is registered. " +
-                        "The response was either delivered after timeout, the user holds a stale subscription, or the wallet service set the wrong e tag.",
-                )
-                return false
+            when (val match = paymentTracker.onResponseReceived(requestId, event.pubKey)) {
+                is NwcPaymentTracker.MatchResult.Matched -> match.pending
+                is NwcPaymentTracker.MatchResult.WrongAuthor -> {
+                    // Possible spoof: a kind-23195 event from someone other than
+                    // the wallet service we sent the request to. The pending
+                    // entry is left in place so the real response can still
+                    // resolve it; we silently drop this one.
+                    Log.w(
+                        "LocalCache",
+                        "Rejecting NWC response ${event.id}: expected author ${match.expected} but event was signed by ${match.actual}. " +
+                            "This may be a spoofed reply — keeping the request pending for the legitimate wallet response.",
+                    )
+                    return false
+                }
+                NwcPaymentTracker.MatchResult.NoMatch -> {
+                    Log.w(
+                        "LocalCache",
+                        "NWC response ${event.id} from ${event.pubKey} references request e=$requestId but no pending request is registered. " +
+                            "The response was either delivered after timeout, the user holds a stale subscription, or the wallet service set the wrong e tag.",
+                    )
+                    return false
+                }
             }
 
         val zappedNote = pending.zappedNote

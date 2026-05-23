@@ -512,6 +512,11 @@ class DesktopLocalCache : ICacheProvider {
         wasVerified: Boolean = false,
     ): Boolean {
         if (!wasVerified && !justVerify(event)) return false
+        val expectedServicePubkey =
+            event.walletServicePubKey() ?: run {
+                Log.w("DesktopLocalCache") { "NWC request ${event.id} has no `p` tag; cannot register for response." }
+                return false
+            }
         val note = getOrCreateNote(event.id)
         val author = getOrCreateUser(event.pubKey)
 
@@ -523,7 +528,7 @@ class DesktopLocalCache : ICacheProvider {
         relay?.let { note.addRelay(it) }
 
         zappedNote?.addZapPayment(note, null)
-        paymentTracker.registerRequest(event.id, zappedNote, onResponse)
+        paymentTracker.registerRequest(event.id, expectedServicePubkey, zappedNote, onResponse)
 
         return true
     }
@@ -543,7 +548,18 @@ class DesktopLocalCache : ICacheProvider {
     ): Boolean {
         if (!wasVerified && !justVerify(event)) return false
         val requestId = event.requestId()
-        val pending = paymentTracker.onResponseReceived(requestId) ?: return false
+        val pending =
+            when (val match = paymentTracker.onResponseReceived(requestId, event.pubKey)) {
+                is NwcPaymentTracker.MatchResult.Matched -> match.pending
+                is NwcPaymentTracker.MatchResult.WrongAuthor -> {
+                    Log.w("DesktopLocalCache") {
+                        "Rejecting NWC response ${event.id}: expected author ${match.expected} but event was signed by ${match.actual}. " +
+                            "This may be a spoofed reply — keeping the request pending for the legitimate wallet response."
+                    }
+                    return false
+                }
+                NwcPaymentTracker.MatchResult.NoMatch -> return false
+            }
 
         val requestNote = requestId?.let { getNoteIfExists(it) }
         val note = getOrCreateNote(event.id)
