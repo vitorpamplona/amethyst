@@ -763,6 +763,13 @@ fun NoteActionsRow(
                         showOverflowMenu = false
                     },
                 )
+                DropdownMenuItem(
+                    text = { Text("Copy Raw JSON") },
+                    onClick = {
+                        copyToClipboard(event.toJson())
+                        showOverflowMenu = false
+                    },
+                )
             }
         }
     }
