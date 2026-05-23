@@ -41,7 +41,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,9 +56,6 @@ import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.network.RelayStatus
 import com.vitorpamplona.amethyst.desktop.ui.auth.LoginCard
 import com.vitorpamplona.amethyst.desktop.ui.auth.NewKeyWarningCard
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -69,7 +65,7 @@ fun LoginScreen(
 ) {
     var showNewKeyDialog by remember { mutableStateOf(false) }
     var generatedAccount by remember { mutableStateOf<AccountState.LoggedIn?>(null) }
-    val scope = rememberCoroutineScope()
+
     val loginProgress by accountManager.loginProgress.collectAsState()
 
     Column(
@@ -96,10 +92,7 @@ fun LoginScreen(
         LoginCard(
             onLogin = { keyInput ->
                 accountManager.loginWithKey(keyInput).map {
-                    scope.launch {
-                        withContext(Dispatchers.IO) { accountManager.saveCurrentAccount() }
-                        onLoginSuccess()
-                    }
+                    onLoginSuccess()
                 }
             },
             onGenerateNew = {
@@ -127,10 +120,7 @@ fun LoginScreen(
                 nsec = account.nsec,
                 onContinue = {
                     showNewKeyDialog = false
-                    scope.launch {
-                        withContext(Dispatchers.IO) { accountManager.saveCurrentAccount() }
-                        onLoginSuccess()
-                    }
+                    onLoginSuccess()
                 },
             )
         }

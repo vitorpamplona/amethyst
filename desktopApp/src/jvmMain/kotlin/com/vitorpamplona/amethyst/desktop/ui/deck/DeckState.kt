@@ -299,6 +299,7 @@ class DeckState(
                 "chess" -> DeckColumnType.Chess
                 "settings" -> DeckColumnType.Settings
                 "relays" -> DeckColumnType.Relays
+                "wallet" -> DeckColumnType.Wallet
                 "drafts" -> DeckColumnType.Drafts
                 "highlights" -> DeckColumnType.MyHighlights
                 "editor" -> DeckColumnType.Editor(param)
