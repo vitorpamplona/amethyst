@@ -387,6 +387,7 @@ private fun GenericInnerReactionRow(
     renderReaction: @Composable (ReactionRowItem) -> Unit,
 ) {
     val enabledReactions = remember(reactions) { reactions.filter { it.enabled } }
+    val lastIndex = enabledReactions.lastIndex
 
     Row(
         verticalAlignment = CenterVertically,
@@ -402,12 +403,19 @@ private fun GenericInnerReactionRow(
             }
         }
 
-        enabledReactions.forEach { item ->
+        enabledReactions.forEachIndexed { index, item ->
+            // Skip the weighted slice for the rightmost item only when it has no counter
+            // (e.g. Share / Pay) — those are icon-only, so letting them collapse to natural
+            // width pins them flush against the right padding. If the rightmost item carries
+            // a counter (Zap / Like / etc.), keep it weighted so its icon stays at the left
+            // of an equal-width slice and the counter doesn't get pushed to the edge.
+            val isLastIconOnly = index == lastIndex && !item.showCounter
             val itemWeight = if (item.action == ReactionRowAction.Reply) weightTwo else 1f
+            val mod = if (isLastIconOnly) Modifier else Modifier.weight(itemWeight)
             Row(
                 verticalAlignment = CenterVertically,
                 horizontalArrangement = RowColSpacing,
-                modifier = Modifier.weight(itemWeight),
+                modifier = mod,
             ) {
                 renderReaction(item)
             }
