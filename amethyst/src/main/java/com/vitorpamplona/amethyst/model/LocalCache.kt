@@ -26,6 +26,7 @@ import android.util.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Channel
+import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
@@ -41,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.services.nwc.NwcPaymentTracker
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.LocalCache.observeEvents
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
+import com.vitorpamplona.amethyst.model.nipBCOnchainZaps.OnchainZapResolver
 import com.vitorpamplona.amethyst.service.BundledInsert
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.dateFormatter
@@ -250,8 +252,6 @@ import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.OnchainBackend
-import com.vitorpamplona.quartz.nipBCOnchainZaps.verify.OnchainZapVerifier
-import com.vitorpamplona.quartz.nipBCOnchainZaps.verify.VerifiedOnchainZap
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
@@ -307,6 +307,15 @@ object LocalCache : ILocalCache, ICacheProvider {
      */
     @Volatile
     var onchainBackend: OnchainBackend? = null
+
+    /**
+     * NIP-BC on-chain zap verification coordinator. Owns the chain-tip poller flow,
+     * the in-flight de-duplication of verifier calls across consume/reverify paths,
+     * and the parallelism cap. `consume(OnchainZapEvent)` delegates the async
+     * verification side here; the gallery's reverification driver also calls in here
+     * directly.
+     */
+    val onchainZapResolver = OnchainZapResolver(this)
 
     /**
      * Resolver for LNURL provider metadata used by [consume]`(LnZapEvent)` to
@@ -1848,52 +1857,57 @@ object LocalCache : ILocalCache, ICacheProvider {
         wasVerified: Boolean,
     ): Boolean {
         val note = getOrCreateNote(event.id)
-        if (note.event != null) return false
+        val alreadyLoaded = note.event != null
 
-        if (!(wasVerified || justVerify(event))) return false
+        // `relay == null` means this event was generated locally by the signed-in user
+        // and routed through `justConsumeMyOwnEvent` — see `Account.sendOnchainZap` →
+        // `LocalCache.justConsumeMyOwnEvent`. Only these get the optimistic gallery
+        // attachment; for incoming zaps from others, the sender-claimed `amount` tag
+        // is untrusted and could mislead the viewer until the chain verifier responds.
+        val isOwnEvent = relay == null
+        var repliesTo: List<Note>? = null
 
-        // Anti-spoofing: NIP-BC requires rejecting self-zaps.
-        val recipient = event.recipient() ?: return false
-        if (event.pubKey.equals(recipient, ignoreCase = true)) return false
+        if (!alreadyLoaded) {
+            if (!(wasVerified || justVerify(event))) return false
 
-        val author = getOrCreateUser(event.pubKey)
-        val repliesTo = computeReplyTo(event)
-        note.loadEvent(event, author, repliesTo)
-        refreshNewNoteObservers(note)
+            // Anti-spoofing: NIP-BC requires rejecting self-zaps.
+            val recipient = event.recipient() ?: return false
+            if (event.pubKey.equals(recipient, ignoreCase = true)) return false
 
-        // Verification needs a chain backend. Without one (e.g. before Account
-        // wires its EsploraBackend) the event is still cached so subscriptions
-        // and profile zap views see it, but it can't contribute to Note totals.
-        val backend = onchainBackend ?: return true
-        val verifier = OnchainZapVerifier(backend)
+            val author = getOrCreateUser(event.pubKey)
+            val resolvedRepliesTo = computeReplyTo(event)
+            repliesTo = resolvedRepliesTo
+            note.loadEvent(event, author, resolvedRepliesTo)
 
-        Amethyst.instance.applicationIOScope.launch {
-            try {
-                when (val result = verifier.verify(event)) {
-                    is VerifiedOnchainZap.Confirmed -> {
-                        repliesTo.forEach {
-                            it.addOnchainZap(note, result.txid, result.verifiedSats, confirmed = true)
-                        }
-                    }
-
-                    is VerifiedOnchainZap.Pending -> {
-                        repliesTo.forEach {
-                            it.addOnchainZap(note, result.txid, result.verifiedSats, confirmed = false)
-                        }
-                    }
-
-                    is VerifiedOnchainZap.Rejected -> {
-                        Log.d("OnchainZap") {
-                            "rejected ${result.txid}: ${result.reason}"
-                        }
+            if (isOwnEvent) {
+                // Optimistic attachment for the sender's own zap: surface it on the
+                // thread immediately, before the chain backend has indexed the tx.
+                // Crucial because `OnchainZapSender.send` consumes the kind:8333
+                // milliseconds after broadcasting the tx — the verifier would
+                // otherwise return TX_NOT_FOUND and the entry would never appear
+                // until a later re-verification pass.
+                val txid = event.txid()
+                if (txid != null) {
+                    // Clamp claimedSats to a non-negative value. `amount` tag parses
+                    // via toLongOrNull() with no sign check, so a malicious sender
+                    // could otherwise put "-1" in the gallery as a negative-sats badge.
+                    val claimedSats = (event.claimedAmountInSats() ?: 0L).coerceAtLeast(0L)
+                    resolvedRepliesTo.forEach {
+                        it.addOnchainZap(note, txid, claimedSats, verifiedSats = 0L, OnchainZapStatus.UNVERIFIED)
                     }
                 }
-            } catch (t: Throwable) {
-                Log.w("OnchainZap", "verification failed for ${event.id}", t)
             }
+
+            refreshNewNoteObservers(note)
         }
 
-        return true
+        // Async chain verification is delegated to OnchainZapResolver, which owns the
+        // in-flight gates (so two relay echoes don't double-fetch) and the chain-tip
+        // polling flow used by the gallery driver. Reusing the repliesTo already
+        // computed above avoids the second computeReplyTo pass on the new-event path.
+        onchainZapResolver.launchVerification(event, note, repliesTo ?: computeReplyTo(event))
+
+        return !alreadyLoaded
     }
 
     private fun attachZapToLiveActivityChannel(

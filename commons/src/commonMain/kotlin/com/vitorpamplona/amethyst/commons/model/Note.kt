@@ -157,15 +157,32 @@ open class Note(
     var zapsAmount: BigDecimal = BigDecimal.ZERO
 
     /**
-     * NIP-BC verified onchain zaps targeting this note.
-     * Key: Bitcoin txid (lowercase 64-char hex). Value: verified entry with the source
-     * OnchainZapEvent note (so `source.author` identifies the sender), the verified
-     * satoshis paid to the recipient (NOT the sender-claimed amount), and a confirmed
-     * flag. Confirmed and pending entries live here together; `updateZapTotal` only
-     * counts confirmed amounts.
+     * NIP-BC onchain zaps targeting this note.
+     * Key: Bitcoin txid (lowercase 64-char hex). Value: entry with the source
+     * OnchainZapEvent note (so `source.author` identifies the sender), the sender-claimed
+     * amount, the on-chain verified amount, and a verification status.
+     * Unverified, pending, and confirmed entries live here together; `updateZapTotal`
+     * only counts CONFIRMED amounts.
+     *
+     * `@Volatile` ensures cross-thread visibility: writes happen on `applicationIOScope`
+     * (inside the @Synchronized inner methods) and reads happen on the Compose Main
+     * thread (gallery recomposition + the reverification driver's `any { … }` check).
      */
+    @Volatile
     var onchainZaps = mapOf<String, OnchainZapEntry>()
         private set
+
+    /**
+     * True when the NIP-BC chain verifier has reached a terminal verdict for THIS
+     * note's OnchainZapEvent — i.e. on-chain Confirmed, or hard-rejected for a reason
+     * other than `TX_NOT_FOUND`. `LocalCache.consume()` uses this to skip re-launching
+     * the verifier on relay echoes once the chain has spoken definitively.
+     *
+     * Stays `false` for transient states (`UNVERIFIED`, `PENDING`, `TX_NOT_FOUND`) so
+     * the gallery's reverify driver can still upgrade them as the chain advances.
+     */
+    @Volatile
+    var onchainZapResolved: Boolean = false
 
     var zapPayments = mapOf<Note, Note?>()
         private set
@@ -330,6 +347,7 @@ open class Note(
         reports = mapOf()
         zaps = mapOf()
         onchainZaps = mapOf()
+        onchainZapResolved = false
         zapPayments = mapOf()
         zapsAmount = BigDecimal.ZERO
         relays = listOf()
@@ -436,31 +454,82 @@ open class Note(
     ): Boolean {
         val existing = onchainZaps[txid]
         if (existing != null) {
-            // Same-state duplicate: keep the first source and amount we got.
-            if (existing.confirmed == entry.confirmed) return false
-            // Downgrade confirmed → pending: never accept. States differ here,
-            // so existing.confirmed alone is sufficient to identify the downgrade.
-            if (existing.confirmed) return false
-            // Else: existing pending + incoming confirmed — fall through to upgrade.
+            // Exact structural duplicate (same source Note + same fields) — typical
+            // relay echo of the same event. Skip the rewrite to avoid spurious
+            // flowSet invalidation.
+            if (entry == existing) return false
+            // Reject downgrades using the explicit OnchainZapStatus.level (not ordinal)
+            // so the upgrade contract survives future enum reordering or insertions.
+            if (entry.status.level < existing.status.level) return false
+            // Same level: accept only when verifiedSats grows OR the source differs
+            // (legitimate alternate signer republishing a split-zap receipt). A strictly
+            // smaller verifiedSats is a backend downgrade and we ignore it.
+            if (entry.status.level == existing.status.level && entry.verifiedSats < existing.verifiedSats) return false
         }
         onchainZaps = onchainZaps + Pair(txid, entry)
         return true
     }
 
+    @Synchronized
+    private fun innerRemoveOnchainZapForSource(
+        txid: String,
+        sourceAuthorPubKey: HexKey,
+    ): Boolean {
+        val existing = onchainZaps[txid] ?: return false
+        // Anti-spoof: only remove the entry if its source matches the rejecting event.
+        // Otherwise a malicious third party could erase a legitimate CONFIRMED entry
+        // by publishing a spoofed kind:8333 with the same txid but a bystander recipient.
+        // Also refuse to remove a CONFIRMED entry — once chain-verified, only a fresh
+        // CONFIRMED replacement should change it; a transient backend hiccup must not
+        // wipe a previously-CONFIRMED entry just because some other target on the same
+        // event is still UNVERIFIED.
+        if (existing.status == OnchainZapStatus.CONFIRMED) return false
+        if (existing.source.author?.pubkeyHex == null) return false
+        if (existing.source.author?.pubkeyHex != sourceAuthorPubKey) return false
+        onchainZaps = onchainZaps - txid
+        return true
+    }
+
     /**
-     * Register a NIP-BC verified onchain zap targeting this note. `verifiedSats` MUST come
-     * from on-chain verification (sum of outputs paying the recipient's derived Taproot
-     * address), not the sender-claimed `amount` tag. `source` is the OnchainZapEvent's own
+     * Register a NIP-BC onchain zap targeting this note. `source` is the OnchainZapEvent's own
      * note — `source.author` is the sender shown in the reactions gallery.
+     *
+     * Call with [OnchainZapStatus.UNVERIFIED] (and `verifiedSats = 0`) at consumption time
+     * to attach the zap optimistically so the user immediately sees their own outgoing zap
+     * is processing. Call again with [OnchainZapStatus.PENDING] or [OnchainZapStatus.CONFIRMED]
+     * (and the verified output sum) once the chain backend confirms it.
+     *
+     * `verifiedSats` MUST come from on-chain verification (sum of outputs paying the
+     * recipient's derived Taproot address), not the sender-claimed `amount` tag.
      */
     fun addOnchainZap(
         source: Note,
         txid: String,
+        claimedSats: Long,
         verifiedSats: Long,
-        confirmed: Boolean,
+        status: OnchainZapStatus,
     ) {
-        val inserted = innerAddOnchainZap(txid, OnchainZapEntry(source, verifiedSats, confirmed))
+        val inserted = innerAddOnchainZap(txid, OnchainZapEntry(source, claimedSats, verifiedSats, status))
         if (inserted) {
+            updateZapTotal()
+            flowSet?.zaps?.invalidateData()
+        }
+    }
+
+    /**
+     * Remove a previously-attached onchain zap entry whose source matches [sourceAuthorPubKey].
+     * Used when verification produced a hard rejection (e.g. the transaction paid zero to the
+     * recipient — a spoof attempt). The source-scoped match prevents a malicious third party
+     * from erasing a legitimate CONFIRMED entry by publishing a spoofed kind:8333 with the
+     * same txid but a different recipient pubkey. Per-target CONFIRMED check also prevents
+     * a transient backend reject from erasing an already-confirmed entry.
+     */
+    fun removeOnchainZapForSource(
+        txid: String,
+        sourceAuthorPubKey: HexKey,
+    ) {
+        val removed = innerRemoveOnchainZapForSource(txid, sourceAuthorPubKey)
+        if (removed) {
             updateZapTotal()
             flowSet?.zaps?.invalidateData()
         }
@@ -679,9 +748,9 @@ open class Note(
         }
 
         // NIP-BC onchain zaps — verified amounts only, confirmed only.
-        // Pending/unconfirmed entries are tracked but excluded from the total per spec.
+        // Unverified/pending entries are tracked but excluded from the total per spec.
         onchainZaps.values.forEach { entry ->
-            if (entry.confirmed) {
+            if (entry.status == OnchainZapStatus.CONFIRMED) {
                 sumOfAmounts += BigDecimal.valueOf(entry.verifiedSats)
             }
         }
