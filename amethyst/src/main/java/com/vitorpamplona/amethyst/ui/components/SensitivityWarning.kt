@@ -82,7 +82,13 @@ fun SensitivityWarning(
     accountViewModel: AccountViewModel,
     content: @Composable () -> Unit,
 ) {
-    note.event?.let { SensitivityWarning(it, accountViewModel, content) }
+    val noteEvent = note.event
+
+    if (noteEvent == null) {
+        content()
+    } else {
+        SensitivityWarning(noteEvent, accountViewModel, content)
+    }
 }
 
 @Composable

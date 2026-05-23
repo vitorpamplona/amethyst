@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.nip28PublicChats
 
+import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
+import com.vitorpamplona.amethyst.commons.defaults.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.ChannelFinderQueryState
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -34,29 +36,28 @@ fun filterMissingChannelsById(keys: List<ChannelFinderQueryState>): List<RelayBa
         mapOfSet {
             keys.forEach { key ->
                 if (key.channel is PublicChatChannel && key.channel.event == null) {
-                    key.channel.relays().forEach {
+                    val searchRelays =
+                        key.account.searchRelayList.flow.value
+                            .ifEmpty { DefaultSearchRelayList }
+                    val indexerRelays =
+                        key.account.indexerRelayList.flow.value
+                            .ifEmpty { DefaultIndexerRelayList }
+
+                    (key.channel.relays() + searchRelays + indexerRelays).forEach {
                         add(it, key.channel.idHex)
                     }
-                } else {
-                    null
                 }
             }
         }
 
-    if (relayPerChannel.isEmpty()) return emptyList()
-
-    return relayPerChannel.mapNotNull {
-        if (it.value.isEmpty()) {
-            RelayBasedFilter(
-                relay = it.key,
-                filter =
-                    Filter(
-                        kinds = filterMissingPublicChannelsByIdKinds,
-                        ids = it.value.sorted(),
-                    ),
-            )
-        } else {
-            null
-        }
+    return relayPerChannel.map { (relay, channelIds) ->
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = filterMissingPublicChannelsByIdKinds,
+                    ids = channelIds.sorted(),
+                ),
+        )
     }
 }

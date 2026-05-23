@@ -68,7 +68,6 @@ import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
-import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -81,8 +80,6 @@ fun RenderPublicChatChannelThumb(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = baseNote.event as? ChannelCreateEvent ?: return
-
     LoadPublicChatChannel(baseNote.idHex, accountViewModel) {
         RenderPublicChatChannelThumb(baseNote = baseNote, channel = it, accountViewModel, nav)
     }
@@ -96,7 +93,7 @@ fun RenderPublicChatChannelThumb(
     nav: INav,
 ) {
     val channelUpdates by observeChannel(channel, accountViewModel)
-    val publicChat = channelUpdates?.channel as PublicChatChannel
+    val publicChat = (channelUpdates?.channel as? PublicChatChannel) ?: channel
 
     val name = remember(channelUpdates) { publicChat.toBestDisplayName() }
     val description = remember(channelUpdates) { publicChat.summary()?.ifBlank { null } }
