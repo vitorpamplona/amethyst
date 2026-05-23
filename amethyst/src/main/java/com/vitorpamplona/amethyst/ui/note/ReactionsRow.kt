@@ -387,7 +387,6 @@ private fun GenericInnerReactionRow(
     renderReaction: @Composable (ReactionRowItem) -> Unit,
 ) {
     val enabledReactions = remember(reactions) { reactions.filter { it.enabled } }
-    val lastIndex = enabledReactions.lastIndex
 
     Row(
         verticalAlignment = CenterVertically,
@@ -403,14 +402,12 @@ private fun GenericInnerReactionRow(
             }
         }
 
-        enabledReactions.forEachIndexed { index, item ->
-            val isLast = index == lastIndex
+        enabledReactions.forEach { item ->
             val itemWeight = if (item.action == ReactionRowAction.Reply) weightTwo else 1f
-            val mod = if (isLast) Modifier else Modifier.weight(itemWeight)
             Row(
                 verticalAlignment = CenterVertically,
                 horizontalArrangement = RowColSpacing,
-                modifier = mod,
+                modifier = Modifier.weight(itemWeight),
             ) {
                 renderReaction(item)
             }
