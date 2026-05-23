@@ -945,8 +945,11 @@ fun App(
                                     if (current?.signerType is com.vitorpamplona.amethyst.commons.model.account.SignerType.Remote) {
                                         accountManager.startHeartbeat(scope)
                                     }
-                                    // Ensure account is in multi-account storage + refresh list
+                                    // Save account (privkey to keychain + metadata to disk)
+                                    // then ensure multi-account storage is up to date.
+                                    // Uses App-level scope so it survives LoginScreen leaving composition.
                                     scope.launch(Dispatchers.IO) {
+                                        accountManager.saveCurrentAccount()
                                         accountManager.ensureCurrentAccountInStorage()
                                         accountManager.refreshAccountList()
                                     }
