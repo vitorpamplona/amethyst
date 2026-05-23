@@ -18,33 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.commons.model.Channel
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import androidx.compose.ui.res.pluralStringResource
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.stringRes
 
+// Picks calendar_day_a11y_no_events when count is 0 because ICU/CLDR maps 0 to
+// the `other` category for every locale we ship, which would otherwise render
+// "[date], 0 events" instead of "[date], no events".
 @Composable
-fun ChannelFinderFilterAssemblerSubscription(
-    channel: Channel,
-    accountViewModel: AccountViewModel,
-) = ChannelFinderFilterAssemblerSubscription(channel, accountViewModel.account, accountViewModel.dataSources().channelFinder)
-
-@Composable
-fun ChannelFinderFilterAssemblerSubscription(
-    channel: Channel,
-    account: Account,
-    dataSource: ChannelFinderFilterAssemblyGroup,
-) {
-    // different screens get different states
-    // even if they are tracking the same tag.
-    val state =
-        remember(channel, account) {
-            ChannelFinderQueryState(channel, account)
-        }
-
-    LifecycleAwareKeyDataSourceSubscription(state, dataSource)
-}
+fun calendarDayA11yLabel(
+    dateLabel: String,
+    count: Int,
+): String =
+    if (count == 0) {
+        stringRes(R.string.calendar_day_a11y_no_events, dateLabel)
+    } else {
+        pluralStringResource(R.plurals.calendar_day_a11y_events, count, dateLabel, count)
+    }

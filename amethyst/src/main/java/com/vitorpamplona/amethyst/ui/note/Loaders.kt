@@ -154,12 +154,11 @@ fun LoadPublicChatChannel(
     accountViewModel: AccountViewModel,
     content: @Composable (PublicChatChannel) -> Unit,
 ) {
-    val channel =
-        produceStateIfNotNull(accountViewModel.getPublicChatChannelIfExists(id), id) {
-            value = accountViewModel.checkGetOrCreatePublicChatChannel(id)
-        }
+    val channel by produceStateIfNotNull(accountViewModel.getPublicChatChannelIfExists(id), id) {
+        value = accountViewModel.checkGetOrCreatePublicChatChannel(id)
+    }
 
-    channel.value?.let { content(it) }
+    channel?.let { content(it) }
 }
 
 @Composable

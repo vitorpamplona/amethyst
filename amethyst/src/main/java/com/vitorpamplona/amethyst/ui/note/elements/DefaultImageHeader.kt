@@ -119,38 +119,32 @@ fun BannerImage(
     if (!banner.isNullOrBlank()) {
         MyAsyncImage(
             imageUrl = banner,
-            contentDescription =
-                stringRes(
-                    R.string.preview_card_image_for,
-                    banner,
-                ),
+            contentDescription = stringRes(R.string.preview_card_image_for, banner),
             contentScale = ContentScale.Crop,
             mainImageModifier = Modifier,
             loadedImageModifier = modifier,
             accountViewModel = accountViewModel,
             onLoadingBackground = {
-                Image(
-                    painter = painterRes(R.drawable.profile_banner, 4),
-                    contentDescription = stringRes(R.string.profile_banner),
-                    contentScale = ContentScale.Crop,
-                    modifier = modifier,
-                )
+                DefaultProfileBanner(modifier, 4)
             },
             onError = {
-                Image(
-                    painter = painterRes(R.drawable.profile_banner, 4),
-                    contentDescription = stringRes(R.string.profile_banner),
-                    contentScale = ContentScale.Crop,
-                    modifier = modifier,
-                )
+                DefaultProfileBanner(modifier, 4)
             },
         )
     } else {
-        Image(
-            painter = painterRes(R.drawable.profile_banner, 5),
-            contentDescription = stringRes(R.string.profile_banner),
-            contentScale = ContentScale.Crop,
-            modifier = modifier,
-        )
+        DefaultProfileBanner(modifier, 5)
     }
+}
+
+@Composable
+fun DefaultProfileBanner(
+    modifier: Modifier,
+    sizeReference: Int,
+) {
+    Image(
+        painter = painterRes(R.drawable.profile_banner, sizeReference),
+        contentDescription = stringRes(R.string.profile_banner),
+        contentScale = ContentScale.Crop,
+        modifier = modifier,
+    )
 }

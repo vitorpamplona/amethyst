@@ -1932,10 +1932,10 @@
     <string name="calendar_add_to_phone_calendar">Add to phone calendar</string>
     <string name="calendar_nav_jump_to_today">Jump to today</string>
     <plurals name="calendar_day_a11y_events">
-        <item quantity="zero">%1$s, no events</item>
         <item quantity="one">%1$s, %2$d event</item>
         <item quantity="other">%1$s, %2$d events</item>
     </plurals>
+    <string name="calendar_day_a11y_no_events">%1$s, no events</string>
     <string name="calendar_day_a11y_today_suffix">today</string>
     <string name="calendar_day_a11y_selected_suffix">selected</string>
     <string name="calendar_fab_new_event">Create a new calendar event</string>
