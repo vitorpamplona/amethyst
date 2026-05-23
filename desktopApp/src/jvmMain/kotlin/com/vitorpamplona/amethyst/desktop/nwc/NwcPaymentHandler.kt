@@ -322,7 +322,6 @@ class NwcPaymentHandler(
                 subId = subId,
                 filters = listOf(filter),
                 onEvent = { event, _ ->
-                    println("NWC rpc event received: kind=${event.kind} id=${event.id.take(8)} from=${event.pubKey.take(8)}")
                     if (event is LnZapPaymentResponseEvent && event.requestId() == requestId) {
                         @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
                         kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {

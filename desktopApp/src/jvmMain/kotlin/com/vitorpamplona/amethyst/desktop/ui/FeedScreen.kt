@@ -409,6 +409,14 @@ fun FeedScreen(
         onDispose { viewModel.destroy() }
     }
 
+    // Rescan cache when followedUsers populates (fixes cold-boot race where
+    // the initial scan runs before the contact list arrives from relays)
+    LaunchedEffect(viewModel, followedUsers) {
+        if (feedMode == FeedMode.FOLLOWING && followedUsers.isNotEmpty()) {
+            viewModel.feedState.refreshSuspended()
+        }
+    }
+
     val feedState by viewModel.feedState.feedContent.collectAsState()
 
     // Viewport-aware metadata loading: only fetch for visible notes + buffer
