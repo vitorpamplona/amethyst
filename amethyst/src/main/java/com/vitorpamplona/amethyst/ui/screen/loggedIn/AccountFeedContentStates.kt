@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.dal.PollsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.products.dal.ProductsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats.dal.PublicChatsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.dal.ShortsFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.dal.SoftwareAppsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.dal.VideoFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.dal.WebBookmarkFeedFilter
 import kotlinx.coroutines.CoroutineScope
@@ -111,6 +112,7 @@ class AccountFeedContentStates(
     val nestsFeed = FeedContentState(NestsFeedFilter(account), scope, LocalCache)
     val longsFeed = FeedContentState(LongsFeedFilter(account), scope, LocalCache)
     val articlesFeed = FeedContentState(ArticlesFeedFilter(account), scope, LocalCache)
+    val softwareAppsFeed = FeedContentState(SoftwareAppsFeedFilter(account), scope, LocalCache)
 
     val notifications = CardFeedContentState(NotificationFeedFilter(account), scope)
     val notificationsFollowing = CardFeedContentState(NotificationFeedFilter(account, TopFilter.AllFollows), scope)
@@ -199,6 +201,7 @@ class AccountFeedContentStates(
         nestsFeed.updateFeedWith(newNotes)
         longsFeed.updateFeedWith(newNotes)
         articlesFeed.updateFeedWith(newNotes)
+        softwareAppsFeed.updateFeedWith(newNotes)
 
         calendarAppointmentsFeed.updateFeedWith(newNotes)
         calendarCollectionsFeed.updateFeedWith(newNotes)
@@ -254,6 +257,7 @@ class AccountFeedContentStates(
         nestsFeed.deleteFromFeed(newNotes)
         longsFeed.deleteFromFeed(newNotes)
         articlesFeed.deleteFromFeed(newNotes)
+        softwareAppsFeed.deleteFromFeed(newNotes)
 
         calendarAppointmentsFeed.deleteFromFeed(newNotes)
         calendarCollectionsFeed.deleteFromFeed(newNotes)

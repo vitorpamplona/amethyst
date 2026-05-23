@@ -167,6 +167,9 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderRelayMembershipList
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayRemoveMember
 import com.vitorpamplona.amethyst.ui.note.types.RenderReport
 import com.vitorpamplona.amethyst.ui.note.types.RenderRootSiteEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderSoftwareApplication
+import com.vitorpamplona.amethyst.ui.note.types.RenderSoftwareAsset
+import com.vitorpamplona.amethyst.ui.note.types.RenderSoftwareRelease
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextModificationEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderThread
@@ -212,6 +215,9 @@ import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -256,6 +262,7 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
+import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
@@ -868,6 +875,23 @@ private fun RenderNoteRow(
     when (val noteEvent = baseNote.event) {
         is AppDefinitionEvent -> {
             RenderAppDefinition(baseNote, accountViewModel, nav)
+        }
+
+        is SoftwareApplicationEvent -> {
+            RenderSoftwareApplication(baseNote, accountViewModel, nav)
+        }
+
+        is SoftwareAssetEvent -> {
+            RenderSoftwareAsset(baseNote, accountViewModel, nav)
+        }
+
+        is ReleaseArtifactSetEvent -> {
+            // kind 30063 is used by both NIP-51 (ReleaseArtifactSet) and NIP-82 (SoftwareRelease).
+            // The EventFactory always materializes the NIP-51 class; dispatch to NIP-82 when the
+            // tag signature matches.
+            if (noteEvent.isNip82SoftwareRelease()) {
+                RenderSoftwareRelease(baseNote, accountViewModel, nav)
+            }
         }
 
         is AttestationEvent -> {

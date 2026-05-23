@@ -25,7 +25,9 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -62,6 +64,10 @@ class SoftwareApplicationEvent(
     fun platforms() = tags.platforms()
 
     fun license() = tags.license()
+
+    fun topics() = tags.mapNotNull(HashtagTag::parse)
+
+    fun appLinks() = tags.mapNotNull(ATag::parse)
 
     companion object {
         const val KIND = 32267
