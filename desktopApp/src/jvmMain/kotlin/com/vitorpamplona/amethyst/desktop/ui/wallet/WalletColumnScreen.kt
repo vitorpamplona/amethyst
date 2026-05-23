@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -40,6 +41,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -59,6 +61,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
@@ -67,6 +70,7 @@ import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.nwc.NwcPaymentHandler
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
+import com.vitorpamplona.amethyst.desktop.ui.auth.QrCodeCanvas
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -534,21 +538,71 @@ private fun ReceiveDialog(
     var isGenerating by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    AlertDialog(
-        onDismissRequest = { if (!isGenerating) onDismiss() },
-        title = { Text(if (generatedInvoice != null) "Invoice Created" else "Receive Payment") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (generatedInvoice != null) {
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = generatedInvoice!!,
-                            modifier = Modifier.padding(12.dp),
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 6,
+    Dialog(onDismissRequest = { if (!isGenerating) onDismiss() }) {
+        Card(
+            modifier = Modifier.width(400.dp),
+            shape = RoundedCornerShape(16.dp),
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                // Header: title + close X
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        if (generatedInvoice != null) "Invoice Created" else "Receive Payment",
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(onClick = { if (!isGenerating) onDismiss() }) {
+                        Icon(
+                            MaterialSymbols.Close,
+                            contentDescription = "Close",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                if (generatedInvoice != null) {
+                    // Amount + description
+                    Text(
+                        "${formatSats(amount.toLongOrNull() ?: 0)} sats",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                    )
+                    if (description.isNotBlank()) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.align(Alignment.CenterHorizontally),
+                        )
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // QR code
+                    QrCodeCanvas(
+                        data = generatedInvoice!!,
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                        size = 240.dp,
+                    )
+
+                    Spacer(Modifier.height(24.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                            val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+                            clipboard.setContents(StringSelection(generatedInvoice), null)
+                            scope.launch { snackbarHostState.showSnackbar("Invoice copied!") }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Copy Invoice")
+                    }
                 } else {
+                    // Input form
                     OutlinedTextField(
                         value = amount,
                         onValueChange = { new -> if (new.all { it.isDigit() }) amount = new },
@@ -557,6 +611,7 @@ private fun ReceiveDialog(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                     )
+                    Spacer(Modifier.height(12.dp))
                     OutlinedTextField(
                         value = description,
                         onValueChange = { description = it },
@@ -565,64 +620,53 @@ private fun ReceiveDialog(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                     )
-                }
-            }
-        },
-        confirmButton = {
-            if (generatedInvoice != null) {
-                Button(onClick = {
-                    val clipboard = Toolkit.getDefaultToolkit().systemClipboard
-                    clipboard.setContents(StringSelection(generatedInvoice), null)
-                    scope.launch { snackbarHostState.showSnackbar("Invoice copied!") }
-                }) {
-                    Text("Copy Invoice")
-                }
-            } else {
-                Button(
-                    onClick = {
-                        val amountSats = amount.toLongOrNull() ?: 0L
-                        if (amountSats > 0) {
-                            isGenerating = true
-                            scope.launch {
-                                val result =
-                                    paymentHandler.makeInvoice(
-                                        nwcConnection = nwcConnection,
-                                        amountMsats = amountSats * 1000,
-                                        description = description.ifBlank { null },
-                                    )
-                                when (result) {
-                                    is NwcPaymentHandler.InvoiceResult.Success -> {
-                                        generatedInvoice = result.invoice
-                                    }
+                    Spacer(Modifier.height(16.dp))
+                    Button(
+                        onClick = {
+                            val amountSats = amount.toLongOrNull() ?: 0L
+                            if (amountSats > 0) {
+                                isGenerating = true
+                                scope.launch {
+                                    val result =
+                                        paymentHandler.makeInvoice(
+                                            nwcConnection = nwcConnection,
+                                            amountMsats = amountSats * 1000,
+                                            description = description.ifBlank { null },
+                                        )
+                                    when (result) {
+                                        is NwcPaymentHandler.InvoiceResult.Success -> {
+                                            generatedInvoice = result.invoice
+                                        }
 
-                                    is NwcPaymentHandler.InvoiceResult.Error -> {
-                                        snackbarHostState.showSnackbar("Error: ${result.message}")
-                                    }
+                                        is NwcPaymentHandler.InvoiceResult.Error -> {
+                                            snackbarHostState.showSnackbar("Error: ${result.message}")
+                                        }
 
-                                    is NwcPaymentHandler.InvoiceResult.Timeout -> {
-                                        snackbarHostState.showSnackbar("Invoice request timed out")
+                                        is NwcPaymentHandler.InvoiceResult.Timeout -> {
+                                            snackbarHostState.showSnackbar("Invoice request timed out")
+                                        }
                                     }
+                                    isGenerating = false
                                 }
-                                isGenerating = false
                             }
+                        },
+                        enabled = amount.isNotBlank() && !isGenerating,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        if (isGenerating) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
                         }
-                    },
-                    enabled = amount.isNotBlank() && !isGenerating,
-                ) {
-                    if (isGenerating) {
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Create Invoice")
                     }
-                    Text("Create Invoice")
                 }
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss, enabled = !isGenerating) {
-                Text(if (generatedInvoice != null) "Close" else "Cancel")
-            }
-        },
-    )
+        }
+    }
 }
 
 private fun formatSats(sats: Long): String = NumberFormat.getNumberInstance(Locale.getDefault()).format(sats)
