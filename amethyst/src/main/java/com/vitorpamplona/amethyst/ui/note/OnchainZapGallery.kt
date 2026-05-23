@@ -111,22 +111,24 @@ private fun DriveOnchainZapReverification(
     val pendingCount = remember(entries) { entries.count { it.status != OnchainZapStatus.CONFIRMED } }
     if (pendingCount == 0) return
 
+    val resolver = LocalCache.onchainZapResolver
+
     // First-view kick — unconditional, doesn't wait for the tip flow. Keyed on
     // (idHex, pendingCount) so a brand-new pending entry arriving while the
     // gallery is still on screen also kicks an immediate reverify instead of
     // waiting up to a full tip-poll interval.
     LaunchedEffect(note.idHex, pendingCount) {
-        LocalCache.reverifyOnchainZapsForNote(note)
+        resolver.reverifyOnchainZapsForNote(note)
     }
 
     // Tip-change kick — subscribes to the shared poller (lazy, WhileSubscribed
     // so only one HTTP poller runs across the whole UI no matter how many
     // galleries are visible). Skips the first emission (null) to avoid
     // duplicating the first-view kick above.
-    val tip by LocalCache.onchainTipHeightFlow.collectAsStateWithLifecycle()
+    val tip by resolver.onchainTipHeightFlow.collectAsStateWithLifecycle()
     LaunchedEffect(note.idHex, tip) {
         if (tip != null) {
-            LocalCache.reverifyOnchainZapsForNote(note)
+            resolver.reverifyOnchainZapsForNote(note)
         }
     }
 }
