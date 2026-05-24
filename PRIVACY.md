@@ -1,13 +1,13 @@
 # Amethyst Privacy Policy and Terms of Use
 
-**App:** Amethyst (Android Nostr client)
-**Publisher:** Vitor Pamplona
-**Contact:** amethyst@vitorpamplona.com
+**App:** Amethyst (Android Nostr client)<br>
+**Publisher:** Vitor Pamplona<br>
+**Contact:** amethyst@vitorpamplona.com<br>
 **Last updated:** 2026-05-24
 
 Amethyst is free, open-source software (MIT License — see `LICENSE`). It is not a service. There is no Amethyst server, no Amethyst account, and the developer has no access to data stored on your device.
 
-Amethyst connects to third-party Nostr **relays** that you choose. Those relays host the content. They are independent of Amethyst, with their own operators and their own policies.
+Amethyst lets you browse content from third-party Nostr **relays** that you choose. Those relays host the content. They are independent of Amethyst, with their own operators and their own policies.
 
 This document explains what data leaves your phone, who can see it, and the standards that apply to use of the app.
 
@@ -33,7 +33,7 @@ Configuration, cached events, keys, drafts, and other operational data live in t
 
 A relay you connect to sees:
 
-- Your IP address.
+- Your IP address (or the Tor exit node when using it).
 - Your public key.
 - The events you publish (posts, reactions, reposts, reports, etc.).
 - The filters you subscribe to.
