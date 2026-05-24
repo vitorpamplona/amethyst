@@ -50,6 +50,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
@@ -187,17 +188,19 @@ fun SignUpPage(
             },
         )
 
-        AcceptTerms(
-            checked = signUpViewModel.acceptedTerms,
-            onCheckedChange = signUpViewModel::updateAcceptedTerms,
-        )
-
-        if (signUpViewModel.termsAcceptanceIsRequiredError) {
-            Text(
-                text = stringRes(R.string.acceptance_of_terms_is_required),
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
+        if (BuildConfig.FLAVOR == "play") {
+            AcceptTerms(
+                checked = signUpViewModel.acceptedTerms,
+                onCheckedChange = signUpViewModel::updateAcceptedTerms,
             )
+
+            if (signUpViewModel.termsAcceptanceIsRequiredError) {
+                Text(
+                    text = stringRes(R.string.acceptance_of_terms_is_required),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(Size10dp))
