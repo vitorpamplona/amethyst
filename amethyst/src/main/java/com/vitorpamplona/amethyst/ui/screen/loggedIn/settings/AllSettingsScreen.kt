@@ -261,6 +261,8 @@ fun AllSettingsScreen(
                 )
             }
 
+            LegalSettingsSection()
+
             SettingsSection(R.string.danger_zone, isDanger = true) {
                 if (hasPrivateKey) {
                     SettingsItem(
