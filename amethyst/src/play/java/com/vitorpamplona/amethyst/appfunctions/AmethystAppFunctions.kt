@@ -25,16 +25,9 @@ import androidx.appfunctions.AppFunctionSerializable
 import androidx.appfunctions.service.AppFunction
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.actions.SearchActions
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
-import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Bridge that exposes Amethyst's "verbs" (commons/.../actions/) to the Android
@@ -86,7 +79,7 @@ class AmethystAppFunctions {
 
         // Snapshot the active account + relay set + client at function entry
         // and never touch sessionManager again from this dispatch. If the
-        // user switches account mid-drain, this snapshot keeps the request
+        // user switches account mid-fetch, this snapshot keeps the request
         // routed to the relays we originally queried — caller still gets a
         // coherent result rather than events mixed across accounts.
         val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return SearchProfilesResult.empty()
@@ -99,7 +92,15 @@ class AmethystAppFunctions {
         val relays = account.searchRelayList.flow.value
         if (relays.isEmpty()) return SearchProfilesResult.empty()
 
-        val events = drain(client, relays, filter, GEMINI_DRAIN_TIMEOUT_MS)
+        // Quartz's INostrClient.fetchAll handles subscribe → drain on
+        // EOSE/closed/cannot-connect → unsubscribe → dedup by id → sort
+        // newest-first. Wraps everything in a withTimeoutOrNull(timeoutMs)
+        // so a slow relay can't stall the dispatch.
+        val events =
+            client.fetchAll(
+                filters = relays.associateWith { listOf(filter) },
+                timeoutMs = GEMINI_FETCH_TIMEOUT_MS,
+            )
 
         val hits =
             events
@@ -110,76 +111,6 @@ class AmethystAppFunctions {
                 .map { it.toProfileHit() }
 
         return SearchProfilesResult(matches = hits)
-    }
-
-    /**
-     * One-shot relay drain: subscribe with [filter] against [relays], collect
-     * events until every relay sends EOSE or [timeoutMs] elapses, then
-     * unsubscribe. Mirrors `Context.drain` in amy — kept inline here because
-     * Account exposes a live `INostrClient` rather than a drain helper.
-     */
-    private suspend fun drain(
-        client: com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient,
-        relays: Set<NormalizedRelayUrl>,
-        filter: Filter,
-        timeoutMs: Long,
-    ): List<Event> {
-        val incoming = Channel<Event>(UNLIMITED)
-        val done = mutableSetOf<NormalizedRelayUrl>()
-        val subId = newSubId()
-        val listener =
-            object : SubscriptionListener {
-                override fun onEvent(
-                    event: Event,
-                    isLive: Boolean,
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    incoming.trySend(event)
-                }
-
-                override fun onEose(
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    done += relay
-                }
-
-                override fun onClosed(
-                    message: String,
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    done += relay
-                }
-
-                override fun onCannotConnect(
-                    relay: NormalizedRelayUrl,
-                    message: String,
-                    forFilters: List<Filter>?,
-                ) {
-                    done += relay
-                }
-            }
-
-        val collected = mutableListOf<Event>()
-        try {
-            client.subscribe(subId, relays.associateWith { listOf(filter) }, listener)
-            withTimeoutOrNull(timeoutMs) {
-                while (done.size < relays.size) {
-                    collected += incoming.receive()
-                }
-                while (true) {
-                    val r = incoming.tryReceive()
-                    if (!r.isSuccess) break
-                    collected += r.getOrThrow()
-                }
-            }
-        } finally {
-            client.unsubscribe(subId)
-            incoming.close()
-        }
-        return collected
     }
 
     private fun MetadataEvent.toProfileHit(): ProfileHit {
@@ -197,11 +128,11 @@ class AmethystAppFunctions {
 
     companion object {
         /**
-         * 6-second drain window. App Functions invocations are user-initiated
+         * 6-second fetch window. App Functions invocations are user-initiated
          * foreground requests in the Gemini UI — anything beyond a few seconds
          * is a poor user experience.
          */
-        private const val GEMINI_DRAIN_TIMEOUT_MS = 6_000L
+        private const val GEMINI_FETCH_TIMEOUT_MS = 6_000L
     }
 }
 
