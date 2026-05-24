@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.service.nests.AppForegroundRecycleHook
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
 
-class Amethyst : Application() {
+open class Amethyst : Application() {
     init {
         Log.minLevel = if (BuildConfig.DEBUG) LogLevel.DEBUG else LogLevel.ERROR
         Log.d("AmethystApp") { "Creating App $this" }

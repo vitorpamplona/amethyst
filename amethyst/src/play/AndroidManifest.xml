@@ -2,8 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Play flavor overrides android:name with PlayAmethyst, which is
+         the same Amethyst Application class plus the
+         AppFunctionConfiguration.Provider surface required by
+         androidx.appfunctions. F-Droid keeps the plain Amethyst. -->
     <application
-        android:name=".Amethyst">
+        android:name=".PlayAmethyst"
+        tools:replace="android:name">
 
         <service
             android:name=".service.notifications.PushNotificationReceiverService"
@@ -37,6 +42,24 @@
         <meta-data
             android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
             android:value="com.vitorpamplona.amethyst.service.cast.chromecast.AmethystCastOptionsProvider" />
+
+        <!-- Gemini / system-agent bridge via androidx.appfunctions
+             (pre-stable as of May 2026). The androidx-provided
+             PlatformAppFunctionService dispatches to plain Kotlin
+             classes annotated with @AppFunction (see
+             com.vitorpamplona.amethyst.appfunctions.AmethystAppFunctions);
+             instances are constructed by PlayAmethyst's
+             AppFunctionConfiguration. Play flavor only — the F-Droid
+             channel ships without the alpha Google AI dependency. -->
+        <service
+            android:name="androidx.appfunctions.service.PlatformAppFunctionService"
+            android:exported="true"
+            android:permission="android.permission.BIND_APP_FUNCTION_SERVICE"
+            tools:ignore="ExportedService">
+            <intent-filter>
+                <action android:name="android.app.AppFunctionService" />
+            </intent-filter>
+        </service>
 
     </application>
 

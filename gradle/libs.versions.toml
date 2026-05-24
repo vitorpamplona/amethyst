@@ -83,12 +83,21 @@ sqlite = "2.6.2"
 ktor = "3.4.3"
 fourkoma = "1.2.0"
 
+# Phase 2 (Gemini App Functions) — both still pre-stable as of May 2026.
+# Scoped to the play flavor only (see amethyst/build.gradle.kts) so the
+# fdroid channel doesn't pull in Google alpha dependencies.
+appfunctions = "1.0.0-alpha09"
+ksp = "2.3.8"
+
 [libraries]
 abedElazizShe-video-compressor-fork = { group = "com.github.davotoula", name = "LightCompressor-enhanced", version.ref = "lightcompressor-enhanced" }
 accompanist-adaptive = { group = "com.google.accompanist", name = "accompanist-adaptive", version.ref = "accompanistAdaptive" }
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanistAdaptive" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+androidx-appfunctions = { group = "androidx.appfunctions", name = "appfunctions", version.ref = "appfunctions" }
+androidx-appfunctions-service = { group = "androidx.appfunctions", name = "appfunctions-service", version.ref = "appfunctions" }
+androidx-appfunctions-compiler = { group = "androidx.appfunctions", name = "appfunctions-compiler", version.ref = "appfunctions" }
 androidx-benchmark-junit4 = { group = "androidx.benchmark", name = "benchmark-junit4", version.ref = "benchmark" }
 androidx-biometric-ktx = { group = "androidx.biometric", name = "biometric-ktx", version.ref = "biometricKtx" }
 androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "androidxCamera" }
@@ -213,3 +222,4 @@ kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref =
 androidKotlinMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 vanniktech-mavenPublish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
+googleKsp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

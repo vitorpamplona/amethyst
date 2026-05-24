@@ -12,6 +12,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform) apply false
     alias(libs.plugins.androidKotlinMultiplatformLibrary) apply false
     alias(libs.plugins.serialization)
+    alias(libs.plugins.googleKsp) apply false
 }
 
 // Shared app version for all subprojects — read from gradle/libs.versions.toml.
