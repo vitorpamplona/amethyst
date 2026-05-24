@@ -85,6 +85,21 @@ object FollowCommand {
             val latest = fetchLatestContactList(ctx, self, outbox, timeoutSecs * 1000)
             val previouslyFollowed = latest?.isTaggedUser(target) ?: false
 
+            // Relay hint embedded in the `p` tag for new follows — points
+            // readers at a relay where they'll find the target's events.
+            // Best-effort: first write relay from the target's cached
+            // kind:10002 advertised relay list, null if we've never seen
+            // one. Mirrors User.bestRelayHint() in the Android UI.
+            val targetRelayHint =
+                if (op == FollowOp.FOLLOW) {
+                    ctx
+                        .relaysOf(target)
+                        ?.writeRelaysNorm()
+                        ?.firstOrNull()
+                } else {
+                    null
+                }
+
             val newEvent: ContactListEvent? =
                 when (op) {
                     FollowOp.FOLLOW ->
@@ -92,6 +107,7 @@ object FollowCommand {
                             signer = ctx.signer,
                             pubkeyToFollow = target,
                             currentContactList = latest,
+                            relayHint = targetRelayHint,
                         )
                     FollowOp.UNFOLLOW ->
                         FollowActions.buildUnfollow(

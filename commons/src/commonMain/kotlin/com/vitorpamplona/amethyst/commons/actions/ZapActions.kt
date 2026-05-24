@@ -32,14 +32,29 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
  * NIP-57 zap-request building + LN address extraction.
  *
  * Returns a signed [LnZapRequestEvent] (kind:9734) — the artifact a caller
- * hands to a LNURL-pay callback to receive a BOLT11 invoice. The Lightning
- * round-trip (LNURL fetch, invoice retrieval, optional NWC payment) is
- * intentionally out of scope here; callers compose this with
- * `LightningAddressResolver` (commons/jvmAndroid) or their own LN client.
+ * hands to a LNURL-pay callback to receive a BOLT11 invoice.
+ *
+ * **Caller responsibilities** that the Amethyst Android flow handles but
+ * these builders do not:
+ *
+ *  * **Use [buildEventZapRequestsForSplits] for events.** A naive call to
+ *    [buildEventZapRequest] on a note carrying NIP-57 zap-split tags, NIP-53
+ *    live-activity host tags, or NIP-89 app metadata silently misroutes
+ *    funds to a single recipient. The splits variant is what the
+ *    foreground UI uses and what amy `zap event` calls.
+ *  * **Lightning round-trip.** LNURL endpoint fetch, BOLT11 invoice
+ *    retrieval, and optional NIP-47 NWC payment all live outside these
+ *    builders. `LightningAddressResolver` (in commons/jvmAndroid) covers
+ *    the LNURL + invoice steps.
+ *  * **Receipt verification.** When the kind:9735 receipt arrives, validate
+ *    it against the LNURL provider's `nostrPubkey` (NIP-57 Appendix F) —
+ *    primed via `LnurlEndpointCache` on Android.
+ *  * **Onchain zaps** (NIP-BC) are a separate flow — see `OnchainZapSender`
+ *    in commons. These builders only cover Lightning.
  *
  * Pattern matches [FollowActions] and [SearchActions]: shared, pure logic
- * usable from amy CLI, the future Android App Functions adapter for Gemini,
- * and any other non-UI consumer.
+ * usable from amy CLI, the Android App Functions adapter for Gemini, and
+ * any other non-UI consumer.
  */
 object ZapActions {
     /** Convert sats to millisats — LN-side amount unit. */

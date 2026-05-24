@@ -79,6 +79,12 @@ object SearchCommand {
         return runSearch(dataDir, query, filter, timeoutMs) { events ->
             events
                 .mapNotNull { it as? MetadataEvent }
+                // Dedup by pubkey, not event id — multiple relays may return
+                // different kind:0 revisions for the same author; keep only
+                // the freshest. Matches the App Functions adapter so amy
+                // and Gemini surface the same profile count for a query.
+                .sortedByDescending { it.createdAt }
+                .distinctBy { it.pubKey }
                 .map { ev ->
                     val parsed =
                         try {

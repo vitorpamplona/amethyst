@@ -31,13 +31,25 @@ import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 /**
  * Pure NIP-50 search-filter assembly + search-relay resolution.
  *
- * Like [FollowActions], these are non-UI verbs callable from any context
- * (amy CLI, future Android App Functions adapter for Gemini, automation).
- * The actions only build [Filter]s and pick relays — caller drives the
- * actual subscription / drain via its own relay client.
+ * Builds [Filter]s and picks relays — caller drives subscription / drain.
+ * Non-UI callers should layer the following on top to match Amethyst's
+ * in-app search behavior:
  *
- * For client-side post-filtering (dedup, pseudo-kinds like `reply` / `media`)
- * see [com.vitorpamplona.amethyst.commons.search.SearchResultFilter].
+ *  * **Drain / subscribe.** A function-call API (amy `search`, Gemini App
+ *    Functions) usually wants `client.subscribe(...)` until every relay
+ *    sends EOSE or a short timeout elapses, then unsubscribe. The Amethyst
+ *    foreground UI uses a live subscription instead — it stays open as the
+ *    user types.
+ *  * **Dedup.** Profile search dedups by `pubKey` (multiple kind:0 events
+ *    per author); note search dedups by event id. Both pick the freshest
+ *    revision via `sortedByDescending { createdAt }.distinctBy { … }`.
+ *  * **Pseudo-kind filtering.** When you let callers ask for `reply` /
+ *    `media` / exclusion terms, apply
+ *    [com.vitorpamplona.amethyst.commons.search.SearchResultFilter] after
+ *    the drain. This filter is NOT exposed in the filter API itself.
+ *  * **Debounce.** Interactive callers should debounce input. The
+ *    Amethyst UI uses 300 ms before issuing a new subscription; one-shot
+ *    callers (amy, App Functions) skip this.
  */
 object SearchActions {
     /** Default kinds for "search notes" — kind:1 short text notes. */

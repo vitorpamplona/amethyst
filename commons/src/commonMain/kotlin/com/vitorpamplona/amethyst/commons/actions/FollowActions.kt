@@ -29,9 +29,24 @@ import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
 /**
  * Pure event-building "verbs" for the NIP-02 kind:3 contact list.
  *
- * Builds a signed [ContactListEvent] but does NOT publish it — callers are
- * responsible for relay delivery (e.g. `Account.sendMyPublicAndPrivateOutbox`
- * on Android, `Context.publish` in amy).
+ * Builds a signed [ContactListEvent] but does NOT publish it. The Amethyst
+ * Android UI flow does more than these builders — non-UI callers are
+ * responsible for the rest:
+ *
+ *  * **Publish.** Hand the returned event to your relay client. Android
+ *    uses `Account.sendMyPublicAndPrivateOutbox`, amy uses `Context.publish`.
+ *  * **Writeable check.** Skip the call when the active signer is read-only
+ *    (e.g. an npub-only login). Building will fail at the sign step
+ *    otherwise.
+ *  * **Relay hint.** Pass [relayHint] pointing at one of the target's
+ *    advertised kind:10002 write relays so readers can find the followed
+ *    user. The in-app flow does this via `User.bestRelayHint()`.
+ *  * **No-op detection.** When the user already follows the target, the
+ *    underlying builder short-circuits to the same [currentContactList].
+ *    Compare `result.id == currentContactList?.id` to detect this.
+ *  * **Local cache update.** If your caller has a local event cache, feed
+ *    the new event back in so the UI / next read sees the update without
+ *    a relay round-trip.
  *
  * Canonical entry point for non-UI callers (CLI commands, Android App
  * Functions adapters, automation scripts): takes pubkeys as [HexKey] rather

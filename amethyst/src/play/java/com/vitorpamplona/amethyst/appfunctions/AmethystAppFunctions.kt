@@ -78,8 +78,13 @@ class AmethystAppFunctions {
         val cappedLimit = limit.coerceIn(1, 50)
         val filter = SearchActions.searchProfilesFilter(query, cappedLimit) ?: return SearchProfilesResult.empty()
 
-        val app = Amethyst.instance
-        val account = app.sessionManager.loggedInAccount() ?: return SearchProfilesResult.empty()
+        // Snapshot the active account + relay set + client at function entry
+        // and never touch sessionManager again from this dispatch. If the
+        // user switches account mid-drain, this snapshot keeps the request
+        // routed to the relays we originally queried — caller still gets a
+        // coherent result rather than events mixed across accounts.
+        val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return SearchProfilesResult.empty()
+        val client = Amethyst.instance.client
 
         // SearchRelayListState's flow already resolves to a concrete relay
         // set: NIP-44-decrypted private entries + public entries, or the
@@ -88,7 +93,7 @@ class AmethystAppFunctions {
         val relays = account.searchRelayList.flow.value
         if (relays.isEmpty()) return SearchProfilesResult.empty()
 
-        val events = drain(app, relays, filter, GEMINI_DRAIN_TIMEOUT_MS)
+        val events = drain(client, relays, filter, GEMINI_DRAIN_TIMEOUT_MS)
 
         val hits =
             events
@@ -108,12 +113,11 @@ class AmethystAppFunctions {
      * Account exposes a live `INostrClient` rather than a drain helper.
      */
     private suspend fun drain(
-        app: com.vitorpamplona.amethyst.AppModules,
+        client: com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient,
         relays: Set<NormalizedRelayUrl>,
         filter: Filter,
         timeoutMs: Long,
     ): List<Event> {
-        val client = app.client
         val incoming = Channel<Event>(UNLIMITED)
         val done = mutableSetOf<NormalizedRelayUrl>()
         val subId = newSubId()
