@@ -110,4 +110,9 @@ object Commands {
         dataDir: DataDir,
         tail: Array<String>,
     ): Int = SearchCommand.dispatch(dataDir, tail)
+
+    suspend fun zap(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = ZapCommand.dispatch(dataDir, tail)
 }
