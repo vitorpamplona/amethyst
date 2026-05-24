@@ -1,7 +1,7 @@
 # iOS Support for Amethyst
 
 **Date:** 2026-05-24
-**Status:** Draft — not yet started
+**Status:** Phase 1 complete; Phase 2 in flight
 **Owner:** TBD
 
 Plan to incrementally bring Amethyst to iOS by extending the existing
@@ -165,6 +165,51 @@ shared ViewModel and state class.
 - **Coroutines dispatcher differences.** `Dispatchers.IO` does not exist on
   Kotlin/Native by default — code that explicitly references it needs a
   `KmpDispatchers.IO` shim. Audit before Phase 2 starts.
+
+### Phase 2 audit (2026-05-24): commons/commonMain iOS-blocker inventory
+
+Audit of all 335 .kt files in `commons/src/commonMain/`. Better than feared
+— most files are already KMP-clean. The actual blockers are 21 files
+across ~6 distinct concerns. Each row below is a small mergeable PR.
+
+**By blocker category:**
+
+| Blocker | Files | Fix |
+|---|---|---|
+| `java.util.Base64` | 1 (`Base64Image.kt`) | `kotlin.io.encoding.Base64` (stdlib since 1.8) |
+| `AtomicLong` / `AtomicInteger` | 2 (`ChessLobbyState.kt`, `SigningState.kt`) | `kotlinx.atomicfu.atomic` |
+| `ConcurrentHashMap` | 4 (`ChessRelayFetchHelper.kt`, `ChessEventCollector.kt`, `ComposeSubscriptionManager.kt`, `MutableComposeSubscriptionManager.kt`) | `androidx.collection.MutableScatterMap` (KMP) — synchronization most likely already provided by enclosing scope; audit per file |
+| `SortedSet` + `ConcurrentSkipListSet` | 2 (`EventListMatchingFilter.kt`, `NoteListMatchingFilter.kt`) | Switch to `mutableListOf` + sort-on-access, or `androidx.collection.MutableScatterSet` with manual order |
+| `WeakReference` | 5 (`Channel.kt`, `Chatroom.kt`, `MarmotGroupChatroom.kt`, `UserRelaysCache.kt`, **+1**) | `expect class KmpWeakReference<T>` actuals: JVM `java.lang.ref.WeakReference`; iOS `kotlin.native.ref.WeakReference` |
+| `BigDecimal` | 1 (`Note.kt`) | Either KMP bignum lib (`com.ionspin:bignum`) or move the BigDecimal-using helper to `jvmAndroid` and stub on iOS |
+| `java.io.File` | 1 (`MediaContentModels.kt`) | Replace with `String` path, or `okio.Path` |
+| `java.net.URI` / `MalformedURLException` | 2 (`RichTextParser.kt`, `UrlInfoItem.kt`) | KMP URL lib (`io.ktor:ktor-http`) or stay JVM via expect/actual `parseUrl()` |
+| `java.nio.charset.Charset` | 1 (`HtmlCharsetParser.kt`) | `kotlin.text.Charsets` for UTF-8/16; for arbitrary charsets, expect/actual |
+| `:nestsClient` project dep | 2 (`NestViewModel.kt`, `ActiveSubscription.kt`) | Move both files to `jvmAndroid` source set (audio rooms are Phase 5 anyway) |
+| `com.halilibo.richtext.*` | 1 (`RenderMarkdown.kt`) | Verify iOS artifact; if missing, move to `jvmAndroid` until Phase 3 markdown decision |
+
+**Files that look scary but aren't:**
+- 183 files import `androidx.compose.*` — these all map to JetBrains Compose
+  Multiplatform's iOS artifacts (identical package paths). No work needed.
+- 7 files import `androidx.lifecycle.*` — KMP since 2.8.0. No work needed.
+- 0 files import `coil3.network.okhttp` (Coil network is already isolated).
+- 0 files import `javax.*` or `android.*` directly from commonMain.
+
+**Recommended PR order** (ascending cost, descending obviousness):
+
+1. ✅ Phase 1 complete (gates + iOS CI for quartz, Jackson migration).
+2. **Base64** (1 file, ~2 LOC change). Demonstrates the pattern.
+3. **Atomics** (2 files, atomicfu plugin + ~10 LOC).
+4. **ConcurrentHashMap** (4 files; needs concurrency audit per file).
+5. **WeakReference** (5 files + 1 new expect/actual).
+6. **`:nestsClient` files → jvmAndroid** (2 files; pure source-set move).
+7. **`RenderMarkdown.kt` → jvmAndroid OR iOS verification** (1 file; depends on lib check).
+8. **URL parsing** (2 files; either ktor-http dep or expect/actual).
+9. **Charsets, BigDecimal, File** (3 files; small per-file decisions).
+10. After ~9 lands: add iOS targets to `:commons`, expect failures to be down
+    to ~zero, run `compileKotlinIosSimulatorArm64` to confirm.
+11. Then proceed with the original Phase 2 plan items (Ktor for HTTP,
+    SecureKeyStore expect/actual, etc.) for the cross-cutting deps.
 
 ---
 
