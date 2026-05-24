@@ -95,4 +95,14 @@ object Commands {
         dataDir: DataDir,
         tail: Array<String>,
     ): Int = StoreCommands.dispatch(dataDir, tail)
+
+    suspend fun follow(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = FollowCommand.follow(dataDir, tail)
+
+    suspend fun unfollow(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = FollowCommand.unfollow(dataDir, tail)
 }

@@ -21,13 +21,13 @@
 package com.vitorpamplona.amethyst.commons.model.nip02FollowList
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.actions.FollowActions
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -112,52 +112,27 @@ class Kind3FollowListState(
         )
     }
 
-    suspend fun follow(users: List<User>): ContactListEvent {
-        val contactList = getFollowListEvent()
+    suspend fun follow(users: List<User>): ContactListEvent =
+        FollowActions.buildFollowBatch(
+            signer = signer,
+            pubkeysWithHints = users.map { it.pubkeyHex to it.bestRelayHint() },
+            currentContactList = getFollowListEvent(),
+        )
 
-        val contacts =
-            users.map {
-                ContactTag(it.pubkeyHex, it.bestRelayHint(), null)
-            }
+    suspend fun follow(user: User): ContactListEvent =
+        FollowActions.buildFollow(
+            signer = signer,
+            pubkeyToFollow = user.pubkeyHex,
+            currentContactList = getFollowListEvent(),
+            relayHint = user.bestRelayHint(),
+        )
 
-        return if (contactList != null) {
-            ContactListEvent.followUsers(contactList, contacts, signer)
-        } else {
-            ContactListEvent.createFromScratch(
-                followUsers = contacts,
-                relayUse = emptyMap(),
-                signer = signer,
-            )
-        }
-    }
-
-    suspend fun follow(user: User): ContactListEvent {
-        val contactList = getFollowListEvent()
-
-        return if (contactList != null) {
-            ContactListEvent.followUser(contactList, user.pubkeyHex, signer)
-        } else {
-            ContactListEvent.createFromScratch(
-                followUsers = listOf(ContactTag(user.pubkeyHex, user.bestRelayHint(), null)),
-                relayUse = emptyMap(),
-                signer = signer,
-            )
-        }
-    }
-
-    suspend fun unfollow(user: User): ContactListEvent? {
-        val contactList = getFollowListEvent()
-
-        return if (contactList != null && contactList.tags.isNotEmpty()) {
-            ContactListEvent.unfollowUser(
-                contactList,
-                user.pubkeyHex,
-                signer,
-            )
-        } else {
-            null
-        }
-    }
+    suspend fun unfollow(user: User): ContactListEvent? =
+        FollowActions.buildUnfollow(
+            signer = signer,
+            pubkeyToUnfollow = user.pubkeyHex,
+            currentContactList = getFollowListEvent(),
+        )
 
     init {
         settings.backupContactList?.let {

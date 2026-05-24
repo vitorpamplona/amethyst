@@ -159,6 +159,14 @@ private suspend fun dispatch(argv: Array<String>): Int {
             Commands.store(dataDir, tail)
         }
 
+        "follow" -> {
+            Commands.follow(dataDir, tail)
+        }
+
+        "unfollow" -> {
+            Commands.unfollow(dataDir, tail)
+        }
+
         else -> {
             System.err.println("unknown subcommand: $head")
             printUsage()
@@ -326,6 +334,11 @@ private fun printUsage() {
         |             [--limit N]                       --following: every contact-list pubkey)
         |             [--since TS] [--until TS]
         |             [--timeout SECS]
+        |
+        |Contacts (NIP-02 kind:3):
+        |  follow USER [--timeout SECS]               add USER to your contact list
+        |  unfollow USER [--timeout SECS]             remove USER from your contact list
+        |                                              (USER: npub|nprofile|hex|name@domain)
         |
         |Direct messages (NIP-17):
         |  dm send RECIPIENT TEXT                     send a gift-wrapped DM
