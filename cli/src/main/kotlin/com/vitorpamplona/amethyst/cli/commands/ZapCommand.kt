@@ -114,7 +114,7 @@ object ZapCommand {
         dataDir: DataDir,
         rest: Array<String>,
     ): Int {
-        if (rest.size < 2) return Output.error("bad_args", "zap event <event-id> <sats> [--comment X] [--anon] [--timeout SECS]")
+        if (rest.size < 2) return Output.error("bad_args", "zap event <event-id> <sats> [--comment X] [--anon] [--private] [--timeout SECS]")
         val eventId = rest[0]
         if (eventId.length != 64) return Output.error("bad_args", "event-id must be 64-hex (nevent bech32 not yet supported)")
         val sats =
@@ -132,24 +132,50 @@ object ZapCommand {
                 ctx.store.query<Event>(Filter(ids = listOf(eventId), limit = 1)).firstOrNull()
                     ?: return Output.error("not_found", "event $eventId not in local store; sync first or fetch by id")
 
-            val metadata =
-                fetchLatestMetadata(ctx, zappedEvent.pubKey, ctx.bootstrapRelays(), timeoutMs)
-                    ?: return Output.error("not_found", "no kind:0 metadata found for author ${zappedEvent.pubKey}")
-            val lnAddress =
-                ZapActions.extractLnAddress(metadata)
-                    ?: return Output.error("no_lightning", "event author has no lud16 or lud06 in their profile")
+            val bootstrap = ctx.bootstrapRelays()
 
-            val request =
-                ZapActions.buildEventZapRequest(
+            // Resolves a pubkey to an LN address by reading the latest
+            // kind:0 from the local store, falling back to a relay drain
+            // when never seen. Mirrors what the Amethyst foreground UI
+            // pulls out of User.lnAddress().
+            val lookupLnAddress: suspend (HexKey) -> String? = { pk ->
+                fetchLatestMetadata(ctx, pk, bootstrap, timeoutMs)
+                    ?.let(ZapActions::extractLnAddress)
+            }
+
+            // Recipient's NIP-65 read ("inbox") relays — read-side flag on
+            // their advertised kind:10002. These get unioned into each
+            // zap request's `relays` tag so the kind:9735 receipt routes
+            // to the recipient's clients. Matches `User.inboxRelays()` in
+            // the Android Account.
+            val lookupInboxRelays: suspend (HexKey) -> Set<NormalizedRelayUrl> = { pk ->
+                ctx
+                    .relaysOf(pk)
+                    ?.readRelaysNorm()
+                    ?.toSet()
+                    .orEmpty()
+            }
+
+            val requests =
+                ZapActions.buildEventZapRequestsForSplits(
                     signer = ctx.signer,
                     zappedEvent = zappedEvent,
-                    amountMillisats = ZapActions.satsToMillisats(sats),
-                    inboxRelays = ctx.outboxRelays(),
+                    totalAmountMillisats = ZapActions.satsToMillisats(sats),
+                    senderInboxRelays = ctx.outboxRelays(),
+                    lookupLnAddress = lookupLnAddress,
+                    lookupInboxRelays = lookupInboxRelays,
                     comment = comment,
                     zapType = zapType,
                 )
 
-            emitZapResult(ctx, sats, lnAddress, comment, request, zapType, zappedEventId = zappedEvent.id)
+            if (requests.isEmpty()) {
+                return Output.error(
+                    "no_lightning",
+                    "no payable recipients — neither the author nor any zap-split recipient has a usable LN address",
+                )
+            }
+
+            emitSplitZapResult(ctx, sats, comment, zappedEvent.id, zapType, requests)
             return 0
         } finally {
             ctx.close()
@@ -195,6 +221,65 @@ object ZapCommand {
                 Output.error("invoice_failed", result.message)
             }
         }
+    }
+
+    /**
+     * Multi-recipient (split-aware) event-zap result emitter. Fetches one
+     * BOLT11 invoice per [ZapActions.ZapRequestForSplit] and writes a
+     * single JSON object enumerating each recipient + its invoice (or
+     * per-recipient `invoice_error` when the LNURL fetch fails). Total
+     * sat sum may be a few millisats below the requested amount due to
+     * whole-sat rounding in the split shares.
+     */
+    private suspend fun emitSplitZapResult(
+        ctx: Context,
+        sats: Long,
+        comment: String,
+        zappedEventId: HexKey,
+        zapType: LnZapEvent.ZapType,
+        requests: List<ZapActions.ZapRequestForSplit>,
+    ) {
+        val resolver = LightningAddressResolver(httpClient = sharedOkHttp(ctx))
+
+        val recipientEntries =
+            requests.map { req ->
+                val shareSats = req.amountMillisats / 1000
+                val result =
+                    resolver.fetchInvoice(
+                        lnAddress = req.recipient.lnAddress,
+                        milliSats = req.amountMillisats,
+                        message = comment,
+                        zapRequest = req.request,
+                    )
+                val entry =
+                    mutableMapOf<String, Any?>(
+                        "ln_address" to req.recipient.lnAddress,
+                        "pubkey" to req.recipient.pubkey,
+                        "weight" to req.recipient.weight,
+                        "amount_sats" to shareSats,
+                        "zap_request_id" to req.request.id,
+                    )
+                when (result) {
+                    is LightningAddressResolver.Result.Success ->
+                        entry["invoice"] = result.invoice
+
+                    is LightningAddressResolver.Result.Error ->
+                        entry["invoice_error"] = result.message
+                }
+                entry
+            }
+
+        Output.emit(
+            mapOf(
+                "zapped_event_id" to zappedEventId,
+                "zap_type" to zapType.name.lowercase(),
+                "comment" to comment,
+                "requested_sats" to sats,
+                "billed_sats" to recipientEntries.sumOf { (it["amount_sats"] as? Long) ?: 0L },
+                "recipient_count" to recipientEntries.size,
+                "recipients" to recipientEntries,
+            ),
+        )
     }
 
     private fun parseZapType(args: Args): LnZapEvent.ZapType =

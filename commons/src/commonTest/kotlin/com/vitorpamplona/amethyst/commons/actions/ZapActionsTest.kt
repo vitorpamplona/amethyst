@@ -206,4 +206,174 @@ class ZapActionsTest {
             val pTag = request.tags.firstOrNull { it[0] == "p" }
             assertEquals(splitTo, pTag?.getOrNull(1), "explicit toUserPubkey wins over event.pubKey")
         }
+
+    // ------------------------------------------------------------------
+    // buildEventZapRequestsForSplits — covers the correctness bug the
+    // single-recipient buildEventZapRequest has for split notes.
+    // ------------------------------------------------------------------
+
+    @Test
+    fun buildEventZapRequestsForSplits_lnAddressSplitTagsProduceOneRequestPerRecipient() =
+        runTest {
+            val note =
+                authorSigner.sign<com.vitorpamplona.quartz.nip10Notes.TextNoteEvent>(
+                    createdAt = 1_700_000_000L,
+                    kind = com.vitorpamplona.quartz.nip10Notes.TextNoteEvent.KIND,
+                    tags =
+                        arrayOf(
+                            arrayOf("zap", "alice@wallet.example"),
+                            arrayOf("zap", "bob@wallet.example"),
+                        ),
+                    content = "split me 50/50",
+                )
+
+            val requests =
+                ZapActions.buildEventZapRequestsForSplits(
+                    signer = signer,
+                    zappedEvent = note,
+                    totalAmountMillisats = 10_000L,
+                    senderInboxRelays = setOf(relay),
+                    lookupLnAddress = { null },
+                )
+
+            assertEquals(2, requests.size)
+            assertEquals(setOf("alice@wallet.example", "bob@wallet.example"), requests.map { it.recipient.lnAddress }.toSet())
+            // LnAddress-style splits are always weight 1.0 (per quartz parser),
+            // so 10000 msats / 2 = 5000 msats each.
+            assertEquals(setOf(5_000L), requests.map { it.amountMillisats }.toSet())
+        }
+
+    @Test
+    fun buildEventZapRequestsForSplits_pubkeySplitsRespectWeights() =
+        runTest {
+            val splitAPriv = "000000000000000000000000000000000000000000000000000000000000000d"
+            val splitAPub =
+                com.vitorpamplona.quartz.utils.Secp256k1Instance
+                    .compressedPubKeyFor(splitAPriv.hexToByteArray())
+                    .copyOfRange(1, 33)
+                    .toHexKey()
+            val splitBPriv = "0000000000000000000000000000000000000000000000000000000000000011"
+            val splitBPub =
+                com.vitorpamplona.quartz.utils.Secp256k1Instance
+                    .compressedPubKeyFor(splitBPriv.hexToByteArray())
+                    .copyOfRange(1, 33)
+                    .toHexKey()
+
+            val note =
+                authorSigner.sign<com.vitorpamplona.quartz.nip10Notes.TextNoteEvent>(
+                    createdAt = 1_700_000_000L,
+                    kind = com.vitorpamplona.quartz.nip10Notes.TextNoteEvent.KIND,
+                    tags =
+                        arrayOf(
+                            arrayOf("zap", splitAPub, "", "1.0"),
+                            arrayOf("zap", splitBPub, "", "4.0"),
+                        ),
+                    content = "20/80 split",
+                )
+
+            val requests =
+                ZapActions.buildEventZapRequestsForSplits(
+                    signer = signer,
+                    zappedEvent = note,
+                    totalAmountMillisats = 100_000L, // 100 sats
+                    senderInboxRelays = setOf(relay),
+                    lookupLnAddress = { pk ->
+                        when (pk) {
+                            splitAPub -> "a@wallet"
+                            splitBPub -> "b@wallet"
+                            else -> null
+                        }
+                    },
+                )
+
+            val byPub = requests.associateBy { it.recipient.pubkey }
+            assertEquals(20_000L, byPub[splitAPub]?.amountMillisats, "1/5 of 100 sats")
+            assertEquals(80_000L, byPub[splitBPub]?.amountMillisats, "4/5 of 100 sats")
+            // Sum matches input within rounding.
+            assertEquals(100_000L, requests.sumOf { it.amountMillisats })
+        }
+
+    @Test
+    fun buildEventZapRequestsForSplits_unionsAuthorAndRecipientInboxRelays() =
+        runTest {
+            // Use a key distinct from authorPriv/senderPriv so the split
+            // recipient and the note author are different pubkeys — otherwise
+            // their inbox-relay lookups collide and we can't tell which one
+            // ended up in the relays tag.
+            val splitPriv = "0000000000000000000000000000000000000000000000000000000000000019"
+            val splitPub =
+                com.vitorpamplona.quartz.utils.Secp256k1Instance
+                    .compressedPubKeyFor(splitPriv.hexToByteArray())
+                    .copyOfRange(1, 33)
+                    .toHexKey()
+            val note =
+                authorSigner.sign<com.vitorpamplona.quartz.nip10Notes.TextNoteEvent>(
+                    createdAt = 1_700_000_000L,
+                    kind = com.vitorpamplona.quartz.nip10Notes.TextNoteEvent.KIND,
+                    tags = arrayOf(arrayOf("zap", splitPub, "", "1.0")),
+                    content = "test inbox unioning",
+                )
+
+            val senderRelay = relay
+            val authorRelay =
+                com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+                    .normalizeOrNull("wss://author-inbox.example")!!
+            val recipientRelay =
+                com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+                    .normalizeOrNull("wss://recipient-inbox.example")!!
+
+            val requests =
+                ZapActions.buildEventZapRequestsForSplits(
+                    signer = signer,
+                    zappedEvent = note,
+                    totalAmountMillisats = 1_000L,
+                    senderInboxRelays = setOf(senderRelay),
+                    lookupLnAddress = { _ -> "x@wallet" },
+                    lookupInboxRelays = { pk ->
+                        when (pk) {
+                            authorSigner.pubKey -> setOf(authorRelay)
+                            splitPub -> setOf(recipientRelay)
+                            else -> emptySet()
+                        }
+                    },
+                )
+
+            assertEquals(1, requests.size)
+            val relaysTag = requests[0].request.tags.firstOrNull { it[0] == "relays" }
+            assertNotNull(relaysTag)
+            val relayUrls = relaysTag.drop(1).toSet()
+            // All three sources end up in the kind:9734 `relays` tag.
+            assertTrue(senderRelay.url in relayUrls, "sender inbox missing")
+            assertTrue(authorRelay.url in relayUrls, "author inbox missing")
+            assertTrue(recipientRelay.url in relayUrls, "recipient inbox missing")
+        }
+
+    @Test
+    fun buildEventZapRequestsForSplits_emptyWhenNoRecipientHasLnAddress() =
+        runTest {
+            val splitPriv = "000000000000000000000000000000000000000000000000000000000000000d"
+            val splitPub =
+                com.vitorpamplona.quartz.utils.Secp256k1Instance
+                    .compressedPubKeyFor(splitPriv.hexToByteArray())
+                    .copyOfRange(1, 33)
+                    .toHexKey()
+            val note =
+                authorSigner.sign<com.vitorpamplona.quartz.nip10Notes.TextNoteEvent>(
+                    createdAt = 1_700_000_000L,
+                    kind = com.vitorpamplona.quartz.nip10Notes.TextNoteEvent.KIND,
+                    tags = arrayOf(arrayOf("zap", splitPub, "", "1.0")),
+                    content = "no recipient ln",
+                )
+
+            val requests =
+                ZapActions.buildEventZapRequestsForSplits(
+                    signer = signer,
+                    zappedEvent = note,
+                    totalAmountMillisats = 10_000L,
+                    senderInboxRelays = setOf(relay),
+                    lookupLnAddress = { null },
+                )
+
+            assertTrue(requests.isEmpty())
+        }
 }

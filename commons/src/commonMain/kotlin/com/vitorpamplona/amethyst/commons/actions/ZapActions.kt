@@ -90,6 +90,12 @@ object ZapActions {
      * [toUserPubkey] when the payment should go to a co-author or
      * delegated recipient (zap splits); when null the zap targets
      * `zappedEvent.pubKey`.
+     *
+     * **Caller beware:** This builds a single zap request to a single
+     * recipient. Notes carrying NIP-57 zap-split tags, NIP-53
+     * live-activity hosts, or NIP-89 app metadata expect the payment to
+     * be divided across multiple parties. Use [buildEventZapRequestsForSplits]
+     * for the split-aware path; that's what the Amethyst foreground UI does.
      */
     suspend fun buildEventZapRequest(
         signer: NostrSigner,
@@ -113,4 +119,73 @@ object ZapActions {
             amountMillisats = amountMillisats,
             lnurl = lnurl,
         )
+
+    /**
+     * One signed zap request for one split recipient, with the share of
+     * the total payment already computed.
+     */
+    data class ZapRequestForSplit(
+        val recipient: ZapSplitResolver.Recipient,
+        val amountMillisats: Long,
+        val request: LnZapRequestEvent,
+    )
+
+    /**
+     * Split-aware version of [buildEventZapRequest]: resolves the recipient
+     * list via [ZapSplitResolver], computes per-recipient shares with
+     * [ZapSplitResolver.shareMillisats] (rounded to whole sats — matches the
+     * Amethyst UI), and signs one zap request per recipient.
+     *
+     * Each request's relay-list tag includes [senderInboxRelays] union the
+     * recipient's own inbox relays (resolved via [lookupInboxRelays]), so
+     * the eventual kind:9735 zap receipt is published to both parties'
+     * read-side relays. This matches `ZapPaymentHandler.signAllZapRequests`.
+     *
+     * Sum of returned `amountMillisats` may differ from [totalAmountMillisats]
+     * by a few hundred millisats due to whole-sat rounding — same drift the
+     * in-app flow has.
+     *
+     * Recipients with no resolvable LN address are dropped at the resolver
+     * step; callers that want to surface "missing LN" warnings should call
+     * [ZapSplitResolver.resolve] separately first.
+     */
+    suspend fun buildEventZapRequestsForSplits(
+        signer: NostrSigner,
+        zappedEvent: Event,
+        totalAmountMillisats: Long,
+        senderInboxRelays: Set<NormalizedRelayUrl>,
+        lookupLnAddress: suspend (HexKey) -> String?,
+        lookupInboxRelays: suspend (HexKey) -> Set<NormalizedRelayUrl> = { emptySet() },
+        comment: String = "",
+        zapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PUBLIC,
+        pollOption: Int? = null,
+    ): List<ZapRequestForSplit> {
+        val recipients = ZapSplitResolver.resolve(zappedEvent, lookupLnAddress)
+        if (recipients.isEmpty()) return emptyList()
+        val totalWeight = recipients.sumOf { it.weight }
+
+        // Author inbox always travels with the zap so the author's clients
+        // see the receipt even when paying a split recipient. Mirrors the
+        // `authorRelayList + userRelayList` union in ZapPaymentHandler.
+        val authorInbox = lookupInboxRelays(zappedEvent.pubKey)
+
+        return recipients.map { recipient ->
+            val share = ZapSplitResolver.shareMillisats(totalAmountMillisats, recipient.weight, totalWeight)
+            val recipientInbox = recipient.pubkey?.let { lookupInboxRelays(it) }.orEmpty()
+            val allRelays = senderInboxRelays + recipientInbox + authorInbox
+            val request =
+                LnZapRequestEvent.create(
+                    zappedEvent = zappedEvent,
+                    relays = allRelays,
+                    signer = signer,
+                    pollOption = pollOption,
+                    message = comment,
+                    zapType = zapType,
+                    toUserPubHex = recipient.pubkey,
+                    amountMillisats = share,
+                    lnurl = null,
+                )
+            ZapRequestForSplit(recipient = recipient, amountMillisats = share, request = request)
+        }
+    }
 }
