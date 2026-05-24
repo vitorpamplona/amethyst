@@ -42,6 +42,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -77,6 +78,7 @@ fun AllSettingsScreen(
     nav: INav,
 ) {
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
     val scope = rememberCoroutineScope()
     var showResetMarmotDialog by remember { mutableStateOf(false) }
     var isResettingMarmot by remember { mutableStateOf(false) }
@@ -258,6 +260,32 @@ fun AllSettingsScreen(
                     title = R.string.profile_ui_settings,
                     icon = MaterialSymbols.AccountCircle,
                     onClick = { nav.nav(Route.ProfileUiSettings) },
+                )
+            }
+
+            SettingsSection(R.string.about_legal) {
+                SettingsItem(
+                    title = R.string.privacy_policy,
+                    icon = MaterialSymbols.Lock,
+                    onClick = {
+                        runCatching {
+                            uriHandler.openUri(
+                                "https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md",
+                            )
+                        }
+                    },
+                )
+                SettingsDivider()
+                SettingsItem(
+                    title = R.string.child_safety_standards,
+                    icon = MaterialSymbols.Shield,
+                    onClick = {
+                        runCatching {
+                            uriHandler.openUri(
+                                "https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md#child-safety-standards",
+                            )
+                        }
+                    },
                 )
             }
 
