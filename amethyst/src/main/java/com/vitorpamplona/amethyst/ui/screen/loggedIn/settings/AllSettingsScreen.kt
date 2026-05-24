@@ -42,11 +42,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -79,7 +77,6 @@ fun AllSettingsScreen(
     nav: INav,
 ) {
     val context = LocalContext.current
-    val uriHandler = LocalUriHandler.current
     val scope = rememberCoroutineScope()
     var showResetMarmotDialog by remember { mutableStateOf(false) }
     var isResettingMarmot by remember { mutableStateOf(false) }
@@ -264,33 +261,7 @@ fun AllSettingsScreen(
                 )
             }
 
-            if (BuildConfig.FLAVOR == "play") {
-                SettingsSection(R.string.about_legal) {
-                    SettingsItem(
-                        title = R.string.privacy_policy,
-                        icon = MaterialSymbols.Lock,
-                        onClick = {
-                            runCatching {
-                                uriHandler.openUri(
-                                    "https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md",
-                                )
-                            }
-                        },
-                    )
-                    SettingsDivider()
-                    SettingsItem(
-                        title = R.string.child_safety_standards,
-                        icon = MaterialSymbols.Shield,
-                        onClick = {
-                            runCatching {
-                                uriHandler.openUri(
-                                    "https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md#child-safety-standards",
-                                )
-                            }
-                        },
-                    )
-                }
-            }
+            LegalSettingsSection()
 
             SettingsSection(R.string.danger_zone, isDanger = true) {
                 if (hasPrivateKey) {

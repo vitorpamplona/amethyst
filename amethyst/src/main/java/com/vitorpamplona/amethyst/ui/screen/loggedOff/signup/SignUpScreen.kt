@@ -50,13 +50,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
-import com.vitorpamplona.amethyst.ui.screen.loggedOff.AcceptTerms
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.TorSettingsSetup
+import com.vitorpamplona.amethyst.ui.screen.loggedOff.legal.TermsGate
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.LoginErrorManager
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -188,20 +187,11 @@ fun SignUpPage(
             },
         )
 
-        if (BuildConfig.FLAVOR == "play") {
-            AcceptTerms(
-                checked = signUpViewModel.acceptedTerms,
-                onCheckedChange = signUpViewModel::updateAcceptedTerms,
-            )
-
-            if (signUpViewModel.termsAcceptanceIsRequiredError) {
-                Text(
-                    text = stringRes(R.string.acceptance_of_terms_is_required),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-        }
+        TermsGate(
+            checked = signUpViewModel.acceptedTerms,
+            onCheckedChange = signUpViewModel::updateAcceptedTerms,
+            showError = signUpViewModel.termsAcceptanceIsRequiredError,
+        )
 
         Spacer(modifier = Modifier.height(Size10dp))
 

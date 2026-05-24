@@ -66,15 +66,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
-import com.vitorpamplona.amethyst.ui.screen.loggedOff.AcceptTerms
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.TorSettingsSetup
+import com.vitorpamplona.amethyst.ui.screen.loggedOff.legal.TermsGate
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
@@ -197,19 +196,12 @@ fun LoginPage(
             )
         }
 
-        if (loginViewModel.isFirstLogin && BuildConfig.FLAVOR == "play") {
-            AcceptTerms(
+        if (loginViewModel.isFirstLogin) {
+            TermsGate(
                 checked = loginViewModel.acceptedTerms,
                 onCheckedChange = loginViewModel::updateAcceptedTerms,
+                showError = loginViewModel.termsAcceptanceIsRequiredError,
             )
-
-            if (loginViewModel.termsAcceptanceIsRequiredError) {
-                Text(
-                    text = stringRes(R.string.acceptance_of_terms_is_required),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
         }
 
         Spacer(modifier = Modifier.height(Size10dp))
