@@ -213,6 +213,33 @@ class FeedDefinitionSerializerTest {
     }
 
     @Test
+    fun parsesLegacyJacksonOutput() {
+        // Wire format previously emitted by ObjectMapper. Users have feed
+        // definitions stored on disk in exactly this shape — the new
+        // kotlinx.serialization-backed parser must keep accepting it.
+        val legacy =
+            """[{"id":"x","name":"Bitcoin","emoji":"₿","pinned":true,"pinOrder":0,""" +
+                """"refreshMode":"LIVE_STREAM","createdAt":1000,""" +
+                """"source":{"type":"filter","hashtags":["bitcoin","btc"],"authors":["abc"],""" +
+                """"relays":[],"excludeAuthors":[],"excludeKeywords":[],"kinds":[1,6]}}]"""
+
+        val feeds = FeedDefinitionSerializer.deserializeList(legacy)
+        assertEquals(1, feeds.size)
+        val feed = feeds[0]
+        assertEquals("x", feed.id)
+        assertEquals("Bitcoin", feed.name)
+        assertEquals("₿", feed.emoji)
+        assertTrue(feed.pinned)
+        assertEquals(0, feed.pinOrder)
+        assertEquals(RefreshMode.LIVE_STREAM, feed.refreshMode)
+        assertEquals(1000L, feed.createdAt)
+        val source = feed.source as FeedSource.Filter
+        assertEquals(persistentListOf("bitcoin", "btc"), source.hashtags)
+        assertEquals(persistentListOf("abc"), source.authors)
+        assertEquals(persistentListOf(1, 6), source.kinds)
+    }
+
+    @Test
     fun defaultFeedsAreValid() {
         val defaults = defaultFeeds()
         assertEquals(2, defaults.size)

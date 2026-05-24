@@ -75,6 +75,10 @@ kotlin {
                 // Immutable collections
                 api(libs.kotlinx.collections.immutable)
 
+                // JSON for custom-feed definitions (KMP — replaces Jackson
+                // for the one commonMain serializer that was blocking iOS).
+                implementation(libs.kotlinx.serialization.json)
+
                 // Compose Multiplatform Resources
                 implementation(libs.jetbrains.compose.components.resources)
 
@@ -150,3 +154,51 @@ compose.resources {
     packageOfResClass = "com.vitorpamplona.amethyst.commons.resources"
     generateResClass = always
 }
+
+// iOS purity gate — same shape as :quartz:verifyKmpPurity. See the rationale
+// there. Commons gains this gate once FeedDefinitionSerializer.kt has been
+// migrated off Jackson; future commonMain code must not reintroduce JVM-only
+// JSON / HTTP deps.
+val verifyKmpPurity by tasks.registering {
+    group = "verification"
+    description = "Fails if iOS-targeted source sets import JVM-only deps."
+    val checkedDirs =
+        listOf(
+            "src/commonMain", "src/commonTest",
+            "src/appleMain", "src/appleTest",
+            "src/nativeMain", "src/nativeTest",
+            "src/iosMain", "src/iosTest",
+            "src/iosArm64Main", "src/iosArm64Test",
+            "src/iosSimulatorArm64Main", "src/iosSimulatorArm64Test",
+            "src/linuxMain", "src/linuxTest",
+            "src/linuxX64Main", "src/linuxX64Test",
+            "src/macosMain", "src/macosTest",
+            "src/macosArm64Main", "src/macosArm64Test",
+        ).map { layout.projectDirectory.dir(it).asFile }
+            .filter { it.exists() }
+    inputs.files(checkedDirs)
+    doLast {
+        val forbidden = listOf("com.fasterxml.jackson", "okhttp3")
+        val offenders =
+            checkedDirs.flatMap { dir ->
+                dir.walkTopDown()
+                    .filter { it.isFile && it.extension == "kt" }
+                    .flatMap { file ->
+                        file.readLines().withIndex().mapNotNull { (idx, line) ->
+                            forbidden.firstOrNull { line.contains(it) }?.let { hit ->
+                                "${file.relativeTo(rootDir)}:${idx + 1}: '$hit'"
+                            }
+                        }
+                    }
+            }
+        if (offenders.isNotEmpty()) {
+            throw GradleException(
+                "iOS-targeted source sets must not reference JVM-only deps " +
+                    "(Jackson, OkHttp). Move the offending code to jvmAndroid/ " +
+                    "or behind an expect/actual:\n  " + offenders.joinToString("\n  "),
+            )
+        }
+    }
+}
+
+tasks.named("check").configure { dependsOn(verifyKmpPurity) }

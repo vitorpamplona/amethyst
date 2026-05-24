@@ -39,7 +39,7 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
       - name: Linter (gradle)
-        run: ./gradlew spotlessCheck :quartz:verifyKmpPurity
+        run: ./gradlew spotlessCheck :quartz:verifyKmpPurity :commons:verifyKmpPurity
 
   build-desktop:
     needs: lint
