@@ -1,108 +1,114 @@
 # Amethyst Privacy Policy and Terms of Use
 
-## Privacy Policy
+**App:** Amethyst (Android Nostr client)
+**Publisher:** Vitor Pamplona
+**Contact:** amethyst@vitorpamplona.com
+**Last updated:** 2026-05-24
 
-Effective as of Jun 12, 2023
+Amethyst is free, open-source software (MIT License — see `LICENSE`). It is not a service. There is no Amethyst server, no Amethyst account, and the developer has no access to data stored on your device.
 
-The Amethyst app for Android does not collect or process any personal information from its users. 
+Amethyst connects to third-party Nostr **relays** that you choose. Those relays host the content. They are independent of Amethyst, with their own operators and their own policies.
 
-The app is used to browse third-party Nostr servers (called Relays) that may or may not collect personal information and are not covered by this privacy policy. Each third-party relay server comes equipped with its own privacy policy and terms of use that can be viewed through the app or through that server's website. The developers of this open-source project or maintainers of the distribution channels (app stores) do not have access to the data located in the user's phone. Accounts are fully maintained by the user. We do not have control over them. 
+This document explains what data leaves your phone, who can see it, and the standards that apply to use of the app.
 
-The app may collect a per-device token, your public key, and a preferred Relay to connect to and provide push notification services through Google's Firebase Cloud Messaging. Other than that, the data from connected accounts is only stored locally on the device when it's required for the functionality and performance of Amethyst. This data is strictly confidential and cannot be accessed by other apps (on non-rooted devices). Phone data can be deleted by clearing Amethyst's local storage or uninstalling the app.
+## Privacy
 
-Amethyst offers several options for uploading pictures and videos to post online. You can choose the server at your discretion. Similar to relays, such services are independent of the app and have their own privacy policy and terms of use. 
+### Data sent off-device
 
-### Privacy with Relay services
+Using the app causes the following data to leave your phone:
 
-Your Internet Protocol (IP) address is exposed to the relays you connect to. If you want to improve your privacy, consider utilizing a service that masks your IP address (e.g., a VPN) from trackers online.
+- **Nostr events** you publish, sent to the relays you have configured.
+- **Subscriptions** (filters describing what you want to read), sent to those relays.
+- **Media uploads** (images, audio, video), sent to the media server you select.
+- *(Google Play build, push notifications enabled)* a per-device push token, your public key, and a preferred relay, registered with Google Firebase Cloud Messaging so a notification proxy can wake the app.
+- *(F-Droid build, push notifications enabled)* a per-device token registered with whichever UnifiedPush distributor you install (e.g. ntfy).
 
-The relay can also see which public keys you are using and what information you are requesting from the network. Your public key is tied to your IP address and your relay filters.
+The developer does not run any server that aggregates or stores this data.
 
-Relays have all your data in raw text. They know your IP, your name, your location (guessed from IP), your pub key, all your contacts, and other relays, and can read every action you do (post, like, boost, quote, report, etc) with the exception of the content inside Private Zaps and Private DMs.
+### Data stored on your device
 
-While the content of direct messages (DMs) is only visible to you and your DM Nostr counterparty, everyone can see when you and your counterparty are DM-ing each other. Image uploads in the DM screen use one of the chosen image servers and simply paste the image link into the DM text. Your uploaded pictures are available to anyone with that direct link. 
+Configuration, cached events, keys, drafts, and other operational data live in the app's local storage. Other apps cannot read it on a standard, non-rooted Android device. You can wipe it by clearing the app's storage or uninstalling.
 
-### Visibility & Permanence of Your Content on Nostr Relays
+### What relays can see
 
-#### Information Visibility
+A relay you connect to sees:
 
-Content that you share can be shared with other relays by any user of the network. 
-The information you share is publicly visible to anyone reading from relays that have access to your information. Your information may also be visible to Nostr users who do not share relays with you.
+- Your IP address.
+- Your public key.
+- The events you publish (posts, reactions, reposts, reports, etc.).
+- The filters you subscribe to.
 
-#### Information Permanence
+A relay does **not** see the plaintext of:
 
-Information shared on Nostr should be assumed permanent for privacy purposes. There is no way to guarantee deleting or editing any content once posted.
+- Private Direct Messages (encrypted to the recipient under NIP-17 / NIP-44).
+- Private Zaps.
+
+A relay can still see *that* you and another user are exchanging DMs even though it cannot read them. To reduce what a relay can correlate to you, route the app over a VPN or Tor.
+
+### Media uploads
+
+Uploads go to the media server you select. That server is independent of Amethyst and has its own policy. Anyone holding the resulting link — including media attached to a DM — can fetch the file.
+
+### Public content is effectively permanent
+
+Anything you publish to a relay can be copied to other relays or clients. Once published, you should assume it cannot be reliably deleted from the network.
 
 ## Child Safety Standards
 
-These are the published Child Safety Standards for Amethyst, an Android Nostr client developed by Vitor Pamplona and distributed on Google Play. They are published to satisfy Google Play's Child Safety Standards policy and to set out the developer's public position on child safety.
+These are the published Child Safety Standards for **Amethyst**, the Android Nostr client published on Google Play by **Vitor Pamplona**. They are published under Google Play's Child Safety Standards policy.
 
-These Standards are a **community standard and published policy**. They do **not** modify, supersede, or add restrictions to the software license that governs the Amethyst source code; see the **Free Software License** note at the end of this section.
+They are a community standard, not a license restriction. Amethyst's source code remains licensed under the MIT License in `LICENSE`.
 
-### How Amethyst Works (and Why That Matters Here)
+### Prohibition
 
-Amethyst is a decentralized Nostr client. **The app itself does not host, store, or moderate any user-generated content.** All content is hosted by independent third-party servers called **relays** that the user freely chooses to connect to. Amethyst is a viewer and a publisher; it has no central database, no upload servers, and no ability to delete content from the network. Content moderation, takedowns, and legal reporting are the responsibility of the **relay operators** who actually host the content.
+Using Amethyst to create, upload, share, solicit, or distribute child sexual abuse and exploitation (CSAE) material — including child sexual abuse material (CSAM) — or to groom, exploit, or harm a minor is prohibited and is illegal in essentially every jurisdiction.
 
-What these Standards cover is (1) a clear prohibition of CSAE as a community standard, (2) the in-app tools available to users to report content, hide content, and disconnect from abusive relays, and (3) a contact point for escalation.
+### In-app tools
 
-### Prohibition of Child Sexual Abuse and Exploitation (CSAE)
+Amethyst provides:
 
-These Standards prohibit using Amethyst to create, upload, share, solicit, or distribute child sexual abuse and exploitation (CSAE) material, including child sexual abuse material (CSAM), in any form, or to groom, exploit, endanger, or otherwise harm minors. Users who use Amethyst for these purposes are in violation of these Standards and of the laws of essentially every jurisdiction.
-
-### In-App User Feedback and Reporting Mechanism
-
-Amethyst provides in-app mechanisms for users to flag, hide, and disconnect from harmful content:
-
-- **Report Post** — use the dropdown menu on any note to report it as illegal content, nudity, impersonation, spam, profanity, or other violations. The report is published as a signed Nostr report event so that relay operators and other clients can act on it.
-- **Report Account** — open a user's profile and use the report action to flag the account, with the same publication behavior.
-- **Block Post / Block Account** — hide a note or a user locally on your device.
-- **Block Relay (NIP-51 Blocked Relay List)** — if a particular relay is hosting CSAE/CSAM or refuses to act on reports, add it to your Blocked Relay List so Amethyst will no longer fetch from or publish to it. This is the strongest tool the app provides: it cuts your client off from servers that won't moderate.
-- **Mute Words and Hashtags** — filter out unwanted content from your feeds.
+- **Report Post** and **Report Account** — publish a signed Nostr report (including the "Illegal Content" reason) so relays and other clients can act on it.
+- **Block Post** / **Block Account** — hide content locally on your device.
+- **Block Relay** — add a relay to your NIP-51 Blocked Relay List so the app stops fetching from or publishing to it. This is the strongest tool the app offers against a relay that refuses to moderate.
+- **Mute Words / Hashtags** — filter unwanted content from your feeds.
 
 ### Addressing CSAM
 
-Because Amethyst does not host content, CSAM cannot be removed by Amethyst — it can only be removed by the relay operator who is actually hosting it, and reported to authorities by that operator under the laws that apply to them (in the United States, 18 U.S.C. §2258A makes hosting providers — not viewer applications — the entities required to report to the National Center for Missing & Exploited Children).
+Amethyst does not host content, so the app cannot remove CSAM. Only the relay hosting the content can remove it. In the United States, 18 U.S.C. §2258A makes hosting providers — not viewer applications — the entities required to report to the National Center for Missing & Exploited Children (NCMEC).
 
-If you become aware of CSAM accessible via Amethyst, please:
+If you encounter CSAM through Amethyst:
 
-1. **Report the content in-app** (select "Illegal Content") so the report propagates to relays and other clients, and
-2. **Block the relay** that is hosting the content using the in-app Blocked Relay List, so your client disconnects from it, and
-3. **Report the relay and the material directly to the authorities** who have jurisdiction over the hosting provider — for content reachable from the United States that is the **National Center for Missing & Exploited Children (NCMEC) CyberTipline** at https://report.cybertip.org/. For other jurisdictions see INHOPE members at https://www.inhope.org/.
-4. **Optionally email the contact below** with the relay URL and event ID. We cannot remove the content from the relay, but we can amplify the report to other relay operators we know, and where appropriate we will recommend that the offending relay be removed from any default relay list shipped with Amethyst.
+1. Report the content in-app and select "Illegal Content."
+2. Add the hosting relay to your Blocked Relay List.
+3. Report directly to **NCMEC** at https://report.cybertip.org/ (United States) or to an **INHOPE** hotline at https://www.inhope.org/ (other jurisdictions). These bodies can compel the hosting provider to act.
+4. You may also email **amethyst@vitorpamplona.com** with the relay URL and event ID. The developer cannot remove content from third-party relays, but may forward the report to relay operators it is in contact with and may stop recommending the offending relay in any list shipped with the app.
 
-### Compliance with Child Safety Laws
+### Compliance
 
-Amethyst is built and distributed to comply with applicable child safety laws and regulations, including Google Play's Child Safety Standards policy. Where Amethyst itself is subject to a legal obligation (for example, as a distributor on Google Play), we will cooperate with lawful requests from child-safety authorities. Obligations that attach to the **hosting** of content (such as 18 U.S.C. §2258A NCMEC reporting in the U.S.) apply to the relay operators, not to the viewer application.
+Amethyst is distributed under Google Play's Child Safety Standards policy and applicable law. Obligations attached to the **hosting** of content rest with relay operators.
 
-### Child Safety Point of Contact
+### Age rating
 
-Questions, reports of relays hosting CSAE/CSAM, or requests related to child safety on Amethyst should be sent to:
-
-- **Name:** Vitor Pamplona (developer, Amethyst for Android)
-- **Email:** amethyst@vitorpamplona.com
-- **What we can do:** acknowledge the report, forward it to relay operators we are in contact with, and consider removing the offending relay from any default/suggested relay list shipped with Amethyst. We cannot delete content from third-party relays — that is the relay operator's responsibility.
-- **What you should also do:** report directly to NCMEC (https://report.cybertip.org/) or your local INHOPE hotline, who can compel the actual hosting provider to act.
-
-### Age Rating
-
-Amethyst is rated 17+. The app does not knowingly collect information from children and has no account-creation flow that targets minors. We rely on Google Play's age-gating to restrict downloads to users 17+.
-
-### Free Software License
-
-These Child Safety Standards are a public statement of the developer's commitments and the published policy that users of Amethyst on Google Play are expected to follow. They are **not** a restriction added to the source code license. Amethyst's source code is licensed under the MIT License (see the `LICENSE` file in the source repository); these Standards do not modify, supersede, or add conditions to that license. All users — including users of builds distributed by F-Droid, by other repositories, or built from source — retain every right granted by the MIT License, including the freedom to use, study, modify, and redistribute the software.
+Amethyst's Google Play listing is rated 17+. The app does not request or store age information.
 
 ## Terms of Use
 
-### For versions downloaded from Google's Play Store
+### Google Play build
 
-You cannot use the Amethyst app for Android to submit Objectionable Content to relays. Objectionable Content includes but is not limited to: (i) sexually explicit materials; (ii) obscene, defamatory, libelous, slanderous, violent and/or unlawful content or profanity; (iii) content that infringes upon the rights of any third party, including copyright, trademark, privacy, publicity or other personal or proprietary rights, or that is deceptive or fraudulent; (iv) content that promotes the use or sale of illegal or regulated substances, tobacco products, ammunition and/or firearms; and (v) illegal content related to gambling.
+You agree not to use the Google Play build of Amethyst to submit Objectionable Content to relays. Objectionable Content includes:
 
-### For versions downloaded from F-Droid
+- Sexually explicit material.
+- Obscene, defamatory, libelous, slanderous, violent, or unlawful content.
+- Content that infringes third-party rights (copyright, trademark, privacy, publicity).
+- Content that is deceptive or fraudulent.
+- Content promoting illegal drugs, tobacco, firearms, ammunition, or illegal gambling.
 
-We do not control the distribution of the application in F-Droid. Legal matters should be resolved between the user and F-Droid. 
+These Terms apply only to the Google Play distribution of Amethyst.
 
-## Other Notes
+### F-Droid and other source-built distributions
 
-We reserve the right to modify this Privacy Policy and Terms of Use at any time. Any modifications to this document will be effective upon our posting of the new terms and/or upon implementation of the new changes on the Service (or as otherwise indicated at the time of posting). In all cases, your continued use of the app after the posting of any modified Privacy Policy and Terms of Use indicates your acceptance of the terms of the modified Privacy Policy and/or Terms of Use.
+The MIT License in `LICENSE` is the only instrument governing your right to use, study, modify, and redistribute the software. No additional terms are imposed on these builds. Any dispute over distribution through F-Droid is between you and F-Droid.
 
-If you have any questions about Amethyst or this privacy policy, you can send a message to amethyst@vitorpamplona.com
+## Updates
+
+This document may change. The current version is published at https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md.
