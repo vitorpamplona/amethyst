@@ -64,17 +64,18 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.anyAsync
 import com.vitorpamplona.quartz.utils.containsAny
 import com.vitorpamplona.quartz.utils.launchAndWaitAll
+import com.vitorpamplona.quartz.utils.plus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
-import java.math.BigDecimal
 import kotlin.concurrent.Volatile
 
 interface NotesGatherer {
@@ -162,7 +163,7 @@ open class Note(
     var zaps = mapOf<Note, Note?>()
         private set
 
-    var zapsAmount: BigDecimal = BigDecimal.ZERO
+    var zapsAmount: BigDecimal = BigDecimal(0)
 
     /**
      * NIP-BC onchain zaps targeting this note.
@@ -357,7 +358,7 @@ open class Note(
         onchainZaps = mapOf()
         onchainZapResolved = false
         zapPayments = mapOf()
-        zapsAmount = BigDecimal.ZERO
+        zapsAmount = BigDecimal(0)
         relays = listOf()
 
         if (repliesChanged) flowSet?.replies?.invalidateData()
@@ -743,13 +744,13 @@ open class Note(
             }.flatten()
 
     private fun updateZapTotal() {
-        var sumOfAmounts = BigDecimal.ZERO
+        var sumOfAmounts = BigDecimal(0)
 
         // Regular Zap Receipts
         zaps.forEach {
             val noteEvent = it.value?.event
             if (noteEvent is LnZapEvent) {
-                sumOfAmounts += noteEvent.amount ?: BigDecimal.ZERO
+                sumOfAmounts += noteEvent.amount ?: BigDecimal(0)
             }
         }
 
@@ -757,7 +758,7 @@ open class Note(
         // Unverified/pending entries are tracked but excluded from the total per spec.
         onchainZaps.values.forEach { entry ->
             if (entry.status == OnchainZapStatus.CONFIRMED) {
-                sumOfAmounts += BigDecimal.valueOf(entry.verifiedSats)
+                sumOfAmounts += BigDecimal(entry.verifiedSats)
             }
         }
 
@@ -895,7 +896,7 @@ open class Note(
                 pledgeValue != null && it.author == user
             }
 
-    fun pledgedAmountByOthers(): BigDecimal = replies.sumOf { it.event?.addedRewardValue() ?: BigDecimal.ZERO }
+    fun pledgedAmountByOthers(): BigDecimal = replies.sumOf { it.event?.addedRewardValue() ?: BigDecimal(0) }
 
     fun hasAnyReports(): Boolean {
         val dayAgo = TimeUtils.oneDayAgo()
@@ -984,7 +985,7 @@ open class Note(
         boosts = emptyList()
         reports = emptyMap()
         zaps = emptyMap()
-        zapsAmount = BigDecimal.ZERO
+        zapsAmount = BigDecimal(0)
     }
 
     fun isHiddenFor(accountChoices: LiveHiddenUsers): Boolean {
