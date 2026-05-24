@@ -35,17 +35,19 @@ Information shared on Nostr should be assumed permanent for privacy purposes. Th
 
 ## Child Safety Standards
 
-Amethyst, published on Google Play by Vitor Pamplona, is committed to protecting children from sexual abuse and exploitation. These standards apply to the Amethyst app for Android.
+These are the published Child Safety Standards for Amethyst, an Android Nostr client developed by Vitor Pamplona and distributed on Google Play. They are published to satisfy Google Play's Child Safety Standards policy and to set out the developer's public position on child safety.
+
+These Standards are a **community standard and published policy**. They do **not** modify, supersede, or add restrictions to the software license that governs the Amethyst source code; see the **Free Software License** note at the end of this section.
 
 ### How Amethyst Works (and Why That Matters Here)
 
 Amethyst is a decentralized Nostr client. **The app itself does not host, store, or moderate any user-generated content.** All content is hosted by independent third-party servers called **relays** that the user freely chooses to connect to. Amethyst is a viewer and a publisher; it has no central database, no upload servers, and no ability to delete content from the network. Content moderation, takedowns, and legal reporting are the responsibility of the **relay operators** who actually host the content.
 
-What Amethyst provides — and what these Standards cover — is (1) a clear prohibition of CSAE, (2) in-app tools that let users report content, hide content, and disconnect from abusive relays, and (3) a contact point for escalation.
+What these Standards cover is (1) a clear prohibition of CSAE as a community standard, (2) the in-app tools available to users to report content, hide content, and disconnect from abusive relays, and (3) a contact point for escalation.
 
 ### Prohibition of Child Sexual Abuse and Exploitation (CSAE)
 
-Amethyst strictly prohibits the use of the app to create, upload, share, solicit, or distribute child sexual abuse and exploitation (CSAE) material, including child sexual abuse material (CSAM), in any form, or to groom, exploit, endanger, or otherwise harm minors. Users who use Amethyst for these purposes are in violation of these Standards and of the laws of essentially every jurisdiction.
+These Standards prohibit using Amethyst to create, upload, share, solicit, or distribute child sexual abuse and exploitation (CSAE) material, including child sexual abuse material (CSAM), in any form, or to groom, exploit, endanger, or otherwise harm minors. Users who use Amethyst for these purposes are in violation of these Standards and of the laws of essentially every jurisdiction.
 
 ### In-App User Feedback and Reporting Mechanism
 
@@ -84,6 +86,10 @@ Questions, reports of relays hosting CSAE/CSAM, or requests related to child saf
 ### Age Rating
 
 Amethyst is rated 17+. The app does not knowingly collect information from children and has no account-creation flow that targets minors. We rely on Google Play's age-gating to restrict downloads to users 17+.
+
+### Free Software License
+
+These Child Safety Standards are a public statement of the developer's commitments and the published policy that users of Amethyst on Google Play are expected to follow. They are **not** a restriction added to the source code license. Amethyst's source code is licensed under the MIT License (see the `LICENSE` file in the source repository); these Standards do not modify, supersede, or add conditions to that license. All users — including users of builds distributed by F-Droid, by other repositories, or built from source — retain every right granted by the MIT License, including the freedom to use, study, modify, and redistribute the software.
 
 ## Terms of Use
 
