@@ -72,13 +72,6 @@ kotlin {
                 // LruCache (KMP-ready)
                 implementation(libs.androidx.collection)
 
-                // KMP-friendly concurrent map/set. Replaces ConcurrentHashMap
-                // for code that genuinely needs cross-thread atomic put/remove
-                // (chess event collector, relay subscription managers). On JVM
-                // it wraps mutableMapOf with synchronized; on Native it uses
-                // platform mutex. No new gradle plugin required.
-                implementation(libs.stately.concurrent.collections)
-
                 // Immutable collections
                 api(libs.kotlinx.collections.immutable)
 

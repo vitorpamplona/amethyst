@@ -21,7 +21,8 @@
 package com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers
 
 import androidx.compose.runtime.Stable
-import co.touchlab.stately.collections.ConcurrentMutableMap
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -41,19 +42,26 @@ import kotlinx.coroutines.launch
 abstract class MutableComposeSubscriptionManager<T : MutableQueryState>(
     val scope: CoroutineScope,
 ) : ComposeSubscriptionManagerControls {
-    private val composeSubscriptions = ConcurrentMutableMap<T, Job?>()
+    // T is generic and not required to be Comparable, so this can't use
+    // LargeCache (ConcurrentSkipListMap-backed on JVM). A plain map guarded by
+    // KmpLock gives the same atomicity guarantees ConcurrentHashMap did
+    // previously, with no Comparable requirement.
+    private val lock = KmpLock()
+    private val composeSubscriptions = mutableMapOf<T, Job>()
 
     // This is called by main. Keep it really fast.
     fun subscribe(query: T?) {
         if (query == null) return
 
-        composeSubscriptions[query]?.cancel()
-        composeSubscriptions[query] =
-            scope.launch {
-                query.flow().collectLatest {
-                    invalidateKeys()
+        lock.withLock {
+            composeSubscriptions[query]?.cancel()
+            composeSubscriptions[query] =
+                scope.launch {
+                    query.flow().collectLatest {
+                        invalidateKeys()
+                    }
                 }
-            }
+        }
 
         invalidateKeys()
     }
@@ -62,16 +70,19 @@ abstract class MutableComposeSubscriptionManager<T : MutableQueryState>(
     fun unsubscribe(query: T?) {
         if (query == null) return
 
-        composeSubscriptions[query]?.cancel()
-        composeSubscriptions.remove(query)
+        lock.withLock {
+            composeSubscriptions[query]?.cancel()
+            composeSubscriptions.remove(query)
+        }
 
         invalidateKeys()
     }
 
-    fun allKeys() = composeSubscriptions.keys
+    fun allKeys(): Set<T> = lock.withLock { composeSubscriptions.keys.toSet() }
 
     fun forEachSubscriber(action: (T) -> Unit) {
-        composeSubscriptions.keys.forEach(action)
+        val snapshot = lock.withLock { composeSubscriptions.keys.toList() }
+        snapshot.forEach(action)
     }
 }
 

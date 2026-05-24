@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst.commons.model.nip01Core
 
 import androidx.compose.runtime.Stable
-import co.touchlab.stately.concurrency.Lock
-import co.touchlab.stately.concurrency.withLock
+import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.WeakReference
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,7 +55,7 @@ val DefaultOrder =
 class UserRelaysCache {
     var data: Map<NormalizedRelayUrl, RelayInfo> = mapOf()
     private var flow: WeakReference<MutableStateFlow<Wrapper>>? = null
-    private val flowLock = Lock()
+    private val flowLock = KmpLock()
 
     fun flow() =
         flow?.get() ?: flowLock.withLock {

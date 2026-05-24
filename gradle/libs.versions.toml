@@ -69,7 +69,6 @@ zelory = "3.0.1"
 zoomable = "2.11.1"
 vlcj = "4.8.3"
 commonsImaging = "1.0.0-alpha6"
-statelyConcurrent = "2.1.0"
 zxing = "3.5.4"
 zxingAndroidEmbedded = "4.3.0"
 windowCoreAndroid = "1.5.1"
@@ -101,7 +100,6 @@ androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", versi
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
 androidx-compose-runtime-annotation = { group = "androidx.compose.runtime", name = "runtime-annotation", version.ref = "composeRuntimeAnnotation" }
 androidx-collection = { group = "androidx.collection", name = "collection", version.ref = "androidxCollection" }
-stately-concurrent-collections = { group = "co.touchlab", name = "stately-concurrent-collections", version.ref = "statelyConcurrent" }
 androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "androidxExifinterface" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
