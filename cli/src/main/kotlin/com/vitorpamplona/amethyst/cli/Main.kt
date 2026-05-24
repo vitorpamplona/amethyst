@@ -167,6 +167,10 @@ private suspend fun dispatch(argv: Array<String>): Int {
             Commands.unfollow(dataDir, tail)
         }
 
+        "search" -> {
+            Commands.search(dataDir, tail)
+        }
+
         else -> {
             System.err.println("unknown subcommand: $head")
             printUsage()
@@ -339,6 +343,15 @@ private fun printUsage() {
         |  follow USER [--timeout SECS]               add USER to your contact list
         |  unfollow USER [--timeout SECS]             remove USER from your contact list
         |                                              (USER: npub|nprofile|hex|name@domain)
+        |
+        |Search (NIP-50):
+        |  search user QUERY [--limit N]              search kind:0 profiles
+        |                    [--timeout SECS]
+        |  search note QUERY [--limit N]              search event content
+        |                    [--kinds K[,K…]]          (default kind:1; e.g. 1,30023)
+        |                    [--timeout SECS]
+        |                                              uses your kind:10007 search-relay
+        |                                              list, falls back to Amethyst defaults
         |
         |Direct messages (NIP-17):
         |  dm send RECIPIENT TEXT                     send a gift-wrapped DM

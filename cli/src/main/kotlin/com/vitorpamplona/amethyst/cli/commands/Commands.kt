@@ -105,4 +105,9 @@ object Commands {
         dataDir: DataDir,
         tail: Array<String>,
     ): Int = FollowCommand.unfollow(dataDir, tail)
+
+    suspend fun search(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = SearchCommand.dispatch(dataDir, tail)
 }
