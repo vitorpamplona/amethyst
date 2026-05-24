@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.chess
 
+import co.touchlab.stately.collections.ConcurrentMutableMap
+import co.touchlab.stately.collections.ConcurrentMutableSet
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
@@ -28,7 +30,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Progress callback for relay fetch operations
@@ -74,10 +75,10 @@ class ChessRelayFetchHelper(
     ): List<Event> {
         if (filters.isEmpty()) return emptyList()
 
-        val events = ConcurrentHashMap<String, Event>()
+        val events = ConcurrentMutableMap<String, Event>()
         val relayCount = filters.keys.size
-        val eoseReceived = ConcurrentHashMap.newKeySet<NormalizedRelayUrl>()
-        val relayEventCounts = ConcurrentHashMap<NormalizedRelayUrl, Int>()
+        val eoseReceived = ConcurrentMutableSet<NormalizedRelayUrl>()
+        val relayEventCounts = ConcurrentMutableMap<NormalizedRelayUrl, Int>()
         val allEose = CompletableDeferred<Unit>()
         val subId = newSubId()
 
@@ -96,7 +97,12 @@ class ChessRelayFetchHelper(
                     forFilters: List<Filter>?,
                 ) {
                     events[event.id] = event
-                    val count = relayEventCounts.compute(relay) { _, v -> (v ?: 0) + 1 } ?: 1
+                    val count =
+                        relayEventCounts.block {
+                            val newVal = (relayEventCounts[relay] ?: 0) + 1
+                            relayEventCounts[relay] = newVal
+                            newVal
+                        }
                     onProgress?.invoke(RelayFetchProgress(relay, RelayFetchStatus.RECEIVING, count))
                 }
 

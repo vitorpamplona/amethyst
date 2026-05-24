@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.chess
 
+import co.touchlab.stately.collections.ConcurrentMutableMap
+import co.touchlab.stately.collections.ConcurrentMutableSet
 import com.vitorpamplona.quartz.nip64Chess.ChessGameEnd
 import com.vitorpamplona.quartz.nip64Chess.ChessMoveEvent
 import com.vitorpamplona.quartz.nip64Chess.Color
@@ -129,18 +131,20 @@ class ChessLobbyLogic(
 ) {
     val state = ChessLobbyState(userPubkey, scope)
 
-    private val dismissedGameIds: MutableSet<String> =
-        java.util.Collections.synchronizedSet(
-            dismissedStorage?.load(userPubkey)?.toMutableSet() ?: mutableSetOf(),
-        )
+    private val dismissedGameIds =
+        ConcurrentMutableSet<String>().apply {
+            dismissedStorage?.load(userPubkey)?.let { addAll(it) }
+        }
 
     // Track when games were last loaded to prevent duplicate fetches
     // (e.g., discoverUserGames loads a game, then polling immediately re-fetches it)
-    private val recentlyLoadedGames = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private val recentlyLoadedGames = ConcurrentMutableMap<String, Long>()
 
-    // Dedup incoming events (same event delivered by multiple relays)
-    // Bounded LRU: evict oldest when exceeding capacity
-    private val seenEventIds = java.util.Collections.synchronizedSet(LinkedHashSet<String>())
+    // Dedup incoming events (same event delivered by multiple relays).
+    // Bounded LRU: evict oldest when exceeding capacity. ConcurrentMutableSet
+    // wraps mutableSetOf() (LinkedHashSet on every KMP target), so iterator
+    // order is insertion order — required for LRU eviction below.
+    private val seenEventIds = ConcurrentMutableSet<String>()
     private val seenEventIdsMax = 500
 
     private val pollingDelegate =
@@ -207,15 +211,21 @@ class ChessLobbyLogic(
         if (!event.isStartEvent() && !event.isMoveEvent()) return
 
         // Dedup: skip if we already processed this event ID (multiple relays deliver same event)
-        synchronized(seenEventIds) {
-            if (!seenEventIds.add(event.id)) return
-            if (seenEventIds.size > seenEventIdsMax) {
-                seenEventIds.iterator().let {
-                    it.next()
-                    it.remove()
+        val isNew =
+            seenEventIds.block {
+                if (!seenEventIds.add(event.id)) {
+                    false
+                } else {
+                    if (seenEventIds.size > seenEventIdsMax) {
+                        seenEventIds.iterator().let {
+                            it.next()
+                            it.remove()
+                        }
+                    }
+                    true
                 }
             }
-        }
+        if (!isNew) return
 
         Log.d("chessdebug") { "[Lobby] handleIncomingEvent: id=${event.id.take(8)}, pubkey=${event.pubKey.take(8)}, isStart=${event.isStartEvent()}, isMove=${event.isMoveEvent()}, createdAt=${event.createdAt}" }
         when {
@@ -952,14 +962,14 @@ class ChessLobbyLogic(
     fun dismissCompletedGame(gameId: String) {
         state.removeCompletedGame(gameId)
         dismissedGameIds.add(gameId)
-        dismissedStorage?.save(userPubkey, HashSet(dismissedGameIds))
+        dismissedStorage?.save(userPubkey, dismissedGameIds.toSet())
     }
 
     fun dismissAllCompletedGames() {
         val allIds = state.completedGames.value.map { it.gameId }
         state.clearCompletedGames()
         dismissedGameIds.addAll(allIds)
-        dismissedStorage?.save(userPubkey, HashSet(dismissedGameIds))
+        dismissedStorage?.save(userPubkey, dismissedGameIds.toSet())
     }
 
     /**
