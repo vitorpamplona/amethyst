@@ -358,6 +358,59 @@ dependencies {
     "jvmAndroidTestImplementation"(testFixtures(project(":geode")))
 }
 
+// iOS purity gate. Jackson and OkHttp are JVM-only and must never appear
+// in source sets that compile for iOS / native / common targets. The KMP
+// build would eventually fail with an "unresolved reference" if these
+// leaked in, but that requires a macOS runner. This task is a fast Linux
+// linter that fails with a clear message before iOS CI ever spins up.
+//
+// Scope: source sets whose code is compiled for at least one non-JVM
+// target. Excludes jvmAndroid, jvmMain, androidMain (and their tests),
+// where Jackson and OkHttp are legitimately used.
+val verifyKmpPurity by tasks.registering {
+    group = "verification"
+    description = "Fails if iOS-targeted source sets import JVM-only deps."
+    val checkedDirs =
+        listOf(
+            "src/commonMain", "src/commonTest",
+            "src/appleMain", "src/appleTest",
+            "src/nativeMain", "src/nativeTest",
+            "src/iosMain", "src/iosTest",
+            "src/iosArm64Main", "src/iosArm64Test",
+            "src/iosSimulatorArm64Main", "src/iosSimulatorArm64Test",
+            "src/linuxMain", "src/linuxTest",
+            "src/linuxX64Main", "src/linuxX64Test",
+            "src/macosMain", "src/macosTest",
+            "src/macosArm64Main", "src/macosArm64Test",
+        ).map { layout.projectDirectory.dir(it).asFile }
+            .filter { it.exists() }
+    inputs.files(checkedDirs)
+    doLast {
+        val forbidden = listOf("com.fasterxml.jackson", "okhttp3")
+        val offenders =
+            checkedDirs.flatMap { dir ->
+                dir.walkTopDown()
+                    .filter { it.isFile && it.extension == "kt" }
+                    .flatMap { file ->
+                        file.readLines().withIndex().mapNotNull { (idx, line) ->
+                            forbidden.firstOrNull { line.contains(it) }?.let { hit ->
+                                "${file.relativeTo(rootDir)}:${idx + 1}: '$hit'"
+                            }
+                        }
+                    }
+            }
+        if (offenders.isNotEmpty()) {
+            throw GradleException(
+                "iOS-targeted source sets must not reference JVM-only deps " +
+                    "(Jackson, OkHttp). Move the offending code to jvmAndroid/ " +
+                    "or behind an expect/actual:\n  " + offenders.joinToString("\n  "),
+            )
+        }
+    }
+}
+
+tasks.named("check").configure { dependsOn(verifyKmpPurity) }
+
 mavenPublishing {
     // sources publishing is always enabled by the Kotlin Multiplatform plugin
     configure(

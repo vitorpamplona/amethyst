@@ -39,7 +39,7 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
       - name: Linter (gradle)
-        run: ./gradlew spotlessCheck
+        run: ./gradlew spotlessCheck :quartz:verifyKmpPurity
 
   build-desktop:
     needs: lint
@@ -185,6 +185,53 @@ jobs:
         with:
           name: ${{ matrix.desktop-artifact-name }}
           path: ${{ matrix.desktop-artifact-path }}
+
+  test-quartz-ios:
+    # Phase 1 of the iOS support plan
+    # (amethyst/plans/2026-05-24-ios-support.md): keep :quartz green on iOS
+    # so JVM-only imports can't sneak into commonMain unnoticed. The
+    # `verifyKmpPurity` task in the lint job is the fast pre-check (Linux,
+    # ~1s); this job is the real one — compiles for the device variant
+    # and actually runs the simulator test suite.
+    needs: lint
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: 21
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      # Two tasks, two purposes:
+      # - iosSimulatorArm64Test runs the existing iosTest suite on the
+      #   simulator (NIP-04 / NIP-17 / NIP-19 / NIP-49 / AES-GCM /
+      #   Chatroom keys), exercising secp256k1 and CryptoKit-backed
+      #   primitives on a real Apple toolchain.
+      # - compileTestKotlinIosArm64 catches any device-only compile drift
+      #   (iosArm64 = aarch64-apple-ios) without needing a physical
+      #   device to run on. Compile-only is enough — running on-device
+      #   would require xcodebuild + a provisioning profile.
+      - name: Test Quartz on iOS
+        run: |
+          ./gradlew \
+            :quartz:iosSimulatorArm64Test \
+            :quartz:compileTestKotlinIosArm64
+
+      - name: Upload iOS Test Reports
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: Quartz iOS Test Reports
+          path: quartz/build/reports
 
   test-and-build-android:
     needs: lint
