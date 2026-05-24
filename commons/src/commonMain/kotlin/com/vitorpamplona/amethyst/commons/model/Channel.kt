@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.WeakReference
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.cache.LargeCache
@@ -40,6 +42,10 @@ abstract class Channel : NotesGatherer {
     var lastNote: Note? = null
 
     private var relays = mapOf<NormalizedRelayUrl, Counter>()
+
+    // Single per-instance lock that previously @Synchronized methods share.
+    // Replaces JVM-only @Synchronized so this class compiles on iOS.
+    private val syncLock = KmpLock()
 
     private var changesFlow: WeakReference<MutableSharedFlow<ListChange<Note>>>? = null
 
@@ -75,12 +81,12 @@ abstract class Channel : NotesGatherer {
         flowSet?.metadata?.invalidateData()
     }
 
-    @Synchronized
-    fun addRelaySync(briefInfo: NormalizedRelayUrl) {
-        if (briefInfo !in relays) {
-            relays = relays + Pair(briefInfo, Counter(1))
+    fun addRelaySync(briefInfo: NormalizedRelayUrl) =
+        syncLock.withLock {
+            if (briefInfo !in relays) {
+                relays = relays + Pair(briefInfo, Counter(1))
+            }
         }
-    }
 
     fun addRelay(relay: NormalizedRelayUrl) {
         val counter = relays[relay]
@@ -165,18 +171,18 @@ abstract class Channel : NotesGatherer {
 
     var flowSet: ChannelFlowSet? = null
 
-    @Synchronized
-    fun createOrDestroyFlowSync(create: Boolean) {
-        if (create) {
-            if (flowSet == null) {
-                flowSet = ChannelFlowSet(this)
-            }
-        } else {
-            if (flowSet != null && flowSet?.isInUse() == false) {
-                flowSet = null
+    fun createOrDestroyFlowSync(create: Boolean) =
+        syncLock.withLock {
+            if (create) {
+                if (flowSet == null) {
+                    flowSet = ChannelFlowSet(this)
+                }
+            } else {
+                if (flowSet != null && flowSet?.isInUse() == false) {
+                    flowSet = null
+                }
             }
         }
-    }
 
     fun flow(): ChannelFlowSet {
         if (flowSet == null) {

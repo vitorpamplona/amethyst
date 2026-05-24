@@ -26,7 +26,9 @@ import com.vitorpamplona.amethyst.commons.model.Channel.Companion.DefaultFeedOrd
 import com.vitorpamplona.amethyst.commons.model.ListChange
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NotesGatherer
+import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.WeakReference
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.channels.BufferOverflow
@@ -84,22 +86,25 @@ class MarmotGroupChatroom(
         return adminPubkeys.value.any { it in followingKeySet }
     }
 
+    // Per-instance lock shared by previously @Synchronized methods.
+    private val syncLock = KmpLock()
+
     // Synthetic note used by list views to represent the group when no
     // messages have been received yet. Lazily created and kept stable so
     // equality-based feed diffing treats it as the same row across refreshes.
     private var cachedPlaceholder: Note? = null
 
-    @Synchronized
-    fun placeholderNote(): Note {
-        val existing = cachedPlaceholder
-        if (existing != null) return existing
-        val created =
-            Note(placeholderIdHex(nostrGroupId)).apply {
-                addGatherer(this@MarmotGroupChatroom)
-            }
-        cachedPlaceholder = created
-        return created
-    }
+    fun placeholderNote(): Note =
+        syncLock.withLock {
+            val existing = cachedPlaceholder
+            if (existing != null) return@withLock existing
+            val created =
+                Note(placeholderIdHex(nostrGroupId)).apply {
+                    addGatherer(this@MarmotGroupChatroom)
+                }
+            cachedPlaceholder = created
+            created
+        }
 
     companion object {
         fun placeholderIdHex(nostrGroupId: HexKey): HexKey = "marmot-empty-$nostrGroupId"
@@ -119,23 +124,23 @@ class MarmotGroupChatroom(
         removeMessageSync(note)
     }
 
-    @Synchronized
-    fun addMessageSync(msg: Note): Boolean {
-        if (msg !in messages) {
-            messages = messages + msg
-            msg.addGatherer(this)
+    fun addMessageSync(msg: Note): Boolean =
+        syncLock.withLock {
+            if (msg !in messages) {
+                messages = messages + msg
+                msg.addGatherer(this)
 
-            val createdAt = msg.createdAt() ?: 0L
-            if (createdAt > (newestMessage?.createdAt() ?: 0L)) {
-                newestMessage = msg
+                val createdAt = msg.createdAt() ?: 0L
+                if (createdAt > (newestMessage?.createdAt() ?: 0L)) {
+                    newestMessage = msg
+                }
+
+                unreadCount.value += 1
+                changesFlow?.get()?.tryEmit(ListChange.Addition(msg))
+                return@withLock true
             }
-
-            unreadCount.value += 1
-            changesFlow?.get()?.tryEmit(ListChange.Addition(msg))
-            return true
+            return@withLock false
         }
-        return false
-    }
 
     /**
      * Add a message that is being restored from persistent storage on app
@@ -143,38 +148,38 @@ class MarmotGroupChatroom(
      * count — restored messages were already seen by the user in a previous
      * session.
      */
-    @Synchronized
-    fun restoreMessageSync(msg: Note): Boolean {
-        if (msg !in messages) {
-            messages = messages + msg
-            msg.addGatherer(this)
+    fun restoreMessageSync(msg: Note): Boolean =
+        syncLock.withLock {
+            if (msg !in messages) {
+                messages = messages + msg
+                msg.addGatherer(this)
 
-            val createdAt = msg.createdAt() ?: 0L
-            if (createdAt > (newestMessage?.createdAt() ?: 0L)) {
-                newestMessage = msg
+                val createdAt = msg.createdAt() ?: 0L
+                if (createdAt > (newestMessage?.createdAt() ?: 0L)) {
+                    newestMessage = msg
+                }
+
+                changesFlow?.get()?.tryEmit(ListChange.Addition(msg))
+                return@withLock true
             }
-
-            changesFlow?.get()?.tryEmit(ListChange.Addition(msg))
-            return true
+            return@withLock false
         }
-        return false
-    }
 
-    @Synchronized
-    fun removeMessageSync(msg: Note): Boolean {
-        if (msg in messages) {
-            messages = messages - msg
-            msg.removeGatherer(this)
+    fun removeMessageSync(msg: Note): Boolean =
+        syncLock.withLock {
+            if (msg in messages) {
+                messages = messages - msg
+                msg.removeGatherer(this)
 
-            if (msg == newestMessage) {
-                newestMessage = messages.maxByOrNull { it.createdAt() ?: 0L }
+                if (msg == newestMessage) {
+                    newestMessage = messages.maxByOrNull { it.createdAt() ?: 0L }
+                }
+
+                changesFlow?.get()?.tryEmit(ListChange.Deletion(msg))
+                return@withLock true
             }
-
-            changesFlow?.get()?.tryEmit(ListChange.Deletion(msg))
-            return true
+            return@withLock false
         }
-        return false
-    }
 
     fun markAsRead() {
         unreadCount.value = 0
@@ -209,14 +214,14 @@ class MarmotGroupChatroom(
      * decrypted inner notes become eligible for GC out of LocalCache (which
      * holds them weakly).
      */
-    @Synchronized
-    fun clearAllMessagesSync(): Set<Note> {
-        val toRemove = messages
-        if (toRemove.isEmpty()) return toRemove
-        messages = emptySet()
-        newestMessage = null
-        unreadCount.value = 0
-        changesFlow?.get()?.tryEmit(ListChange.SetDeletion<Note>(toRemove))
-        return toRemove
-    }
+    fun clearAllMessagesSync(): Set<Note> =
+        syncLock.withLock {
+            val toRemove = messages
+            if (toRemove.isEmpty()) return@withLock toRemove
+            messages = emptySet()
+            newestMessage = null
+            unreadCount.value = 0
+            changesFlow?.get()?.tryEmit(ListChange.SetDeletion<Note>(toRemove))
+            toRemove
+        }
 }

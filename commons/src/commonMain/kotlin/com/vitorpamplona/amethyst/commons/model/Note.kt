@@ -24,9 +24,11 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponsesCache
 import com.vitorpamplona.amethyst.commons.threading.checkNotInMainThread
+import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.firstFullCharOrEmoji
 import com.vitorpamplona.amethyst.commons.util.replace
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.experimental.bounties.addedRewardValue
 import com.vitorpamplona.quartz.experimental.bounties.hasAdditionalReward
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
@@ -73,6 +75,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import java.math.BigDecimal
+import kotlin.concurrent.Volatile
 
 interface NotesGatherer {
     fun removeNote(note: Note)
@@ -105,6 +108,11 @@ class AddressableNote(
 open class Note(
     val idHex: HexKey,
 ) : NotesGatherer {
+    // Per-instance lock shared by the previously @Synchronized methods (zap /
+    // onchain-zap / zap-payment / relay-add / flowSet lifecycle). Replaces the
+    // JVM-only @Synchronized annotation so this class compiles on iOS.
+    private val syncLock = KmpLock()
+
     // These fields are only available after the Text Note event is received.
     // They are immutable after that.
     var event: Event? = null
@@ -165,7 +173,7 @@ open class Note(
      * only counts CONFIRMED amounts.
      *
      * `@Volatile` ensures cross-thread visibility: writes happen on `applicationIOScope`
-     * (inside the @Synchronized inner methods) and reads happen on the Compose Main
+     * (inside the syncLock-guarded inner methods) and reads happen on the Compose Main
      * thread (gallery recomposition + the reverification driver's `any { … }` check).
      */
     @Volatile
@@ -421,18 +429,17 @@ open class Note(
         }
     }
 
-    @Synchronized
     private fun innerAddZap(
         zapRequest: Note,
         zap: Note?,
-    ): Boolean {
-        if (zaps[zapRequest] == null) {
-            zaps = zaps + Pair(zapRequest, zap)
-            return true
+    ): Boolean =
+        syncLock.withLock {
+            if (zaps[zapRequest] == null) {
+                zaps = zaps + Pair(zapRequest, zap)
+                return@withLock true
+            }
+            return@withLock false
         }
-
-        return false
-    }
 
     fun addZap(
         zapRequest: Note,
@@ -447,48 +454,48 @@ open class Note(
         }
     }
 
-    @Synchronized
     private fun innerAddOnchainZap(
         txid: String,
         entry: OnchainZapEntry,
-    ): Boolean {
-        val existing = onchainZaps[txid]
-        if (existing != null) {
-            // Exact structural duplicate (same source Note + same fields) — typical
-            // relay echo of the same event. Skip the rewrite to avoid spurious
-            // flowSet invalidation.
-            if (entry == existing) return false
-            // Reject downgrades using the explicit OnchainZapStatus.level (not ordinal)
-            // so the upgrade contract survives future enum reordering or insertions.
-            if (entry.status.level < existing.status.level) return false
-            // Same level: accept only when verifiedSats grows OR the source differs
-            // (legitimate alternate signer republishing a split-zap receipt). A strictly
-            // smaller verifiedSats is a backend downgrade and we ignore it.
-            if (entry.status.level == existing.status.level && entry.verifiedSats < existing.verifiedSats) return false
+    ): Boolean =
+        syncLock.withLock {
+            val existing = onchainZaps[txid]
+            if (existing != null) {
+                // Exact structural duplicate (same source Note + same fields) — typical
+                // relay echo of the same event. Skip the rewrite to avoid spurious
+                // flowSet invalidation.
+                if (entry == existing) return@withLock false
+                // Reject downgrades using the explicit OnchainZapStatus.level (not ordinal)
+                // so the upgrade contract survives future enum reordering or insertions.
+                if (entry.status.level < existing.status.level) return@withLock false
+                // Same level: accept only when verifiedSats grows OR the source differs
+                // (legitimate alternate signer republishing a split-zap receipt). A strictly
+                // smaller verifiedSats is a backend downgrade and we ignore it.
+                if (entry.status.level == existing.status.level && entry.verifiedSats < existing.verifiedSats) return@withLock false
+            }
+            onchainZaps = onchainZaps + Pair(txid, entry)
+            return@withLock true
         }
-        onchainZaps = onchainZaps + Pair(txid, entry)
-        return true
-    }
 
-    @Synchronized
     private fun innerRemoveOnchainZapForSource(
         txid: String,
         sourceAuthorPubKey: HexKey,
-    ): Boolean {
-        val existing = onchainZaps[txid] ?: return false
-        // Anti-spoof: only remove the entry if its source matches the rejecting event.
-        // Otherwise a malicious third party could erase a legitimate CONFIRMED entry
-        // by publishing a spoofed kind:8333 with the same txid but a bystander recipient.
-        // Also refuse to remove a CONFIRMED entry — once chain-verified, only a fresh
-        // CONFIRMED replacement should change it; a transient backend hiccup must not
-        // wipe a previously-CONFIRMED entry just because some other target on the same
-        // event is still UNVERIFIED.
-        if (existing.status == OnchainZapStatus.CONFIRMED) return false
-        if (existing.source.author?.pubkeyHex == null) return false
-        if (existing.source.author?.pubkeyHex != sourceAuthorPubKey) return false
-        onchainZaps = onchainZaps - txid
-        return true
-    }
+    ): Boolean =
+        syncLock.withLock {
+            val existing = onchainZaps[txid] ?: return@withLock false
+            // Anti-spoof: only remove the entry if its source matches the rejecting event.
+            // Otherwise a malicious third party could erase a legitimate CONFIRMED entry
+            // by publishing a spoofed kind:8333 with the same txid but a bystander recipient.
+            // Also refuse to remove a CONFIRMED entry — once chain-verified, only a fresh
+            // CONFIRMED replacement should change it; a transient backend hiccup must not
+            // wipe a previously-CONFIRMED entry just because some other target on the same
+            // event is still UNVERIFIED.
+            if (existing.status == OnchainZapStatus.CONFIRMED) return@withLock false
+            if (existing.source.author?.pubkeyHex == null) return@withLock false
+            if (existing.source.author?.pubkeyHex != sourceAuthorPubKey) return@withLock false
+            onchainZaps = onchainZaps - txid
+            return@withLock true
+        }
 
     /**
      * Register a NIP-BC onchain zap targeting this note. `source` is the OnchainZapEvent's own
@@ -535,18 +542,17 @@ open class Note(
         }
     }
 
-    @Synchronized
     private fun innerAddZapPayment(
         zapPaymentRequest: Note,
         zapPayment: Note?,
-    ): Boolean {
-        if (zapPayments[zapPaymentRequest] == null) {
-            zapPayments = zapPayments + Pair(zapPaymentRequest, zapPayment)
-            return true
+    ): Boolean =
+        syncLock.withLock {
+            if (zapPayments[zapPaymentRequest] == null) {
+                zapPayments = zapPayments + Pair(zapPaymentRequest, zapPayment)
+                return@withLock true
+            }
+            return@withLock false
         }
-
-        return false
-    }
 
     fun addZapPayment(
         zapPaymentRequest: Note,
@@ -589,12 +595,12 @@ open class Note(
         }
     }
 
-    @Synchronized
-    fun addRelaySync(relay: NormalizedRelayUrl) {
-        if (relay !in relays) {
-            relays = relays + relay
+    fun addRelaySync(relay: NormalizedRelayUrl) =
+        syncLock.withLock {
+            if (relay !in relays) {
+                relays = relays + relay
+            }
         }
-    }
 
     fun hasRelay(relay: NormalizedRelayUrl) = relay in relays
 
@@ -1035,18 +1041,18 @@ open class Note(
 
     var flowSet: NoteFlowSet? = null
 
-    @Synchronized
-    fun createOrDestroyFlowSync(create: Boolean) {
-        if (create) {
-            if (flowSet == null) {
-                flowSet = NoteFlowSet(this)
-            }
-        } else {
-            if (flowSet != null && flowSet?.isInUse() == false) {
-                flowSet = null
+    fun createOrDestroyFlowSync(create: Boolean) =
+        syncLock.withLock {
+            if (create) {
+                if (flowSet == null) {
+                    flowSet = NoteFlowSet(this)
+                }
+            } else {
+                if (flowSet != null && flowSet?.isInUse() == false) {
+                    flowSet = null
+                }
             }
         }
-    }
 
     fun flow(): NoteFlowSet {
         if (flowSet == null) {
