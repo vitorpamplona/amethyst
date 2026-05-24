@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.cli.AwaitTimeout
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.actions.DmActions
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.filterGiftWrapsToPubkey
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull
 import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
@@ -34,7 +35,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
@@ -86,8 +86,7 @@ object DmCommands {
         try {
             ctx.prepare()
             val recipient = ctx.requireUserHex(rest[0])
-            val template = ChatMessageEvent.build(text, listOf(PTag(recipient)))
-            val result = NIP17Factory().createMessageNIP17(template, ctx.signer)
+            val result = DmActions.buildTextDm(ctx.signer, recipient, text)
             return publishWraps(ctx, result, allowFallback)
         } finally {
             ctx.close()
@@ -124,27 +123,34 @@ object DmCommands {
             ctx.prepare()
             val recipient = ctx.requireUserHex(recipientInput)
 
-            val (template, summary) =
+            val (result, summary) =
                 if (args.flag("file") != null) {
-                    buildUploadModeTemplate(ctx, recipient, args)
+                    buildUploadedFileDm(ctx, recipient, args)
                         ?: return 1
                 } else {
-                    buildReferenceModeTemplate(args, recipient)
+                    buildReferencedFileDm(ctx, recipient, args)
                         ?: return 1
                 }
 
-            val result = NIP17Factory().createEncryptedFileNIP17(template, ctx.signer)
             return publishWraps(ctx, result, allowFallback, extra = summary)
         } finally {
             ctx.close()
         }
     }
 
-    private suspend fun buildUploadModeTemplate(
+    /**
+     * Upload mode: read the local file, encrypt with a fresh AESGCM key,
+     * push the ciphertext to a Blossom server, then call into
+     * [DmActions.buildFileDmReference] with the resulting URL + metadata.
+     * Returns the gift-wrap result plus an `extra` map that surfaces the
+     * upload's cipher material on stdout so callers can re-share or
+     * republish the same blob without re-uploading.
+     */
+    private suspend fun buildUploadedFileDm(
         ctx: Context,
-        recipient: com.vitorpamplona.quartz.nip01Core.core.HexKey,
+        recipient: HexKey,
         args: Args,
-    ): Pair<com.vitorpamplona.quartz.nip01Core.signers.EventTemplate<ChatMessageEncryptedFileHeaderEvent>, Map<String, Any?>>? {
+    ): Pair<NIP17Factory.Result, Map<String, Any?>>? {
         val file = java.io.File(args.requireFlag("file"))
         if (!file.exists()) {
             Output.error("bad_args", "file does not exist: ${file.absolutePath}")
@@ -169,9 +175,10 @@ object DmCommands {
                         .DimensionTag(w, h)
                 }
             }
-        val template =
-            ChatMessageEncryptedFileHeaderEvent.build(
-                to = listOf(PTag(recipient)),
+        val result =
+            DmActions.buildFileDmReference(
+                signer = ctx.signer,
+                recipient = recipient,
                 url = uploadedUrl,
                 cipher = cipher,
                 mimeType = mimeType,
@@ -181,8 +188,6 @@ object DmCommands {
                 blurhash = uploaded.metadata.blurhash,
                 originalHash = uploaded.metadata.sha256,
             )
-        // Surface the cipher material on stdout so callers can re-share
-        // or republish the same encrypted blob without re-uploading.
         val summary =
             mapOf(
                 "url" to uploadedUrl,
@@ -193,13 +198,19 @@ object DmCommands {
                 "original_hash" to uploaded.metadata.sha256,
                 "mime_type" to mimeType,
             )
-        return template to summary
+        return result to summary
     }
 
-    private fun buildReferenceModeTemplate(
+    /**
+     * Reference mode: the file is already uploaded somewhere; the user
+     * hands us the URL + cipher key/nonce + whatever metadata they want
+     * stamped onto the kind:15.
+     */
+    private suspend fun buildReferencedFileDm(
+        ctx: Context,
+        recipient: HexKey,
         args: Args,
-        recipient: com.vitorpamplona.quartz.nip01Core.core.HexKey,
-    ): Pair<com.vitorpamplona.quartz.nip01Core.signers.EventTemplate<ChatMessageEncryptedFileHeaderEvent>, Map<String, Any?>>? {
+    ): Pair<NIP17Factory.Result, Map<String, Any?>>? {
         val url =
             args.positionalOrNull(0) ?: run {
                 Output.error("bad_args", USAGE_SEND_FILE)
@@ -236,9 +247,10 @@ object DmCommands {
         val cipher =
             com.vitorpamplona.quartz.utils.ciphers
                 .AESGCM(keyBytes, nonceBytes)
-        val template =
-            ChatMessageEncryptedFileHeaderEvent.build(
-                to = listOf(PTag(recipient)),
+        val result =
+            DmActions.buildFileDmReference(
+                signer = ctx.signer,
+                recipient = recipient,
                 url = url,
                 cipher = cipher,
                 mimeType = mimeType,
@@ -248,7 +260,7 @@ object DmCommands {
                 blurhash = blurhash,
                 originalHash = originalHash,
             )
-        return template to emptyMap()
+        return result to emptyMap()
     }
 
     private const val USAGE_SEND_FILE: String =
@@ -278,7 +290,7 @@ object DmCommands {
                     "wrap_id" to wrap.id,
                     "published_to" to ack.filterValues { it }.keys.map { it.url },
                     "relays_tried" to resolution.relays.map { it.url },
-                    "relay_source" to resolution.source,
+                    "relay_source" to resolution.source.name.lowercase(),
                 ),
             )
         }
@@ -402,38 +414,28 @@ object DmCommands {
     }
 
     /**
-     * Per NIP-17: kind:1059 should only be delivered to relays the recipient
-     * has advertised in their kind:10050. When that list is empty:
-     *  - strict (default): refuse with no_dm_relays — caller must fix or
-     *    explicitly opt into a fallback.
-     *  - allowFallback=true: fall through to the NIP-65 read marker and then
-     *    to our bootstrap pool.
+     * Cache-first relay lookup. If amy has previously seen the recipient's
+     * kind:10050 / 10051 / 10002 events, use the local copy and skip the
+     * network drain entirely. Otherwise drain `seedRelays` for them. Then
+     * hands the resulting [RecipientRelayFetcher.Lists] off to
+     * [DmActions.resolveDmRelays] which applies the strict-kind:10050 /
+     * fallback policy.
      */
     private suspend fun resolveDmRelays(
         ctx: Context,
         recipient: HexKey,
         allowFallback: Boolean,
-    ): RelaySet {
+    ): DmActions.DmRelaySet {
         val seed = ctx.bootstrapRelays()
-        // Cache-first: if Amy has previously seen the recipient's
-        // kind:10050 / 10051 / 10002 events, use the local copy and
-        // skip the network drain entirely. Falls back to the live
-        // fetcher only if the local store has nothing.
         val lists =
             ctx.cachedRelayListsOf(recipient)
                 ?: RecipientRelayFetcher.fetchRelayLists(ctx.client, recipient, seed)
-        val dmInbox = lists.dmInbox.toSet()
-        if (dmInbox.isNotEmpty()) return RelaySet(dmInbox, "kind_10050")
-        if (!allowFallback) return RelaySet(emptySet(), "kind_10050")
-        val nip65Read = lists.nip65Read().toSet()
-        if (nip65Read.isNotEmpty()) return RelaySet(nip65Read, "nip65_read")
-        return RelaySet(seed, "bootstrap")
+        return DmActions.resolveDmRelays(
+            recipientLists = lists,
+            bootstrap = seed,
+            allowFallback = allowFallback,
+        )
     }
-
-    private data class RelaySet(
-        val relays: Set<NormalizedRelayUrl>,
-        val source: String,
-    )
 
     private sealed interface DecryptedDm {
         val id: HexKey
