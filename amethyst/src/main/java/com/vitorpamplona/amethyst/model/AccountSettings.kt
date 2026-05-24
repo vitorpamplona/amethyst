@@ -182,6 +182,7 @@ class AccountSettings(
     var hideNIP17WarningDialog: Boolean = false,
     val alwaysOnNotificationService: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val splitNotificationsEnabled: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    val simpleRelayMode: MutableStateFlow<Boolean> = MutableStateFlow(false),
     var backupUserMetadata: MetadataEvent? = null,
     var backupContactList: ContactListEvent? = null,
     var backupDMRelayList: ChatMessageRelayListEvent? = null,
@@ -243,6 +244,15 @@ class AccountSettings(
         splitNotificationsEnabled.tryEmit(newValue)
         saveAccountSettings()
         return newValue
+    }
+
+    fun changeSimpleRelayMode(newValue: Boolean): Boolean {
+        if (simpleRelayMode.value != newValue) {
+            simpleRelayMode.tryEmit(newValue)
+            saveAccountSettings()
+            return true
+        }
+        return false
     }
 
     // ---

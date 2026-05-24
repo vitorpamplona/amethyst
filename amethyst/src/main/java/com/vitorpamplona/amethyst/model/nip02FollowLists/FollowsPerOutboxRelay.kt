@@ -45,21 +45,30 @@ class FollowsPerOutboxRelay(
     kind3Follows: Kind3FollowListState,
     blockedRelayList: BlockedRelayListState,
     proxyRelayList: ProxyRelayListState,
+    simpleRelayMode: StateFlow<Boolean>,
     val cache: LocalCache,
     scope: CoroutineScope,
 ) {
     @OptIn(ExperimentalCoroutinesApi::class)
     val outboxPerRelayFlow: StateFlow<Map<NormalizedRelayUrl, Set<HexKey>>> =
-        kind3Follows.flow
-            .transformLatest {
+        combine(kind3Follows.flow, simpleRelayMode) { follows, isSimpleRelayMode ->
+            follows to isSimpleRelayMode
+        }
+            .transformLatest { (follows, isSimpleRelayMode) ->
                 emitAll(
-                    OutboxRelayLoader().toAuthorsPerRelayFlow(it.authors, cache) { it },
+                    OutboxRelayLoader().toAuthorsPerRelayFlow(follows.authors, cache) {
+                        selectOutboxRelays(it, isSimpleRelayMode)
+                    },
                 )
-            }.onStart {
+            }
+            .onStart {
                 emit(
-                    OutboxRelayLoader().authorsPerRelaySnapshot(kind3Follows.flow.value.authors, cache) { it },
+                    OutboxRelayLoader().authorsPerRelaySnapshot(kind3Follows.flow.value.authors, cache) {
+                        selectOutboxRelays(it, simpleRelayMode.value)
+                    },
                 )
-            }.distinctUntilChanged()
+            }
+            .distinctUntilChanged()
             .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
@@ -102,4 +111,14 @@ class FollowsPerOutboxRelay(
                 SharingStarted.Eagerly,
                 emptyMap(),
             )
+
+    private fun selectOutboxRelays(
+        authorsPerRelay: Map<NormalizedRelayUrl, Set<HexKey>>,
+        isSimpleRelayMode: Boolean,
+    ): Map<NormalizedRelayUrl, Set<HexKey>> =
+        if (isSimpleRelayMode) {
+            authorsPerRelay.filterValues { it.size > 1 }
+        } else {
+            authorsPerRelay
+        }
 }

@@ -98,6 +98,7 @@ private object PrefKeys {
     const val USE_LOCAL_BLOSSOM_CACHE = "useLocalBlossomCache"
     const val LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY = "localBlossomCacheProfilePicturesOnly"
     const val HIDE_COMMUNITY_RULES_VIOLATIONS = "hideCommunityRulesViolations"
+    const val SIMPLE_RELAY_MODE = "simpleRelayMode"
     const val DEFAULT_HOME_FOLLOW_LIST = "defaultHomeFollowList"
     const val DEFAULT_STORIES_FOLLOW_LIST = "defaultStoriesFollowList"
     const val DEFAULT_NOTIFICATION_FOLLOW_LIST = "defaultNotificationFollowList"
@@ -362,6 +363,7 @@ object LocalPreferences {
                     putBoolean(PrefKeys.USE_LOCAL_BLOSSOM_CACHE, settings.useLocalBlossomCache.value)
                     putBoolean(PrefKeys.LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY, settings.localBlossomCacheProfilePicturesOnly.value)
                     putBoolean(PrefKeys.HIDE_COMMUNITY_RULES_VIOLATIONS, settings.hideCommunityRulesViolations.value)
+                    putBoolean(PrefKeys.SIMPLE_RELAY_MODE, settings.simpleRelayMode.value)
 
                     putString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, JsonMapper.toJson(settings.defaultHomeFollowList.value))
                     putString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultStoriesFollowList.value))
@@ -535,6 +537,7 @@ object LocalPreferences {
                     val useLocalBlossomCache = getBoolean(PrefKeys.USE_LOCAL_BLOSSOM_CACHE, true)
                     val localBlossomCacheProfilePicturesOnly = getBoolean(PrefKeys.LOCAL_BLOSSOM_CACHE_PROFILE_PICTURES_ONLY, false)
                     val hideCommunityRulesViolations = getBoolean(PrefKeys.HIDE_COMMUNITY_RULES_VIOLATIONS, false)
+                    val simpleRelayMode = getBoolean(PrefKeys.SIMPLE_RELAY_MODE, false)
                     val hideDeleteRequestDialog = getBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, false)
                     val hideBlockAlertDialog = getBoolean(PrefKeys.HIDE_BLOCK_ALERT_DIALOG, false)
                     val hideNIP17WarningDialog = getBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, false)
@@ -646,6 +649,7 @@ object LocalPreferences {
                         useLocalBlossomCache = MutableStateFlow(useLocalBlossomCache),
                         localBlossomCacheProfilePicturesOnly = MutableStateFlow(localBlossomCacheProfilePicturesOnly),
                         hideCommunityRulesViolations = MutableStateFlow(hideCommunityRulesViolations),
+                        simpleRelayMode = MutableStateFlow(simpleRelayMode),
                         defaultHomeFollowList = MutableStateFlow(followListPrefs.home),
                         defaultStoriesFollowList = MutableStateFlow(followListPrefs.stories),
                         defaultNotificationFollowList = MutableStateFlow(followListPrefs.notification),

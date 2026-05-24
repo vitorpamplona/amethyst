@@ -2210,6 +2210,11 @@
     <string name="proxy_section">Proxy Relays</string>
     <string name="proxy_section_explainer">Aggregator relays the app must use to download your feeds from, like filter.nostr.wine. This replaces the outbox model and will make the app connect to only the relays in your lists.</string>
 
+    <string name="simple_relay_mode_section">Connection Mode</string>
+    <string name="simple_relay_mode_section_explainer">Choose how aggressively Amethyst follows outbox relays for your feed subscriptions.</string>
+    <string name="simple_relay_mode_title">Simple relay mode</string>
+    <string name="simple_relay_mode_description">Use only followed outbox relays shared by more than one person. This reduces relay connections but can miss posts from people who publish to unique relays.</string>
+
     <string name="broadcast_relays_title">Broadcast Relays</string>
     <string name="broadcast_section">Broadcast Relays</string>
     <string name="broadcast_section_explainer">Relays that specialize in pushing your notes to all of the other relays, like sendit.nosflare.com. Amethyst will add this relay to all new events made by you</string>

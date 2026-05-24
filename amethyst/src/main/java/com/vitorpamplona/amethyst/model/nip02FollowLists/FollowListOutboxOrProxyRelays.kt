@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.proxyRelays.ProxyRelayListState
 import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxRelayLoader
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -45,21 +46,30 @@ class FollowListOutboxOrProxyRelays(
     kind3Follows: Kind3FollowListState,
     blockedRelayList: BlockedRelayListState,
     proxyRelayList: ProxyRelayListState,
+    simpleRelayMode: StateFlow<Boolean>,
     val cache: LocalCache,
     scope: CoroutineScope,
 ) {
     @OptIn(ExperimentalCoroutinesApi::class)
     val outboxRelayFlow: StateFlow<Set<NormalizedRelayUrl>> =
-        kind3Follows.flow
-            .transformLatest { follows ->
+        combine(kind3Follows.flow, simpleRelayMode) { follows, isSimpleRelayMode ->
+            follows to isSimpleRelayMode
+        }
+            .transformLatest { (follows, isSimpleRelayMode) ->
                 emitAll(
-                    OutboxRelayLoader(true).toAuthorsPerRelayFlow(follows.authors, cache) { it.keys },
+                    OutboxRelayLoader(true).toAuthorsPerRelayFlow(follows.authors, cache) {
+                        selectOutboxRelays(it, isSimpleRelayMode)
+                    },
                 )
-            }.onStart {
+            }
+            .onStart {
                 emit(
-                    OutboxRelayLoader(true).authorsPerRelaySnapshot(kind3Follows.flow.value.authors, cache) { it.keys },
+                    OutboxRelayLoader(true).authorsPerRelaySnapshot(kind3Follows.flow.value.authors, cache) {
+                        selectOutboxRelays(it, simpleRelayMode.value)
+                    },
                 )
-            }.distinctUntilChanged()
+            }
+            .distinctUntilChanged()
             .flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
@@ -114,4 +124,16 @@ class FollowListOutboxOrProxyRelays(
                 SharingStarted.Eagerly,
                 emptySet(),
             )
+
+    private fun selectOutboxRelays(
+        authorsPerRelay: Map<NormalizedRelayUrl, Set<HexKey>>,
+        isSimpleRelayMode: Boolean,
+    ): Set<NormalizedRelayUrl> =
+        if (isSimpleRelayMode) {
+            authorsPerRelay.mapNotNullTo(mutableSetOf()) { (relay, authors) ->
+                if (authors.size > 1) relay else null
+            }
+        } else {
+            authorsPerRelay.keys
+        }
 }
