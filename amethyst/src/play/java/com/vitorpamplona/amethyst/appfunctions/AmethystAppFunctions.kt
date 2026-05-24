@@ -46,8 +46,14 @@ import kotlinx.coroutines.withTimeoutOrNull
  * ships without any Google AI dependencies.
  *
  * Plain class, no inheritance — the KSP compiler discovers `@AppFunction`
- * methods and generates the dispatcher glue. Construction is wired in
- * [PlayAmethyst.appFunctionConfiguration].
+ * methods and generates the dispatcher glue (see
+ * `amethyst/build/generated/ksp/playDebug/.../$AmethystAppFunctions_AppFunctionInvoker.kt`).
+ * The generated invoker constructs this class via its default no-arg
+ * constructor, so no `AppFunctionConfiguration.Provider` is required on
+ * the Application. If we ever add an @AppFunction host class with
+ * constructor parameters, we'll need to register a factory via Provider —
+ * the docs nudge that direction, but the runtime does not require it for
+ * default-constructed classes.
  *
  * Only read-only verbs are exposed so far. Write verbs (post, follow, zap)
  * are intentionally deferred until we resolve the signer-prompt flow for

@@ -2,13 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Play flavor overrides android:name with PlayAmethyst, which is
-         the same Amethyst Application class plus the
-         AppFunctionConfiguration.Provider surface required by
-         androidx.appfunctions. F-Droid keeps the plain Amethyst. -->
     <application
-        android:name=".PlayAmethyst"
-        tools:replace="android:name">
+        android:name=".Amethyst">
 
         <service
             android:name=".service.notifications.PushNotificationReceiverService"
