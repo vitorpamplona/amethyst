@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.actions.SearchActions
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 
 /**
@@ -126,6 +127,100 @@ class AmethystAppFunctions {
         )
     }
 
+    /**
+     * Searches Nostr notes for [query] via NIP-50 full-text search across the
+     * active account's configured search relays (kind:10007), falling back to
+     * Amethyst's curated default search-relay set when none is configured.
+     *
+     * Defaults to short text notes (kind:1) only. Currently no way to widen
+     * to long-form or other kinds — add a parameter when the need is real;
+     * App Functions doesn't support `List<Int>` parameters in alpha09.
+     *
+     * @param query free-form search text.
+     * @param limit max number of notes to return — capped to 50.
+     */
+    @AppFunction(isDescribedByKDoc = true)
+    suspend fun searchNotes(
+        appFunctionContext: AppFunctionContext,
+        query: String,
+        limit: Int = 20,
+    ): SearchNotesResult {
+        val cappedLimit = limit.coerceIn(1, 50)
+        val filter = SearchActions.searchNotesFilter(query, limit = cappedLimit) ?: return SearchNotesResult.empty()
+
+        val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return SearchNotesResult.empty()
+        val client = Amethyst.instance.client
+
+        val relays = account.searchRelayList.flow.value
+        if (relays.isEmpty()) return SearchNotesResult.empty()
+
+        val events =
+            client.fetchAll(
+                filters = relays.associateWith { listOf(filter) },
+                timeoutMs = GEMINI_FETCH_TIMEOUT_MS,
+            )
+
+        val hits =
+            events
+                .mapNotNull { it as? TextNoteEvent }
+                // Sorted newest-first by fetchAll already, but the cast may
+                // have dropped non-kind:1 events from a relay that ignored
+                // our kinds filter.
+                .take(cappedLimit)
+                .map { ev ->
+                    NoteHit(
+                        eventId = ev.id,
+                        npub = NPub.create(ev.pubKey),
+                        pubkeyHex = ev.pubKey,
+                        createdAt = ev.createdAt,
+                        content = ev.content,
+                    )
+                }
+
+        return SearchNotesResult(matches = hits)
+    }
+
+    /**
+     * Lists the active account's current follow set — the people the signed-in
+     * user follows per their latest NIP-02 kind:3 contact list.
+     *
+     * Returned entries include best-effort display names sourced from each
+     * user's cached kind:0; users with no cached metadata appear with
+     * [FollowedUser.displayName] null. The order matches the on-disk follow
+     * list (which is the order the user followed them in).
+     *
+     * @param limit cap on entries returned — capped to 500. Set to 0 for the
+     *   full list when there's no specific bound.
+     */
+    @AppFunction(isDescribedByKDoc = true)
+    suspend fun getFollowing(
+        appFunctionContext: AppFunctionContext,
+        limit: Int = 100,
+    ): FollowingResult {
+        val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return FollowingResult.empty()
+
+        // userList resolves authors through LocalCache so display names /
+        // pictures / nip05 are filled in for anyone whose kind:0 we've seen.
+        val users = account.kind3FollowList.userList.value
+        val effectiveLimit = if (limit <= 0) users.size else limit.coerceIn(1, 500)
+
+        val out =
+            users
+                .take(effectiveLimit)
+                .map { user ->
+                    val meta = user.metadataOrNull()
+                    FollowedUser(
+                        npub = NPub.create(user.pubkeyHex),
+                        pubkeyHex = user.pubkeyHex,
+                        displayName = meta?.bestName(),
+                        nip05 = meta?.nip05(),
+                        picture = meta?.profilePicture(),
+                    )
+                }
+
+        return FollowingResult(totalFollowing = users.size, returned = out)
+    }
+
     companion object {
         /**
          * 6-second fetch window. App Functions invocations are user-initiated
@@ -165,5 +260,59 @@ class SearchProfilesResult(
 ) {
     companion object {
         fun empty() = SearchProfilesResult(matches = emptyList())
+    }
+}
+
+/** Single match in [SearchNotesResult]. */
+@AppFunctionSerializable(isDescribedByKDoc = true)
+class NoteHit(
+    /** Hex event id of the note. */
+    val eventId: String,
+    /** Bech32 npub of the note's author. */
+    val npub: String,
+    /** Hex pubkey of the note's author. */
+    val pubkeyHex: String,
+    /** Unix-seconds timestamp the note was created at. */
+    val createdAt: Long,
+    /** Raw content of the note (plain text, may contain Nostr URIs / hashtags). */
+    val content: String,
+)
+
+@AppFunctionSerializable(isDescribedByKDoc = true)
+class SearchNotesResult(
+    /** Matched notes, sorted newest-first by created_at. */
+    val matches: List<NoteHit>,
+) {
+    companion object {
+        fun empty() = SearchNotesResult(matches = emptyList())
+    }
+}
+
+/** Single entry in [FollowingResult]. Metadata fields may be null when the
+ *  user's kind:0 hasn't been cached locally. */
+@AppFunctionSerializable(isDescribedByKDoc = true)
+class FollowedUser(
+    /** Bech32 npub of the followed user. */
+    val npub: String,
+    /** Hex pubkey of the followed user. */
+    val pubkeyHex: String,
+    /** Best-effort display name (display_name then name). */
+    val displayName: String?,
+    /** NIP-05 verified handle, e.g. `alice@example.com`. */
+    val nip05: String?,
+    /** Avatar image URL. */
+    val picture: String?,
+)
+
+@AppFunctionSerializable(isDescribedByKDoc = true)
+class FollowingResult(
+    /** Total number of follows in the active account's kind:3 — may exceed
+     *  [returned] when the caller passed a limit. */
+    val totalFollowing: Int,
+    /** Subset of follows returned to the caller, in original on-disk order. */
+    val returned: List<FollowedUser>,
+) {
+    companion object {
+        fun empty() = FollowingResult(totalFollowing = 0, returned = emptyList())
     }
 }
