@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Natural-language description of the app for the AppFunctions agent
+  (Gemini and other system assistants). Resolved by the system via the
+  application-level `<property android:name="android.app.appfunctions.app_metadata">`
+  pointer in play/AndroidManifest.xml. Without this resource, system
+  logcat shows "Unable to resolve AppFunctionMetadata" and the agent
+  can't render a user-facing summary of what our functions do.
+
+  Keep descriptions short and Nostr-grounded so a user reading "What
+  can Amethyst do?" in the agent gets a useful answer. Update when
+  the @AppFunction surface grows.
+-->
+<AppFunctionAppMetadata xmlns:appfn="http://schemas.android.com/apk/res-auto"
+    appfn:description="Amethyst is a Nostr social client. The agent can search Nostr profiles and short text notes through Amethyst's configured search relays, and read the list of accounts the signed-in user follows."
+    appfn:displayDescription="Search Nostr and read your follows" />

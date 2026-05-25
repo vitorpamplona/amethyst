@@ -40,21 +40,20 @@
 
         <!-- Gemini / system-agent bridge via androidx.appfunctions
              (pre-stable as of May 2026). The androidx-provided
-             PlatformAppFunctionService dispatches to plain Kotlin
+             PlatformAppFunctionService (registered automatically via
+             manifest merging by the library) dispatches to plain Kotlin
              classes annotated with @AppFunction (see
-             com.vitorpamplona.amethyst.appfunctions.AmethystAppFunctions);
-             instances are constructed by PlayAmethyst's
-             AppFunctionConfiguration. Play flavor only — the F-Droid
-             channel ships without the alpha Google AI dependency. -->
-        <service
-            android:name="androidx.appfunctions.service.PlatformAppFunctionService"
-            android:exported="true"
-            android:permission="android.permission.BIND_APP_FUNCTION_SERVICE"
-            tools:ignore="ExportedService">
-            <intent-filter>
-                <action android:name="android.app.AppFunctionService" />
-            </intent-filter>
-        </service>
+             com.vitorpamplona.amethyst.appfunctions.AmethystAppFunctions).
+             Play flavor only — the F-Droid channel ships without the
+             alpha Google AI dependency.
+
+             The `app_metadata` property below gives the system agent a
+             user-facing summary of what this app exposes. Without it,
+             system logcat logs "Unable to resolve AppFunctionMetadata"
+             and our functions never make it into Gemini's tool picker. -->
+        <property
+            android:name="android.app.appfunctions.app_metadata"
+            android:resource="@xml/app_metadata" />
 
     </application>
 
