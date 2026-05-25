@@ -61,6 +61,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -90,7 +91,15 @@ fun WalletScreen(
     val walletViewModel: WalletViewModel = viewModel()
     walletViewModel.init(accountViewModel)
 
-    val hasWallet by walletViewModel.hasWalletSetup.collectAsState()
+    val cashuWalletViewModel: CashuWalletViewModel = viewModel()
+    LaunchedEffect(Unit) { cashuWalletViewModel.init(accountViewModel) }
+
+    val hasNwcWallet by walletViewModel.hasWalletSetup.collectAsState()
+    val cashuWalletEvent by cashuWalletViewModel.walletEvent.collectAsState()
+    val hasCashuWallet = cashuWalletEvent != null
+    val hasWallet = hasNwcWallet || hasCashuWallet
+    val cashuBalanceSats by cashuWalletViewModel.balanceSats.collectAsState()
+    val cashuMints by cashuWalletViewModel.mints.collectAsState()
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
 
@@ -145,6 +154,9 @@ fun WalletScreen(
                     modifier = Modifier,
                     listState = listState,
                     nav = nav,
+                    hasCashuWallet = hasCashuWallet,
+                    cashuBalanceSats = cashuBalanceSats,
+                    cashuMintCount = cashuMints.size,
                 )
             }
         }
@@ -191,6 +203,9 @@ private fun MultiWalletHomeContent(
     modifier: Modifier,
     listState: LazyListState,
     nav: INav,
+    hasCashuWallet: Boolean,
+    cashuBalanceSats: Long,
+    cashuMintCount: Int,
 ) {
     val walletInfoList by walletViewModel.walletInfoList.collectAsState()
 
@@ -244,6 +259,16 @@ private fun MultiWalletHomeContent(
                     walletViewModel.removeWallet(walletInfo.walletId)
                 },
             )
+        }
+
+        if (hasCashuWallet) {
+            item {
+                CashuWalletRow(
+                    balanceSats = cashuBalanceSats,
+                    mintCount = cashuMintCount,
+                    onClick = { nav.nav(Route.CashuWallet) },
+                )
+            }
         }
 
         item {
@@ -457,6 +482,69 @@ private fun WalletCard(
                         tint = MaterialTheme.colorScheme.error,
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CashuWalletRow(
+    balanceSats: Long,
+    mintCount: Int,
+    onClick: () -> Unit,
+) {
+    val formattedBalance =
+        remember(balanceSats) { NumberFormat.getIntegerInstance().format(balanceSats) }
+    Card(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                symbol = MaterialSymbols.AccountBalanceWallet,
+                contentDescription = null,
+                modifier = Modifier.size(28.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringRes(R.string.cashu_wallet_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text =
+                        pluralStringResource(
+                            R.plurals.cashu_wallet_subtitle_mints,
+                            mintCount,
+                            mintCount,
+                        ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = formattedBalance,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = stringRes(R.string.wallet_sats),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }

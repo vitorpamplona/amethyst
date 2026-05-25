@@ -1868,6 +1868,24 @@
     <string name="wallet_no_wallets">No wallets connected</string>
     <string name="wallet_no_wallets_description">Connect one or more NWC wallets to send and receive payments.</string>
     <string name="wallet_add_connection">Add NWC Connection</string>
+    <string name="wallet_add_choose_type">Choose wallet type</string>
+    <string name="wallet_add_nwc_title">Connect a Lightning wallet (NWC)</string>
+    <string name="wallet_add_nwc_description">Pay via an external Lightning wallet using Nostr Wallet Connect.</string>
+    <string name="wallet_add_cashu_title">Cashu wallet (NIP-60)</string>
+    <string name="wallet_add_cashu_description">An in-app ecash wallet backed by a Cashu mint. Tokens are stored encrypted on relays.</string>
+    <string name="cashu_wallet_title">Cashu Wallet</string>
+    <string name="cashu_no_wallet">No Cashu wallet yet</string>
+    <string name="cashu_no_wallet_description">Create a Cashu wallet to hold ecash tokens and receive nutzaps.</string>
+    <string name="cashu_balance">Balance</string>
+    <string name="cashu_mints">Mints</string>
+    <string name="cashu_mint_url">Mint URL</string>
+    <string name="cashu_remove_mint">Remove mint</string>
+    <string name="cashu_history">History</string>
+    <string name="cashu_edit_wallet">Edit wallet</string>
+    <string name="cashu_p2pk_section">Nutzap key (advanced)</string>
+    <string name="cashu_p2pk_explainer">A separate private key used only to receive NIP-61 nutzaps. Not your Nostr identity key.</string>
+    <string name="cashu_p2pk_autogen">Auto-generate</string>
+    <string name="cashu_p2pk_manual_label">P2PK private key (hex)</string>
     <string name="wallet_paste_uri">Paste nostr+walletconnect:// URI</string>
     <string name="wallet_save">Save</string>
     <string name="wallet_rename">Rename</string>
@@ -2777,6 +2795,11 @@
     <plurals name="duration_years">
         <item quantity="one">%1$d year</item>
         <item quantity="other">%1$d years</item>
+    </plurals>
+
+    <plurals name="cashu_wallet_subtitle_mints">
+        <item quantity="one">%1$d mint</item>
+        <item quantity="other">%1$d mints</item>
     </plurals>
 
     <string name="event_sync_less_than_until">&lt;%1$s</string>

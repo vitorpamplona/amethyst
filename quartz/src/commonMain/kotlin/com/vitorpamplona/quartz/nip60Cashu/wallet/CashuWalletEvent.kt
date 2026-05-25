@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip60Cashu.wallet
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -71,6 +72,9 @@ class CashuWalletEvent(
     companion object {
         const val KIND = 17375
         const val ALT_DESCRIPTION = "Cashu wallet"
+        const val FIXED_D_TAG = ""
+
+        fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, FIXED_D_TAG)
 
         suspend fun build(
             mints: List<String>,
