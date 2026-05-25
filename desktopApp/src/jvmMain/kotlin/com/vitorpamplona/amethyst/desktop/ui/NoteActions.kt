@@ -1407,6 +1407,7 @@ fun NoteActionsRow(
             onDismiss = { quoteEvent = null },
             relayManager = relayManager,
             account = account,
+            localCache = localCache,
             quoteOf = quoteEvent,
         )
     }

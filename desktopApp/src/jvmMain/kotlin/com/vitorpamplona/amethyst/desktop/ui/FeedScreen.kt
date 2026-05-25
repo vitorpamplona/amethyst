@@ -689,6 +689,7 @@ fun FeedScreen(
                 onDismiss = { replyToEvent = null },
                 relayManager = relayManager,
                 account = account,
+                localCache = localCache,
                 replyTo = replyToEvent,
             )
         }
