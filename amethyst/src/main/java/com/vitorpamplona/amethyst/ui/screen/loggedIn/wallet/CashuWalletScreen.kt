@@ -97,11 +97,22 @@ fun CashuWalletScreen(
     val mints by viewModel.mints.collectAsState()
     val balanceSats by viewModel.balanceSats.collectAsState()
     val history by viewModel.history.collectAsState()
+    val pendingQuotes by viewModel.pendingQuotes.collectAsState()
 
     var receiveOpen by remember { mutableStateOf(false) }
     var sendLnOpen by remember { mutableStateOf(false) }
     var sendTokenOpen by remember { mutableStateOf(false) }
     var redeemOpen by remember { mutableStateOf(false) }
+
+    // If the user has an unfinished kind:7374 quote, surface it the next time
+    // they open the wallet so the in-flight invoice isn't lost. Auto-resumes
+    // the most recent quote on first composition.
+    LaunchedEffect(pendingQuotes) {
+        if (!receiveOpen && pendingQuotes.isNotEmpty()) {
+            viewModel.resumeMintQuote(pendingQuotes.first())
+            receiveOpen = true
+        }
+    }
 
     Scaffold(
         topBar = {

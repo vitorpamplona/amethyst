@@ -324,12 +324,18 @@ class CashuWalletState(
     private suspend fun recomputeUnspent() {
         val all = tokenEvents.values.toList()
         // Decrypt anything we haven't seen before; reuse cached TokenContent
-        // for events we've already decrypted.
+        // for events we've already decrypted. Decryption failures are
+        // skipped — the proof set rebuilds the next time a re-key happens.
         all.forEach { evt ->
-            tokenContents.getOrPut(evt.id) {
-                runCatching { evt.tokenContent(signer) }
-                    .onFailure { Log.w("CashuWallet") { "Failed to decrypt token ${evt.id.take(8)}: ${it.message}" } }
-                    .getOrNull() ?: return@getOrPut return@forEach
+            if (!tokenContents.containsKey(evt.id)) {
+                val content =
+                    runCatching { evt.tokenContent(signer) }
+                        .onFailure {
+                            Log.w("CashuWallet") {
+                                "Failed to decrypt token ${evt.id.take(8)}: ${it.message}"
+                            }
+                        }.getOrNull()
+                if (content != null) tokenContents[evt.id] = content
             }
         }
 
