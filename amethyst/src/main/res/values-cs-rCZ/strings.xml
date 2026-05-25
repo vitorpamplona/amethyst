@@ -2790,4 +2790,13 @@
     <string name="nowhere_link_card_message">Nowhere Zpráva</string>
     <string name="nowhere_link_card_art">Nowhere Umění</string>
     <string name="nowhere_link_card_forum">Nowhere Fórum</string>
+    <string name="about_legal">O aplikaci a právní informace</string>
+    <string name="child_safety_standards">Standardy ochrany dětí</string>
+    <string name="nip82_download">Stáhnout</string>
+    <string name="nip82_repository_label">Zdroj: %1$s</string>
+    <string name="nip82_version_label">v%1$s</string>
+    <string name="nowhere_link_card_drop">Nowhere Drop</string>
+    <string name="onchain_zap_description">On-chain Bitcoin zap</string>
+    <string name="route_software_apps">Aplikace</string>
+    <string name="software_apps">Aplikace</string>
 </resources>

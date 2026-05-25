@@ -2761,4 +2761,12 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nowhere_link_card_store">Nowhere Shop</string>
     <string name="nowhere_link_card_message">Nowhere Nachricht</string>
     <string name="nowhere_link_card_art">Nowhere Kunst</string>
+    <string name="about_legal">Über &amp; Rechtliches</string>
+    <string name="child_safety_standards">Kinderschutzstandards</string>
+    <string name="nip82_download">Herunterladen</string>
+    <string name="nip82_repository_label">Quelle: %1$s</string>
+    <string name="nip82_version_label">v%1$s</string>
+    <string name="nowhere_link_card_drop">Nowhere Drop</string>
+    <string name="route_software_apps">Apps</string>
+    <string name="software_apps">Apps</string>
 </resources>
