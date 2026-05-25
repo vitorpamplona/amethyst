@@ -556,6 +556,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="profile_badges_description">Wähle aus, welche deiner erhaltenen Abzeichen auf deinem Profil erscheinen sollen.</string>
     <string name="profile_badges_empty">Du hast noch keine Abzeichen erhalten.</string>
     <string name="pictures">Bilder</string>
+    <string name="nip82_repository_label">Quelle: %1$s</string>
+    <string name="nip82_download">Herunterladen</string>
     <string name="calendars">Kalender</string>
     <string name="shorts">Kurzvideos</string>
     <string name="public_chats">Öffentliche Chats</string>
@@ -1190,6 +1192,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="posting_policy">Veröffentlichungsrichtlinie</string>
     <string name="privacy_policy">Datenschutzerklärung</string>
     <string name="terms_and_conditions">Allgemeine Geschäftsbedingungen</string>
+    <string name="child_safety_standards">Kinderschutzstandards</string>
+    <string name="about_legal">Über &amp; Rechtliches</string>
     <string name="not_available_acronym">N/A</string>
     <string name="relay_error_messages">Fehler und Hinweise von diesem Relais</string>
     <string name="relay_monitor_reports">Relay-Überwachungsberichte</string>
@@ -2761,12 +2765,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nowhere_link_card_store">Nowhere Shop</string>
     <string name="nowhere_link_card_message">Nowhere Nachricht</string>
     <string name="nowhere_link_card_art">Nowhere Kunst</string>
-    <string name="about_legal">Über &amp; Rechtliches</string>
-    <string name="child_safety_standards">Kinderschutzstandards</string>
-    <string name="nip82_download">Herunterladen</string>
-    <string name="nip82_repository_label">Quelle: %1$s</string>
-    <string name="nip82_version_label">v%1$s</string>
-    <string name="nowhere_link_card_drop">Nowhere Drop</string>
-    <string name="route_software_apps">Apps</string>
-    <string name="software_apps">Apps</string>
 </resources>

@@ -12,6 +12,10 @@
         <item quantity="one">Ez a bejegyzés több mint %1$d kulcsszót tartalmaz</item>
         <item quantity="other">Ez a bejegyzés több mint %1$d kulcsszót tartalmaz</item>
     </plurals>
+    <plurals name="nip82_assets_count">
+        <item quantity="one">%1$d asset egybecsomagolva</item>
+        <item quantity="other">%1$d asset egybecsomagolva</item>
+    </plurals>
     <string name="post_not_found">Az esemény épp betöltődik vagy nem található az átjátszólistában</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Csatorna profilképe</string>
@@ -552,6 +556,11 @@
     <string name="profile_badges_description">Válassza ki, hogy a megszerzett kitűzők közül melyek jelenjenek meg a profilban.</string>
     <string name="profile_badges_empty">Ön még nem kapott kitűzőt.</string>
     <string name="pictures">Képek</string>
+    <string name="software_apps">Alkalmazások</string>
+    <string name="route_software_apps">Alkalmazások</string>
+    <string name="nip82_repository_label">Forrás: %1$s</string>
+    <string name="nip82_version_label">v%1$s</string>
+    <string name="nip82_download">Letöltés</string>
     <string name="calendars">Naptárak</string>
     <string name="shorts">Rövidek</string>
     <string name="public_chats">Nyilvános csevegések</string>
@@ -1189,6 +1198,8 @@
     <string name="posting_policy">Közzétételi szabályzat</string>
     <string name="privacy_policy">Adatvédelmi irányelvek</string>
     <string name="terms_and_conditions">Általános szerződési feltételek</string>
+    <string name="child_safety_standards">Gyermekbiztonsági szabványok</string>
+    <string name="about_legal">Névjegy &amp; Jogi információk</string>
     <string name="not_available_acronym">Nem érhető el</string>
     <string name="relay_error_messages">Hibák és megjegyzések ettől az átjátszótól</string>
     <string name="relay_monitor_reports">Átjátszófigyelési jelentések</string>

@@ -562,6 +562,10 @@
     <string name="profile_badges_description">Vyberte, které z odznaků, které jste obdrželi, se zobrazí na vašem profilu.</string>
     <string name="profile_badges_empty">Zatím jste neobdrželi žádné odznaky.</string>
     <string name="pictures">Obrázky</string>
+    <string name="software_apps">Aplikace</string>
+    <string name="route_software_apps">Aplikace</string>
+    <string name="nip82_repository_label">Zdroj: %1$s</string>
+    <string name="nip82_download">Stáhnout</string>
     <string name="calendars">Kalendáře</string>
     <string name="shorts">Krátká videa</string>
     <string name="public_chats">Veřejné chaty</string>
@@ -1199,6 +1203,8 @@
     <string name="posting_policy">Politika příspěvků</string>
     <string name="privacy_policy">Zásady ochrany soukromí</string>
     <string name="terms_and_conditions">Podmínky &amp; ujednání</string>
+    <string name="child_safety_standards">Standardy ochrany dětí</string>
+    <string name="about_legal">O aplikaci a právní informace</string>
     <string name="not_available_acronym">N/A</string>
     <string name="relay_error_messages">Chyby a upozornění z tohoto relé</string>
     <string name="relay_monitor_reports">Zprávy monitoru relé</string>
@@ -2790,13 +2796,4 @@
     <string name="nowhere_link_card_message">Nowhere Zpráva</string>
     <string name="nowhere_link_card_art">Nowhere Umění</string>
     <string name="nowhere_link_card_forum">Nowhere Fórum</string>
-    <string name="about_legal">O aplikaci a právní informace</string>
-    <string name="child_safety_standards">Standardy ochrany dětí</string>
-    <string name="nip82_download">Stáhnout</string>
-    <string name="nip82_repository_label">Zdroj: %1$s</string>
-    <string name="nip82_version_label">v%1$s</string>
-    <string name="nowhere_link_card_drop">Nowhere Drop</string>
-    <string name="onchain_zap_description">On-chain Bitcoin zap</string>
-    <string name="route_software_apps">Aplikace</string>
-    <string name="software_apps">Aplikace</string>
 </resources>
