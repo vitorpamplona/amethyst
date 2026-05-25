@@ -93,6 +93,7 @@ import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBlockedRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBroadcastRelayList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayContactList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayDMRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayFollowList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayIndexerRelayList
@@ -116,7 +117,9 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderAttestorRecommendation
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioHeader
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderBadgeAward
+import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarCollectionEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarDateSlotEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarRSVPEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarTimeSlotEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCashuMint
 import com.vitorpamplona.amethyst.ui.note.types.RenderChannelMessage
@@ -164,6 +167,9 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderRelayMembershipList
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayRemoveMember
 import com.vitorpamplona.amethyst.ui.note.types.RenderReport
 import com.vitorpamplona.amethyst.ui.note.types.RenderRootSiteEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderSoftwareApplication
+import com.vitorpamplona.amethyst.ui.note.types.RenderSoftwareAsset
+import com.vitorpamplona.amethyst.ui.note.types.RenderSoftwareRelease
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextModificationEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderThread
@@ -209,10 +215,14 @@ import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -252,8 +262,11 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
+import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
+import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
@@ -864,6 +877,23 @@ private fun RenderNoteRow(
             RenderAppDefinition(baseNote, accountViewModel, nav)
         }
 
+        is SoftwareApplicationEvent -> {
+            RenderSoftwareApplication(baseNote, accountViewModel, nav)
+        }
+
+        is SoftwareAssetEvent -> {
+            RenderSoftwareAsset(baseNote, accountViewModel, nav)
+        }
+
+        is ReleaseArtifactSetEvent -> {
+            // kind 30063 is used by both NIP-51 (ReleaseArtifactSet) and NIP-82 (SoftwareRelease).
+            // The EventFactory always materializes the NIP-51 class; dispatch to NIP-82 when the
+            // tag signature matches.
+            if (noteEvent.isNip82SoftwareRelease()) {
+                RenderSoftwareRelease(baseNote, accountViewModel, nav)
+            }
+        }
+
         is AttestationEvent -> {
             RenderAttestation(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
@@ -968,6 +998,10 @@ private fun RenderNoteRow(
 
         is FollowListEvent -> {
             DisplayFollowList(baseNote, true, accountViewModel, nav)
+        }
+
+        is ContactListEvent -> {
+            DisplayContactList(baseNote, accountViewModel, nav)
         }
 
         is RelaySetEvent -> {
@@ -1187,6 +1221,14 @@ private fun RenderNoteRow(
 
         is CalendarDateSlotEvent -> {
             RenderCalendarDateSlotEvent(baseNote, accountViewModel, nav)
+        }
+
+        is CalendarEvent -> {
+            RenderCalendarCollectionEvent(baseNote, accountViewModel, nav)
+        }
+
+        is CalendarRSVPEvent -> {
+            RenderCalendarRSVPEvent(baseNote, accountViewModel, nav)
         }
 
         is GoalEvent -> {

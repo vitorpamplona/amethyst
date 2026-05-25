@@ -74,6 +74,9 @@ import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
+import com.vitorpamplona.quartz.nip18Reposts.quotes.quote
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -96,8 +99,19 @@ fun ComposeNoteDialog(
     relayManager: DesktopRelayConnectionManager,
     account: AccountState.LoggedIn,
     replyTo: Event? = null,
+    quoteOf: Event? = null,
 ) {
-    var content by remember { mutableStateOf("") }
+    val initialContent =
+        remember(quoteOf) {
+            if (quoteOf != null) {
+                val relays = relayManager.connectedRelays.value.take(3)
+                val nevent = NEvent.create(quoteOf.id, quoteOf.pubKey, quoteOf.kind, relays)
+                "\nnostr:$nevent"
+            } else {
+                ""
+            }
+        }
+    var content by remember { mutableStateOf(initialContent) }
     var isPosting by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -165,7 +179,11 @@ fun ComposeNoteDialog(
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(
-                    if (replyTo != null) "Reply" else "New Note",
+                    when {
+                        replyTo != null -> "Reply"
+                        quoteOf != null -> "Quote"
+                        else -> "New Note"
+                    },
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
@@ -174,6 +192,15 @@ fun ComposeNoteDialog(
                     Spacer(Modifier.height(8.dp))
                     Text(
                         "Replying to: ${reply.content.take(50)}${if (reply.content.length > 50) "..." else ""}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                quoteOf?.let { quoted ->
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Quoting: ${quoted.content.take(50)}${if (quoted.content.length > 50) "..." else ""}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -357,6 +384,7 @@ fun ComposeNoteDialog(
                                             account = account,
                                             relayManager = relayManager,
                                             replyTo = replyTo,
+                                            quoteOf = quoteOf,
                                             imetaTags = imetaTags,
                                             relays = selectedRelays,
                                         )
@@ -529,6 +557,7 @@ private suspend fun publishNote(
     account: AccountState.LoggedIn,
     relayManager: DesktopRelayConnectionManager,
     replyTo: Event?,
+    quoteOf: Event? = null,
     imetaTags: List<IMetaTag> = emptyList(),
     relays: Set<NormalizedRelayUrl>,
 ) {
@@ -545,6 +574,10 @@ private suspend fun publishNote(
                     etag.author = replyTo.pubKey
                     eTag(etag)
                     pTag(PTag(replyTo.pubKey, relayHint = null))
+                }
+                if (quoteOf != null) {
+                    quote(QEventTag(quoteOf.id, relayHint = null, authorPubKeyHex = quoteOf.pubKey))
+                    pTag(PTag(quoteOf.pubKey, relayHint = null))
                 }
                 hashtags(findHashtags(content))
                 references(findURLs(content))

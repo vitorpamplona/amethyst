@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.desktop.ui.relay.LocalRelayCategories
 import com.vitorpamplona.amethyst.desktop.ui.relay.Nip65RelayEditor
 import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -154,10 +155,10 @@ fun FeedNoteCard(
             return
         }
 
-        val reactionCount = originalNote.countReactions()
-        val replyCount = originalNote.replies.size
-        val repostCount = originalNote.boosts.size
-        val zapAmount = originalNote.zapsAmount
+        val reactionCount = remember(reactionsState) { originalNote.countReactions() }
+        val replyCount = remember(repliesState) { originalNote.replies.size }
+        val repostCount = remember(metadataState) { originalNote.boosts.size }
+        val zapAmount = remember(zapsState) { originalNote.zapsAmount }
 
         val reposterUser = localCache.getUserIfExists(event.pubKey)
         val originalUser = localCache.getUserIfExists(originalEvent.pubKey)
@@ -171,15 +172,15 @@ fun FeedNoteCard(
                 GenericRepostLayout(
                     baseAuthorPicture = {
                         UserAvatar(
-                            userHex = originalEvent.pubKey,
-                            pictureUrl = originalUser?.profilePicture(),
+                            userHex = event.pubKey,
+                            pictureUrl = reposterUser?.profilePicture(),
                             size = 35.dp,
                         )
                     },
                     repostAuthorPicture = {
                         UserAvatar(
-                            userHex = event.pubKey,
-                            pictureUrl = reposterUser?.profilePicture(),
+                            userHex = originalEvent.pubKey,
+                            pictureUrl = originalUser?.profilePicture(),
                             size = 35.dp,
                         )
                     },
@@ -211,12 +212,15 @@ fun FeedNoteCard(
                     onReplyClick = onReply,
                     onZapFeedback = onZapFeedback,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    note = originalNote,
                     zapCount = originalNote.zaps.size,
                     zapAmountSats = zapAmount.toLong(),
                     zapReceipts = emptyList(),
                     reactionCount = reactionCount,
                     replyCount = replyCount,
                     repostCount = repostCount,
+                    onNavigateToThread = onNavigateToThread,
+                    onNavigateToProfile = onNavigateToProfile,
                 )
             }
         }
@@ -228,10 +232,10 @@ fun FeedNoteCard(
         val repliesState by flowSet.replies.stateFlow.collectAsState()
         val zapsState by flowSet.zaps.stateFlow.collectAsState()
 
-        val reactionCount = note.countReactions()
-        val replyCount = note.replies.size
-        val repostCount = note.boosts.size
-        val zapAmount = note.zapsAmount
+        val reactionCount = remember(reactionsState) { note.countReactions() }
+        val replyCount = remember(repliesState) { note.replies.size }
+        val repostCount = remember(metadataState) { note.boosts.size }
+        val zapAmount = remember(zapsState) { note.zapsAmount }
 
         DisposableEffect(note) {
             onDispose { note.clearFlow() }
@@ -260,12 +264,15 @@ fun FeedNoteCard(
                     onReplyClick = onReply,
                     onZapFeedback = onZapFeedback,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    note = note,
                     zapCount = note.zaps.size,
                     zapAmountSats = zapAmount.toLong(),
                     zapReceipts = emptyList(),
                     reactionCount = reactionCount,
                     replyCount = replyCount,
                     repostCount = repostCount,
+                    onNavigateToThread = onNavigateToThread,
+                    onNavigateToProfile = onNavigateToProfile,
                 )
             }
         }
@@ -410,6 +417,15 @@ fun FeedScreen(
 
     val feedState by viewModel.feedState.feedContent.collectAsState()
 
+    // Force refresh when followedUsers arrives and feed is still empty
+    LaunchedEffect(followedUsers, feedState) {
+        if (followedUsers.isNotEmpty() && feedState is FeedState.Empty) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                viewModel.feedState.refreshSuspended()
+            }
+        }
+    }
+
     // Viewport-aware metadata loading: only fetch for visible notes + buffer
     // Uses snapshotFlow to avoid per-frame recomposition from scroll observation
     LaunchedEffect(feedState, subscriptionsCoordinator) {
@@ -512,19 +528,32 @@ fun FeedScreen(
         )
     }
 
-    // Request interaction subscriptions — keyed on feedMode (stable), not feedState (changes every 250ms)
-    DisposableEffect(feedMode, subscriptionsCoordinator) {
-        val coordinator = subscriptionsCoordinator ?: return@DisposableEffect onDispose {}
-        val relays = relayManager.relayStatuses.value.keys
-        // Initial subscription with whatever notes are visible now
-        val noteIds = viewModel.feedState.visibleNotes().mapNotNull { it.event?.id }
-        val subId =
-            if (noteIds.isNotEmpty()) {
-                coordinator.requestInteractions(noteIds, relays)
-            } else {
-                null
-            }
-        onDispose { subId?.let { coordinator.releaseInteractions(it) } }
+    // Interaction subscriptions (reactions, zaps, reposts, replies) — same pattern as metadata
+    val interactionNoteIds =
+        remember(feedState) {
+            if (feedState !is FeedState.Loaded) return@remember emptyList<String>()
+            viewModel.feedState.visibleNotes().mapNotNull { it.event?.id }
+        }
+
+    rememberSubscription(allRelayUrls, interactionNoteIds, relayManager = relayManager) {
+        if (allRelayUrls.isEmpty() || interactionNoteIds.isEmpty()) return@rememberSubscription null
+        SubscriptionConfig(
+            subId = generateSubId("fetch-interactions"),
+            filters =
+                listOf(
+                    FilterBuilders.reactionsForEvents(interactionNoteIds),
+                    FilterBuilders.zapsForEvents(interactionNoteIds),
+                    FilterBuilders.repostsForEvents(interactionNoteIds),
+                    Filter(
+                        kinds = listOf(com.vitorpamplona.quartz.nip10Notes.TextNoteEvent.KIND),
+                        tags = mapOf("e" to interactionNoteIds),
+                    ),
+                ),
+            relays = allRelayUrls,
+            onEvent = { event, _, relay, _ ->
+                subscriptionsCoordinator?.consumeEvent(event, relay)
+            },
+        )
     }
 
     Box(modifier = Modifier.fillMaxSize()) {

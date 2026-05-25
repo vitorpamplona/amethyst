@@ -27,9 +27,13 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip47WalletConnect.Nip47Client
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
@@ -183,6 +187,180 @@ class NwcPaymentHandler(
 
             else -> {
                 PaymentResult.Error("Unexpected response type: ${response.resultType}")
+            }
+        }
+
+    // -- NWC RPC: get_balance --
+
+    sealed class BalanceResult {
+        data class Success(
+            val balanceMsats: Long,
+        ) : BalanceResult()
+
+        data class Error(
+            val message: String,
+        ) : BalanceResult()
+
+        data object Timeout : BalanceResult()
+    }
+
+    suspend fun getBalance(
+        nwcConnection: Nip47WalletConnect.Nip47URINorm,
+        timeoutMs: Long = 30_000,
+    ): BalanceResult {
+        val secret = nwcConnection.secret ?: return BalanceResult.Error("NWC connection has no secret")
+
+        val nwcSigner = NostrSignerInternal(KeyPair(secret.hexToByteArray()))
+        val client = Nip47Client.fromNip47URI(nwcConnection)
+        val requestEvent = client.getBalance()
+
+        return withTimeoutOrNull(timeoutMs) {
+            waitForGenericResponse(
+                requestId = requestEvent.id,
+                nwcConnection = nwcConnection,
+                nwcSigner = nwcSigner,
+                onSubscribed = {
+                    relayManager.publishToRelay(nwcConnection.relayUri, requestEvent)
+                },
+            ) { response ->
+                when (response) {
+                    is GetBalanceSuccessResponse -> {
+                        val msats = response.result?.balance ?: 0L
+                        BalanceResult.Success(msats)
+                    }
+
+                    is NwcErrorResponse -> {
+                        BalanceResult.Error(response.error?.message ?: "Unknown error")
+                    }
+
+                    else -> {
+                        BalanceResult.Error("Unexpected response: ${response.resultType}")
+                    }
+                }
+            }
+        } ?: BalanceResult.Timeout
+    }
+
+    // -- NWC RPC: make_invoice --
+
+    sealed class InvoiceResult {
+        data class Success(
+            val invoice: String,
+            val paymentHash: String?,
+        ) : InvoiceResult()
+
+        data class Error(
+            val message: String,
+        ) : InvoiceResult()
+
+        data object Timeout : InvoiceResult()
+    }
+
+    suspend fun makeInvoice(
+        nwcConnection: Nip47WalletConnect.Nip47URINorm,
+        amountMsats: Long,
+        description: String? = null,
+        timeoutMs: Long = 30_000,
+    ): InvoiceResult {
+        val secret = nwcConnection.secret ?: return InvoiceResult.Error("NWC connection has no secret")
+
+        val nwcSigner = NostrSignerInternal(KeyPair(secret.hexToByteArray()))
+        val client = Nip47Client.fromNip47URI(nwcConnection)
+        val requestEvent = client.makeInvoice(amountMsats, description)
+
+        return withTimeoutOrNull(timeoutMs) {
+            // Subscribe BEFORE publishing to avoid race with fast wallet responses
+            waitForGenericResponse(
+                requestId = requestEvent.id,
+                nwcConnection = nwcConnection,
+                nwcSigner = nwcSigner,
+                onSubscribed = { relayManager.publishToRelay(nwcConnection.relayUri, requestEvent) },
+            ) { response ->
+                when (response) {
+                    is MakeInvoiceSuccessResponse -> {
+                        val invoice = response.result?.invoice
+                        if (invoice != null) {
+                            InvoiceResult.Success(invoice, response.result?.payment_hash)
+                        } else {
+                            InvoiceResult.Error("Wallet returned no invoice")
+                        }
+                    }
+
+                    is NwcErrorResponse -> {
+                        InvoiceResult.Error(response.error?.message ?: "Unknown error")
+                    }
+
+                    else -> {
+                        InvoiceResult.Error("Unexpected response: ${response.resultType}")
+                    }
+                }
+            }
+        } ?: InvoiceResult.Timeout
+    }
+
+    // -- Generic NWC response listener --
+
+    private suspend fun <T> waitForGenericResponse(
+        requestId: String,
+        nwcConnection: Nip47WalletConnect.Nip47URINorm,
+        nwcSigner: NostrSignerInternal,
+        onSubscribed: () -> Unit = {},
+        processResponse: (Response) -> T,
+    ): T =
+        suspendCancellableCoroutine { continuation ->
+            val filter =
+                Filter(
+                    kinds = listOf(LnZapPaymentResponseEvent.KIND),
+                    authors = listOf(nwcConnection.pubKeyHex),
+                    tags = mapOf("e" to listOf(requestId)),
+                )
+
+            val subId = "nwc-rpc-${requestId.take(8)}"
+
+            relayManager.subscribeOnRelay(
+                relay = nwcConnection.relayUri,
+                subId = subId,
+                filters = listOf(filter),
+                onEvent = { event, _ ->
+                    if (event is LnZapPaymentResponseEvent && event.requestId() == requestId) {
+                        @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
+                        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                            if (!localCache.justVerify(event)) return@launch
+
+                            relayManager.closeSubscription(nwcConnection.relayUri, subId)
+
+                            try {
+                                val response = event.decrypt(nwcSigner)
+                                val result = processResponse(response)
+                                if (continuation.isActive) {
+                                    continuation.resume(result)
+                                }
+                            } catch (e: Exception) {
+                                if (e is kotlinx.coroutines.CancellationException) throw e
+                                if (continuation.isActive) {
+                                    continuation.resume(
+                                        processResponse(
+                                            NwcErrorResponse(
+                                                resultType = "error",
+                                                error =
+                                                    com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcError(
+                                                        message = "Decrypt failed: ${e.message}",
+                                                    ),
+                                            ),
+                                        ),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                },
+            )
+
+            // Publish AFTER subscribing to avoid missing fast wallet responses
+            onSubscribed()
+
+            continuation.invokeOnCancellation {
+                relayManager.closeSubscription(nwcConnection.relayUri, subId)
             }
         }
 }

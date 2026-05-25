@@ -334,13 +334,13 @@ private enum class FeedGroup(
     @param:androidx.annotation.StringRes val labelRes: Int,
 ) {
     FEEDS(R.string.feed_group_feeds),
+    RELAYS(R.string.feed_group_relays),
     HASHTAGS(R.string.feed_group_hashtags),
     INTEREST_SETS(R.string.feed_group_interest_sets),
-    COMMUNITIES(R.string.feed_group_communities),
     LOCATIONS(R.string.feed_group_locations),
-    LISTS(R.string.feed_group_lists),
     DVMS(R.string.feed_group_dvms),
-    RELAYS(R.string.feed_group_relays),
+    COMMUNITIES(R.string.feed_group_communities),
+    LISTS(R.string.feed_group_lists),
 }
 
 private fun FeedDefinition.group(): FeedGroup =

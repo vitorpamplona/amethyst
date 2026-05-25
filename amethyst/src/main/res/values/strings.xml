@@ -10,7 +10,14 @@
     <string name="show_anyway">Show Anyway</string>
     <string name="post_was_hidden">This post was hidden because it mentions your hidden users or words</string>
     <string name="post_was_flagged_as_inappropriate_by">Post was muted or reported by</string>
-    <string name="post_was_hidden_due_to_too_many_hashtags">This post has more than %1$d hashtags</string>
+    <plurals name="post_was_hidden_due_to_too_many_hashtags">
+        <item quantity="one">This post has more than %1$d hashtag</item>
+        <item quantity="other">This post has more than %1$d hashtags</item>
+    </plurals>
+    <plurals name="nip82_assets_count">
+        <item quantity="one">%1$d asset bundled</item>
+        <item quantity="other">%1$d assets bundled</item>
+    </plurals>
     <string name="post_not_found">Event is loading or can\'t be found in your relay list</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Channel Image</string>
@@ -580,6 +587,12 @@
     <string name="profile_badges_description">Choose which of the badges you\'ve received appear on your profile.</string>
     <string name="profile_badges_empty">You haven\'t received any badges yet.</string>
     <string name="pictures">Pictures</string>
+    <string name="software_apps">Apps</string>
+    <string name="route_software_apps">Apps</string>
+    <string name="nip82_repository_label">Source: %1$s</string>
+    <string name="nip82_version_label">v%1$s</string>
+    <string name="nip82_download">Download</string>
+    <string name="calendars">Calendars</string>
     <string name="shorts">Shorts</string>
     <string name="public_chats">Public Chats</string>
     <string name="follow_packs">Follow Packs</string>
@@ -817,6 +830,10 @@
     <string name="wallet_connect_manual_config">Advanced: enter connection details manually</string>
     <string name="quick_zap_amounts">Quick Zap Amounts</string>
     <string name="quick_zap_amounts_explainer">Shown when pressing the zap button. Tap an amount to remove it. If you leave it empty, it will open the dialog to insert an amount every time.</string>
+    <string name="quick_zap_amounts_onchain">Quick On-chain Zap Amounts</string>
+    <string name="quick_zap_amounts_onchain_explainer">On-chain zaps pay miner fees, so amounts are usually larger than Lightning. Tap an amount to remove it.</string>
+    <string name="new_amount_in_sats_onchain">New on-chain amount in sats</string>
+    <string name="send_onchain_instead">Send on-chain instead</string>
     <string name="zap_privacy_section">Zap Privacy</string>
     <string name="zap_type_section_explainer">Controls how your identity is shown when you send a zap.</string>
     <string name="wallet_connect_connect_app">Connect Wallet</string>
@@ -1301,6 +1318,8 @@
     <string name="posting_policy">Posting policy</string>
     <string name="privacy_policy">Privacy Policy</string>
     <string name="terms_and_conditions">Terms &amp; Conditions</string>
+    <string name="child_safety_standards">Child Safety Standards</string>
+    <string name="about_legal">About &amp; Legal</string>
     <string name="not_available_acronym">N/A</string>
     <string name="relay_error_messages">Errors and Notices from this Relay</string>
     <string name="relay_monitor_reports">Relay Monitor Reports</string>
@@ -1800,6 +1819,8 @@
     <string name="route_global">Global</string>
     <string name="route_video">Shorts</string>
     <string name="route_pictures">Pictures</string>
+    <string name="route_calendars">Calendars</string>
+    <string name="route_calendar_collections">Calendar lists</string>
     <string name="route_chess">Chess</string>
     <string name="wallet">Wallet</string>
     <string name="wallet_balance">Balance</string>
@@ -1820,6 +1841,7 @@
     <string name="wallet_creating_invoice">Creating invoice…</string>
     <string name="wallet_copy_invoice">Copy Invoice</string>
     <string name="wallet_no_transactions">No transactions yet</string>
+    <string name="wallet_no_transactions_for_filter">No transactions match this filter</string>
     <string name="wallet_loading">Loading…</string>
     <string name="wallet_incoming">Received</string>
     <string name="wallet_outgoing">Sent</string>
@@ -1848,6 +1870,15 @@
     <string name="wallet_invalid_uri">Invalid NWC connection URI</string>
     <string name="wallet_move_up">Move Up</string>
     <string name="wallet_move_down">Move Down</string>
+    <string name="wallet_onchain_transactions">Onchain Transactions</string>
+    <string name="wallet_onchain_no_address">No on-chain address available for this account.</string>
+    <string name="wallet_onchain_no_backend">No chain backend is configured.</string>
+    <string name="wallet_onchain_pending">Pending</string>
+    <string name="wallet_onchain_public_chip">Public</string>
+    <string name="wallet_onchain_public_dialog_title">This wallet is public</string>
+    <string name="wallet_onchain_public_dialog_body">Your Taproot address is derived from your Nostr public key, so anyone who knows your npub can see this wallet\'s balance and transaction history on the blockchain.\n\nTo preserve your privacy, fund and drain this wallet from and to non-private accounts, like exchanges. Never mix these funds with your cold wallets, and treat them as money you can lose, since anyone in control of your nsec can spend it.</string>
+    <string name="wallet_onchain_public_dialog_confirm">Got it</string>
+    <string name="wallet_onchain_copy_dialog_confirm">Copy address</string>
     <string name="route_security_filters">Security Filters</string>
     <string name="route_import_follows">Import Follows</string>
 
@@ -1861,6 +1892,132 @@
     <string name="new_zap_poll">New Zap Poll</string>
     <string name="new_regular_poll">New Regular Poll</string>
     <string name="new_picture">New Picture</string>
+    <string name="new_calendar_event">New Calendar Event</string>
+    <string name="edit_calendar_event">Edit Calendar Event</string>
+    <string name="calendar_event_all_day_locked">Locked while editing — changing this would create a new event instead.</string>
+    <string name="new_calendar_collection">New Calendar</string>
+    <string name="edit_calendar_collection">Edit Calendar</string>
+    <string name="calendar_collection_events_section">Events in this calendar (%1$d)</string>
+    <string name="calendar_collection_no_events_yet">You haven\'t created any calendar events yet.</string>
+
+    <string name="calendar_view_feed">Feed</string>
+    <string name="calendar_view_month">Month</string>
+    <string name="calendar_view_week">Week</string>
+    <string name="calendar_view_day">Day</string>
+
+    <string name="calendar_section_upcoming">Upcoming</string>
+    <string name="calendar_section_past">Past</string>
+    <string name="calendar_empty_feed">No upcoming or past calendar events from your selected feed yet.</string>
+    <string name="calendar_empty_collections">No calendar collections yet.</string>
+    <string name="calendar_empty_feed_title">Your calendar is empty</string>
+    <string name="calendar_empty_feed_subtitle">Events shared by people you follow appear here. Tap the + button to create your own.</string>
+    <string name="calendar_empty_collections_title">No collections yet</string>
+    <string name="calendar_empty_collections_subtitle">Group events together — a meetup series, a conference track, your team\'s roadmap. Tap + to create one.</string>
+    <string name="calendar_empty_day_title">Nothing scheduled</string>
+    <string name="calendar_empty_day_subtitle">No events on this day. Tap + to add one.</string>
+    <string name="calendar_empty_week_title">Nothing this week</string>
+    <string name="calendar_empty_week_subtitle">No events fall in this week.</string>
+
+    <string name="calendar_event_title">Title</string>
+    <string name="calendar_event_summary">Summary</string>
+    <string name="calendar_event_location">Location</string>
+    <string name="calendar_event_image">Image URL</string>
+    <string name="calendar_event_all_day">All-day event</string>
+    <string name="calendar_event_start">Starts</string>
+    <string name="calendar_event_end">Ends</string>
+    <string name="calendar_event_hashtags">Hashtags (comma-separated)</string>
+    <string name="calendar_event_pick_date">Pick date</string>
+    <string name="calendar_event_pick_time">Pick time</string>
+    <string name="calendar_event_invalid">Title and start are required.</string>
+    <string name="calendar_event_end_before_start">End must be after start.</string>
+    <string name="calendar_nav_previous_month">Previous month</string>
+    <string name="calendar_nav_next_month">Next month</string>
+    <string name="calendar_nav_previous_week">Previous week</string>
+    <string name="calendar_nav_next_week">Next week</string>
+    <string name="calendar_nav_previous_day">Previous day</string>
+    <string name="calendar_nav_next_day">Next day</string>
+    <string name="calendar_no_events_today">No events on this day</string>
+    <string name="calendar_no_events">No events</string>
+    <string name="calendar_continues">Continues</string>
+    <string name="calendar_day_of_total">Day %1$d of %2$d</string>
+    <string name="calendar_add_to_phone_calendar">Add to phone calendar</string>
+    <string name="calendar_nav_jump_to_today">Jump to today</string>
+    <plurals name="calendar_day_a11y_events">
+        <item quantity="one">%1$s, %2$d event</item>
+        <item quantity="other">%1$s, %2$d events</item>
+    </plurals>
+    <string name="calendar_day_a11y_no_events">%1$s, no events</string>
+    <string name="calendar_day_a11y_today_suffix">today</string>
+    <string name="calendar_day_a11y_selected_suffix">selected</string>
+    <string name="calendar_fab_new_event">Create a new calendar event</string>
+    <string name="calendar_fab_new_collection">Create a new calendar collection</string>
+    <string name="calendar_fab_toggle">Show create options</string>
+    <string name="calendar_untitled">(untitled)</string>
+    <string name="calendar_all_day">All-day</string>
+    <string name="calendar_rsvp_going_prefixed">✓ Going</string>
+    <string name="calendar_rsvp_maybe_prefixed">\? Maybe</string>
+    <string name="calendar_rsvp_not_going_prefixed">✗ Can\'t go</string>
+
+    <string name="calendar_collection_title">Title</string>
+    <string name="calendar_collection_description">Description</string>
+    <string name="calendar_collection_invalid">A title is required.</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d event</item>
+        <item quantity="other">%1$d events</item>
+    </plurals>
+    <string name="calendar_collection_empty_members">No events in this calendar yet.</string>
+
+    <string name="calendar_rsvp_going">Going</string>
+    <string name="calendar_rsvp_maybe">Maybe</string>
+    <string name="calendar_rsvp_not_going">Can\'t go</string>
+    <string name="calendar_rsvp_section">RSVPs (%1$d)</string>
+    <string name="calendar_rsvp_none">No RSVPs yet.</string>
+    <string name="calendar_participants_section">Participants (%1$d)</string>
+    <string name="calendar_event_in_calendars">In calendars (%1$d)</string>
+    <string name="calendar_event_in_no_calendars">Not part of any calendar yet.</string>
+    <string name="calendar_event_loading">Loading event…</string>
+    <string name="calendar_relative_ongoing">Happening now</string>
+    <string name="calendar_relative_ongoing_with_end">%1$s · ends %2$s</string>
+    <string name="calendar_export_share_title">Share calendar event</string>
+    <string name="calendar_export_event">Export to calendar (.ics)</string>
+    <string name="calendar_reminder_channel_id">calendar_reminders</string>
+    <string name="calendar_reminder_channel_name">Calendar reminders</string>
+    <string name="calendar_reminder_channel_description">Heads-up when an event you\'re attending is about to start.</string>
+    <string name="calendar_reminder_default_title">Calendar event</string>
+    <plurals name="calendar_reminder_body">
+        <item quantity="one">Starts in %1$d minute</item>
+        <item quantity="other">Starts in %1$d minutes</item>
+    </plurals>
+    <string name="calendar_add_to_calendar_action">Add to one of your calendars</string>
+    <string name="calendar_add_to_calendar_title">Add to a calendar</string>
+    <string name="calendar_add_to_calendar_none">You haven\'t created any calendars yet.</string>
+    <string name="calendar_collection_delete">Delete calendar</string>
+    <string name="calendar_collection_delete_confirm_title">Delete this calendar?</string>
+    <string name="calendar_collection_delete_confirm_message">The calendar list will be removed. Events inside it are not deleted.</string>
+    <string name="calendar_event_pick_image">Pick image</string>
+    <string name="calendar_event_image_upload_failed">Image upload failed</string>
+    <string name="calendar_event_image_upload_failed_body">The picked image couldn\'t be uploaded. Try again or paste a URL.</string>
+    <string name="calendar_event_participants_section">Participants (%1$d)</string>
+    <string name="calendar_event_participant_input">Search name, npub, or nip-05</string>
+    <string name="calendar_event_participant_invalid">Enter a valid npub… or 64-character hex pubkey.</string>
+    <string name="calendar_event_participant_remove">Remove participant</string>
+    <string name="calendar_reminder_settings_title">Calendar reminders</string>
+    <string name="calendar_reminder_settings_enabled_title">Send reminders</string>
+    <string name="calendar_reminder_settings_enabled_subtitle">A notification fires when an event you\'re attending is about to start.</string>
+    <string name="calendar_reminder_settings_lead_title">Reminder lead time</string>
+    <string name="calendar_reminder_settings_lead_subtitle">How many minutes before the event you want to be notified.</string>
+    <plurals name="calendar_reminder_settings_lead_choice">
+        <item quantity="one">%1$d min</item>
+        <item quantity="other">%1$d min</item>
+    </plurals>
+    <string name="calendar_share_nostr">Share as nostr link</string>
+    <string name="calendar_share_nostr_title">Share calendar link</string>
+    <string name="calendar_filter_all">All calendars</string>
+    <string name="calendar_filter_sheet_title">Show events from…</string>
+    <string name="calendar_filter_no_calendars">You haven\'t created any calendars yet.</string>
+    <string name="calendar_open_in_maps">Open in maps</string>
+    <string name="calendar_open_link">Open link</string>
+    <string name="route_calendar_event_detail">Event details</string>
     <string name="new_short_video">New Short Video</string>
     <string name="new_long_video">New Long Video</string>
 
@@ -1887,6 +2044,8 @@
     <string name="boost_or_quote_description">Boost Or Quote</string>
     <string name="like_description">Like</string>
     <string name="zap_description">Zap</string>
+    <string name="onchain_zap_description">On-chain Bitcoin zap</string>
+    <string name="onchain_zap_pending">Pending confirmation</string>
 
     <string name="change_reaction">Change Quick Reactions</string>
 
@@ -2288,6 +2447,9 @@
     <string name="remove_user_from_the_list">Remove user from the list</string>
     <string name="follow_list_item_label">Follow Pack</string>
     <string name="members">Members</string>
+    <string name="contact_list_containing_label">Follow list containing %1$d user(s):</string>
+    <string name="contact_list_screen_title">Follow list</string>
+    <string name="contact_list_screen_title_with_count">Follow list (%1$d)</string>
 
     <string name="people_list_title">Follow List Metadata</string>
     <string name="people_list_explainer">Follow lists metadata can be seen by anyone on Nostr. Only your private members are encrypted.</string>

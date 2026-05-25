@@ -33,6 +33,20 @@ interface OnchainBackend {
     /** Fetch the spendable UTXOs paying `address` (bech32m taproot for NIP-BC). */
     suspend fun getUtxosForAddress(address: String): List<Utxo>
 
+    /**
+     * Fetch a page of transactions touching `address`, projected onto the
+     * address's perspective (see [BitcoinAddressTx.netValueSats]).
+     *
+     * The first call (`afterTxid == null`) returns the most recent mempool
+     * transactions followed by the first page of confirmed transactions, newest
+     * first. Subsequent calls pass the txid of the last entry of the previous
+     * confirmed page to get the next page. An empty list means no more pages.
+     */
+    suspend fun getTxsForAddress(
+        address: String,
+        afterTxid: String? = null,
+    ): List<BitcoinAddressTx>
+
     /** Broadcast a fully signed transaction (lowercase hex). Returns the txid. */
     suspend fun broadcast(rawTxHex: String): String
 

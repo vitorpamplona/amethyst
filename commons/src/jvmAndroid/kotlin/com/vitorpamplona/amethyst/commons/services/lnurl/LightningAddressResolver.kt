@@ -24,6 +24,8 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.lightning.Lud06
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointCache
+import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -122,6 +124,15 @@ class LightningAddressResolver(
                         ?: return@withContext Result.Error("No callback URL in LNURL response")
 
                 val allowsNostr = lnurlp.get("allowsNostr")?.asBoolean() ?: false
+                val nostrPubkey = lnurlp.get("nostrPubkey")?.asText()?.ifBlank { null }
+
+                // Prime the receipt-validation cache so incoming zap receipts can
+                // be checked against this provider's nostrPubkey (NIP-57 Appendix F)
+                // without re-fetching the lnurlp endpoint.
+                LnurlEndpointCache.put(
+                    url,
+                    LnurlEndpointInfo(nostrPubkey = nostrPubkey, allowsNostr = allowsNostr),
+                )
 
                 onProgress(0.5f)
 
@@ -132,7 +143,7 @@ class LightningAddressResolver(
                         milliSats = milliSats,
                         message = message,
                         zapRequest = if (allowsNostr) zapRequest else null,
-                    ) ?: return@withContext Result.Error("Failed to fetch invoice from callback")
+                    ) ?: return@withContext Result.Error("Failed to connect to payment server")
 
                 onProgress(0.7f)
 
@@ -146,7 +157,9 @@ class LightningAddressResolver(
                 val pr = invoiceResponse?.get("pr")?.asText()?.ifBlank { null }
 
                 if (pr == null) {
-                    val reason = invoiceResponse?.get("reason")?.asText()?.ifBlank { null }
+                    val reason =
+                        invoiceResponse?.get("reason")?.asText()?.ifBlank { null }
+                            ?: invoiceResponse?.get("message")?.asText()?.ifBlank { null }
                     return@withContext Result.Error(reason ?: "No invoice in response")
                 }
 
@@ -210,11 +223,8 @@ class LightningAddressResolver(
 
                 val request = Request.Builder().url(url).build()
                 httpClient.newCall(request).execute().use { response ->
-                    if (response.isSuccessful) {
-                        response.body?.string()
-                    } else {
-                        null
-                    }
+                    // Return body even on error — caller extracts "reason" or "message" from JSON
+                    response.body?.string()
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

@@ -590,6 +590,7 @@ fun main() {
                             Item("Profile", onClick = { deckState.addColumn(DeckColumnType.MyProfile) })
                             Item("Chess", onClick = { deckState.addColumn(DeckColumnType.Chess) })
                             Item("Relays", onClick = { deckState.addColumn(DeckColumnType.Relays) })
+                            Item("Wallet", onClick = { deckState.addColumn(DeckColumnType.Wallet) })
                         }
                     }
                 }
@@ -944,8 +945,11 @@ fun App(
                                     if (current?.signerType is com.vitorpamplona.amethyst.commons.model.account.SignerType.Remote) {
                                         accountManager.startHeartbeat(scope)
                                     }
-                                    // Ensure account is in multi-account storage + refresh list
+                                    // Save account (privkey to keychain + metadata to disk)
+                                    // then ensure multi-account storage is up to date.
+                                    // Uses App-level scope so it survives LoginScreen leaving composition.
                                     scope.launch(Dispatchers.IO) {
+                                        accountManager.saveCurrentAccount()
                                         accountManager.ensureCurrentAccountInStorage()
                                         accountManager.refreshAccountList()
                                     }

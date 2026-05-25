@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm
 
 import android.content.Context
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -181,7 +182,7 @@ class LongFormPostViewModel :
     // Forward Zap to
     var wantsForwardZapTo by mutableStateOf(false)
     override var forwardZapTo = mutableStateOf<SplitBuilder<User>>(SplitBuilder())
-    override var forwardZapToEditting = mutableStateOf(TextFieldValue(""))
+    override val forwardZapToEditting = TextFieldState()
 
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
@@ -290,7 +291,7 @@ class LongFormPostViewModel :
             val value = it.last().toFloatOrNull() ?: 0f
             forwardZapTo.value.addItem(user, value)
         }
-        forwardZapToEditting.value = TextFieldValue("")
+        forwardZapToEditting.clearText()
         wantsForwardZapTo = localForwardZapTo.isNotEmpty()
 
         wantsToMarkAsSensitive = draftEvent.isSensitive()
@@ -603,7 +604,7 @@ class LongFormPostViewModel :
         wantsSecretEmoji = false
 
         forwardZapTo.value = SplitBuilder()
-        forwardZapToEditting.value = TextFieldValue("")
+        forwardZapToEditting.clearText()
 
         userSuggestions?.reset()
         userSuggestionsMainMessage = null
@@ -634,10 +635,9 @@ class LongFormPostViewModel :
         draftTag.newVersion()
     }
 
-    override fun updateZapForwardTo(newZapForwardTo: TextFieldValue) {
-        forwardZapToEditting.value = newZapForwardTo
-        if (newZapForwardTo.selection.collapsed) {
-            val lastWord = newZapForwardTo.text
+    override fun onForwardZapTextChanged() {
+        if (forwardZapToEditting.selection.collapsed) {
+            val lastWord = forwardZapToEditting.text.toString()
             userSuggestionsMainMessage = UserSuggestionAnchor.FORWARD_ZAPS
             userSuggestions?.processCurrentWord(lastWord)
         }
@@ -650,7 +650,7 @@ class LongFormPostViewModel :
                 userSuggestions.replaceCurrentWord(message, lastWord, item)
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
                 forwardZapTo.value.addItem(item)
-                forwardZapToEditting.value = TextFieldValue("")
+                forwardZapToEditting.clearText()
             }
 
             userSuggestionsMainMessage = null

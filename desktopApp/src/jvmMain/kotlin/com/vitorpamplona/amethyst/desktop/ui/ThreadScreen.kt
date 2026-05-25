@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -62,12 +63,18 @@ import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.feeds.DesktopThreadFilter
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
+import com.vitorpamplona.amethyst.desktop.subscriptions.FilterBuilders
+import com.vitorpamplona.amethyst.desktop.subscriptions.SubscriptionConfig
 import com.vitorpamplona.amethyst.desktop.subscriptions.createNoteSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createThreadRepliesSubscription
+import com.vitorpamplona.amethyst.desktop.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
 import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 
 /**
  * Desktop Thread Screen - displays a note and all its replies in a thread view.
@@ -175,6 +182,38 @@ fun ThreadScreen(
         if (subscriptionsCoordinator != null && threadNotes.isNotEmpty()) {
             subscriptionsCoordinator.loadMetadataForNotes(threadNotes)
         }
+    }
+
+    // Fetch quoted notes referenced in thread content
+    val quotedNoteIds =
+        remember(threadNotes) {
+            threadNotes
+                .mapNotNull { it.event }
+                .flatMap { event ->
+                    UrlParser()
+                        .parseValidUrls(event.content)
+                        .bech32s
+                        .mapNotNull { bech32 ->
+                            when (val entity = Nip19Parser.uriToRoute(bech32)?.entity) {
+                                is NNote -> entity.hex
+                                is NEvent -> entity.hex
+                                else -> null
+                            }
+                        }
+                }.filter { localCache.getNoteIfExists(it)?.event == null }
+                .distinct()
+        }
+
+    rememberSubscription(connectedRelays, quotedNoteIds, relayManager = relayManager) {
+        if (connectedRelays.isEmpty() || quotedNoteIds.isEmpty()) return@rememberSubscription null
+        SubscriptionConfig(
+            subId = generateSubId("thread-quoted"),
+            filters = listOf(FilterBuilders.byIds(quotedNoteIds)),
+            relays = connectedRelays,
+            onEvent = { event, _, relay, _ ->
+                subscriptionsCoordinator?.consumeEvent(event, relay)
+            },
+        )
     }
 
     // Calculate reply level for a note based on e-tags

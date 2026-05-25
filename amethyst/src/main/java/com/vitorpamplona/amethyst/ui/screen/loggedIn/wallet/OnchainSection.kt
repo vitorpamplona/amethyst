@@ -22,9 +22,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,6 +36,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -42,6 +45,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -59,11 +63,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.components.util.setText
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.TaprootAddress
 import kotlinx.coroutines.Dispatchers
@@ -83,6 +92,7 @@ import java.text.NumberFormat
 @Composable
 fun OnchainSection(
     accountViewModel: AccountViewModel,
+    nav: INav,
     modifier: Modifier = Modifier,
 ) {
     val pubKey = accountViewModel.account.signer.pubKey
@@ -118,7 +128,10 @@ fun OnchainSection(
     val orange = MaterialTheme.colorScheme.bitcoinColor
 
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clickable { nav.nav(Route.OnchainTransactions) },
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(2.dp, orange),
         colors =
@@ -173,6 +186,8 @@ private fun HeaderRow(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
+                Spacer(modifier = Modifier.width(8.dp))
+                PublicChip()
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -183,6 +198,56 @@ private fun HeaderRow(
         }
 
         BalanceBlock(state = balanceState, sats = balanceSats, orange = orange)
+    }
+}
+
+@Composable
+private fun PublicChip() {
+    var showDialog by remember { mutableStateOf(false) }
+    val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
+
+    Row(
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(onSurfaceVariant.copy(alpha = 0.12f))
+                .clickable { showDialog = true }
+                .padding(horizontal = 6.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Info,
+            contentDescription = null,
+            tint = onSurfaceVariant,
+            modifier = Modifier.size(12.dp),
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = stringRes(R.string.wallet_onchain_public_chip),
+            style = MaterialTheme.typography.labelSmall,
+            color = onSurfaceVariant,
+            fontWeight = FontWeight.Medium,
+        )
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            icon = {
+                Icon(
+                    symbol = MaterialSymbols.Info,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                )
+            },
+            title = { Text(stringRes(R.string.wallet_onchain_public_dialog_title)) },
+            text = { Text(stringRes(R.string.wallet_onchain_public_dialog_body)) },
+            confirmButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text(stringRes(R.string.wallet_onchain_public_dialog_confirm))
+                }
+            },
+        )
     }
 }
 
@@ -297,7 +362,15 @@ private fun ActionRow(
 ) {
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
+    val sharedPrefs = accountViewModel.settings.uiSettingsFlow
+    val dontShowCopyWarning by sharedPrefs.dontShowOnchainPublicWarning.collectAsStateWithLifecycle()
     var showSendDialog by remember { mutableStateOf(false) }
+    var showCopyWarning by remember { mutableStateOf(false) }
+
+    val copyAddress = {
+        scope.launch { clipboard.setText(address) }
+        Unit
+    }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -305,7 +378,13 @@ private fun ActionRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         OutlinedButton(
-            onClick = { scope.launch { clipboard.setText(address) } },
+            onClick = {
+                if (dontShowCopyWarning) {
+                    copyAddress()
+                } else {
+                    showCopyWarning = true
+                }
+            },
             modifier = Modifier.height(36.dp),
             shape = RoundedCornerShape(8.dp),
         ) {
@@ -346,4 +425,62 @@ private fun ActionRow(
             onDismiss = { showSendDialog = false },
         )
     }
+
+    if (showCopyWarning) {
+        CopyPublicAddressDialog(
+            onConfirm = {
+                showCopyWarning = false
+                copyAddress()
+            },
+            onDontShowAgain = {
+                sharedPrefs.dontShowOnchainPublicWarning()
+                showCopyWarning = false
+                copyAddress()
+            },
+            onDismiss = { showCopyWarning = false },
+        )
+    }
+}
+
+@Composable
+private fun CopyPublicAddressDialog(
+    onConfirm: () -> Unit,
+    onDontShowAgain: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                symbol = MaterialSymbols.Info,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+            )
+        },
+        title = { Text(stringRes(R.string.wallet_onchain_public_dialog_title)) },
+        text = { Text(stringRes(R.string.wallet_onchain_public_dialog_body)) },
+        confirmButton = {
+            Row(
+                modifier = Modifier.padding(all = 8.dp).fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(onClick = onDontShowAgain) {
+                    Text(stringRes(R.string.quick_action_dont_show_again_button))
+                }
+                Button(
+                    onClick = onConfirm,
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                ) {
+                    Icon(
+                        symbol = MaterialSymbols.ContentCopy,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringRes(R.string.wallet_onchain_copy_dialog_confirm))
+                }
+            }
+        },
+    )
 }

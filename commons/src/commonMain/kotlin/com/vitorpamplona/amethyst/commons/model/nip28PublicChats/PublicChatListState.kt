@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
@@ -94,6 +95,19 @@ class PublicChatListState(
                 scope,
                 SharingStarted.Eagerly,
                 emptySet(),
+            )
+
+    val flowSetNote =
+        flowSet
+            .map {
+                it.mapNotNull {
+                    cache.checkGetOrCreateNote(it)
+                }
+            }.flowOn(Dispatchers.IO)
+            .stateIn(
+                scope,
+                SharingStarted.Eagerly,
+                emptyList(),
             )
 
     suspend fun follow(channel: PublicChatChannel): ChannelListEvent {

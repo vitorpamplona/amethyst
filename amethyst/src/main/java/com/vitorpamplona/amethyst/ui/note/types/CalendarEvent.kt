@@ -86,6 +86,15 @@ fun RenderCalendarTimeSlotEvent(
         dateRange = dateRange,
         note = note,
         accountViewModel = accountViewModel,
+        rsvpRow = {
+            CalendarRsvpRow(
+                eventKind = CalendarTimeSlotEvent.KIND,
+                eventPubKey = noteEvent.pubKey,
+                eventDTag = noteEvent.dTag(),
+                eventId = noteEvent.id,
+                accountViewModel = accountViewModel,
+            )
+        },
     )
 }
 
@@ -119,6 +128,15 @@ fun RenderCalendarDateSlotEvent(
         dateRange = dateRange,
         note = note,
         accountViewModel = accountViewModel,
+        rsvpRow = {
+            CalendarRsvpRow(
+                eventKind = CalendarDateSlotEvent.KIND,
+                eventPubKey = noteEvent.pubKey,
+                eventDTag = noteEvent.dTag(),
+                eventId = noteEvent.id,
+                accountViewModel = accountViewModel,
+            )
+        },
     )
 }
 
@@ -131,6 +149,7 @@ private fun CalendarHeader(
     dateRange: String?,
     note: Note,
     accountViewModel: AccountViewModel,
+    rsvpRow: @Composable () -> Unit = {},
 ) {
     Column(MaterialTheme.colorScheme.replyModifier) {
         image?.let {
@@ -209,6 +228,8 @@ private fun CalendarHeader(
         if (summary == null) {
             Spacer(modifier = StdVertSpacer)
         }
+
+        rsvpRow()
     }
 }
 

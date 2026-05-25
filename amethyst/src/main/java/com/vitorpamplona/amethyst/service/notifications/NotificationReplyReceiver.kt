@@ -94,6 +94,25 @@ class NotificationReplyReceiver : BroadcastReceiver() {
                     sendPublicReply(accountNpub, targetEventId, replyText)
                 }
             }
+
+            NotificationUtils.MARMOT_REPLY_ACTION -> {
+                val replyText =
+                    RemoteInput
+                        .getResultsFromIntent(intent)
+                        ?.getCharSequence(NotificationUtils.KEY_REPLY_TEXT)
+                        ?.toString()
+
+                if (replyText.isNullOrBlank()) return
+
+                val accountNpub = intent.getStringExtra(NotificationUtils.KEY_ACCOUNT_NPUB) ?: return
+                val nostrGroupId = intent.getStringExtra(NotificationUtils.KEY_MARMOT_GROUP_ID) ?: return
+                val replyToInnerId = intent.getStringExtra(NotificationUtils.KEY_MARMOT_REPLY_TO_INNER_ID)
+                val replyToInnerAuthor = intent.getStringExtra(NotificationUtils.KEY_MARMOT_REPLY_TO_INNER_AUTHOR)
+
+                runOnRelay(notificationManager, notificationId) {
+                    sendMarmotReply(accountNpub, nostrGroupId, replyToInnerId, replyToInnerAuthor, replyText)
+                }
+            }
         }
     }
 
@@ -138,6 +157,34 @@ class NotificationReplyReceiver : BroadcastReceiver() {
         val template = ChatMessageEvent.build(msg = replyText, to = recipients)
 
         account.sendNip17PrivateMessage(template)
+    }
+
+    private suspend fun sendMarmotReply(
+        accountNpub: String,
+        nostrGroupId: String,
+        replyToInnerEventId: String?,
+        replyToInnerAuthor: String?,
+        replyText: String,
+    ) {
+        val accountSettings = LocalPreferences.loadAccountConfigFromEncryptedStorage(accountNpub) ?: return
+        val account = Amethyst.instance.accountsCache.loadAccount(accountSettings)
+
+        val manager = account.marmotManager ?: return
+
+        // Use id+author from the Intent so the reply is threaded even when
+        // LocalCache hasn't been rehydrated yet (cold-process broadcast
+        // receiver: Account.restoreAll runs async on init and may not have
+        // finished by the time we get here).
+        val bundle =
+            manager.buildTextMessage(
+                nostrGroupId = nostrGroupId,
+                text = replyText,
+                replyToEventId = replyToInnerEventId,
+                replyToAuthorPubKey = replyToInnerAuthor,
+                persistOwn = false,
+            )
+
+        account.sendMarmotGroupMessage(nostrGroupId, bundle.innerEvent, account.marmotGroupRelays(nostrGroupId))
     }
 
     private suspend fun sendPublicReply(

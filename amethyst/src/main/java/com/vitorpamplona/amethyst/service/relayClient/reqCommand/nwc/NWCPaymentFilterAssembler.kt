@@ -26,11 +26,12 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-// This allows multiple screen to be listening to tags, even the same tag
+// This allows multiple screen to be listening to tags, even the same tag.
+// The subscription filter only needs the request event id (#e) — the wallet
+// service's identity is authenticated by NIP-04 decryption against the
+// per-connection shared secret, not by relay-side `authors`/`#p` filtering.
 @Stable
 class NWCPaymentQueryState(
-    val fromServiceHex: HexKey,
-    val toUserHex: HexKey,
     val replyingToHex: HexKey,
     val relay: NormalizedRelayUrl,
 )
@@ -47,6 +48,18 @@ class NWCPaymentFilterAssembler(
     override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
 
     override fun invalidateKeys() = invalidateFilters()
+
+    /**
+     * Synchronously sends the REQ frame to the relay, bypassing the 500ms
+     * BundledUpdate debounce. Used for NIP-47 RPC where the response is an
+     * ephemeral event (kind 23195) and the subscription must be active on the
+     * relay before we publish the request event — otherwise the relay drops
+     * the response with no replay.
+     */
+    fun subscribeAndFlush(query: NWCPaymentQueryState) {
+        subscribe(query)
+        group.forEach { it.forceInvalidate() }
+    }
 
     override fun destroy() = group.forEach { it.destroy() }
 }

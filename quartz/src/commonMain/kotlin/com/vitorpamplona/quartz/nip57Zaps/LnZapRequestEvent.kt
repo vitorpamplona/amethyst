@@ -95,6 +95,8 @@ class LnZapRequestEvent(
             message: String,
             zapType: LnZapEvent.ZapType,
             toUserPubHex: String?,
+            amountMillisats: Long? = null,
+            lnurl: String? = null,
             createdAt: Long = TimeUtils.now(),
         ): LnZapRequestEvent {
             var tags =
@@ -110,6 +112,12 @@ class LnZapRequestEvent(
             }
             if (pollOption != null && pollOption >= 0) {
                 tags = tags + listOf(arrayOf(PollOptionTag.TAG_NAME, pollOption.toString()))
+            }
+            if (amountMillisats != null && amountMillisats > 0) {
+                tags = tags + listOf(arrayOf("amount", amountMillisats.toString()))
+            }
+            if (!lnurl.isNullOrBlank()) {
+                tags = tags + listOf(arrayOf("lnurl", lnurl))
             }
 
             return when (zapType) {
@@ -139,6 +147,8 @@ class LnZapRequestEvent(
             signer: NostrSigner,
             message: String,
             zapType: LnZapEvent.ZapType,
+            amountMillisats: Long? = null,
+            lnurl: String? = null,
             createdAt: Long = TimeUtils.now(),
         ): LnZapRequestEvent {
             var tags =
@@ -146,6 +156,12 @@ class LnZapRequestEvent(
                     arrayOf("p", userHex),
                     arrayOf("relays") + relays.map { it.url },
                 )
+            if (amountMillisats != null && amountMillisats > 0) {
+                tags += arrayOf(arrayOf("amount", amountMillisats.toString()))
+            }
+            if (!lnurl.isNullOrBlank()) {
+                tags += arrayOf(arrayOf("lnurl", lnurl))
+            }
 
             return when (zapType) {
                 LnZapEvent.ZapType.PUBLIC -> {

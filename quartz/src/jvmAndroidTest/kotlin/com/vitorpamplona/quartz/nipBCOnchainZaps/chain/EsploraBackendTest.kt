@@ -109,6 +109,62 @@ class EsploraBackendTest {
     }
 
     @Test
+    fun parsesAddressTxList_incomingAndOutgoing() {
+        // Two transactions:
+        //  - tx1: pays 25_000 to our address (incoming, sender = bc1qSENDER)
+        //  - tx2: spends 100_000 from our address; 30_000 to bc1qOUT and 65_000 back as change (outgoing)
+        val ours = "bc1pours"
+        val json =
+            """
+            [
+              {
+                "txid": "1111111111111111111111111111111111111111111111111111111111111111",
+                "vin": [
+                  { "prevout": { "scriptpubkey_address": "bc1qsender", "value": 50000 } }
+                ],
+                "vout": [
+                  { "scriptpubkey_address": "$ours", "value": 25000 },
+                  { "scriptpubkey_address": "bc1qsender", "value": 24500 }
+                ],
+                "status": { "confirmed": true, "block_height": 800000, "block_time": 1700000000 }
+              },
+              {
+                "txid": "2222222222222222222222222222222222222222222222222222222222222222",
+                "vin": [
+                  { "prevout": { "scriptpubkey_address": "$ours", "value": 100000 } }
+                ],
+                "vout": [
+                  { "scriptpubkey_address": "bc1qout", "value": 30000 },
+                  { "scriptpubkey_address": "$ours", "value": 65000 }
+                ],
+                "status": { "confirmed": false }
+              }
+            ]
+            """.trimIndent()
+
+        val txs = backend.parseAddressTxList(json, ours)
+        assertEquals(2, txs.size)
+
+        // tx1: incoming, +25_000 sats.
+        assertEquals(25_000L, txs[0].netValueSats)
+        assertEquals(1, txs[0].confirmations)
+        assertEquals(800_000L, txs[0].blockHeight)
+        assertEquals(1_700_000_000L, txs[0].blockTime)
+        assertEquals(listOf("bc1qsender"), txs[0].counterpartyAddresses)
+
+        // tx2: outgoing, net = 65_000 - 100_000 = -35_000 (includes fee).
+        assertEquals(-35_000L, txs[1].netValueSats)
+        assertEquals(0, txs[1].confirmations)
+        assertEquals(listOf("bc1qout"), txs[1].counterpartyAddresses)
+    }
+
+    @Test
+    fun parsesAddressTxList_emptyResponse() {
+        val txs = backend.parseAddressTxList("[]", "bc1pignored")
+        assertEquals(0, txs.size)
+    }
+
+    @Test
     fun parsesMempoolSpaceRecommendedFees() {
         // mempool.space /v1/fees/recommended
         val json =

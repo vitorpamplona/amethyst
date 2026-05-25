@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.ui.actions
 
 import android.content.Context
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -77,7 +79,7 @@ open class EditPostViewModel : ViewModel() {
     var nip95attachments by
         mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
 
-    var message by mutableStateOf(TextFieldValue(""))
+    val message = TextFieldState()
     var urlPreview by mutableStateOf<String?>(null)
     val mediaUploadTracker = MediaUploadTracker()
     val isUploadingImage: Boolean get() = mediaUploadTracker.isUploadingImage
@@ -111,7 +113,7 @@ open class EditPostViewModel : ViewModel() {
         canAddInvoice = accountViewModel.userProfile().lnAddress() != null
         multiOrchestrator = null
 
-        message = TextFieldValue(versionLookingAt?.event?.content ?: edit.event?.content ?: "")
+        message.setTextAndPlaceCursorAtEnd(versionLookingAt?.event?.content ?: edit.event?.content ?: "")
         urlPreview = findUrlInMessage()
 
         this.editedFromNote = edit
@@ -141,7 +143,7 @@ open class EditPostViewModel : ViewModel() {
             }
 
         account.sendEdit(
-            message = message.text,
+            message = message.text.toString(),
             originalNote = editedFromNote!!,
             notify = notify,
             summary = subject.text.ifBlank { null },
@@ -248,7 +250,7 @@ open class EditPostViewModel : ViewModel() {
                             }
                         }
 
-                    message = message.insertUrlAtCursor(urls.joinToString(" "))
+                    message.insertUrlAtCursor(urls.joinToString(" "))
                     urlPreview = findUrlInMessage()
 
                     this@EditPostViewModel.multiOrchestrator = null
@@ -264,7 +266,7 @@ open class EditPostViewModel : ViewModel() {
     }
 
     open fun cancel() {
-        message = TextFieldValue("")
+        message.setTextAndPlaceCursorAtEnd("")
         subject = TextFieldValue("")
 
         editedFromNote = null
@@ -280,17 +282,16 @@ open class EditPostViewModel : ViewModel() {
     }
 
     open fun findUrlInMessage(): String? =
-        message.text.split('\n').firstNotNullOfOrNull { paragraph ->
+        message.text.toString().split('\n').firstNotNullOfOrNull { paragraph ->
             paragraph.split(' ').firstOrNull { word: String ->
                 RichTextParser.isValidURL(word) || RichTextParser.isUrlWithoutScheme(word)
             }
         }
 
-    open fun updateMessage(it: TextFieldValue) {
-        message = it
+    open fun onMessageChanged() {
         urlPreview = findUrlInMessage()
 
-        if (it.selection.collapsed) {
+        if (message.selection.collapsed) {
             val lastWord = message.currentWord()
             if (lastWord.startsWith("@")) {
                 userSuggestionsMainMessage = UserSuggestionAnchor.MAIN_MESSAGE
@@ -305,7 +306,7 @@ open class EditPostViewModel : ViewModel() {
     open fun autocompleteWithUser(item: User) {
         userSuggestions?.let { userSuggestions ->
             val lastWord = message.currentWord()
-            message = userSuggestions.replaceCurrentWord(message, lastWord, item)
+            userSuggestions.replaceCurrentWord(message, lastWord, item)
 
             userSuggestionsMainMessage = null
             userSuggestions.reset()

@@ -128,6 +128,7 @@ fun DeckColumnType.category(): ScreenCategory =
 
         DeckColumnType.MyProfile,
         DeckColumnType.Settings,
+        DeckColumnType.Wallet,
         -> ScreenCategory.IDENTITY
 
         DeckColumnType.Chess -> ScreenCategory.PLAY
@@ -176,6 +177,7 @@ val LAUNCHABLE_SCREENS: List<DeckColumnType> =
         DeckColumnType.Settings,
         DeckColumnType.Relays,
         DeckColumnType.Chess,
+        DeckColumnType.Wallet,
     )
 
 // -- Tabs --

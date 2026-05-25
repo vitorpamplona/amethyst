@@ -104,6 +104,7 @@ private object PrefKeys {
     const val DEFAULT_DISCOVERY_FOLLOW_LIST = "defaultDiscoveryFollowList"
     const val DEFAULT_POLLS_FOLLOW_LIST = "defaultPollsFollowList"
     const val DEFAULT_PICTURES_FOLLOW_LIST = "defaultPicturesFollowList"
+    const val DEFAULT_CALENDARS_FOLLOW_LIST = "defaultCalendarsFollowList"
     const val DEFAULT_PRODUCTS_FOLLOW_LIST = "defaultProductsFollowList"
     const val DEFAULT_SHORTS_FOLLOW_LIST = "defaultShortsFollowList"
     const val DEFAULT_PUBLIC_CHATS_FOLLOW_LIST = "defaultPublicChatsFollowList"
@@ -322,8 +323,16 @@ object LocalPreferences {
     }
 
     suspend fun setDefaultAccount(accountSettings: AccountSettings) {
-        setCurrentAccount(accountSettings)
+        // Save the per-npub file before emitting onto the savedAccounts flow.
+        // Otherwise a collector (e.g. AlwaysOnNotificationServiceManager) can race in
+        // and call loadAccountConfigFromEncryptedStorage(npub) before NOSTR_PUBKEY is
+        // written, get null back, and poison `cachedAccounts[npub] = null` for the
+        // rest of the session — making every later switch to this account land on
+        // LoggedOff instead of LoggedIn.
         saveToEncryptedStorage(accountSettings)
+        val npub = accountSettings.keyPair.pubKey.toNpub()
+        mutex.withLock { cachedAccounts.put(npub, accountSettings) }
+        setCurrentAccount(accountSettings)
     }
 
     suspend fun allSavedAccounts(): List<AccountInfo> = savedAccounts()
@@ -361,6 +370,7 @@ object LocalPreferences {
 
                     putString(PrefKeys.DEFAULT_POLLS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPollsFollowList.value))
                     putString(PrefKeys.DEFAULT_PICTURES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPicturesFollowList.value))
+                    putString(PrefKeys.DEFAULT_CALENDARS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultCalendarsFollowList.value))
                     putString(PrefKeys.DEFAULT_PRODUCTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultProductsFollowList.value))
                     putString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultShortsFollowList.value))
                     putString(PrefKeys.DEFAULT_PUBLIC_CHATS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPublicChatsFollowList.value))
@@ -487,19 +497,20 @@ object LocalPreferences {
 
     suspend fun loadAccountConfigFromEncryptedStorage(npub: String): AccountSettings? {
         // if already loaded, return right away
-        if (cachedAccounts.containsKey(npub)) {
-            return cachedAccounts[npub]
-        }
+        cachedAccounts[npub]?.let { return it }
 
         return withContext(Dispatchers.IO) {
             mutex.withLock {
-                if (cachedAccounts.containsKey(npub)) {
-                    return@withContext cachedAccounts.get(npub)
-                }
+                cachedAccounts[npub]?.let { return@withContext it }
 
                 val accountSettings = innerLoadCurrentAccountFromEncryptedStorage(npub)
 
-                cachedAccounts.put(npub, accountSettings)
+                // Only cache successful loads. Caching null would leave the account
+                // permanently unreachable for the rest of the session if a reader
+                // raced in before the per-npub file finished being written.
+                if (accountSettings != null) {
+                    cachedAccounts.put(npub, accountSettings)
+                }
 
                 return@withContext accountSettings
             }
@@ -641,6 +652,7 @@ object LocalPreferences {
                         defaultDiscoveryFollowList = MutableStateFlow(followListPrefs.discovery),
                         defaultPollsFollowList = MutableStateFlow(followListPrefs.polls),
                         defaultPicturesFollowList = MutableStateFlow(followListPrefs.pictures),
+                        defaultCalendarsFollowList = MutableStateFlow(followListPrefs.calendars),
                         defaultProductsFollowList = MutableStateFlow(followListPrefs.products),
                         defaultShortsFollowList = MutableStateFlow(followListPrefs.shorts),
                         defaultPublicChatsFollowList = MutableStateFlow(followListPrefs.publicChats),
@@ -712,6 +724,7 @@ object LocalPreferences {
         val discovery: TopFilter,
         val polls: TopFilter,
         val pictures: TopFilter,
+        val calendars: TopFilter,
         val products: TopFilter,
         val shorts: TopFilter,
         val publicChats: TopFilter,
@@ -733,6 +746,7 @@ object LocalPreferences {
             discovery = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, null), TopFilter.Global),
             polls = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_POLLS_FOLLOW_LIST, null), TopFilter.Global),
             pictures = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PICTURES_FOLLOW_LIST, null), TopFilter.Global),
+            calendars = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_CALENDARS_FOLLOW_LIST, null), TopFilter.Global),
             products = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PRODUCTS_FOLLOW_LIST, null), TopFilter.AroundMe),
             shorts = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_SHORTS_FOLLOW_LIST, null), TopFilter.Global),
             publicChats = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PUBLIC_CHATS_FOLLOW_LIST, null), TopFilter.Global),

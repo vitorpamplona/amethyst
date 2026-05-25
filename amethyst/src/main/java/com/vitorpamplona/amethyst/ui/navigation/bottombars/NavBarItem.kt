@@ -50,6 +50,9 @@ enum class NavBarItem {
     COMMUNITIES,
     ARTICLES,
     PICTURES,
+    SOFTWARE_APPS,
+    CALENDARS,
+    CALENDAR_COLLECTIONS,
     SHORTS,
     PUBLIC_CHATS,
     FOLLOW_PACKS,
@@ -199,6 +202,27 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 icon = MaterialSymbols.Photo,
                 resolveRoute = { Route.Pictures },
             ),
+        NavBarItem.SOFTWARE_APPS to
+            NavBarItemDef(
+                id = NavBarItem.SOFTWARE_APPS,
+                labelRes = R.string.software_apps,
+                icon = MaterialSymbols.Apps,
+                resolveRoute = { Route.SoftwareApps },
+            ),
+        NavBarItem.CALENDARS to
+            NavBarItemDef(
+                id = NavBarItem.CALENDARS,
+                labelRes = R.string.route_calendars,
+                icon = MaterialSymbols.CalendarMonth,
+                resolveRoute = { Route.Calendars },
+            ),
+        NavBarItem.CALENDAR_COLLECTIONS to
+            NavBarItemDef(
+                id = NavBarItem.CALENDAR_COLLECTIONS,
+                labelRes = R.string.route_calendar_collections,
+                icon = MaterialSymbols.AutoMirrored.FormatListBulleted,
+                resolveRoute = { Route.CalendarCollections },
+            ),
         NavBarItem.SHORTS to
             NavBarItemDef(
                 id = NavBarItem.SHORTS,
@@ -318,6 +342,9 @@ val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.COMMUNITIES,
         NavBarItem.ARTICLES,
         NavBarItem.PICTURES,
+        NavBarItem.SOFTWARE_APPS,
+        NavBarItem.CALENDARS,
+        NavBarItem.CALENDAR_COLLECTIONS,
         NavBarItem.SHORTS,
         NavBarItem.PUBLIC_CHATS,
         NavBarItem.FOLLOW_PACKS,

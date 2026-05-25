@@ -26,6 +26,7 @@ import android.util.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.Channel
+import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
@@ -41,6 +42,7 @@ import com.vitorpamplona.amethyst.commons.services.nwc.NwcPaymentTracker
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.LocalCache.observeEvents
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
+import com.vitorpamplona.amethyst.model.nipBCOnchainZaps.OnchainZapResolver
 import com.vitorpamplona.amethyst.service.BundledInsert
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.note.dateFormatter
@@ -189,6 +191,10 @@ import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
+import com.vitorpamplona.quartz.nip57Zaps.validate.LnZapReceiptValidator
+import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointCache
+import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointResolver
+import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlForm
 import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
@@ -246,8 +252,6 @@ import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.OnchainBackend
-import com.vitorpamplona.quartz.nipBCOnchainZaps.verify.OnchainZapVerifier
-import com.vitorpamplona.quartz.nipBCOnchainZaps.verify.VerifiedOnchainZap
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
@@ -303,6 +307,25 @@ object LocalCache : ILocalCache, ICacheProvider {
      */
     @Volatile
     var onchainBackend: OnchainBackend? = null
+
+    /**
+     * NIP-BC on-chain zap verification coordinator. Owns the chain-tip poller flow,
+     * the in-flight de-duplication of verifier calls across consume/reverify paths,
+     * and the parallelism cap. `consume(OnchainZapEvent)` delegates the async
+     * verification side here; the gallery's reverification driver also calls in here
+     * directly.
+     */
+    val onchainZapResolver = OnchainZapResolver(this)
+
+    /**
+     * Resolver for LNURL provider metadata used by [consume]`(LnZapEvent)` to
+     * validate NIP-57 Appendix F. `null` skips the receipt-signer check (the
+     * receipt is still accepted on signature verification alone — matches legacy
+     * behavior); set this in app init so receipts can be verified against the
+     * recipient's provider's advertised `nostrPubkey`.
+     */
+    @Volatile
+    var lnurlEndpointResolver: LnurlEndpointResolver? = null
 
     val relayHints = HintIndexer()
 
@@ -1709,37 +1732,123 @@ object LocalCache : ILocalCache, ICacheProvider {
             return false
         }
 
-        if (wasVerified || justVerify(event)) {
-            val existingZapRequest = event.zapRequest?.id?.let { getNoteIfExists(it) }
-            if (existingZapRequest == null || existingZapRequest.event == null) {
-                // tries to add it
-                event.zapRequest?.let {
-                    checkDeletionAndConsume(it, relay, false)
-                }
+        if (!(wasVerified || justVerify(event))) return false
+
+        val existingZapRequest = event.zapRequest?.id?.let { getNoteIfExists(it) }
+        if (existingZapRequest == null || existingZapRequest.event == null) {
+            // tries to add it
+            event.zapRequest?.let {
+                checkDeletionAndConsume(it, relay, false)
             }
+        }
 
-            val zapRequest = event.zapRequest?.id?.let { getNoteIfExists(it) }
+        val zapRequest = event.zapRequest?.id?.let { getNoteIfExists(it) }
 
-            if (zapRequest == null || zapRequest.event !is LnZapRequestEvent) {
-                Log.d("ZP") { "Zap Request not found. Unable to process Zap {${event.toJson()}}" }
+        if (zapRequest == null || zapRequest.event !is LnZapRequestEvent) {
+            Log.d("ZP") { "Zap Request not found. Unable to process Zap {${event.toJson()}}" }
+            return false
+        }
+
+        // NIP-57 Appendix F validation. Resolve the recipient's lnurl from their
+        // profile metadata, look up the LNURL provider's `nostrPubkey`, and check
+        // the receipt against it (signer + invoice amount + lnurl tag).
+        //
+        // Synchronous path: cache hit, or no resolver wired (fallback to legacy
+        // signature-only behavior). Failed MUST-checks drop the receipt entirely.
+        //
+        // Async path: cache miss + resolver available. Load the event so feeds
+        // and live channels see it, but defer the `addZap` credit until the
+        // resolver returns. On async MUST-fail we never credit; the receipt
+        // stays in cache as a visible artifact but contributes 0 to zap totals.
+        val recipientLnurl = recipientLnurl(event)
+        val recipientLnurlpUrl = recipientLnurl?.let { LnurlForm.toUrl(it) }
+        val cachedInfo = recipientLnurlpUrl?.let { LnurlEndpointCache.get(it) }
+
+        val author = getOrCreateUser(event.pubKey)
+        val repliesTo = computeReplyTo(event)
+
+        if (cachedInfo != null) {
+            val result =
+                LnZapReceiptValidator.validate(
+                    receipt = event,
+                    expectedNostrPubkey = cachedInfo.nostrPubkey,
+                    expectedLnurl = recipientLnurl,
+                )
+            if (result is LnZapReceiptValidator.Result.Invalid &&
+                result.reason != LnZapReceiptValidator.Result.Reason.MISMATCHED_LNURL
+            ) {
+                Log.w("ZP", "dropping zap receipt ${event.id}: ${result.reason} ${result.detail ?: ""}")
                 return false
             }
-
-            val author = getOrCreateUser(event.pubKey)
-            val repliesTo = computeReplyTo(event)
+            if (result is LnZapReceiptValidator.Result.Invalid) {
+                Log.w("ZP", "zap receipt ${event.id} has mismatched lnurl tag (accepting per SHOULD)")
+            }
 
             note.loadEvent(event, author, repliesTo)
-
             repliesTo.forEach { it.addZap(zapRequest, note) }
-
             attachZapToLiveActivityChannel(event, note, relay)
-
             refreshNewNoteObservers(note)
-
             return true
         }
 
-        return false
+        val resolver = lnurlEndpointResolver
+        if (resolver == null || recipientLnurlpUrl == null) {
+            // No resolver configured, or recipient has no lud16/lud06 on file.
+            // Legacy behavior: accept the receipt on signature verification alone.
+            note.loadEvent(event, author, repliesTo)
+            repliesTo.forEach { it.addZap(zapRequest, note) }
+            attachZapToLiveActivityChannel(event, note, relay)
+            refreshNewNoteObservers(note)
+            return true
+        }
+
+        // Async validation. Make the event visible immediately, but only credit
+        // it to repliesTo after the resolver confirms the LNURL provider's pubkey.
+        note.loadEvent(event, author, repliesTo)
+        attachZapToLiveActivityChannel(event, note, relay)
+        refreshNewNoteObservers(note)
+
+        Amethyst.instance.applicationIOScope.launch {
+            try {
+                val info = resolver.resolve(recipientLnurlpUrl)
+                if (info == null) {
+                    Log.w("ZP", "could not fetch lnurlp for ${event.id}; not crediting")
+                    return@launch
+                }
+                val result =
+                    LnZapReceiptValidator.validate(
+                        receipt = event,
+                        expectedNostrPubkey = info.nostrPubkey,
+                        expectedLnurl = recipientLnurl,
+                    )
+                if (result is LnZapReceiptValidator.Result.Invalid &&
+                    result.reason != LnZapReceiptValidator.Result.Reason.MISMATCHED_LNURL
+                ) {
+                    Log.w("ZP", "dropping zap receipt ${event.id}: ${result.reason} ${result.detail ?: ""}")
+                    return@launch
+                }
+                if (result is LnZapReceiptValidator.Result.Invalid) {
+                    Log.w("ZP", "zap receipt ${event.id} has mismatched lnurl tag (accepting per SHOULD)")
+                }
+                repliesTo.forEach { it.addZap(zapRequest, note) }
+            } catch (t: Throwable) {
+                Log.w("ZP", "validation failed for ${event.id}", t)
+            }
+        }
+
+        return true
+    }
+
+    /**
+     * Look up the recipient's lnurl from their kind:0 metadata. The recipient is
+     * the receipt's first `p` tag (which the LNURL provider sets to the original
+     * zap target). Returns null if we have no metadata, or the user has neither
+     * lud16 nor lud06.
+     */
+    private fun recipientLnurl(event: LnZapEvent): String? {
+        val recipientPubkey = event.zappedAuthor().firstOrNull() ?: return null
+        val user = getUserIfExists(recipientPubkey) ?: return null
+        return user.lnAddress()?.takeIf { it.isNotBlank() }
     }
 
     fun consume(
@@ -1748,52 +1857,57 @@ object LocalCache : ILocalCache, ICacheProvider {
         wasVerified: Boolean,
     ): Boolean {
         val note = getOrCreateNote(event.id)
-        if (note.event != null) return false
+        val alreadyLoaded = note.event != null
 
-        if (!(wasVerified || justVerify(event))) return false
+        // `relay == null` means this event was generated locally by the signed-in user
+        // and routed through `justConsumeMyOwnEvent` — see `Account.sendOnchainZap` →
+        // `LocalCache.justConsumeMyOwnEvent`. Only these get the optimistic gallery
+        // attachment; for incoming zaps from others, the sender-claimed `amount` tag
+        // is untrusted and could mislead the viewer until the chain verifier responds.
+        val isOwnEvent = relay == null
+        var repliesTo: List<Note>? = null
 
-        // Anti-spoofing: NIP-BC requires rejecting self-zaps.
-        val recipient = event.recipient() ?: return false
-        if (event.pubKey.equals(recipient, ignoreCase = true)) return false
+        if (!alreadyLoaded) {
+            if (!(wasVerified || justVerify(event))) return false
 
-        val author = getOrCreateUser(event.pubKey)
-        val repliesTo = computeReplyTo(event)
-        note.loadEvent(event, author, repliesTo)
-        refreshNewNoteObservers(note)
+            // Anti-spoofing: NIP-BC requires rejecting self-zaps.
+            val recipient = event.recipient() ?: return false
+            if (event.pubKey.equals(recipient, ignoreCase = true)) return false
 
-        // Verification needs a chain backend. Without one (e.g. before Account
-        // wires its EsploraBackend) the event is still cached so subscriptions
-        // and profile zap views see it, but it can't contribute to Note totals.
-        val backend = onchainBackend ?: return true
-        val verifier = OnchainZapVerifier(backend)
+            val author = getOrCreateUser(event.pubKey)
+            val resolvedRepliesTo = computeReplyTo(event)
+            repliesTo = resolvedRepliesTo
+            note.loadEvent(event, author, resolvedRepliesTo)
 
-        Amethyst.instance.applicationIOScope.launch {
-            try {
-                when (val result = verifier.verify(event)) {
-                    is VerifiedOnchainZap.Confirmed -> {
-                        repliesTo.forEach {
-                            it.addOnchainZap(result.txid, result.verifiedSats, confirmed = true)
-                        }
-                    }
-
-                    is VerifiedOnchainZap.Pending -> {
-                        repliesTo.forEach {
-                            it.addOnchainZap(result.txid, result.verifiedSats, confirmed = false)
-                        }
-                    }
-
-                    is VerifiedOnchainZap.Rejected -> {
-                        Log.d("OnchainZap") {
-                            "rejected ${result.txid}: ${result.reason}"
-                        }
+            if (isOwnEvent) {
+                // Optimistic attachment for the sender's own zap: surface it on the
+                // thread immediately, before the chain backend has indexed the tx.
+                // Crucial because `OnchainZapSender.send` consumes the kind:8333
+                // milliseconds after broadcasting the tx — the verifier would
+                // otherwise return TX_NOT_FOUND and the entry would never appear
+                // until a later re-verification pass.
+                val txid = event.txid()
+                if (txid != null) {
+                    // Clamp claimedSats to a non-negative value. `amount` tag parses
+                    // via toLongOrNull() with no sign check, so a malicious sender
+                    // could otherwise put "-1" in the gallery as a negative-sats badge.
+                    val claimedSats = (event.claimedAmountInSats() ?: 0L).coerceAtLeast(0L)
+                    resolvedRepliesTo.forEach {
+                        it.addOnchainZap(note, txid, claimedSats, verifiedSats = 0L, OnchainZapStatus.UNVERIFIED)
                     }
                 }
-            } catch (t: Throwable) {
-                Log.w("OnchainZap", "verification failed for ${event.id}", t)
             }
+
+            refreshNewNoteObservers(note)
         }
 
-        return true
+        // Async chain verification is delegated to OnchainZapResolver, which owns the
+        // in-flight gates (so two relay echoes don't double-fetch) and the chain-tip
+        // polling flow used by the gallery driver. Reusing the repliesTo already
+        // computed above avoids the second computeReplyTo pass on the new-event path.
+        onchainZapResolver.launchVerification(event, note, repliesTo ?: computeReplyTo(event))
+
+        return !alreadyLoaded
     }
 
     private fun attachZapToLiveActivityChannel(
@@ -1975,6 +2089,12 @@ object LocalCache : ILocalCache, ICacheProvider {
         if (note.event != null) return false
 
         if (wasVerified || justVerify(event)) {
+            val expectedServicePubkey =
+                event.walletServicePubKey() ?: run {
+                    Log.w("LocalCache", "NWC request ${event.id} has no `p` tag; cannot register for response.")
+                    return false
+                }
+
             note.loadEvent(event, author, emptyList())
 
             relay?.let {
@@ -1983,7 +2103,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
             zappedNote?.addZapPayment(note, null)
 
-            paymentTracker.registerRequest(event.id, zappedNote, onResponse)
+            paymentTracker.registerRequest(event.id, expectedServicePubkey, zappedNote, onResponse)
 
             refreshNewNoteObservers(note)
 
@@ -1999,7 +2119,30 @@ object LocalCache : ILocalCache, ICacheProvider {
         wasVerified: Boolean,
     ): Boolean {
         val requestId = event.requestId()
-        val pending = paymentTracker.onResponseReceived(requestId) ?: return false
+        val pending =
+            when (val match = paymentTracker.onResponseReceived(requestId, event.pubKey)) {
+                is NwcPaymentTracker.MatchResult.Matched -> match.pending
+                is NwcPaymentTracker.MatchResult.WrongAuthor -> {
+                    // Possible spoof: a kind-23195 event from someone other than
+                    // the wallet service we sent the request to. The pending
+                    // entry is left in place so the real response can still
+                    // resolve it; we silently drop this one.
+                    Log.w(
+                        "LocalCache",
+                        "Rejecting NWC response ${event.id}: expected author ${match.expected} but event was signed by ${match.actual}. " +
+                            "This may be a spoofed reply — keeping the request pending for the legitimate wallet response.",
+                    )
+                    return false
+                }
+                NwcPaymentTracker.MatchResult.NoMatch -> {
+                    Log.w(
+                        "LocalCache",
+                        "NWC response ${event.id} from ${event.pubKey} references request e=$requestId but no pending request is registered. " +
+                            "The response was either delivered after timeout, the user holds a stale subscription, or the wallet service set the wrong e tag.",
+                    )
+                    return false
+                }
+            }
 
         val zappedNote = pending.zappedNote
         val responseCallback = pending.onResponse

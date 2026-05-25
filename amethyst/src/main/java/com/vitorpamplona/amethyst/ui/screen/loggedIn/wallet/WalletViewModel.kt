@@ -25,6 +25,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceSuccessResponse
@@ -39,6 +40,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -172,10 +174,35 @@ class WalletViewModel : ViewModel() {
     private val _receiveState = MutableStateFlow<ReceiveState>(ReceiveState.Idle)
     val receiveState = _receiveState.asStateFlow()
 
-    private fun launchTimeout(onTimeout: () -> Unit): Job =
+    // A null `Response` means the wallet service replied but the payload could
+    // not be decrypted (wrong key, unexpected format). Any other unexpected
+    // subtype means the response shape didn't match any known NIP-47 result.
+    // Both used to be swallowed silently — now we surface them so the user
+    // can distinguish "wallet never answered" from "wallet answered with
+    // something we can't read".
+    private fun unreadableResponseError(response: Response?): String =
+        if (response == null) {
+            "Could not decrypt the wallet's reply — the wallet may be using a different key"
+        } else {
+            "Wallet returned an unrecognized reply for ${response.resultType}"
+        }
+
+    private fun launchTimeout(
+        requestIdProvider: () -> HexKey?,
+        onTimeout: () -> Unit,
+    ): Job =
         viewModelScope.launch(Dispatchers.IO) {
             delay(NWC_TIMEOUT_MS)
-            _error.value = "Wallet request timed out"
+            val requestId = requestIdProvider()
+            val spoofs = requestId?.let { account?.nwcSpoofAttempts(it) ?: 0 } ?: 0
+            _error.value =
+                if (spoofs > 0) {
+                    "Wallet request timed out — $spoofs ${if (spoofs == 1) "reply was" else "replies were"} rejected because " +
+                        "${if (spoofs == 1) "it was" else "they were"} signed by an unexpected key. Your relay may be untrusted."
+                } else {
+                    "Wallet request timed out"
+                }
+            requestId?.let { account?.cleanupNwcRequest(it) }
             onTimeout()
         }
 
@@ -315,7 +342,9 @@ class WalletViewModel : ViewModel() {
                         }
 
                         else -> {
-                            updateWalletInfo(walletId) { it.copy(isLoading = false) }
+                            updateWalletInfo(walletId) {
+                                it.copy(error = unreadableResponseError(response), isLoading = false)
+                            }
                         }
                     }
                 }
@@ -368,24 +397,29 @@ class WalletViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
             _error.value = null
-            val timeoutJob = launchTimeout { _isLoading.value = false }
+            var requestId: HexKey? = null
+            val timeoutJob = launchTimeout({ requestId }) { _isLoading.value = false }
             try {
-                acc.sendNwcRequestToWallet(walletUri, GetBalanceMethod.create()) { response ->
-                    timeoutJob.cancel()
-                    when (response) {
-                        is GetBalanceSuccessResponse -> {
-                            _balanceSats.value = (response.result?.balance ?: 0L) / 1000L
-                            updateWalletInfo(walletId) { it.copy(balanceSats = _balanceSats.value) }
-                        }
+                requestId =
+                    acc.sendNwcRequestToWallet(walletUri, GetBalanceMethod.create()) { response ->
+                        timeoutJob.cancel()
+                        when (response) {
+                            is GetBalanceSuccessResponse -> {
+                                _balanceSats.value = (response.result?.balance ?: 0L) / 1000L
+                                updateWalletInfo(walletId) { it.copy(balanceSats = _balanceSats.value) }
+                                _error.value = null
+                            }
 
-                        is NwcErrorResponse -> {
-                            _error.value = response.error?.message ?: "Balance request failed"
-                        }
+                            is NwcErrorResponse -> {
+                                _error.value = response.error?.message ?: "Balance request failed"
+                            }
 
-                        else -> {}
+                            else -> {
+                                _error.value = unreadableResponseError(response)
+                            }
+                        }
+                        _isLoading.value = false
                     }
-                    _isLoading.value = false
-                }
             } catch (e: Exception) {
                 timeoutJob.cancel()
                 _error.value = e.message
@@ -422,38 +456,43 @@ class WalletViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
             _hasMoreTransactions.value = true
-            val timeoutJob = launchTimeout { _isLoading.value = false }
+            var requestId: HexKey? = null
+            val timeoutJob = launchTimeout({ requestId }) { _isLoading.value = false }
             try {
-                acc.sendNwcRequestToWallet(
-                    walletUri,
-                    ListTransactionsMethod.create(
-                        limit = pageSize,
-                        offset = 0,
-                        unpaid = false,
-                    ),
-                ) { response ->
-                    timeoutJob.cancel()
-                    when (response) {
-                        is ListTransactionsSuccessResponse -> {
-                            val txs = response.result?.transactions ?: emptyList()
-                            allTransactions.value = txs
-                            val totalCount = response.result?.total_count
-                            _hasMoreTransactions.value =
-                                if (totalCount != null) {
-                                    txs.size < totalCount
-                                } else {
-                                    txs.size >= pageSize
-                                }
-                        }
+                requestId =
+                    acc.sendNwcRequestToWallet(
+                        walletUri,
+                        ListTransactionsMethod.create(
+                            limit = pageSize,
+                            offset = 0,
+                            unpaid = false,
+                        ),
+                    ) { response ->
+                        timeoutJob.cancel()
+                        when (response) {
+                            is ListTransactionsSuccessResponse -> {
+                                val txs = response.result?.transactions ?: emptyList()
+                                allTransactions.value = txs
+                                val totalCount = response.result?.total_count
+                                _hasMoreTransactions.value =
+                                    if (totalCount != null) {
+                                        txs.size < totalCount
+                                    } else {
+                                        txs.size >= pageSize
+                                    }
+                                _error.value = null
+                            }
 
-                        is NwcErrorResponse -> {
-                            _error.value = response.error?.message ?: "Failed to load transactions"
-                        }
+                            is NwcErrorResponse -> {
+                                _error.value = response.error?.message ?: "Failed to load transactions"
+                            }
 
-                        else -> {}
+                            else -> {
+                                _error.value = unreadableResponseError(response)
+                            }
+                        }
+                        _isLoading.value = false
                     }
-                    _isLoading.value = false
-                }
             } catch (e: Exception) {
                 timeoutJob.cancel()
                 _error.value = e.message
@@ -470,38 +509,42 @@ class WalletViewModel : ViewModel() {
         val currentOffset = allTransactions.value.size
         viewModelScope.launch(Dispatchers.IO) {
             _isLoadingMore.value = true
-            val timeoutJob = launchTimeout { _isLoadingMore.value = false }
+            var requestId: HexKey? = null
+            val timeoutJob = launchTimeout({ requestId }) { _isLoadingMore.value = false }
             try {
-                acc.sendNwcRequestToWallet(
-                    walletUri,
-                    ListTransactionsMethod.create(
-                        limit = pageSize,
-                        offset = currentOffset,
-                        unpaid = false,
-                    ),
-                ) { response ->
-                    timeoutJob.cancel()
-                    when (response) {
-                        is ListTransactionsSuccessResponse -> {
-                            val newTxs = response.result?.transactions ?: emptyList()
-                            allTransactions.value += newTxs
-                            val totalCount = response.result?.total_count
-                            _hasMoreTransactions.value =
-                                if (totalCount != null) {
-                                    allTransactions.value.size < totalCount
-                                } else {
-                                    newTxs.size >= pageSize
-                                }
-                        }
+                requestId =
+                    acc.sendNwcRequestToWallet(
+                        walletUri,
+                        ListTransactionsMethod.create(
+                            limit = pageSize,
+                            offset = currentOffset,
+                            unpaid = false,
+                        ),
+                    ) { response ->
+                        timeoutJob.cancel()
+                        when (response) {
+                            is ListTransactionsSuccessResponse -> {
+                                val newTxs = response.result?.transactions ?: emptyList()
+                                allTransactions.value += newTxs
+                                val totalCount = response.result?.total_count
+                                _hasMoreTransactions.value =
+                                    if (totalCount != null) {
+                                        allTransactions.value.size < totalCount
+                                    } else {
+                                        newTxs.size >= pageSize
+                                    }
+                            }
 
-                        is NwcErrorResponse -> {
-                            _error.value = response.error?.message ?: "Failed to load more transactions"
-                        }
+                            is NwcErrorResponse -> {
+                                _error.value = response.error?.message ?: "Failed to load more transactions"
+                            }
 
-                        else -> {}
+                            else -> {
+                                _error.value = unreadableResponseError(response)
+                            }
+                        }
+                        _isLoadingMore.value = false
                     }
-                    _isLoadingMore.value = false
-                }
             } catch (e: Exception) {
                 timeoutJob.cancel()
                 _error.value = e.message

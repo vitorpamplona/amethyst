@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -48,6 +49,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -66,7 +68,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.onchain.DustRecipientException
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
+import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage
+import com.vitorpamplona.amethyst.commons.onchain.OnchainZapShare
+import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSplitter
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.namecoin.NamecoinResolutionRow
@@ -81,12 +87,24 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.splits.ZapSplitSetupLnAddress
+import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
+import com.vitorpamplona.quartz.nipBCOnchainZaps.builder.OnchainZapBuilder
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.FeeEstimates
 import com.vitorpamplona.quartz.utils.BigDecimal
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.NumberFormat
+
+// UX floor for onchain zaps. Below this any on-chain transaction is dominated
+// by miner fees — the recipient nets close to nothing even at low fee rates,
+// so quietly funneling the user to a Lightning zap is the friendlier outcome.
+// This is stricter than the protocol-level [OnchainZapBuilder.DUST_THRESHOLD_SATS]
+// (330 sats), which only guards against creating outputs the network rejects.
+private const val MIN_ONCHAIN_ZAP_SATS = 1_000L
 
 private enum class FeeTier(
     val label: String,
@@ -127,6 +145,8 @@ fun OnchainZapSendDialog(
     onDismiss: () -> Unit,
     recipientPubKey: HexKey? = null,
     zappedEvent: EventHintBundle<out Event>? = null,
+    prefillAmountSats: Long? = null,
+    prefillComment: String = "",
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -141,24 +161,60 @@ fun OnchainZapSendDialog(
 
     var searchInput by remember { mutableStateOf("") }
     var selectedUser by remember { mutableStateOf<User?>(null) }
-    var amountInput by remember { mutableStateOf("") }
-    var comment by remember { mutableStateOf("") }
+    var amountInput by remember { mutableStateOf(prefillAmountSats?.toString().orEmpty()) }
+    var comment by remember { mutableStateOf(prefillComment) }
     var feeTier by remember { mutableStateOf(FeeTier.NORMAL) }
     var fees by remember { mutableStateOf<FeeEstimates?>(null) }
 
     var sending by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf<OnchainZapSendResult?>(null) }
 
+    // Pull pubkey-based zap splits off the zapped event. Lightning-address-only
+    // splits are dropped because we can't derive a Taproot output from an
+    // lnAddress — they appear in [skippedLnSplits] so the UI can warn the user
+    // that those recipients won't be paid on-chain. The sender's own pubkey is
+    // also dropped (zapping your own post is common; the on-chain builder
+    // refuses self-pays) and duplicate pubkeys are merged.
+    val senderPubKey = accountViewModel.account.signer.pubKey
+    val zappedEventId = zappedEvent?.event?.id
+    val rawSplits =
+        remember(zappedEventId) {
+            zappedEvent?.event?.zapSplitSetup().orEmpty()
+        }
+    val onchainSplits =
+        remember(zappedEventId, senderPubKey) {
+            val raw = rawSplits.filterIsInstance<ZapSplitSetup>().map { it.pubKeyHex to it.weight }
+            OnchainZapSplitter.prepare(raw, senderPubKey)
+        }
+    val skippedLnSplits =
+        remember(zappedEventId) {
+            rawSplits.filterIsInstance<ZapSplitSetupLnAddress>()
+        }
+    var useSplits by remember(zappedEventId) { mutableStateOf(onchainSplits.isNotEmpty()) }
+    val splitMode = useSplits && onchainSplits.isNotEmpty()
+
+    // Fetch fee estimates with bounded retry. Covers two boot races:
+    //  - LocalCache.onchainBackend is null briefly while AppModules wires it up
+    //  - feeEstimates() throws on a flaky network
+    // Without retry, the Send button would stay permanently disabled because
+    // the build path needs a fee rate.
     LaunchedEffect(Unit) {
-        val backend = LocalCache.onchainBackend ?: return@LaunchedEffect
-        fees =
-            runCatching { withContext(Dispatchers.IO) { backend.feeEstimates() } }.getOrNull()
+        repeat(4) { attempt ->
+            if (fees != null) return@LaunchedEffect
+            val backend = LocalCache.onchainBackend
+            if (backend != null) {
+                val newFees = runCatching { withContext(Dispatchers.IO) { backend.feeEstimates() } }.getOrNull()
+                if (newFees != null) {
+                    fees = newFees
+                    return@LaunchedEffect
+                }
+            }
+            if (attempt < 3) delay(1_000L * (attempt + 1))
+        }
     }
 
-    val presetAmounts =
-        remember(accountViewModel) {
-            accountViewModel.zapAmountChoices()
-        }
+    val presetAmounts by accountViewModel.account.settings.syncedSettings.zaps.onchainZapAmountChoices
+        .collectAsStateWithLifecycle()
 
     // Mirror the dropdown's NIP-05 / Namecoin (.bit) resolution so Send can
     // enable as soon as the typed name resolves, without forcing the user to
@@ -172,13 +228,37 @@ fun OnchainZapSendDialog(
             ?: searchInput.trim().takeIf { it.isNotEmpty() }?.let { decodePublicKeyAsHexOrNull(it) }
             ?: nip05Resolved?.pubkeyHex
     val amountSats = amountInput.trim().toLongOrNull()
+
+    // Preview the per-recipient share allocation. Always compute the full
+    // list (even when some shares would land below dust) so the UI can show
+    // every recipient's amount; below-dust offenders are flagged separately
+    // and gate the Send button so the user can't tap into a guaranteed
+    // BUILDING-stage failure.
+    val previewShares =
+        remember(splitMode, onchainSplits, amountSats) {
+            if (!splitMode || amountSats == null || amountSats <= 0) {
+                null
+            } else {
+                runCatching {
+                    OnchainZapSplitter.distributeUnchecked(amountSats, onchainSplits)
+                }.getOrNull()
+            }
+        }
+    val belowDustShares =
+        remember(previewShares) {
+            previewShares.orEmpty().filter { it.sats < OnchainZapBuilder.DUST_THRESHOLD_SATS }
+        }
+
+    val belowMinimum = amountSats != null && amountSats > 0 && amountSats < MIN_ONCHAIN_ZAP_SATS
+
     val canSend =
         !sending &&
             result == null &&
-            resolvedRecipient != null &&
+            (splitMode || (resolvedRecipient != null && resolvedRecipient != senderPubKey)) &&
             amountSats != null &&
-            amountSats > 0 &&
-            fees != null
+            amountSats >= MIN_ONCHAIN_ZAP_SATS &&
+            fees != null &&
+            (!splitMode || (previewShares != null && belowDustShares.isEmpty()))
 
     ModalBottomSheet(
         onDismissRequest = { if (!sending) onDismiss() },
@@ -188,6 +268,7 @@ fun OnchainZapSendDialog(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .fillMaxHeight()
                     .imePadding()
                     .navigationBarsPadding(),
         ) {
@@ -198,6 +279,7 @@ fun OnchainZapSendDialog(
                     Column(
                         modifier =
                             Modifier
+                                .weight(1f, fill = false)
                                 .verticalScroll(rememberScrollState())
                                 .padding(horizontal = 20.dp, vertical = 12.dp),
                     ) {
@@ -210,6 +292,7 @@ fun OnchainZapSendDialog(
                     Column(
                         modifier =
                             Modifier
+                                .weight(1f, fill = false)
                                 .verticalScroll(rememberScrollState())
                                 .padding(horizontal = 20.dp, vertical = 12.dp),
                     ) {
@@ -225,34 +308,53 @@ fun OnchainZapSendDialog(
                         Column(
                             modifier =
                                 Modifier
+                                    .weight(1f, fill = false)
                                     .verticalScroll(rememberScrollState())
                                     .padding(horizontal = 20.dp),
                         ) {
-                            RecipientSection(
-                                accountViewModel = accountViewModel,
-                                recipientPubKey = recipientPubKey,
-                                userSuggestions = userSuggestions,
-                                selectedUser = selectedUser,
-                                onSelectUser = {
-                                    selectedUser = it
-                                    searchInput = ""
-                                    userSuggestions.reset()
-                                },
-                                onClearUser = {
-                                    selectedUser = null
-                                    searchInput = ""
-                                    userSuggestions.reset()
-                                },
-                                searchInput = searchInput,
-                                onSearchChange = { newValue ->
-                                    searchInput = newValue
-                                    if (newValue.length > 2) {
-                                        userSuggestions.processCurrentWord(newValue)
-                                    } else {
+                            if (splitMode) {
+                                SplitsRecipientSection(
+                                    splits = onchainSplits,
+                                    previewShares = previewShares,
+                                    skippedLnSplits = skippedLnSplits,
+                                    onDisable = { useSplits = false },
+                                    accountViewModel = accountViewModel,
+                                )
+                            } else {
+                                RecipientSection(
+                                    accountViewModel = accountViewModel,
+                                    recipientPubKey = recipientPubKey,
+                                    userSuggestions = userSuggestions,
+                                    selectedUser = selectedUser,
+                                    onSelectUser = {
+                                        selectedUser = it
+                                        searchInput = ""
                                         userSuggestions.reset()
+                                    },
+                                    onClearUser = {
+                                        selectedUser = null
+                                        searchInput = ""
+                                        userSuggestions.reset()
+                                    },
+                                    searchInput = searchInput,
+                                    onSearchChange = { newValue ->
+                                        searchInput = newValue
+                                        if (newValue.length > 2) {
+                                            userSuggestions.processCurrentWord(newValue)
+                                        } else {
+                                            userSuggestions.reset()
+                                        }
+                                    },
+                                )
+                                if (onchainSplits.isNotEmpty()) {
+                                    Spacer(Modifier.height(6.dp))
+                                    TextButton(
+                                        onClick = { useSplits = true },
+                                    ) {
+                                        Text("Use this note's ${onchainSplits.size}-way zap split")
                                     }
-                                },
-                            )
+                                }
+                            }
 
                             SectionSpacer()
 
@@ -260,6 +362,7 @@ fun OnchainZapSendDialog(
                                 amountInput = amountInput,
                                 onAmountChange = { amountInput = it },
                                 presetAmounts = presetAmounts,
+                                belowMinimum = belowMinimum,
                             )
 
                             SectionSpacer()
@@ -285,20 +388,46 @@ fun OnchainZapSendDialog(
                         SendButton(
                             enabled = canSend,
                             amountSats = amountSats,
+                            splitWays = if (splitMode) onchainSplits.size else 0,
                             onClick = {
-                                val recipient = resolvedRecipient ?: return@SendButton
                                 val amount = amountSats ?: return@SendButton
                                 val feeRate = fees?.rateFor(feeTier) ?: return@SendButton
                                 sending = true
                                 scope.launch {
                                     val r =
-                                        accountViewModel.account.sendOnchainZap(
-                                            recipientPubKey = recipient,
-                                            amountSats = amount,
-                                            feeRateSatPerVByte = feeRate,
-                                            comment = comment.trim(),
-                                            zappedEvent = zappedEvent,
-                                        )
+                                        if (splitMode) {
+                                            val shares =
+                                                try {
+                                                    OnchainZapSplitter.distribute(
+                                                        totalSats = amount,
+                                                        splits = onchainSplits,
+                                                        dustThresholdSats = OnchainZapBuilder.DUST_THRESHOLD_SATS,
+                                                    )
+                                                } catch (e: DustRecipientException) {
+                                                    sending = false
+                                                    result =
+                                                        OnchainZapSendResult.Failure(
+                                                            stage = OnchainZapSendStage.BUILDING,
+                                                            message = e.message ?: "A recipient share is below dust",
+                                                        )
+                                                    return@launch
+                                                }
+                                            accountViewModel.account.sendOnchainZapWithSplits(
+                                                recipients = shares,
+                                                feeRateSatPerVByte = feeRate,
+                                                comment = comment.trim(),
+                                                zappedEvent = zappedEvent,
+                                            )
+                                        } else {
+                                            val recipient = resolvedRecipient ?: return@launch
+                                            accountViewModel.account.sendOnchainZap(
+                                                recipientPubKey = recipient,
+                                                amountSats = amount,
+                                                feeRateSatPerVByte = feeRate,
+                                                comment = comment.trim(),
+                                                zappedEvent = zappedEvent,
+                                            )
+                                        }
                                     sending = false
                                     result = r
                                 }
@@ -491,21 +620,11 @@ private fun AmountSection(
     amountInput: String,
     onAmountChange: (String) -> Unit,
     presetAmounts: List<Long>,
+    belowMinimum: Boolean,
 ) {
     SectionLabel("Amount")
 
-    OutlinedTextField(
-        value = amountInput,
-        onValueChange = { onAmountChange(it.filter(Char::isDigit)) },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        placeholder = { Text("0") },
-        suffix = { Text("sats", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-        modifier = Modifier.fillMaxWidth(),
-    )
-
     if (presetAmounts.isNotEmpty()) {
-        Spacer(Modifier.height(8.dp))
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -518,6 +637,29 @@ private fun AmountSection(
                 )
             }
         }
+        Spacer(Modifier.height(8.dp))
+    }
+
+    OutlinedTextField(
+        value = amountInput,
+        onValueChange = { onAmountChange(it.filter(Char::isDigit)) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        placeholder = { Text("0") },
+        suffix = { Text("sats", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+        isError = belowMinimum,
+        modifier = Modifier.fillMaxWidth(),
+    )
+
+    if (belowMinimum) {
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text =
+                "Minimum on-chain zap is ${NumberFormat.getNumberInstance().format(MIN_ONCHAIN_ZAP_SATS)} sats — " +
+                    "smaller amounts are eaten by miner fees. Use a Lightning zap instead.",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.error,
+        )
     }
 }
 
@@ -591,6 +733,7 @@ private fun SectionLabel(text: String) {
 private fun SendButton(
     enabled: Boolean,
     amountSats: Long?,
+    splitWays: Int,
     onClick: () -> Unit,
 ) {
     Button(
@@ -608,15 +751,111 @@ private fun SendButton(
             modifier = Modifier.size(18.dp),
         )
         Spacer(Modifier.size(8.dp))
+        val sats = if (amountSats != null && amountSats > 0) NumberFormat.getNumberInstance().format(amountSats) else null
         Text(
             text =
-                if (amountSats != null && amountSats > 0) {
-                    "Send ${NumberFormat.getNumberInstance().format(amountSats)} sats"
-                } else {
-                    "Send"
+                when {
+                    sats != null && splitWays > 1 -> "Send $sats sats, $splitWays ways"
+                    sats != null -> "Send $sats sats"
+                    else -> "Send"
                 },
             fontWeight = FontWeight.SemiBold,
         )
+    }
+}
+
+@Composable
+private fun SplitsRecipientSection(
+    splits: List<Pair<HexKey, Double>>,
+    previewShares: List<OnchainZapShare>?,
+    skippedLnSplits: List<ZapSplitSetupLnAddress>,
+    onDisable: () -> Unit,
+    accountViewModel: AccountViewModel,
+) {
+    SectionLabel("Splits among ${splits.size} recipients")
+
+    val totalWeight = splits.sumOf { it.second }
+    // Index the preview by pubkey once — the splits list scan would otherwise
+    // be O(N²) for the per-row sat amount lookup.
+    val previewByPubKey =
+        remember(previewShares) {
+            previewShares?.associateBy { it.recipientPubKey }
+        }
+
+    Surface(
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(vertical = 4.dp)) {
+            splits.forEach { (pubKey, weight) ->
+                val share = previewByPubKey?.get(pubKey)
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    UserPicture(
+                        userHex = pubKey,
+                        size = 28.dp,
+                        accountViewModel = accountViewModel,
+                        nav = EmptyNav(),
+                    )
+                    Spacer(Modifier.size(8.dp))
+                    Text(
+                        text = formatWeight(weight, totalWeight),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (share != null) {
+                        val belowDust = share.sats < OnchainZapBuilder.DUST_THRESHOLD_SATS
+                        Text(
+                            text = "${NumberFormat.getNumberInstance().format(share.sats)} sats",
+                            style = MaterialTheme.typography.bodySmall,
+                            color =
+                                if (belowDust) {
+                                    MaterialTheme.colorScheme.error
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (skippedLnSplits.isNotEmpty()) {
+        Spacer(Modifier.height(6.dp))
+        val word = if (skippedLnSplits.size == 1) "recipient" else "recipients"
+        Text(
+            text =
+                "Skipping ${skippedLnSplits.size} Lightning-address-only $word — " +
+                    "on-chain needs a Nostr pubkey to derive the address.",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+
+    Spacer(Modifier.height(4.dp))
+    TextButton(onClick = onDisable) {
+        Text("Don't split — pay one recipient instead")
+    }
+}
+
+private fun formatWeight(
+    weight: Double,
+    totalWeight: Double,
+): String {
+    val pct = (weight / totalWeight) * 100.0
+    return if (pct >= 99.95) {
+        "100%"
+    } else {
+        // Round to a tenth of a percent. Drop the trailing ".0" so whole
+        // percentages render as "50%" instead of "50.0%".
+        val tenths = (pct * 10).toLong()
+        if (tenths % 10 == 0L) "${tenths / 10}%" else "${tenths / 10}.${tenths % 10}%"
     }
 }
 

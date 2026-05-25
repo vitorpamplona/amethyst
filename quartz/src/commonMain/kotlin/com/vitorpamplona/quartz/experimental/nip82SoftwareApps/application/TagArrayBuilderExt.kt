@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.tags.
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.tags.UrlTag
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.shared.PlatformTag
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 
 fun TagArrayBuilder<SoftwareApplicationEvent>.name(name: String) = addUnique(NameTag.assemble(name))
 
@@ -49,3 +50,5 @@ fun TagArrayBuilder<SoftwareApplicationEvent>.platform(platform: String) = add(P
 fun TagArrayBuilder<SoftwareApplicationEvent>.platforms(platforms: List<String>) = addAll(PlatformTag.assemble(platforms))
 
 fun TagArrayBuilder<SoftwareApplicationEvent>.license(spdxId: String) = addUnique(LicenseTag.assemble(spdxId))
+
+fun TagArrayBuilder<SoftwareApplicationEvent>.appLink(addressTag: String) = add(ATag.assemble(addressTag, null))

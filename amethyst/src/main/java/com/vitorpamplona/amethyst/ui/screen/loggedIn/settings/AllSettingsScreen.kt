@@ -225,6 +225,12 @@ fun AllSettingsScreen(
                 )
                 SettingsDivider()
                 SettingsItem(
+                    title = R.string.calendar_reminder_settings_title,
+                    icon = MaterialSymbols.CalendarMonth,
+                    onClick = { nav.nav(Route.CalendarReminderSettings) },
+                )
+                SettingsDivider()
+                SettingsItem(
                     title = R.string.compose_settings,
                     icon = MaterialSymbols.Edit,
                     onClick = { nav.nav(Route.ComposeSettings) },
@@ -254,6 +260,8 @@ fun AllSettingsScreen(
                     onClick = { nav.nav(Route.ProfileUiSettings) },
                 )
             }
+
+            LegalSettingsSection()
 
             SettingsSection(R.string.danger_zone, isDanger = true) {
                 if (hasPrivateKey) {

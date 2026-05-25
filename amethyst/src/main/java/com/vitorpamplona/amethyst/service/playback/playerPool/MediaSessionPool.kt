@@ -143,9 +143,31 @@ class MediaSessionPool(
 
         reset(mediaSession, keepPlaying)
 
+        // Warm-pool fast path acquires a player that still holds its MediaItem, so the
+        // client side skips setMediaItem (see GetVideoController) and onAddMediaItems
+        // never fires for this fresh session — leaving the notification's tap target
+        // unset. Re-bind it from the player's current item so tapping the playback
+        // notification opens the originating nostr URI.
+        bindSessionActivity(mediaSession, mediaSession.player.currentMediaItem)
+
         cache.put(mediaSession.id, SessionListener(mediaSession, listener))
 
         return mediaSession
+    }
+
+    fun bindSessionActivity(
+        session: MediaSession,
+        mediaItem: MediaItem?,
+    ) {
+        val callbackUri = mediaItem?.mediaMetadata?.extras?.getString(MediaItemCache.EXTRA_CALLBACK_URI) ?: return
+        session.setSessionActivity(
+            PendingIntent.getActivity(
+                appContext,
+                0,
+                Intent(Intent.ACTION_VIEW, callbackUri.toUri(), appContext, MainActivity::class.java),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            ),
+        )
     }
 
     fun releaseSession(session: MediaSession) {
@@ -220,16 +242,7 @@ class MediaSessionPool(
             mediaItems: List<MediaItem>,
         ): ListenableFuture<List<MediaItem>> {
             // set up return call when clicking on the Notification bar
-            mediaItems.firstOrNull()?.mediaMetadata?.extras?.getString(MediaItemCache.EXTRA_CALLBACK_URI)?.let {
-                mediaSession.setSessionActivity(
-                    PendingIntent.getActivity(
-                        appContext,
-                        0,
-                        Intent(Intent.ACTION_VIEW, it.toUri(), appContext, MainActivity::class.java),
-                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-                    ),
-                )
-            }
+            pool.bindSessionActivity(mediaSession, mediaItems.firstOrNull())
 
             return Futures.immediateFuture(mediaItems)
         }

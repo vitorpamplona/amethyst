@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.datasource.ArticlesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.datasource.BadgesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.profile.datasource.ProfileBadgesFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.datasource.CalendarsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource.ChatroomFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.datasource.ChannelFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssembler
@@ -58,8 +59,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats.datasource.Publ
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relay.datasource.RelayFeedFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.datasource.RelayInfoNip66FilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.datasource.ShortsFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.datasource.SoftwareAppsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.ThreadFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.datasource.OnchainZapsFilterAssembler
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.IAuthStatus
@@ -110,6 +113,7 @@ class RelaySubscriptionsCoordinator(
 
     val polls = PollsFilterAssembler(client)
     val pictures = PicturesFilterAssembler(client)
+    val calendars = CalendarsFilterAssembler(client)
     val products = ProductsFilterAssembler(client)
     val shorts = ShortsFilterAssembler(client)
     val publicChats = PublicChatsFilterAssembler(client)
@@ -119,6 +123,7 @@ class RelaySubscriptionsCoordinator(
     val nestRoomLiveness = NestRoomLivenessAssembler(client)
     val longs = LongsFilterAssembler(client)
     val articles = ArticlesFilterAssembler(client)
+    val softwareApps = SoftwareAppsFilterAssembler(client)
     val badges = BadgesFilterAssembler(client)
     val profileBadges = ProfileBadgesFilterAssembler(client)
     val browseEmojiSets = BrowseEmojiSetsFilterAssembler(client)
@@ -126,6 +131,9 @@ class RelaySubscriptionsCoordinator(
 
     // active when sending zaps via NWC
     val nwc = NWCPaymentFilterAssembler(client)
+
+    // active when the wallet's on-chain transactions screen is on top.
+    val onchainZaps = OnchainZapsFilterAssembler(client)
 
     val all =
         listOf(
@@ -137,6 +145,7 @@ class RelaySubscriptionsCoordinator(
             discovery,
             polls,
             pictures,
+            calendars,
             products,
             shorts,
             publicChats,
@@ -147,6 +156,7 @@ class RelaySubscriptionsCoordinator(
             nestRoomLiveness,
             longs,
             articles,
+            softwareApps,
             badges,
             profileBadges,
             browseEmojiSets,
@@ -167,6 +177,7 @@ class RelaySubscriptionsCoordinator(
             relayInfoNip66,
             chess,
             nwc,
+            onchainZaps,
         )
 
     fun destroy() = all.forEach { it.destroy() }

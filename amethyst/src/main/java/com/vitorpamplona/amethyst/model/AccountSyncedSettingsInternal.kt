@@ -37,7 +37,8 @@ val DefaultReactions =
         "\uD83D\uDE31",
     )
 
-val DefaultZapAmounts = listOf(100L, 500L, 1000L)
+val DefaultZapAmounts = listOf(21L, 50L, 100L)
+val DefaultOnchainZapAmounts = listOf(5_000L)
 val DefaultReportWarningThreshold = 5
 
 @Serializable
@@ -66,6 +67,16 @@ val DefaultReactionRowItems =
         ReactionRowItem(ReactionRowAction.Pay, enabled = false, showCounter = false),
         ReactionRowItem(ReactionRowAction.Share, showCounter = false),
     )
+
+// Existing accounts have a reaction-row list serialized before some actions
+// existed (e.g. Pay was added later). Append any default items the saved list
+// is missing so new actions surface without forcing a settings reset — the
+// user's existing order/toggles for actions they already have are preserved.
+fun mergeWithDefaultReactionRowItems(saved: List<ReactionRowItem>): List<ReactionRowItem> {
+    val knownActions = saved.mapTo(mutableSetOf()) { it.action }
+    val missing = DefaultReactionRowItems.filter { it.action !in knownActions }
+    return if (missing.isEmpty()) saved else saved + missing
+}
 
 @Serializable
 enum class VideoPlayerAction {
@@ -143,6 +154,7 @@ class AccountReactionPreferencesInternal(
 @Serializable
 class AccountZapPreferencesInternal(
     var zapAmountChoices: List<Long> = DefaultZapAmounts,
+    var onchainZapAmountChoices: List<Long> = DefaultOnchainZapAmounts,
     val defaultZapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PUBLIC,
 )
 

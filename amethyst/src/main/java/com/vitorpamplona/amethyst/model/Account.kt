@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.model.nip56Reports.ReportAction
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSender
+import com.vitorpamplona.amethyst.commons.onchain.OnchainZapShare
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.algoFeeds.FavoriteAlgoFeedsOrchestrator
@@ -404,7 +405,7 @@ class Account(
     val dmRelays = DmInboxRelayState(dmRelayList, nip65RelayList, privateStorageRelayList, localRelayList, scope)
     val notificationRelays = NotificationInboxRelayState(nip65RelayList, localRelayList, scope)
 
-    val trustedRelays = TrustedRelayListsState(nip65RelayList, privateStorageRelayList, localRelayList, dmRelayList, searchRelayList, trustedRelayList, broadcastRelayList, scope)
+    val trustedRelays = TrustedRelayListsState(nip65RelayList, privateStorageRelayList, localRelayList, dmRelayList, searchRelayList, indexerRelayList, proxyRelayList, trustedRelayList, broadcastRelayList, scope)
 
     // Follows Relays
     val followOutboxesOrProxy = FollowListOutboxOrProxyRelays(kind3FollowList, blockedRelayList, proxyRelayList, cache, scope)
@@ -488,6 +489,9 @@ class Account(
 
     val livePicturesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPicturesFollowList)
     val livePicturesFollowListsPerRelay = OutboxLoaderState(livePicturesFollowLists, cache, scope).flow
+
+    val liveCalendarsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultCalendarsFollowList)
+    val liveCalendarsFollowListsPerRelay = OutboxLoaderState(liveCalendarsFollowLists, cache, scope).flow
 
     val liveProductsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultProductsFollowList)
     val liveProductsFollowListsPerRelay = OutboxLoaderState(liveProductsFollowLists, cache, scope).flow
@@ -600,12 +604,14 @@ class Account(
 
     suspend fun updateZapAmounts(
         amountSet: List<Long>,
+        onchainAmountSet: List<Long>,
         selectedZapType: LnZapEvent.ZapType,
         nip47Update: Nip47WalletConnect.Nip47URINorm?,
     ) {
         var changed = false
 
         if (settings.changeZapAmounts(amountSet)) changed = true
+        if (settings.changeOnchainZapAmounts(onchainAmountSet)) changed = true
         if (settings.changeDefaultZapType(selectedZapType)) changed = true
         if (settings.changeZapPaymentRequest(nip47Update)) changed = true
 
@@ -696,6 +702,8 @@ class Account(
         zapType: LnZapEvent.ZapType,
         toUser: User?,
         additionalRelays: Set<NormalizedRelayUrl>? = null,
+        amountMillisats: Long? = null,
+        lnurl: String? = null,
     ) = LnZapRequestEvent.create(
         zappedEvent = event,
         relays = nip65RelayList.inboxFlow.value + (additionalRelays ?: emptySet()),
@@ -704,6 +712,8 @@ class Account(
         message = message,
         zapType = zapType,
         toUserPubHex = toUser?.pubkeyHex,
+        amountMillisats = amountMillisats,
+        lnurl = lnurl,
     )
 
     suspend fun calculateIfNoteWasZappedByAccount(
@@ -725,10 +735,23 @@ class Account(
         walletUri: Nip47WalletConnect.Nip47URINorm,
         request: Request,
         onResponse: (Response?) -> Unit,
-    ) {
+    ): HexKey {
         val (event, relay) = nip47SignerState.sendNwcRequestToWallet(walletUri, request, onResponse)
         client.publish(event, setOf(relay))
+        return event.id
     }
+
+    /**
+     * Number of spoofed (wrong-author) NIP-47 replies that have arrived for
+     * the given request id. 0 if the request is unknown or already resolved.
+     */
+    fun nwcSpoofAttempts(requestId: HexKey): Int = LocalCache.paymentTracker.spoofAttemptsFor(requestId)
+
+    /**
+     * Removes a pending NIP-47 request from the tracker. Call this when the
+     * UI gives up waiting (timeout) so the entry doesn't stick around.
+     */
+    fun cleanupNwcRequest(requestId: HexKey) = LocalCache.paymentTracker.cleanup(requestId)
 
     suspend fun sendZapPaymentRequestFor(
         bolt11: String,
@@ -743,6 +766,8 @@ class Account(
         user: User,
         message: String = "",
         zapType: LnZapEvent.ZapType,
+        amountMillisats: Long? = null,
+        lnurl: String? = null,
     ): LnZapRequestEvent {
         val zapRequest =
             LnZapRequestEvent.create(
@@ -751,6 +776,8 @@ class Account(
                 signer = signer,
                 message = message,
                 zapType = zapType,
+                amountMillisats = amountMillisats,
+                lnurl = lnurl,
             )
 
         cache.justConsumeMyOwnEvent(zapRequest)
@@ -782,6 +809,34 @@ class Account(
             senderPubKey = signer.pubKey,
             recipientPubKey = recipientPubKey,
             amountSats = amountSats,
+            feeRateSatPerVByte = feeRateSatPerVByte,
+            comment = comment,
+            zappedEvent = zappedEvent,
+        ) { template -> signAndComputeBroadcast(template) }
+    }
+
+    /**
+     * Send a NIP-BC onchain split zap: a single Bitcoin transaction paying
+     * each recipient their precomputed share, plus one kind:8333 receipt per
+     * recipient. See [OnchainZapSender.sendSplit] for failure semantics.
+     */
+    suspend fun sendOnchainZapWithSplits(
+        recipients: List<OnchainZapShare>,
+        feeRateSatPerVByte: Double,
+        comment: String = "",
+        zappedEvent: EventHintBundle<out Event>? = null,
+    ): OnchainZapSendResult {
+        val backend =
+            cache.onchainBackend
+                ?: return OnchainZapSendResult.Failure(
+                    OnchainZapSendStage.LOADING_UTXOS,
+                    "Bitcoin chain backend is not configured",
+                )
+        return OnchainZapSender.sendSplit(
+            backend = backend,
+            signer = signer,
+            senderPubKey = signer.pubKey,
+            recipients = recipients,
             feeRateSatPerVByte = feeRateSatPerVByte,
             comment = comment,
             zappedEvent = zappedEvent,
@@ -2123,6 +2178,28 @@ class Account(
     }
 
     // --- Marmot Group Messaging ---
+
+    /**
+     * Resolve the relay set for a Marmot group. Prefer the relays carried in
+     * the MLS GroupContext metadata so every member converges on the same
+     * canonical set; fall back to the account's outbox relays if the group
+     * has none (e.g. a group joined before MIP-01 metadata existed).
+     *
+     * Lives on Account (not AccountViewModel) so that headless callers —
+     * notifications' BroadcastReceiver, background workers — can resolve
+     * relays without spinning up a ViewModel.
+     */
+    fun marmotGroupRelays(nostrGroupId: HexKey): Set<NormalizedRelayUrl> {
+        val groupRelays =
+            marmotManager
+                ?.groupMetadata(nostrGroupId)
+                ?.relays
+                ?.mapNotNull {
+                    com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+                        .normalizeOrNull(it)
+                }?.toSet()
+        return if (!groupRelays.isNullOrEmpty()) groupRelays else outboxRelays.flow.value
+    }
 
     /**
      * Send a message to a Marmot MLS group.

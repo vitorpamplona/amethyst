@@ -82,6 +82,9 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockk)
     testImplementation(libs.okhttp)
+
+    // Compose UI testing (createComposeRule / onNodeWithText / etc.)
+    testImplementation(compose.desktop.uiTestJUnit4)
 }
 
 compose.desktop {

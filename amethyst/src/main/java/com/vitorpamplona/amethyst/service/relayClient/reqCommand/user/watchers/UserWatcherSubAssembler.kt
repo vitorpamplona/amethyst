@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinder
 import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.groupByRelay
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -37,6 +38,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 class UserWatcherSubAssembler(
     client: INostrClient,
     val cache: LocalCache,
+    val failureTracker: RelayOfflineTracker,
     allKeys: () -> Set<UserFinderQueryState>,
 ) : BaseEoseManager<UserFinderQueryState>(client, allKeys) {
     /**
@@ -99,7 +101,13 @@ class UserWatcherSubAssembler(
             )
         }
 
-        val newFilters = filterUserMetadataForKey(users, indexRelays, latestEOSEs).ifEmpty { null }
+        val newFilters =
+            filterUserMetadataForKey(
+                users,
+                indexRelays,
+                failureTracker.cannotConnectRelays,
+                latestEOSEs,
+            ).ifEmpty { null }
 
         sub.updateFilters(newFilters?.groupByRelay())
     }

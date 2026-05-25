@@ -73,6 +73,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.list.metadat
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.membershipManagement.ArticleBookmarkListManagementScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.membershipManagement.PostBookmarkListManagementScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.old.OldBookmarkListScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarCollectionsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarReminderSettingsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.CalendarsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.create.NewCalendarCollectionScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.create.NewCalendarEventScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars.detail.CalendarEventDetailScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.CreateGroupScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.EditGroupInfoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupChatScreen
@@ -93,6 +99,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.CommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.list.CommunitiesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.newCommunity.EditCommunityScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.newCommunity.NewCommunityScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.contactList.ContactListUsersScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.DiscoverScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip23LongForm.LongFormPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.discover.nip99Classifieds.NewProductScreen
@@ -175,10 +182,12 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UpdateZapAmountScr
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UserSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.VideoPlayerSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.ShortsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.SoftwareAppsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.ThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.NewHlsVideoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.AddWalletScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.OnchainTransactionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletDetailScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletReceiveScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletScreen
@@ -251,6 +260,18 @@ fun BuildNavigation(
         composableFromEnd<Route.ProfileBadges> { ProfileBadgesScreen(accountViewModel, nav) }
         composableFromBottomArgs<Route.AwardBadge> { AwardBadgeScreen(it.kind, it.pubKeyHex, it.dTag, accountViewModel, nav) }
         composableFromEnd<Route.Pictures> { PicturesScreen(accountViewModel, nav) }
+        composableFromEnd<Route.SoftwareApps> { SoftwareAppsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.Calendars> { CalendarsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.CalendarCollections> { CalendarCollectionsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.CalendarReminderSettings> { CalendarReminderSettingsScreen(nav) }
+        composableFromEndArgs<Route.CalendarEventDetail> {
+            CalendarEventDetailScreen(it.kind, it.pubKeyHex, it.dTag, accountViewModel, nav)
+        }
+        composableFromBottomArgs<Route.NewCalendarEvent> { NewCalendarEventScreen(nav, accountViewModel) }
+        composableFromBottomArgs<Route.EditCalendarEvent> {
+            NewCalendarEventScreen(nav, accountViewModel, editKind = it.kind, editPubKeyHex = it.pubKeyHex, editDTag = it.dTag)
+        }
+        composableFromBottomArgs<Route.NewCalendarCollection> { NewCalendarCollectionScreen(nav, accountViewModel, it.dTag) }
         composableFromEnd<Route.Products> { ProductsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Shorts> { ShortsScreen(accountViewModel, nav) }
         composableFromEnd<Route.PublicChats> { PublicChatsScreen(accountViewModel, nav) }
@@ -267,6 +288,7 @@ fun BuildNavigation(
         composableFromEnd<Route.WalletSend> { WalletSendScreen(accountViewModel, nav) }
         composableFromEnd<Route.WalletReceive> { WalletReceiveScreen(accountViewModel, nav) }
         composableFromEnd<Route.WalletTransactions> { WalletTransactionsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.OnchainTransactions> { OnchainTransactionsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.WalletDetail> { WalletDetailScreen(it.walletId, accountViewModel, nav) }
         composableFromEnd<Route.WalletAdd> { AddWalletScreen(accountViewModel, nav) }
 
@@ -351,6 +373,7 @@ fun BuildNavigation(
         composableFromEndArgs<Route.ContentDiscovery> { DvmContentDiscoveryScreen(it.id, accountViewModel, nav) }
         composableFromEndArgs<Route.Profile> { ProfileScreen(it.id, accountViewModel, nav) }
         composableFromEndArgs<Route.Note> { ThreadScreen(it.id, accountViewModel, nav) }
+        composableFromEndArgs<Route.ContactListUsers> { ContactListUsersScreen(it.noteId, accountViewModel, nav) }
         composableFromEndArgs<Route.Hashtag> { HashtagScreen(it, accountViewModel, nav) }
         composableFromEndArgs<Route.Geohash> { GeoHashScreen(it, accountViewModel, nav) }
         composableFromEndArgs<Route.RelayFeed> { RelayFeedScreen(it, accountViewModel, nav) }
@@ -366,7 +389,15 @@ fun BuildNavigation(
         composableFromEndArgs<Route.RoomByAuthor> { ChatroomByAuthorScreen(it.id, null, accountViewModel, nav) }
 
         composableFromEnd<Route.MarmotGroupList> { MarmotGroupListScreen(accountViewModel, nav) }
-        composableFromEndArgs<Route.MarmotGroupChat> { MarmotGroupChatScreen(it.nostrGroupId, accountViewModel, nav) }
+        composableFromEndArgs<Route.MarmotGroupChat> {
+            MarmotGroupChatScreen(
+                nostrGroupId = it.nostrGroupId,
+                draftMessage = it.message,
+                replyToInnerNote = it.replyId,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
         composableFromEndArgs<Route.MarmotGroupInfo> { MarmotGroupInfoScreen(it.nostrGroupId, accountViewModel, nav) }
 
         composableFromBottom<Route.CreateMarmotGroup> { CreateGroupScreen(accountViewModel, nav) }

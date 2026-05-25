@@ -38,6 +38,7 @@ enum class ServerType {
 val DEFAULT_MEDIA_SERVERS: List<ServerName> =
     listOf(
         ServerName("Nostr.Build", "https://blossom.band/", ServerType.Blossom),
+        ServerName("Nostrcheck.me", "https://cdn.nostrcheck.me", ServerType.Blossom),
         ServerName("24242.io", "https://24242.io/", ServerType.Blossom),
         ServerName("Azzamo", "https://blossom.azzamo.media", ServerType.Blossom),
         ServerName("YakiHonne", "https://blossom.yakihonne.com/", ServerType.Blossom),

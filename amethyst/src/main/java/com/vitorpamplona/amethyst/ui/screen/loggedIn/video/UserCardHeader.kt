@@ -45,6 +45,7 @@ fun UserCardHeader(
     baseNote: Note,
     accountViewModel: AccountViewModel,
     nav: INav,
+    showTimeAgo: Boolean = true,
 ) {
     Row(
         modifier =
@@ -74,7 +75,11 @@ fun UserCardHeader(
             )
         }
 
-        TimeAgo(baseNote)
+        // The header time-ago is the note's createdAt (publication time). For most card types
+        // that's a meaningful "posted 5h ago" affordance. For calendar appointments and
+        // collections, the user cares about the event time, not when the metadata was
+        // published — showing both was confusing, so calendar cards hide this one.
+        if (showTimeAgo) TimeAgo(baseNote)
 
         MoreOptionsButton(
             baseNote = baseNote,

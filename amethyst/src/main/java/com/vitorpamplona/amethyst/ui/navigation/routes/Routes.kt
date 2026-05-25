@@ -81,6 +81,47 @@ sealed class Route {
 
     @Serializable object Pictures : Route()
 
+    @Serializable object SoftwareApps : Route()
+
+    @Serializable object Calendars : Route()
+
+    @Serializable object CalendarCollections : Route()
+
+    @Serializable
+    data class NewCalendarEvent(
+        val draft: String? = null,
+    ) : Route()
+
+    @Serializable
+    data class EditCalendarEvent(
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
+    ) : Route() {
+        constructor(address: Address) : this(
+            kind = address.kind,
+            pubKeyHex = address.pubKeyHex,
+            dTag = address.dTag,
+        )
+    }
+
+    @Serializable
+    data class NewCalendarCollection(
+        val dTag: String? = null,
+    ) : Route()
+
+    @Serializable data class CalendarEventDetail(
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
+    ) : Route() {
+        constructor(address: Address) : this(
+            kind = address.kind,
+            pubKeyHex = address.pubKeyHex,
+            dTag = address.dTag,
+        )
+    }
+
     @Serializable object Products : Route()
 
     @Serializable object Shorts : Route()
@@ -110,6 +151,8 @@ sealed class Route {
     @Serializable object WalletReceive : Route()
 
     @Serializable object WalletTransactions : Route()
+
+    @Serializable object OnchainTransactions : Route()
 
     @Serializable
     data class WalletDetail(
@@ -241,6 +284,8 @@ sealed class Route {
 
     @Serializable object NotificationSettings : Route()
 
+    @Serializable object CalendarReminderSettings : Route()
+
     @Serializable object Lists : Route()
 
     @Serializable data class MyPeopleListView(
@@ -305,6 +350,10 @@ sealed class Route {
 
     @Serializable data class Note(
         val id: String,
+    ) : Route()
+
+    @Serializable data class ContactListUsers(
+        val noteId: String,
     ) : Route()
 
     @Serializable data class Hashtag(
@@ -402,6 +451,8 @@ sealed class Route {
 
     @Serializable data class MarmotGroupChat(
         val nostrGroupId: String,
+        val message: String? = null,
+        val replyId: HexKey? = null,
     ) : Route()
 
     @Serializable data class MarmotGroupInfo(

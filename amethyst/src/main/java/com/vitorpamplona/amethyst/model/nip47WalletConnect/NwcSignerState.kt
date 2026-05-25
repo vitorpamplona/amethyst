@@ -144,15 +144,17 @@ class NwcSignerState(
 
         val filter =
             NWCPaymentQueryState(
-                fromServiceHex = walletService.pubKeyHex,
-                toUserHex = event.pubKey,
                 replyingToHex = event.id,
                 relay = walletService.relayUri,
             )
 
         val assembler = nwcFilterAssembler()
 
-        assembler.subscribe(filter)
+        // Synchronous flush so the REQ frame is queued on the WebSocket before
+        // the EVENT is published. Without this, the bundler may delay REQ up
+        // to 500ms, and the wallet service's ephemeral kind 23195 reply can
+        // be missed.
+        assembler.subscribeAndFlush(filter)
 
         scope.launch(Dispatchers.IO) {
             delay(60000)
@@ -181,15 +183,15 @@ class NwcSignerState(
 
         val filter =
             NWCPaymentQueryState(
-                fromServiceHex = walletService.pubKeyHex,
-                toUserHex = event.pubKey,
                 replyingToHex = event.id,
                 relay = walletService.relayUri,
             )
 
         val assembler = nwcFilterAssembler()
 
-        assembler.subscribe(filter)
+        // Synchronous flush so the REQ frame is queued before the EVENT.
+        // See sendNwcRequestToWallet above for the rationale.
+        assembler.subscribeAndFlush(filter)
 
         scope.launch(Dispatchers.IO) {
             delay(60000) // waits 1 minute to complete payment.

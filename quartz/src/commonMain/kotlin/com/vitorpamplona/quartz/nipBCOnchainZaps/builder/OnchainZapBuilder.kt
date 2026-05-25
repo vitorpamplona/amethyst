@@ -108,16 +108,54 @@ object OnchainZapBuilder {
         feeRateSatPerVByte: Double,
         availableUtxos: List<Utxo>,
         allowUnconfirmed: Boolean = false,
+    ): Result =
+        buildSplit(
+            senderPubKey = senderPubKey,
+            recipients = listOf(recipientPubKey to amountSats),
+            feeRateSatPerVByte = feeRateSatPerVByte,
+            availableUtxos = availableUtxos,
+            allowUnconfirmed = allowUnconfirmed,
+        )
+
+    /**
+     * Build the unsigned onchain-zap PSBT with one output per recipient.
+     *
+     * Same coin-selection and change-handling as [build]; the only difference
+     * is that the output set is the full list of (recipient, sats) pairs, so
+     * a single transaction pays N split recipients atomically.
+     *
+     * @param senderPubKey The sender's 32-byte x-only Nostr pubkey (hex).
+     * @param recipients Per-recipient amount to pay, in input order.
+     * @param feeRateSatPerVByte Target fee rate.
+     * @param availableUtxos UTXOs spendable from the sender's Taproot address.
+     * @param allowUnconfirmed See [build].
+     * @throws InsufficientFundsException when the UTXOs can't cover total + fee.
+     */
+    fun buildSplit(
+        senderPubKey: HexKey,
+        recipients: List<Pair<HexKey, Long>>,
+        feeRateSatPerVByte: Double,
+        availableUtxos: List<Utxo>,
+        allowUnconfirmed: Boolean = false,
     ): Result {
-        require(amountSats > 0) { "amount must be positive" }
-        require(amountSats >= DUST_THRESHOLD_SATS) { "amount is below the dust threshold" }
+        require(recipients.isNotEmpty()) { "must have at least one recipient" }
+        require(recipients.all { it.second > 0 }) { "all amounts must be positive" }
+        require(recipients.all { it.second >= DUST_THRESHOLD_SATS }) { "a recipient amount is below the dust threshold" }
         require(feeRateSatPerVByte > 0) { "fee rate must be positive" }
-        require(senderPubKey != recipientPubKey) { "cannot zap yourself" }
+        require(recipients.none { it.first == senderPubKey }) { "cannot zap yourself" }
+        // Distinct recipients keep the output set clean and make per-recipient
+        // receipts unambiguous. Callers should merge weights upstream.
+        require(recipients.map { it.first }.toSet().size == recipients.size) {
+            "recipients must be distinct"
+        }
 
         val senderXOnly = senderPubKey.hexToByteArray()
         require(senderXOnly.size == 32) { "sender pubkey must be 32 bytes" }
         val senderScript = TaprootAddress.scriptPubKeyForRecipient(senderPubKey)
-        val recipientScript = TaprootAddress.scriptPubKeyForRecipient(recipientPubKey)
+        val recipientScripts =
+            recipients.map { (pubKey, _) -> TaprootAddress.scriptPubKeyForRecipient(pubKey) }
+        val totalRecipientSats = recipients.sumOf { it.second }
+        val recipientOutputCount = recipients.size
 
         // Only spend confirmed UTXOs unless the caller explicitly opts in.
         val spendableUtxos =
@@ -130,15 +168,15 @@ object OnchainZapBuilder {
         var cursor = 0
 
         while (true) {
-            val feeWithChange = estimateFee(selected.size, 2, feeRateSatPerVByte)
-            if (selected.isNotEmpty() && selectedSum >= amountSats + feeWithChange) break
+            val feeWithChange = estimateFee(selected.size, recipientOutputCount + 1, feeRateSatPerVByte)
+            if (selected.isNotEmpty() && selectedSum >= totalRecipientSats + feeWithChange) break
 
             if (cursor >= sorted.size) {
                 // Last chance: maybe it fits without a change output.
-                val feeNoChange = estimateFee(selected.size, 1, feeRateSatPerVByte)
-                if (selected.isNotEmpty() && selectedSum >= amountSats + feeNoChange) break
+                val feeNoChange = estimateFee(selected.size, recipientOutputCount, feeRateSatPerVByte)
+                if (selected.isNotEmpty() && selectedSum >= totalRecipientSats + feeNoChange) break
                 throw InsufficientFundsException(
-                    needed = amountSats + estimateFee(selected.size.coerceAtLeast(1), 2, feeRateSatPerVByte),
+                    needed = totalRecipientSats + estimateFee(selected.size.coerceAtLeast(1), recipientOutputCount + 1, feeRateSatPerVByte),
                     available = spendableUtxos.sumOf { it.valueSats },
                 )
             }
@@ -148,8 +186,8 @@ object OnchainZapBuilder {
         }
 
         // Decide whether a change output is worth creating.
-        val feeWithChange = estimateFee(selected.size, 2, feeRateSatPerVByte)
-        val candidateChange = selectedSum - amountSats - feeWithChange
+        val feeWithChange = estimateFee(selected.size, recipientOutputCount + 1, feeRateSatPerVByte)
+        val candidateChange = selectedSum - totalRecipientSats - feeWithChange
 
         val feeSats: Long
         val changeSats: Long
@@ -159,11 +197,11 @@ object OnchainZapBuilder {
         } else {
             // Drop the change output; the leftover (dust + would-be change) is
             // absorbed into the fee.
-            val feeNoChange = estimateFee(selected.size, 1, feeRateSatPerVByte)
-            val leftover = selectedSum - amountSats
+            val feeNoChange = estimateFee(selected.size, recipientOutputCount, feeRateSatPerVByte)
+            val leftover = selectedSum - totalRecipientSats
             if (leftover < feeNoChange) {
                 throw InsufficientFundsException(
-                    needed = amountSats + feeNoChange,
+                    needed = totalRecipientSats + feeNoChange,
                     available = spendableUtxos.sumOf { it.valueSats },
                 )
             }
@@ -180,8 +218,10 @@ object OnchainZapBuilder {
                     sequence = RBF_SEQUENCE,
                 )
             }
-        val outputs = ArrayList<TxOut>(2)
-        outputs.add(TxOut(amountSats, recipientScript))
+        val outputs = ArrayList<TxOut>(recipientOutputCount + 1)
+        recipients.forEachIndexed { i, (_, sats) ->
+            outputs.add(TxOut(sats, recipientScripts[i]))
+        }
         if (changeSats > 0) {
             outputs.add(TxOut(changeSats, senderScript))
         }
@@ -195,13 +235,14 @@ object OnchainZapBuilder {
             psbt.setInputTapInternalKey(i, senderXOnly)
         }
         if (changeSats > 0) {
-            psbt.setOutputTapInternalKey(1, senderXOnly)
+            // Change output is always the last output in the tx.
+            psbt.setOutputTapInternalKey(recipientOutputCount, senderXOnly)
         }
 
         return Result(
             psbt = psbt,
             selectedUtxos = selected,
-            recipientSats = amountSats,
+            recipientSats = totalRecipientSats,
             changeSats = changeSats,
             feeSats = feeSats,
         )

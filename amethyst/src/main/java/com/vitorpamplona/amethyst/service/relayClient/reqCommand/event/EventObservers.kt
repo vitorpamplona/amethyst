@@ -333,7 +333,10 @@ fun observeNoteReferences(
     // Subscribe in the relay for changes in this note.
     EventFinderFilterAssemblerSubscription(note, accountViewModel)
 
-    // Subscribe in the LocalCache for changes that arrive in the device
+    // Subscribe in the LocalCache for changes that arrive in the device.
+    // On-chain zaps piggyback `note.flow().zaps.stateFlow` because Note.addOnchainZap
+    // invalidates the same `flowSet.zaps`. If that ever moves to a dedicated flow,
+    // add it here too — otherwise on-chain-only notes will stop pinging the chevron.
     val flow =
         remember(note) {
             combine(

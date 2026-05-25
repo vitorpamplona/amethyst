@@ -56,7 +56,6 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.notifications.Card
 import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
 import com.vitorpamplona.amethyst.logTime
-import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
@@ -91,37 +90,35 @@ fun RenderCardFeed(
 ) {
     val feedState by feedContent.feedContent.collectAsStateWithLifecycle()
 
-    CrossfadeIfEnabled(
-        modifier = Modifier.fillMaxSize(),
-        targetState = feedState,
-        animationSpec = tween(durationMillis = 100),
-        accountViewModel = accountViewModel,
-    ) { state ->
-        when (state) {
-            is CardFeedState.Empty -> {
-                NotificationFeedEmpty(feedContent::invalidateData)
-            }
+    // Direct switch instead of CrossfadeIfEnabled: the crossfade's `currentlyVisible`
+    // accumulator can leave a previous `Loaded` instance composed alongside the new
+    // one when refreshes (e.g. double-tap on the Notifications tab) bounce the
+    // state through Empty/Loading and back inside the animation window. Two
+    // LazyColumns then share the same listState and only the top one scrolls.
+    when (val state = feedState) {
+        is CardFeedState.Empty -> {
+            NotificationFeedEmpty(feedContent::invalidateData)
+        }
 
-            is CardFeedState.FeedError -> {
-                FeedError(state.errorMessage, feedContent::invalidateData)
-            }
+        is CardFeedState.FeedError -> {
+            FeedError(state.errorMessage, feedContent::invalidateData)
+        }
 
-            is CardFeedState.Loaded -> {
-                FeedLoaded(
-                    loaded = state,
-                    polls = pollContent,
-                    listState = listState,
-                    routeForLastRead = routeForLastRead,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                    scrollToEventId = scrollToEventId,
-                    headerContent = headerContent,
-                )
-            }
+        is CardFeedState.Loaded -> {
+            FeedLoaded(
+                loaded = state,
+                polls = pollContent,
+                listState = listState,
+                routeForLastRead = routeForLastRead,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                scrollToEventId = scrollToEventId,
+                headerContent = headerContent,
+            )
+        }
 
-            CardFeedState.Loading -> {
-                LoadingFeed()
-            }
+        CardFeedState.Loading -> {
+            LoadingFeed()
         }
     }
 }

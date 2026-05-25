@@ -24,10 +24,12 @@ import android.content.Context
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
@@ -173,15 +175,37 @@ class NotificationDispatcher(
                         //   matches the downstream per-channel policy. Calls
                         //   use a stricter 20s check in notifyIncomingCall so
                         //   they still pass through.
-                        // - event.notifies(pubkey) for any of our accounts —
-                        //   each kind decides which tag(s) name its recipients
-                        //   (lowercase `p` by default, plus uppercase `P` for
-                        //   NIP-22 root authors, etc.).
-                        val predicate = { event: Event ->
-                            event.kind in NOTIFICATION_KINDS &&
-                                event.createdAt >= dispatcherSince &&
-                                event.createdAt >= TimeUtils.fifteenMinutesAgo() &&
-                                pubkeys.any { event.notifies(it) }
+                        // - WakeUpEvent bypasses recipient matching: its
+                        //   [Event.notifies] is `true` unconditionally, meaning
+                        //   "wake every signed-in account" (p-tags on a WakeUp
+                        //   name referenced-event authors, not recipients).
+                        // - Everything else uses isTaggedUser + tagsAnEventByUser
+                        //   — same pair the in-app Notifications feed uses, so
+                        //   push and feed agree on what counts as a mention,
+                        //   reply, citation, fork, or community moderation.
+                        //   Note: NIP-22 CommentEvents where the user is only
+                        //   the root author (uppercase `P`) no longer match —
+                        //   intentional alignment with the feed, which gates
+                        //   on lowercase `p` only.
+                        val predicate = predicate@{ event: Event ->
+                            if (event.kind !in NOTIFICATION_KINDS) return@predicate false
+                            if (event.createdAt < dispatcherSince) return@predicate false
+                            if (event.createdAt < TimeUtils.fifteenMinutesAgo()) return@predicate false
+                            if (event is WakeUpEvent) return@predicate true
+
+                            // getNoteIfExists(event) — not (event.id) — so
+                            // AddressableEvent kinds (LongTextNote, WikiNote,
+                            // LiveChess*, VideoHorizontal/Vertical) resolve to
+                            // their address-keyed replaceable note. The id-keyed
+                            // version note has its replyTo moved away during
+                            // insertion (LocalCache.consumeBaseReplaceable), so
+                            // tagsAnEventByUser's replyTo check would otherwise
+                            // always miss for replies into addressable posts.
+                            val note = LocalCache.getNoteIfExists(event) ?: return@predicate false
+                            pubkeys.any { pubkey ->
+                                event.isTaggedUser(pubkey) &&
+                                    NotificationFeedFilter.tagsAnEventByUser(note, pubkey)
+                            }
                         }
 
                         LocalCache

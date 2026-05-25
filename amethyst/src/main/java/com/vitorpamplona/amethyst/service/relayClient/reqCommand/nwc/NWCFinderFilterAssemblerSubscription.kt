@@ -49,11 +49,9 @@ fun NWCFinderFilterAssemblerSubscription(
         remember(note) {
             val zapPaymentRequestNote = note
             (zapPaymentRequestNote.event as? LnZapPaymentRequestEvent)?.let { noteEvent ->
-                noteEvent.walletServicePubKey()?.let { serviceId ->
+                noteEvent.walletServicePubKey()?.let {
                     zapPaymentRequestNote.relays.map {
                         NWCPaymentQueryState(
-                            fromServiceHex = serviceId,
-                            toUserHex = noteEvent.pubKey,
                             replyingToHex = noteEvent.id,
                             relay = it,
                         )

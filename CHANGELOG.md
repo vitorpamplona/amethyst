@@ -1,3 +1,108 @@
+<a id="v1.11.0"></a> NIP-52 Calendars, On-Chain Zap Polish
+
+Highlights:
+- NIP-52 Calendars — feed, day/week/month views, event/collection editors, RSVP, ICS export, "starting soon" notifications, share-as-nostr-link, gallery picker.
+- On-Chain zaps polish — splits with dust gating, payment-targets modal redesign (QR + copy + pay), public-address chip + confirmation, on-chain handoff from custom-zap dialog, on-chain zappers in the reactions gallery.
+- Privacy groundwork — I2P scaffolded as a parallel transport to Tor, route-aware HTTP stack, typed fail-closed `BlockedRouteException`.
+- Notifications — dedicated settings screen, delivery vs display split, on-chain zaps in summary stats, push filters aligned with the Notifications feed.
+- Inline nowhere-link cards in rich text.
+- Wallet — clickable on-chain rows, tappable wallet card opens transaction history, reactive on-chain zap observation, time-windowed relay sub with burst coalescing.
+
+PRs:
+- Restore Lightning Address + LNURL fields in Edit Profile
+- Raise the default maximum hashtag limit from 5 to 8
+- Include on-chain zaps in notification summary stats
+- Add electrum.nmc.ethicnology.com to default ElectrumX server set
+- Translate call-permission and git-repo strings (cs, pt-BR, sv, de) + New Crowdin translations
+- Subscribe and observe PaymentTargetsEvent for other users
+- Only bridge to local cache when URL is BUD-01 layout; dedupe public-channel rows; normalize video/x-m4v to video/mp4
+- Enable Send when typed name resolves via NIP-05; on-chain Bit recipient
+- Inline Namecoin resolution indicator + result row on on-chain zaps
+- Inline Namecoin resolution indicator in global search bar
+- Long-press to copy Nostr Address, Website, LN Address, identities, payment targets
+- macOS VLC bundled discovery and video rendering
+- Make RelayAuthenticator authStatus thread-safe
+- Pad GitRepositoryOverview content to clear top/bottom bars
+- Use LargeCache for RelayAuthenticator authStatus
+- MIME-type normalization for MediaStore
+- Split delivery vs display, add Categories section in notifications
+- Accept floating-point dimensions in imeta so image space is reserved pre-load
+- Explain hashtag-limit hide reason in HiddenNote
+- Route media-upload signing through launchSigner
+- Render nowhere links inline as branded cards
+- Release MediaController after 30s in background; skip timer for PiP
+- Clickable on-chain card opens transaction history; tappable on-chain rows + txid index in LocalCache
+- Disable ProGuard optimization entirely on desktop (fixes kmp-tor crash); .deb launch CI smoke test
+- Show on-chain zappers in expanded reactions gallery
+- Convert hashtag-limit message to <plurals> and add cs/pt-BR/sv/de translations
+- Restore long-press on root note + anchor popup to the card
+- Keep filter chips visible on empty on-chain transactions list
+- Make playback notification tap open the note on warm-pool resume
+- Validate zap receipts against LNURL provider's nostrPubkey (NIP-57 Appendix F)
+- Stable sort in ShortsFeedFilter to avoid TimSort contract crash
+- Align push notifications with Notifications feed filter; resolve addressable events to their replaceable note; WakeUp bypass + lookup hoist
+- Update on-chain-zap + headers-explorer plans for NIP-BC inline SPV tags
+- Start zoomable dialog close animation from zoomed bounds
+- Scaffold I2P as a parallel privacy transport to Tor; route-aware HTTP stack; BlockedRouteException
+- Reorder feed filter popup sections (DVMs before Communities, interest sets next to hashtags)
+- Stop spinning Around Me when Geocoder is unavailable
+- NIP-52 calendars — feed, day/week/month views, RSVP, ICS export, reminders, edit, share-as-nostr-link, participant picker, multi-day bars
+- Audit follow-ups on MLS reply paths; route reply button on MLS messages to the encrypted group
+- Use LaunchedEffect instead of remember for VM reset
+- Switch to Dispatchers.IO around the whole executeAsync call in relay-info
+- Drop crossfade around the card feed in notifications
+- Observe locale in CalendarDateTimePickerButton
+- Modernize zap amount choice popup to match reactions popup style
+- Catch ForegroundServiceStartNotAllowedException in PlaybackService
+- Include crashing thread name in crash report
+- Convert remaining .gradle files to Kotlin DSL
+- Redesign payment targets modal with QR, copy and pay buttons
+- Add Public chip to on-chain wallet card; clarify privacy guidance on on-chain wallet popup
+- Require running material-symbols-subset.sh when adding new icons; add new information icon
+- Re-add Nostrcheck.me Blossom server to defaults
+- Surface on-chain zaps from the reactions zap button
+- On-chain zap splits — drop sender from splits, merge duplicates, gate Send on dust
+- On-chain option on the Zap the Devs button
+- On-chain handoff from the custom-zap dialog
+- Keep listening on default index+search relays for users with no kind 10002
+- Skip offline relays when fetching user metadata
+- Include indexer and proxy relays in the trusted relay list to avoid Tor
+- Confirm on-chain copy with public-address warning
+- Swallow LegacyCursorAnchorInfo IllegalArgumentException
+- Render ContactListEvent in NoteCompose with tap-through user list; add preview for DisplayContactList
+
+## Contributors
+
+- @npub1gcxzte5zlkncx26j68ez60fzkvtkm9e0vrwdcvsjakxf9mu9qewqlfnj5z
+- @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
+- @npub12cfje6nl2nuxplcqfvhg7ljt89fmpj0n0fd24zxsukja5qm9wmtqd7y76c
+- @npub1w4uswmv6lu9yel005l3qgheysmr7tk9uvwluddznju3nuxalevvs2d0jr5
+- @npub1a3tx8wcrt789skl6gg7rqwj4wey0j53eesr4z6asd4h4jwrd62jq0wkq4k
+- @npub1dn0tej4a5806qk9ts56j572sndvjk27l5qmsxf0z3mquknccve7s4k8tfp
+
+## Translations
+
+- Czech, German, Swedish, and Portuguese by @npub1e2yuky03caw4ke3zy68lg0fz3r4gkt94hx4fjmlelacyljgyk79svn3eef
+- Hungarian by @npub1dnvslq0vvrs8d603suykc4harv94yglcxwna9sl2xu8grt2afm3qgfh0tp
+- French by @npub106efcyntxc5qwl3w8krrhyt626m59ya2nk9f40px5s968u5xdwhsjsr8fz
+- Dutch by @npub1w4la29u3zv09r6crx5u8yxax0ffxgekzdm2egzjkjckef7xc83fs0ftxcd
+- Polish by @npub16gjyljum0ksrrm28zzvejydgxwfm7xse98zwc4hlgq8epxeuggushqwyrm
+- Hindi by @npub1ww6huwu3xye6r05n3qkjeq62wds5pq0jswhl7uc59lchc0n0ns4sdtw5e6
+- Slovenian by @npub1qqqqqqz7nhdqz3uuwmzlflxt46lyu7zkuqhcapddhgz66c4ddynswreecw
+- Bengali by @npub13qtw3yu0uc9r4yj5x0rhgy8nj5q0uyeq0pavkgt9ly69uuzxgkfqwvx23t
+- Spanish by @npub1luhyzgce7qtcs6r6v00ryjxza8av8u4dzh3avg0zks38tjktnmxspxq903
+- Chinese by hypnotichemionus4 and @npub1gd8e0xfkylc7v8c5a6hkpj4gelwwcy99jt90lqjseqjj2t253s2s6ch58h
+- Russian by Anton Zhao
+
+<a id="v1.10.0"></a> On-Chain zaps
+
+- ci: remove macos-13 x64 build legs by @vitorpamplona in #2939
+- Replace linuxdeploy with appimagetool for AppImage packaging by @vitorpamplona in #2940
+- Sync inner note highlight fade with parent background color by @vitorpamplona in #2941
+- Handle denied call permissions with settings dialog by @vitorpamplona in #2942
+- Fix gradient rendering with transparent background colors by @vitorpamplona in #2943
+- Add NIP-BC onchain Bitcoin zaps support (send, receive, display) by @vitorpamplona in #2944
+
 <a id="v1.09.2"></a> Fixes
 
 - Fix Blossom blob detection to reject non-compliant filenames by @greenart7c3 in #2919

@@ -45,6 +45,8 @@ sealed class DeckColumnType {
 
     object Relays : DeckColumnType()
 
+    object Wallet : DeckColumnType()
+
     data class Profile(
         val pubKeyHex: String,
     ) : DeckColumnType()
@@ -88,6 +90,7 @@ sealed class DeckColumnType {
             Chess -> "Chess"
             Settings -> "Settings"
             Relays -> "Relays"
+            Wallet -> "Wallet"
             is Article -> "Article"
             is Editor -> "New Article"
             Drafts -> "Drafts"
@@ -111,6 +114,7 @@ sealed class DeckColumnType {
             Chess -> "chess"
             Settings -> "settings"
             Relays -> "relays"
+            Wallet -> "wallet"
             is Article -> "article"
             is Editor -> "editor"
             Drafts -> "drafts"

@@ -24,7 +24,10 @@ import android.os.Build
 import com.vitorpamplona.amethyst.BuildConfig
 
 class ReportAssembler {
-    fun buildReport(e: Throwable): String =
+    fun buildReport(
+        e: Throwable,
+        threadName: String = Thread.currentThread().name,
+    ): String =
         buildString {
             append(e.javaClass.simpleName)
             append(": ")
@@ -70,9 +73,14 @@ class ReportAssembler {
             append("| User | ")
             append(Build.USER)
             appendLine(" |")
+            append("| Thread | ")
+            append(threadName)
+            appendLine(" |")
             appendLine()
 
             appendLine("```")
+            append("Thread: ")
+            appendLine(threadName)
             appendLine(e.toString())
             e.stackTrace.forEach {
                 append("    ")

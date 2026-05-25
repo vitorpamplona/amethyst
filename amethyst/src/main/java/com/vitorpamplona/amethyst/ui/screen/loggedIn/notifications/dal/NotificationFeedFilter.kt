@@ -49,6 +49,7 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
@@ -111,6 +112,7 @@ class NotificationFeedFilter(
         val NOTIFICATION_KINDS =
             setOf(
                 BadgeAwardEvent.KIND,
+                ChannelMessageEvent.KIND,
                 ChatMessageEvent.KIND,
                 ChatMessageEncryptedFileHeaderEvent.KIND,
                 CommentEvent.KIND,
@@ -134,6 +136,81 @@ class NotificationFeedFilter(
                 VoiceEvent.KIND,
                 VoiceReplyEvent.KIND,
             ) + ADDRESSABLE_KINDS
+
+        // Shared with EventNotificationConsumer so push notifications and the
+        // in-app feed apply the same per-kind "is this event for me" rule.
+        fun tagsAnEventByUser(
+            note: Note,
+            authorHex: HexKey,
+        ): Boolean {
+            val event = note.event
+
+            if (event is GitIssueEvent || event is GitPatchEvent) {
+                return true
+            }
+
+            if (event is HighlightEvent) {
+                return true
+            }
+
+            if (event is BaseNoteEvent) {
+                if (note.replyTo?.any { it.author?.pubkeyHex == authorHex } == true) {
+                    return true
+                }
+
+                if ((event is TextNoteEvent || event is CommentEvent)) {
+                    val community =
+                        event
+                            .communityAddress()
+                            ?.let {
+                                LocalCache.getAddressableNoteIfExists(it)
+                            }?.event as? CommunityDefinitionEvent
+                    if (community != null) {
+                        val moderators = community.moderatorKeys().toSet()
+                        val isModerator = moderators.contains(authorHex)
+
+                        if (isModerator && event.pubKey !in moderators) {
+                            return true
+                        }
+                    }
+                }
+
+                val isAuthoredPostCited = event.findCitations().any { LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == authorHex }
+
+                if (isAuthoredPostCited) return true
+
+                val isAuthorDirectlyCited = event.citedUsers().contains(authorHex)
+
+                if (isAuthorDirectlyCited) return true
+
+                return if (event is IForkableEvent && event.isAFork()) {
+                    val address = event.forkFromAddress()
+                    val version = event.forkFromVersion()
+
+                    // Displays notifications about forks
+                    address?.pubKeyHex == authorHex ||
+                        (version?.let { LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == authorHex } == true)
+                } else {
+                    false
+                }
+            }
+
+            if (event is ReactionEvent) {
+                return note.replyTo
+                    ?.lastOrNull()
+                    ?.author
+                    ?.pubkeyHex == authorHex
+            }
+
+            if (event is RepostEvent || event is GenericRepostEvent) {
+                return note.replyTo
+                    ?.lastOrNull()
+                    ?.author
+                    ?.pubkeyHex == authorHex
+            }
+
+            return true
+        }
     }
 
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code
@@ -251,77 +328,4 @@ class NotificationFeedFilter(
     }
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
-
-    fun tagsAnEventByUser(
-        note: Note,
-        authorHex: HexKey,
-    ): Boolean {
-        val event = note.event
-
-        if (event is GitIssueEvent || event is GitPatchEvent) {
-            return true
-        }
-
-        if (event is HighlightEvent) {
-            return true
-        }
-
-        if (event is BaseNoteEvent) {
-            if (note.replyTo?.any { it.author?.pubkeyHex == authorHex } == true) {
-                return true
-            }
-
-            if ((event is TextNoteEvent || event is CommentEvent)) {
-                val community =
-                    event
-                        .communityAddress()
-                        ?.let {
-                            LocalCache.getAddressableNoteIfExists(it)
-                        }?.event as? CommunityDefinitionEvent
-                if (community != null) {
-                    val moderators = community.moderatorKeys().toSet()
-                    val isModerator = moderators.contains(authorHex)
-
-                    if (isModerator && event.pubKey !in moderators) {
-                        return true
-                    }
-                }
-            }
-
-            val isAuthoredPostCited = event.findCitations().any { LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == authorHex }
-
-            if (isAuthoredPostCited) return true
-
-            val isAuthorDirectlyCited = event.citedUsers().contains(authorHex)
-
-            if (isAuthorDirectlyCited) return true
-
-            return if (event is IForkableEvent && event.isAFork()) {
-                val address = event.forkFromAddress()
-                val version = event.forkFromVersion()
-
-                // Displays notifications about forks
-                address?.pubKeyHex == authorHex ||
-                    (version?.let { LocalCache.getNoteIfExists(it)?.author?.pubkeyHex == authorHex } == true)
-            } else {
-                false
-            }
-        }
-
-        if (event is ReactionEvent) {
-            return note.replyTo
-                ?.lastOrNull()
-                ?.author
-                ?.pubkeyHex == authorHex
-        }
-
-        if (event is RepostEvent || event is GenericRepostEvent) {
-            return note.replyTo
-                ?.lastOrNull()
-                ?.author
-                ?.pubkeyHex == authorHex
-        }
-
-        return true
-    }
 }

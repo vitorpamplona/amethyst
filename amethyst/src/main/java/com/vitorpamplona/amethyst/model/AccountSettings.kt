@@ -163,6 +163,7 @@ class AccountSettings(
     val defaultDiscoveryFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultPollsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultPicturesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultCalendarsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultProductsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AroundMe),
     val defaultShortsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultPublicChatsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
@@ -260,6 +261,15 @@ class AccountSettings(
     fun changeZapAmounts(newAmounts: List<Long>): Boolean {
         if (syncedSettings.zaps.zapAmountChoices.value != newAmounts) {
             syncedSettings.zaps.zapAmountChoices.tryEmit(newAmounts.toImmutableList())
+            saveAccountSettings()
+            return true
+        }
+        return false
+    }
+
+    fun changeOnchainZapAmounts(newAmounts: List<Long>): Boolean {
+        if (syncedSettings.zaps.onchainZapAmountChoices.value != newAmounts) {
+            syncedSettings.zaps.onchainZapAmountChoices.tryEmit(newAmounts.toImmutableList())
             saveAccountSettings()
             return true
         }
@@ -525,6 +535,17 @@ class AccountSettings(
     fun changeDefaultPicturesFollowList(name: TopFilter) {
         if (defaultPicturesFollowList.value != name) {
             defaultPicturesFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultCalendarsFollowList(name: FeedDefinition) {
+        changeDefaultCalendarsFollowList(name.code)
+    }
+
+    fun changeDefaultCalendarsFollowList(name: TopFilter) {
+        if (defaultCalendarsFollowList.value != name) {
+            defaultCalendarsFollowList.tryEmit(name)
             saveAccountSettings()
         }
     }

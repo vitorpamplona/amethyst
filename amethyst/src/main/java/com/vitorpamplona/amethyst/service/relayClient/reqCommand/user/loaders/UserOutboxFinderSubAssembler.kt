@@ -20,12 +20,15 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.loaders
 
+import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
+import com.vitorpamplona.amethyst.commons.defaults.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.BaseEoseManager
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.follows.pickRelaysToLoadUsers
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
@@ -107,16 +110,46 @@ class UserOutboxFinderSubAssembler(
                 hasTried,
             )
 
-        return perRelayKeysBoth.mapNotNull {
-            val sortedUsers = it.value.sorted()
-            if (sortedUsers.isNotEmpty()) {
-                RelayBasedFilter(
-                    relay = it.key,
-                    filter = Filter(kinds = relayListKinds, authors = sortedUsers),
-                )
-            } else {
-                null
+        val activeFilters =
+            perRelayKeysBoth.mapNotNull {
+                val sortedUsers = it.value.sorted()
+                if (sortedUsers.isNotEmpty()) {
+                    RelayBasedFilter(
+                        relay = it.key,
+                        filter = Filter(kinds = relayListKinds, authors = sortedUsers),
+                    )
+                } else {
+                    null
+                }
             }
-        }
+
+        // Users that pickRelaysToLoadUsers could not place anywhere this pass:
+        // every candidate relay tier (outbox/hints/index/search/connected/common)
+        // is already in hasTried. Without a fallback they'd be silently dropped
+        // and a late-published kind 10002 would never reach the UI.
+        val placedPubkeys =
+            perRelayKeysBoth.values
+                .asSequence()
+                .flatten()
+                .toSet()
+        val abandonedPubkeys =
+            noOutboxList.mapNotNullTo(mutableSetOf<HexKey>()) { user ->
+                user.pubkeyHex.takeIf { it !in placedPubkeys }
+            }
+
+        if (abandonedPubkeys.isEmpty()) return activeFilters
+
+        val sortedAbandoned = abandonedPubkeys.sorted()
+        val fallbackRelays =
+            (DefaultIndexerRelayList + DefaultSearchRelayList) - failureTracker.cannotConnectRelays
+        val fallbackFilters =
+            fallbackRelays.map { relay ->
+                RelayBasedFilter(
+                    relay = relay,
+                    filter = Filter(kinds = relayListKinds, authors = sortedAbandoned),
+                )
+            }
+
+        return activeFilters + fallbackFilters
     }
 }

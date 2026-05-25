@@ -127,6 +127,7 @@ import com.vitorpamplona.amethyst.ui.note.types.AudioTrackHeader
 import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBlockedRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBroadcastRelayList
+import com.vitorpamplona.amethyst.ui.note.types.DisplayContactList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayDMRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayFollowList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayIndexerRelayList
@@ -181,6 +182,9 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderRelayLeaveRequest
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayMembershipList
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayRemoveMember
 import com.vitorpamplona.amethyst.ui.note.types.RenderRootSiteEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderSoftwareApplication
+import com.vitorpamplona.amethyst.ui.note.types.RenderSoftwareAsset
+import com.vitorpamplona.amethyst.ui.note.types.RenderSoftwareRelease
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTextModificationEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderTorrent
@@ -224,10 +228,14 @@ import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
@@ -262,6 +270,7 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
+import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
@@ -483,7 +492,7 @@ private fun FullBleedNoteCompose(
         )
 
     Column(
-        Modifier
+        modifier
             .fillMaxWidth()
             .padding(top = 10.dp),
     ) {
@@ -623,6 +632,8 @@ private fun FullBleedNoteCompose(
                     DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is FollowListEvent) {
                     DisplayFollowList(baseNote, false, accountViewModel, nav)
+                } else if (noteEvent is ContactListEvent) {
+                    DisplayContactList(baseNote, accountViewModel, nav)
                 } else if (noteEvent is AudioTrackEvent) {
                     AudioTrackHeader(noteEvent, baseNote, ContentScale.FillWidth, accountViewModel, nav)
                 } else if (noteEvent is AudioHeaderEvent) {
@@ -721,6 +732,12 @@ private fun FullBleedNoteCompose(
                     RenderGitIssueEvent(baseNote, makeItShort = false, canPreview = true, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
                 } else if (noteEvent is AppDefinitionEvent) {
                     RenderAppDefinition(baseNote, accountViewModel, nav)
+                } else if (noteEvent is SoftwareApplicationEvent) {
+                    RenderSoftwareApplication(baseNote, accountViewModel, nav)
+                } else if (noteEvent is SoftwareAssetEvent) {
+                    RenderSoftwareAsset(baseNote, accountViewModel, nav)
+                } else if (noteEvent is ReleaseArtifactSetEvent && noteEvent.isNip82SoftwareRelease()) {
+                    RenderSoftwareRelease(baseNote, accountViewModel, nav)
                 } else if (noteEvent is DraftWrapEvent) {
                     RenderDraft(baseNote, 3, ReplyRenderType.FULL, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is HighlightEvent) {

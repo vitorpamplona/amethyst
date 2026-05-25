@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relays.EOSEAccountFast
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -43,11 +44,13 @@ val UserMetadataForKeyKinds =
         AdvertisedRelayListEvent.KIND,
         ChatMessageRelayListEvent.KIND,
         KeyPackageRelayListEvent.KIND,
+        PaymentTargetsEvent.KIND,
     )
 
 fun filterUserMetadataForKey(
     authors: Set<User>,
     indexRelays: Set<NormalizedRelayUrl>,
+    cannotConnectRelays: Set<NormalizedRelayUrl>,
     since: EOSEAccountFast<User>,
 ): List<RelayBasedFilter> {
     val perRelayUsers =
@@ -57,7 +60,7 @@ fun filterUserMetadataForKey(
                     key.outboxRelays()
                         ?: (key.allUsedRelays() + LocalCache.relayHints.hintsForKey(key.pubkeyHex) + indexRelays)
 
-                relays.forEach {
+                (relays - cannotConnectRelays).forEach {
                     add(it, key)
                 }
             }

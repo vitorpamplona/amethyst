@@ -26,6 +26,7 @@ import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
+import com.vitorpamplona.amethyst.commons.services.lnurl.OkHttpLnurlEndpointResolver
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -360,6 +361,12 @@ class AppModules(
                     client = roleBasedHttpClientBuilder.okHttpClientForMoney(OkHttpBitcoinExplorer.MEMPOOL_API_URL),
                 ),
             )
+
+        // NIP-57 Appendix F: validates incoming zap receipts against the
+        // recipient's LNURL provider's advertised `nostrPubkey`. Reuses the
+        // money-tier http client so Tor preferences and proxy settings apply.
+        cache.lnurlEndpointResolver =
+            OkHttpLnurlEndpointResolver(roleBasedHttpClientBuilder::okHttpClientForMoney)
     }
 
     // Provides a relay pool
@@ -640,6 +647,12 @@ class AppModules(
         // posts still fire when always-on notifications are disabled.
         ScheduledPostWorker.schedule(appContext)
         ScheduledPostWorker.scheduleCatchUp(appContext)
+
+        // Periodic scan that posts "starting soon" notifications for NIP-52 appointments the
+        // user has RSVP'd to as ACCEPTED. 15-minute cadence matches both the WorkManager
+        // periodic minimum and the lead-time window.
+        com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
+            .schedule(appContext)
 
         // Watch for account login and start/stop always-on notification service
         applicationIOScope.launch {

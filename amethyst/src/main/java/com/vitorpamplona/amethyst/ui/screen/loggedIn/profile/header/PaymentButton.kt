@@ -21,19 +21,36 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
 import android.content.Intent
+import android.widget.Toast
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -48,7 +65,9 @@ import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
@@ -81,11 +100,7 @@ fun PaymentButton(
 
 @Composable
 fun PaymentButtonWithTargets(targets: List<PaymentTarget>) {
-    val context = LocalContext.current
-    val clipboardManager = LocalClipboard.current
-    val scope = rememberCoroutineScope()
     var expanded by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     FilledTonalButton(
         modifier =
@@ -102,34 +117,58 @@ fun PaymentButtonWithTargets(targets: List<PaymentTarget>) {
     }
 
     if (expanded) {
-        M3ActionDialog(
-            title = stringRes(R.string.payment_targets),
-            onDismiss = { expanded = false },
-        ) {
-            M3ActionSection {
+        PaymentTargetsDialog(targets = targets, onDismiss = { expanded = false })
+    }
+}
+
+@Composable
+fun PaymentTargetsDialog(
+    targets: List<PaymentTarget>,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var qrContent by remember { mutableStateOf<String?>(null) }
+
+    M3ActionDialog(
+        title = stringRes(R.string.payment_targets),
+        onDismiss = onDismiss,
+    ) {
+        M3ActionSection {
+            if (targets.isEmpty()) {
+                M3ActionRow(
+                    icon = MaterialSymbols.AccountBalanceWallet,
+                    text = stringRes(R.string.no_payment_targets_message),
+                    enabled = false,
+                    onClick = {},
+                )
+            } else {
                 targets.forEach { target ->
-                    M3ActionRow(
-                        icon = MaterialSymbols.AccountBalanceWallet,
-                        text = "${target.type.replaceFirstChar(Char::titlecase)}: ${target.authority}",
-                        onClick = {
-                            expanded = false
+                    PaymentTargetRow(
+                        target = target,
+                        onShowQr = { qrContent = target.authority },
+                        onCopy = {
+                            scope.launch {
+                                clipboardManager.setText(target.authority)
+                                Toast
+                                    .makeText(
+                                        context,
+                                        stringRes(context, R.string.copied_to_clipboard),
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                            }
+                        },
+                        onPay = {
                             try {
                                 val intent = Intent(Intent.ACTION_VIEW, "payto://${target.type}/${target.authority}".toUri())
                                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                                 context.startActivity(intent)
+                                onDismiss()
                             } catch (e: Exception) {
                                 if (e is kotlinx.coroutines.CancellationException) throw e
                                 errorMessage = stringRes(context, R.string.no_payment_app_found)
-                            }
-                        },
-                    )
-                    M3ActionRow(
-                        icon = MaterialSymbols.ContentCopy,
-                        text = stringRes(R.string.copy_to_clipboard),
-                        onClick = {
-                            expanded = false
-                            scope.launch {
-                                clipboardManager.setText(target.authority)
                             }
                         },
                     )
@@ -138,11 +177,102 @@ fun PaymentButtonWithTargets(targets: List<PaymentTarget>) {
         }
     }
 
+    qrContent?.let { value ->
+        PaymentTargetQrDialog(value = value, onDismiss = { qrContent = null })
+    }
+
     errorMessage?.let { msg ->
         ErrorMessageDialog(
             title = stringRes(R.string.error_dialog_payment_error),
             textContent = msg,
             onDismiss = { errorMessage = null },
         )
+    }
+}
+
+@Composable
+private fun PaymentTargetRow(
+    target: PaymentTarget,
+    onShowQr: () -> Unit,
+    onCopy: () -> Unit,
+    onPay: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = target.type.replaceFirstChar(Char::titlecase),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = target.authority,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        IconButton(onClick = onShowQr) {
+            Icon(
+                symbol = MaterialSymbols.QrCode2,
+                contentDescription = stringRes(R.string.show_qr),
+                modifier = Size20Modifier,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        IconButton(onClick = onCopy) {
+            Icon(
+                symbol = MaterialSymbols.ContentCopy,
+                contentDescription = stringRes(R.string.copy_to_clipboard),
+                modifier = Size20Modifier,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        IconButton(onClick = onPay) {
+            Icon(
+                symbol = MaterialSymbols.Bolt,
+                contentDescription = stringRes(R.string.payment_targets),
+                modifier = Size20Modifier,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PaymentTargetQrDialog(
+    value: String,
+    onDismiss: () -> Unit,
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                QrCodeDrawer(
+                    contents = value,
+                    modifier = Modifier.size(260.dp),
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
     }
 }

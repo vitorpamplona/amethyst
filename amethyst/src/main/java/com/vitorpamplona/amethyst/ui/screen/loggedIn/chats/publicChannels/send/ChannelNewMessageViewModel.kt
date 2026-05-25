@@ -22,13 +22,13 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.send
 
 import android.content.Context
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
@@ -156,7 +156,7 @@ open class ChannelNewMessageViewModel :
     // Forward Zap to
     var wantsForwardZapTo by mutableStateOf(false)
     var forwardZapTo by mutableStateOf<SplitBuilder<User>>(SplitBuilder())
-    var forwardZapToEditting by mutableStateOf(TextFieldValue(""))
+    val forwardZapToEditting = TextFieldState()
 
     // NSFW, Sensitive
     var wantsToMarkAsSensitive by mutableStateOf(false)
@@ -240,7 +240,7 @@ open class ChannelNewMessageViewModel :
             }
             // don't support edditing old-style splits.
         }
-        forwardZapToEditting = TextFieldValue("")
+        forwardZapToEditting.clearText()
         wantsForwardZapTo = localForwardZapTo.isNotEmpty()
 
         wantsToMarkAsSensitive = draftEvent.isSensitive()
@@ -561,7 +561,7 @@ open class ChannelNewMessageViewModel :
         wantsToAddGeoHash = false
 
         forwardZapTo = SplitBuilder()
-        forwardZapToEditting = TextFieldValue("")
+        forwardZapToEditting.clearText()
 
         userSuggestions?.reset()
         userSuggestionsMainMessage = null
@@ -599,10 +599,9 @@ open class ChannelNewMessageViewModel :
         draftTag.newVersion()
     }
 
-    open fun updateZapForwardTo(newZapForwardTo: TextFieldValue) {
-        forwardZapToEditting = newZapForwardTo
-        if (newZapForwardTo.selection.collapsed) {
-            val lastWord = newZapForwardTo.text
+    open fun onForwardZapTextChanged() {
+        if (forwardZapToEditting.selection.collapsed) {
+            val lastWord = forwardZapToEditting.text.toString()
             userSuggestionsMainMessage = UserSuggestionAnchor.FORWARD_ZAPS
             userSuggestions?.processCurrentWord(lastWord)
         }
@@ -615,7 +614,7 @@ open class ChannelNewMessageViewModel :
                 it.replaceCurrentWord(message, lastWord, item)
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
                 forwardZapTo.addItem(item)
-                forwardZapToEditting = TextFieldValue("")
+                forwardZapToEditting.clearText()
             }
 
             userSuggestionsMainMessage = null

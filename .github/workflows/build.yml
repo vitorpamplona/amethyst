@@ -155,8 +155,20 @@ jobs:
               ;;
           esac
 
+      # Compose UI smoke test (DesktopLaunchSmokeTest) uses Skiko which needs
+      # a display server on Linux. xvfb provides a virtual framebuffer.
+      - name: Install xvfb (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+
       - name: Test + Build Desktop (gradle)
-        run: ./gradlew :quartz:jvmTest :commons:jvmTest :nestsClient:jvmTest :cli:test :desktopApp:test :desktopApp:${{ matrix.desktop-task }}
+        run: |
+          CMD="./gradlew :quartz:jvmTest :commons:jvmTest :nestsClient:jvmTest :cli:test :desktopApp:test :desktopApp:${{ matrix.desktop-task }}"
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            xvfb-run --auto-servernum $CMD
+          else
+            $CMD
+          fi
 
       # jpackage pins libicu to the build host's version (libicu74 on
       # ubuntu-24.04). Rewrite the .deb so testers on other Debian/Ubuntu

@@ -41,6 +41,11 @@ class CachingOnchainBackendTest {
 
         override suspend fun getUtxosForAddress(address: String): List<Utxo> = emptyList()
 
+        override suspend fun getTxsForAddress(
+            address: String,
+            afterTxid: String?,
+        ): List<BitcoinAddressTx> = emptyList()
+
         override suspend fun broadcast(rawTxHex: String): String = "broadcast"
 
         override suspend fun tipHeight(): Long {

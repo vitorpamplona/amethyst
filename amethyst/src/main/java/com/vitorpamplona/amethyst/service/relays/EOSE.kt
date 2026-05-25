@@ -51,6 +51,11 @@ open class EOSEByKey<U : Any>(
 
     fun since(listCode: U) = followList[listCode]?.relayList
 
+    /** Drops the EOSE state for [listCode] so the next filter assembly starts fresh. */
+    fun clear(listCode: U) {
+        followList.remove(listCode)
+    }
+
     fun newEose(
         listCode: U,
         relayUrl: NormalizedRelayUrl,
@@ -81,6 +86,19 @@ open class EOSEAccountKey<U : Any>(
 
     fun removeDataFor(user: User) {
         users.remove(user)
+    }
+
+    /**
+     * Drops the EOSE state for the (user, list) pair so the next assembly will ask the relay
+     * from scratch. Used by feeds that need to force a re-fetch — e.g. calendar / pictures
+     * where [LargeSoftCache]'s WeakReference store may have evicted the previously-loaded notes
+     * while the user was viewing a different list.
+     */
+    fun clear(
+        user: User,
+        listCode: U,
+    ) {
+        users[user]?.clear(listCode)
     }
 
     fun since(

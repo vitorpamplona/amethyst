@@ -35,8 +35,9 @@ class UnexpectedCrashSaver(
     ) {
         if (e !is OutOfMemoryError) {
             // OOM reports are junk
+            val threadName = t.name
             scope.launch {
-                cache.writeReport(ReportAssembler().buildReport(e))
+                cache.writeReport(ReportAssembler().buildReport(e, threadName))
             }
         }
         defaultUEH!!.uncaughtException(t, e)

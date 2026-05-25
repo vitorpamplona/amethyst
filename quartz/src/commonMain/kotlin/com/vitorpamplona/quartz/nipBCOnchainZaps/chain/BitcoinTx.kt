@@ -80,3 +80,36 @@ data class FeeEstimates(
     val normalSatPerVbyte: Double,
     val slowSatPerVbyte: Double,
 )
+
+/**
+ * A transaction projected onto a single Bitcoin address — the view a wallet UI
+ * needs for a transaction history list.
+ *
+ * `netValueSats` is the address-perspective delta: positive means the address
+ * received sats in this tx (inputs from the address < outputs to the address),
+ * negative means it sent sats (the typical sender pays change back to itself,
+ * so this is `outputs_to_others_or_zero - inputs_from_address`). It is the
+ * post-fee delta only when the address is a sender (fees come out of inputs);
+ * for a pure receiver, fees are invisible.
+ *
+ * `counterpartyAddresses` is a best-effort short list of addresses on the
+ * other side: for an incoming tx, distinct addresses across the inputs; for an
+ * outgoing tx, distinct output addresses that are NOT [address]. Empty when the
+ * backend can't derive an address (non-standard scripts, missing prevout).
+ *
+ * @property txid 64-char lowercase hex transaction id
+ * @property netValueSats Net effect on the address (+ received, − sent)
+ * @property confirmations 0 for mempool; ≥1 for confirmed
+ * @property blockHeight Height of the confirming block, if any
+ * @property blockTime Unix seconds of the confirming block, if any
+ * @property counterpartyAddresses Best-effort other-side addresses
+ */
+@Immutable
+data class BitcoinAddressTx(
+    val txid: String,
+    val netValueSats: Long,
+    val confirmations: Int,
+    val blockHeight: Long? = null,
+    val blockTime: Long? = null,
+    val counterpartyAddresses: List<String> = emptyList(),
+)
