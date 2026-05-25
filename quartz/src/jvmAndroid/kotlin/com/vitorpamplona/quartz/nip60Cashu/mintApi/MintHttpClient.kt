@@ -43,6 +43,16 @@ class MintHttpException(
 ) : RuntimeException(message)
 
 /**
+ * Thrown when the mint responded with HTTP 2xx but the protocol-level
+ * outcome was a failure (e.g. melt completed without reaching the PAID
+ * state). Distinct from [MintHttpException] so callers can tell
+ * "network/HTTP problem" apart from "mint said no to the request".
+ */
+class MintProtocolException(
+    message: String,
+) : RuntimeException(message)
+
+/**
  * OkHttp-backed Cashu v1 mint client implementing NUT-00..06 endpoints.
  *
  * Each instance is bound to a single mint URL (e.g. `https://mint.example.com`).

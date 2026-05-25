@@ -620,6 +620,24 @@ private fun SendLnDialog(
         text = {
             Column {
                 when (val s = state) {
+                    is CashuMeltFlowState.Quoting -> {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringRes(R.string.cashu_getting_quote))
+                        }
+                    }
+
+                    is CashuMeltFlowState.Quoted -> {
+                        Text(
+                            stringRes(
+                                R.string.cashu_quote_confirm,
+                                s.quote.amount.toString(),
+                                s.quote.feeReserve.toString(),
+                            ),
+                        )
+                    }
+
                     is CashuMeltFlowState.Paying -> {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
@@ -666,9 +684,15 @@ private fun SendLnDialog(
             when (state) {
                 is CashuMeltFlowState.Idle, is CashuMeltFlowState.Error -> {
                     TextButton(
-                        onClick = { viewModel.meltToLightning(pickedMint, invoice) },
+                        onClick = { viewModel.startMelt(pickedMint, invoice) },
                         enabled = invoice.isNotBlank() && pickedMint.isNotBlank(),
-                    ) { Text(stringRes(R.string.cashu_pay_invoice)) }
+                    ) { Text(stringRes(R.string.cashu_get_quote)) }
+                }
+
+                is CashuMeltFlowState.Quoted -> {
+                    TextButton(onClick = { viewModel.confirmMelt() }) {
+                        Text(stringRes(R.string.cashu_pay_invoice))
+                    }
                 }
 
                 is CashuMeltFlowState.Completed -> {

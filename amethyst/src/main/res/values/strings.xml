@@ -1898,6 +1898,13 @@
     <string name="cashu_copy_invoice">Copy invoice</string>
     <string name="cashu_request_invoice">Request invoice</string>
     <string name="cashu_pay_invoice">Pay invoice</string>
+    <string name="cashu_get_quote">Get quote</string>
+    <string name="cashu_getting_quote">Asking mint for a quote…</string>
+    <string name="cashu_quote_confirm">Pay %1$s sat + up to %2$s sat in fees?</string>
+    <string name="cashu_verify">Verify</string>
+    <string name="cashu_mint_reachable">✓ Mint is reachable</string>
+    <string name="cashu_mint_reachable_named">✓ %1$s</string>
+    <string name="cashu_mint_unreachable">Could not reach mint: %1$s</string>
     <string name="cashu_create_token">Create token</string>
     <string name="cashu_redeem_button">Redeem</string>
     <string name="cashu_done">Done</string>

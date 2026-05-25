@@ -53,6 +53,8 @@ import java.io.File
 class AccountCacheState(
     val geolocationFlow: () -> StateFlow<LocationState.LocationResult>,
     val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
+    val cashuWalletFilterAssembler: () -> com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuWalletFilterAssembler,
+    val okHttpClientForMoney: (String) -> okhttp3.OkHttpClient,
     val contentResolverFn: () -> ContentResolver,
     val otsResolverBuilder: () -> OtsResolver,
     val cache: LocalCache,
@@ -191,6 +193,8 @@ class AccountCacheState(
             signer = signerWithClientTag,
             geolocationFlow = geolocationFlow,
             nwcFilterAssembler = nwcFilterAssembler,
+            cashuWalletFilterAssembler = cashuWalletFilterAssembler,
+            okHttpClientForMoney = okHttpClientForMoney,
             otsResolverBuilder = otsResolverBuilder,
             cache = cache,
             client = client,

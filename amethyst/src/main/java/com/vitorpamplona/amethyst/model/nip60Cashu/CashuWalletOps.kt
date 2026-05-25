@@ -20,20 +20,24 @@
  */
 package com.vitorpamplona.amethyst.model.nip60Cashu
 
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.cashu.v4.V4Encoder
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip60Cashu.bdhke.Bdhke
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.SpendingDirection
 import com.vitorpamplona.quartz.nip60Cashu.history.TokenReference
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.CashuMintOperations
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.MeltQuoteBolt11ResponseDto
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpClient
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpException
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintProtocolException
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintQuoteBolt11ResponseDto
+import com.vitorpamplona.quartz.nip60Cashu.p2pk.P2PK
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuProof
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
@@ -47,24 +51,33 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Wallet-level operations that combine the [CashuMintOperations] HTTP layer
  * with Nostr event publishing (kind 7375 / 7376 / 7374 / 17375 / 10019 /
  * deletion-5).
  *
- * The operations layer is intentionally stateless: each call receives the
- * current decrypted state from [CashuWalletViewModel] (or rebuilds it from
- * [LocalCache] when needed). All side effects flow through [Account] which
- * handles signing + publishing + local-cache consumption in one shot.
+ * Stateless w.r.t. wallet contents — each call receives the current state
+ * from `CashuWalletState`. Signing and broadcast are abstracted behind the
+ * [signer] + [publish] callbacks so the ops layer can be unit-tested without
+ * a full [com.vitorpamplona.amethyst.model.Account] graph.
+ *
+ * Per-mint [CashuMintOperations] instances are cached so repeated calls
+ * against the same mint reuse the same `MintHttpClient` and avoid re-
+ * instantiating the JSON serializer per request.
  */
 class CashuWalletOps(
-    private val account: Account,
+    private val signer: NostrSigner,
+    private val publish: suspend (Event) -> Unit,
     private val okHttpClient: (String) -> OkHttpClient,
 ) {
-    private fun client(mintUrl: String) = MintHttpClient(mintUrl, okHttpClient)
+    private val opsCache = ConcurrentHashMap<String, CashuMintOperations>()
 
-    private fun ops(mintUrl: String) = CashuMintOperations(client(mintUrl))
+    private fun ops(mintUrl: String): CashuMintOperations =
+        opsCache.getOrPut(mintUrl.trimEnd('/')) {
+            CashuMintOperations(MintHttpClient(mintUrl, okHttpClient))
+        }
 
     /**
      * Publish kind:17375 + kind:10019 in one go.
@@ -80,24 +93,28 @@ class CashuWalletOps(
     suspend fun publishWalletEvents(
         mints: List<String>,
         p2pkPrivkeyHex: String?,
+        nutzapRelays: List<NormalizedRelayUrl> = emptyList(),
     ): CreatedWallet {
         require(mints.isNotEmpty()) { "Wallet must have at least one mint" }
 
         val priv = (p2pkPrivkeyHex?.takeIf { it.isNotBlank() } ?: Bdhke.randomScalar().toHexKey())
         val pubKeyHex = Secp256k1.pubKeyCompress(Secp256k1.pubkeyCreate(priv.hexToByteArray())).toHexKey()
 
-        val walletTemplate = CashuWalletEvent.build(mints, priv, account.signer)
-        val walletEvent = account.signer.sign(walletTemplate)
-        account.sendLiterallyEverywhere(walletEvent)
+        val walletTemplate = CashuWalletEvent.build(mints, priv, signer)
+        val walletEvent = signer.sign(walletTemplate)
+        publish(walletEvent)
 
+        // Populate `relay` tags so senders know where to publish nutzaps —
+        // without these, they fall back to NIP-65 outbox and may miss our
+        // subscription scope on relays we don't read from.
         val nutzapInfoTemplate =
             NutzapInfoEvent.build(
                 mints = mints.map { NutzapMintTag(it, listOf("sat")) },
-                relays = emptyList(),
+                relays = nutzapRelays,
                 p2pkPubkey = pubKeyHex,
             )
-        val nutzapInfoEvent = account.signer.sign(nutzapInfoTemplate)
-        account.sendLiterallyEverywhere(nutzapInfoEvent)
+        val nutzapInfoEvent = signer.sign(nutzapInfoTemplate)
+        publish(nutzapInfoEvent)
 
         return CreatedWallet(
             walletEvent = walletEvent,
@@ -120,10 +137,10 @@ class CashuWalletOps(
             CashuMintQuoteEvent.build(
                 quoteId = response.quote,
                 mintUrl = mintUrl,
-                signer = account.signer,
+                signer = signer,
             )
-        val quoteEvent = account.signer.sign(quoteTemplate)
-        account.sendLiterallyEverywhere(quoteEvent)
+        val quoteEvent = signer.sign(quoteTemplate)
+        publish(quoteEvent)
         return MintQuoteStarted(
             quoteEvent = quoteEvent,
             mintQuote = response,
@@ -146,13 +163,13 @@ class CashuWalletOps(
         quoteEvent: CashuMintQuoteEvent,
         amountSats: Long,
     ): MintCompleted {
-        val quoteId = quoteEvent.quoteId(account.signer)
+        val quoteId = quoteEvent.quoteId(signer)
         val minted = ops(mintUrl).mintProofs(quoteId, amountSats)
 
         val tokenContent = minted.toTokenContent(mintUrl)
-        val tokenTemplate = CashuTokenEvent.build(tokenContent, account.signer)
-        val tokenEvent = account.signer.sign(tokenTemplate)
-        account.sendLiterallyEverywhere(tokenEvent)
+        val tokenTemplate = CashuTokenEvent.build(tokenContent, signer)
+        val tokenEvent = signer.sign(tokenTemplate)
+        publish(tokenEvent)
 
         val historyTemplate =
             CashuSpendingHistoryEvent.build(
@@ -166,15 +183,15 @@ class CashuWalletOps(
                             marker = TokenReference.MARKER_CREATED,
                         ),
                     ),
-                signer = account.signer,
+                signer = signer,
             )
-        val historyEvent = account.signer.sign(historyTemplate)
-        account.sendLiterallyEverywhere(historyEvent)
+        val historyEvent = signer.sign(historyTemplate)
+        publish(historyEvent)
 
         // NIP-09 delete the now-fulfilled quote event.
         val delTemplate = DeletionEvent.build(listOf(quoteEvent))
-        val delEvent = account.signer.sign(delTemplate)
-        account.sendLiterallyEverywhere(delEvent)
+        val delEvent = signer.sign(delTemplate)
+        publish(delEvent)
 
         return MintCompleted(
             tokenEvent = tokenEvent,
@@ -184,20 +201,30 @@ class CashuWalletOps(
     }
 
     /**
-     * Pay a bolt11 invoice via the chosen mint, spending [available] token
-     * events. Picks the smallest subset of token events whose total covers
-     * `amount + fee_reserve` (greedy by total amount descending). Any leftover
-     * change comes back as proofs in a fresh kind:7375.
+     * Phase 1 of melt — ask the mint how much an invoice will cost and what
+     * its fee_reserve is. Pure read; no state mutation. UI shows the quote to
+     * the user; they confirm; the wallet calls [meltToLightning] with the
+     * same quote to actually pay.
+     */
+    suspend fun requestMeltQuote(
+        mintUrl: String,
+        invoice: String,
+    ): MeltQuoteBolt11ResponseDto = ops(mintUrl).requestMeltQuote(invoice)
+
+    /**
+     * Phase 2 of melt — pay the invoice using the agreed-upon [quote].
+     * Spends [available] token events: picks the smallest subset whose total
+     * covers `amount + fee_reserve` (greedy by total amount descending). Any
+     * leftover change comes back as proofs in a fresh kind:7375.
      */
     suspend fun meltToLightning(
         mintUrl: String,
-        invoice: String,
+        quote: MeltQuoteBolt11ResponseDto,
         available: List<TokenEntry>,
     ): MeltCompleted {
         if (available.isEmpty()) throw IllegalStateException("No proofs available to spend")
 
         val ops = ops(mintUrl)
-        val quote = ops.requestMeltQuote(invoice)
         val required = quote.amount + quote.feeReserve
 
         val (selected, _) = selectProofsCovering(available, required)
@@ -214,9 +241,9 @@ class CashuWalletOps(
                 val keepEvent =
                     if (swap.keep.isNotEmpty()) {
                         val content = TokenContent(mint = mintUrl, proofs = swap.keep, del = selected.map { it.event.id })
-                        val tokenTemplate = CashuTokenEvent.build(content, account.signer)
-                        val signed = account.signer.sign(tokenTemplate)
-                        account.sendLiterallyEverywhere(signed)
+                        val tokenTemplate = CashuTokenEvent.build(content, signer)
+                        val signed = signer.sign(tokenTemplate)
+                        publish(signed)
                         signed
                     } else {
                         null
@@ -239,9 +266,9 @@ class CashuWalletOps(
                         selected.map { it.event.id }
                     }
                 val content = TokenContent(mint = mintUrl, proofs = meltResult.changeProofs, del = delIds)
-                val tokenTemplate = CashuTokenEvent.build(content, account.signer)
-                val signed = account.signer.sign(tokenTemplate)
-                account.sendLiterallyEverywhere(signed)
+                val tokenTemplate = CashuTokenEvent.build(content, signer)
+                val signed = signer.sign(tokenTemplate)
+                publish(signed)
                 signed
             } else {
                 null
@@ -253,7 +280,7 @@ class CashuWalletOps(
             run {
                 val toDelete = selected.map { it.event } + listOfNotNull(prePaidChangeEvent.takeIf { finalChangeEvent != null })
                 val delTemplate = DeletionEvent.build(toDelete)
-                account.signer.sign(delTemplate).also { account.sendLiterallyEverywhere(it) }
+                signer.sign(delTemplate).also { publish(it) }
             }
 
         val historyTemplate =
@@ -267,10 +294,10 @@ class CashuWalletOps(
                         }
                         finalChangeEvent?.let { add(TokenReference(it.id, null, TokenReference.MARKER_CREATED)) }
                     },
-                signer = account.signer,
+                signer = signer,
             )
-        val historyEvent = account.signer.sign(historyTemplate)
-        account.sendLiterallyEverywhere(historyEvent)
+        val historyEvent = signer.sign(historyTemplate)
+        publish(historyEvent)
 
         return MeltCompleted(
             preimage = meltResult.preimage,
@@ -305,9 +332,9 @@ class CashuWalletOps(
         val newKeepEvent =
             if (swap.keep.isNotEmpty()) {
                 val content = TokenContent(mint = mintUrl, proofs = swap.keep, del = selected.map { it.event.id })
-                val template = CashuTokenEvent.build(content, account.signer)
-                val signed = account.signer.sign(template)
-                account.sendLiterallyEverywhere(signed)
+                val template = CashuTokenEvent.build(content, signer)
+                val signed = signer.sign(template)
+                publish(signed)
                 signed
             } else {
                 null
@@ -316,7 +343,7 @@ class CashuWalletOps(
         val deleteEvent =
             run {
                 val template = DeletionEvent.build(selected.map { it.event })
-                account.signer.sign(template).also { account.sendLiterallyEverywhere(it) }
+                signer.sign(template).also { publish(it) }
             }
 
         val historyTemplate =
@@ -328,10 +355,10 @@ class CashuWalletOps(
                         selected.forEach { add(TokenReference(it.event.id, null, TokenReference.MARKER_DESTROYED)) }
                         newKeepEvent?.let { add(TokenReference(it.id, null, TokenReference.MARKER_CREATED)) }
                     },
-                signer = account.signer,
+                signer = signer,
             )
-        val historyEvent = account.signer.sign(historyTemplate)
-        account.sendLiterallyEverywhere(historyEvent)
+        val historyEvent = signer.sign(historyTemplate)
+        publish(historyEvent)
 
         return SendTokenCompleted(
             cashuToken = tokenString,
@@ -361,9 +388,9 @@ class CashuWalletOps(
 
         // All output goes to "keep" since targetSplit was null.
         val content = TokenContent(mint = mintUrl, proofs = swap.keep)
-        val tokenTemplate = CashuTokenEvent.build(content, account.signer)
-        val tokenEvent = account.signer.sign(tokenTemplate)
-        account.sendLiterallyEverywhere(tokenEvent)
+        val tokenTemplate = CashuTokenEvent.build(content, signer)
+        val tokenEvent = signer.sign(tokenTemplate)
+        publish(tokenEvent)
 
         val historyTemplate =
             CashuSpendingHistoryEvent.build(
@@ -374,10 +401,10 @@ class CashuWalletOps(
                         add(TokenReference(tokenEvent.id, null, TokenReference.MARKER_CREATED))
                         nutzapEventId?.let { add(TokenReference(it, null, TokenReference.MARKER_REDEEMED)) }
                     },
-                signer = account.signer,
+                signer = signer,
             )
-        val historyEvent = account.signer.sign(historyTemplate)
-        account.sendLiterallyEverywhere(historyEvent)
+        val historyEvent = signer.sign(historyTemplate)
+        publish(historyEvent)
 
         return RedeemCompleted(
             amount = total,
@@ -407,6 +434,7 @@ class CashuWalletOps(
     suspend fun redeemNutzap(
         nutzap: NutzapEvent,
         walletPrivkeyHex: String,
+        walletP2pkPubkeyHex: String,
     ): RedeemCompleted {
         val mintUrl =
             nutzap.mintUrl()
@@ -425,13 +453,29 @@ class CashuWalletOps(
                 )
             }
 
+        // Verify the lock points at us before spending a mint round-trip. The
+        // pubkey in the P2PK secret can be 64-char x-only or 66-char
+        // compressed; normalize to x-only for the comparison since BIP-340
+        // verification (which the mint uses) is parity-agnostic.
+        val ourXOnly = walletP2pkPubkeyHex.lastHex64()
+        parsedProofs.forEach { proof ->
+            val parsed =
+                P2PK.parseSecret(proof.secret)
+                    ?: throw IllegalArgumentException("Nutzap proof is not P2PK-locked")
+            if (parsed.pubKeyHex.lastHex64() != ourXOnly) {
+                throw IllegalArgumentException(
+                    "Nutzap proof is locked to a different pubkey (${parsed.pubKeyHex.take(16)}…)",
+                )
+            }
+        }
+
         val swap = ops(mintUrl).redeemNutzap(parsedProofs, walletPrivkeyHex)
         val total = swap.keep.sumOf { it.amount }
 
         val tokenContent = TokenContent(mint = mintUrl, proofs = swap.keep)
-        val tokenTemplate = CashuTokenEvent.build(tokenContent, account.signer)
-        val tokenEvent = account.signer.sign(tokenTemplate)
-        account.sendLiterallyEverywhere(tokenEvent)
+        val tokenTemplate = CashuTokenEvent.build(tokenContent, signer)
+        val tokenEvent = signer.sign(tokenTemplate)
+        publish(tokenEvent)
 
         val historyTemplate =
             CashuSpendingHistoryEvent.build(
@@ -442,10 +486,10 @@ class CashuWalletOps(
                         TokenReference(tokenEvent.id, null, TokenReference.MARKER_CREATED),
                         TokenReference(nutzap.id, null, TokenReference.MARKER_REDEEMED),
                     ),
-                signer = account.signer,
+                signer = signer,
             )
-        val historyEvent = account.signer.sign(historyTemplate)
-        account.sendLiterallyEverywhere(historyEvent)
+        val historyEvent = signer.sign(historyTemplate)
+        publish(historyEvent)
 
         return RedeemCompleted(
             amount = total,
@@ -475,13 +519,26 @@ class CashuWalletOps(
         return picked to running
     }
 
-    /** Catches mint HTTP errors and surfaces their detail message. */
-    fun describe(e: Throwable): String =
-        when (e) {
-            is MintHttpException -> "Mint error (HTTP ${e.httpStatus}): ${e.detail ?: e.message}"
-            else -> e.message ?: e::class.simpleName ?: "Unknown error"
-        }
+    /**
+     * Ping `/v1/info` on [mintUrl] and return the mint's display name on
+     * success. Used by the Add-Mint UI to give immediate feedback when a URL
+     * is typo'd, points at a non-Cashu host, or is otherwise unreachable.
+     *
+     * Throws on failure so the UI can surface the underlying reason.
+     */
+    suspend fun pingMint(mintUrl: String): String? = MintHttpClient(mintUrl, okHttpClient).info().name
 }
+
+/** Drop the leading parity byte if present so two pubkeys can be compared. */
+private fun String.lastHex64(): String = if (length == 66) substring(2) else this
+
+/** Catches mint HTTP / protocol errors and surfaces their detail message. */
+fun describeMintError(e: Throwable): String =
+    when (e) {
+        is MintHttpException -> "Mint error (HTTP ${e.httpStatus}): ${e.detail ?: e.message}"
+        is MintProtocolException -> "Mint refused: ${e.message}"
+        else -> e.message ?: e::class.simpleName ?: "Unknown error"
+    }
 
 /** A decrypted, unspent token event ready to be spent. */
 data class TokenEntry(

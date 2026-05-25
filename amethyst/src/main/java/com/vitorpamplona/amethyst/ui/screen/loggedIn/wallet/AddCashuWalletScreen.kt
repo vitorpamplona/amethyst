@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -143,13 +144,17 @@ fun AddCashuWalletScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            val pingState by viewModel.mintPingState.collectAsState()
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 OutlinedTextField(
                     value = mintInput,
-                    onValueChange = { mintInput = it },
+                    onValueChange = {
+                        mintInput = it
+                        viewModel.resetMintPing()
+                    },
                     label = { Text(stringRes(R.string.cashu_mint_url)) },
                     placeholder = { Text("https://mint.example.com") },
                     singleLine = true,
@@ -158,16 +163,55 @@ fun AddCashuWalletScreen(
                 Spacer(modifier = Modifier.width(8.dp))
                 OutlinedButton(
                     onClick = {
+                        viewModel.pingMint(mintInput.trim().trimEnd('/'))
+                    },
+                    enabled = mintInput.isNotBlank() && pingState !is MintPingState.Pinging,
+                ) {
+                    if (pingState is MintPingState.Pinging) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text(stringRes(R.string.cashu_verify))
+                    }
+                }
+                Spacer(modifier = Modifier.width(4.dp))
+                OutlinedButton(
+                    onClick = {
                         val trimmed = mintInput.trim().trimEnd('/')
                         if (trimmed.isNotEmpty() && trimmed !in mints) {
                             mints.add(trimmed)
                             mintInput = ""
+                            viewModel.resetMintPing()
                         }
                     },
                     enabled = mintInput.isNotBlank(),
                 ) {
                     Icon(MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 }
+            }
+
+            when (val ps = pingState) {
+                is MintPingState.Ok -> {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text =
+                            if (ps.name.isNullOrBlank()) {
+                                stringRes(R.string.cashu_mint_reachable)
+                            } else {
+                                stringRes(R.string.cashu_mint_reachable_named, ps.name)
+                            },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                is MintPingState.Failed -> {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = stringRes(R.string.cashu_mint_unreachable, ps.message),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+                else -> Unit
             }
 
             Spacer(modifier = Modifier.height(24.dp))

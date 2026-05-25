@@ -29,6 +29,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
@@ -97,7 +98,7 @@ object P2PK {
             if (arr.size < 2) return null
             val kind = (arr[0] as? JsonPrimitive)?.content
             if (kind != "P2PK") return null
-            val body = arr[1] as? kotlinx.serialization.json.JsonObject ?: return null
+            val body = arr[1] as? JsonObject ?: return null
             val data = (body["data"] as? JsonPrimitive)?.content ?: return null
             val nonce = (body["nonce"] as? JsonPrimitive)?.content
             ParsedP2pk(pubKeyHex = data, nonceHex = nonce)

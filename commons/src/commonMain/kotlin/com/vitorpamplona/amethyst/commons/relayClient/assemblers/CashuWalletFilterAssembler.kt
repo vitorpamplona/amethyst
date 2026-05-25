@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.assemblers
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
@@ -43,8 +44,8 @@ import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
  * NIP-60 events and as the `#p` tag value for inbound nutzaps. `relays` is
  * the union of relays to subscribe on (NIP-65 outbox + DM relays at minimum).
  */
-@Stable
-class CashuWalletQueryState(
+@Immutable
+data class CashuWalletQueryState(
     val pubkey: HexKey,
     val relays: Set<NormalizedRelayUrl>,
 )

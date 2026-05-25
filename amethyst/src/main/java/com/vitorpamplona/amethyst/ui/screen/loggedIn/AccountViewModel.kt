@@ -2177,6 +2177,11 @@ fun mockAccountViewModel(): AccountViewModel {
             signer = NostrSignerInternal(keyPair),
             geolocationFlow = { MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading) },
             nwcFilterAssembler = { nwcFilters },
+            cashuWalletFilterAssembler = {
+                com.vitorpamplona.amethyst.commons.relayClient.assemblers
+                    .CashuWalletFilterAssembler(client)
+            },
+            okHttpClientForMoney = { okhttp3.OkHttpClient() },
             otsResolverBuilder = { EmptyOtsResolverBuilder.build() },
             cache = LocalCache,
             client = client,
@@ -2228,6 +2233,11 @@ fun mockVitorAccountViewModel(): AccountViewModel {
             signer = NostrSignerInternal(keyPair),
             geolocationFlow = { MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading) },
             nwcFilterAssembler = { nwcFilters },
+            cashuWalletFilterAssembler = {
+                com.vitorpamplona.amethyst.commons.relayClient.assemblers
+                    .CashuWalletFilterAssembler(client)
+            },
+            okHttpClientForMoney = { okhttp3.OkHttpClient() },
             otsResolverBuilder = { EmptyOtsResolverBuilder.build() },
             cache = LocalCache,
             client = EmptyNostrClient(),

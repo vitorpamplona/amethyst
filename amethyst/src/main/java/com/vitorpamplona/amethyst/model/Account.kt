@@ -291,6 +291,8 @@ class Account(
     override val signer: NostrSigner,
     val geolocationFlow: () -> StateFlow<LocationState.LocationResult>,
     val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
+    val cashuWalletFilterAssembler: () -> com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuWalletFilterAssembler,
+    val okHttpClientForMoney: (String) -> okhttp3.OkHttpClient,
     val otsResolverBuilder: () -> OtsResolver,
     val cache: LocalCache,
     val client: INostrClient,
@@ -404,6 +406,17 @@ class Account(
     val outboxRelays = AccountOutboxRelayState(nip65RelayList, privateStorageRelayList, localRelayList, broadcastRelayList, scope)
     val dmRelays = DmInboxRelayState(dmRelayList, nip65RelayList, privateStorageRelayList, localRelayList, scope)
     val notificationRelays = NotificationInboxRelayState(nip65RelayList, localRelayList, scope)
+
+    val cashuWalletState =
+        com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState(
+            pubKey = signer.pubKey,
+            signer = signer,
+            cache = cache,
+            scope = scope,
+            assembler = cashuWalletFilterAssembler(),
+            outboxRelaysFlow = outboxRelays.flow,
+            okHttpClient = okHttpClientForMoney,
+        )
 
     val trustedRelays = TrustedRelayListsState(nip65RelayList, privateStorageRelayList, localRelayList, dmRelayList, searchRelayList, indexerRelayList, proxyRelayList, trustedRelayList, broadcastRelayList, scope)
 
@@ -3387,6 +3400,11 @@ class Account(
 
     init {
         Log.d("AccountRegisterObservers", "Init")
+
+        // Bridge CashuWalletOps's publish callback to our `sendLiterallyEverywhere`
+        // so the state object can push events to relays + cache without holding
+        // a direct reference back to Account.
+        cashuWalletState.publishDelegate = { event -> sendLiterallyEverywhere(event) }
 
         // Restore Marmot MLS group state on startup
         if (marmotManager != null) {

@@ -118,9 +118,13 @@ class CashuMintOperations(
                 ),
             )
 
-        // Match signatures back to outputs by index — mints preserve order.
+        // The mint MUST return one signature per output, in the same order.
+        // We cannot match by content alone (signatures only echo `amount` +
+        // `id`, not the blinded message `B_`), so the protocol relies on
+        // positional correspondence. nutshell + cdk + cashu-ts all preserve
+        // this — kept here as an invariant, not a heuristic.
         if (response.signatures.size != allOutputs.size) {
-            throw IllegalStateException(
+            throw MintProtocolException(
                 "Mint returned ${response.signatures.size} signatures for ${allOutputs.size} outputs",
             )
         }
@@ -146,11 +150,10 @@ class CashuMintOperations(
         if (lockedProofs.isEmpty()) throw IllegalArgumentException("No proofs to redeem")
         val unlocked =
             lockedProofs.map { proof ->
-                val secretJson =
-                    P2PK.parseSecret(proof.secret)
-                        ?: throw IllegalArgumentException("Proof secret is not a NUT-11 P2PK secret")
+                P2PK.parseSecret(proof.secret)
+                    ?: throw IllegalArgumentException("Proof secret is not a NUT-11 P2PK secret")
                 val witness = P2PK.signWitness(proof.secret, walletPrivkeyHex)
-                proof.copy(witness = witness).also { _ -> secretJson }
+                proof.copy(witness = witness)
             }
         return swap(unlocked, targetSplit = null)
     }
@@ -198,12 +201,7 @@ class CashuMintOperations(
 
         val paid = response.paid == true || response.state == "PAID"
         if (!paid) {
-            throw MintHttpException(
-                httpStatus = 200,
-                detail = "Melt not completed (state=${response.state})",
-                code = null,
-                message = "Melt failed: state=${response.state}",
-            )
+            throw MintProtocolException("Melt not completed (state=${response.state})")
         }
 
         // Unblind any change the mint returned. The mint can return *fewer*
