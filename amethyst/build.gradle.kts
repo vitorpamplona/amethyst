@@ -272,6 +272,18 @@ android {
     }
 }
 
+// androidx.appfunctions-compiler runs in a per-module mode by default,
+// emitting only the dispatcher Kotlin code. The aggregator that builds
+// the `app_functions.xml` asset (which the system reads to discover our
+// @AppFunction methods) is gated behind this KSP argument — without it,
+// the manifest's `android.app.appfunctions` property points at a file
+// that doesn't exist and the System UI logs "Unable to resolve
+// AppFunctionMetadata." Set on the app module only; library modules
+// (commons/quartz) would set it to "false".
+ksp {
+    arg("appfunctions:aggregateAppFunctions", "true")
+}
+
 // TODO: until google merges and unifiedpush updates https://github.com/tink-crypto/tink-java-apps/pull/5
 configurations.all {
     val tink = "com.google.crypto.tink:tink-android:1.17.0"
