@@ -12,5 +12,5 @@
   the @AppFunction surface grows.
 -->
 <AppFunctionAppMetadata xmlns:appfn="http://schemas.android.com/apk/res-auto"
-    appfn:description="Amethyst is a Nostr social client. The agent can search Nostr profiles and short text notes through Amethyst's configured search relays, and read the list of accounts the signed-in user follows."
-    appfn:displayDescription="Search Nostr and read your follows" />
+    appfn:description="Amethyst is a Nostr social client. The agent can search Nostr profiles, notes, and hashtags through Amethyst's configured search relays; look up any user's profile by npub; read recent posts from the signed-in user's follows or from a specific user; and report basic account info (npub, display name, follow count)."
+    appfn:displayDescription="Search and read Nostr through Amethyst" />

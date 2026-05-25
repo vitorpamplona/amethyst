@@ -21,13 +21,19 @@
 package com.vitorpamplona.amethyst.appfunctions
 
 import androidx.appfunctions.AppFunctionContext
+import androidx.appfunctions.AppFunctionInvalidArgumentException
 import androidx.appfunctions.AppFunctionSerializable
 import androidx.appfunctions.service.AppFunction
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.actions.SearchActions
+import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 
 /**
@@ -114,6 +120,272 @@ class AmethystAppFunctions {
         return SearchProfilesResult(matches = hits)
     }
 
+    /**
+     * Drains recent kind:1 short text notes from the people the active
+     * account follows. The "what's new on Nostr" verb — same query the
+     * Amethyst home-feed UI runs, just truncated to one batch.
+     *
+     * Queried relays: the active account's home relays (NIP-65 outbox +
+     * any private storage + local relays). Same source the UI uses, so
+     * Gemini sees what the user would see on their timeline.
+     *
+     * @param limit max notes to return, capped to 200. Default 30.
+     */
+    @AppFunction(isDescribedByKDoc = true)
+    suspend fun getRecentFromFollows(
+        appFunctionContext: AppFunctionContext,
+        limit: Int = 30,
+    ): SearchNotesResult {
+        val cappedLimit = limit.coerceIn(1, 200)
+        val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return SearchNotesResult.empty()
+        val client = Amethyst.instance.client
+
+        val authors = account.kind3FollowList.flow.value.authors
+        if (authors.isEmpty()) return SearchNotesResult.empty()
+
+        val relays =
+            account.homeRelays.flow.value
+                .ifEmpty { DefaultNIP65RelaySet }
+        if (relays.isEmpty()) return SearchNotesResult.empty()
+
+        val filter =
+            Filter(
+                kinds = listOf(TextNoteEvent.KIND),
+                authors = authors.toList(),
+                limit = cappedLimit,
+            )
+        val events =
+            client.fetchAll(
+                filters = relays.associateWith { listOf(filter) },
+                timeoutMs = GEMINI_FETCH_TIMEOUT_MS,
+            )
+
+        val hits =
+            events
+                .mapNotNull { it as? TextNoteEvent }
+                .take(cappedLimit)
+                .map { it.toNoteHit() }
+
+        return SearchNotesResult(matches = hits)
+    }
+
+    /**
+     * Recent kind:1 short text notes from a specific user. Use this when
+     * the user asks "what did Vitor post recently?" or "catch me up on
+     * Snowden" — pass that user's npub or 64-hex pubkey.
+     *
+     * Queried relays: prefer the target's NIP-65 write relays (where they
+     * publish) when their kind:10002 is cached locally; fall back to the
+     * active account's home relays.
+     *
+     * @param user npub (`npub1…`) or 64-character hex pubkey.
+     * @param limit max notes to return, capped to 100. Default 20.
+     */
+    @AppFunction(isDescribedByKDoc = true)
+    suspend fun getNotesByUser(
+        appFunctionContext: AppFunctionContext,
+        user: String,
+        limit: Int = 20,
+    ): SearchNotesResult {
+        val cappedLimit = limit.coerceIn(1, 100)
+        val pubkey = decodeUserOrThrow(user)
+
+        val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return SearchNotesResult.empty()
+        val client = Amethyst.instance.client
+
+        val targetWriteRelays =
+            account.cache
+                .checkGetOrCreateUser(pubkey)
+                ?.outboxRelays()
+                ?.toSet()
+                .orEmpty()
+        val relays =
+            targetWriteRelays
+                .ifEmpty { account.homeRelays.flow.value }
+                .ifEmpty { DefaultNIP65RelaySet }
+        if (relays.isEmpty()) return SearchNotesResult.empty()
+
+        val filter =
+            Filter(
+                kinds = listOf(TextNoteEvent.KIND),
+                authors = listOf(pubkey),
+                limit = cappedLimit,
+            )
+        val events =
+            client.fetchAll(
+                filters = relays.associateWith { listOf(filter) },
+                timeoutMs = GEMINI_FETCH_TIMEOUT_MS,
+            )
+
+        val hits =
+            events
+                .mapNotNull { it as? TextNoteEvent }
+                .filter { it.pubKey == pubkey }
+                .take(cappedLimit)
+                .map { it.toNoteHit() }
+
+        return SearchNotesResult(matches = hits)
+    }
+
+    /**
+     * Looks up one Nostr profile by [user] (npub or 64-hex). Returns the
+     * latest kind:0 metadata available — checks the local cache first,
+     * falls back to a short network drain.
+     *
+     * @param user npub (`npub1…`) or 64-character hex pubkey.
+     */
+    @AppFunction(isDescribedByKDoc = true)
+    suspend fun getProfile(
+        appFunctionContext: AppFunctionContext,
+        user: String,
+    ): GetProfileResult {
+        val pubkey = decodeUserOrThrow(user)
+        val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return GetProfileResult.notFound(pubkey)
+
+        // Cache-first: the foreground UI keeps observed metadata around.
+        val cached =
+            account.cache
+                .checkGetOrCreateUser(pubkey)
+                ?.metadataOrNull()
+        if (cached != null) {
+            return GetProfileResult(
+                found = true,
+                profile =
+                    ProfileHit(
+                        npub = NPub.create(pubkey),
+                        pubkeyHex = pubkey,
+                        displayName = cached.bestName(),
+                        about = null,
+                        nip05 = cached.nip05(),
+                        picture = cached.profilePicture(),
+                        lnAddress = cached.lnAddress(),
+                    ),
+            )
+        }
+
+        // Cache miss: drain bootstrap relays for the latest kind:0.
+        val client = Amethyst.instance.client
+        val relays =
+            account.homeRelays.flow.value
+                .ifEmpty { DefaultNIP65RelaySet }
+        if (relays.isEmpty()) return GetProfileResult.notFound(pubkey)
+
+        val filter =
+            Filter(
+                kinds = listOf(MetadataEvent.KIND),
+                authors = listOf(pubkey),
+                limit = 1,
+            )
+        val event =
+            client
+                .fetchAll(
+                    filters = relays.associateWith { listOf(filter) },
+                    timeoutMs = GEMINI_FETCH_TIMEOUT_MS,
+                ).mapNotNull { it as? MetadataEvent }
+                .filter { it.pubKey == pubkey }
+                .maxByOrNull { it.createdAt }
+                ?: return GetProfileResult.notFound(pubkey)
+
+        return GetProfileResult(found = true, profile = event.toProfileHit())
+    }
+
+    /**
+     * Find kind:1 short text notes tagged with a hashtag (NIP-12 `t`
+     * tag). For "find me Nostr posts about Bitcoin" — pass `bitcoin`,
+     * not `#bitcoin`. The hashtag is lowercased before matching, which
+     * is the convention most Nostr clients (Amethyst included) follow.
+     *
+     * @param hashtag the tag value without the leading `#`.
+     * @param limit max notes to return, capped to 100. Default 30.
+     */
+    @AppFunction(isDescribedByKDoc = true)
+    suspend fun searchByHashtag(
+        appFunctionContext: AppFunctionContext,
+        hashtag: String,
+        limit: Int = 30,
+    ): SearchNotesResult {
+        val tag = hashtag.trim().removePrefix("#").lowercase()
+        if (tag.isEmpty()) throw AppFunctionInvalidArgumentException("hashtag must not be blank")
+        val cappedLimit = limit.coerceIn(1, 100)
+
+        val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return SearchNotesResult.empty()
+        val client = Amethyst.instance.client
+        val relays =
+            account.homeRelays.flow.value
+                .ifEmpty { DefaultNIP65RelaySet }
+        if (relays.isEmpty()) return SearchNotesResult.empty()
+
+        val filter =
+            Filter(
+                kinds = listOf(TextNoteEvent.KIND),
+                tags = mapOf("t" to listOf(tag)),
+                limit = cappedLimit,
+            )
+        val events =
+            client.fetchAll(
+                filters = relays.associateWith { listOf(filter) },
+                timeoutMs = GEMINI_FETCH_TIMEOUT_MS,
+            )
+
+        val hits =
+            events
+                .mapNotNull { it as? TextNoteEvent }
+                .take(cappedLimit)
+                .map { it.toNoteHit() }
+
+        return SearchNotesResult(matches = hits)
+    }
+
+    /**
+     * Returns who the user is currently signed in as on Nostr — their
+     * npub, best-effort display name, follow count, and how many relays
+     * are configured for outbox / inbox. Diagnostic verb for queries
+     * like "who am I logged in as?" or "what's my npub?".
+     */
+    @AppFunction(isDescribedByKDoc = true)
+    suspend fun getActiveAccountInfo(appFunctionContext: AppFunctionContext): AccountInfoResult {
+        val account =
+            Amethyst.instance.sessionManager.loggedInAccount() ?: return AccountInfoResult.signedOut()
+
+        val myPub = account.signer.pubKey
+        val myUser = account.cache.checkGetOrCreateUser(myPub)
+        val meta = myUser?.metadataOrNull()
+
+        return AccountInfoResult(
+            signedIn = true,
+            npub = NPub.create(myPub),
+            pubkeyHex = myPub,
+            displayName = meta?.bestName(),
+            nip05 = meta?.nip05(),
+            followCount = account.kind3FollowList.userList.value.size,
+            outboxRelayCount = account.homeRelays.flow.value.size,
+            dmRelayCount = account.dmRelays.flow.value.size,
+        )
+    }
+
+    /**
+     * Accepts either an npub bech32 (`npub1…`) or 64-character hex
+     * pubkey and returns the 64-char lowercase hex. Throws
+     * [AppFunctionInvalidArgumentException] on anything else so the
+     * caller sees a typed error rather than a generic crash.
+     */
+    private fun decodeUserOrThrow(input: String): HexKey =
+        runCatching { decodePublicKey(input.trim()).toHexKey() }
+            .getOrElse {
+                throw AppFunctionInvalidArgumentException(
+                    "Could not decode user '$input' — expected npub1… or 64-char hex pubkey.",
+                )
+            }
+
+    private fun TextNoteEvent.toNoteHit(): NoteHit =
+        NoteHit(
+            eventId = id,
+            npub = NPub.create(pubKey),
+            pubkeyHex = pubKey,
+            createdAt = createdAt,
+            content = content,
+        )
+
     private fun MetadataEvent.toProfileHit(): ProfileHit {
         val meta = contactMetaData()
         return ProfileHit(
@@ -167,15 +439,7 @@ class AmethystAppFunctions {
                 // have dropped non-kind:1 events from a relay that ignored
                 // our kinds filter.
                 .take(cappedLimit)
-                .map { ev ->
-                    NoteHit(
-                        eventId = ev.id,
-                        npub = NPub.create(ev.pubKey),
-                        pubkeyHex = ev.pubKey,
-                        createdAt = ev.createdAt,
-                        content = ev.content,
-                    )
-                }
+                .map { it.toNoteHit() }
 
         return SearchNotesResult(matches = hits)
     }
@@ -314,5 +578,76 @@ class FollowingResult(
 ) {
     companion object {
         fun empty() = FollowingResult(totalFollowing = 0, returned = emptyList())
+    }
+}
+
+/**
+ * Result of [AmethystAppFunctions.getProfile]. Distinguishes "user has no
+ * cached + observable kind:0 metadata" (`found = false`) from "user has a
+ * stub profile with empty fields" — the latter shouldn't normally happen
+ * but the explicit flag keeps callers from rendering a hollow card.
+ */
+@AppFunctionSerializable(isDescribedByKDoc = true)
+class GetProfileResult(
+    /** True when a kind:0 was found (cache or relay). False means the
+     *  user exists as a pubkey but no profile event was reachable. */
+    val found: Boolean,
+    /** Resolved profile when [found] is true, otherwise a stub with
+     *  pubkey-only fields populated. */
+    val profile: ProfileHit?,
+) {
+    companion object {
+        fun notFound(pubkeyHex: String) =
+            GetProfileResult(
+                found = false,
+                profile =
+                    ProfileHit(
+                        npub = NPub.create(pubkeyHex),
+                        pubkeyHex = pubkeyHex,
+                        displayName = null,
+                        about = null,
+                        nip05 = null,
+                        picture = null,
+                        lnAddress = null,
+                    ),
+            )
+    }
+}
+
+/**
+ * Summary of the active Nostr account on this device. Returned by
+ * [AmethystAppFunctions.getActiveAccountInfo].
+ */
+@AppFunctionSerializable(isDescribedByKDoc = true)
+class AccountInfoResult(
+    /** False when no account is currently logged into Amethyst. */
+    val signedIn: Boolean,
+    /** Bech32 npub of the active account, or null when signed out. */
+    val npub: String?,
+    /** Hex pubkey of the active account, or null when signed out. */
+    val pubkeyHex: String?,
+    /** Best-effort display name from cached kind:0. */
+    val displayName: String?,
+    /** NIP-05 verified handle. */
+    val nip05: String?,
+    /** Number of pubkeys in the user's current kind:3 follow list. */
+    val followCount: Int,
+    /** Number of NIP-65 outbox / home relays configured. */
+    val outboxRelayCount: Int,
+    /** Number of NIP-17 DM-inbox relays (kind:10050) configured. */
+    val dmRelayCount: Int,
+) {
+    companion object {
+        fun signedOut() =
+            AccountInfoResult(
+                signedIn = false,
+                npub = null,
+                pubkeyHex = null,
+                displayName = null,
+                nip05 = null,
+                followCount = 0,
+                outboxRelayCount = 0,
+                dmRelayCount = 0,
+            )
     }
 }
