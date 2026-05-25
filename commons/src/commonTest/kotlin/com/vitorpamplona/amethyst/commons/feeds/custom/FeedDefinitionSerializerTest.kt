@@ -213,6 +213,44 @@ class FeedDefinitionSerializerTest {
     }
 
     @Test
+    fun serializesToExpectedWireFormat() {
+        // Pins the byte-exact JSON output so any future change to the
+        // serializer (field order, null handling, number formatting) is
+        // caught here. Users have feeds saved on disk in this exact format
+        // and may share JSON between app versions; downstream consumers
+        // depend on the field order being stable.
+        val feed =
+            FeedDefinition(
+                id = "test-1",
+                name = "Bitcoin",
+                emoji = "₿",
+                pinned = true,
+                pinOrder = 0,
+                source =
+                    FeedSource.Filter(
+                        hashtags = persistentListOf("bitcoin", "btc"),
+                        authors = persistentListOf("abc123"),
+                        relays = persistentListOf("wss://relay.damus.io"),
+                        excludeAuthors = persistentListOf("spammer"),
+                        excludeKeywords = persistentListOf("scam"),
+                        kinds = persistentListOf(1, 6),
+                    ),
+                refreshMode = RefreshMode.LIVE_STREAM,
+                createdAt = 1000L,
+            )
+
+        val expected =
+            """[{"id":"test-1","name":"Bitcoin","emoji":"₿","pinned":true,""" +
+                """"pinOrder":0,"refreshMode":"LIVE_STREAM","createdAt":1000,""" +
+                """"source":{"type":"filter","hashtags":["bitcoin","btc"],""" +
+                """"authors":["abc123"],"relays":["wss://relay.damus.io"],""" +
+                """"excludeAuthors":["spammer"],"excludeKeywords":["scam"],""" +
+                """"kinds":[1,6]}}]"""
+
+        assertEquals(expected, FeedDefinitionSerializer.serializeList(listOf(feed)))
+    }
+
+    @Test
     fun parsesLegacyJacksonOutput() {
         // Wire format previously emitted by ObjectMapper. Users have feed
         // definitions stored on disk in exactly this shape — the new
