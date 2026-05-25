@@ -257,6 +257,7 @@ class AmethystAppFunctions {
                 .checkGetOrCreateUser(pubkey)
                 ?.metadataOrNull()
         if (cached != null) {
+            val info = cached.flow.value?.info
             return GetProfileResult(
                 found = true,
                 profile =
@@ -264,7 +265,7 @@ class AmethystAppFunctions {
                         npub = NPub.create(pubkey),
                         pubkeyHex = pubkey,
                         displayName = cached.bestName(),
-                        about = null,
+                        about = info?.about,
                         nip05 = cached.nip05(),
                         picture = cached.profilePicture(),
                         lnAddress = cached.lnAddress(),
@@ -649,6 +650,8 @@ class AmethystAppFunctions {
                 DmMessage(
                     fromNpub = NPub.create(inner.pubKey),
                     fromPubkeyHex = inner.pubKey,
+                    fromDisplayName = displayNameOf(inner.pubKey),
+                    sentByMe = inner.pubKey == myPub,
                     content = inner.content,
                     createdAt = inner.createdAt,
                 ),
@@ -715,6 +718,7 @@ class AmethystAppFunctions {
                         eventId = ev.id,
                         npub = NPub.create(ev.pubKey),
                         pubkeyHex = ev.pubKey,
+                        authorDisplayName = displayNameOf(ev.pubKey),
                         createdAt = ev.createdAt,
                         content = snippet,
                     )
@@ -769,8 +773,10 @@ class AmethystAppFunctions {
                         eventId = ev.id,
                         title = ev.title(),
                         summary = ev.summary(),
+                        streamingUrl = ev.streaming(),
                         hostNpub = hostPub?.let { NPub.create(it) },
                         hostPubkeyHex = hostPub,
+                        hostDisplayName = hostPub?.let { displayNameOf(it) },
                         startsAt = ev.starts(),
                         createdAt = ev.createdAt,
                     )
@@ -793,11 +799,26 @@ class AmethystAppFunctions {
                 )
             }
 
+    /**
+     * Look up the cached display name for a pubkey. Returns null when no
+     * kind:0 has been observed for this user yet — caller renders the
+     * npub instead.
+     *
+     * Cheap in-memory read against the same LocalCache the foreground UI
+     * uses; no relay round-trip, no allocation beyond the lookup.
+     */
+    private fun displayNameOf(pubkey: HexKey): String? =
+        Amethyst.instance.cache
+            .checkGetOrCreateUser(pubkey)
+            ?.metadataOrNull()
+            ?.bestName()
+
     private fun TextNoteEvent.toNoteHit(): NoteHit =
         NoteHit(
             eventId = id,
             npub = NPub.create(pubKey),
             pubkeyHex = pubKey,
+            authorDisplayName = displayNameOf(pubKey),
             createdAt = createdAt,
             content = content,
         )
@@ -960,6 +981,10 @@ class NoteHit(
     val npub: String,
     /** Hex pubkey of the note's author. */
     val pubkeyHex: String,
+    /** Best-effort display name of the author from the local kind:0 cache.
+     *  Null when the author's profile hasn't been seen yet — caller renders
+     *  the npub instead. */
+    val authorDisplayName: String?,
     /** Unix-seconds timestamp the note was created at. */
     val createdAt: Long,
     /** Raw content of the note (plain text, may contain Nostr URIs / hashtags). */
@@ -1074,6 +1099,12 @@ class DmMessage(
     val fromNpub: String,
     /** Hex pubkey of the sender. */
     val fromPubkeyHex: String,
+    /** Best-effort display name of the sender from the local kind:0 cache. */
+    val fromDisplayName: String?,
+    /** True when the active account sent this message — useful for the
+     *  caller to distinguish "Alice said X" from "I said Y" when both
+     *  appear in the same thread snapshot. */
+    val sentByMe: Boolean,
     /** Plaintext message body. */
     val content: String,
     /** Unix-seconds timestamp of the inner kind:14 event. */
@@ -1102,10 +1133,16 @@ class LiveStreamHit(
     val title: String?,
     /** Short description from the `summary` tag, or null when absent. */
     val summary: String?,
+    /** The URL where the stream is playable (HLS / WebRTC / etc.) from
+     *  the `streaming` tag. Null when the announcement carries no
+     *  streaming endpoint — caller has nothing to play. */
+    val streamingUrl: String?,
     /** Bech32 npub of the host, when a host tag is present. */
     val hostNpub: String?,
     /** Hex pubkey of the host, when a host tag is present. */
     val hostPubkeyHex: String?,
+    /** Best-effort display name of the host from the local kind:0 cache. */
+    val hostDisplayName: String?,
     /** Unix-seconds timestamp the stream's `starts` tag points to. */
     val startsAt: Long?,
     /** Unix-seconds timestamp of the kind:30311 event itself. */
