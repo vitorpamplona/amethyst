@@ -11,6 +11,9 @@
     <plurals name="post_was_hidden_due_to_too_many_hashtags">
         <item quantity="other">此帖有超过 %1$d 个话题标签</item>
     </plurals>
+    <plurals name="nip82_assets_count">
+        <item quantity="other">捆绑了 %1$d 个资产</item>
+    </plurals>
     <string name="post_not_found">事件正在加载或无法在你的中继列表中找到</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">频道图片</string>
@@ -546,6 +549,11 @@
     <string name="profile_badges_description">选择要在个人资料中显示的已收到的徽章。</string>
     <string name="profile_badges_empty">您还没有收到任何徽章。</string>
     <string name="pictures">图片</string>
+    <string name="software_apps">应用</string>
+    <string name="route_software_apps">应用</string>
+    <string name="nip82_repository_label">来源： %1$s</string>
+    <string name="nip82_version_label">v%1$s</string>
+    <string name="nip82_download">下载</string>
     <string name="calendars">日历</string>
     <string name="shorts">短视频</string>
     <string name="public_chats">公共聊天</string>
@@ -1182,6 +1190,8 @@
     <string name="posting_policy">发布政策</string>
     <string name="privacy_policy">隐私政策</string>
     <string name="terms_and_conditions">使用条款</string>
+    <string name="child_safety_standards">儿童安全标准</string>
+    <string name="about_legal">关于 &amp; 法律</string>
     <string name="not_available_acronym">N/A</string>
     <string name="relay_error_messages">该中继的错误和通知</string>
     <string name="relay_monitor_reports">中继监视器报告</string>
