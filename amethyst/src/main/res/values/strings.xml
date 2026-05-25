@@ -1884,8 +1884,12 @@
     <string name="cashu_edit_wallet">Edit wallet</string>
     <string name="cashu_p2pk_section">Nutzap key (advanced)</string>
     <string name="cashu_p2pk_explainer">A separate private key used only to receive NIP-61 nutzaps. Not your Nostr identity key.</string>
-    <string name="cashu_p2pk_autogen">Auto-generate</string>
+    <string name="cashu_p2pk_autogen">Generate a new key</string>
+    <string name="cashu_p2pk_autogen_warning_edit">Will invalidate any pending nutzaps locked to the current key.</string>
+    <string name="cashu_p2pk_keep_current">Keep current key</string>
     <string name="cashu_p2pk_manual_label">P2PK private key (hex)</string>
+    <string name="wallet_edit_cashu_title">Edit Cashu wallet</string>
+    <string name="wallet_save_changes">Save changes</string>
     <string name="cashu_action_receive">Receive</string>
     <string name="cashu_action_send_ln">Send LN</string>
     <string name="cashu_action_send_token">Send Token</string>

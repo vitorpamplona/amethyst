@@ -143,6 +143,16 @@ class CashuWalletState(
             .toHexKey()
     }
 
+    /**
+     * Read the wallet's P2PK private key. Used by the edit-wallet flow to
+     * preserve the same nutzap key when only mints are being changed —
+     * regenerating would orphan any inbound nutzaps locked to the old key.
+     *
+     * The signer round-trip means this is suspending and can fail (remote /
+     * external signers may reject the decrypt). Callers should handle null.
+     */
+    suspend fun exportP2pkPrivkeyHex(): String? = walletPrivkeyHex()
+
     private suspend fun walletPrivkeyHex(): String? =
         _walletEvent.value?.let { evt ->
             runCatching { evt.privkey(signer) }.getOrNull()

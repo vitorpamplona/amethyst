@@ -190,9 +190,21 @@ class CashuWalletViewModel : ViewModel() {
         _mintPingState.value = MintPingState.Idle
     }
 
+    /** What to do with the wallet's P2PK key during a save. */
+    enum class P2pkKeyMode {
+        /** Keep the existing key from the on-cache wallet (edit only). */
+        KeepCurrent,
+
+        /** Generate a fresh random key — invalidates inbound nutzaps locked to the old one. */
+        AutoGenerate,
+
+        /** Use a user-pasted hex key. */
+        Manual,
+    }
+
     fun saveWallet(
         mints: List<String>,
-        autoGenPrivkey: Boolean,
+        keyMode: P2pkKeyMode,
         manualPrivkey: String? = null,
     ) {
         val vm = accountViewModel ?: return
@@ -202,15 +214,30 @@ class CashuWalletViewModel : ViewModel() {
             _createState.value = CashuWalletCreateState.Error("Add at least one mint")
             return
         }
+        if (keyMode == P2pkKeyMode.Manual && manualPrivkey.isNullOrBlank()) {
+            _createState.value = CashuWalletCreateState.Error("Paste a P2PK private key")
+            return
+        }
 
         _createState.value = CashuWalletCreateState.Saving
         vm.launchSigner {
             try {
-                val privkey =
-                    when {
-                        autoGenPrivkey -> null // ops generates one
-                        !manualPrivkey.isNullOrBlank() -> manualPrivkey.trim()
-                        else -> null
+                val privkey: String? =
+                    when (keyMode) {
+                        P2pkKeyMode.KeepCurrent -> {
+                            val existing = state.exportP2pkPrivkeyHex()
+                            if (existing == null) {
+                                _createState.value =
+                                    CashuWalletCreateState.Error(
+                                        "Could not read the existing wallet key. " +
+                                            "Use auto-generate or paste a key instead.",
+                                    )
+                                return@launchSigner
+                            }
+                            existing
+                        }
+                        P2pkKeyMode.AutoGenerate -> null // ops generates one
+                        P2pkKeyMode.Manual -> manualPrivkey?.trim()
                     }
                 ops.publishWalletEvents(
                     mints = mints,

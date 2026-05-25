@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,6 +29,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -40,8 +42,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -73,11 +75,30 @@ fun AddCashuWalletScreen(
     val viewModel: CashuWalletViewModel = viewModel()
     LaunchedEffect(Unit) { viewModel.init(accountViewModel) }
 
+    val existingWallet by viewModel.walletEvent.collectAsState()
+    val existingMints by viewModel.mints.collectAsState()
+    val isEditMode = existingWallet != null
+
     val mints = remember { mutableStateListOf<String>() }
     var mintInput by remember { mutableStateOf("") }
-    var autoGenPrivkey by remember { mutableStateOf(true) }
+    var keyMode by remember {
+        mutableStateOf(
+            if (isEditMode) CashuWalletViewModel.P2pkKeyMode.KeepCurrent else CashuWalletViewModel.P2pkKeyMode.AutoGenerate,
+        )
+    }
     var manualPrivkey by remember { mutableStateOf("") }
     val createState by viewModel.createState.collectAsState()
+
+    // Pre-fill the mints list with the existing wallet's mints whenever we
+    // enter edit mode (or the existing mints update). Without this, hitting
+    // the Edit button silently wipes the user's mint list because the local
+    // `mints` state holder starts empty.
+    LaunchedEffect(existingMints) {
+        if (existingMints.isNotEmpty()) {
+            val current = mints.toSet()
+            existingMints.forEach { if (it !in current) mints.add(it) }
+        }
+    }
 
     LaunchedEffect(createState) {
         if (createState is CashuWalletCreateState.Success) {
@@ -89,7 +110,13 @@ fun AddCashuWalletScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.wallet_add_cashu_title)) },
+                title = {
+                    Text(
+                        stringRes(
+                            if (isEditMode) R.string.wallet_edit_cashu_title else R.string.wallet_add_cashu_title,
+                        ),
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
@@ -106,6 +133,7 @@ fun AddCashuWalletScreen(
                 Modifier
                     .fillMaxSize()
                     .padding(padding)
+                    .verticalScroll(rememberScrollState())
                     .padding(16.dp),
         ) {
             Text(
@@ -162,9 +190,7 @@ fun AddCashuWalletScreen(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 OutlinedButton(
-                    onClick = {
-                        viewModel.pingMint(mintInput.trim().trimEnd('/'))
-                    },
+                    onClick = { viewModel.pingMint(mintInput.trim().trimEnd('/')) },
                     enabled = mintInput.isNotBlank() && pingState !is MintPingState.Pinging,
                 ) {
                     if (pingState is MintPingState.Pinging) {
@@ -229,16 +255,26 @@ fun AddCashuWalletScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(stringRes(R.string.cashu_p2pk_autogen))
-                Switch(checked = autoGenPrivkey, onCheckedChange = { autoGenPrivkey = it })
+            if (isEditMode) {
+                P2pkRadio(
+                    label = stringRes(R.string.cashu_p2pk_keep_current),
+                    selected = keyMode == CashuWalletViewModel.P2pkKeyMode.KeepCurrent,
+                    onSelect = { keyMode = CashuWalletViewModel.P2pkKeyMode.KeepCurrent },
+                )
             }
+            P2pkRadio(
+                label = stringRes(R.string.cashu_p2pk_autogen),
+                sub = if (isEditMode) stringRes(R.string.cashu_p2pk_autogen_warning_edit) else null,
+                selected = keyMode == CashuWalletViewModel.P2pkKeyMode.AutoGenerate,
+                onSelect = { keyMode = CashuWalletViewModel.P2pkKeyMode.AutoGenerate },
+            )
+            P2pkRadio(
+                label = stringRes(R.string.cashu_p2pk_manual_label),
+                selected = keyMode == CashuWalletViewModel.P2pkKeyMode.Manual,
+                onSelect = { keyMode = CashuWalletViewModel.P2pkKeyMode.Manual },
+            )
 
-            if (!autoGenPrivkey) {
+            if (keyMode == CashuWalletViewModel.P2pkKeyMode.Manual) {
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = manualPrivkey,
@@ -266,16 +302,51 @@ fun AddCashuWalletScreen(
                 onClick = {
                     viewModel.saveWallet(
                         mints = mints.toList(),
-                        autoGenPrivkey = autoGenPrivkey,
-                        manualPrivkey = manualPrivkey.takeIf { !autoGenPrivkey },
+                        keyMode = keyMode,
+                        manualPrivkey = manualPrivkey.takeIf { keyMode == CashuWalletViewModel.P2pkKeyMode.Manual },
                     )
                 },
                 enabled =
                     mints.isNotEmpty() &&
-                        createState !is CashuWalletCreateState.Saving,
+                        createState !is CashuWalletCreateState.Saving &&
+                        (keyMode != CashuWalletViewModel.P2pkKeyMode.Manual || manualPrivkey.isNotBlank()),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringRes(R.string.wallet_save))
+                Text(
+                    stringRes(
+                        if (isEditMode) R.string.wallet_save_changes else R.string.wallet_save,
+                    ),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun P2pkRadio(
+    label: String,
+    selected: Boolean,
+    onSelect: () -> Unit,
+    sub: String? = null,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .selectable(selected = selected, onClick = onSelect)
+                .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = onSelect)
+        Spacer(modifier = Modifier.width(8.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.bodyMedium)
+            if (sub != null) {
+                Text(
+                    sub,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
             }
         }
     }
