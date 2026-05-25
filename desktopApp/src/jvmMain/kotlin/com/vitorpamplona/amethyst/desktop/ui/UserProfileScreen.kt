@@ -99,6 +99,10 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip39ExtIdentities.GitHubIdentity
+import com.vitorpamplona.quartz.nip39ExtIdentities.MastodonIdentity
+import com.vitorpamplona.quartz.nip39ExtIdentities.TwitterIdentity
+import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import kotlinx.coroutines.Dispatchers
@@ -163,6 +167,11 @@ fun UserProfileScreen(
         )
     }
     var lnAddress by remember { mutableStateOf(cachedMetadata?.lnAddress()) }
+    var identities by remember {
+        mutableStateOf(
+            cachedMetadata?.flow?.value?.identities ?: emptyList(),
+        )
+    }
     var followersCount by remember { mutableStateOf(localCache.getCachedFollowerCount(pubKeyHex)) }
     var followingCount by remember { mutableStateOf(localCache.getCachedFollowingCount(pubKeyHex)) }
 
@@ -286,6 +295,7 @@ fun UserProfileScreen(
                                 nip05 = metadata.nip05
                                 website = metadata.website
                                 lnAddress = metadata.lnAddress()
+                                identities = event.identityClaims()
                             }
 
                             // Store MetadataEvent for editing (only for own profile)
@@ -744,6 +754,27 @@ fun UserProfileScreen(
                                     ProfileMetadataField(
                                         text = addr,
                                         icon = MaterialSymbols.Bolt,
+                                    )
+                                }
+
+                                identities.forEach { identity ->
+                                    Spacer(Modifier.height(4.dp))
+                                    ProfileMetadataField(
+                                        text =
+                                            when (identity) {
+                                                is TwitterIdentity -> "@${identity.identity}"
+                                                is GitHubIdentity -> identity.identity
+                                                is MastodonIdentity -> identity.identity
+                                                else -> identity.identity
+                                            },
+                                        icon = MaterialSymbols.Language,
+                                        onClick = {
+                                            runCatching {
+                                                java.awt.Desktop.getDesktop().browse(
+                                                    java.net.URI(identity.toProofUrl()),
+                                                )
+                                            }
+                                        },
                                     )
                                 }
 

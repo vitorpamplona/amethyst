@@ -188,7 +188,7 @@ fun DesktopRichTextViewer(
                 else -> {
                     FlowRow(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Start,
+                        horizontalArrangement = if (paragraph.isRTL) Arrangement.End else Arrangement.Start,
                     ) {
                         for (word in paragraph.words) {
                             RenderSegment(word, state, localCache, callbacks)
