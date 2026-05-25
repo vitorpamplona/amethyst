@@ -625,6 +625,33 @@ class CashuWalletOps(
      * Throws on failure so the UI can surface the underlying reason.
      */
     suspend fun pingMint(mintUrl: String): String? = MintHttpClient(mintUrl, okHttpClient).info().name
+
+    /**
+     * Publish a NIP-87 kind:38000 recommendation for [mintUrl].
+     *
+     * The recommendation is keyed by the announcement's d-tag (mint pubkey)
+     * when one is known — that makes it discoverable via `#a` queries that
+     * scope by mint identity. We always emit a `u` tag with the raw URL too
+     * so older clients that index by URL still pick it up. [review] is an
+     * optional free-text body (kind:38000 content).
+     */
+    suspend fun recommendMint(
+        mintUrl: String,
+        mintAnnouncementDTag: String? = null,
+        review: String = "",
+    ): com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent {
+        val template =
+            com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
+                .build(
+                    mintIdentifier = mintAnnouncementDTag ?: mintUrl,
+                    mintKind = com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent.KIND,
+                    review = review,
+                    mintUrls = listOf(mintUrl),
+                )
+        val event = signer.sign(template)
+        publish(event)
+        return event
+    }
 }
 
 /** Drop the leading parity byte if present so two pubkeys can be compared. */

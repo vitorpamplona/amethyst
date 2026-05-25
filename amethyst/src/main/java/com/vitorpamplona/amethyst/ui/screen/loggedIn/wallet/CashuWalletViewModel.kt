@@ -190,6 +190,40 @@ class CashuWalletViewModel : ViewModel() {
         _mintPingState.value = MintPingState.Idle
     }
 
+    /**
+     * Reference to the account-scoped NIP-87 mint directory state. The picker
+     * UI calls .open()/.close() on entry/exit and observes .entries directly.
+     */
+    val directory get() = account!!.cashuMintDirectoryState
+
+    /** Open the NIP-87 mint directory subscription against the account's outbox relays. */
+    fun openMintDirectory() {
+        val acc = account ?: return
+        directory.open(this, acc.outboxRelays.flow.value)
+    }
+
+    fun closeMintDirectory() {
+        directory.close(this)
+    }
+
+    /** Publish a NIP-87 kind:38000 recommendation for [mintUrl]. */
+    fun recommendMint(
+        mintUrl: String,
+        review: String = "",
+    ) {
+        val vm = accountViewModel ?: return
+        vm.launchSigner {
+            try {
+                val dTag = directory.lookup(mintUrl)?.announcement?.dTag()
+                ops.recommendMint(mintUrl = mintUrl, mintAnnouncementDTag = dTag, review = review)
+            } catch (e: Exception) {
+                // Best-effort — the UI doesn't need to block on the result.
+                com.vitorpamplona.quartz.utils.Log
+                    .w("CashuWallet") { "recommendMint($mintUrl) failed: ${describeMintError(e)}" }
+            }
+        }
+    }
+
     /** What to do with the wallet's P2PK key during a save. */
     enum class P2pkKeyMode {
         /** Keep the existing key from the on-cache wallet (edit only). */

@@ -87,6 +87,7 @@ fun AddCashuWalletScreen(
         )
     }
     var manualPrivkey by remember { mutableStateOf("") }
+    var showPicker by remember { mutableStateOf(false) }
     val createState by viewModel.createState.collectAsState()
 
     // Pre-fill the mints list with the existing wallet's mints whenever we
@@ -136,11 +137,22 @@ fun AddCashuWalletScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp),
         ) {
-            Text(
-                text = stringRes(R.string.cashu_mints),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringRes(R.string.cashu_mints),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                OutlinedButton(onClick = { showPicker = true }) {
+                    Icon(MaterialSymbols.Search, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(stringRes(R.string.cashu_browse_mints))
+                }
+            }
             Spacer(modifier = Modifier.height(8.dp))
 
             mints.forEachIndexed { index, mint ->
@@ -319,6 +331,18 @@ fun AddCashuWalletScreen(
                 )
             }
         }
+    }
+
+    if (showPicker) {
+        MintPickerSheet(
+            viewModel = viewModel,
+            excludeUrls = mints.toSet(),
+            onPick = { entry ->
+                val url = entry.url.trim().trimEnd('/')
+                if (url.isNotEmpty() && url !in mints) mints.add(url)
+            },
+            onDismiss = { showPicker = false },
+        )
     }
 }
 

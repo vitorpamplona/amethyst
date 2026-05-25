@@ -292,6 +292,7 @@ class Account(
     val geolocationFlow: () -> StateFlow<LocationState.LocationResult>,
     val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
     val cashuWalletFilterAssembler: () -> com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuWalletFilterAssembler,
+    val cashuMintDirectoryFilterAssembler: () -> com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler,
     val okHttpClientForMoney: (String) -> okhttp3.OkHttpClient,
     val otsResolverBuilder: () -> OtsResolver,
     val cache: LocalCache,
@@ -416,6 +417,24 @@ class Account(
             assembler = cashuWalletFilterAssembler(),
             outboxRelaysFlow = outboxRelays.flow,
             okHttpClient = okHttpClientForMoney,
+        )
+
+    /**
+     * NIP-87 cashu mint directory — populated on-demand while the mint
+     * picker is on screen. ViewModels call open()/close() ref-counted, the
+     * relay subscription only runs while at least one opener is active.
+     */
+    val cashuMintDirectoryState =
+        com.vitorpamplona.amethyst.model.nip60Cashu.CashuMintDirectoryState(
+            cache = cache,
+            scope = scope,
+            assembler = cashuMintDirectoryFilterAssembler(),
+            followsFlow =
+                kotlinx.coroutines.flow.MutableStateFlow(kind3FollowList.flow.value.authors).also { authorSet ->
+                    scope.launch {
+                        kind3FollowList.flow.collect { authorSet.value = it.authors }
+                    }
+                },
         )
 
     val trustedRelays = TrustedRelayListsState(nip65RelayList, privateStorageRelayList, localRelayList, dmRelayList, searchRelayList, indexerRelayList, proxyRelayList, trustedRelayList, broadcastRelayList, scope)

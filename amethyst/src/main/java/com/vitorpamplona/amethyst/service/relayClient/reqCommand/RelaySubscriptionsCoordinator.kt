@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand
 
+import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuWalletFilterAssembler
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssembler
@@ -140,6 +141,11 @@ class RelaySubscriptionsCoordinator(
     // Subscribes to kinds 17375/7375/7376/7374/10019 by author + inbound 9321 #p=self.
     val cashuWallet = CashuWalletFilterAssembler(client)
 
+    // active while the user is browsing the NIP-87 mint picker. Subscribes to
+    // kind:38172 cashu mint announcements + kind:38000 cashu-scoped
+    // recommendations on the configured relay set.
+    val cashuMintDirectory = CashuMintDirectoryFilterAssembler(client)
+
     val all =
         listOf(
             account,
@@ -184,6 +190,7 @@ class RelaySubscriptionsCoordinator(
             nwc,
             onchainZaps,
             cashuWallet,
+            cashuMintDirectory,
         )
 
     fun destroy() = all.forEach { it.destroy() }

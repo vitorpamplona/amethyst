@@ -152,6 +152,7 @@ fun CashuWalletScreen(
                 onSendLn = { sendLnOpen = true },
                 onSendToken = { sendTokenOpen = true },
                 onRedeem = { redeemOpen = true },
+                onRecommendMint = { viewModel.recommendMint(it) },
             )
         }
     }
@@ -238,6 +239,7 @@ private fun CashuWalletContent(
     onSendLn: () -> Unit,
     onSendToken: () -> Unit,
     onRedeem: () -> Unit,
+    onRecommendMint: (String) -> Unit,
 ) {
     LazyColumn(
         modifier =
@@ -269,7 +271,7 @@ private fun CashuWalletContent(
             )
         }
         items(mints, key = { it }) { mint ->
-            MintRow(mint)
+            MintRow(mint = mint, onRecommend = { onRecommendMint(mint) })
         }
 
         if (history.isNotEmpty()) {
@@ -365,7 +367,10 @@ private fun ActionButton(
 }
 
 @Composable
-private fun MintRow(mint: String) {
+private fun MintRow(
+    mint: String,
+    onRecommend: (() -> Unit)? = null,
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -381,7 +386,17 @@ private fun MintRow(mint: String) {
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.width(12.dp))
-            Text(text = mint, style = MaterialTheme.typography.bodyMedium)
+            Text(text = mint, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            if (onRecommend != null) {
+                IconButton(onClick = onRecommend, modifier = Modifier.size(28.dp)) {
+                    Icon(
+                        symbol = MaterialSymbols.ThumbUp,
+                        contentDescription = stringRes(R.string.cashu_recommend_mint),
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
         }
     }
 }

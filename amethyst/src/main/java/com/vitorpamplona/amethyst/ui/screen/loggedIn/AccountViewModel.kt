@@ -2229,6 +2229,10 @@ fun mockAccountViewModel(): AccountViewModel {
                 com.vitorpamplona.amethyst.commons.relayClient.assemblers
                     .CashuWalletFilterAssembler(client)
             },
+            cashuMintDirectoryFilterAssembler = {
+                com.vitorpamplona.amethyst.commons.relayClient.assemblers
+                    .CashuMintDirectoryFilterAssembler(client)
+            },
             okHttpClientForMoney = { okhttp3.OkHttpClient() },
             otsResolverBuilder = { EmptyOtsResolverBuilder.build() },
             cache = LocalCache,
@@ -2284,6 +2288,10 @@ fun mockVitorAccountViewModel(): AccountViewModel {
             cashuWalletFilterAssembler = {
                 com.vitorpamplona.amethyst.commons.relayClient.assemblers
                     .CashuWalletFilterAssembler(client)
+            },
+            cashuMintDirectoryFilterAssembler = {
+                com.vitorpamplona.amethyst.commons.relayClient.assemblers
+                    .CashuMintDirectoryFilterAssembler(client)
             },
             okHttpClientForMoney = { okhttp3.OkHttpClient() },
             otsResolverBuilder = { EmptyOtsResolverBuilder.build() },
