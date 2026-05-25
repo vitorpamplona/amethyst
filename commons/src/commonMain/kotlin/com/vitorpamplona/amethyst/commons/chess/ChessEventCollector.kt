@@ -20,16 +20,18 @@
  */
 package com.vitorpamplona.amethyst.commons.chess
 
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterGameEvents
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
 import com.vitorpamplona.quartz.nip64Chess.jester.toJesterEvent
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Collects and aggregates Jester chess events for a game from any source.
@@ -67,11 +69,15 @@ class ChessEventCollector(
     private val _startEvent = MutableStateFlow<JesterEvent?>(null)
     val startEvent: StateFlow<JesterEvent?> = _startEvent.asStateFlow()
 
-    // Move events (deduplicated by event ID)
-    private val moves = ConcurrentHashMap<String, JesterEvent>()
+    // Move events (deduplicated by event ID). String keys are Comparable, so
+    // LargeCache (ConcurrentSkipListMap on JVM, CacheMap on Apple) works.
+    private val moves = LargeCache<String, JesterEvent>()
 
-    // Track all processed event IDs for fast deduplication
-    private val processedEventIds = ConcurrentHashMap.newKeySet<String>()
+    // Track all processed event IDs for fast deduplication. A plain HashSet
+    // guarded by KmpLock — simpler than a LargeCache<K, Boolean> for set-shaped
+    // membership.
+    private val processedEventIdsLock = KmpLock()
+    private val processedEventIds = mutableSetOf<String>()
 
     // Flow that emits when any event is added (for reactive updates)
     private val _eventCount = MutableStateFlow(0)
@@ -80,7 +86,11 @@ class ChessEventCollector(
     /**
      * Check if an event has already been processed.
      */
-    fun hasEvent(eventId: String): Boolean = processedEventIds.contains(eventId)
+    fun hasEvent(eventId: String): Boolean = processedEventIdsLock.withLock { processedEventIds.contains(eventId) }
+
+    private fun markProcessed(eventId: String): Boolean = processedEventIdsLock.withLock { processedEventIds.add(eventId) }
+
+    private fun processedEventCount(): Int = processedEventIdsLock.withLock { processedEventIds.size }
 
     /**
      * Add a Jester event for this game.
@@ -89,7 +99,7 @@ class ChessEventCollector(
      * @return true if the event was added, false if already exists or invalid
      */
     fun addEvent(event: JesterEvent): Boolean {
-        if (processedEventIds.contains(event.id)) {
+        if (hasEvent(event.id)) {
             Log.d("chessdebug") { "[Collector] DEDUP: event ${event.id.take(8)} already processed for game ${startEventId.take(8)}" }
             return false
         }
@@ -129,12 +139,12 @@ class ChessEventCollector(
      * @return true if the event was added, false if already exists or invalid
      */
     private fun addStartEvent(event: JesterEvent): Boolean {
-        if (processedEventIds.contains(event.id)) return false
+        if (hasEvent(event.id)) return false
         if (!event.isStartEvent()) return false
         if (event.id != startEventId) return false
 
         if (_startEvent.compareAndSet(null, event)) {
-            processedEventIds.add(event.id)
+            markProcessed(event.id)
             incrementEventCount()
             Log.d("chessdebug") { "[Collector] START event added: id=${event.id.take(8)}, pubkey=${event.pubKey.take(8)}, createdAt=${event.createdAt}" }
             return true
@@ -149,14 +159,15 @@ class ChessEventCollector(
      * @return true if the event was added, false if already exists or invalid
      */
     private fun addMoveEvent(event: JesterEvent): Boolean {
-        if (processedEventIds.contains(event.id)) return false
+        if (hasEvent(event.id)) return false
         if (!event.isMoveEvent()) return false
         if (event.startEventId() != startEventId) return false
 
-        if (moves.putIfAbsent(event.id, event) == null) {
-            processedEventIds.add(event.id)
+        // createIfAbsent returns true iff the entry was added (no prior entry).
+        if (moves.createIfAbsent(event.id) { event }) {
+            markProcessed(event.id)
             incrementEventCount()
-            Log.d("chessdebug") { "[Collector] MOVE event added: id=${event.id.take(8)}, pubkey=${event.pubKey.take(8)}, move=${event.move()}, historySize=${event.history().size}, fen=${event.fen()?.take(30)}, result=${event.result()}, totalMoves=${moves.size}" }
+            Log.d("chessdebug") { "[Collector] MOVE event added: id=${event.id.take(8)}, pubkey=${event.pubKey.take(8)}, move=${event.move()}, historySize=${event.history().size}, fen=${event.fen()?.take(30)}, result=${event.result()}, totalMoves=${moves.size()}" }
             return true
         }
         return false
@@ -168,7 +179,7 @@ class ChessEventCollector(
     fun getEvents(): JesterGameEvents =
         JesterGameEvents(
             startEvent = _startEvent.value,
-            moves = moves.values.toList(),
+            moves = moves.values().toList(),
         )
 
     /**
@@ -179,22 +190,22 @@ class ChessEventCollector(
     /**
      * Check if the game has any moves (indicates game is active).
      */
-    fun hasMoves(): Boolean = moves.isNotEmpty()
+    fun hasMoves(): Boolean = !moves.isEmpty()
 
     /**
      * Check if the game has ended (has a move with result).
      */
-    fun hasEnded(): Boolean = moves.values.any { it.result() != null }
+    fun hasEnded(): Boolean = moves.values().any { it.result() != null }
 
     /**
      * Get the number of moves collected.
      */
-    fun moveCount(): Int = moves.size
+    fun moveCount(): Int = moves.size()
 
     /**
      * Get the latest move (with longest history).
      */
-    fun latestMove(): JesterEvent? = moves.values.maxByOrNull { it.history().size }
+    fun latestMove(): JesterEvent? = moves.values().maxByOrNull { it.history().size }
 
     /**
      * Clear all collected events.
@@ -202,12 +213,12 @@ class ChessEventCollector(
     fun clear() {
         _startEvent.value = null
         moves.clear()
-        processedEventIds.clear()
+        processedEventIdsLock.withLock { processedEventIds.clear() }
         _eventCount.value = 0
     }
 
     private fun incrementEventCount() {
-        _eventCount.value = processedEventIds.size
+        _eventCount.value = processedEventCount()
     }
 }
 
@@ -218,21 +229,21 @@ class ChessEventCollector(
  * such as in a chess lobby or when spectating multiple games.
  */
 class ChessEventCollectorManager {
-    private val collectors = ConcurrentHashMap<String, ChessEventCollector>()
+    private val collectors = LargeCache<String, ChessEventCollector>()
 
     /**
      * Get or create a collector for a game.
      *
      * @param startEventId The start event ID (game identifier)
      */
-    fun getOrCreate(startEventId: String): ChessEventCollector = collectors.getOrPut(startEventId) { ChessEventCollector(startEventId) }
+    fun getOrCreate(startEventId: String): ChessEventCollector = collectors.getOrCreate(startEventId) { ChessEventCollector(it) }
 
     /**
      * Get a collector if it exists.
      *
      * @param startEventId The start event ID (game identifier)
      */
-    fun get(startEventId: String): ChessEventCollector? = collectors[startEventId]
+    fun get(startEventId: String): ChessEventCollector? = collectors.get(startEventId)
 
     /**
      * Remove a collector for a game.
@@ -244,13 +255,13 @@ class ChessEventCollectorManager {
     /**
      * Get all active game IDs (start event IDs).
      */
-    fun activeGameIds(): Set<String> = collectors.keys.toSet()
+    fun activeGameIds(): Set<String> = collectors.keys()
 
     /**
      * Clear all collectors.
      */
     fun clear() {
-        collectors.values.forEach { it.clear() }
+        collectors.values().forEach { it.clear() }
         collectors.clear()
     }
 
@@ -275,8 +286,8 @@ class ChessEventCollectorManager {
                 return false
             }
         val collector =
-            collectors[startId] ?: run {
-                Log.d("chessdebug") { "[CollectorMgr] REJECTED: no collector for game ${startId.take(8)} (active games: ${collectors.keys.map { it.take(8) }})" }
+            collectors.get(startId) ?: run {
+                Log.d("chessdebug") { "[CollectorMgr] REJECTED: no collector for game ${startId.take(8)} (active games: ${collectors.keys().map { it.take(8) }})" }
                 return false
             }
         return collector.addEvent(event)

@@ -21,7 +21,8 @@
 package com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers
 
 import androidx.compose.runtime.Stable
-import java.util.concurrent.ConcurrentHashMap
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 
 /**
  *  This allows composables to directly register their queries
@@ -32,13 +33,16 @@ import java.util.concurrent.ConcurrentHashMap
 abstract class ComposeSubscriptionManager<T> :
     ComposeSubscriptionManagerControls,
     Subscribable<T> {
-    private var composeSubscriptions: ConcurrentHashMap<T, T> = ConcurrentHashMap()
+    // T has no Comparable bound — see the note in MutableComposeSubscriptionManager
+    // for why LargeCache isn't used here.
+    private val lock = KmpLock()
+    private val composeSubscriptions = mutableMapOf<T, T>()
 
     // This is called by main. Keep it really fast.
     override fun subscribe(query: T?) {
         if (query == null) return
 
-        composeSubscriptions.put(query, query)
+        lock.withLock { composeSubscriptions[query] = query }
 
         invalidateKeys()
     }
@@ -47,7 +51,7 @@ abstract class ComposeSubscriptionManager<T> :
     override fun unsubscribe(query: T?) {
         if (query == null) return
 
-        composeSubscriptions.remove(query)
+        lock.withLock { composeSubscriptions.remove(query) }
 
         invalidateKeys()
     }
@@ -55,8 +59,8 @@ abstract class ComposeSubscriptionManager<T> :
     override fun subscribe(query: List<T>) {
         if (query.isEmpty()) return
 
-        query.forEach {
-            composeSubscriptions.put(it, it)
+        lock.withLock {
+            query.forEach { composeSubscriptions[it] = it }
         }
 
         invalidateKeys()
@@ -66,14 +70,14 @@ abstract class ComposeSubscriptionManager<T> :
     override fun unsubscribe(query: List<T>) {
         if (query.isEmpty()) return
 
-        query.forEach {
-            composeSubscriptions.remove(it)
+        lock.withLock {
+            query.forEach { composeSubscriptions.remove(it) }
         }
 
         invalidateKeys()
     }
 
-    fun allKeys() = composeSubscriptions.keys
+    fun allKeys(): Set<T> = lock.withLock { composeSubscriptions.keys.toSet() }
 }
 
 interface Subscribable<T> {

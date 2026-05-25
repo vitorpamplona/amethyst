@@ -27,7 +27,8 @@ import androidx.compose.runtime.setValue
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.coroutines.cancellation.CancellationException
 
 sealed class SigningOpState {
@@ -44,26 +45,27 @@ sealed class SigningOpState {
  * Global signing status — any [SigningState] instance updates this when signing starts/ends.
  * Observe [globalState] from a screen-level composable to show a persistent status bar.
  */
+@OptIn(ExperimentalAtomicApi::class)
 object GlobalSigningStatus {
     var globalState by mutableStateOf<SigningOpState>(SigningOpState.Idle)
         private set
 
-    private val activeCount = AtomicInteger(0)
+    private val activeCount = AtomicInt(0)
 
     fun onPending() {
-        activeCount.incrementAndGet()
+        activeCount.addAndFetch(1)
         globalState = SigningOpState.Pending
     }
 
     fun onIdle() {
-        if (activeCount.decrementAndGet() <= 0) {
-            activeCount.set(0)
+        if (activeCount.addAndFetch(-1) <= 0) {
+            activeCount.store(0)
             globalState = SigningOpState.Idle
         }
     }
 
     fun onError(message: String) {
-        activeCount.decrementAndGet()
+        activeCount.addAndFetch(-1)
         globalState = SigningOpState.Error(message)
     }
 }

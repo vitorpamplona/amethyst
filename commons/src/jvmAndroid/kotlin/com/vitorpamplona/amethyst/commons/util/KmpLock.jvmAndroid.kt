@@ -18,22 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.richtext
+package com.vitorpamplona.amethyst.commons.util
 
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
+import java.util.concurrent.locks.ReentrantLock
 
-object Base64Image {
-    val pattern = Patterns.BASE64_IMAGE
+actual class KmpLock {
+    private val delegate = ReentrantLock()
 
-    fun isBase64(content: String): Boolean = Patterns.BASE64_IMAGE.matches(content)
+    actual fun lock() = delegate.lock()
 
-    @OptIn(ExperimentalEncodingApi::class)
-    fun parse(content: String): ByteArray {
-        val match = pattern.find(content) ?: throw Exception("Unable to convert base64 to image $content")
-        val base64String =
-            match.groups[2]?.value
-                ?: throw Exception("Unable to convert base64 to image $content")
-        return Base64.decode(base64String)
-    }
+    actual fun unlock() = delegate.unlock()
 }

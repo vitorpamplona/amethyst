@@ -18,22 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.richtext
+package com.vitorpamplona.amethyst.commons.util
 
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
+/**
+ * KMP-friendly reentrant lock. JVM/Android map to `java.util.concurrent.locks.ReentrantLock`;
+ * iOS maps to `NSRecursiveLock`.
+ *
+ * Use [withLock] in preference to manual lock/unlock — it guarantees release on
+ * exception. The class is reentrant on every platform, so a thread that already
+ * holds the lock can re-enter without deadlocking.
+ */
+expect class KmpLock() {
+    fun lock()
 
-object Base64Image {
-    val pattern = Patterns.BASE64_IMAGE
+    fun unlock()
+}
 
-    fun isBase64(content: String): Boolean = Patterns.BASE64_IMAGE.matches(content)
-
-    @OptIn(ExperimentalEncodingApi::class)
-    fun parse(content: String): ByteArray {
-        val match = pattern.find(content) ?: throw Exception("Unable to convert base64 to image $content")
-        val base64String =
-            match.groups[2]?.value
-                ?: throw Exception("Unable to convert base64 to image $content")
-        return Base64.decode(base64String)
+inline fun <T> KmpLock.withLock(block: () -> T): T {
+    lock()
+    try {
+        return block()
+    } finally {
+        unlock()
     }
 }

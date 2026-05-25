@@ -18,22 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.richtext
+package com.vitorpamplona.amethyst.commons.util
 
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
-
-object Base64Image {
-    val pattern = Patterns.BASE64_IMAGE
-
-    fun isBase64(content: String): Boolean = Patterns.BASE64_IMAGE.matches(content)
-
-    @OptIn(ExperimentalEncodingApi::class)
-    fun parse(content: String): ByteArray {
-        val match = pattern.find(content) ?: throw Exception("Unable to convert base64 to image $content")
-        val base64String =
-            match.groups[2]?.value
-                ?: throw Exception("Unable to convert base64 to image $content")
-        return Base64.decode(base64String)
-    }
+/**
+ * KMP-friendly weak reference. JVM/Android map to `java.lang.ref.WeakReference`;
+ * iOS will map to `kotlin.native.ref.WeakReference` when that target is added.
+ *
+ * The referent may be reclaimed by GC at any time after this reference is
+ * constructed — callers must always null-check the result of [get].
+ */
+expect class WeakReference<T : Any>(
+    referent: T,
+) {
+    fun get(): T?
 }

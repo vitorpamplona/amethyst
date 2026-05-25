@@ -20,29 +20,37 @@
  */
 package com.vitorpamplona.amethyst.commons.feeds.custom
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.node.ArrayNode
-import com.fasterxml.jackson.databind.node.ObjectNode
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.json.put
 
 object FeedDefinitionSerializer {
-    private val mapper = ObjectMapper()
+    private val json = Json { ignoreUnknownKeys = true }
 
     fun serializeList(feeds: List<FeedDefinition>): String {
-        val array = mapper.createArrayNode()
-        feeds.forEach { feed -> array.add(serializeFeed(feed)) }
-        return mapper.writeValueAsString(array)
+        val array =
+            buildJsonArray {
+                feeds.forEach { add(serializeFeed(it)) }
+            }
+        return json.encodeToString(JsonArray.serializer(), array)
     }
 
-    fun deserializeList(json: String): List<FeedDefinition> {
-        if (json.isBlank()) return emptyList()
-        val array = mapper.readTree(json) as? ArrayNode ?: return emptyList()
-        return array.mapNotNull { node -> deserializeFeed(node) }
+    fun deserializeList(jsonString: String): List<FeedDefinition> {
+        if (jsonString.isBlank()) return emptyList()
+        val array = json.parseToJsonElement(jsonString) as? JsonArray ?: return emptyList()
+        return array.mapNotNull { node -> (node as? JsonObject)?.let { deserializeFeed(it) } }
     }
 
-    private fun serializeFeed(feed: FeedDefinition): ObjectNode =
-        mapper.createObjectNode().apply {
+    private fun serializeFeed(feed: FeedDefinition): JsonObject =
+        buildJsonObject {
             put("id", feed.id)
             put("name", feed.name)
             put("emoji", feed.emoji)
@@ -50,25 +58,25 @@ object FeedDefinitionSerializer {
             put("pinOrder", feed.pinOrder)
             put("refreshMode", feed.refreshMode.name)
             put("createdAt", feed.createdAt)
-            set<ObjectNode>("source", serializeSource(feed.source))
+            put("source", serializeSource(feed.source))
         }
 
-    private fun deserializeFeed(node: JsonNode): FeedDefinition? {
-        val id = node.get("id")?.asText() ?: return null
-        val name = node.get("name")?.asText() ?: return null
-        val emoji = node.get("emoji")?.asText() ?: ""
-        val pinned = node.get("pinned")?.asBoolean() ?: false
-        val pinOrder = node.get("pinOrder")?.asInt() ?: Int.MAX_VALUE
+    private fun deserializeFeed(node: JsonObject): FeedDefinition? {
+        val id = node.string("id") ?: return null
+        val name = node.string("name") ?: return null
+        val emoji = node.string("emoji") ?: ""
+        val pinned = node.bool("pinned") ?: false
+        val pinOrder = node.int("pinOrder") ?: Int.MAX_VALUE
         val refreshMode =
-            node.get("refreshMode")?.asText()?.let {
+            node.string("refreshMode")?.let {
                 try {
                     RefreshMode.valueOf(it)
                 } catch (_: Exception) {
                     RefreshMode.LIVE_STREAM
                 }
             } ?: RefreshMode.LIVE_STREAM
-        val createdAt = node.get("createdAt")?.asLong() ?: 0L
-        val source = node.get("source")?.let { deserializeSource(it) } ?: return null
+        val createdAt = node.long("createdAt") ?: 0L
+        val source = (node["source"] as? JsonObject)?.let { deserializeSource(it) } ?: return null
 
         return FeedDefinition(
             id = id,
@@ -82,17 +90,20 @@ object FeedDefinitionSerializer {
         )
     }
 
-    private fun serializeSource(source: FeedSource): ObjectNode =
-        mapper.createObjectNode().apply {
+    private fun serializeSource(source: FeedSource): JsonObject =
+        buildJsonObject {
             when (source) {
                 is FeedSource.Filter -> {
                     put("type", "filter")
-                    set<ArrayNode>("hashtags", mapper.valueToTree(source.hashtags.toList()))
-                    set<ArrayNode>("authors", mapper.valueToTree(source.authors.toList()))
-                    set<ArrayNode>("relays", mapper.valueToTree(source.relays.toList()))
-                    set<ArrayNode>("excludeAuthors", mapper.valueToTree(source.excludeAuthors.toList()))
-                    set<ArrayNode>("excludeKeywords", mapper.valueToTree(source.excludeKeywords.toList()))
-                    set<ArrayNode>("kinds", mapper.valueToTree(source.kinds.toList()))
+                    put("hashtags", stringArray(source.hashtags))
+                    put("authors", stringArray(source.authors))
+                    put("relays", stringArray(source.relays))
+                    put("excludeAuthors", stringArray(source.excludeAuthors))
+                    put("excludeKeywords", stringArray(source.excludeKeywords))
+                    put(
+                        "kinds",
+                        buildJsonArray { source.kinds.forEach { add(JsonPrimitive(it)) } },
+                    )
                 }
 
                 is FeedSource.PeopleList -> {
@@ -131,61 +142,73 @@ object FeedDefinitionSerializer {
             }
         }
 
-    private fun deserializeSource(node: JsonNode): FeedSource? {
-        val type = node.get("type")?.asText() ?: return null
+    private fun deserializeSource(node: JsonObject): FeedSource? {
+        val type = node.string("type") ?: return null
         return when (type) {
             "filter" -> {
                 FeedSource.Filter(
-                    hashtags = node.get("hashtags")?.map { it.asText() }?.toImmutableList() ?: return null,
-                    authors = node.get("authors")?.map { it.asText() }?.toImmutableList() ?: return null,
-                    relays = node.get("relays")?.map { it.asText() }?.toImmutableList() ?: return null,
-                    excludeAuthors = node.get("excludeAuthors")?.map { it.asText() }?.toImmutableList() ?: return null,
-                    excludeKeywords = node.get("excludeKeywords")?.map { it.asText() }?.toImmutableList() ?: return null,
-                    kinds = node.get("kinds")?.map { it.asInt() }?.toImmutableList() ?: return null,
+                    hashtags = node.stringList("hashtags") ?: return null,
+                    authors = node.stringList("authors") ?: return null,
+                    relays = node.stringList("relays") ?: return null,
+                    excludeAuthors = node.stringList("excludeAuthors") ?: return null,
+                    excludeKeywords = node.stringList("excludeKeywords") ?: return null,
+                    kinds = node.intList("kinds") ?: return null,
                 )
             }
 
             "people_list" -> {
                 FeedSource.PeopleList(
-                    kind = node.get("kind")?.asInt() ?: 30000,
-                    pubkey = node.get("pubkey")?.asText() ?: return null,
-                    dTag = node.get("dTag")?.asText() ?: return null,
+                    kind = node.int("kind") ?: 30000,
+                    pubkey = node.string("pubkey") ?: return null,
+                    dTag = node.string("dTag") ?: return null,
                 )
             }
 
             "interest_set" -> {
                 FeedSource.InterestSet(
-                    kind = node.get("kind")?.asInt() ?: 30015,
-                    pubkey = node.get("pubkey")?.asText() ?: return null,
-                    dTag = node.get("dTag")?.asText() ?: return null,
+                    kind = node.int("kind") ?: 30015,
+                    pubkey = node.string("pubkey") ?: return null,
+                    dTag = node.string("dTag") ?: return null,
                 )
             }
 
             "dvm" -> {
                 FeedSource.DVM(
-                    kind = node.get("kind")?.asInt() ?: 31990,
-                    pubkey = node.get("pubkey")?.asText() ?: return null,
-                    dTag = node.get("dTag")?.asText() ?: return null,
+                    kind = node.int("kind") ?: 31990,
+                    pubkey = node.string("pubkey") ?: return null,
+                    dTag = node.string("dTag") ?: return null,
                 )
             }
 
             "single_relay" -> {
                 FeedSource.SingleRelay(
-                    url = node.get("url")?.asText() ?: return null,
+                    url = node.string("url") ?: return null,
                 )
             }
 
-            "global" -> {
-                FeedSource.Global
-            }
-
-            "following" -> {
-                FeedSource.Following
-            }
-
-            else -> {
-                null
-            }
+            "global" -> FeedSource.Global
+            "following" -> FeedSource.Following
+            else -> null
         }
     }
+
+    private fun stringArray(values: Iterable<String>): JsonArray = buildJsonArray { values.forEach { add(JsonPrimitive(it)) } }
+
+    private fun JsonObject.string(key: String): String? = (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
+
+    private fun JsonObject.bool(key: String): Boolean? = (this[key] as? JsonPrimitive)?.booleanOrNull
+
+    private fun JsonObject.int(key: String): Int? = (this[key] as? JsonPrimitive)?.intOrNull
+
+    private fun JsonObject.long(key: String): Long? = (this[key] as? JsonPrimitive)?.longOrNull
+
+    private fun JsonObject.stringList(key: String) =
+        (this[key] as? JsonArray)
+            ?.map { (it as? JsonPrimitive)?.content.orEmpty() }
+            ?.toImmutableList()
+
+    private fun JsonObject.intList(key: String) =
+        (this[key] as? JsonArray)
+            ?.mapNotNull { (it as? JsonPrimitive)?.intOrNull }
+            ?.toImmutableList()
 }

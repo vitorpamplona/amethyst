@@ -20,15 +20,19 @@
  */
 package com.vitorpamplona.amethyst.commons.chess
 
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.concurrent.ConcurrentHashMap
+import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * Progress callback for relay fetch operations
@@ -67,6 +71,7 @@ class ChessRelayFetchHelper(
      * @param onProgress Optional callback for progress updates per relay
      * @return Deduplicated list of events received before timeout/EOSE
      */
+    @OptIn(ExperimentalAtomicApi::class)
     suspend fun fetchEvents(
         filters: Map<NormalizedRelayUrl, List<Filter>>,
         timeoutMs: Long = ChessConfig.FETCH_TIMEOUT_MS,
@@ -74,16 +79,22 @@ class ChessRelayFetchHelper(
     ): List<Event> {
         if (filters.isEmpty()) return emptyList()
 
-        val events = ConcurrentHashMap<String, Event>()
+        val events = LargeCache<String, Event>()
         val relayCount = filters.keys.size
-        val eoseReceived = ConcurrentHashMap.newKeySet<NormalizedRelayUrl>()
-        val relayEventCounts = ConcurrentHashMap<NormalizedRelayUrl, Int>()
+        // Per-relay event counters. Each counter is independently atomic, so
+        // increments don't need to lock the whole map.
+        val relayEventCounts = LargeCache<NormalizedRelayUrl, AtomicInt>()
+        // Small bounded set; KmpLock-guarded plain set is fine for the size we
+        // expect (one entry per relay in the filter map).
+        val eoseLock = KmpLock()
+        val eoseReceived = mutableSetOf<NormalizedRelayUrl>()
         val allEose = CompletableDeferred<Unit>()
         val subId = newSubId()
 
-        // Initialize all relays as WAITING
+        // Initialize all relays as WAITING. Eagerly create AtomicInt counters
+        // so onEose / timeout paths can read load() without a put race.
         filters.keys.forEach { relay ->
-            relayEventCounts[relay] = 0
+            relayEventCounts.getOrCreate(relay) { AtomicInt(0) }
             onProgress?.invoke(RelayFetchProgress(relay, RelayFetchStatus.WAITING, 0))
         }
 
@@ -95,8 +106,8 @@ class ChessRelayFetchHelper(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
-                    events[event.id] = event
-                    val count = relayEventCounts.compute(relay) { _, v -> (v ?: 0) + 1 } ?: 1
+                    events.put(event.id, event)
+                    val count = relayEventCounts.getOrCreate(relay) { AtomicInt(0) }.addAndFetch(1)
                     onProgress?.invoke(RelayFetchProgress(relay, RelayFetchStatus.RECEIVING, count))
                 }
 
@@ -104,11 +115,15 @@ class ChessRelayFetchHelper(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
-                    eoseReceived.add(relay)
-                    val count = relayEventCounts[relay] ?: 0
+                    val newEoseSize =
+                        eoseLock.withLock {
+                            eoseReceived.add(relay)
+                            eoseReceived.size
+                        }
+                    val count = relayEventCounts.get(relay)?.load() ?: 0
                     onProgress?.invoke(RelayFetchProgress(relay, RelayFetchStatus.EOSE_RECEIVED, count))
                     // Complete when all relays respond
-                    if (eoseReceived.size >= relayCount) {
+                    if (newEoseSize >= relayCount) {
                         allEose.complete(Unit)
                     }
                 }
@@ -119,9 +134,10 @@ class ChessRelayFetchHelper(
 
         // Mark timed-out relays
         if (eoseResult == null) {
+            val eoseSnapshot = eoseLock.withLock { eoseReceived.toSet() }
             filters.keys.forEach { relay ->
-                if (relay !in eoseReceived) {
-                    val count = relayEventCounts[relay] ?: 0
+                if (relay !in eoseSnapshot) {
+                    val count = relayEventCounts.get(relay)?.load() ?: 0
                     onProgress?.invoke(RelayFetchProgress(relay, RelayFetchStatus.TIMEOUT, count))
                 }
             }
@@ -129,6 +145,6 @@ class ChessRelayFetchHelper(
 
         client.unsubscribe(subId)
 
-        return events.values.toList()
+        return events.values().toList()
     }
 }

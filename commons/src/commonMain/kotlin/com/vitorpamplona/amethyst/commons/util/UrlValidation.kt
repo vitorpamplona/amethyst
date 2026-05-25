@@ -18,22 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.richtext
+package com.vitorpamplona.amethyst.commons.util
 
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
-
-object Base64Image {
-    val pattern = Patterns.BASE64_IMAGE
-
-    fun isBase64(content: String): Boolean = Patterns.BASE64_IMAGE.matches(content)
-
-    @OptIn(ExperimentalEncodingApi::class)
-    fun parse(content: String): ByteArray {
-        val match = pattern.find(content) ?: throw Exception("Unable to convert base64 to image $content")
-        val base64String =
-            match.groups[2]?.value
-                ?: throw Exception("Unable to convert base64 to image $content")
-        return Base64.decode(base64String)
-    }
-}
+/**
+ * True iff [url] is a syntactically valid absolute URL with a recognized
+ * scheme. JVM/Android delegate to `java.net.URI(url).toURL()`; the iOS actual
+ * will use `NSURL(string:)` when that target is added.
+ *
+ * Called per-URL during feed render — actuals should keep this fast and
+ * allocation-light.
+ */
+expect fun isValidUrl(url: String?): Boolean

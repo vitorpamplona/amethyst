@@ -18,22 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.richtext
+package com.vitorpamplona.amethyst.commons.util
 
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
+import platform.Foundation.NSURL
 
-object Base64Image {
-    val pattern = Patterns.BASE64_IMAGE
+// Schemes that JVM's URI.toURL() requires a host for (network schemes).
+// "http:" without a host throws MalformedURLException on JVM; NSURL accepts
+// it. Explicitly reject to keep behavior aligned.
+private val HOST_REQUIRED_SCHEMES = setOf("http", "https", "ws", "wss", "ftp")
 
-    fun isBase64(content: String): Boolean = Patterns.BASE64_IMAGE.matches(content)
-
-    @OptIn(ExperimentalEncodingApi::class)
-    fun parse(content: String): ByteArray {
-        val match = pattern.find(content) ?: throw Exception("Unable to convert base64 to image $content")
-        val base64String =
-            match.groups[2]?.value
-                ?: throw Exception("Unable to convert base64 to image $content")
-        return Base64.decode(base64String)
-    }
+actual fun isValidUrl(url: String?): Boolean {
+    if (url == null) return false
+    // NSURL.URLWithString returns null for syntactically invalid URLs. It is
+    // more permissive than JVM's URI(url).toURL() — it accepts scheme-less
+    // relative URLs ("foo", "/bar") and scheme-only inputs ("http:"). Match
+    // the JVM contract (absolute URL with a known scheme and, for network
+    // schemes, a host).
+    val nsUrl = NSURL.URLWithString(url) ?: return false
+    val scheme = nsUrl.scheme?.lowercase() ?: return false
+    if (scheme.isEmpty()) return false
+    if (scheme in HOST_REQUIRED_SCHEMES && nsUrl.host.isNullOrEmpty()) return false
+    return true
 }
