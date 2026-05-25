@@ -152,7 +152,23 @@ class CashuWalletState(
     private val jobs = mutableListOf<Job>()
     private var currentSubscription: CashuWalletQueryState? = null
 
-    init {
+    @Volatile private var started = false
+
+    /**
+     * Wire the publish bridge and begin observing the cache + relay flows.
+     *
+     * Account must call this from its own `init { }` block (after all field
+     * initializers complete) — that guarantees `sendLiterallyEverywhere` and
+     * its dependencies (`followPlusAllMineWithIndex`, etc.) are fully
+     * constructed before the first auto-redeem might fire. Calling start()
+     * inside the state's own `init { }` would race: the collectors could
+     * publish via a half-built Account.
+     */
+    fun start(publish: suspend (Event) -> Unit) {
+        if (started) return
+        started = true
+        this.publish = publish
+
         // Backfill from cache once.
         scope.launch(Dispatchers.Default) {
             val initial = scanCacheForOwnEvents()
@@ -427,13 +443,13 @@ class CashuWalletState(
     // ============================================================
 
     /**
-     * Bridge for [CashuWalletOps.publish]. Concrete `Account` plugs in its
-     * `sendLiterallyEverywhere` via the constructor-time wiring. We keep this
-     * delegate field separate to avoid an Account ↔ State direct dependency.
+     * Set exactly once in [start]; before that, every coroutine that could
+     * call [publishEvent] is gated behind `started` so the no-op default is
+     * never observed by produced events.
      */
-    var publishDelegate: suspend (Event) -> Unit = { /* set by Account */ }
+    private var publish: suspend (Event) -> Unit = { error("CashuWalletState.start() not called") }
 
     private suspend fun publishEvent(event: Event) {
-        publishDelegate(event)
+        publish(event)
     }
 }

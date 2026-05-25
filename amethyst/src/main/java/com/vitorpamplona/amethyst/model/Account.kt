@@ -3401,10 +3401,13 @@ class Account(
     init {
         Log.d("AccountRegisterObservers", "Init")
 
-        // Bridge CashuWalletOps's publish callback to our `sendLiterallyEverywhere`
-        // so the state object can push events to relays + cache without holding
-        // a direct reference back to Account.
-        cashuWalletState.publishDelegate = { event -> sendLiterallyEverywhere(event) }
+        // Start the Cashu wallet state observers AFTER all field initializers
+        // complete — auto-redeem can fire as soon as start() returns, and it
+        // calls back into sendLiterallyEverywhere which depends on
+        // followPlusAllMineWithIndex (initialized after cashuWalletState).
+        // Doing this in start() rather than in the state's own init { } closes
+        // the race where a publish would land on a half-built Account.
+        cashuWalletState.start { event -> sendLiterallyEverywhere(event) }
 
         // Restore Marmot MLS group state on startup
         if (marmotManager != null) {
