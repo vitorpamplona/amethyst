@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
@@ -34,6 +35,7 @@ import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
 import com.vitorpamplona.quartz.nip60Cashu.token.TokenContent
 import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -439,6 +441,66 @@ class CashuWalletState(
     }
 
     // ============================================================
+    // Send nutzap
+    // ============================================================
+
+    /**
+     * Information needed to nutzap [recipientPubKey], resolved from their
+     * kind:10019 + our wallet's mint list. Returns null if:
+     *  - we don't have a Cashu wallet,
+     *  - the recipient hasn't published a kind:10019,
+     *  - we share no mint with them, or
+     *  - their kind:10019 has no P2PK pubkey.
+     */
+    fun peekNutzapTarget(recipientPubKey: HexKey): NutzapTarget? {
+        val ourMints = _mints.value.toSet()
+        if (ourMints.isEmpty()) return null
+
+        val infoNote = cache.getOrCreateAddressableNote(NutzapInfoEvent.createAddress(recipientPubKey))
+        val info = infoNote.event as? NutzapInfoEvent ?: return null
+
+        val recipientPubkeyHex = info.p2pkPubkey() ?: return null
+        val shared = info.mints().firstOrNull { it.mintUrl in ourMints } ?: return null
+
+        return NutzapTarget(
+            mintUrl = shared.mintUrl,
+            recipientP2pkPubkeyHex = recipientPubkeyHex,
+        )
+    }
+
+    /**
+     * Send a NIP-61 nutzap of [amountSats] to [recipientPubKey] referencing
+     * [zappedEvent]. Returns the resulting [NutzapSent] on success or throws
+     * — callers should surface errors via [describeMintError].
+     */
+    suspend fun sendNutzap(
+        amountSats: Long,
+        recipientPubKey: HexKey,
+        zappedEvent: EventHintBundle<out Event>,
+        message: String = "",
+    ): NutzapSent {
+        check(started) { "CashuWalletState.start() not called" }
+        val target =
+            peekNutzapTarget(recipientPubKey)
+                ?: throw IllegalStateException("Recipient does not accept nutzaps from any of our mints")
+
+        val available = _tokenEntries.value.filter { it.content.mint == target.mintUrl }
+        if (available.isEmpty()) {
+            throw IllegalStateException("No proofs available at ${target.mintUrl}")
+        }
+
+        return ops.sendNutzap(
+            mintUrl = target.mintUrl,
+            amountSats = amountSats,
+            recipientPubKey = recipientPubKey,
+            recipientP2pkPubkeyHex = target.recipientP2pkPubkeyHex,
+            zappedEvent = zappedEvent,
+            message = message,
+            available = available,
+        )
+    }
+
+    // ============================================================
     // Publish bridge
     // ============================================================
 
@@ -453,3 +515,9 @@ class CashuWalletState(
         publish(event)
     }
 }
+
+/** Mint + recipient pubkey resolved from a kind:10019. */
+data class NutzapTarget(
+    val mintUrl: String,
+    val recipientP2pkPubkeyHex: String,
+)

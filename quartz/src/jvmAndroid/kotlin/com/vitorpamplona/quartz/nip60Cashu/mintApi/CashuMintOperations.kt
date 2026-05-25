@@ -159,6 +159,49 @@ class CashuMintOperations(
     }
 
     /**
+     * Swap our unlocked proofs so that [targetSplit] sats are returned as
+     * NUT-11 P2PK-locked proofs (recipient-spendable only with their
+     * private key), and the remainder stays unlocked in our wallet.
+     *
+     * The caller bundles `result.send` into a kind:9321 NutzapEvent and
+     * keeps `result.keep` as the change in a new kind:7375.
+     */
+    suspend fun swapToLocked(
+        proofs: List<CashuProof>,
+        recipientP2pkPubkeyHex: String,
+        targetSplit: Long,
+    ): SwapResult {
+        if (proofs.isEmpty()) throw IllegalArgumentException("Nothing to swap")
+        if (targetSplit <= 0) throw IllegalArgumentException("Target split must be > 0")
+        val total = proofs.sumOf { it.amount }
+        if (targetSplit > total) throw IllegalArgumentException("Target split exceeds available proofs")
+
+        val keyset = fetchKeyset()
+        val sendOutputs = splitAmounts(targetSplit).map { lockedOutputFor(it, keyset, recipientP2pkPubkeyHex) }
+        val keepOutputs = splitAmounts(total - targetSplit).map { secretOutputFor(it, keyset) }
+        val allOutputs = sendOutputs + keepOutputs
+
+        val response =
+            client.swap(
+                SwapRequestDto(
+                    inputs = proofs.map { it.toDto() },
+                    outputs = allOutputs.map { it.toDto() },
+                ),
+            )
+
+        if (response.signatures.size != allOutputs.size) {
+            throw MintProtocolException(
+                "Mint returned ${response.signatures.size} signatures for ${allOutputs.size} outputs",
+            )
+        }
+
+        val unblinded = unblindAll(allOutputs, response.signatures, keyset)
+        val sendProofs = unblinded.subList(0, sendOutputs.size)
+        val keepProofs = unblinded.subList(sendOutputs.size, unblinded.size)
+        return SwapResult(send = sendProofs, keep = keepProofs, keysetId = keyset.id)
+    }
+
+    /**
      * Ask the mint for a bolt11 melt quote: how much in fees this invoice will
      * cost on top of its amount. Caller selects the proofs that cover
      * `amount + fee_reserve` and passes them to [meltProofs].
@@ -249,6 +292,22 @@ class CashuMintOperations(
         val secretHex = secret.toHexKey()
         val bTick = Bdhke.blind(secretHex.encodeToByteArray(), r)
         return BlindOutput(amount, keyset.id, r, secretHex, bTick)
+    }
+
+    /**
+     * Like [secretOutputFor] but the secret is a NUT-11 P2PK lock string so
+     * the resulting proof can only be redeemed with [recipientPubKeyHex]'s
+     * private key. Used by [swapToLocked] when minting nutzap outputs.
+     */
+    private fun lockedOutputFor(
+        amount: Long,
+        keyset: KeysetDto,
+        recipientPubKeyHex: String,
+    ): BlindOutput {
+        val r = Bdhke.randomScalar()
+        val secret = P2PK.lockedSecret(recipientPubKeyHex)
+        val bTick = Bdhke.blind(secret.encodeToByteArray(), r)
+        return BlindOutput(amount, keyset.id, r, secret, bTick)
     }
 
     private fun unblindAll(

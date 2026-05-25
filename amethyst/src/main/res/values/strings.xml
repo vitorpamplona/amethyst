@@ -1905,6 +1905,10 @@
     <string name="cashu_mint_reachable">✓ Mint is reachable</string>
     <string name="cashu_mint_reachable_named">✓ %1$s</string>
     <string name="cashu_mint_unreachable">Could not reach mint: %1$s</string>
+    <string name="nutzap">Nutzap</string>
+    <string name="nutzap_failed_title">Nutzap failed</string>
+    <string name="nutzap_failed_no_recipient">No recipient pubkey on the note</string>
+    <string name="nutzap_failed_no_event">Cannot build event reference</string>
     <string name="cashu_create_token">Create token</string>
     <string name="cashu_redeem_button">Redeem</string>
     <string name="cashu_done">Done</string>

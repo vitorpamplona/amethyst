@@ -22,8 +22,10 @@ package com.vitorpamplona.amethyst.model.nip60Cashu
 
 import com.vitorpamplona.amethyst.service.cashu.v4.V4Encoder
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
@@ -415,6 +417,102 @@ class CashuWalletOps(
     }
 
     /**
+     * Send a NIP-61 nutzap.
+     *
+     * Spends [available] proofs at [mintUrl] to produce P2PK-locked outputs
+     * worth [amountSats] for [recipientPubKey]'s [recipientP2pkPubkeyHex].
+     * Publishes a kind:9321 with the locked proofs + message, rolls leftover
+     * change into a new kind:7375, NIP-09-deletes the source token events,
+     * and records the spend in kind:7376.
+     *
+     * Throws if `available` doesn't sum to at least [amountSats].
+     */
+    suspend fun sendNutzap(
+        mintUrl: String,
+        amountSats: Long,
+        recipientPubKey: HexKey,
+        recipientP2pkPubkeyHex: String,
+        zappedEvent: EventHintBundle<out Event>,
+        message: String,
+        available: List<TokenEntry>,
+    ): NutzapSent {
+        if (amountSats <= 0) throw IllegalArgumentException("Amount must be positive")
+        val (selected, totalSelected) = selectProofsCovering(available, amountSats)
+        if (totalSelected < amountSats) throw IllegalStateException("Insufficient balance for $mintUrl")
+
+        val swap =
+            ops(mintUrl).swapToLocked(
+                proofs = selected.flatMap { it.content.proofs },
+                recipientP2pkPubkeyHex = recipientP2pkPubkeyHex,
+                targetSplit = amountSats,
+            )
+
+        // Build the kind:9321 first so we have its id to reference from history.
+        val proofJsons = swap.send.map { nutzapProofJson.encodeToString(NutzapProofJson.serializer(), it.toNutzapJson()) }
+        val nutzapTemplate =
+            NutzapEvent.build(
+                message = message,
+                proofs = proofJsons,
+                mintUrl = mintUrl,
+                unit = "sat",
+                zappedEvent = zappedEvent,
+                recipientPubKey = recipientPubKey,
+            )
+        val nutzapEvent = signer.sign(nutzapTemplate)
+        publish(nutzapEvent)
+
+        // Roll over change locally if any.
+        val keepEvent =
+            if (swap.keep.isNotEmpty()) {
+                val content = TokenContent(mint = mintUrl, proofs = swap.keep, del = selected.map { it.event.id })
+                val template = CashuTokenEvent.build(content, signer)
+                val signed = signer.sign(template)
+                publish(signed)
+                signed
+            } else {
+                null
+            }
+
+        // NIP-09 delete the source token events.
+        val deleteEvent =
+            run {
+                val template = DeletionEvent.build(selected.map { it.event })
+                signer.sign(template).also { publish(it) }
+            }
+
+        val historyTemplate =
+            CashuSpendingHistoryEvent.build(
+                direction = SpendingDirection.OUT,
+                amount = amountSats,
+                tokenReferences =
+                    buildList {
+                        selected.forEach { add(TokenReference(it.event.id, null, TokenReference.MARKER_DESTROYED)) }
+                        keepEvent?.let { add(TokenReference(it.id, null, TokenReference.MARKER_CREATED)) }
+                    },
+                signer = signer,
+            )
+        val historyEvent = signer.sign(historyTemplate)
+        publish(historyEvent)
+
+        return NutzapSent(
+            nutzapEvent = nutzapEvent,
+            keepEvent = keepEvent,
+            deleteEvent = deleteEvent,
+            historyEvent = historyEvent,
+            amount = amountSats,
+        )
+    }
+
+    private fun CashuProof.toNutzapJson() =
+        NutzapProofJson(
+            id = id,
+            amount = amount,
+            secret = secret,
+            c = c,
+            witness = witness,
+        )
+
+    /**
      * Redeem an inbound NIP-61 nutzap.
      *
      * Steps:
@@ -602,4 +700,12 @@ data class RedeemCompleted(
     val tokenEvent: CashuTokenEvent,
     val historyEvent: CashuSpendingHistoryEvent,
     val rawToken: String,
+)
+
+data class NutzapSent(
+    val nutzapEvent: NutzapEvent,
+    val keepEvent: CashuTokenEvent?,
+    val deleteEvent: DeletionEvent,
+    val historyEvent: CashuSpendingHistoryEvent,
+    val amount: Long,
 )

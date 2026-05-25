@@ -905,6 +905,54 @@ class AccountViewModel(
         )
     }
 
+    /**
+     * Fire-and-forget NIP-61 nutzap from the zap picker. Picks a mint the
+     * recipient accepts (via their kind:10019) that we also have proofs at,
+     * swaps proofs to P2PK-locked outputs, and publishes a kind:9321
+     * referencing [note]. Errors are surfaced to [onError]; success is
+     * indicated by the resulting kind:9321 landing in the cache.
+     */
+    fun sendNutzap(
+        baseNote: Note,
+        amountSats: Long,
+        message: String,
+        onError: (String, String, User?) -> Unit,
+    ) = launchSigner {
+        val recipient = baseNote.author?.pubkeyHex
+        if (recipient == null) {
+            onError(
+                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_title),
+                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_no_recipient),
+                null,
+            )
+            return@launchSigner
+        }
+        val zappedEvent = baseNote.toEventHint<com.vitorpamplona.quartz.nip01Core.core.Event>()
+        if (zappedEvent == null) {
+            onError(
+                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_title),
+                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_no_event),
+                baseNote.author,
+            )
+            return@launchSigner
+        }
+        try {
+            account.cashuWalletState.sendNutzap(
+                amountSats = amountSats,
+                recipientPubKey = recipient,
+                zappedEvent = zappedEvent,
+                message = message,
+            )
+        } catch (e: Exception) {
+            onError(
+                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_title),
+                com.vitorpamplona.amethyst.model.nip60Cashu
+                    .describeMintError(e),
+                baseNote.author,
+            )
+        }
+    }
+
     fun report(
         note: Note,
         type: ReportType,

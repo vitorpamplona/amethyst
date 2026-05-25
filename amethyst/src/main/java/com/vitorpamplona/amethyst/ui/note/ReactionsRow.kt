@@ -1873,6 +1873,16 @@ fun ZapAmountChoicePopup(
         accountViewModel.account.settings.syncedSettings.zaps.onchainZapAmountChoices
             .collectAsStateWithLifecycle()
 
+    // Nutzap chips appear only when (a) we have a Cashu wallet, (b) the
+    // recipient has a kind:10019 with a P2PK pubkey, and (c) we share at
+    // least one mint with them. peekNutzapTarget() returns null otherwise.
+    val nutzapTarget =
+        remember(baseNote) {
+            baseNote.author?.pubkeyHex?.let { recipientPubKey ->
+                accountViewModel.account.cashuWalletState.peekNutzapTarget(recipientPubKey)
+            }
+        }
+
     ZapAmountChoicePopup(
         baseNote = baseNote,
         zapAmountChoices = zapAmountChoices,
@@ -1886,6 +1896,7 @@ fun ZapAmountChoicePopup(
         onPayViaIntent = onPayViaIntent,
         onchainZapAmountChoices = if (onOnchainAmount != null) onchainZapAmountChoices else persistentListOf(),
         onOnchainAmount = onOnchainAmount ?: {},
+        nutzapEnabled = nutzapTarget != null,
     )
 }
 
@@ -1903,9 +1914,24 @@ fun ZapAmountChoicePopup(
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
     onchainZapAmountChoices: ImmutableList<Long> = persistentListOf(),
     onOnchainAmount: (Long?) -> Unit = {},
+    nutzapEnabled: Boolean = false,
 ) {
     val visibilityState = rememberVisibilityState(onDismiss)
-    ZapAmountChoicePopup(baseNote, zapAmountChoices, onchainZapAmountChoices, accountViewModel, popupYOffset, visibilityState, onZapStarts, onChangeAmount, onOnchainAmount, onError, onProgress, onPayViaIntent)
+    ZapAmountChoicePopup(
+        baseNote,
+        zapAmountChoices,
+        onchainZapAmountChoices,
+        accountViewModel,
+        popupYOffset,
+        visibilityState,
+        onZapStarts,
+        onChangeAmount,
+        onOnchainAmount,
+        onError,
+        onProgress,
+        onPayViaIntent,
+        nutzapEnabled,
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
@@ -1923,6 +1949,7 @@ fun ZapAmountChoicePopup(
     onError: (title: String, text: String, user: User?) -> Unit,
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
+    nutzapEnabled: Boolean = false,
 ) {
     val context = LocalContext.current
     val yOffset = with(LocalDensity.current) { -popupYOffset.toPx().toInt() }
@@ -1961,6 +1988,17 @@ fun ZapAmountChoicePopup(
                     onOnchainAmount(amount)
                     visibilityState.targetState = false
                 },
+                nutzapAmountChoices = if (nutzapEnabled) zapAmountChoices else persistentListOf(),
+                onNutzap = { amountInSats ->
+                    onZapStarts()
+                    accountViewModel.sendNutzap(
+                        baseNote = baseNote,
+                        amountSats = amountInSats,
+                        message = "",
+                        onError = onError,
+                    )
+                    visibilityState.targetState = false
+                },
             )
         }
     }
@@ -1974,6 +2012,8 @@ fun ZapAmountChoicePopupContent(
     onChangeAmount: () -> Unit,
     onchainZapAmountChoices: ImmutableList<Long> = persistentListOf(),
     onOnchainAmount: (Long?) -> Unit = {},
+    nutzapAmountChoices: ImmutableList<Long> = persistentListOf(),
+    onNutzap: (Long) -> Unit = {},
 ) {
     Box(HalfPadding, contentAlignment = Center) {
         ElevatedCard(
@@ -2001,6 +2041,13 @@ fun ZapAmountChoicePopupContent(
                         onLongClick = onChangeAmount,
                     )
                 }
+                nutzapAmountChoices.forEach { amountInSats ->
+                    NutzapAmountChip(
+                        amountInSats = amountInSats,
+                        onClick = { onNutzap(amountInSats) },
+                        onLongClick = onChangeAmount,
+                    )
+                }
                 ClickableBox(
                     modifier =
                         Modifier
@@ -2017,6 +2064,42 @@ fun ZapAmountChoicePopupContent(
                     )
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun NutzapAmountChip(
+    amountInSats: Long,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
+    Surface(
+        shape = ButtonBorder,
+        color = MaterialTheme.colorScheme.tertiary,
+        modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = CenterVertically,
+        ) {
+            Icon(
+                symbol = MaterialSymbols.AccountBalanceWallet,
+                contentDescription = stringRes(R.string.nutzap),
+                modifier = Size18Modifier,
+                tint = MaterialTheme.colorScheme.onTertiary,
+            )
+            Spacer(Modifier.width(2.dp))
+            Text(
+                text = showAmount(amountInSats.toBigDecimal().setScale(1)),
+                color = MaterialTheme.colorScheme.onTertiary,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }
