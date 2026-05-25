@@ -22,18 +22,25 @@ package com.vitorpamplona.amethyst.appfunctions
 
 import androidx.appfunctions.AppFunctionContext
 import androidx.appfunctions.AppFunctionInvalidArgumentException
+import androidx.appfunctions.AppFunctionNotSupportedException
 import androidx.appfunctions.AppFunctionSerializable
 import androidx.appfunctions.service.AppFunction
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.actions.DmActions
+import com.vitorpamplona.amethyst.commons.actions.FollowActions
 import com.vitorpamplona.amethyst.commons.actions.SearchActions
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
+import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirmDetailed
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -64,10 +71,15 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * the docs nudge that direction, but the runtime does not require it for
  * default-constructed classes.
  *
- * Only read-only verbs are exposed so far. Write verbs (post, follow, zap)
- * are intentionally deferred until we resolve the signer-prompt flow for
- * NIP-46 / NIP-55 signers, which cannot interact with the user from a
- * background AppFunctionService invocation.
+ * Read verbs work with any account state. Write verbs (post / follow /
+ * unfollow / sendDm) require a signer that can sign in-process — i.e.
+ * a local [NostrSignerInternal] or a remote NIP-46 bunker. NIP-55
+ * external signers (Amber) are refused with
+ * [AppFunctionNotSupportedException] for now because the agent
+ * dispatch happens outside the foreground task stack — the user can't
+ * see the Amber approval activity from inside Gemini. See
+ * `amethyst/plans/2026-05-25-appfunctions-signer-prompts.md` for the
+ * design and the planned PendingIntent escape hatch.
  *
  * Account scoping uses the currently active account from
  * [com.vitorpamplona.amethyst.Amethyst.instance.sessionManager] — the same
@@ -785,6 +797,245 @@ class AmethystAppFunctions {
         return LiveStreamsResult(streams = streams)
     }
 
+    // ------------------------------------------------------------------
+    // Write verbs — gated on a signer that can sign without launching a
+    // foreground activity. See requireInProcessSigner below.
+    // ------------------------------------------------------------------
+
+    /**
+     * Publishes a short text note (NIP-10 kind:1) on Nostr as the
+     * signed-in user, broadcast to the account's configured outbox
+     * relays.
+     *
+     * @param text the note body. Cannot be blank; capped at 8000
+     *   characters so an accidentally-pasted document doesn't try to
+     *   become a Nostr post.
+     */
+    @AppFunction(isDescribedByKDoc = true)
+    suspend fun postNote(
+        appFunctionContext: AppFunctionContext,
+        text: String,
+    ): WriteResult {
+        val body = text.trim()
+        if (body.isEmpty()) throw AppFunctionInvalidArgumentException("text cannot be blank")
+        if (body.length > MAX_NOTE_LENGTH) {
+            throw AppFunctionInvalidArgumentException("text is $${body.length} chars; cap is $MAX_NOTE_LENGTH")
+        }
+
+        val account = Amethyst.instance.sessionManager.loggedInAccount() ?: throw notSignedIn()
+        requireInProcessSigner(account.signer)
+        val relays = account.outboxRelays.flow.value
+        if (relays.isEmpty()) throw AppFunctionInvalidArgumentException("account has no outbox relays configured")
+
+        val template = TextNoteEvent.build(body)
+        val signed = account.signer.sign(template)
+        // Mirror the foreground UI: cache the freshly-signed event so
+        // subsequent reads see it without waiting for a relay echo.
+        account.cache.justConsumeMyOwnEvent(signed)
+        val ack = Amethyst.instance.client.publishAndConfirmDetailed(signed, relays, PUBLISH_TIMEOUT_SECS)
+
+        return WriteResult.from(signed.id, ack)
+    }
+
+    /**
+     * Adds [user] to the signed-in account's NIP-02 kind:3 follow list
+     * and publishes the updated list. No-op when the user is already
+     * followed — [WriteResult.changed] reports `false` in that case.
+     *
+     * @param user npub (`npub1…`) or 64-character hex pubkey.
+     */
+    @AppFunction(isDescribedByKDoc = true)
+    suspend fun followUser(
+        appFunctionContext: AppFunctionContext,
+        user: String,
+    ): WriteResult {
+        val target = decodeUserOrThrow(user)
+        val account = Amethyst.instance.sessionManager.loggedInAccount() ?: throw notSignedIn()
+        if (target == account.signer.pubKey) {
+            throw AppFunctionInvalidArgumentException("cannot follow yourself")
+        }
+        requireInProcessSigner(account.signer)
+        val relays = account.outboxRelays.flow.value
+        if (relays.isEmpty()) throw AppFunctionInvalidArgumentException("account has no outbox relays configured")
+
+        val currentList = account.kind3FollowList.getFollowListEvent()
+        if (currentList != null && currentList.isTaggedUser(target)) {
+            return WriteResult.unchanged()
+        }
+
+        // Relay hint from cached kind:10002 so the follow tag points
+        // readers at where the target publishes.
+        val relayHint =
+            account.cache
+                .checkGetOrCreateUser(target)
+                ?.outboxRelays()
+                ?.firstOrNull()
+
+        val newList =
+            FollowActions.buildFollow(
+                signer = account.signer,
+                pubkeyToFollow = target,
+                currentContactList = currentList,
+                relayHint = relayHint,
+            )
+        account.cache.justConsumeMyOwnEvent(newList)
+        val ack = Amethyst.instance.client.publishAndConfirmDetailed(newList, relays, PUBLISH_TIMEOUT_SECS)
+        return WriteResult.from(newList.id, ack)
+    }
+
+    /**
+     * Removes [user] from the signed-in account's NIP-02 kind:3 follow
+     * list and publishes the updated list. No-op when the user wasn't
+     * followed — [WriteResult.changed] reports `false`.
+     *
+     * @param user npub (`npub1…`) or 64-character hex pubkey.
+     */
+    @AppFunction(isDescribedByKDoc = true)
+    suspend fun unfollowUser(
+        appFunctionContext: AppFunctionContext,
+        user: String,
+    ): WriteResult {
+        val target = decodeUserOrThrow(user)
+        val account = Amethyst.instance.sessionManager.loggedInAccount() ?: throw notSignedIn()
+        requireInProcessSigner(account.signer)
+        val relays = account.outboxRelays.flow.value
+        if (relays.isEmpty()) throw AppFunctionInvalidArgumentException("account has no outbox relays configured")
+
+        val currentList = account.kind3FollowList.getFollowListEvent()
+        if (currentList == null || !currentList.isTaggedUser(target)) {
+            return WriteResult.unchanged()
+        }
+
+        val newList =
+            FollowActions.buildUnfollow(
+                signer = account.signer,
+                pubkeyToUnfollow = target,
+                currentContactList = currentList,
+            ) ?: return WriteResult.unchanged()
+        account.cache.justConsumeMyOwnEvent(newList)
+        val ack = Amethyst.instance.client.publishAndConfirmDetailed(newList, relays, PUBLISH_TIMEOUT_SECS)
+        return WriteResult.from(newList.id, ack)
+    }
+
+    /**
+     * Sends a NIP-17 direct message to [recipient]. The message is
+     * gift-wrapped (kind:1059) per NIP-59 — only the recipient (and
+     * the signed-in user, who keeps their own copy) can decrypt it.
+     *
+     * Recipients without a published kind:10050 DM-inbox list fall back
+     * through NIP-65 read relays then bootstrap relays. If you want the
+     * stricter NIP-17 behavior — refuse to send when no kind:10050 is
+     * available — read the recipient's profile via [getProfile] first
+     * and check yourself; this verb defaults to permissive so Gemini
+     * users don't see confusing failures from an unfamiliar spec rule.
+     *
+     * @param recipient npub (`npub1…`) or 64-character hex pubkey.
+     * @param text the message body. Cannot be blank; capped at 8000
+     *   characters.
+     */
+    @AppFunction(isDescribedByKDoc = true)
+    suspend fun sendDm(
+        appFunctionContext: AppFunctionContext,
+        recipient: String,
+        text: String,
+    ): SendDmResult {
+        val body = text.trim()
+        if (body.isEmpty()) throw AppFunctionInvalidArgumentException("text cannot be blank")
+        if (body.length > MAX_NOTE_LENGTH) {
+            throw AppFunctionInvalidArgumentException("text is $${body.length} chars; cap is $MAX_NOTE_LENGTH")
+        }
+        val recipientPub = decodeUserOrThrow(recipient)
+        val account = Amethyst.instance.sessionManager.loggedInAccount() ?: throw notSignedIn()
+        requireInProcessSigner(account.signer)
+
+        val client = Amethyst.instance.client
+        val result = DmActions.buildTextDm(account.signer, recipientPub, body)
+
+        // One wrap per recipient — for a 1:1 DM that's two (the recipient's
+        // copy + the sender's own copy on the sender's inbox).
+        val deliveries = mutableListOf<DmDelivery>()
+        for (wrap in result.wraps) {
+            val target = wrap.recipientPubKey() ?: continue
+            // Fetch the recipient's kind:10050 / 10051 / 10002 fresh — local
+            // cache may be stale for users we rarely interact with, and the
+            // cost is one short drain on already-warmed sockets.
+            val lists =
+                RecipientRelayFetcher.fetchRelayLists(client, target, account.outboxRelays.flow.value)
+            val resolution =
+                DmActions.resolveDmRelays(
+                    recipientLists = lists,
+                    bootstrap = account.outboxRelays.flow.value,
+                    allowFallback = true,
+                )
+            if (resolution.relays.isEmpty()) {
+                deliveries.add(
+                    DmDelivery(
+                        recipientNpub = NPub.create(target),
+                        recipientPubkeyHex = target,
+                        wrapId = wrap.id,
+                        publishedTo = emptyList(),
+                        rejectedBy = emptyList(),
+                        relaySource = resolution.source.name.lowercase(),
+                    ),
+                )
+                continue
+            }
+            val ack = client.publishAndConfirmDetailed(wrap, resolution.relays, PUBLISH_TIMEOUT_SECS)
+            deliveries.add(
+                DmDelivery(
+                    recipientNpub = NPub.create(target),
+                    recipientPubkeyHex = target,
+                    wrapId = wrap.id,
+                    publishedTo = ack.filterValues { it }.keys.map { it.url },
+                    rejectedBy = ack.filterValues { !it }.keys.map { it.url },
+                    relaySource = resolution.source.name.lowercase(),
+                ),
+            )
+        }
+        // Cache the inner kind:14 so the foreground UI sees the message
+        // immediately in the relevant DM thread.
+        account.cache.justConsumeMyOwnEvent(result.msg)
+
+        return SendDmResult(
+            messageEventId = result.msg.id,
+            deliveries = deliveries,
+        )
+    }
+
+    /**
+     * Reject the call when the active signer can't sign in-process —
+     * NIP-55 external signers (Amber) need a foreground activity to
+     * show the user an approval prompt, which we can't launch from a
+     * background AppFunctionService dispatch.
+     *
+     * Throws [AppFunctionNotSupportedException] when the user's signer
+     * is read-only, and a typed [AppFunctionNotSupportedException]
+     * with a clarifying message when it's an external signer.
+     */
+    private fun requireInProcessSigner(signer: NostrSigner) {
+        if (!signer.isWriteable()) {
+            throw AppFunctionNotSupportedException(
+                "Active Amethyst account is read-only (npub login). Sign in with a private key or NIP-46 bunker to publish.",
+            )
+        }
+        // NostrSignerExternal lives in quartz/androidMain and isn't visible
+        // to commonMain — but we're already in android-app code, so the
+        // class is on the classpath. Reflective name-check keeps the
+        // dependency edge clean and avoids hard-coupling the bridge to
+        // the NIP-55 implementation class.
+        val klass = signer::class.qualifiedName
+        if (klass == "com.vitorpamplona.quartz.nip55AndroidSigner.client.NostrSignerExternal") {
+            throw AppFunctionNotSupportedException(
+                "Amethyst is configured to use an external NIP-55 signer (Amber). " +
+                    "Write actions from Gemini aren't supported with this signer yet — " +
+                    "they require Amber's approval activity which can't launch from a " +
+                    "background dispatch. Open Amethyst directly to complete the action.",
+            )
+        }
+    }
+
+    private fun notSignedIn(): AppFunctionNotSupportedException = AppFunctionNotSupportedException("No Amethyst account is signed in.")
+
     /**
      * Accepts either an npub bech32 (`npub1…`) or 64-character hex
      * pubkey and returns the 64-char lowercase hex. Throws
@@ -937,6 +1188,22 @@ class AmethystAppFunctions {
          * whether to fetch the full article.
          */
         private const val LONG_FORM_SNIPPET_LIMIT = 2_000
+
+        /**
+         * Cap on the body of a Gemini-driven write (postNote / sendDm).
+         * Anything larger is almost certainly an accidentally-pasted
+         * document; bail out with a typed error instead of silently
+         * publishing a wall of text to relays.
+         */
+        private const val MAX_NOTE_LENGTH = 8_000
+
+        /**
+         * Per-publish ack window. We wait this long for OK responses
+         * from each relay; relays that don't answer in time are
+         * reported as `rejectedBy` (no ack, no event). 15 s lines up
+         * with what `cli/Context.publish` uses.
+         */
+        private const val PUBLISH_TIMEOUT_SECS = 15L
     }
 }
 
@@ -1196,3 +1463,74 @@ class AccountInfoResult(
             )
     }
 }
+
+/**
+ * Result of a single-event write verb (postNote / followUser /
+ * unfollowUser). When the verb is a no-op — already following, not
+ * following, content unchanged — [changed] is false and [eventId] is
+ * null; the relay lists are empty for the same reason.
+ */
+@AppFunctionSerializable(isDescribedByKDoc = true)
+class WriteResult(
+    /** True when a new event was actually signed and published. */
+    val changed: Boolean,
+    /** Hex event id of the signed event, or null when the verb was a no-op. */
+    val eventId: String?,
+    /** Relays that ACK'd the publish. */
+    val publishedTo: List<String>,
+    /** Relays that rejected the event or didn't answer in time. */
+    val rejectedBy: List<String>,
+) {
+    companion object {
+        fun unchanged() =
+            WriteResult(
+                changed = false,
+                eventId = null,
+                publishedTo = emptyList(),
+                rejectedBy = emptyList(),
+            )
+
+        fun from(
+            eventId: String,
+            ack: Map<com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl, Boolean>,
+        ) = WriteResult(
+            changed = true,
+            eventId = eventId,
+            publishedTo = ack.filterValues { it }.keys.map { it.url },
+            rejectedBy = ack.filterValues { !it }.keys.map { it.url },
+        )
+    }
+}
+
+/**
+ * Per-recipient delivery status for a NIP-17 DM send. A 1:1 DM
+ * produces two entries — the recipient's wrap and the sender's own
+ * copy on their own DM-inbox relays. [relaySource] reports which
+ * bucket the relays were drawn from: `kind_10050`, `nip65_read`,
+ * `bootstrap`, or `none`.
+ */
+@AppFunctionSerializable(isDescribedByKDoc = true)
+class DmDelivery(
+    /** Bech32 npub of the recipient this wrap was addressed to. */
+    val recipientNpub: String,
+    /** Hex pubkey of the recipient. */
+    val recipientPubkeyHex: String,
+    /** Hex event id of the kind:1059 gift wrap published to this recipient. */
+    val wrapId: String,
+    /** Relays that ACK'd this wrap. */
+    val publishedTo: List<String>,
+    /** Relays that rejected this wrap or didn't answer in time. */
+    val rejectedBy: List<String>,
+    /** Bucket the relays were resolved from: kind_10050 / nip65_read / bootstrap / none. */
+    val relaySource: String,
+)
+
+/** Result of [AmethystAppFunctions.sendDm]. */
+@AppFunctionSerializable(isDescribedByKDoc = true)
+class SendDmResult(
+    /** Hex event id of the inner kind:14 (the plaintext message — only the
+     *  signer and the recipient know it; relays only see the kind:1059 wraps). */
+    val messageEventId: String,
+    /** One entry per gift-wrap delivery. */
+    val deliveries: List<DmDelivery>,
+)

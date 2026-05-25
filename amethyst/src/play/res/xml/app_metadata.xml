@@ -12,5 +12,5 @@
   the @AppFunction surface grows.
 -->
 <AppFunctionAppMetadata xmlns:appfn="http://schemas.android.com/apk/res-auto"
-    appfn:description="Amethyst is a Nostr social client. The agent can: search Nostr profiles, notes, hashtags, and long-form articles; look up any user's profile by npub; read recent posts from the signed-in user's follows or any specific user; read recent direct messages (decrypted); list NIP-57 zaps received and total sats earned in a time window; surface notes that mention or reply to the user; list currently-live audio/video streams; and report basic account info (npub, display name, follow count)."
-    appfn:displayDescription="Read Nostr through Amethyst — feed, DMs, profiles, zaps" />
+    appfn:description="Amethyst is a Nostr social client. The agent can read: search Nostr profiles, notes, hashtags, and long-form articles; look up any user's profile by npub; read recent posts from the signed-in user's follows or any specific user; read recent direct messages (decrypted); list NIP-57 zaps received and total sats earned in a time window; surface notes that mention or reply to the user; list currently-live audio/video streams; and report basic account info. The agent can also write: publish short text notes, follow or unfollow other users, and send NIP-17 gift-wrapped direct messages — provided the user is signed in with a local key or NIP-46 bunker. NIP-55 external signers (Amber) are read-only from the agent for now; open Amethyst directly to publish."
+    appfn:displayDescription="Read and write Nostr through Amethyst" />
