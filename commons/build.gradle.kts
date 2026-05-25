@@ -44,15 +44,16 @@ kotlin {
         }
     }
 
+    // iOS targets — Phase 2 spike. Compile-only for now (no framework binary
+    // configured yet). Reveals which transitive deps need iOS variants and
+    // which commonMain files still reach for platform-only APIs.
+    iosArm64()
+    iosSimulatorArm64()
+
     sourceSets {
         commonMain {
             dependencies {
                 implementation(project(":quartz"))
-                // Audio-rooms ViewModel needs the listener orchestration + audio
-                // pipeline types (NestsListener, AudioRoomPlayer, AudioPlayer
-                // interface). Concrete OkHttp/Quic/MediaCodec/AudioTrack actuals
-                // stay in :nestsClient's platform source sets.
-                implementation(project(":nestsClient"))
 
                 // Compose Multiplatform
                 implementation(libs.jetbrains.compose.ui)
@@ -61,13 +62,17 @@ kotlin {
                 implementation(libs.jetbrains.compose.material3)
                 implementation(libs.jetbrains.compose.ui.tooling.preview)
 
-                // Lifecycle ViewModel (KMP since 2.8.0)
-                implementation(libs.androidx.lifecycle.viewmodel.compose)
+                // Lifecycle (KMP since 2.8.0). lifecycle-viewmodel and
+                // lifecycle-runtime-compose ship iOS variants;
+                // lifecycle-viewmodel-compose (the viewModel() Composable
+                // helper) is Android-only and lives in jvmAndroid below.
+                implementation(libs.androidx.lifecycle.viewmodel)
                 implementation(libs.androidx.lifecycle.runtime.compose)
 
-                // Image loading (Coil 3 - KMP)
+                // Image loading (Coil 3 - KMP). The okhttp network fetcher is
+                // JVM-only and lives in jvmAndroid; iOS will pull coil-ktor
+                // when that target wires its actual.
                 implementation(libs.coil.compose)
-                implementation(libs.coil.okhttp)
 
                 // LruCache (KMP-ready)
                 implementation(libs.androidx.collection)
@@ -81,11 +86,6 @@ kotlin {
 
                 // Compose Multiplatform Resources
                 implementation(libs.jetbrains.compose.components.resources)
-
-                // Markdown rendering (richtext-commonmark)
-                implementation(libs.markdown.commonmark)
-                implementation(libs.markdown.ui)
-                implementation(libs.markdown.ui.material3)
             }
         }
 
@@ -101,6 +101,32 @@ kotlin {
             create("jvmAndroid") {
                 dependsOn(commonMain.get())
                 dependencies {
+                    // Audio-rooms ViewModel needs the listener orchestration +
+                    // audio pipeline types (NestsListener, AudioRoomPlayer,
+                    // AudioPlayer interface). The :nestsClient module is
+                    // jvmAndroid-only today (its QUIC + Opus + AudioRecord/Track
+                    // stacks are JVM-bound), so the dep lives here, not in
+                    // commonMain. iOS will need an audio-rooms reroute when
+                    // Phase 5 lands.
+                    implementation(project(":nestsClient"))
+
+                    // Coil's OkHttp network fetcher (JVM-only). iOS will use
+                    // coil-ktor when the iOS Compose UI ships.
+                    implementation(libs.coil.okhttp)
+
+                    // Markdown rendering (richtext-commonmark). The single
+                    // consumer (RenderMarkdown.kt) already lives in jvmAndroid.
+                    // iOS support pending Phase 3 markdown decision.
+                    implementation(libs.markdown.commonmark)
+                    implementation(libs.markdown.ui)
+                    implementation(libs.markdown.ui.material3)
+
+                    // viewModel() Compose helper. AndroidX publishes this
+                    // artifact for android/jvmStubs/linuxx64Stubs but not iOS,
+                    // so it stays in jvmAndroid until we either swap to the
+                    // org.jetbrains.androidx.lifecycle variant or accept a
+                    // platform-specific ViewModel access pattern on iOS.
+                    implementation(libs.androidx.lifecycle.viewmodel.compose)
                 }
             }
 
@@ -130,6 +156,14 @@ kotlin {
                 implementation(libs.androidx.datastore.preferences)
             }
         }
+
+        // iOS intermediate so iosArm64Main and iosSimulatorArm64Main share code.
+        val iosMain =
+            create("iosMain") {
+                dependsOn(commonMain.get())
+            }
+        getByName("iosArm64Main").dependsOn(iosMain)
+        getByName("iosSimulatorArm64Main").dependsOn(iosMain)
 
         getByName("androidHostTest") {
             dependencies {

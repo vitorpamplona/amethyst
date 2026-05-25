@@ -226,6 +226,18 @@ jobs:
             :quartz:iosSimulatorArm64Test \
             :quartz:compileTestKotlinIosArm64
 
+      # :commons gained iosArm64 + iosSimulatorArm64 targets in Phase 2 of the
+      # iOS plan. Compile-only for now — actual UI / lifecycle wiring will
+      # land with the iosApp module in Phase 3. The container that runs Claude
+      # Code can't extract the Kotlin/Native LLVM toolchain (sandbox limit),
+      # so this is the first place commonMain Compose code is actually
+      # type-checked against an Apple Native frontend.
+      - name: Compile Commons for iOS
+        run: |
+          ./gradlew \
+            :commons:compileKotlinIosSimulatorArm64 \
+            :commons:compileKotlinIosArm64
+
       - name: Upload iOS Test Reports
         uses: actions/upload-artifact@v7
         if: failure()
