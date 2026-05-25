@@ -186,12 +186,22 @@ fun DesktopRichTextViewer(
                 }
 
                 else -> {
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = if (paragraph.isRTL) Arrangement.End else Arrangement.Start,
-                    ) {
-                        for (word in paragraph.words) {
-                            RenderSegment(word, state, localCache, callbacks)
+                    val hasOnlyText = paragraph.words.all { it is RegularTextSegment }
+                    if (hasOnlyText) {
+                        Text(
+                            text = paragraph.words.joinToString("") { it.segmentText },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    } else {
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = if (paragraph.isRTL) Arrangement.End else Arrangement.Start,
+                        ) {
+                            for (word in paragraph.words) {
+                                RenderSegment(word, state, localCache, callbacks)
+                            }
                         }
                     }
                 }
