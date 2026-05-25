@@ -33,35 +33,53 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.ui.components.util.getText
+import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.text.NumberFormat
 import java.util.Date
@@ -79,6 +97,11 @@ fun CashuWalletScreen(
     val mints by viewModel.mints.collectAsState()
     val balanceSats by viewModel.balanceSats.collectAsState()
     val history by viewModel.history.collectAsState()
+
+    var receiveOpen by remember { mutableStateOf(false) }
+    var sendLnOpen by remember { mutableStateOf(false) }
+    var sendTokenOpen by remember { mutableStateOf(false) }
+    var redeemOpen by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -114,8 +137,52 @@ fun CashuWalletScreen(
                 balanceSats = balanceSats,
                 mints = mints,
                 history = history,
+                onReceive = { receiveOpen = true },
+                onSendLn = { sendLnOpen = true },
+                onSendToken = { sendTokenOpen = true },
+                onRedeem = { redeemOpen = true },
             )
         }
+    }
+
+    if (receiveOpen) {
+        ReceiveDialog(
+            viewModel = viewModel,
+            mints = mints,
+            onDismiss = {
+                receiveOpen = false
+                viewModel.resetMintState()
+            },
+        )
+    }
+    if (sendLnOpen) {
+        SendLnDialog(
+            viewModel = viewModel,
+            mints = mints,
+            onDismiss = {
+                sendLnOpen = false
+                viewModel.resetMeltState()
+            },
+        )
+    }
+    if (sendTokenOpen) {
+        SendTokenDialog(
+            viewModel = viewModel,
+            mints = mints,
+            onDismiss = {
+                sendTokenOpen = false
+                viewModel.resetSendTokenState()
+            },
+        )
+    }
+    if (redeemOpen) {
+        RedeemDialog(
+            viewModel = viewModel,
+            onDismiss = {
+                redeemOpen = false
+                viewModel.resetRedeemState()
+            },
+        )
     }
 }
 
@@ -156,6 +223,10 @@ private fun CashuWalletContent(
     balanceSats: Long,
     mints: List<String>,
     history: List<CashuSpendingHistoryEvent>,
+    onReceive: () -> Unit,
+    onSendLn: () -> Unit,
+    onSendToken: () -> Unit,
+    onRedeem: () -> Unit,
 ) {
     LazyColumn(
         modifier =
@@ -167,6 +238,15 @@ private fun CashuWalletContent(
         item {
             Spacer(modifier = Modifier.height(8.dp))
             BalanceCard(balanceSats)
+        }
+
+        item {
+            ActionRow(
+                onReceive = onReceive,
+                onSendLn = onSendLn,
+                onSendToken = onSendToken,
+                onRedeem = onRedeem,
+            )
         }
 
         item {
@@ -236,6 +316,44 @@ private fun BalanceCard(balanceSats: Long) {
 }
 
 @Composable
+private fun ActionRow(
+    onReceive: () -> Unit,
+    onSendLn: () -> Unit,
+    onSendToken: () -> Unit,
+    onRedeem: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        ActionButton(MaterialSymbols.Bolt, stringRes(R.string.cashu_action_receive), onReceive, Modifier.weight(1f))
+        ActionButton(MaterialSymbols.AutoMirrored.Send, stringRes(R.string.cashu_action_send_ln), onSendLn, Modifier.weight(1f))
+        ActionButton(MaterialSymbols.ContentPaste, stringRes(R.string.cashu_action_send_token), onSendToken, Modifier.weight(1f))
+        ActionButton(MaterialSymbols.Add, stringRes(R.string.cashu_action_redeem), onRedeem, Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun ActionButton(
+    icon: MaterialSymbol,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier,
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(symbol = icon, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+        }
+    }
+}
+
+@Composable
 private fun MintRow(mint: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -282,6 +400,533 @@ private fun HistoryRow(entry: CashuSpendingHistoryEvent) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
+    }
+}
+
+// ============================================================================
+// Receive (mint from LN)
+// ============================================================================
+
+@Composable
+private fun ReceiveDialog(
+    viewModel: CashuWalletViewModel,
+    mints: List<String>,
+    onDismiss: () -> Unit,
+) {
+    val state by viewModel.mintState.collectAsState()
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+
+    var amount by remember { mutableStateOf("") }
+    var pickedMint by remember { mutableStateOf(mints.firstOrNull() ?: "") }
+
+    // Poll every 3s while waiting for payment.
+    LaunchedEffect(state) {
+        if (state is CashuMintFlowState.AwaitingPayment) {
+            while (true) {
+                delay(3000)
+                viewModel.checkAndCompleteMint()
+            }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(R.string.cashu_action_receive)) },
+        text = {
+            Column {
+                when (val s = state) {
+                    is CashuMintFlowState.AwaitingPayment -> {
+                        Text(
+                            stringRes(R.string.cashu_receive_invoice_explainer, s.amountSats.toString()),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = s.flow.invoice,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text(stringRes(R.string.cashu_invoice_bolt11)) },
+                            maxLines = 5,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TextButton(onClick = {
+                            scope.launch { clipboard.setText(s.flow.invoice) }
+                        }) {
+                            Icon(
+                                symbol = MaterialSymbols.ContentPaste,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(stringRes(R.string.cashu_copy_invoice))
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                stringRes(R.string.cashu_waiting_for_payment),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    }
+
+                    is CashuMintFlowState.Completing -> {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringRes(R.string.cashu_completing_mint))
+                        }
+                    }
+
+                    is CashuMintFlowState.Completed -> {
+                        Text(stringRes(R.string.cashu_received_amount, s.amountSats.toString()))
+                    }
+
+                    is CashuMintFlowState.Error -> {
+                        Text(
+                            text = s.message,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        FormReceive(
+                            mints = mints,
+                            amount = amount,
+                            onAmountChange = { amount = it },
+                            pickedMint = pickedMint,
+                            onMintChange = { pickedMint = it },
+                        )
+                    }
+
+                    CashuMintFlowState.Requesting -> {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringRes(R.string.cashu_requesting_invoice))
+                        }
+                    }
+
+                    CashuMintFlowState.Idle -> {
+                        FormReceive(
+                            mints = mints,
+                            amount = amount,
+                            onAmountChange = { amount = it },
+                            pickedMint = pickedMint,
+                            onMintChange = { pickedMint = it },
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            when (state) {
+                is CashuMintFlowState.Idle, is CashuMintFlowState.Error -> {
+                    TextButton(
+                        onClick = {
+                            val n = amount.toLongOrNull() ?: 0L
+                            viewModel.startMintFromLightning(pickedMint, n)
+                        },
+                        enabled = amount.isNotBlank() && pickedMint.isNotBlank(),
+                    ) { Text(stringRes(R.string.cashu_request_invoice)) }
+                }
+
+                is CashuMintFlowState.Completed -> {
+                    TextButton(onClick = onDismiss) { Text(stringRes(R.string.cashu_done)) }
+                }
+
+                else -> {}
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) }
+        },
+    )
+}
+
+@Composable
+private fun FormReceive(
+    mints: List<String>,
+    amount: String,
+    onAmountChange: (String) -> Unit,
+    pickedMint: String,
+    onMintChange: (String) -> Unit,
+) {
+    OutlinedTextField(
+        value = amount,
+        onValueChange = { v -> onAmountChange(v.filter { it.isDigit() }) },
+        label = { Text(stringRes(R.string.cashu_amount_sats)) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+    MintPicker(mints, pickedMint, onMintChange)
+}
+
+@Composable
+private fun MintPicker(
+    mints: List<String>,
+    picked: String,
+    onPick: (String) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    OutlinedButton(
+        onClick = { expanded = true },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            text = picked.ifEmpty { stringRes(R.string.cashu_pick_mint) },
+            maxLines = 1,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(MaterialSymbols.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(18.dp))
+    }
+    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        mints.forEach { m ->
+            DropdownMenuItem(
+                text = { Text(m) },
+                onClick = {
+                    onPick(m)
+                    expanded = false
+                },
+            )
+        }
+    }
+}
+
+// ============================================================================
+// Send LN (melt)
+// ============================================================================
+
+@Composable
+private fun SendLnDialog(
+    viewModel: CashuWalletViewModel,
+    mints: List<String>,
+    onDismiss: () -> Unit,
+) {
+    val state by viewModel.meltState.collectAsState()
+    var invoice by remember { mutableStateOf("") }
+    var pickedMint by remember { mutableStateOf(mints.firstOrNull() ?: "") }
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(R.string.cashu_action_send_ln)) },
+        text = {
+            Column {
+                when (val s = state) {
+                    is CashuMeltFlowState.Paying -> {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringRes(R.string.cashu_paying_invoice))
+                        }
+                    }
+
+                    is CashuMeltFlowState.Completed -> {
+                        Text(stringRes(R.string.cashu_paid_amount, s.paidAmount.toString(), s.fees.toString()))
+                    }
+
+                    is CashuMeltFlowState.Error -> {
+                        Text(
+                            text = s.message,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        InvoiceForm(
+                            invoice = invoice,
+                            onInvoiceChange = { invoice = it },
+                            onPaste = { scope.launch { clipboard.getText()?.let { invoice = it } } },
+                            mints = mints,
+                            pickedMint = pickedMint,
+                            onMintChange = { pickedMint = it },
+                        )
+                    }
+
+                    CashuMeltFlowState.Idle -> {
+                        InvoiceForm(
+                            invoice = invoice,
+                            onInvoiceChange = { invoice = it },
+                            onPaste = { scope.launch { clipboard.getText()?.let { invoice = it } } },
+                            mints = mints,
+                            pickedMint = pickedMint,
+                            onMintChange = { pickedMint = it },
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            when (state) {
+                is CashuMeltFlowState.Idle, is CashuMeltFlowState.Error -> {
+                    TextButton(
+                        onClick = { viewModel.meltToLightning(pickedMint, invoice) },
+                        enabled = invoice.isNotBlank() && pickedMint.isNotBlank(),
+                    ) { Text(stringRes(R.string.cashu_pay_invoice)) }
+                }
+
+                is CashuMeltFlowState.Completed -> {
+                    TextButton(onClick = onDismiss) { Text(stringRes(R.string.cashu_done)) }
+                }
+
+                else -> {}
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) }
+        },
+    )
+}
+
+@Composable
+private fun InvoiceForm(
+    invoice: String,
+    onInvoiceChange: (String) -> Unit,
+    onPaste: () -> Unit,
+    mints: List<String>,
+    pickedMint: String,
+    onMintChange: (String) -> Unit,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        OutlinedTextField(
+            value = invoice,
+            onValueChange = onInvoiceChange,
+            label = { Text(stringRes(R.string.cashu_invoice_bolt11)) },
+            placeholder = { Text("lnbc…") },
+            minLines = 2,
+            maxLines = 4,
+            modifier = Modifier.weight(1f),
+        )
+        IconButton(onClick = onPaste) {
+            Icon(MaterialSymbols.ContentPaste, contentDescription = stringRes(R.string.paste_from_clipboard))
+        }
+    }
+    Spacer(modifier = Modifier.height(8.dp))
+    MintPicker(mints, pickedMint, onMintChange)
+}
+
+// ============================================================================
+// Send as token
+// ============================================================================
+
+@Composable
+private fun SendTokenDialog(
+    viewModel: CashuWalletViewModel,
+    mints: List<String>,
+    onDismiss: () -> Unit,
+) {
+    val state by viewModel.sendTokenState.collectAsState()
+    var amount by remember { mutableStateOf("") }
+    var memo by remember { mutableStateOf("") }
+    var pickedMint by remember { mutableStateOf(mints.firstOrNull() ?: "") }
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(R.string.cashu_action_send_token)) },
+        text = {
+            Column {
+                when (val s = state) {
+                    is CashuSendTokenFlowState.Building -> {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringRes(R.string.cashu_building_token))
+                        }
+                    }
+
+                    is CashuSendTokenFlowState.Ready -> {
+                        Text(stringRes(R.string.cashu_token_ready, s.amount.toString()))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = s.token,
+                            onValueChange = {},
+                            readOnly = true,
+                            maxLines = 6,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        TextButton(onClick = { scope.launch { clipboard.setText(s.token) } }) {
+                            Icon(
+                                symbol = MaterialSymbols.ContentPaste,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(stringRes(R.string.cashu_copy_token))
+                        }
+                    }
+
+                    is CashuSendTokenFlowState.Error -> {
+                        Text(
+                            text = s.message,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        SendTokenForm(amount, { amount = it }, memo, { memo = it }, mints, pickedMint, { pickedMint = it })
+                    }
+
+                    CashuSendTokenFlowState.Idle -> {
+                        SendTokenForm(amount, { amount = it }, memo, { memo = it }, mints, pickedMint, { pickedMint = it })
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            when (state) {
+                is CashuSendTokenFlowState.Idle, is CashuSendTokenFlowState.Error -> {
+                    TextButton(
+                        onClick = {
+                            val n = amount.toLongOrNull() ?: 0L
+                            viewModel.sendAsToken(pickedMint, n, memo.ifBlank { null })
+                        },
+                        enabled = amount.isNotBlank() && pickedMint.isNotBlank(),
+                    ) { Text(stringRes(R.string.cashu_create_token)) }
+                }
+
+                is CashuSendTokenFlowState.Ready -> {
+                    TextButton(onClick = onDismiss) { Text(stringRes(R.string.cashu_done)) }
+                }
+
+                else -> {}
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) }
+        },
+    )
+}
+
+@Composable
+private fun SendTokenForm(
+    amount: String,
+    onAmount: (String) -> Unit,
+    memo: String,
+    onMemo: (String) -> Unit,
+    mints: List<String>,
+    pickedMint: String,
+    onMintChange: (String) -> Unit,
+) {
+    OutlinedTextField(
+        value = amount,
+        onValueChange = { v -> onAmount(v.filter { it.isDigit() }) },
+        label = { Text(stringRes(R.string.cashu_amount_sats)) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+    OutlinedTextField(
+        value = memo,
+        onValueChange = onMemo,
+        label = { Text(stringRes(R.string.cashu_memo_optional)) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+    MintPicker(mints, pickedMint, onMintChange)
+}
+
+// ============================================================================
+// Redeem
+// ============================================================================
+
+@Composable
+private fun RedeemDialog(
+    viewModel: CashuWalletViewModel,
+    onDismiss: () -> Unit,
+) {
+    val state by viewModel.redeemState.collectAsState()
+    var token by remember { mutableStateOf("") }
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(R.string.cashu_action_redeem)) },
+        text = {
+            Column {
+                when (val s = state) {
+                    is CashuRedeemFlowState.Redeeming -> {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringRes(R.string.cashu_redeeming))
+                        }
+                    }
+
+                    is CashuRedeemFlowState.Completed -> {
+                        Text(stringRes(R.string.cashu_redeemed_amount, s.amount.toString()))
+                    }
+
+                    is CashuRedeemFlowState.Error -> {
+                        Text(
+                            text = s.message,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TokenInput(token, { token = it }) {
+                            scope.launch { clipboard.getText()?.let { token = it } }
+                        }
+                    }
+
+                    CashuRedeemFlowState.Idle -> {
+                        TokenInput(token, { token = it }) {
+                            scope.launch { clipboard.getText()?.let { token = it } }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            when (state) {
+                is CashuRedeemFlowState.Idle, is CashuRedeemFlowState.Error -> {
+                    TextButton(
+                        onClick = { viewModel.redeemToken(token) },
+                        enabled = token.isNotBlank(),
+                    ) { Text(stringRes(R.string.cashu_redeem_button)) }
+                }
+
+                is CashuRedeemFlowState.Completed -> {
+                    TextButton(onClick = onDismiss) { Text(stringRes(R.string.cashu_done)) }
+                }
+
+                else -> {}
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) }
+        },
+    )
+}
+
+@Composable
+private fun TokenInput(
+    token: String,
+    onTokenChange: (String) -> Unit,
+    onPaste: () -> Unit,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        OutlinedTextField(
+            value = token,
+            onValueChange = onTokenChange,
+            label = { Text(stringRes(R.string.cashu_token_label)) },
+            placeholder = { Text("cashuB… / cashuA…") },
+            minLines = 2,
+            maxLines = 5,
+            modifier = Modifier.weight(1f),
+        )
+        IconButton(onClick = onPaste) {
+            Icon(MaterialSymbols.ContentPaste, contentDescription = stringRes(R.string.paste_from_clipboard))
         }
     }
 }

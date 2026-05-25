@@ -18,23 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip60Cashu.token
-
-import androidx.compose.runtime.Immutable
+package com.vitorpamplona.quartz.nip60Cashu.mintApi
 
 /**
- * Represents an unencoded cashu proof.
+ * NUT-00 amount split: decompose [amount] into a sorted list of distinct
+ * power-of-2 denominations summing to amount.
  *
- * [witness] is the NUT-11 unlock witness (a JSON string `{"signatures":[…]}`)
- * required when spending a P2PK-locked proof. Always null on freshly minted
- * unlocked proofs; populated by the wallet right before submitting a swap that
- * spends locked proofs.
+ *   13  → [1, 4, 8]
+ *   100 → [4, 32, 64]
+ *   0   → []
+ *
+ * Cashu mints maintain one mint-key per denomination so amounts are always
+ * stored as the user's binary decomposition. This keeps proofs anonymous
+ * across users (same denominations) and bounds the keyset size at ~64 keys.
  */
-@Immutable
-data class CashuProof(
-    val id: String,
-    val amount: Long,
-    val secret: String,
-    val c: String,
-    val witness: String? = null,
-)
+fun splitAmountIntoDenominations(amount: Long): List<Long> {
+    require(amount >= 0) { "Amount must be non-negative" }
+    if (amount == 0L) return emptyList()
+    val out = mutableListOf<Long>()
+    var n = amount
+    var d = 1L
+    while (n > 0) {
+        if (n and 1L != 0L) out += d
+        n = n shr 1
+        d = d shl 1
+    }
+    return out
+}

@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.assemblers
 
+import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -38,9 +40,11 @@ import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
  * Query state for the NIP-60 / NIP-61 wallet subscription.
  *
  * `pubkey` is the wallet owner — used both as `authors=` for their own
- * NIP-60 events and as the `#p` tag value for inbound nutzaps.
+ * NIP-60 events and as the `#p` tag value for inbound nutzaps. `relays` is
+ * the union of relays to subscribe on (NIP-65 outbox + DM relays at minimum).
  */
-data class CashuWalletQueryState(
+@Stable
+class CashuWalletQueryState(
     val pubkey: HexKey,
     val relays: Set<NormalizedRelayUrl>,
 )
@@ -59,7 +63,20 @@ data class CashuWalletQueryState(
  * All authored events are queried by `authors=[pubkey]`; nutzaps are queried by
  * `#p=[pubkey]` (we receive them, not send them, from this filter's perspective).
  */
+@Stable
 class CashuWalletFilterAssembler(
+    client: INostrClient,
+) : ComposeSubscriptionManager<CashuWalletQueryState>() {
+    private val sub = CashuWalletSubAssembler(client, ::allKeys)
+
+    override fun invalidateFilters() = sub.invalidateFilters()
+
+    override fun invalidateKeys() = invalidateFilters()
+
+    override fun destroy() = sub.destroy()
+}
+
+private class CashuWalletSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<CashuWalletQueryState>,
 ) : SingleSubEoseManager<CashuWalletQueryState>(client, allKeys, invalidateAfterEose = true) {
