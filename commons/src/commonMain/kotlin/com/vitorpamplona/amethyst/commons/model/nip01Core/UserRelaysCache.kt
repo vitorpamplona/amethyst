@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlin.concurrent.Volatile
 
 @Stable
 data class RelayInfo(
@@ -54,6 +55,11 @@ val DefaultOrder =
 @Stable
 class UserRelaysCache {
     var data: Map<NormalizedRelayUrl, RelayInfo> = mapOf()
+
+    // @Volatile is required for the double-checked locking in flow() to be
+    // safe on weak-memory platforms (K/N + ARM). Without it, the outer
+    // fast-path read could observe a partially-published WeakReference.
+    @Volatile
     private var flow: WeakReference<MutableStateFlow<Wrapper>>? = null
     private val flowLock = KmpLock()
 

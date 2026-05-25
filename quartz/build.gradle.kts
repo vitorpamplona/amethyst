@@ -386,24 +386,39 @@ val verifyKmpPurity by tasks.registering {
             .filter { it.exists() }
     inputs.files(checkedDirs)
     doLast {
-        val forbidden = listOf("com.fasterxml.jackson", "okhttp3")
+        // Each pattern is paired with a short hint so the failure message
+        // points at the canonical KMP replacement.
+        val forbidden =
+            listOf(
+                "com.fasterxml.jackson" to "Jackson is JVM-only — use kotlinx.serialization",
+                "okhttp3" to "OkHttp is JVM-only — wrap behind expect/actual or use Ktor on iOS",
+                "System.currentTimeMillis" to "use TimeUtils.now()",
+                "Thread.sleep" to "use kotlinx.coroutines.delay or platform-specific actual",
+                "java.util.UUID" to "use kotlin.uuid.Uuid",
+                "kotlin.jvm.Synchronized" to "use a KMP lock primitive",
+                "kotlin.jvm.Volatile" to "use kotlin.concurrent.Volatile",
+            )
         val offenders =
             checkedDirs.flatMap { dir ->
                 dir.walkTopDown()
                     .filter { it.isFile && it.extension == "kt" }
                     .flatMap { file ->
                         file.readLines().withIndex().mapNotNull { (idx, line) ->
-                            forbidden.firstOrNull { line.contains(it) }?.let { hit ->
-                                "${file.relativeTo(rootDir)}:${idx + 1}: '$hit'"
+                            val trimmed = line.trimStart()
+                            if (trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*")) {
+                                return@mapNotNull null
+                            }
+                            forbidden.firstOrNull { (pattern, _) -> line.contains(pattern) }?.let { (hit, hint) ->
+                                "${file.relativeTo(rootDir)}:${idx + 1}: '$hit' — $hint"
                             }
                         }
                     }
             }
         if (offenders.isNotEmpty()) {
             throw GradleException(
-                "iOS-targeted source sets must not reference JVM-only deps " +
-                    "(Jackson, OkHttp). Move the offending code to jvmAndroid/ " +
-                    "or behind an expect/actual:\n  " + offenders.joinToString("\n  "),
+                "iOS-targeted source sets must not reference JVM-only APIs. " +
+                    "Move the offending code to jvmAndroid/ or behind an expect/actual:\n  " +
+                    offenders.joinToString("\n  "),
             )
         }
     }

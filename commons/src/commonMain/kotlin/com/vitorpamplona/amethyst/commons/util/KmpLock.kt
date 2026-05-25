@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.util
 
 /**
  * KMP-friendly reentrant lock. JVM/Android map to `java.util.concurrent.locks.ReentrantLock`;
- * iOS will map to `NSLock` (or a thin wrapper around it) when the target is added.
+ * iOS maps to `NSRecursiveLock`.
  *
  * Use [withLock] in preference to manual lock/unlock — it guarantees release on
  * exception. The class is reentrant on every platform, so a thread that already

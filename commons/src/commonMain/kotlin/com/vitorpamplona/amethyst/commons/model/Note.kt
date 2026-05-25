@@ -835,7 +835,7 @@ open class Note(
                     val amount =
                         try {
                             LnInvoiceUtil.getAmountInSats(invoice)
-                        } catch (e: java.lang.Exception) {
+                        } catch (e: Exception) {
                             if (e is CancellationException) throw e
                             null
                         }
@@ -886,7 +886,7 @@ open class Note(
             .any {
                 val pledgeValue =
                     try {
-                        BigDecimal(it.event?.content)
+                        it.event?.content?.let { content -> BigDecimal(content) }
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
                         null
@@ -896,7 +896,13 @@ open class Note(
                 pledgeValue != null && it.author == user
             }
 
-    fun pledgedAmountByOthers(): BigDecimal = replies.sumOf { it.event?.addedRewardValue() ?: BigDecimal(0) }
+    // Manual fold rather than Iterable.sumOf { -> BigDecimal } because that
+    // overload is JVM-only; the common stdlib only ships sumOf for the
+    // primitive numeric types.
+    fun pledgedAmountByOthers(): BigDecimal =
+        replies.fold(BigDecimal(0)) { acc, note ->
+            acc + (note.event?.addedRewardValue() ?: BigDecimal(0))
+        }
 
     fun hasAnyReports(): Boolean {
         val dayAgo = TimeUtils.oneDayAgo()
