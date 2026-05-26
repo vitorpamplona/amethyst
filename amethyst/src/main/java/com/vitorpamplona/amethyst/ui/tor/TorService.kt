@@ -177,4 +177,36 @@ class TorService(
 
         _status.value = TorServiceStatus.Off
     }
+
+    /**
+     * Drop the native TorClient so the next [start] runs full initialization
+     * with a fresh bootstrap, new guards, and new circuits. Used by self-heal
+     * paths in [TorManager] — network identity change, stuck-Connecting
+     * recovery — when the in-memory Arti state is suspected of being broken.
+     * The `arti/state/` directory on disk is preserved.
+     */
+    suspend fun reset() {
+        withContext(Dispatchers.IO) {
+            if (proxyRunning.compareAndSet(true, false)) {
+                ArtiNative.stopSocksProxy()
+            }
+            ArtiNative.destroy()
+            initialized.set(false)
+            Log.d("TorService") { "Tor service reset — next start will re-initialize" }
+        }
+        _status.value = TorServiceStatus.Off
+    }
+
+    /**
+     * Like [reset] but additionally wipes `arti/state/` so the next
+     * initialization rebuilds guard selection from scratch. Used when stale
+     * on-disk state (e.g. unreachable guards persisted from a previous
+     * network) is the suspected cause of a bootstrap that never completes.
+     */
+    suspend fun resetWithCleanState() {
+        reset()
+        withContext(Dispatchers.IO) {
+            clearAllArtiData()
+        }
+    }
 }

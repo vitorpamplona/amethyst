@@ -192,10 +192,10 @@ class AppModules(
 
     val torManager = TorManager(torPrefs, appContext, applicationIOScope)
 
-    // Whenever the underlying network identity changes (wifi↔cellular, regained from
-    // offline, etc.) we clear any active Tor session bypass so the manager re-attempts
-    // bootstrap on the new network. The remembered-approval window is unaffected: if Tor
-    // stays stuck we will silently bypass again after the timeout fires.
+    // Network identity change (wifi↔cellular, regained from offline, captive portal
+    // cleared) — the old network's guards/circuits are dead, and Arti's in-memory
+    // client + on-disk state/ both need a fresh start. onNetworkChange drops the
+    // TorClient, clears the bypass + persisted approval, and triggers a full re-init.
     init {
         applicationIOScope.launch {
             connManager.status
@@ -203,7 +203,7 @@ class AppModules(
                 .filterNotNull()
                 .distinctUntilChanged()
                 .drop(1)
-                .collect { torManager.clearSessionBypass() }
+                .collect { torManager.onNetworkChange() }
         }
     }
 

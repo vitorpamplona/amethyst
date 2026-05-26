@@ -20,6 +20,10 @@ static TOKIO_RUNTIME: Mutex<Option<tokio::runtime::Runtime>> = Mutex::new(None);
 static JAVA_VM: Mutex<Option<JavaVM>> = Mutex::new(None);
 static LOG_CALLBACK: Mutex<Option<GlobalRef>> = Mutex::new(None);
 static SOCKS_TASK: Mutex<Option<tokio::task::JoinHandle<()>>> = Mutex::new(None);
+// Per-connection handler tasks. Tracked so destroy() can abort in-flight handlers
+// — otherwise their Arc<TorClient> clones keep the client alive and the
+// state file lock would not be released for the next initialize().
+static HANDLER_TASKS: Mutex<Vec<tokio::task::JoinHandle<()>>> = Mutex::new(Vec::new());
 static INIT_ONCE: Once = Once::new();
 
 // ============================================================================
@@ -243,11 +247,14 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_startSocksPr
             match listener.accept().await {
                 Ok((stream, _peer_addr)) => {
                     let client_clone = Arc::clone(&client);
-                    tokio::spawn(async move {
+                    let h = tokio::spawn(async move {
                         if let Err(e) = handle_socks_connection(stream, client_clone).await {
                             log_error!("SOCKS connection error: {:?}", e);
                         }
                     });
+                    let mut handlers = HANDLER_TASKS.lock().unwrap();
+                    handlers.retain(|h| !h.is_finished());
+                    handlers.push(h);
                 }
                 Err(e) => {
                     log_error!("Failed to accept SOCKS connection: {:?}", e);
@@ -382,5 +389,50 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_stopSocksPro
     // NOTE: TorClient is NOT destroyed — it persists for reuse.
 
     log_info!("SOCKS proxy stopped");
+    0
+}
+
+/// Destroy the TorClient — used by self-heal paths in Kotlin when Tor is
+/// stuck and the in-memory state (guards, circuits) needs to be rebuilt
+/// from scratch. Aborts the SOCKS listener and all in-flight per-connection
+/// handlers, then drops the static Arc so Arti's state file lock can be
+/// released. The next call to [initialize] will create a fresh TorClient
+/// (and re-bootstrap).
+#[no_mangle]
+pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_destroy(
+    _env: JNIEnv,
+    _class: JClass,
+) -> jint {
+    log_info!("Destroying Arti client");
+
+    // Abort the listener task first so no new handlers spawn.
+    if let Some(handle) = SOCKS_TASK.lock().unwrap().take() {
+        handle.abort();
+    }
+
+    // Abort all in-flight handlers — each holds an Arc<TorClient> clone, and
+    // the client cannot drop (state file lock cannot release) while any clone
+    // is alive.
+    let handlers = std::mem::take(&mut *HANDLER_TASKS.lock().unwrap());
+    for h in &handlers {
+        h.abort();
+    }
+    drop(handlers);
+
+    // Give tokio a moment to actually cancel and drop the task frames so the
+    // handler Arcs are released before we drop our static one.
+    if let Some(rt) = TOKIO_RUNTIME.lock().unwrap().as_ref() {
+        rt.block_on(async {
+            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        });
+    }
+
+    // Drop the static Arc. If any handler is still holding a clone, the
+    // TorClient stays alive until that handler finishes — in which case the
+    // next initialize() will fail and Kotlin's clearAllArtiData retry path
+    // will handle it.
+    let _ = ARTI_CLIENT.lock().unwrap().take();
+
+    log_info!("Arti client destroyed");
     0
 }

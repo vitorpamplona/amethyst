@@ -41,6 +41,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
@@ -69,6 +70,18 @@ class TorManager(
      */
     @Volatile private var lastBypassApprovalMs: Long = 0L
 
+    /**
+     * Bumped by self-heal paths ([onNetworkChange], stuck-Connecting watcher) so the
+     * [status] combine re-fires and re-enters the [TorType.INTERNAL] branch — which
+     * calls [TorService.start] again and, because [TorService.reset] flipped
+     * `initialized` back to false, runs full Arti re-initialization with a fresh
+     * bootstrap, new guards, new circuits.
+     */
+    private val resetEpoch = MutableStateFlow(0)
+
+    /** Wall-clock of the last automatic self-heal — rate-limits the stuck-Connecting reset. */
+    @Volatile private var lastSelfHealAtMs: Long = 0L
+
     init {
         scope.launch(Dispatchers.IO) {
             lastBypassApprovalMs = torPrefs.loadLastBypassApprovalMs()
@@ -95,7 +108,8 @@ class TorManager(
             torPrefs.value.torType,
             torPrefs.value.externalSocksPort,
             sessionBypass,
-        ) { torType, externalSocksPort, bypass ->
+            resetEpoch,
+        ) { torType, externalSocksPort, bypass, _ ->
             Triple(torType, externalSocksPort, bypass)
         }.transformLatest { (torType, externalSocksPort, bypass) ->
             if (bypass) {
@@ -171,6 +185,40 @@ class TorManager(
                 false,
             )
 
+    /**
+     * Fires once after [SELF_HEAL_AFTER_MS] of continuous [TorServiceStatus.Connecting].
+     * Drives the watchdog wired up below. `transformLatest` cancels the pending delay
+     * whenever the status changes, so a brief Connecting blip never fires.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val selfHealSignal =
+        status.transformLatest { s ->
+            if (s is TorServiceStatus.Connecting) {
+                delay(SELF_HEAL_AFTER_MS)
+                emit(Unit)
+            }
+        }
+
+    init {
+        // Self-heal watchdog. When status sits at Connecting for longer than
+        // SELF_HEAL_AFTER_MS, the in-memory Arti state is almost certainly stuck —
+        // bad guards, broken circuits, expired consensus. Drop the TorClient, wipe
+        // on-disk state, and bump resetEpoch so the status combine re-fires and
+        // re-enters the INTERNAL branch — which calls service.start() and, because
+        // reset() flipped initialized=false, runs full Arti re-init with fresh
+        // bootstrap. Rate-limited so a permanently broken network doesn't loop us.
+        // Fires BEFORE the 60s connectionFailure dialog so most users never see it.
+        selfHealSignal
+            .onEach {
+                val now = System.currentTimeMillis()
+                if (now - lastSelfHealAtMs < SELF_HEAL_COOLDOWN_MS) return@onEach
+                lastSelfHealAtMs = now
+                Log.w("TorManager") { "Tor stuck Connecting >${SELF_HEAL_AFTER_MS}ms — self-healing (drop client + wipe state)" }
+                service.resetWithCleanState()
+                resetEpoch.update { it + 1 }
+            }.launchIn(scope)
+    }
+
     fun rememberedApprovalActive(): Boolean {
         val ts = lastBypassApprovalMs
         return ts > 0 && (System.currentTimeMillis() - ts) < APPROVAL_REMEMBER_MS
@@ -187,12 +235,26 @@ class TorManager(
     }
 
     /**
-     * Re-attempt Tor on this session — used on network change. Does not clear the
-     * remembered-approval window: if Tor stays stuck, we will silently bypass again
-     * after the timeout fires.
+     * Network identity changed (wifi↔cellular, captive portal cleared, regained from
+     * offline). The old network's guards and circuits are dead, but Arti's in-memory
+     * TorClient doesn't always notice — and even if it does, on-disk `state/` can hold
+     * unreachable guards that the next process load will pick up again. Drop the
+     * client, clear `sessionBypass`, clear the persisted approval, and bump
+     * [resetEpoch] so the status flow re-enters the INTERNAL branch with
+     * `initialized=false` — forcing a full Arti re-init with fresh bootstrap.
      */
-    fun clearSessionBypass() {
+    fun onNetworkChange() {
         sessionBypass.value = false
+        lastBypassApprovalMs = 0L
+        // Prevent the stuck-Connecting watchdog from firing a second reset while the
+        // network-change bootstrap is still legitimately in progress (initial bootstrap
+        // on a new network can take ~10–30s, sometimes longer).
+        lastSelfHealAtMs = System.currentTimeMillis()
+        scope.launch(Dispatchers.IO) {
+            torPrefs.saveLastBypassApprovalMs(0L)
+            service.reset()
+            resetEpoch.update { it + 1 }
+        }
     }
 
     fun isSocksReady() = status.value is TorServiceStatus.Active
@@ -202,5 +264,9 @@ class TorManager(
     companion object {
         const val BOOTSTRAP_TIMEOUT_MS: Long = 60_000L
         const val APPROVAL_REMEMBER_MS: Long = 60L * 60L * 1000L
+
+        /** Self-heal kicks in BEFORE the 60s [BOOTSTRAP_TIMEOUT_MS] dialog so most users never see it. */
+        const val SELF_HEAL_AFTER_MS: Long = 45_000L
+        const val SELF_HEAL_COOLDOWN_MS: Long = 5L * 60L * 1000L
     }
 }
