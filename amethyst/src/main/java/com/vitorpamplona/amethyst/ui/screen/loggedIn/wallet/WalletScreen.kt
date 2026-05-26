@@ -235,11 +235,6 @@ private fun MultiWalletHomeContent(
     ) {
         item {
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = stringRes(R.string.wallet_your_wallets),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-            )
         }
 
         itemsIndexed(walletInfoList, key = { _, info -> info.walletId }) { index, walletInfo ->
