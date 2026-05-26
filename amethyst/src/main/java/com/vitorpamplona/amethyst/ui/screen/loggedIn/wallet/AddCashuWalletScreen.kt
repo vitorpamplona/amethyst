@@ -73,7 +73,9 @@ fun AddCashuWalletScreen(
     nav: INav,
 ) {
     val viewModel: CashuWalletViewModel = viewModel()
-    LaunchedEffect(Unit) { viewModel.init(accountViewModel) }
+    // Synchronous init so state-flow getters don't hit a null `account` on
+    // the first composition pass. init() is idempotent — just sets refs.
+    viewModel.init(accountViewModel)
 
     val existingWallet by viewModel.walletEvent.collectAsState()
     val existingMints by viewModel.mints.collectAsState()

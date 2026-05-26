@@ -92,7 +92,9 @@ fun WalletScreen(
     walletViewModel.init(accountViewModel)
 
     val cashuWalletViewModel: CashuWalletViewModel = viewModel()
-    LaunchedEffect(Unit) { cashuWalletViewModel.init(accountViewModel) }
+    // Synchronous init so state-flow getters don't hit a null `account` on
+    // the first composition pass. init() is idempotent — just sets refs.
+    cashuWalletViewModel.init(accountViewModel)
 
     val hasNwcWallet by walletViewModel.hasWalletSetup.collectAsState()
     val cashuWalletEvent by cashuWalletViewModel.walletEvent.collectAsState()
