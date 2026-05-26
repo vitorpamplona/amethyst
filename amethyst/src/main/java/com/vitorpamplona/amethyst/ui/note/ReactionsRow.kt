@@ -109,6 +109,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ReactionRowAction
 import com.vitorpamplona.amethyst.model.ReactionRowItem
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.zap.RailCapabilityResolver
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
@@ -1873,19 +1874,21 @@ fun ZapAmountChoicePopup(
         accountViewModel.account.settings.syncedSettings.zaps.onchainZapAmountChoices
             .collectAsStateWithLifecycle()
 
-    // Nutzap chips appear only when (a) we have a Cashu wallet, (b) the
-    // recipient has a kind:10019 with a P2PK pubkey, and (c) we share at
-    // least one mint with them. peekNutzapTarget() returns null otherwise.
-    val nutzapTarget =
+    // Hide chips for rails the recipient(s) can't actually receive on. For a
+    // single-author note this gates against the author's kind:0 / kind:10019;
+    // for a note with `zap` split tags it considers every split recipient so
+    // splits where (e.g.) only one of three has a lud16 still surface the LN
+    // chips. Recomputed only when the note id changes — the underlying flows
+    // (CashuWalletState, LocalCache user metadata) are stable for the life of
+    // the popup, which is usually open for under a second.
+    val railCapability =
         remember(baseNote) {
-            baseNote.author?.pubkeyHex?.let { recipientPubKey ->
-                accountViewModel.account.cashuWalletState.peekNutzapTarget(recipientPubKey)
-            }
+            RailCapabilityResolver.peek(baseNote, accountViewModel.account.cashuWalletState)
         }
 
     ZapAmountChoicePopup(
         baseNote = baseNote,
-        zapAmountChoices = zapAmountChoices,
+        zapAmountChoices = if (railCapability.hasLightning) zapAmountChoices else persistentListOf(),
         accountViewModel = accountViewModel,
         popupYOffset = popupYOffset,
         onZapStarts = onZapStarts,
@@ -1894,9 +1897,14 @@ fun ZapAmountChoicePopup(
         onError = onError,
         onProgress = onProgress,
         onPayViaIntent = onPayViaIntent,
-        onchainZapAmountChoices = if (onOnchainAmount != null) onchainZapAmountChoices else persistentListOf(),
+        onchainZapAmountChoices =
+            if (onOnchainAmount != null && railCapability.hasOnchain) {
+                onchainZapAmountChoices
+            } else {
+                persistentListOf()
+            },
         onOnchainAmount = onOnchainAmount ?: {},
-        nutzapEnabled = nutzapTarget != null,
+        nutzapEnabled = railCapability.hasCashu,
     )
 }
 
