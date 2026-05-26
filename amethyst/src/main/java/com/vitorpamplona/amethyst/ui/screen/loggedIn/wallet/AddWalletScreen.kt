@@ -92,13 +92,18 @@ fun AddWalletScreen(
                 icon = MaterialSymbols.Bolt,
                 title = stringRes(R.string.wallet_add_nwc_title),
                 description = stringRes(R.string.wallet_add_nwc_description),
-                onClick = { nav.nav(Route.WalletAddNwc) },
+                // Replace the chooser in the back stack rather than stacking
+                // the form on top: once the user picks a wallet type, the
+                // chooser has done its job. Without this, completing the
+                // add-wallet form pops back to the chooser, which is a
+                // pointless dead end.
+                onClick = { nav.popUpTo(Route.WalletAddNwc, Route.WalletAdd::class) },
             )
             WalletTypeCard(
                 icon = MaterialSymbols.AccountBalanceWallet,
                 title = stringRes(R.string.wallet_add_cashu_title),
                 description = stringRes(R.string.wallet_add_cashu_description),
-                onClick = { nav.nav(Route.WalletAddCashu) },
+                onClick = { nav.popUpTo(Route.WalletAddCashu, Route.WalletAdd::class) },
             )
         }
     }
