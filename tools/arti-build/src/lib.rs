@@ -380,8 +380,13 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_stopSocksPro
         handle.abort();
     }
 
-    if let Some(rt) = TOKIO_RUNTIME.lock().unwrap().as_ref() {
-        rt.block_on(async {
+    let rt_handle = TOKIO_RUNTIME
+        .lock()
+        .unwrap()
+        .as_ref()
+        .map(|rt| rt.handle().clone());
+    if let Some(rh) = rt_handle {
+        rh.block_on(async {
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
         });
     }
@@ -405,9 +410,26 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_destroy(
 ) -> jint {
     log_info!("Destroying Arti client");
 
-    // Abort the listener task first so no new handlers spawn.
-    if let Some(handle) = SOCKS_TASK.lock().unwrap().take() {
-        handle.abort();
+    // Clone the runtime handle and release the TOKIO_RUNTIME mutex immediately —
+    // we will hold it for ~500ms below, and other JNI calls that need the runtime
+    // (e.g. a Kotlin start() racing with us) would otherwise block on this mutex.
+    let rt_handle = TOKIO_RUNTIME
+        .lock()
+        .unwrap()
+        .as_ref()
+        .map(|rt| rt.handle().clone());
+
+    // Abort the listener and wait for it to actually terminate before draining
+    // HANDLER_TASKS. The accept loop has no .await between `accept` and
+    // `HANDLER_TASKS.push(h)`, so abort() alone is racy: a handler can be spawned
+    // and pushed AFTER our drain. Awaiting the JoinHandle (with timeout) closes
+    // that window — no new handlers can be pushed once the listener task is gone.
+    let socks_handle = SOCKS_TASK.lock().unwrap().take();
+    if let (Some(h), Some(rh)) = (socks_handle, rt_handle.as_ref()) {
+        h.abort();
+        rh.block_on(async {
+            let _ = tokio::time::timeout(tokio::time::Duration::from_secs(1), h).await;
+        });
     }
 
     // Abort all in-flight handlers — each holds an Arc<TorClient> clone, and
@@ -421,8 +443,8 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_destroy(
 
     // Give tokio a moment to actually cancel and drop the task frames so the
     // handler Arcs are released before we drop our static one.
-    if let Some(rt) = TOKIO_RUNTIME.lock().unwrap().as_ref() {
-        rt.block_on(async {
+    if let Some(rh) = rt_handle {
+        rh.block_on(async {
             tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
         });
     }

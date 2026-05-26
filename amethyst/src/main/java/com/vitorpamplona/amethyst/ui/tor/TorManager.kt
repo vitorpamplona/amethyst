@@ -82,6 +82,16 @@ class TorManager(
     /** Wall-clock of the last automatic self-heal — rate-limits the stuck-Connecting reset. */
     @Volatile private var lastSelfHealAtMs: Long = 0L
 
+    /**
+     * Flipped the first time [status] reaches [TorServiceStatus.Active] in this process. Before
+     * that, the stuck-Connecting watchdog uses the gentler [TorService.reset] (drop client only)
+     * rather than [TorService.resetWithCleanState] — because on a slow legitimate first
+     * bootstrap there is no stale state to wipe, and wiping just forces an unnecessary
+     * re-bootstrap cycle. Once we've seen Tor work once, persisted `arti/state/` is fair game
+     * for the recovery to wipe.
+     */
+    @Volatile private var hasEverBootstrapped: Boolean = false
+
     init {
         scope.launch(Dispatchers.IO) {
             lastBypassApprovalMs = torPrefs.loadLastBypassApprovalMs()
@@ -201,20 +211,36 @@ class TorManager(
 
     init {
         // Self-heal watchdog. When status sits at Connecting for longer than
-        // SELF_HEAL_AFTER_MS, the in-memory Arti state is almost certainly stuck —
-        // bad guards, broken circuits, expired consensus. Drop the TorClient, wipe
-        // on-disk state, and bump resetEpoch so the status combine re-fires and
-        // re-enters the INTERNAL branch — which calls service.start() and, because
-        // reset() flipped initialized=false, runs full Arti re-init with fresh
-        // bootstrap. Rate-limited so a permanently broken network doesn't loop us.
-        // Fires BEFORE the 60s connectionFailure dialog so most users never see it.
+        // SELF_HEAL_AFTER_MS, the in-memory Arti state is likely stuck — bad guards,
+        // broken circuits, expired consensus. Drop the TorClient and bump resetEpoch
+        // so the status combine re-fires and re-enters the INTERNAL branch, which
+        // runs full Arti re-init. Rate-limited so a permanently broken network
+        // doesn't loop us. Fires BEFORE the 60s connectionFailure dialog so most
+        // users never see it.
+        //
+        // Pre-first-bootstrap: gentle reset (drop client, keep state). On a slow
+        // legitimate first bootstrap there's nothing on disk worth wiping, and
+        // wiping just costs another full bootstrap cycle.
+        // Post-first-bootstrap: full reset (drop client + wipe state). Once we've
+        // seen Tor work once, a stuck Connecting almost certainly means stale on-disk
+        // state from a different network needs to go.
+        status
+            .onEach {
+                if (it is TorServiceStatus.Active) hasEverBootstrapped = true
+            }.launchIn(scope)
+
         selfHealSignal
             .onEach {
                 val now = System.currentTimeMillis()
                 if (now - lastSelfHealAtMs < SELF_HEAL_COOLDOWN_MS) return@onEach
                 lastSelfHealAtMs = now
-                Log.w("TorManager") { "Tor stuck Connecting >${SELF_HEAL_AFTER_MS}ms — self-healing (drop client + wipe state)" }
-                service.resetWithCleanState()
+                if (hasEverBootstrapped) {
+                    Log.w("TorManager") { "Tor stuck Connecting >${SELF_HEAL_AFTER_MS}ms — self-healing (drop client + wipe state)" }
+                    service.resetWithCleanState()
+                } else {
+                    Log.w("TorManager") { "Tor stuck Connecting >${SELF_HEAL_AFTER_MS}ms on first bootstrap — self-healing (drop client only)" }
+                    service.reset()
+                }
                 resetEpoch.update { it + 1 }
             }.launchIn(scope)
     }
