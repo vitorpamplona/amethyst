@@ -33,12 +33,13 @@ class NWCPaymentWatcherSubAssembler(
 
         return keys.groupBy { it.relay }.map { relayGroup ->
             val replyingToPayments = relayGroup.value.mapTo(mutableSetOf()) { it.replyingToHex }
+            val aboutUsers = relayGroup.value.mapTo(mutableSetOf()) { it.toUserHex }
 
             if (replyingToPayments.isEmpty()) return null
 
             RelayBasedFilter(
                 relay = relayGroup.key,
-                filter = filterNWCPaymentsFromRequests(replyingToPayments),
+                filter = filterNWCPaymentsFromRequests(replyingToPayments, aboutUsers),
             )
         }
     }

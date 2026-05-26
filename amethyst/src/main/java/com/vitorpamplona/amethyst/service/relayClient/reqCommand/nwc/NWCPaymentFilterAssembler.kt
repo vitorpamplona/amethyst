@@ -27,11 +27,14 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 // This allows multiple screen to be listening to tags, even the same tag.
-// The subscription filter only needs the request event id (#e) — the wallet
-// service's identity is authenticated by NIP-04 decryption against the
-// per-connection shared secret, not by relay-side `authors`/`#p` filtering.
+// The subscription filter carries `#e: [request id]` plus `#p: [client pubkey]`.
+// The `#p` field is the routing key for purpose-built NWC relays (e.g.
+// relay.getalby.com/v1) — dropping it caused those relays to silently never
+// deliver the response. `authors` is intentionally left out because some
+// wallets sign responses with a key different from the URI-advertised one.
 @Stable
 class NWCPaymentQueryState(
+    val toUserHex: HexKey,
     val replyingToHex: HexKey,
     val relay: NormalizedRelayUrl,
 )

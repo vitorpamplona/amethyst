@@ -52,6 +52,7 @@ fun NWCFinderFilterAssemblerSubscription(
                 noteEvent.walletServicePubKey()?.let {
                     zapPaymentRequestNote.relays.map {
                         NWCPaymentQueryState(
+                            toUserHex = noteEvent.pubKey,
                             replyingToHex = noteEvent.id,
                             relay = it,
                         )

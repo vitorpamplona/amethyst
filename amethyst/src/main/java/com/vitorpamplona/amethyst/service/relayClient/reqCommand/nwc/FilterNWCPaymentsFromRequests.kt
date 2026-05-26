@@ -25,15 +25,28 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip47WalletConnect.events.LnZapPaymentResponseEvent
 
 // The request event id (#e) is a unique 32-byte identifier — sufficient on
-// its own to match the response. Adding `authors` or `#p` makes the filter
-// strictly stricter at the relay, which causes silent timeouts on services
-// or relays that don't set / index those fields the way NIP-47 expects
-// (e.g. wallets that omit the `p` tag, relays that don't index single-letter
-// tags on ephemeral kinds). Primal's client uses the same minimal filter
-// (kinds + #e), and the wallet's identity is still authenticated end-to-end
-// by NIP-04 decryption against the per-connection shared secret.
-fun filterNWCPaymentsFromRequests(paymentRequests: Set<HexKey>): Filter =
+// its own to match a spec-compliant kind-23195 response. We deliberately keep
+// `authors` out of the filter because some wallet services route through a
+// signer pubkey that differs from the one advertised in the connection URI,
+// which made the previous `authors`-strict filter time out.
+//
+// We DO keep `#p: [client pubkey]` because purpose-built NWC relays
+// (e.g. relay.getalby.com/v1) use the `#p` tag as the routing key — without
+// it the relay never delivers the response to our subscription, even though
+// the event is well-formed. Spec-compliant responses always set `p` to the
+// client pubkey, so including `#p` does not exclude any conforming wallet.
+// The wallet's identity is still authenticated end-to-end by NIP-04
+// decryption against the per-connection shared secret AND by a client-side
+// `event.pubKey == request.p` check in NwcPaymentTracker.
+fun filterNWCPaymentsFromRequests(
+    paymentRequests: Set<HexKey>,
+    fromUsers: Set<HexKey>,
+): Filter =
     Filter(
         kinds = listOf(LnZapPaymentResponseEvent.KIND),
-        tags = mapOf("e" to paymentRequests.sorted()),
+        tags =
+            mapOf(
+                "e" to paymentRequests.sorted(),
+                "p" to fromUsers.sorted(),
+            ),
     )
