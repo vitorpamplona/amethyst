@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
@@ -278,7 +279,34 @@ class CashuWalletState(
         jobs +=
             scope.launch(Dispatchers.Default) {
                 cache.live.newEventBundles.collect { notes ->
-                    val ours = notes.mapNotNull { it.event }.filter(::isRelevantEvent)
+                    val all = notes.mapNotNull { it.event }
+
+                    // Process our own NIP-09 deletions inline rather than
+                    // relying on LocalCache's `deletedEventBundles`. That
+                    // path only fires when `consume(DeletionEvent)` finds
+                    // the target Note still resident in `notes` — a
+                    // LargeSoftCache backed by WeakReferences, which can
+                    // be cleared on any GC cycle. When the weak ref is
+                    // gone (common between publish and the round-trip on
+                    // a busy device), the cache's deleteNote/removedNote
+                    // chain silently no-ops and our quoteEvents /
+                    // tokenEvents / etc. retain the logically-deleted
+                    // entries indefinitely — which manifested as the
+                    // pending-invoice card not disappearing after the
+                    // user tapped Discard. The kind:5 event itself does
+                    // reach us via newEventBundles regardless of soft-
+                    // cache state, so we extract its target ids and
+                    // remove from our maps directly.
+                    val ourDeleteIds =
+                        all
+                            .asSequence()
+                            .filterIsInstance<DeletionEvent>()
+                            .filter { it.pubKey == pubKey }
+                            .flatMap { it.deleteEventIds().asSequence() }
+                            .toSet()
+                    if (ourDeleteIds.isNotEmpty()) removeEvents(ourDeleteIds)
+
+                    val ours = all.filter(::isRelevantEvent)
                     if (ours.isNotEmpty()) {
                         applyEvents(ours)
                         recomputePending()

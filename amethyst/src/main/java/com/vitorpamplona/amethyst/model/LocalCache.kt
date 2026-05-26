@@ -234,6 +234,9 @@ import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
+import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
+import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
@@ -3130,6 +3133,32 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 is NutzapEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                // ============================================================
+                // NIP-87 Cashu mint discovery + recommendations
+                // ============================================================
+                // All three are kind 3xxxx (parameterized-replaceable per the
+                // spec) but neither CashuMintEvent / FedimintEvent /
+                // MintRecommendationEvent extends AddressableEvent in Quartz
+                // today, so consumeBaseReplaceable's `check(event is
+                // AddressableEvent)` would crash. Route through
+                // consumeRegularEvent — downstream consumers
+                // (CashuMintDirectoryState, CashuWalletState) already dedupe
+                // by (pubKey, dTag) and keep the newest. Without these
+                // entries the dispatch falls into the "Event Not Supported"
+                // else branch and silently drops the event, so our own
+                // kind:38000 thumbs-up never lands in the cache.
+                is CashuMintEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is FedimintEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is MintRecommendationEvent -> {
                     consumeRegularEvent(event, relay, wasVerified)
                 }
 
