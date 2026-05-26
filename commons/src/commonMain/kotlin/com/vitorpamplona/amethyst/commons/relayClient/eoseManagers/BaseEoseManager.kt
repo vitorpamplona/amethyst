@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.SubscriptionController
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 
 abstract class BaseEoseManager<T>(
     val client: INostrClient,

@@ -70,12 +70,9 @@ abstract class Channel : NotesGatherer {
     abstract fun toBestDisplayName(): String
 
     open fun relays(): Set<NormalizedRelayUrl> =
-        relays.keys
-            .toSortedSet { o1, o2 ->
-                val o1Count = relays[o1]?.number ?: 0
-                val o2Count = relays[o2]?.number ?: 0
-                o2Count.compareTo(o1Count) // descending
-            }
+        relays.entries
+            .sortedByDescending { it.value.number }
+            .mapTo(LinkedHashSet(relays.size)) { it.key }
 
     fun updateChannelInfo() {
         flowSet?.metadata?.invalidateData()

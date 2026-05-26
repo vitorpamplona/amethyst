@@ -18,6 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+@file:OptIn(kotlin.experimental.ExperimentalNativeApi::class)
+
 package com.vitorpamplona.amethyst.commons.util
 
-actual typealias WeakReference<T> = kotlin.native.ref.WeakReference<T>
+actual class WeakReference<T : Any> actual constructor(
+    referent: T,
+) {
+    private val ref = kotlin.native.ref.WeakReference(referent)
+
+    actual fun get(): T? = ref.get()
+}

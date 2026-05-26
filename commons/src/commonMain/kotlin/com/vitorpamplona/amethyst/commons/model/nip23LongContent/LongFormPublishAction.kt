@@ -58,7 +58,7 @@ object LongFormPublishAction {
             throw IllegalStateException("Cannot publish: signer is not writeable")
         }
 
-        if (content.toByteArray().size > MAX_CONTENT_BYTES) {
+        if (content.encodeToByteArray().size > MAX_CONTENT_BYTES) {
             throw IllegalArgumentException("Content exceeds maximum size of $MAX_CONTENT_BYTES bytes")
         }
 
