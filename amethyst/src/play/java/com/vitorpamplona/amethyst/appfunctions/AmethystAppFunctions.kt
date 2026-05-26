@@ -50,10 +50,16 @@ import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKey
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Bridge that exposes Amethyst's "verbs" (commons/.../actions/) to the Android
@@ -1058,10 +1064,12 @@ class AmethystAppFunctions {
      * when the user asks "zap [X] on Nostr", "tip [user] [N] sats",
      * "send a Lightning tip to [npub]", or "thank [user] with sats".
      *
-     * Builds the NIP-57 kind:9734 zap request and fetches a BOLT11
-     * invoice from the recipient's Lightning service. Returns the
-     * invoice — the user pastes it into a Lightning wallet to settle.
-     * (NWC auto-pay is a separate verb, not yet exposed.)
+     * Builds the NIP-57 kind:9734 zap request, fetches a BOLT11
+     * invoice from the recipient's Lightning service, and — when the
+     * user has a Nostr Wallet Connect wallet configured in Amethyst —
+     * pays the invoice automatically over NIP-47. Falls back to
+     * returning the invoice for manual payment when no NWC wallet is
+     * set up.
      *
      * Defaults to 21 sats — the canonical "small thank-you" zap. Cap
      * is 1,000,000 sats so an accidental tip can't drain a wallet.
@@ -1118,6 +1126,13 @@ class AmethystAppFunctions {
 
         val invoice = fetchInvoiceOrThrow(lnAddress, cappedSats, trimmedComment, zapRequest)
 
+        // If the user has a Nostr Wallet Connect wallet configured, pay
+        // the invoice automatically over NIP-47 so Gemini can answer
+        // "I zapped Alice 21 sats" instead of "here's a BOLT11 invoice
+        // for you to paste somewhere." Falls back to manual when NWC
+        // isn't set up or the wallet declines.
+        val nwc = payViaNwcOrNull(account, invoice, null)
+
         return ZapResult(
             recipientNpub = NPub.create(recipientPub),
             recipientPubkeyHex = recipientPub,
@@ -1127,6 +1142,10 @@ class AmethystAppFunctions {
             comment = trimmedComment,
             invoice = invoice,
             zapRequestId = zapRequest.id,
+            nwcAttempted = nwc != null,
+            nwcPaid = nwc?.success == true,
+            nwcPreimage = nwc?.preimage,
+            nwcError = nwc?.errorMessage,
         )
     }
 
@@ -1138,9 +1157,11 @@ class AmethystAppFunctions {
      *
      * Honors NIP-57 zap-split tags — a post with multiple `zap` tags
      * produces one invoice per recipient, proportional to weight, so
-     * a multi-party collab post pays everyone correctly. Returns one
-     * BOLT11 invoice per recipient; user pays each in a Lightning
-     * wallet to complete the zap.
+     * a multi-party collab post pays everyone correctly. When the user
+     * has a Nostr Wallet Connect wallet configured, every split is
+     * paid automatically over NIP-47 and the result reports per-
+     * recipient success / failure. Without NWC, the verb returns the
+     * BOLT11 invoices for manual payment.
      *
      * @param eventId 64-character hex id of the note to zap. Must be
      *   in the local cache — get it via [getNotesByUser] /
@@ -1218,7 +1239,7 @@ class AmethystAppFunctions {
         val invoices =
             requests.map { req ->
                 val shareSats = req.amountMillisats / 1000
-                val result =
+                val invoiceResult =
                     runCatching {
                         fetchInvoiceOrThrow(
                             lnAddress = req.recipient.lnAddress,
@@ -1227,6 +1248,11 @@ class AmethystAppFunctions {
                             zapRequest = req.request,
                         )
                     }
+                val invoice = invoiceResult.getOrNull()
+                // Try NWC for every invoice that came back. Failed splits
+                // stay as a manual invoice with nwcError set — the others
+                // still go through.
+                val nwc = invoice?.let { payViaNwcOrNull(account, it, note) }
                 ZapInvoice(
                     recipientNpub = req.recipient.pubkey?.let { NPub.create(it) },
                     recipientPubkeyHex = req.recipient.pubkey,
@@ -1234,9 +1260,13 @@ class AmethystAppFunctions {
                     lnAddress = req.recipient.lnAddress,
                     weight = req.recipient.weight,
                     amountSats = shareSats,
-                    invoice = result.getOrNull(),
-                    invoiceError = result.exceptionOrNull()?.message,
+                    invoice = invoice,
+                    invoiceError = invoiceResult.exceptionOrNull()?.message,
                     zapRequestId = req.request.id,
+                    nwcAttempted = nwc != null,
+                    nwcPaid = nwc?.success == true,
+                    nwcPreimage = nwc?.preimage,
+                    nwcError = nwc?.errorMessage,
                 )
             }
 
@@ -1281,6 +1311,87 @@ class AmethystAppFunctions {
             .maxByOrNull { it.createdAt }
             ?.contactMetaData()
             ?.lnAddress()
+    }
+
+    /** Internal result of [payViaNwcOrNull]. */
+    private data class NwcOutcome(
+        val success: Boolean,
+        val preimage: String?,
+        val errorMessage: String?,
+    )
+
+    /**
+     * Try to pay [bolt11] through the active account's Nostr Wallet
+     * Connect setup. Returns null when no NWC wallet is configured —
+     * caller should fall back to surfacing the invoice for manual
+     * payment. Returns an outcome with [NwcOutcome.success] = true on
+     * a wallet-confirmed payment, false (with [NwcOutcome.errorMessage]
+     * set) on rejection or timeout.
+     *
+     * The wallet's response can take a few seconds; bounded by
+     * [NWC_PAYMENT_TIMEOUT_MS] so a hung wallet can't stall the
+     * dispatch.
+     */
+    private suspend fun payViaNwcOrNull(
+        account: com.vitorpamplona.amethyst.model.Account,
+        bolt11: String,
+        zappedNote: com.vitorpamplona.amethyst.model.Note?,
+    ): NwcOutcome? {
+        if (!account.nip47SignerState.hasWalletConnectSetup()) return null
+
+        val deferred = CompletableDeferred<Response?>()
+        // sendZapPaymentRequestFor fires onResponse exactly once when
+        // the wallet replies (success, error, or NwcError). On timeout
+        // we discard the late response.
+        account.sendZapPaymentRequestFor(bolt11, zappedNote) { response ->
+            if (!deferred.isCompleted) deferred.complete(response)
+        }
+        val response =
+            withTimeoutOrNull(NWC_PAYMENT_TIMEOUT_MS) { deferred.await() }
+                ?: return NwcOutcome(
+                    success = false,
+                    preimage = null,
+                    errorMessage = "NWC wallet didn't respond within ${NWC_PAYMENT_TIMEOUT_MS / 1000}s",
+                )
+
+        return when (response) {
+            is PayInvoiceSuccessResponse ->
+                NwcOutcome(
+                    success = true,
+                    preimage = response.result?.preimage,
+                    errorMessage = null,
+                )
+            is PayInvoiceErrorResponse ->
+                NwcOutcome(
+                    success = false,
+                    preimage = null,
+                    errorMessage =
+                        response.error?.message
+                            ?: response.error?.code?.name
+                            ?: "wallet returned an unspecified pay_invoice error",
+                )
+            is NwcErrorResponse ->
+                NwcOutcome(
+                    success = false,
+                    preimage = null,
+                    errorMessage =
+                        response.error?.message
+                            ?: response.error?.code?.name
+                            ?: "wallet returned an NWC error",
+                )
+            null ->
+                NwcOutcome(
+                    success = false,
+                    preimage = null,
+                    errorMessage = "NWC wallet returned null response (could not decrypt)",
+                )
+            else ->
+                NwcOutcome(
+                    success = false,
+                    preimage = null,
+                    errorMessage = "Unexpected NWC response type: ${response::class.simpleName}",
+                )
+        }
     }
 
     /**
@@ -1528,6 +1639,12 @@ class AmethystAppFunctions {
          *  280 keeps us under the most aggressive ceilings while still
          *  fitting a tweet-length thank-you note. */
         private const val MAX_ZAP_COMMENT_LENGTH = 280
+
+        /** Max time to wait for an NWC wallet to respond to a
+         *  pay_invoice request. Mobile wallets typically settle in
+         *  a few seconds; 30s is generous without letting a stuck
+         *  wallet stall the dispatch indefinitely. */
+        private const val NWC_PAYMENT_TIMEOUT_MS = 30_000L
     }
 }
 
@@ -1860,9 +1977,11 @@ class SendDmResult(
 )
 
 /**
- * Result of [AmethystAppFunctions.zapUser]. Carries the BOLT11 invoice
- * the user needs to pay in their Lightning wallet — this verb doesn't
- * auto-pay (NWC integration is a separate, not-yet-exposed verb).
+ * Result of [AmethystAppFunctions.zapUser]. Always carries the BOLT11
+ * invoice so the caller can fall back to manual payment; when the
+ * user has a Nostr Wallet Connect (NIP-47) wallet configured, the
+ * verb also attempts to pay the invoice via that wallet and the
+ * `nwc*` fields report the outcome.
  */
 @AppFunctionSerializable(isDescribedByKDoc = true)
 class ZapResult(
@@ -1878,15 +1997,28 @@ class ZapResult(
     val amountSats: Long,
     /** Comment attached to the zap (truncated to 280 chars). */
     val comment: String,
-    /** BOLT11 invoice the user pastes into a Lightning wallet. */
+    /** BOLT11 invoice — always set. Pay this manually if [nwcPaid]
+     *  is false. */
     val invoice: String,
     /** Hex event id of the signed kind:9734 zap request. */
     val zapRequestId: String,
+    /** True when the user has NWC configured and we tried to auto-pay.
+     *  False means the caller should surface the invoice for manual
+     *  payment. */
+    val nwcAttempted: Boolean,
+    /** True only when an NWC wallet confirmed the payment. */
+    val nwcPaid: Boolean,
+    /** Payment preimage from the wallet on success, otherwise null. */
+    val nwcPreimage: String?,
+    /** Failure reason when [nwcAttempted] is true but [nwcPaid] is false. */
+    val nwcError: String?,
 )
 
 /**
  * Per-recipient BOLT11 invoice for an event zap. Multiple invoices
- * appear when the zapped note carries NIP-57 zap-split tags.
+ * appear when the zapped note carries NIP-57 zap-split tags. When NWC
+ * is configured we try to pay each invoice automatically; per-split
+ * NWC results are reported in the `nwc*` fields.
  */
 @AppFunctionSerializable(isDescribedByKDoc = true)
 class ZapInvoice(
@@ -1910,6 +2042,16 @@ class ZapInvoice(
     val invoiceError: String?,
     /** Hex event id of this recipient's kind:9734 zap request. */
     val zapRequestId: String,
+    /** True when NWC was configured and we tried to auto-pay this
+     *  invoice. False when no NWC was set up or the invoice itself
+     *  couldn't be fetched. */
+    val nwcAttempted: Boolean,
+    /** True only when an NWC wallet confirmed the payment for this split. */
+    val nwcPaid: Boolean,
+    /** Payment preimage from the wallet on success, otherwise null. */
+    val nwcPreimage: String?,
+    /** Failure reason when [nwcAttempted] is true but [nwcPaid] is false. */
+    val nwcError: String?,
 )
 
 /**
