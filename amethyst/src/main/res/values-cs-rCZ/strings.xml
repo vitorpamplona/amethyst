@@ -14,6 +14,12 @@
         <item quantity="many">Tento příspěvek má více než %1$d hashtagů</item>
         <item quantity="other">Tento příspěvek má více než %1$d hashtagů</item>
     </plurals>
+    <plurals name="nip82_assets_count">
+        <item quantity="one">%1$d majetek je zbalený</item>
+        <item quantity="few">%1$d majetky jsou zbalený</item>
+        <item quantity="many">%1$d majetků jsou zbalený</item>
+        <item quantity="other">%1$d majetků jsou zbalený</item>
+    </plurals>
     <string name="post_not_found">Příspěvek se načítá nebo nemůže být nalezena ve vašem seznamu relací</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Obrázek kanálu</string>
@@ -565,6 +571,7 @@
     <string name="software_apps">Aplikace</string>
     <string name="route_software_apps">Aplikace</string>
     <string name="nip82_repository_label">Zdroj: %1$s</string>
+    <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Stáhnout</string>
     <string name="calendars">Kalendáře</string>
     <string name="shorts">Krátká videa</string>
@@ -1776,6 +1783,7 @@
     <string name="calendar_relative_ongoing_with_end">%1$s · končí %2$s</string>
     <string name="calendar_export_share_title">Sdílet událost kalendáře</string>
     <string name="calendar_export_event">Exportovat do kalendáře (.ics)</string>
+    <string name="calendar_reminder_channel_id">calendar_reminders</string>
     <string name="calendar_reminder_channel_name">Připomenutí kalendáře</string>
     <string name="calendar_reminder_channel_description">Upozornění, když je událost, které se účastníte, blízko začátku.</string>
     <string name="calendar_reminder_default_title">Událost kalendáře</string>
@@ -1803,6 +1811,12 @@
     <string name="calendar_reminder_settings_enabled_subtitle">Oznámení se spustí, když je událost, které se účastníte, blízko začátku.</string>
     <string name="calendar_reminder_settings_lead_title">Doba předstihu připomenutí</string>
     <string name="calendar_reminder_settings_lead_subtitle">Kolik minut před událostí chcete být upozorněni.</string>
+    <plurals name="calendar_reminder_settings_lead_choice">
+        <item quantity="one">%1$d min</item>
+        <item quantity="few">%1$d min</item>
+        <item quantity="many">%1$d min</item>
+        <item quantity="other">%1$d min</item>
+    </plurals>
     <string name="calendar_share_nostr">Sdílet jako Nostr odkaz</string>
     <string name="calendar_share_nostr_title">Sdílet odkaz na kalendář</string>
     <string name="calendar_filter_all">Všechny kalendáře</string>
@@ -1834,6 +1848,7 @@
     <string name="boost_or_quote_description">Zvýšit nebo citovat</string>
     <string name="like_description">Olajkovat</string>
     <string name="zap_description">Zap</string>
+    <string name="onchain_zap_description">On-chain Bitcoin zap</string>
     <string name="onchain_zap_pending">Čeká na potvrzení</string>
     <string name="change_reaction">Změnit rychlé reakce</string>
     <string name="bottom_bar_settings">Spodní navigační lišta</string>
@@ -2794,6 +2809,7 @@
     <string name="nowhere_link_card_store">Nowhere Obchod</string>
     <string name="nowhere_link_card_petition">Nowhere Petice</string>
     <string name="nowhere_link_card_message">Nowhere Zpráva</string>
+    <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Umění</string>
     <string name="nowhere_link_card_forum">Nowhere Fórum</string>
 </resources>

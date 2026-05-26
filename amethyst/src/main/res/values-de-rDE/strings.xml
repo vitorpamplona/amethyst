@@ -12,6 +12,10 @@
         <item quantity="one">Dieser Beitrag hat mehr als %1$d Hashtag</item>
         <item quantity="other">Dieser Beitrag hat mehr als %1$d Hashtags</item>
     </plurals>
+    <plurals name="nip82_assets_count">
+        <item quantity="one">%1$d Asset gebündelt</item>
+        <item quantity="other">%1$d Assets bündelt</item>
+    </plurals>
     <string name="post_not_found">Ereignis wird geladen oder kann nicht in deiner Relay-Liste gefunden werden</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Kanalbild</string>
@@ -556,7 +560,10 @@ anz der Bedingungen ist erforderlich</string>
     <string name="profile_badges_description">Wähle aus, welche deiner erhaltenen Abzeichen auf deinem Profil erscheinen sollen.</string>
     <string name="profile_badges_empty">Du hast noch keine Abzeichen erhalten.</string>
     <string name="pictures">Bilder</string>
+    <string name="software_apps">Apps</string>
+    <string name="route_software_apps">Apps</string>
     <string name="nip82_repository_label">Quelle: %1$s</string>
+    <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Herunterladen</string>
     <string name="calendars">Kalender</string>
     <string name="shorts">Kurzvideos</string>
@@ -1685,6 +1692,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="edit_calendar_collection">Kalender bearbeiten</string>
     <string name="calendar_collection_events_section">Termine in diesem Kalender (%1$d)</string>
     <string name="calendar_collection_no_events_yet">Du hast noch keine Kalendertermine erstellt.</string>
+    <string name="calendar_view_feed">Feed</string>
     <string name="calendar_view_month">Monat</string>
     <string name="calendar_view_week">Woche</string>
     <string name="calendar_view_day">Tag</string>
@@ -1750,6 +1758,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="calendar_rsvp_going">Komme</string>
     <string name="calendar_rsvp_maybe">Vielleicht</string>
     <string name="calendar_rsvp_not_going">Komme nicht</string>
+    <string name="calendar_rsvp_section">RSVPs (%1$d)</string>
     <string name="calendar_rsvp_none">Noch keine Antworten.</string>
     <string name="calendar_participants_section">Teilnehmer (%1$d)</string>
     <string name="calendar_event_in_calendars">In Kalendern (%1$d)</string>
@@ -1759,6 +1768,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="calendar_relative_ongoing_with_end">%1$s · endet %2$s</string>
     <string name="calendar_export_share_title">Kalendertermin teilen</string>
     <string name="calendar_export_event">In Kalender exportieren (.ics)</string>
+    <string name="calendar_reminder_channel_id">calendar_reminders</string>
     <string name="calendar_reminder_channel_name">Kalendererinnerungen</string>
     <string name="calendar_reminder_channel_description">Hinweis, wenn ein Termin, an dem du teilnimmst, bald beginnt.</string>
     <string name="calendar_reminder_default_title">Kalendertermin</string>
@@ -1995,8 +2005,10 @@ anz der Bedingungen ist erforderlich</string>
     <string name="git_status_closed">Geschlossen</string>
     <string name="git_status_draft">Entwurf</string>
     <string name="git_repo_tab_overview">Übersicht</string>
+    <string name="git_repo_tab_issues">Tickets</string>
     <string name="git_repo_tab_patches">Patches und PRs</string>
     <string name="git_repo_section_about">Über</string>
+    <string name="git_repo_section_links">Links</string>
     <string name="git_repo_section_maintainers">Maintainer</string>
     <string name="git_repo_section_topics">Themen</string>
     <string name="git_repo_personal_fork">Persönlicher Fork</string>
@@ -2761,8 +2773,12 @@ anz der Bedingungen ist erforderlich</string>
     <string name="community_rules_violation_stale_rules">Das aktuelle Community-Regeldokument wurde als veraltet abgelehnt.</string>
     <!-- Nowhere links (hostednowhere.com / nowhr.xyz). The site name "Nowhere" is a proper noun, do not translate. -->
     <string name="nowhere_link_card_generic">Nowhere-Seite</string>
+    <string name="nowhere_link_card_event">Nowhere Ereignis</string>
     <string name="nowhere_link_card_fundraiser">Nowhere Spendenaktion</string>
     <string name="nowhere_link_card_store">Nowhere Shop</string>
+    <string name="nowhere_link_card_petition">Nowhere Petition</string>
     <string name="nowhere_link_card_message">Nowhere Nachricht</string>
+    <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Kunst</string>
+    <string name="nowhere_link_card_forum">Nowhere Forum</string>
 </resources>
