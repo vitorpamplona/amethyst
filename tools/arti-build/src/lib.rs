@@ -170,8 +170,21 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_initialize(
     let result: Result<()> = runtime.block_on(async {
         log_info!("Creating Arti client...");
 
-        let config = TorClientConfigBuilder::from_directories(state_dir, cache_dir)
-            .build()?;
+        let mut builder = TorClientConfigBuilder::from_directories(state_dir, cache_dir);
+
+        // Arti's fs-mistrust walks every parent of the state dir and rejects any
+        // that has an "unsafe" owner. On Android the app's private filesDir is
+        // sandboxed by the OS, so the default strict check is correct. On JVM
+        // host runs (TorArtiNativeIntegrationTest) the data dir lives under
+        // /tmp and the check trips on container-style ownership of `/` (UID 999
+        // etc.). Disable it for non-Android targets — these are the test/dev
+        // surface, not a user-facing binary.
+        #[cfg(not(target_os = "android"))]
+        {
+            builder.storage().permissions().dangerously_trust_everyone();
+        }
+
+        let config = builder.build()?;
 
         let client = TorClient::create_bootstrapped(config).await?;
 
