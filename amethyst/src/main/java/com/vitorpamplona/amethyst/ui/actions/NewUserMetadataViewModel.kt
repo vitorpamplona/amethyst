@@ -28,6 +28,7 @@ import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.uploads.AvifMetadataNotVerifiableException
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MetadataStripper
@@ -213,7 +214,16 @@ class NewUserMetadataViewModel : ViewModel() {
 
         val strippingResult =
             if (account.settings.stripLocationOnUpload) {
-                MetadataStripper.strip(galleryUri.uri, galleryUri.mimeType, context.applicationContext)
+                try {
+                    MetadataStripper.strip(galleryUri.uri, galleryUri.mimeType, context.applicationContext)
+                } catch (e: AvifMetadataNotVerifiableException) {
+                    isUploadingImageForPicture = false
+                    onError(
+                        stringRes(context, R.string.metadata_strip_failed_title),
+                        stringRes(context, R.string.avif_metadata_strip_failed, e.message ?: e.javaClass.simpleName),
+                    )
+                    return null
+                }
             } else {
                 null
             }
