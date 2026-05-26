@@ -131,6 +131,12 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_initialize(
     log_info!("Initializing Arti with data directory: {}", data_dir_str);
 
     INIT_ONCE.call_once(|| {
+        // arti-v2.3.0's tor-rtcompat no longer installs a rustls CryptoProvider
+        // implicitly — without this, TorClient::create_bootstrapped panics on
+        // first TLS handshake. install_default() returns Err if a provider is
+        // already installed, which is fine; we just want at-least-one.
+        let _ = rustls::crypto::ring::default_provider().install_default();
+
         match tokio::runtime::Builder::new_multi_thread()
             .enable_all()
             .build()
