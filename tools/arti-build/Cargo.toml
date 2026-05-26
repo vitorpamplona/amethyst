@@ -1,6 +1,6 @@
 [package]
 name = "arti-android"
-version = "2.2.0"
+version = "2.3.0"
 edition = "2021"
 
 [lib]
@@ -9,14 +9,19 @@ crate-type = ["cdylib"]
 [workspace]
 
 [dependencies]
-arti-client = { version = "0.41", default-features = false, features = [
+arti-client = { version = "0.42", default-features = false, features = [
     "tokio",
     "rustls",
     "compression",
     "onion-service-client",
     "static-sqlite",
 ] }
-tor-rtcompat = { version = "0.41", default-features = false, features = ["tokio", "rustls"] }
+tor-rtcompat = { version = "0.42", default-features = false, features = ["tokio", "rustls"] }
+# Direct dep on rustls so we can install the `ring` crypto provider ourselves —
+# arti-v2.3.0's tor-rtcompat no longer installs one implicitly. `ring` matches
+# what arti-v2.2.0 effectively used and avoids the Android build pain of
+# aws-lc-rs (which became Arti's default in 2.3.0).
+rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
 jni = "0.21"
 tokio = { version = "1", features = ["rt-multi-thread", "net", "io-util", "time", "macros"] }
 anyhow = "1"

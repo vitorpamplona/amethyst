@@ -269,6 +269,21 @@ android {
 
     testOptions {
         unitTests.isReturnDefaultValues = true
+        // Lets TorArtiNativeIntegrationTest's System.loadLibrary("arti_android")
+        // find the desktop-host build of our Arti JNI shim. The Android .so
+        // variants live in src/main/jniLibs/{arm64-v8a,x86_64}/ and are loaded
+        // on-device — this Linux x86_64 .so is just for JVM unit-test runs.
+        // -Pamethyst.arti.integration=true opts the (slow, network-dependent)
+        // tests in; see TorArtiNativeIntegrationTest.kdoc.
+        unitTests.all { test ->
+            test.systemProperty(
+                "java.library.path",
+                "${projectDir}/src/test/native-libs/x86_64-linux",
+            )
+            project
+                .findProperty("amethyst.arti.integration")
+                ?.let { test.systemProperty("amethyst.arti.integration", it.toString()) }
+        }
     }
 }
 
