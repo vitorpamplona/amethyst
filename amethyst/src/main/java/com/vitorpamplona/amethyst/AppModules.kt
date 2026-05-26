@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
 import com.vitorpamplona.amethyst.ui.tor.TorManager
+import com.vitorpamplona.amethyst.ui.tor.TorService
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
@@ -190,7 +191,7 @@ class AppModules(
         UiSettingsState(uiPrefs.value, connManager.isMobileOrFalse, applicationIOScope)
     }
 
-    val torManager = TorManager(torPrefs, appContext, applicationIOScope)
+    val torManager = TorManager(torPrefs, TorService(appContext), applicationIOScope)
 
     // Network identity change (wifi↔cellular, regained from offline, captive portal
     // cleared) — the old network's guards/circuits are dead, and Arti's in-memory

@@ -20,10 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.tor
 
-import android.content.Context
 import com.vitorpamplona.amethyst.commons.tor.TorType
-import com.vitorpamplona.amethyst.model.preferences.TorSharedPreferences
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -48,14 +47,19 @@ import kotlinx.coroutines.launch
  * There should be only one instance of the Tor binding per app.
  *
  * Tor will connect as soon as status is listened to.
+ *
+ * [service] and [torPrefs] are constructor-injected so the manager can be unit-tested
+ * with in-memory fakes — see `TorManagerTest`. [ioDispatcher] is the dispatcher for
+ * background I/O (DataStore reads/writes, [TorBackend] calls); tests pass a
+ * `TestDispatcher` so virtual time controls scheduling.
  */
 class TorManager(
-    private val torPrefs: TorSharedPreferences,
-    app: Context,
+    private val torPrefs: TorPreferencesPort,
+    val service: TorBackend,
     private val scope: CoroutineScope,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val nowMs: () -> Long = System::currentTimeMillis,
 ) {
-    val service = TorService(app)
-
     /**
      * In-memory only — when true, the manager emits [TorServiceStatus.Off] regardless of
      * the persisted [TorType]. Cleared on process death, on network change, and on any
@@ -93,7 +97,7 @@ class TorManager(
     @Volatile private var hasEverBootstrapped: Boolean = false
 
     init {
-        scope.launch(Dispatchers.IO) {
+        scope.launch(ioDispatcher) {
             lastBypassApprovalMs = torPrefs.loadLastBypassApprovalMs()
         }
 
@@ -103,7 +107,7 @@ class TorManager(
         // auto-flips sessionBypass without showing the dialog, force-stop preserves
         // the DataStore-backed approval, and toggling Tor off/on only clears the
         // in-memory half — so wiping app data becomes the only recovery path.
-        torPrefs.value.torType
+        torPrefs.torType
             .drop(1)
             .onEach {
                 sessionBypass.value = false
@@ -115,8 +119,8 @@ class TorManager(
     @OptIn(ExperimentalCoroutinesApi::class)
     val status =
         combine(
-            torPrefs.value.torType,
-            torPrefs.value.externalSocksPort,
+            torPrefs.torType,
+            torPrefs.externalSocksPort,
             sessionBypass,
             resetEpoch,
         ) { torType, externalSocksPort, bypass, _ ->
@@ -150,7 +154,7 @@ class TorManager(
         }.catch { e ->
             Log.e("TorManager") { "Tor service error: ${e.message}" }
             emit(TorServiceStatus.Off)
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(ioDispatcher)
             .stateIn(
                 scope,
                 SharingStarted.WhileSubscribed(30000),
@@ -231,7 +235,7 @@ class TorManager(
 
         selfHealSignal
             .onEach {
-                val now = System.currentTimeMillis()
+                val now = nowMs()
                 if (now - lastSelfHealAtMs < SELF_HEAL_COOLDOWN_MS) return@onEach
                 lastSelfHealAtMs = now
                 if (hasEverBootstrapped) {
@@ -247,15 +251,15 @@ class TorManager(
 
     fun rememberedApprovalActive(): Boolean {
         val ts = lastBypassApprovalMs
-        return ts > 0 && (System.currentTimeMillis() - ts) < APPROVAL_REMEMBER_MS
+        return ts > 0 && (nowMs() - ts) < APPROVAL_REMEMBER_MS
     }
 
     /** Called when the user picks "Use regular connection". Starts a fresh 1-hour window. */
     fun approveBypassForOneHour() {
-        val now = System.currentTimeMillis()
+        val now = nowMs()
         lastBypassApprovalMs = now
         sessionBypass.value = true
-        scope.launch(Dispatchers.IO) {
+        scope.launch(ioDispatcher) {
             torPrefs.saveLastBypassApprovalMs(now)
         }
     }
@@ -275,8 +279,8 @@ class TorManager(
         // Prevent the stuck-Connecting watchdog from firing a second reset while the
         // network-change bootstrap is still legitimately in progress (initial bootstrap
         // on a new network can take ~10–30s, sometimes longer).
-        lastSelfHealAtMs = System.currentTimeMillis()
-        scope.launch(Dispatchers.IO) {
+        lastSelfHealAtMs = nowMs()
+        scope.launch(ioDispatcher) {
             torPrefs.saveLastBypassApprovalMs(0L)
             service.reset()
             resetEpoch.update { it + 1 }

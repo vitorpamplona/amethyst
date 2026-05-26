@@ -29,12 +29,14 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.commons.tor.TorType
+import com.vitorpamplona.amethyst.ui.tor.TorPreferencesPort
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -48,9 +50,12 @@ class TorSharedPreferences(
     prefs: TorSettings,
     val context: Context,
     val scope: CoroutineScope,
-) {
+) : TorPreferencesPort {
     // Tor Preferences. Makes sure to wait for it to avoid connecting with random IPs
     val value = TorSettingsFlow.build(prefs)
+
+    override val torType: StateFlow<TorType> get() = value.torType
+    override val externalSocksPort: StateFlow<Int> get() = value.externalSocksPort
 
     @OptIn(FlowPreview::class)
     val saving =
@@ -66,9 +71,9 @@ class TorSharedPreferences(
                 value.toSettings(),
             )
 
-    suspend fun loadLastBypassApprovalMs(): Long = TorSharedPreferences.loadLastBypassApprovalMs(context)
+    override suspend fun loadLastBypassApprovalMs(): Long = TorSharedPreferences.loadLastBypassApprovalMs(context)
 
-    suspend fun saveLastBypassApprovalMs(value: Long) = TorSharedPreferences.saveLastBypassApprovalMs(value, context)
+    override suspend fun saveLastBypassApprovalMs(value: Long) = TorSharedPreferences.saveLastBypassApprovalMs(value, context)
 
     companion object {
         // loads faster when individualized

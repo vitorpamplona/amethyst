@@ -46,13 +46,13 @@ private const val MAX_PORT_RETRIES = 10
  */
 class TorService(
     val context: Context,
-) {
+) : TorBackend {
     private var socksPort = DEFAULT_SOCKS_PORT
     private val initialized = AtomicBoolean(false)
     private val proxyRunning = AtomicBoolean(false)
 
     private val _status = MutableStateFlow<TorServiceStatus>(TorServiceStatus.Off)
-    val status: StateFlow<TorServiceStatus> = _status.asStateFlow()
+    override val status: StateFlow<TorServiceStatus> = _status.asStateFlow()
 
     private fun artiDataDir() = File(context.filesDir, "arti")
 
@@ -86,7 +86,7 @@ class TorService(
      * Initialize the TorClient (once) and start the SOCKS proxy.
      * Must be called from a coroutine on [Dispatchers.IO].
      */
-    suspend fun start() {
+    override suspend fun start() {
         if (proxyRunning.get()) {
             if (_status.value is TorServiceStatus.Active) return
             _status.value = TorServiceStatus.Connecting
@@ -167,7 +167,7 @@ class TorService(
      * Stop the SOCKS proxy and release the port.
      * The TorClient stays alive — no file lock issues on restart.
      */
-    suspend fun stop() {
+    override suspend fun stop() {
         if (!proxyRunning.compareAndSet(true, false)) return
 
         withContext(Dispatchers.IO) {
@@ -185,7 +185,7 @@ class TorService(
      * recovery — when the in-memory Arti state is suspected of being broken.
      * The `arti/state/` directory on disk is preserved.
      */
-    suspend fun reset() {
+    override suspend fun reset() {
         withContext(Dispatchers.IO) {
             if (proxyRunning.compareAndSet(true, false)) {
                 ArtiNative.stopSocksProxy()
@@ -203,7 +203,7 @@ class TorService(
      * on-disk state (e.g. unreachable guards persisted from a previous
      * network) is the suspected cause of a bootstrap that never completes.
      */
-    suspend fun resetWithCleanState() {
+    override suspend fun resetWithCleanState() {
         reset()
         withContext(Dispatchers.IO) {
             clearAllArtiData()
