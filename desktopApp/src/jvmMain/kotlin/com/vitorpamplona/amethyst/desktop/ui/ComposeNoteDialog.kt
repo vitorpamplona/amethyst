@@ -21,24 +21,32 @@
 package com.vitorpamplona.amethyst.desktop.ui
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -46,14 +54,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.upload.UploadResult
+import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.desktop.DesktopPreferences
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
@@ -98,6 +111,7 @@ fun ComposeNoteDialog(
     onDismiss: () -> Unit,
     relayManager: DesktopRelayConnectionManager,
     account: AccountState.LoggedIn,
+    localCache: com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache? = null,
     replyTo: Event? = null,
     quoteOf: Event? = null,
 ) {
@@ -111,8 +125,43 @@ fun ComposeNoteDialog(
                 ""
             }
         }
-    var content by remember { mutableStateOf(initialContent) }
+    var contentField by remember {
+        mutableStateOf(
+            TextFieldValue(
+                text = initialContent,
+                selection = TextRange(initialContent.length),
+            ),
+        )
+    }
+    val content = contentField.text
     var isPosting by remember { mutableStateOf(false) }
+
+    // Mention autocomplete state
+    var mentionSuggestions by remember { mutableStateOf<List<User>>(emptyList()) }
+    var mentionQuery by remember { mutableStateOf<String?>(null) }
+    var mentionWordStart by remember { mutableStateOf(0) }
+
+    LaunchedEffect(contentField) {
+        val cursor = contentField.selection.end
+        val text = contentField.text
+        if (cursor > 0 && localCache != null) {
+            // Find the word at cursor
+            val wordStart = text.lastIndexOf(' ', cursor - 1) + 1
+            val wordAtCursor = text.substring(wordStart, cursor)
+            if (wordAtCursor.startsWith("@") && wordAtCursor.length > 1) {
+                val query = wordAtCursor.removePrefix("@")
+                mentionQuery = query
+                mentionWordStart = wordStart
+                mentionSuggestions = localCache.findUsersStartingWith(query, 5)
+            } else {
+                mentionQuery = null
+                mentionSuggestions = emptyList()
+            }
+        } else {
+            mentionQuery = null
+            mentionSuggestions = emptyList()
+        }
+    }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val attachedFiles = remember { mutableStateListOf<File>() }
@@ -208,22 +257,55 @@ fun ComposeNoteDialog(
 
                 Spacer(Modifier.height(16.dp))
 
-                OutlinedTextField(
-                    value = if (postAsPicture) "" else content,
-                    onValueChange = {
-                        content = it
-                        errorMessage = null
-                    },
-                    modifier = Modifier.fillMaxWidth().height(if (postAsPicture) 60.dp else 200.dp),
-                    label = {
-                        Text(
-                            if (postAsPicture) "Text disabled for picture posts" else "What's on your mind?",
-                        )
-                    },
-                    placeholder = { Text(if (postAsPicture) "" else "Write your note...") },
-                    enabled = !isPosting && !postAsPicture,
-                    maxLines = if (postAsPicture) 1 else 10,
-                )
+                Box {
+                    OutlinedTextField(
+                        value = if (postAsPicture) TextFieldValue("") else contentField,
+                        onValueChange = {
+                            contentField = it
+                            errorMessage = null
+                        },
+                        modifier = Modifier.fillMaxWidth().height(if (postAsPicture) 60.dp else 200.dp),
+                        label = {
+                            Text(
+                                if (postAsPicture) "Text disabled for picture posts" else "What's on your mind?",
+                            )
+                        },
+                        placeholder = { Text(if (postAsPicture) "" else "Write your note... (type @ to mention)") },
+                        enabled = !isPosting && !postAsPicture,
+                        maxLines = if (postAsPicture) 1 else 10,
+                    )
+
+                    // Mention autocomplete dropdown
+                    if (mentionSuggestions.isNotEmpty()) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                        ) {
+                            LazyColumn(modifier = Modifier.heightIn(max = 200.dp)) {
+                                items(mentionSuggestions, key = { it.pubkeyHex }) { user ->
+                                    MentionSuggestionRow(
+                                        user = user,
+                                        onClick = {
+                                            val npub = user.pubkeyNpub()
+                                            val replacement = "nostr:$npub "
+                                            val cursorEnd = contentField.selection.end
+                                            val newText =
+                                                contentField.text.replaceRange(
+                                                    mentionWordStart,
+                                                    cursorEnd,
+                                                    replacement,
+                                                )
+                                            val newCursor = mentionWordStart + replacement.length
+                                            contentField = TextFieldValue(newText, TextRange(newCursor))
+                                            mentionSuggestions = emptyList()
+                                            mentionQuery = null
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
 
                 Spacer(Modifier.height(8.dp))
 
@@ -588,5 +670,41 @@ private suspend fun publishNote(
 
         val signedEvent = account.signer.sign(template)
         relayManager.publish(signedEvent, relays)
+    }
+}
+
+@Composable
+private fun MentionSuggestionRow(
+    user: User,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        UserAvatar(
+            userHex = user.pubkeyHex,
+            pictureUrl = user.profilePicture(),
+            size = 28.dp,
+            contentDescription = null,
+        )
+        Column {
+            Text(
+                text = user.toBestDisplayName(),
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+            )
+            Text(
+                text = user.pubkeyNpub().take(24) + "...",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+        }
     }
 }

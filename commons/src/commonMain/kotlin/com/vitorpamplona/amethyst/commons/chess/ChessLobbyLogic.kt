@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.chess
 
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip64Chess.ChessGameEnd
 import com.vitorpamplona.quartz.nip64Chess.ChessMoveEvent
 import com.vitorpamplona.quartz.nip64Chess.Color
@@ -30,6 +32,7 @@ import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterGameEvents
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -129,18 +132,21 @@ class ChessLobbyLogic(
 ) {
     val state = ChessLobbyState(userPubkey, scope)
 
+    private val dismissedGameIdsLock = KmpLock()
     private val dismissedGameIds: MutableSet<String> =
-        java.util.Collections.synchronizedSet(
-            dismissedStorage?.load(userPubkey)?.toMutableSet() ?: mutableSetOf(),
-        )
+        (dismissedStorage?.load(userPubkey)?.toMutableSet() ?: mutableSetOf())
 
     // Track when games were last loaded to prevent duplicate fetches
-    // (e.g., discoverUserGames loads a game, then polling immediately re-fetches it)
-    private val recentlyLoadedGames = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    // (e.g., discoverUserGames loads a game, then polling immediately re-fetches it).
+    // String keys are Comparable, so LargeCache works.
+    private val recentlyLoadedGames = LargeCache<String, Long>()
 
-    // Dedup incoming events (same event delivered by multiple relays)
-    // Bounded LRU: evict oldest when exceeding capacity
-    private val seenEventIds = java.util.Collections.synchronizedSet(LinkedHashSet<String>())
+    // Dedup incoming events (same event delivered by multiple relays).
+    // Bounded LRU: evict oldest when exceeding capacity. mutableSetOf returns
+    // LinkedHashSet on every KMP target, preserving insertion-order iteration
+    // required for LRU eviction below.
+    private val seenEventIdsLock = KmpLock()
+    private val seenEventIds = mutableSetOf<String>()
     private val seenEventIdsMax = 500
 
     private val pollingDelegate =
@@ -207,15 +213,21 @@ class ChessLobbyLogic(
         if (!event.isStartEvent() && !event.isMoveEvent()) return
 
         // Dedup: skip if we already processed this event ID (multiple relays deliver same event)
-        synchronized(seenEventIds) {
-            if (!seenEventIds.add(event.id)) return
-            if (seenEventIds.size > seenEventIdsMax) {
-                seenEventIds.iterator().let {
-                    it.next()
-                    it.remove()
+        val isNew =
+            seenEventIdsLock.withLock {
+                if (!seenEventIds.add(event.id)) {
+                    false
+                } else {
+                    if (seenEventIds.size > seenEventIdsMax) {
+                        seenEventIds.iterator().let {
+                            it.next()
+                            it.remove()
+                        }
+                    }
+                    true
                 }
             }
-        }
+        if (!isNew) return
 
         Log.d("chessdebug") { "[Lobby] handleIncomingEvent: id=${event.id.take(8)}, pubkey=${event.pubKey.take(8)}, isStart=${event.isStartEvent()}, isMove=${event.isMoveEvent()}, createdAt=${event.createdAt}" }
         when {
@@ -438,13 +450,13 @@ class ChessLobbyLogic(
      */
     fun handleGameAccepted(startEventId: String) {
         // Skip if already loaded or in-flight (multiple move events from same game trigger this)
-        val lastLoaded = recentlyLoadedGames[startEventId]
+        val lastLoaded = recentlyLoadedGames.get(startEventId)
         if (lastLoaded != null && (TimeUtils.now() - lastLoaded) < 10) {
             Log.d("chessdebug") { "[Lobby] handleGameAccepted: SKIPPED game ${startEventId.take(8)} - loaded ${TimeUtils.now() - lastLoaded}s ago" }
             return
         }
         // Mark immediately to prevent concurrent launches
-        recentlyLoadedGames[startEventId] = TimeUtils.now()
+        recentlyLoadedGames.put(startEventId, TimeUtils.now())
 
         Log.d("chessdebug") { "[Lobby] handleGameAccepted: game ${startEventId.take(8)} - fetching from relays" }
         scope.launch(Dispatchers.Default) {
@@ -456,7 +468,7 @@ class ChessLobbyLogic(
 
             when (result) {
                 is LoadGameResult.Success -> {
-                    recentlyLoadedGames[startEventId] = TimeUtils.now()
+                    recentlyLoadedGames.put(startEventId, TimeUtils.now())
                     Log.d("chessdebug") { "[Lobby] handleGameAccepted SUCCESS: game ${startEventId.take(8)}, role=${result.reconstructedState.viewerRole}" }
                     state.addActiveGame(startEventId, result.liveState)
                     pollingDelegate.addGameId(startEventId)
@@ -608,7 +620,7 @@ class ChessLobbyLogic(
 
             when (result) {
                 is LoadGameResult.Success -> {
-                    recentlyLoadedGames[startEventId] = TimeUtils.now()
+                    recentlyLoadedGames.put(startEventId, TimeUtils.now())
                     state.addSpectatingGame(startEventId, result.liveState)
                     pollingDelegate.addGameId(startEventId)
                     state.setBroadcastStatus(ChessBroadcastStatus.Idle)
@@ -641,7 +653,7 @@ class ChessLobbyLogic(
 
             when (result) {
                 is LoadGameResult.Success -> {
-                    recentlyLoadedGames[startEventId] = TimeUtils.now()
+                    recentlyLoadedGames.put(startEventId, TimeUtils.now())
                     if (result.liveState.isSpectator) {
                         state.addSpectatingGame(startEventId, result.liveState)
                     } else {
@@ -678,13 +690,13 @@ class ChessLobbyLogic(
 
     private suspend fun refreshGame(startEventId: String) {
         // Skip if this game was just loaded (prevents duplicate fetch after discoverUserGames)
-        val lastLoaded = recentlyLoadedGames[startEventId]
+        val lastLoaded = recentlyLoadedGames.get(startEventId)
         if (lastLoaded != null && (TimeUtils.now() - lastLoaded) < 10) {
             Log.d("chessdebug") { "[Lobby] refreshGame: SKIPPED game ${startEventId.take(8)} - loaded ${TimeUtils.now() - lastLoaded}s ago" }
             return
         }
         // Mark immediately to prevent concurrent fetches for the same game
-        recentlyLoadedGames[startEventId] = TimeUtils.now()
+        recentlyLoadedGames.put(startEventId, TimeUtils.now())
 
         Log.d("chessdebug") { "[Lobby] refreshGame: fetching game ${startEventId.take(8)} from relays" }
         val events = fetcher.fetchGameEvents(startEventId)
@@ -873,16 +885,17 @@ class ChessLobbyLogic(
                 .map { it.gameId }
                 .toSet()
 
+        val dismissedSnapshot = dismissedGameIdsLock.withLock { dismissedGameIds.toSet() }
         for (startEventId in newGameIds) {
             if (startEventId in completedGameIds) continue
-            if (startEventId in dismissedGameIds) continue
+            if (startEventId in dismissedSnapshot) continue
 
             val events = fetcher.fetchGameEvents(startEventId)
             val result = ChessGameLoader.loadGame(events, userPubkey)
 
             when (result) {
                 is LoadGameResult.Success -> {
-                    recentlyLoadedGames[startEventId] = TimeUtils.now()
+                    recentlyLoadedGames.put(startEventId, TimeUtils.now())
                     // If the discovered game is already finished, send it straight to completed
                     val gameStatus = result.liveState.gameStatus.value
                     if (gameStatus is GameStatus.Finished) {
@@ -951,15 +964,23 @@ class ChessLobbyLogic(
 
     fun dismissCompletedGame(gameId: String) {
         state.removeCompletedGame(gameId)
-        dismissedGameIds.add(gameId)
-        dismissedStorage?.save(userPubkey, HashSet(dismissedGameIds))
+        val snapshot =
+            dismissedGameIdsLock.withLock {
+                dismissedGameIds.add(gameId)
+                dismissedGameIds.toSet()
+            }
+        dismissedStorage?.save(userPubkey, snapshot)
     }
 
     fun dismissAllCompletedGames() {
         val allIds = state.completedGames.value.map { it.gameId }
         state.clearCompletedGames()
-        dismissedGameIds.addAll(allIds)
-        dismissedStorage?.save(userPubkey, HashSet(dismissedGameIds))
+        val snapshot =
+            dismissedGameIdsLock.withLock {
+                dismissedGameIds.addAll(allIds)
+                dismissedGameIds.toSet()
+            }
+        dismissedStorage?.save(userPubkey, snapshot)
     }
 
     /**

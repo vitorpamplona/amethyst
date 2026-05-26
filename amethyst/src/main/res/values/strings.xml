@@ -1318,6 +1318,8 @@
     <string name="posting_policy">Posting policy</string>
     <string name="privacy_policy">Privacy Policy</string>
     <string name="terms_and_conditions">Terms &amp; Conditions</string>
+    <string name="child_safety_standards">Child Safety Standards</string>
+    <string name="about_legal">About &amp; Legal</string>
     <string name="not_available_acronym">N/A</string>
     <string name="relay_error_messages">Errors and Notices from this Relay</string>
     <string name="relay_monitor_reports">Relay Monitor Reports</string>

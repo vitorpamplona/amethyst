@@ -126,6 +126,7 @@ fun FeedNoteCard(
     onNavigateToThread: (String) -> Unit = {},
     onImageClick: ((List<String>, Int) -> Unit)? = null,
     onMediaClick: ((List<String>, Int, Float) -> Unit)? = null,
+    onHashtagClick: ((String) -> Unit)? = null,
 ) {
     val event = note.event ?: return
     val isRepost = event is RepostEvent || event is GenericRepostEvent
@@ -195,6 +196,7 @@ fun FeedNoteCard(
                 onClick = { onNavigateToThread(originalEvent.id) },
                 onAuthorClick = onNavigateToProfile,
                 onMentionClick = onNavigateToProfile,
+                onHashtagClick = onHashtagClick,
                 onImageClick = onImageClick,
                 onMediaClick = onMediaClick,
             )
@@ -247,6 +249,7 @@ fun FeedNoteCard(
                 onClick = { onNavigateToThread(event.id) },
                 onAuthorClick = onNavigateToProfile,
                 onMentionClick = onNavigateToProfile,
+                onHashtagClick = onHashtagClick,
                 onImageClick = onImageClick,
                 onMediaClick = onMediaClick,
             )
@@ -686,6 +689,7 @@ fun FeedScreen(
                 onDismiss = { replyToEvent = null },
                 relayManager = relayManager,
                 account = account,
+                localCache = localCache,
                 replyTo = replyToEvent,
             )
         }

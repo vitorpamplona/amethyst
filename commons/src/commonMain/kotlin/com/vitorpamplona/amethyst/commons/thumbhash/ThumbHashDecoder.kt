@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.thumbhash
 
 import com.vitorpamplona.amethyst.commons.blurhash.PlatformImage
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.math.PI
@@ -50,14 +52,14 @@ object ThumbHashDecoder {
     // (size, components) pairs across the entire app lifetime, each table is
     // a few KB, so the memory ceiling is tiny.
     private val cosineCache = HashMap<Long, DoubleArray>()
-    private val cosineCacheLock = Any()
+    private val cosineCacheLock = KmpLock()
 
     /**
      * Clear the cosine table cache. Tables are tiny but callers under memory
      * pressure can release them; they will be recomputed on demand.
      */
     fun clearCache() {
-        synchronized(cosineCacheLock) { cosineCache.clear() }
+        cosineCacheLock.withLock { cosineCache.clear() }
     }
 
     private fun cosTable(
@@ -65,9 +67,8 @@ object ThumbHashDecoder {
         components: Int,
     ): DoubleArray {
         val key = (size.toLong() shl 32) or components.toLong()
-        synchronized(cosineCacheLock) {
-            cosineCache[key]?.let { return it }
-        }
+        val cached = cosineCacheLock.withLock { cosineCache[key] }
+        if (cached != null) return cached
         val table = DoubleArray(size * components)
         val piOverSize = PI / size
         for (i in 0 until size) {
@@ -77,10 +78,7 @@ object ThumbHashDecoder {
                 table[rowOffset + c] = cos(phase * c)
             }
         }
-        synchronized(cosineCacheLock) {
-            cosineCache.getOrPut(key) { table }
-        }
-        return table
+        return cosineCacheLock.withLock { cosineCache.getOrPut(key) { table } }
     }
 
     /**

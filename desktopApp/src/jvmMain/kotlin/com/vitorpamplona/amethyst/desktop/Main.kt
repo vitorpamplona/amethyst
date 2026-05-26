@@ -1043,6 +1043,7 @@ fun App(
                                     onDismiss = onDismissComposeDialog,
                                     relayManager = relayManager,
                                     account = account,
+                                    localCache = localCache,
                                     replyTo = replyToNote,
                                 )
                             }

@@ -24,6 +24,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,6 +44,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -63,7 +66,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -93,6 +99,10 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip39ExtIdentities.GitHubIdentity
+import com.vitorpamplona.quartz.nip39ExtIdentities.MastodonIdentity
+import com.vitorpamplona.quartz.nip39ExtIdentities.TwitterIdentity
+import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import kotlinx.coroutines.Dispatchers
@@ -138,6 +148,30 @@ fun UserProfileScreen(
         )
     }
     var picture by remember { mutableStateOf(cachedMetadata?.profilePicture()) }
+    var nip05 by remember {
+        mutableStateOf(
+            cachedMetadata
+                ?.flow
+                ?.value
+                ?.info
+                ?.nip05,
+        )
+    }
+    var website by remember {
+        mutableStateOf(
+            cachedMetadata
+                ?.flow
+                ?.value
+                ?.info
+                ?.website,
+        )
+    }
+    var lnAddress by remember { mutableStateOf(cachedMetadata?.lnAddress()) }
+    var identities by remember {
+        mutableStateOf(
+            cachedMetadata?.flow?.value?.identities ?: emptyList(),
+        )
+    }
     var followersCount by remember { mutableStateOf(localCache.getCachedFollowerCount(pubKeyHex)) }
     var followingCount by remember { mutableStateOf(localCache.getCachedFollowingCount(pubKeyHex)) }
 
@@ -258,6 +292,10 @@ fun UserProfileScreen(
                                 displayName = metadata.displayName ?: metadata.name
                                 about = metadata.about
                                 picture = metadata.picture
+                                nip05 = metadata.nip05
+                                website = metadata.website
+                                lnAddress = metadata.lnAddress()
+                                identities = event.identityClaims()
                             }
 
                             // Store MetadataEvent for editing (only for own profile)
@@ -675,6 +713,68 @@ fun UserProfileScreen(
                                         about!!,
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
+
+                                // Profile metadata fields
+                                nip05?.takeIf { it.isNotBlank() }?.let { addr ->
+                                    Spacer(Modifier.height(8.dp))
+                                    ProfileMetadataField(
+                                        text = addr,
+                                        icon = MaterialSymbols.CheckCircle,
+                                        onClick = {
+                                            runCatching {
+                                                java.awt.Desktop.getDesktop().browse(
+                                                    java.net.URI("https://${addr.substringAfter("@")}"),
+                                                )
+                                            }
+                                        },
+                                    )
+                                }
+
+                                website?.takeIf { it.isNotBlank() }?.let { site ->
+                                    Spacer(Modifier.height(4.dp))
+                                    ProfileMetadataField(
+                                        text = site.removePrefix("https://").removePrefix("http://").removeSuffix("/"),
+                                        copyValue = site,
+                                        icon = MaterialSymbols.Language,
+                                        onClick = {
+                                            runCatching {
+                                                val url = if (site.contains("://")) site else "https://$site"
+                                                java.awt.Desktop
+                                                    .getDesktop()
+                                                    .browse(java.net.URI(url))
+                                            }
+                                        },
+                                    )
+                                }
+
+                                lnAddress?.takeIf { it.isNotBlank() }?.let { addr ->
+                                    Spacer(Modifier.height(4.dp))
+                                    ProfileMetadataField(
+                                        text = addr,
+                                        icon = MaterialSymbols.Bolt,
+                                    )
+                                }
+
+                                identities.forEach { identity ->
+                                    Spacer(Modifier.height(4.dp))
+                                    ProfileMetadataField(
+                                        text =
+                                            when (identity) {
+                                                is TwitterIdentity -> "@${identity.identity}"
+                                                is GitHubIdentity -> identity.identity
+                                                is MastodonIdentity -> identity.identity
+                                                else -> identity.identity
+                                            },
+                                        icon = MaterialSymbols.Language,
+                                        onClick = {
+                                            runCatching {
+                                                java.awt.Desktop.getDesktop().browse(
+                                                    java.net.URI(identity.toProofUrl()),
+                                                )
+                                            }
+                                        },
                                     )
                                 }
 
@@ -1170,6 +1270,67 @@ private fun PublishedHighlightCard(
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ProfileMetadataField(
+    text: String,
+    copyValue: String = text,
+    icon: com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol? = null,
+    onClick: () -> Unit = {},
+) {
+    var showContextMenu by remember { mutableStateOf(false) }
+
+    Box(
+        modifier =
+            Modifier
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            if (
+                                event.buttons.isSecondaryPressed &&
+                                event.changes.any { it.pressed && !it.previousPressed }
+                            ) {
+                                showContextMenu = true
+                            }
+                        }
+                    }
+                }.clickable { onClick() },
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(vertical = 2.dp),
+        ) {
+            if (icon != null) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.width(4.dp))
+            }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+
+        DropdownMenu(expanded = showContextMenu, onDismissRequest = { showContextMenu = false }) {
+            DropdownMenuItem(
+                text = { Text("Copy") },
+                onClick = {
+                    val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+                    clipboard.setContents(StringSelection(copyValue), null)
+                    showContextMenu = false
+                },
+            )
         }
     }
 }

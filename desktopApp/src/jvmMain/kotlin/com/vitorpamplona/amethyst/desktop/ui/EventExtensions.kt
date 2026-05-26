@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui
 
+import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.desktop.ui.note.NoteDisplayData
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -49,5 +50,6 @@ fun Event.toNoteDisplayData(cache: ICacheProvider? = null): NoteDisplayData {
         profilePictureUrl = pictureUrl,
         content = content,
         createdAt = createdAt,
+        tags = ImmutableListOfLists(tags),
     )
 }

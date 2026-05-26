@@ -562,6 +562,11 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="profile_badges_description">Wybierz, które z otrzymanych odznak pojawią się na Twoim profilu.</string>
     <string name="profile_badges_empty">Nie otrzymałeś jeszcze żadnych odznak.</string>
     <string name="pictures">Zdjęcia</string>
+    <string name="software_apps">Aplikacje</string>
+    <string name="route_software_apps">Aplikacje</string>
+    <string name="nip82_repository_label">Źródło: %1$s</string>
+    <string name="nip82_version_label">v%1$s</string>
+    <string name="nip82_download">Pobierz</string>
     <string name="calendars">Kalendarze</string>
     <string name="shorts">Filmiki</string>
     <string name="public_chats">Czaty publiczne</string>
@@ -1201,6 +1206,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="posting_policy">Polityka publikowania</string>
     <string name="privacy_policy">Polityka Prywatności</string>
     <string name="terms_and_conditions">Zasady i warunki użytkowania</string>
+    <string name="child_safety_standards">Normy bezpieczeństwa dzieci</string>
+    <string name="about_legal">O Nas &amp; Informacje Prawne</string>
     <string name="not_available_acronym">Nie dotyczy</string>
     <string name="relay_error_messages">Błędy i powiadomienia z tego transmitera</string>
     <string name="relay_monitor_reports">Raporty z monitoringu transmitera</string>
