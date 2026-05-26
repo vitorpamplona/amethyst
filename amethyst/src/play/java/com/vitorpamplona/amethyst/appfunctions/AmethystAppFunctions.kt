@@ -175,35 +175,146 @@ class AmethystAppFunctions {
     ): SearchNotesResult {
         val cappedLimit = limit.coerceIn(1, 200)
         val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return SearchNotesResult.empty()
-        val client = Amethyst.instance.client
 
+        val events = fetchFollowFeed(account = account, sinceSecs = null, limit = cappedLimit)
+        return SearchNotesResult(matches = events.map { it.toNoteHit() })
+    }
+
+    /**
+     * Build a structured digest of the user's Nostr feed for an AI
+     * summary. Use when the user asks "summarize my Nostr feed",
+     * "give me a digest of what my follows posted today", "recap
+     * Nostr for me", "what have people been talking about on Nostr",
+     * or any "summary / digest / recap of my Nostr timeline" intent.
+     *
+     * Returns the raw notes plus pre-extracted signals the LLM needs
+     * to write a useful summary without re-deriving them: total note
+     * count, unique author count, top hashtags in the window, and the
+     * most-mentioned users (with display names resolved from the local
+     * kind:0 cache). The LLM composes the natural-language summary
+     * from these.
+     *
+     * @param hoursBack window size in hours. Capped to 168 (7 days),
+     *   default 12.
+     * @param maxNotes max notes returned in the body. Capped to 200.
+     *   Default 60 — big enough for a meaningful summary, small enough
+     *   to fit comfortably in the LLM's prompt.
+     */
+    @AppFunction(isDescribedByKDoc = true)
+    suspend fun getFeedDigest(
+        appFunctionContext: AppFunctionContext,
+        hoursBack: Int = 12,
+        maxNotes: Int = 60,
+    ): FeedDigestResult {
+        val cappedHours = hoursBack.coerceIn(1, 24 * 7)
+        val cappedMaxNotes = maxNotes.coerceIn(1, 200)
+        val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return FeedDigestResult.empty()
+
+        val sinceSecs = TimeUtils.now() - cappedHours.toLong() * 3600L
+        // Over-fetch a bit so the stats are computed over a larger
+        // sample than the trimmed `notes` list — the LLM gets richer
+        // signal without seeing every note. Cap at 500 events to keep
+        // the on-device work bounded.
+        val events =
+            fetchFollowFeed(
+                account = account,
+                sinceSecs = sinceSecs,
+                limit = (cappedMaxNotes * 3).coerceAtMost(500),
+            )
+
+        // Hashtag frequencies — case-folded so `#Bitcoin` and
+        // `#bitcoin` collapse to one bucket.
+        val hashtagCounts = HashMap<String, Int>()
+        // Mention frequencies, keyed by mentioned pubkey hex.
+        val mentionCounts = HashMap<HexKey, Int>()
+        val uniqueAuthors = HashSet<HexKey>()
+
+        for (ev in events) {
+            uniqueAuthors.add(ev.pubKey)
+            for (tag in ev.tags) {
+                if (tag.size < 2) continue
+                when (tag[0]) {
+                    "t" -> {
+                        val cleaned = tag[1].trim().removePrefix("#").lowercase()
+                        if (cleaned.isNotEmpty()) {
+                            hashtagCounts.merge(cleaned, 1, Int::plus)
+                        }
+                    }
+                    "p" -> {
+                        // Skip self-mentions (the author tags themself
+                        // in some clients) — not useful for the digest.
+                        if (tag[1].length == 64 && tag[1] != ev.pubKey) {
+                            mentionCounts.merge(tag[1], 1, Int::plus)
+                        }
+                    }
+                }
+            }
+        }
+
+        val topHashtags =
+            hashtagCounts.entries
+                .sortedByDescending { it.value }
+                .take(TOP_HASHTAGS_LIMIT)
+                .map { HashtagFrequency(tag = it.key, noteCount = it.value) }
+
+        val topMentions =
+            mentionCounts.entries
+                .sortedByDescending { it.value }
+                .take(TOP_MENTIONS_LIMIT)
+                .map { (pub, count) ->
+                    MentionFrequency(
+                        npub = NPub.create(pub),
+                        pubkeyHex = pub,
+                        displayName = displayNameOf(pub),
+                        mentionCount = count,
+                    )
+                }
+
+        return FeedDigestResult(
+            windowHours = cappedHours,
+            totalNoteCount = events.size,
+            uniqueAuthorCount = uniqueAuthors.size,
+            topHashtags = topHashtags,
+            topMentions = topMentions,
+            // Truncate to the caller-requested limit for the body —
+            // the LLM has the stats either way and doesn't need every
+            // note quoted.
+            notes = events.take(cappedMaxNotes).map { it.toNoteHit() },
+        )
+    }
+
+    /**
+     * Shared core of [getRecentFromFollows] and [getFeedDigest]: drain
+     * recent kind:1 notes from the active account's follow set,
+     * optionally filtered by `since`. Returns empty when there's no
+     * account, no follows, or no relays configured.
+     */
+    private suspend fun fetchFollowFeed(
+        account: com.vitorpamplona.amethyst.model.Account,
+        sinceSecs: Long?,
+        limit: Int,
+    ): List<TextNoteEvent> {
         val authors = account.kind3FollowList.flow.value.authors
-        if (authors.isEmpty()) return SearchNotesResult.empty()
+        if (authors.isEmpty()) return emptyList()
 
         val relays =
             account.homeRelays.flow.value
                 .ifEmpty { DefaultNIP65RelaySet }
-        if (relays.isEmpty()) return SearchNotesResult.empty()
+        if (relays.isEmpty()) return emptyList()
 
         val filter =
             Filter(
                 kinds = listOf(TextNoteEvent.KIND),
                 authors = authors.toList(),
-                limit = cappedLimit,
+                since = sinceSecs,
+                limit = limit,
             )
-        val events =
-            client.fetchAll(
+        return Amethyst.instance.client
+            .fetchAll(
                 filters = relays.associateWith { listOf(filter) },
                 timeoutMs = GEMINI_FETCH_TIMEOUT_MS,
-            )
-
-        val hits =
-            events
-                .mapNotNull { it as? TextNoteEvent }
-                .take(cappedLimit)
-                .map { it.toNoteHit() }
-
-        return SearchNotesResult(matches = hits)
+            ).mapNotNull { it as? TextNoteEvent }
+            .take(limit)
     }
 
     /**
@@ -1641,6 +1752,15 @@ class AmethystAppFunctions {
          *  a few seconds; 30s is generous without letting a stuck
          *  wallet stall the dispatch indefinitely. */
         private const val NWC_PAYMENT_TIMEOUT_MS = 30_000L
+
+        /** Cap on the number of distinct hashtags surfaced in a feed
+         *  digest. Picked to fit a one-paragraph summary without
+         *  noise — the long tail won't help the LLM. */
+        private const val TOP_HASHTAGS_LIMIT = 10
+
+        /** Cap on the number of mentioned users surfaced in a feed
+         *  digest. Same rationale as TOP_HASHTAGS_LIMIT. */
+        private const val TOP_MENTIONS_LIMIT = 10
     }
 }
 
@@ -1673,6 +1793,69 @@ class SearchProfilesResult(
 ) {
     companion object {
         fun empty() = SearchProfilesResult(matches = emptyList())
+    }
+}
+
+/** One hashtag and how many notes in the digest window carried it.
+ *  Lowercased and stripped of the leading `#`. */
+@AppFunctionSerializable(isDescribedByKDoc = true)
+class HashtagFrequency(
+    /** The hashtag value without the leading `#`, lowercased. */
+    val tag: String,
+    /** Number of notes in the digest window that carried this tag. */
+    val noteCount: Int,
+)
+
+/** One pubkey that was mentioned via `p` tags in the digest window,
+ *  with display name resolved from the local kind:0 cache when known. */
+@AppFunctionSerializable(isDescribedByKDoc = true)
+class MentionFrequency(
+    /** Bech32 npub of the mentioned user. */
+    val npub: String,
+    /** Hex pubkey of the mentioned user. */
+    val pubkeyHex: String,
+    /** Best-effort display name from the local kind:0 cache. Null when
+     *  the user's profile hasn't been seen yet — caller falls back to
+     *  the npub. */
+    val displayName: String?,
+    /** Number of notes in the digest window that mention this user. */
+    val mentionCount: Int,
+)
+
+/**
+ * Structured snapshot of the active account's Nostr feed for
+ * [AmethystAppFunctions.getFeedDigest]. The LLM uses the aggregate
+ * signals (counts + top hashtags + top mentions) to write a one- or
+ * two-paragraph summary; the raw [notes] list is included for
+ * follow-up questions ("which post was about X?").
+ */
+@AppFunctionSerializable(isDescribedByKDoc = true)
+class FeedDigestResult(
+    /** Window size in hours actually queried (after capping). */
+    val windowHours: Int,
+    /** Total notes scanned for stats. May exceed [notes].size when the
+     *  body was truncated to fit the LLM prompt. */
+    val totalNoteCount: Int,
+    /** Distinct authors who posted in the window. */
+    val uniqueAuthorCount: Int,
+    /** Top hashtags by note count — at most 10. */
+    val topHashtags: List<HashtagFrequency>,
+    /** Most-mentioned users by note count — at most 10. */
+    val topMentions: List<MentionFrequency>,
+    /** Notes themselves (truncated to the caller's maxNotes). Newest-
+     *  first; same fields as [NoteHit] returned by the search verbs. */
+    val notes: List<NoteHit>,
+) {
+    companion object {
+        fun empty() =
+            FeedDigestResult(
+                windowHours = 0,
+                totalNoteCount = 0,
+                uniqueAuthorCount = 0,
+                topHashtags = emptyList(),
+                topMentions = emptyList(),
+                notes = emptyList(),
+            )
     }
 }
 
