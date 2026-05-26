@@ -41,7 +41,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.asDrawable
-import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
@@ -112,7 +111,7 @@ fun RobohashFallbackAsyncImage(
     contentDescription: String?,
     modifier: Modifier = Modifier,
     alignment: Alignment = Alignment.Center,
-    contentScale: ContentScale = ContentScale.Fit,
+    contentScale: ContentScale = ContentScale.Crop,
     alpha: Float = DefaultAlpha,
     colorFilter: ColorFilter? = null,
     filterQuality: FilterQuality = DrawScope.DefaultFilterQuality,
@@ -135,7 +134,7 @@ fun RobohashFallbackAsyncImage(
             autoPlay = autoPlayGif,
         )
     } else if (bridgedModel != null && loadProfilePicture) {
-        val painter =
+        val fallbackPainter =
             if (loadRobohash) {
                 rememberVectorPainter(
                     image = CachedRobohash.get(robot, MaterialTheme.colorScheme.isLight),
@@ -147,19 +146,52 @@ fun RobohashFallbackAsyncImage(
                 )
             }
 
-        AsyncImage(
+        val resources = LocalContext.current.resources
+        SubcomposeAsyncImage(
             model = ProfilePictureUrl(bridgedModel),
             contentDescription = contentDescription,
             modifier = modifier,
-            placeholder = painter,
-            fallback = painter,
-            error = painter,
             alignment = alignment,
             contentScale = contentScale,
             alpha = alpha,
             colorFilter = colorFilter,
             filterQuality = filterQuality,
-        )
+        ) {
+            val state by painter.state.collectAsState()
+            val successState = state as? AsyncImagePainter.State.Success
+            val drawable = successState?.result?.image?.asDrawable(resources)
+
+            LaunchedEffect(drawable, autoPlayGif) {
+                if (drawable is Animatable) {
+                    if (autoPlayGif) drawable.start() else drawable.stop()
+                }
+            }
+
+            when (state) {
+                is AsyncImagePainter.State.Success -> SubcomposeAsyncImageContent()
+                is AsyncImagePainter.State.Loading ->
+                    Image(
+                        painter = fallbackPainter,
+                        contentDescription = contentDescription,
+                        modifier = Modifier.fillMaxSize(),
+                        alignment = alignment,
+                        contentScale = contentScale,
+                        alpha = alpha,
+                        colorFilter = colorFilter,
+                    )
+                is AsyncImagePainter.State.Error ->
+                    Image(
+                        painter = fallbackPainter,
+                        contentDescription = contentDescription,
+                        modifier = Modifier.fillMaxSize(),
+                        alignment = alignment,
+                        contentScale = contentScale,
+                        alpha = alpha,
+                        colorFilter = colorFilter,
+                    )
+                else -> {}
+            }
+        }
     } else {
         if (loadRobohash) {
             Image(
