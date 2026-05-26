@@ -139,10 +139,10 @@ fun CashuWalletScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { nav.nav(Route.WalletAddCashu) }) {
+                    IconButton(onClick = { nav.nav(Route.CashuWalletSettings) }) {
                         Icon(
-                            symbol = MaterialSymbols.Edit,
-                            contentDescription = stringRes(R.string.cashu_edit_wallet),
+                            symbol = MaterialSymbols.Settings,
+                            contentDescription = stringRes(R.string.cashu_settings_title),
                         )
                     }
                 },

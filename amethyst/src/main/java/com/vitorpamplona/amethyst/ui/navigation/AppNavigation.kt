@@ -190,6 +190,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.AddCashuWalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.AddNwcWalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.AddWalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.CashuWalletScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.CashuWalletSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.OnchainTransactionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletDetailScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletReceiveScreen
@@ -297,6 +298,7 @@ fun BuildNavigation(
         composableFromEnd<Route.WalletAddNwc> { AddNwcWalletScreen(accountViewModel, nav) }
         composableFromEnd<Route.WalletAddCashu> { AddCashuWalletScreen(accountViewModel, nav) }
         composableFromEnd<Route.CashuWallet> { CashuWalletScreen(accountViewModel, nav) }
+        composableFromEnd<Route.CashuWalletSettings> { CashuWalletSettingsScreen(accountViewModel, nav) }
 
         composableFromEnd<Route.Lists> { ListOfPeopleListsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.MyPeopleListView> { PeopleListScreen(it.dTag, accountViewModel, nav) }

@@ -176,6 +176,8 @@ sealed class Route {
 
     @Serializable object CashuWallet : Route()
 
+    @Serializable object CashuWalletSettings : Route()
+
     @Serializable object Search : Route()
 
     @Serializable object SecurityFilters : Route()

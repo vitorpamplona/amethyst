@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
 import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
+import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 
 /**
  * Query state for the NIP-60 / NIP-61 wallet subscription.
@@ -105,6 +106,11 @@ private class CashuWalletSubAssembler(
                         CashuSpendingHistoryEvent.KIND,
                         CashuMintQuoteEvent.KIND,
                         NutzapInfoEvent.KIND,
+                        // NIP-87 mint recommendations the user has published.
+                        // Pulled here (instead of relying on the general
+                        // account filter) so the Cashu Settings screen can
+                        // list and retract them without any extra subscription.
+                        MintRecommendationEvent.KIND,
                     ),
                 authors = listOf(pubkey),
             )

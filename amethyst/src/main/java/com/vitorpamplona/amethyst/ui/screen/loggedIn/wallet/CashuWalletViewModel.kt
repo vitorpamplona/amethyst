@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MeltQuoteBolt11ResponseDto
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuProof
+import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -147,6 +148,7 @@ class CashuWalletViewModel : ViewModel() {
     val history get() = state.history
     val pendingQuotes get() = state.pendingQuotes
     val discovering get() = state.discovering
+    val ownRecommendations get() = state.ownRecommendations
 
     private val _createState = MutableStateFlow<CashuWalletCreateState>(CashuWalletCreateState.Idle)
     val createState = _createState.asStateFlow()
@@ -222,6 +224,21 @@ class CashuWalletViewModel : ViewModel() {
                 // Best-effort — the UI doesn't need to block on the result.
                 Log.w("CashuWallet") { "recommendMint($mintUrl) failed: ${describeMintError(e)}" }
             }
+        }
+    }
+
+    /**
+     * NIP-09-retract a previously-published mint recommendation. The local
+     * `ownRecommendations` list updates reactively once the delete event
+     * round-trips through LocalCache.
+     */
+    fun deleteRecommendation(event: MintRecommendationEvent) {
+        val vm = accountViewModel ?: return
+        vm.launchSigner {
+            runCatching { ops.deleteRecommendation(event) }
+                .onFailure {
+                    Log.w("CashuWallet") { "deleteRecommendation failed: ${describeMintError(it)}" }
+                }
         }
     }
 

@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.nip60Cashu.token.TokenContent
 import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
+import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
@@ -107,6 +108,15 @@ class CashuWalletState(
     private val quoteEvents = ConcurrentHashMap<HexKey, CashuMintQuoteEvent>()
     private val nutzapEvents = ConcurrentHashMap<HexKey, NutzapEvent>()
 
+    /**
+     * NIP-87 cashu mint recommendations published by this account. Keyed by
+     * dTag (the mint identifier — either the announcement d-tag when known
+     * or the raw mint URL), so a re-published recommendation for the same
+     * mint replaces the older one and we don't show duplicates in the
+     * Settings screen list.
+     */
+    private val recommendationEvents = ConcurrentHashMap<String, MintRecommendationEvent>()
+
     /** NIP-44 decryption cache for token contents, keyed by event id. */
     private val tokenContents = ConcurrentHashMap<HexKey, TokenContent>()
     private val redeemMutex = Mutex()
@@ -138,6 +148,13 @@ class CashuWalletState(
     /** Unfulfilled, unexpired kind:7374 events — surfaced for resume UI. */
     private val _pendingQuotes = MutableStateFlow<List<CashuMintQuoteEvent>>(emptyList())
     val pendingQuotes: StateFlow<List<CashuMintQuoteEvent>> = _pendingQuotes.asStateFlow()
+
+    /**
+     * NIP-87 mint recommendations this account has published — surfaced in
+     * the Cashu Settings screen so the user can review and retract them.
+     */
+    private val _ownRecommendations = MutableStateFlow<List<MintRecommendationEvent>>(emptyList())
+    val ownRecommendations: StateFlow<List<MintRecommendationEvent>> = _ownRecommendations.asStateFlow()
 
     /**
      * True while we're still waiting for relays to deliver an existing
@@ -315,6 +332,9 @@ class CashuWalletState(
             // Inbound nutzaps: addressed to us, possibly authored by someone
             // else. Match by the recipient `#p` tag.
             is NutzapEvent -> event.tags.any { it.size >= 2 && it[0] == "p" && it[1] == pubKey }
+            // NIP-87 mint recommendations: only our own, and only cashu-
+            // scoped (the kind:38000 namespace covers fedimint too).
+            is MintRecommendationEvent -> event.pubKey == pubKey && event.isCashuRecommendation()
             else -> false
         }
 
@@ -325,6 +345,7 @@ class CashuWalletState(
         var dirtyHistory = false
         var dirtyQuotes = false
         var dirtyNutzaps = false
+        var dirtyRecommendations = false
 
         for (event in events) {
             when (event) {
@@ -354,6 +375,20 @@ class CashuWalletState(
                 }
                 is NutzapEvent -> {
                     if (nutzapEvents.put(event.id, event) == null) dirtyNutzaps = true
+                }
+                is MintRecommendationEvent -> {
+                    // kind:38000 is parameterized-replaceable — keep only the
+                    // newest event per (pubKey, dTag). Our isRelevantEvent
+                    // already gates by self+cashu so we only see our own.
+                    // dTag() is nullable on this event type; fall back to the
+                    // event id so a missing d-tag doesn't collapse every
+                    // such event into the same map slot.
+                    val key = event.dTag() ?: event.id
+                    val current = recommendationEvents[key]
+                    if (current == null || event.createdAt > current.createdAt) {
+                        recommendationEvents[key] = event
+                        dirtyRecommendations = true
+                    }
                 }
                 else -> Unit
             }
@@ -391,6 +426,9 @@ class CashuWalletState(
         if (dirtyNutzaps) {
             triggerAutoRedeem()
         }
+        if (dirtyRecommendations) {
+            _ownRecommendations.value = recommendationEvents.values.sortedByDescending { it.createdAt }
+        }
     }
 
     private suspend fun removeEvents(ids: Set<HexKey>) {
@@ -400,6 +438,7 @@ class CashuWalletState(
         var dirtyNutzaps = false
         var dirtyWallet = false
         var dirtyNutzapInfo = false
+        var dirtyRecommendations = false
 
         ids.forEach { id ->
             if (tokenEvents.remove(id) != null) {
@@ -417,6 +456,14 @@ class CashuWalletState(
                 nutzapInfoEventInternal = null
                 dirtyNutzapInfo = true
             }
+            // Recommendations are indexed by dTag, not event id — find by
+            // matching event.id and drop the entry.
+            val recoKey =
+                recommendationEvents.entries.firstOrNull { it.value.id == id }?.key
+            if (recoKey != null) {
+                recommendationEvents.remove(recoKey)
+                dirtyRecommendations = true
+            }
         }
 
         if (dirtyWallet) {
@@ -431,6 +478,9 @@ class CashuWalletState(
         // redeem already fires from the live-event observer, so no extra
         // signal is needed here.
         if (dirtyNutzaps) Unit
+        if (dirtyRecommendations) {
+            _ownRecommendations.value = recommendationEvents.values.sortedByDescending { it.createdAt }
+        }
     }
 
     private suspend fun recomputeUnspent() {
