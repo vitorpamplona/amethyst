@@ -1351,7 +1351,9 @@ class AmethystAppFunctions {
                 ?: return NwcOutcome(
                     success = false,
                     preimage = null,
-                    errorMessage = "NWC wallet didn't respond within ${NWC_PAYMENT_TIMEOUT_MS / 1000}s",
+                    errorMessage =
+                        "NWC wallet didn't respond within ${NWC_PAYMENT_TIMEOUT_MS / 1000}s, " +
+                            "or returned a malformed reply we couldn't decrypt",
                 )
 
         return when (response) {
@@ -1378,12 +1380,6 @@ class AmethystAppFunctions {
                         response.error?.message
                             ?: response.error?.code?.name
                             ?: "wallet returned an NWC error",
-                )
-            null ->
-                NwcOutcome(
-                    success = false,
-                    preimage = null,
-                    errorMessage = "NWC wallet returned null response (could not decrypt)",
                 )
             else ->
                 NwcOutcome(
