@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.actions.ZapActions
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull
 import com.vitorpamplona.amethyst.commons.services.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -181,24 +182,42 @@ class AmethystAppFunctions {
     }
 
     /**
-     * Build a structured digest of the user's Nostr feed for an AI
-     * summary. Use when the user asks "summarize my Nostr feed",
+     * Build a structured digest of the user's Nostr home feed for an
+     * AI summary. Use when the user asks "summarize my Nostr feed",
      * "give me a digest of what my follows posted today", "recap
      * Nostr for me", "what have people been talking about on Nostr",
-     * or any "summary / digest / recap of my Nostr timeline" intent.
+     * "summarize what's on my Nostr home screen", or any "summary /
+     * digest / recap of my Nostr timeline" intent.
+     *
+     * **Mirrors the home page exactly.** Runs the same
+     * `HomeNewThreadFeedFilter` the Amethyst home screen uses against
+     * the local event cache — so the LLM sees what the user would see
+     * if they opened the app: short text notes, reposts (deduped),
+     * long-form articles, polls, comments, audio, classifieds,
+     * highlights, and the rest. Respects the user's currently selected
+     * NIP-51 follow list (not just plain kind:3), filters muted users,
+     * and excludes replies (top-level threads only).
+     *
+     * Because the feed is read from the local cache rather than drained
+     * fresh from relays, the digest reflects what the foreground app
+     * has previously gathered — sparse if the app hasn't been opened
+     * recently. Open Amethyst before asking the agent to summarise if
+     * you want the freshest possible result.
      *
      * Returns the raw notes plus pre-extracted signals the LLM needs
      * to write a useful summary without re-deriving them: total note
      * count, unique author count, top hashtags in the window, and the
-     * most-mentioned users (with display names resolved from the local
-     * kind:0 cache). The LLM composes the natural-language summary
-     * from these.
+     * most-mentioned users (display names resolved from local kind:0
+     * cache). The LLM composes the natural-language summary from
+     * these.
      *
      * @param hoursBack window size in hours. Capped to 168 (7 days),
-     *   default 12.
+     *   default 12. Events older than this are excluded from both the
+     *   stats and the body.
      * @param maxNotes max notes returned in the body. Capped to 200.
      *   Default 60 — big enough for a meaningful summary, small enough
-     *   to fit comfortably in the LLM's prompt.
+     *   to fit comfortably in the LLM's prompt. Stats are computed
+     *   over the full in-window set, not just the trimmed body.
      */
     @AppFunction(isDescribedByKDoc = true)
     suspend fun getFeedDigest(
@@ -211,16 +230,19 @@ class AmethystAppFunctions {
         val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return FeedDigestResult.empty()
 
         val sinceSecs = TimeUtils.now() - cappedHours.toLong() * 3600L
-        // Over-fetch a bit so the stats are computed over a larger
-        // sample than the trimmed `notes` list — the LLM gets richer
-        // signal without seeing every note. Cap at 500 events to keep
-        // the on-device work bounded.
-        val events =
-            fetchFollowFeed(
-                account = account,
-                sinceSecs = sinceSecs,
-                limit = (cappedMaxNotes * 3).coerceAtMost(500),
-            )
+
+        // Use the same filter the home screen uses, so the digest
+        // mirrors what the user actually sees in the UI. The filter
+        // reads from LocalCache (already maintained by the foreground
+        // subscriptions) and applies the user's selected follow list,
+        // mutes, repost dedup, and new-thread-only rule.
+        val feed =
+            HomeNewThreadFeedFilter(account)
+                .feed()
+                .asSequence()
+                .mapNotNull { it.event }
+                .filter { it.createdAt >= sinceSecs }
+                .toList()
 
         // Hashtag frequencies — case-folded so `#Bitcoin` and
         // `#bitcoin` collapse to one bucket.
@@ -229,7 +251,7 @@ class AmethystAppFunctions {
         val mentionCounts = HashMap<HexKey, Int>()
         val uniqueAuthors = HashSet<HexKey>()
 
-        for (ev in events) {
+        for (ev in feed) {
             uniqueAuthors.add(ev.pubKey)
             for (tag in ev.tags) {
                 if (tag.size < 2) continue
@@ -272,14 +294,18 @@ class AmethystAppFunctions {
 
         return FeedDigestResult(
             windowHours = cappedHours,
-            totalNoteCount = events.size,
+            totalNoteCount = feed.size,
             uniqueAuthorCount = uniqueAuthors.size,
             topHashtags = topHashtags,
             topMentions = topMentions,
             // Truncate to the caller-requested limit for the body —
             // the LLM has the stats either way and doesn't need every
-            // note quoted.
-            notes = events.take(cappedMaxNotes).map { it.toNoteHit() },
+            // note quoted. Sorted newest-first.
+            notes =
+                feed
+                    .sortedByDescending { it.createdAt }
+                    .take(cappedMaxNotes)
+                    .map { it.toFeedNoteHit() },
         )
     }
 
@@ -869,25 +895,7 @@ class AmethystAppFunctions {
             events
                 .mapNotNull { it as? LongTextNoteEvent }
                 .take(cappedLimit)
-                .map { ev ->
-                    // Long-form articles can be book-length; cap the
-                    // content payload so the AppFunctions result stays
-                    // bounded — Gemini can ask for a follow-up if needed.
-                    val snippet =
-                        if (ev.content.length > LONG_FORM_SNIPPET_LIMIT) {
-                            ev.content.take(LONG_FORM_SNIPPET_LIMIT) + "…"
-                        } else {
-                            ev.content
-                        }
-                    NoteHit(
-                        eventId = ev.id,
-                        npub = NPub.create(ev.pubKey),
-                        pubkeyHex = ev.pubKey,
-                        authorDisplayName = displayNameOf(ev.pubKey),
-                        createdAt = ev.createdAt,
-                        content = snippet,
-                    )
-                }
+                .map { (it as com.vitorpamplona.quartz.nip01Core.core.Event).toFeedNoteHit() }
 
         return SearchNotesResult(matches = hits)
     }
@@ -1596,15 +1604,36 @@ class AmethystAppFunctions {
             ?.metadataOrNull()
             ?.bestName()
 
-    private fun TextNoteEvent.toNoteHit(): NoteHit =
-        NoteHit(
+    private fun TextNoteEvent.toNoteHit(): NoteHit = (this as com.vitorpamplona.quartz.nip01Core.core.Event).toFeedNoteHit()
+
+    /**
+     * Project any home-feed-eligible event into a [NoteHit]. Covers
+     * the broader event set the home filter accepts (kind:1, kind:6
+     * reposts, kind:30023 long-form, polls, comments, etc.), so a
+     * digest can carry whatever the user actually sees.
+     *
+     * Long content is snippet-truncated so a book-length article
+     * doesn't blow up the AppFunctions response — Gemini can ask the
+     * user whether to fetch the full article through a follow-up
+     * verb call.
+     */
+    private fun com.vitorpamplona.quartz.nip01Core.core.Event.toFeedNoteHit(): NoteHit {
+        val snippet =
+            if (content.length > LONG_FORM_SNIPPET_LIMIT) {
+                content.take(LONG_FORM_SNIPPET_LIMIT) + "…"
+            } else {
+                content
+            }
+        return NoteHit(
             eventId = id,
+            kind = kind,
             npub = NPub.create(pubKey),
             pubkeyHex = pubKey,
             authorDisplayName = displayNameOf(pubKey),
             createdAt = createdAt,
-            content = content,
+            content = snippet,
         )
+    }
 
     private fun MetadataEvent.toProfileHit(): ProfileHit {
         val meta = contactMetaData()
@@ -1859,11 +1888,16 @@ class FeedDigestResult(
     }
 }
 
-/** Single match in [SearchNotesResult]. */
+/** Single match in [SearchNotesResult] or entry in a feed result. */
 @AppFunctionSerializable(isDescribedByKDoc = true)
 class NoteHit(
     /** Hex event id of the note. */
     val eventId: String,
+    /** Nostr event kind. 1 = short text note, 6 = repost, 30023 =
+     *  long-form article, 1111 = comment, 9802 = highlight, 1068 =
+     *  poll, etc. Lets the LLM distinguish "Alice posted a note"
+     *  from "Alice published an article" or "Alice ran a poll". */
+    val kind: Int,
     /** Bech32 npub of the note's author. */
     val npub: String,
     /** Hex pubkey of the note's author. */
@@ -1874,7 +1908,9 @@ class NoteHit(
     val authorDisplayName: String?,
     /** Unix-seconds timestamp the note was created at. */
     val createdAt: Long,
-    /** Raw content of the note (plain text, may contain Nostr URIs / hashtags). */
+    /** Raw content of the note (plain text, may contain Nostr URIs /
+     *  hashtags). Truncated at ~2000 chars for very long content; the
+     *  full event is reachable by its [eventId] via a follow-up verb. */
     val content: String,
 )
 
