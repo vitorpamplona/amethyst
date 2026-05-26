@@ -1876,6 +1876,8 @@
     <string name="cashu_wallet_title">Cashu Wallet</string>
     <string name="cashu_no_wallet">No Cashu wallet yet</string>
     <string name="cashu_no_wallet_description">Create a Cashu wallet to hold ecash tokens and receive nutzaps.</string>
+    <string name="cashu_discovering">Looking for your wallet…</string>
+    <string name="cashu_discovering_description">NIP-60 wallets sync across clients. If you created one in another app under this Nostr key, it should appear in a few seconds.</string>
     <string name="cashu_balance">Balance</string>
     <string name="cashu_mints">Mints</string>
     <string name="cashu_mint_url">Mint URL</string>

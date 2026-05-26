@@ -145,6 +145,7 @@ class CashuWalletViewModel : ViewModel() {
     val tokenEntries: StateFlow<List<TokenEntry>> get() = state.tokenEntries
     val history get() = state.history
     val pendingQuotes get() = state.pendingQuotes
+    val discovering get() = state.discovering
 
     private val _createState = MutableStateFlow<CashuWalletCreateState>(CashuWalletCreateState.Idle)
     val createState = _createState.asStateFlow()

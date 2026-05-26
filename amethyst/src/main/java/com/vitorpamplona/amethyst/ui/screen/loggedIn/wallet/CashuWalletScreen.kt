@@ -96,6 +96,7 @@ fun CashuWalletScreen(
     viewModel.init(accountViewModel)
 
     val walletEvent by viewModel.walletEvent.collectAsState()
+    val discovering by viewModel.discovering.collectAsState()
     val mints by viewModel.mints.collectAsState()
     val balanceSats by viewModel.balanceSats.collectAsState()
     val history by viewModel.history.collectAsState()
@@ -139,23 +140,33 @@ fun CashuWalletScreen(
             )
         },
     ) { padding ->
-        if (walletEvent == null) {
-            EmptyCashuWallet(
-                modifier = Modifier.padding(padding),
-                onCreate = { nav.nav(Route.WalletAddCashu) },
-            )
-        } else {
-            CashuWalletContent(
-                modifier = Modifier.padding(padding),
-                balanceSats = balanceSats,
-                mints = mints,
-                history = history,
-                onReceive = { receiveOpen = true },
-                onSendLn = { sendLnOpen = true },
-                onSendToken = { sendTokenOpen = true },
-                onRedeem = { redeemOpen = true },
-                onRecommendMint = { viewModel.recommendMint(it) },
-            )
+        when {
+            walletEvent != null ->
+                CashuWalletContent(
+                    modifier = Modifier.padding(padding),
+                    balanceSats = balanceSats,
+                    mints = mints,
+                    history = history,
+                    onReceive = { receiveOpen = true },
+                    onSendLn = { sendLnOpen = true },
+                    onSendToken = { sendTokenOpen = true },
+                    onRedeem = { redeemOpen = true },
+                    onRecommendMint = { viewModel.recommendMint(it) },
+                )
+
+            // NIP-60 wallets are portable across clients — show a "looking
+            // for your wallet" state until the relay subscription returns
+            // anything (or times out). Without this, a user who created
+            // their wallet in another app would see the Create CTA on
+            // first launch and would clobber the remote kind:17375.
+            discovering ->
+                DiscoveringCashuWallet(modifier = Modifier.padding(padding))
+
+            else ->
+                EmptyCashuWallet(
+                    modifier = Modifier.padding(padding),
+                    onCreate = { nav.nav(Route.WalletAddCashu) },
+                )
         }
     }
 
@@ -196,6 +207,33 @@ fun CashuWalletScreen(
                 redeemOpen = false
                 viewModel.resetRedeemState()
             },
+        )
+    }
+}
+
+@Composable
+private fun DiscoveringCashuWallet(modifier: Modifier) {
+    Column(
+        modifier =
+            modifier
+                .fillMaxSize()
+                .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        CircularProgressIndicator(modifier = Modifier.size(36.dp), strokeWidth = 3.dp)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = stringRes(R.string.cashu_discovering),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = stringRes(R.string.cashu_discovering_description),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
         )
     }
 }

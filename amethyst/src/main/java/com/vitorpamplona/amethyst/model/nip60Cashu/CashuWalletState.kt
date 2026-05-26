@@ -133,6 +133,24 @@ class CashuWalletState(
     private val _pendingQuotes = MutableStateFlow<List<CashuMintQuoteEvent>>(emptyList())
     val pendingQuotes: StateFlow<List<CashuMintQuoteEvent>> = _pendingQuotes.asStateFlow()
 
+    /**
+     * True while we're still waiting for relays to deliver an existing
+     * wallet event for this account.
+     *
+     * NIP-60 wallets are portable across clients — if the user previously
+     * created one in (say) Boardwalk or cashu.me, our subscription should
+     * pull the kind:17375 in within a few seconds of sign-in. The UI uses
+     * this flag to show a "Looking for your wallet…" state during that
+     * window instead of jumping straight to the "Create" CTA, which would
+     * overwrite the remote wallet (kind:17375 is replaceable).
+     *
+     * Cleared when:
+     *   - a wallet event arrives via cache backfill or live update, OR
+     *   - the discovery timeout elapses (~8 seconds), whichever first.
+     */
+    private val _discovering = MutableStateFlow(false)
+    val discovering: StateFlow<Boolean> = _discovering.asStateFlow()
+
     fun hasWallet(): Boolean = _walletEvent.value != null
 
     /** Read the wallet's P2PK pubkey (33-byte compressed hex). */
@@ -180,6 +198,21 @@ class CashuWalletState(
         if (started) return
         started = true
         this.publish = publish
+
+        // Show the "discovering" state until either a wallet event lands
+        // (set inside applyEvents()) or the timeout below fires. Without
+        // this the UI would render the empty-wallet CTA the moment the
+        // screen opens — even for users whose wallet exists on relays but
+        // hasn't yet been delivered — and tapping Create there would
+        // overwrite the remote kind:17375.
+        if (_walletEvent.value == null) {
+            _discovering.value = true
+            jobs +=
+                scope.launch(Dispatchers.Default) {
+                    kotlinx.coroutines.delay(DISCOVERY_TIMEOUT_MS)
+                    _discovering.value = false
+                }
+        }
 
         // Backfill from cache once.
         scope.launch(Dispatchers.Default) {
@@ -294,6 +327,9 @@ class CashuWalletState(
 
         if (dirtyWallet) {
             _walletEvent.value = walletEventInternal
+            // Any wallet event resolves the "discovering" state — whether it
+            // came from cache backfill or a fresh relay delivery.
+            _discovering.value = false
             walletEventInternal?.let { evt ->
                 _mints.value =
                     runCatching { evt.mints(signer) }
@@ -523,6 +559,16 @@ class CashuWalletState(
 
     private suspend fun publishEvent(event: Event) {
         publish(event)
+    }
+
+    private companion object {
+        /**
+         * How long to remain in the "discovering" state before falling back
+         * to the empty-wallet CTA. Long enough that a typical relay round-
+         * trip on a cold start completes; short enough that genuinely
+         * wallet-less users don't stare at a spinner.
+         */
+        const val DISCOVERY_TIMEOUT_MS = 8_000L
     }
 }
 
