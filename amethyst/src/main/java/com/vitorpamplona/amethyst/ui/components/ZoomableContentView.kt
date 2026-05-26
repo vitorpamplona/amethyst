@@ -697,9 +697,19 @@ fun ShowHash(content: MediaUrlContent) {
 
 fun BaseMediaContent.isGif(): Boolean =
     if (this is MediaUrlContent) {
-        mimeType == "image/gif" || url.endsWith(".gif", ignoreCase = true) || url.contains(".gif?", ignoreCase = true) || url.contains(".gif#", ignoreCase = true)
+        mimeType == "image/gif" ||
+            mimeType == "image/avif" ||
+            url.endsWith(".gif", ignoreCase = true) ||
+            url.contains(".gif?", ignoreCase = true) ||
+            url.contains(".gif#", ignoreCase = true) ||
+            url.endsWith(".avif", ignoreCase = true) ||
+            url.contains(".avif?", ignoreCase = true) ||
+            url.contains(".avif#", ignoreCase = true)
     } else if (this is MediaPreloadedContent) {
-        mimeType == "image/gif" || localFile?.name?.endsWith(".gif", ignoreCase = true) == true
+        mimeType == "image/gif" ||
+            mimeType == "image/avif" ||
+            localFile?.name?.endsWith(".gif", ignoreCase = true) == true ||
+            localFile?.name?.endsWith(".avif", ignoreCase = true) == true
     } else {
         false
     }

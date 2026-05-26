@@ -23,14 +23,18 @@ package com.vitorpamplona.amethyst.service.uploads
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.ImageDecoder
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.os.Build
 import com.vitorpamplona.amethyst.commons.blurhash.toBlurhash
 import com.vitorpamplona.amethyst.commons.thumbhash.toThumbhash
 import com.vitorpamplona.amethyst.service.images.BlurhashWrapper
 import com.vitorpamplona.amethyst.service.images.ThumbhashWrapper
+import com.vitorpamplona.amethyst.service.uploads.isAvif
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.Log
+import java.nio.ByteBuffer
 
 /**
  * Result of precomputing placeholder metadata during an upload. The bitmap or video thumbnail is
@@ -67,6 +71,11 @@ object PreviewMetadataCalculator {
         dimPrecomputed: DimensionTag?,
     ): PreviewHashes =
         when {
+            isAvif(mimeType) -> {
+                val bitmap = decodeAvifBytes(data)
+                processImage(bitmap, dimPrecomputed)
+            }
+
             isImage(mimeType) -> {
                 val bitmap = BitmapFactory.decodeByteArray(data, 0, data.size, createBitmapOptions())
                 processImage(bitmap, dimPrecomputed)
@@ -97,6 +106,11 @@ object PreviewMetadataCalculator {
 
         return try {
             when {
+                isAvif(mimeType) -> {
+                    val bitmap = decodeAvifFromUri(context, uri)
+                    processImage(bitmap, dimPrecomputed)
+                }
+
                 isImage(mimeType) -> {
                     context.contentResolver.openInputStream(uri)?.use { stream ->
                         val bitmap = BitmapFactory.decodeStream(stream, null, createBitmapOptions())
@@ -167,5 +181,50 @@ object PreviewMetadataCalculator {
         val hashes = processBitmap(thumb)
         val finalDim = if (dim?.hasSize() == true) dim else hashes.dim
         return hashes.copy(dim = finalDim)
+    }
+
+    /**
+     * Decode AVIF bytes into a bitmap. Uses [ImageDecoder.ALLOCATOR_SOFTWARE] because hardware
+     * bitmaps reject `getPixels()`, which is required for blurhash computation.
+     */
+    private fun decodeAvifBytes(data: ByteArray): Bitmap? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            // ImageDecoder is API 28+; AVIF is API 31+ regardless.
+            // Older devices: skip preview metadata for AVIF.
+            Log.d(LOG_TAG, "AVIF preview metadata skipped on API < 28")
+            return null
+        }
+        if (data.isEmpty()) return null
+        return try {
+            val source = ImageDecoder.createSource(ByteBuffer.wrap(data))
+            ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
+                decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                decoder.isMutableRequired = false
+            }
+        } catch (e: Exception) {
+            Log.w(LOG_TAG, "AVIF decode failed: ${e.message}", e)
+            null
+        }
+    }
+
+    private fun decodeAvifFromUri(
+        context: Context,
+        uri: Uri,
+    ): Bitmap? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            Log.d(LOG_TAG, "AVIF preview metadata skipped on API < 28")
+            return null
+        }
+        return try {
+            val source = ImageDecoder.createSource(context.contentResolver, uri)
+            ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
+                // Same allocator rationale as decodeAvifBytes.
+                decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+                decoder.isMutableRequired = false
+            }
+        } catch (e: Exception) {
+            Log.w(LOG_TAG, "AVIF decode failed: ${e.message}", e)
+            null
+        }
     }
 }

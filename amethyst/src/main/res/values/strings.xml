@@ -1807,6 +1807,7 @@
     <string name="metadata_strip_failed_upload">Upload anyway</string>
     <string name="metadata_strip_failed_upload_cancelled">Failed to strip private metadata from media. Upload cancelled.</string>
     <string name="upload_cancelled">Upload cancelled</string>
+    <string name="avif_metadata_strip_failed">Cannot strip metadata from AVIF: %1$s</string>
 
     <string name="edit_draft">Edit draft</string>
 

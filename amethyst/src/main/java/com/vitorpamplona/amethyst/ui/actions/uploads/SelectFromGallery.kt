@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.service.uploads.isAvif
 import com.vitorpamplona.amethyst.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.collections.immutable.ImmutableList
@@ -65,6 +66,27 @@ class SelectedMedia(
         } ?: true
 
     fun isDocument() = mimeType == "application/pdf"
+
+    /**
+     * Returns true if [MediaCompressor.compress] would actually compress this file when a
+     * non-UNCOMPRESSED quality is selected. AVIF, GIF, SVG, and unknown MIME types pass
+     * through MediaCompressor unchanged — the compression-quality slider has no effect on
+     * them, so the UI hides the slider when no selected files are compressible.
+     *
+     * Keep this in sync with the branching in MediaCompressor.compress() — if either side
+     * drifts, the UI will lie to the user.
+     */
+    fun isCompressible(): Boolean {
+        val mt = mimeType?.lowercase() ?: return false
+        return when {
+            mt.startsWith("video") -> true
+            mt.startsWith("image") ->
+                !mt.contains("gif") &&
+                    !mt.contains("svg") &&
+                    !isAvif(mt)
+            else -> false
+        }
+    }
 }
 
 @Composable

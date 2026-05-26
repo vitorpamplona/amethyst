@@ -317,7 +317,12 @@ class UploadOrchestrator {
                 // assume it stripped metadata successfully.
                 StrippingResult(compressed.uri, true)
             } else {
-                MetadataStripper.strip(compressed.uri, effectiveMimeType, context.applicationContext)
+                try {
+                    MetadataStripper.strip(compressed.uri, effectiveMimeType, context.applicationContext)
+                } catch (e: AvifMetadataNotVerifiableException) {
+                    error(R.string.avif_metadata_strip_failed, e.message ?: e.javaClass.simpleName)
+                    return null
+                }
             }
 
         if (!strippingResult.stripped && !onStrippingFailed()) return null

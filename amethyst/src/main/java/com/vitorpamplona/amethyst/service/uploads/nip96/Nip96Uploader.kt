@@ -30,6 +30,8 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.service.uploads.AVIF_EXTENSION
+import com.vitorpamplona.amethyst.service.uploads.AVIF_MIME
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.service.uploads.PreviewMetadataCalculator
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -234,15 +236,17 @@ class Nip96Uploader {
 
     fun String.displayUrl() = this.removeSuffix("/").removePrefix("https://")
 
-    // Android's MimeTypeMap does not know every MIME we upload (notably HLS playlist types).
-    // When it returns null we fall back to a small static table so the multipart filename still
-    // carries a real extension — otherwise the server gets "name." and echoes it back, which
-    // breaks HLS URL rewriting.
-    private fun fallbackExtensionForMimeType(mimeType: String): String? =
+    // Android's MimeTypeMap does not know every MIME we upload (notably HLS playlist types
+    // and AVIF on older Android). When it returns null we fall back to a small static table
+    // so the multipart filename still carries a real extension — otherwise the server gets
+    // "name." and echoes it back, which breaks HLS URL rewriting (and rejects extension-less
+    // uploads on some NIP-96 servers).
+    internal fun fallbackExtensionForMimeType(mimeType: String): String? =
         when (mimeType.lowercase()) {
             "application/vnd.apple.mpegurl", "application/x-mpegurl", "audio/x-mpegurl", "audio/mpegurl" -> "m3u8"
             "video/mp2t" -> "ts"
             "video/iso.segment", "video/mp4" -> "mp4"
+            AVIF_MIME -> AVIF_EXTENSION
             else -> null
         }
 

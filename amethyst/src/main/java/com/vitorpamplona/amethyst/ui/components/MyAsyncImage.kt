@@ -157,4 +157,7 @@ fun MyAsyncImage(
 fun isGifUrl(url: String): Boolean =
     url.endsWith(".gif", ignoreCase = true) ||
         url.contains(".gif?", ignoreCase = true) ||
-        url.contains(".gif#", ignoreCase = true)
+        url.contains(".gif#", ignoreCase = true) ||
+        url.endsWith(".avif", ignoreCase = true) ||
+        url.contains(".avif?", ignoreCase = true) ||
+        url.contains(".avif#", ignoreCase = true)
