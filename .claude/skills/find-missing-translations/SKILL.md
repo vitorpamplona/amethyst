@@ -15,6 +15,18 @@ Extract string resource keys from the default `values/strings.xml` that are abse
 - Preparing a batch of strings for a translator
 - Checking translation coverage after adding new features
 
+## Background: Crowdin strip-identical behavior
+
+This repo syncs translations via Crowdin (branch `l10n_crowdin_translations`). Crowdin's default export behavior **omits any translation that exactly equals the source**, so a key that the translator deliberately kept as English (common for brand terms like `"Nowhere Drop"`, single-word loanwords like `"Apps"` / `"Feed"` / `"Issues"`, or version prefixes like `"v%1$s"`) will not appear in the locale's `strings.xml` even though the Crowdin UI shows it as 100% translated.
+
+Consequences for this skill:
+
+1. **A "missing" key on disk is not always actionable.** It may be Crowdin-stripped (translator already chose source-identical and Crowdin didn't export it) rather than genuinely new.
+2. **Don't add source-identical fallbacks locally.** Android's resource resolution falls back to `values/strings.xml` at runtime, so the user already sees the correct text. Local additions will be silently overwritten on Crowdin's next sync anyway.
+3. **The only actionable cases are keys Crowdin has never exported.** Whether the translator picked "use English" or simply hasn't translated the key yet, both states are owned by Crowdin and look identical on disk. The local repo cannot distinguish them.
+
+The Step 2.5 filter below uses the **most recent Crowdin export commit reachable from `HEAD`** (subject: `"New Crowdin translations by GitHub Action"`) as the cutoff: any key added to `values/strings.xml` after that commit is genuinely new (Crowdin hasn't exported it yet); anything older is Crowdin's responsibility regardless of why it's missing. The reachable-from-HEAD check survives the common workflow of deleting the `l10n_crowdin_translations` branch after merging.
+
 ## Target Locales
 
 The default set of locales (unless the user specifies otherwise):
@@ -50,6 +62,59 @@ comm -23 \
 ```
 
 This gives the list of missing key names. Do NOT diff each locale separately — assume the same keys are missing in all target locales.
+
+> **Caveat:** Crowdin can asymmetrically strip keys across locales (each translator independently chose source-identical for different keys). If the cs-rCZ list looks suspiciously short, run the same diff for each target locale individually and union the results before Step 2.5.
+
+### 2.5. Filter out keys Crowdin has already seen (sync-timestamp check)
+
+A missing key is **only actionable if Crowdin has never exported it**. Once a key has been pushed to Crowdin and exported back, the translator may have chosen "use English" — Crowdin stores that choice in its own database and strips the entry from the exported `strings.xml`. From disk we cannot tell "translator picked English" from "Crowdin never saw the key": both look identical.
+
+The reliable signal is **time**: compare when the key was added to `values/strings.xml` against the timestamp of the **most recent Crowdin export that has been merged into the current branch**. Crowdin's GitHub Action produces commits with the literal subject `New Crowdin translations by GitHub Action`; finding the latest such commit reachable from `HEAD` works even if the `l10n_crowdin_translations` branch has been deleted post-merge (a common cleanup workflow).
+
+- Key added **before** that commit → Crowdin saw it on a prior export; translator made a decision; the absence on disk is a deliberate "use English" or "leave blank" choice. **Skip.**
+- Key added **after** → Crowdin has not exported it yet; genuinely new and actionable.
+
+```bash
+# Latest Crowdin export reachable from HEAD (survives branch deletion).
+sync_ts=$(git log -1 --format=%ct --grep='^New Crowdin translations by GitHub Action$' 2>/dev/null)
+if [ -z "$sync_ts" ]; then
+  echo "WARNING: no Crowdin export commit found in history; treating all missing as actionable" >&2
+  sync_ts=0
+else
+  echo "Crowdin sync cutoff: $(git log -1 --format='%ci  %h' --grep='^New Crowdin translations by GitHub Action$')"
+fi
+
+# For each locale, list only keys added after the Crowdin sync (truly new).
+for locale in cs-rCZ de-rDE sv-rSE; do
+  echo "=== $locale: genuinely new (post-sync) keys ==="
+  comm -23 \
+    <(grep '<string name=' amethyst/src/main/res/values/strings.xml \
+      | grep -v 'translatable="false"' \
+      | sed 's/.*name="\([^"]*\)".*/\1/' | sort) \
+    <(grep '<string name=' amethyst/src/main/res/values-$locale/strings.xml \
+      | sed 's/.*name="\([^"]*\)".*/\1/' | sort) \
+  | while IFS= read -r key; do
+      added_ts=$(git log -1 --format=%ct -S "name=\"$key\"" -- amethyst/src/main/res/values/strings.xml)
+      if [ -n "$added_ts" ] && [ "$added_ts" -gt "$sync_ts" ]; then
+        echo "$key"
+      fi
+    done
+done
+```
+
+**Why this beats using the `l10n_crowdin_translations` branch tip:**
+- The branch is often deleted after merge — the branch tip then doesn't exist or points to a stale ref.
+- The branch tip may include Crowdin commits that haven't been merged to main yet. Those changes aren't in our working tree, so they don't affect what's on disk for us. The "reachable from HEAD" cutoff matches what we can actually observe in `values-*/strings.xml`.
+
+**Only the listed (post-sync) keys are actionable.** Anything older is either:
+- A deliberate "use English" choice in Crowdin (brand terms like `Nowhere X`, loanwords like `Apps` / `Feed` / `Issues`, version prefixes like `v%1$s`), or
+- A pending translation the translator hasn't filled in yet — still Crowdin's job, not ours.
+
+In both cases, Android's resource resolution falls back to `values/strings.xml` at runtime, so there is no user-visible bug. Adding source-identical fallbacks locally is noise that the next sync will strip again.
+
+Report the pre-sync skipped count as a one-liner ("N keys predate the last Crowdin sync, skipped — Crowdin owns them"). Do not list them or propose translations.
+
+If no Crowdin export commit can be found in history (`sync_ts=0` fallback), warn the user and fall back to treating all missing keys as actionable — but flag that the workflow is degraded.
 
 ### 3. Get English values for missing keys
 
@@ -198,7 +263,10 @@ When adding translated strings to locale files:
 
 - **Forgetting `translatable="false"`** — these should never appear in locale files
 - **Not checking string-arrays/plurals** — only checking `<string>` misses other resource types
-- **Diffing each locale separately** — only diff against `cs-rCZ`; assume the same keys are missing everywhere
+- **Treating every missing key as actionable** — Crowdin strips on export any translation the translator marked as "use English", and we cannot distinguish that from "never seen" by looking at disk. Use the Step 2.5 sync-timestamp filter: only keys added to `values/strings.xml` after the last `l10n_crowdin_translations` sync are genuinely new.
+- **Trying to detect "stripped" from git history alone** — the on-disk locale file only sees keys the translator typed a non-identical value for. The "translator opened the key and picked English from the start" case never touches disk, so a history-only check misses it. Use the sync-timestamp cutoff instead.
+- **Adding source-identical fallbacks locally** — they get overwritten on the next Crowdin sync. Android falls back to `values/strings.xml` at runtime anyway, so there is no user-visible bug to fix.
+- **Skipping per-locale diffs when only diffing cs-rCZ** — Crowdin can strip different keys in different locales (each translator's choice), so cs-rCZ is not a reliable upper bound. Diff each target locale, then apply the sync-timestamp filter.
 - **Inserting strings in a specific position** — always append at the bottom; ordering is handled separately
 - **Hardcoding `"1"` in a `<plurals>` `quantity="one"` item** — always use the count placeholder; otherwise non-English `one` categories produce wrong text
 - **Copying English's `one`/`other` set into every locale** — each language must include all CLDR plural categories it uses (e.g. Czech needs `one`, `few`, `many`, `other`)
