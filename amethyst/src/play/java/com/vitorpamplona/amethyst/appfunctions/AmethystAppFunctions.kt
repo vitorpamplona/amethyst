@@ -45,6 +45,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -60,6 +61,9 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -108,6 +112,14 @@ class AmethystAppFunctions {
      * configured search relays (kind:10007), with a fallback to
      * Amethyst's curated default search-relay set.
      *
+     * Results carrying a NIP-05 claim are verified in parallel and dropped
+     * when the claim explicitly fails — the listed domain doesn't sign for
+     * that pubkey, or returns a different one. Profiles with no NIP-05 at
+     * all are kept (no claim, nothing to refute). This is the
+     * anti-impersonation guard for the downstream write verbs: if Gemini
+     * asks the user "do you mean alice@damus.io?" the user should be able
+     * to trust that the npub actually controls that handle.
+     *
      * @param query free-form search text (display name, NIP-05 handle, etc.)
      * @param limit max number of profiles to return — capped to 50.
      */
@@ -145,15 +157,58 @@ class AmethystAppFunctions {
                 timeoutMs = GEMINI_FETCH_TIMEOUT_MS,
             )
 
-        val hits =
+        val candidates =
             events
                 .mapNotNull { it as? MetadataEvent }
                 .distinctBy { it.pubKey }
                 .sortedByDescending { it.createdAt }
                 .take(cappedLimit)
-                .map { it.toProfileHit() }
+
+        // Verify NIP-05 claims in parallel with a bounded timeout, then
+        // drop only the ones that explicitly fail (the domain returns a
+        // different pubkey, or no entry for the local part). Network
+        // errors / DNS failures / timeouts are inconclusive — keep those
+        // so a flaky .well-known doesn't censor legitimate users.
+        val verified =
+            withTimeoutOrNull(NIP05_FILTER_TIMEOUT_MS) {
+                coroutineScope {
+                    candidates
+                        .map { meta ->
+                            async { meta to nip05IsExplicitlyFailed(meta) }
+                        }.awaitAll()
+                }
+            } ?: candidates.map { it to false }
+
+        val hits =
+            verified
+                .filterNot { (_, failed) -> failed }
+                .map { (meta, _) -> meta.toProfileHit() }
 
         return SearchProfilesResult(matches = hits)
+    }
+
+    /**
+     * Returns true only when the recipient's kind:0 carries a NIP-05 claim
+     * that the listed domain actively refuses to sign for. Returns false
+     * for "no claim", "unparseable claim", "network error", "namecoin
+     * unreachable" — those are inconclusive, not refutations.
+     */
+    private suspend fun nip05IsExplicitlyFailed(meta: MetadataEvent): Boolean {
+        val claim =
+            meta
+                .contactMetaData()
+                ?.nip05
+                ?.trim()
+                .orEmpty()
+        if (claim.isEmpty()) return false
+        val parsed = Nip05Id.parse(claim) ?: return false
+        return runCatching {
+            !Amethyst.instance.nip05Client.verify(parsed, meta.pubKey)
+        }.getOrElse {
+            // verify() throws IllegalStateException on network / parse
+            // errors — treat as inconclusive rather than a failure.
+            false
+        }
     }
 
     /**
@@ -1013,12 +1068,26 @@ class AmethystAppFunctions {
      * and publishes the updated list. [WriteResult.changed] reports
      * `false` when the user is already followed.
      *
+     * **BEFORE INVOKING:** the agent MUST resolve [user] via
+     * [searchProfiles] / [getProfile] first and present the recipient
+     * to the human with all three identity signals — display name,
+     * npub, and NIP-05 handle — and wait for explicit confirmation
+     * ("yes, follow Vitor (vitor@vitorpamplona.com, npub1…)"). Nostr
+     * has no global namespace, so multiple users can share a display
+     * name; the NIP-05 + npub disambiguates.
+     *
      * @param user npub (`npub1…`) or 64-character hex pubkey.
+     * @param expectedDisplayName when set, the verb cross-checks that
+     *   the resolved profile's display name / NIP-05 contains (or is
+     *   contained by) this string. Pass the same name you showed the
+     *   user during the confirmation prompt — a mismatch aborts the
+     *   write with a typed error so the agent can re-prompt.
      */
     @AppFunction(isDescribedByKDoc = true)
     suspend fun followUser(
         appFunctionContext: AppFunctionContext,
         user: String,
+        expectedDisplayName: String? = null,
     ): WriteResult {
         val target = decodeUserOrThrow(user)
         val account = Amethyst.instance.sessionManager.loggedInAccount() ?: throw notSignedIn()
@@ -1026,6 +1095,7 @@ class AmethystAppFunctions {
             throw AppFunctionInvalidArgumentException("cannot follow yourself")
         }
         requireInProcessSigner(account.signer)
+        verifyExpectedRecipient(account, target, expectedDisplayName, requireFollow = false)
         val relays = account.outboxRelays.flow.value
         if (relays.isEmpty()) throw AppFunctionInvalidArgumentException("account has no outbox relays configured")
 
@@ -1105,15 +1175,38 @@ class AmethystAppFunctions {
      * DM-inbox list fall back through NIP-65 read relays then
      * bootstrap relays.
      *
+     * **BEFORE INVOKING:** the agent MUST resolve [recipient] via
+     * [searchProfiles] / [getProfile] first and confirm with the user
+     * using all three identity signals — display name, npub, and
+     * NIP-05 handle ("DM Alice (alice@damus.io, npub1…)?"). Nostr has
+     * no global namespace and impersonation is trivial; the npub +
+     * NIP-05 are the only cryptographic disambiguators.
+     *
+     * By default, the verb refuses to message anyone not in the user's
+     * follow list — a near-zero-cost guard against same-name
+     * impersonators. Pass `requireFollow = false` only after the user
+     * explicitly approves messaging a stranger.
+     *
      * @param recipient npub (`npub1…`) or 64-character hex pubkey.
      * @param text the message body. Cannot be blank; capped at 8000
      *   characters.
+     * @param expectedDisplayName when set, the verb cross-checks that
+     *   the resolved profile's display name / NIP-05 contains (or is
+     *   contained by) this string. Pass the same name you showed the
+     *   user during the confirmation prompt — a mismatch aborts the
+     *   send with a typed error.
+     * @param requireFollow when true (the default), the verb refuses
+     *   to send to a pubkey the user doesn't already follow on Nostr.
+     *   Override to false only when the user explicitly confirmed they
+     *   want to DM a stranger.
      */
     @AppFunction(isDescribedByKDoc = true)
     suspend fun sendDm(
         appFunctionContext: AppFunctionContext,
         recipient: String,
         text: String,
+        expectedDisplayName: String? = null,
+        requireFollow: Boolean = true,
     ): SendDmResult {
         val body = text.trim()
         if (body.isEmpty()) throw AppFunctionInvalidArgumentException("text cannot be blank")
@@ -1123,6 +1216,7 @@ class AmethystAppFunctions {
         val recipientPub = decodeUserOrThrow(recipient)
         val account = Amethyst.instance.sessionManager.loggedInAccount() ?: throw notSignedIn()
         requireInProcessSigner(account.signer)
+        verifyExpectedRecipient(account, recipientPub, expectedDisplayName, requireFollow)
 
         val client = Amethyst.instance.client
         val result = DmActions.buildTextDm(account.signer, recipientPub, body)
@@ -1179,19 +1273,43 @@ class AmethystAppFunctions {
     }
 
     /**
-     * Tip a Nostr user with Lightning sats (NIP-57 profile zap). Use
-     * when the user asks "zap [X] on Nostr", "tip [user] [N] sats",
-     * "send a Lightning tip to [npub]", or "thank [user] with sats".
+     * Tip a Nostr user with Bitcoin sats. Use when the user asks "zap
+     * [X] on Nostr", "tip [user] [N] sats", "send a Lightning tip to
+     * [npub]", "send [N] sats onchain to [user]", "send Alice
+     * [N] sats via Bitcoin", or "thank [user] with sats".
      *
-     * Builds the NIP-57 kind:9734 zap request, fetches a BOLT11
-     * invoice from the recipient's Lightning service, and — when the
-     * user has a Nostr Wallet Connect wallet configured in Amethyst —
-     * pays the invoice automatically over NIP-47. Falls back to
-     * returning the invoice for manual payment when no NWC wallet is
-     * set up.
+     * Two rails are supported:
      *
-     * Defaults to 21 sats — the canonical "small thank-you" zap. Cap
-     * is 1,000,000 sats so an accidental tip can't drain a wallet.
+     *   * **Lightning** (default) — NIP-57 zap. Builds the kind:9734
+     *     request, fetches a BOLT11 invoice from the recipient's
+     *     Lightning service, and — when the user has a Nostr Wallet
+     *     Connect wallet configured — pays automatically over NIP-47.
+     *     Falls back to returning the invoice for manual payment.
+     *
+     *   * **Onchain** (NIP-BC kind:8333) — when [chain] is "onchain",
+     *     builds and broadcasts a Bitcoin transaction paying the
+     *     recipient's derived Taproot address, then publishes a
+     *     kind:8333 zap receipt. Requires the user to have a Bitcoin
+     *     chain backend configured in Amethyst (an Esplora-compatible
+     *     API like mempool.space — see Settings → Bitcoin).
+     *
+     * Defaults to 21 sats Lightning. Cap is 1,000,000 sats so an
+     * accidental tip can't drain a wallet.
+     *
+     * **BEFORE INVOKING:** zaps move real money, so the agent MUST
+     * resolve [user] via [searchProfiles] / [getProfile] first and
+     * confirm with the human using all three identity signals —
+     * display name, npub, and NIP-05 handle ("Zap Alice
+     * (alice@damus.io, npub1…) 21 sats?"). Nostr has no global
+     * namespace; a same-name impersonator is the most likely way for
+     * a zap to go to the wrong person.
+     *
+     * By default, the verb refuses to zap anyone not in the user's
+     * follow list. This is the strongest guard against same-name
+     * impersonators — even if Gemini picked the wrong Alice, the user
+     * almost certainly isn't following her. Pass `requireFollow =
+     * false` only after the user explicitly approves zapping a
+     * stranger (e.g. a public-figure npub they read out themselves).
      *
      * @param user npub (`npub1…`) or 64-character hex pubkey of the
      *   zap recipient.
@@ -1199,6 +1317,21 @@ class AmethystAppFunctions {
      *   sats. Default 21.
      * @param comment optional message to attach to the zap. Capped at
      *   280 characters.
+     * @param chain transport rail: "lightning" (default) or "onchain".
+     *   Null / blank is treated as Lightning.
+     * @param feeRateSatPerVByte miner fee rate for onchain zaps in
+     *   sats per virtual byte. Ignored for Lightning. Default 5.0,
+     *   which targets fast confirmation under typical mempool
+     *   conditions without being aggressive.
+     * @param expectedDisplayName when set, the verb cross-checks that
+     *   the resolved profile's display name / NIP-05 contains (or is
+     *   contained by) this string. Pass the same name you showed the
+     *   user during the confirmation prompt — a mismatch aborts the
+     *   zap before any money moves.
+     * @param requireFollow when true (the default), the verb refuses
+     *   to zap a pubkey the user doesn't already follow on Nostr.
+     *   Override to false only when the user explicitly confirmed
+     *   they want to zap a stranger.
      */
     @AppFunction(isDescribedByKDoc = true)
     suspend fun zapUser(
@@ -1206,12 +1339,36 @@ class AmethystAppFunctions {
         user: String,
         sats: Long = 21,
         comment: String? = null,
+        chain: String? = null,
+        feeRateSatPerVByte: Double = 5.0,
+        expectedDisplayName: String? = null,
+        requireFollow: Boolean = true,
     ): ZapResult {
         val cappedSats = sats.coerceIn(1L, MAX_ZAP_SATS)
         val trimmedComment = comment.orEmpty().trim().take(MAX_ZAP_COMMENT_LENGTH)
         val recipientPub = decodeUserOrThrow(user)
         val account = Amethyst.instance.sessionManager.loggedInAccount() ?: throw notSignedIn()
         requireInProcessSigner(account.signer)
+        verifyExpectedRecipient(account, recipientPub, expectedDisplayName, requireFollow)
+
+        val rail = chain?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: "lightning"
+        return when (rail) {
+            "lightning", "ln" -> zapUserViaLightning(account, recipientPub, cappedSats, trimmedComment)
+            "onchain", "btc", "bitcoin" ->
+                zapUserViaOnchain(account, recipientPub, cappedSats, trimmedComment, feeRateSatPerVByte)
+            else ->
+                throw AppFunctionInvalidArgumentException(
+                    "chain must be \"lightning\" or \"onchain\" (got \"$chain\").",
+                )
+        }
+    }
+
+    private suspend fun zapUserViaLightning(
+        account: com.vitorpamplona.amethyst.model.Account,
+        recipientPub: HexKey,
+        sats: Long,
+        comment: String,
+    ): ZapResult {
         val client = Amethyst.instance.client
 
         // Pull the recipient's kind:0 — needs lnAddress to receive the zap.
@@ -1225,25 +1382,26 @@ class AmethystAppFunctions {
                 ?.let { extractLnAddressFromMetadata(it) }
                 ?: fetchProfileForZap(client, account, recipientPub)
                 ?: throw AppFunctionInvalidArgumentException(
-                    "No kind:0 metadata for $user — recipient must have a Nostr profile first.",
+                    "No kind:0 metadata for ${NPub.create(recipientPub)} — recipient must have a Nostr profile first.",
                 )
         val lnAddress =
             metadata.takeIf { it.isNotBlank() }
                 ?: throw AppFunctionInvalidArgumentException(
-                    "Recipient has no lud16 or lud06 in their profile — they can't receive Lightning zaps.",
+                    "Recipient has no lud16 or lud06 in their profile — they can't receive Lightning zaps. " +
+                        "Try chain=\"onchain\" instead if they have NIP-BC enabled on their account.",
                 )
 
         val zapRequest =
             ZapActions.buildUserZapRequest(
                 signer = account.signer,
                 recipientPubkey = recipientPub,
-                amountMillisats = ZapActions.satsToMillisats(cappedSats),
+                amountMillisats = ZapActions.satsToMillisats(sats),
                 inboxRelays = account.nip65RelayList.inboxFlow.value,
-                comment = trimmedComment,
+                comment = comment,
                 zapType = LnZapEvent.ZapType.PUBLIC,
             )
 
-        val invoice = fetchInvoiceOrThrow(lnAddress, cappedSats, trimmedComment, zapRequest)
+        val invoice = fetchInvoiceOrThrow(lnAddress, sats, comment, zapRequest)
 
         // If the user has a Nostr Wallet Connect wallet configured, pay
         // the invoice automatically over NIP-47 so Gemini can answer
@@ -1253,19 +1411,123 @@ class AmethystAppFunctions {
         val nwc = payViaNwcOrNull(account, invoice, null)
 
         return ZapResult(
+            chain = "lightning",
             recipientNpub = NPub.create(recipientPub),
             recipientPubkeyHex = recipientPub,
             recipientDisplayName = displayNameOf(recipientPub),
             lnAddress = lnAddress,
-            amountSats = cappedSats,
-            comment = trimmedComment,
+            amountSats = sats,
+            comment = comment,
             invoice = invoice,
             zapRequestId = zapRequest.id,
             nwcAttempted = nwc != null,
             nwcPaid = nwc?.success == true,
             nwcPreimage = nwc?.preimage,
             nwcError = nwc?.errorMessage,
+            onchainTxid = null,
+            onchainFeeSats = null,
+            onchainChangeSats = null,
+            onchainReceiptEventId = null,
+            onchainError = null,
+            onchainStage = null,
         )
+    }
+
+    private suspend fun zapUserViaOnchain(
+        account: com.vitorpamplona.amethyst.model.Account,
+        recipientPub: HexKey,
+        sats: Long,
+        comment: String,
+        feeRateSatPerVByte: Double,
+    ): ZapResult {
+        // The Account.sendOnchainZap call returns Failure when the
+        // backend isn't configured; we surface that as a typed
+        // NotSupported error so the LLM can tell the user "you need to
+        // set up a Bitcoin backend in Amethyst Settings → Bitcoin."
+        if (account.cache.onchainBackend == null) {
+            throw AppFunctionNotSupportedException(
+                "Amethyst has no Bitcoin chain backend configured. " +
+                    "Open Settings → Bitcoin and add an Esplora-compatible endpoint (e.g. mempool.space) " +
+                    "before sending onchain zaps.",
+            )
+        }
+        if (feeRateSatPerVByte < 0.1) {
+            throw AppFunctionInvalidArgumentException(
+                "feeRateSatPerVByte must be at least 0.1 (got $feeRateSatPerVByte).",
+            )
+        }
+        if (feeRateSatPerVByte > 1000) {
+            throw AppFunctionInvalidArgumentException(
+                "feeRateSatPerVByte must be ≤ 1000 (got $feeRateSatPerVByte) — anything higher is almost certainly a mistake.",
+            )
+        }
+
+        val result =
+            account.sendOnchainZap(
+                recipientPubKey = recipientPub,
+                amountSats = sats,
+                feeRateSatPerVByte = feeRateSatPerVByte,
+                comment = comment,
+                // No zappedEvent: this is a profile zap. Event zaps via
+                // onchain would need a separate verb that takes an
+                // event id (and resolves splits) — deferred.
+                zappedEvent = null,
+            )
+
+        return when (result) {
+            is com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult.Success ->
+                ZapResult(
+                    chain = "onchain",
+                    recipientNpub = NPub.create(recipientPub),
+                    recipientPubkeyHex = recipientPub,
+                    recipientDisplayName = displayNameOf(recipientPub),
+                    // Onchain doesn't go through an LN service.
+                    lnAddress = "",
+                    amountSats = sats,
+                    comment = comment,
+                    // Onchain has no BOLT11; pre-fill empty to satisfy
+                    // the non-null result-class contract.
+                    invoice = "",
+                    zapRequestId = "",
+                    nwcAttempted = false,
+                    nwcPaid = false,
+                    nwcPreimage = null,
+                    nwcError = null,
+                    onchainTxid = result.txid,
+                    onchainFeeSats = result.feeSats,
+                    onchainChangeSats = result.changeSats,
+                    onchainReceiptEventId = result.receiptEventId,
+                    onchainError = null,
+                    onchainStage = null,
+                )
+
+            is com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult.Failure ->
+                ZapResult(
+                    chain = "onchain",
+                    recipientNpub = NPub.create(recipientPub),
+                    recipientPubkeyHex = recipientPub,
+                    recipientDisplayName = displayNameOf(recipientPub),
+                    lnAddress = "",
+                    amountSats = sats,
+                    comment = comment,
+                    invoice = "",
+                    zapRequestId = "",
+                    nwcAttempted = false,
+                    nwcPaid = false,
+                    nwcPreimage = null,
+                    nwcError = null,
+                    // When stage == PUBLISHING, the tx WAS broadcast
+                    // but the receipt couldn't be published — surface
+                    // the txid even on failure so the user can verify
+                    // on a block explorer.
+                    onchainTxid = result.broadcastTxid,
+                    onchainFeeSats = null,
+                    onchainChangeSats = null,
+                    onchainReceiptEventId = null,
+                    onchainError = result.message,
+                    onchainStage = result.stage.name.lowercase(),
+                )
+        }
     }
 
     /**
@@ -1543,6 +1805,88 @@ class AmethystAppFunctions {
     }
 
     /**
+     * Anti-impersonation guard for write verbs. Two checks, both
+     * defensive against an agent that misroutes "DM Alice" to the wrong
+     * Alice:
+     *
+     *   1. If [expectedDisplayName] is provided, verify it loosely
+     *      matches the cached display name, name, or NIP-05 handle of
+     *      [target]. The match is case-insensitive and bidirectional
+     *      ("vitor" matches "Vitor Pamplona" and vice-versa) so the
+     *      agent can pass whatever the user said without having to
+     *      reconstruct the exact metadata string.
+     *
+     *   2. If [requireFollow] is true, verify the target is in the
+     *      active account's kind:3 follow list. This is the strongest
+     *      lever against wrong-recipient writes: even if Gemini picked
+     *      a same-name impersonator, the user is overwhelmingly
+     *      unlikely to be following them. Caller can pass
+     *      `requireFollow = false` to override (e.g. zapping a stranger
+     *      the user explicitly named by npub).
+     *
+     * Throws [AppFunctionInvalidArgumentException] with the npub +
+     * cached NIP-05 + display name on mismatch so the agent can render
+     * a clarifying prompt to the user.
+     */
+    private fun verifyExpectedRecipient(
+        account: com.vitorpamplona.amethyst.model.Account,
+        target: HexKey,
+        expectedDisplayName: String?,
+        requireFollow: Boolean,
+    ) {
+        val user = account.cache.checkGetOrCreateUser(target)
+        val meta =
+            user
+                ?.metadataOrNull()
+                ?.flow
+                ?.value
+                ?.info
+        val cachedName = meta?.bestName()
+        val cachedNip05 = meta?.nip05?.trim()?.takeIf { it.isNotEmpty() }
+        val npub = NPub.create(target)
+        val expected = expectedDisplayName?.trim()?.takeIf { it.isNotEmpty() }
+
+        if (expected != null) {
+            val normalized = expected.lowercase()
+            val candidates =
+                listOfNotNull(
+                    cachedName?.lowercase(),
+                    meta
+                        ?.displayName
+                        ?.trim()
+                        ?.lowercase()
+                        ?.takeIf { it.isNotEmpty() },
+                    meta
+                        ?.name
+                        ?.trim()
+                        ?.lowercase()
+                        ?.takeIf { it.isNotEmpty() },
+                    cachedNip05?.lowercase(),
+                    cachedNip05?.substringBefore('@')?.lowercase()?.takeIf { it.isNotEmpty() },
+                )
+            val matches =
+                candidates.any { it == normalized || it.contains(normalized) || normalized.contains(it) }
+            if (!matches) {
+                throw AppFunctionInvalidArgumentException(
+                    "Recipient mismatch: expectedDisplayName=\"$expected\" doesn't match the resolved " +
+                        "Nostr profile (npub=$npub, displayName=${cachedName ?: "<unknown>"}, " +
+                        "nip05=${cachedNip05 ?: "<none>"}). Ask the user to confirm with the agent " +
+                        "before retrying — there may be multiple users with the same name on Nostr.",
+                )
+            }
+        }
+
+        if (requireFollow && target !in account.kind3FollowList.flow.value.authors) {
+            throw AppFunctionInvalidArgumentException(
+                "Recipient is not in the user's Nostr follow list (npub=$npub, " +
+                    "displayName=${cachedName ?: "<unknown>"}, nip05=${cachedNip05 ?: "<none>"}). " +
+                    "Ask the user to confirm they want to act on this stranger, then retry with " +
+                    "requireFollow=false. This is a guard against acting on a same-name impersonator.",
+            )
+        }
+    }
+
+    /**
      * Reject the call when the active signer can't sign in-process —
      * NIP-55 external signers (Amber) need a foreground activity to
      * show the user an approval prompt, which we can't launch from a
@@ -1790,6 +2134,14 @@ class AmethystAppFunctions {
         /** Cap on the number of mentioned users surfaced in a feed
          *  digest. Same rationale as TOP_HASHTAGS_LIMIT. */
         private const val TOP_MENTIONS_LIMIT = 10
+
+        /** Overall budget for the NIP-05 verification pass inside
+         *  [searchProfiles]. We fan out one HTTP request per result so
+         *  the wall-clock is dominated by the slowest .well-known.
+         *  4s is short enough to keep search snappy and long enough to
+         *  catch most genuine refutations. On timeout we keep all
+         *  candidates rather than censoring them. */
+        private const val NIP05_FILTER_TIMEOUT_MS = 4_000L
     }
 }
 
@@ -2192,34 +2544,35 @@ class SendDmResult(
 )
 
 /**
- * Result of [AmethystAppFunctions.zapUser]. Always carries the BOLT11
- * invoice so the caller can fall back to manual payment; when the
- * user has a Nostr Wallet Connect (NIP-47) wallet configured, the
- * verb also attempts to pay the invoice via that wallet and the
- * `nwc*` fields report the outcome.
+ * Result of [AmethystAppFunctions.zapUser]. Carries either the
+ * Lightning BOLT11 invoice (+ NWC payment outcome when configured) or
+ * the onchain Bitcoin broadcast result, depending on the rail used.
+ * The [chain] field tells callers which set of fields to read.
  */
 @AppFunctionSerializable(isDescribedByKDoc = true)
 class ZapResult(
+    /** Transport rail actually used: "lightning" or "onchain". */
+    val chain: String,
     /** Bech32 npub of the zap recipient. */
     val recipientNpub: String,
     /** Hex pubkey of the recipient. */
     val recipientPubkeyHex: String,
     /** Best-effort display name from the local kind:0 cache. */
     val recipientDisplayName: String?,
-    /** LN address the invoice was fetched from. */
+    /** LN address the invoice was fetched from. Empty for onchain zaps. */
     val lnAddress: String,
-    /** Amount actually requested (after capping). */
+    /** Amount actually billed (after capping). For onchain, the
+     *  miner fee is reported separately in [onchainFeeSats]. */
     val amountSats: Long,
     /** Comment attached to the zap (truncated to 280 chars). */
     val comment: String,
-    /** BOLT11 invoice — always set. Pay this manually if [nwcPaid]
-     *  is false. */
+    /** BOLT11 invoice — populated for Lightning, empty for onchain.
+     *  Pay manually if [nwcPaid] is false. */
     val invoice: String,
-    /** Hex event id of the signed kind:9734 zap request. */
+    /** Hex event id of the signed kind:9734 zap request. Empty for onchain. */
     val zapRequestId: String,
     /** True when the user has NWC configured and we tried to auto-pay.
-     *  False means the caller should surface the invoice for manual
-     *  payment. */
+     *  Always false for onchain. */
     val nwcAttempted: Boolean,
     /** True only when an NWC wallet confirmed the payment. */
     val nwcPaid: Boolean,
@@ -2227,6 +2580,24 @@ class ZapResult(
     val nwcPreimage: String?,
     /** Failure reason when [nwcAttempted] is true but [nwcPaid] is false. */
     val nwcError: String?,
+    /** Bitcoin transaction id on a successful onchain zap, or — when
+     *  the tx was broadcast but the receipt failed to publish — the
+     *  txid so the user can verify the payment manually. Null for
+     *  Lightning zaps. */
+    val onchainTxid: String?,
+    /** Miner fee paid in sats on a successful onchain zap. */
+    val onchainFeeSats: Long?,
+    /** Change returned to the sender's address on an onchain zap. */
+    val onchainChangeSats: Long?,
+    /** Hex event id of the kind:8333 onchain zap receipt. */
+    val onchainReceiptEventId: String?,
+    /** Failure reason when an onchain zap failed. */
+    val onchainError: String?,
+    /** Stage at which an onchain zap failed: "loading_utxos",
+     *  "building", "signing", "broadcasting", or "publishing"
+     *  (last means the tx is on-chain but the receipt didn't land
+     *  on relays — the payment is still real). */
+    val onchainStage: String?,
 )
 
 /**
