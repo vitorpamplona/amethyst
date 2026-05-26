@@ -22,6 +22,8 @@
 
 package com.vitorpamplona.amethyst.commons.model
 
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import platform.Foundation.NSDate
 import platform.Foundation.NSDateFormatter
 import platform.Foundation.NSLocale
@@ -39,4 +41,14 @@ private val levelFormatter: NSDateFormatter =
         locale = NSLocale("en_US_POSIX")
     }
 
-actual fun formattedDateTime(timestamp: Long): String = levelFormatter.stringFromDate(NSDate.dateWithTimeIntervalSince1970(timestamp.toDouble()))
+// NSDateFormatter is not thread-safe for concurrent stringFromDate calls
+// (Apple docs). ThreadLevelCalculator.replyLevelSignature runs under
+// Dispatchers.IO via LevelFeedViewModel, so multiple threads can hit
+// formattedDateTime simultaneously. Guard the shared formatter rather than
+// allocating one per call (cheaper for the O(notes-per-thread-sort) call rate).
+private val levelFormatterLock = KmpLock()
+
+actual fun formattedDateTime(timestamp: Long): String =
+    levelFormatterLock.withLock {
+        levelFormatter.stringFromDate(NSDate.dateWithTimeIntervalSince1970(timestamp.toDouble()))
+    }
