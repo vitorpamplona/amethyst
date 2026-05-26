@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MeltQuoteBolt11ResponseDto
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuProof
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -219,8 +220,7 @@ class CashuWalletViewModel : ViewModel() {
                 ops.recommendMint(mintUrl = mintUrl, mintAnnouncementDTag = dTag, review = review)
             } catch (e: Exception) {
                 // Best-effort — the UI doesn't need to block on the result.
-                com.vitorpamplona.quartz.utils.Log
-                    .w("CashuWallet") { "recommendMint($mintUrl) failed: ${describeMintError(e)}" }
+                Log.w("CashuWallet") { "recommendMint($mintUrl) failed: ${describeMintError(e)}" }
             }
         }
     }
@@ -366,6 +366,33 @@ class CashuWalletViewModel : ViewModel() {
 
     fun resetMintState() {
         _mintState.value = CashuMintFlowState.Idle
+    }
+
+    /**
+     * User-initiated discard of the pending mint quote currently showing in
+     * the Receive dialog. NIP-09 deletes the kind:7374 so the pending-quote
+     * banner doesn't keep re-surfacing it, then drops back to Idle.
+     *
+     * Works from both the AwaitingPayment state (just-requested invoice)
+     * and the Error state (failed completion). No-op otherwise.
+     */
+    fun discardMintQuote() {
+        val vm = accountViewModel ?: return
+        val quoteEvent =
+            when (val s = _mintState.value) {
+                is CashuMintFlowState.AwaitingPayment -> s.flow.quoteEvent
+                else -> null
+            } ?: run {
+                _mintState.value = CashuMintFlowState.Idle
+                return
+            }
+        vm.launchSigner {
+            runCatching { ops.cancelMintQuote(quoteEvent) }
+                .onFailure {
+                    Log.w("CashuWallet") { "cancelMintQuote failed: ${describeMintError(it)}" }
+                }
+            _mintState.value = CashuMintFlowState.Idle
+        }
     }
 
     // -------- Melt to LN --------

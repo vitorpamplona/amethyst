@@ -157,6 +157,24 @@ class CashuWalletOps(
     ): MintQuoteBolt11ResponseDto = ops(mintUrl).mintQuoteStatus(quoteId)
 
     /**
+     * User-initiated abandonment of a pending mint quote.
+     *
+     * NIP-09 deletes the kind:7374 so the quote no longer shows in the
+     * pending banner. We do NOT call the mint to cancel — bolt11 invoices
+     * just expire on their own, and a fresh quote is cheap if the user
+     * changes their mind.
+     *
+     * No-op if the invoice was already paid: by the time the mint issues
+     * proofs and completeMintFromLightning runs, the same NIP-09 delete is
+     * fired anyway; running it twice on a missing event is harmless.
+     */
+    suspend fun cancelMintQuote(quoteEvent: CashuMintQuoteEvent) {
+        val delTemplate = DeletionEvent.build(listOf(quoteEvent))
+        val delEvent = signer.sign(delTemplate)
+        publish(delEvent)
+    }
+
+    /**
      * Mint phase 2: after the user paid the invoice, exchange the quote for
      * proofs, publish them as kind:7375, log kind:7376, and delete kind:7374.
      */

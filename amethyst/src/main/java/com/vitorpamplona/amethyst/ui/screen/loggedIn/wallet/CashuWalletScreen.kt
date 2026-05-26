@@ -49,6 +49,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -57,14 +58,18 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -72,13 +77,20 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.components.util.getText
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
+import com.vitorpamplona.quartz.nip60Cashu.history.SpendingDirection
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.DateFormat
@@ -145,6 +157,8 @@ fun CashuWalletScreen(
                     mints = mints,
                     history = history,
                     pendingQuoteCount = pendingQuotes.size,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
                     onReceive = { receiveOpen = true },
                     onSendLn = { sendLnOpen = true },
                     onSendToken = { sendTokenOpen = true },
@@ -237,7 +251,7 @@ private fun DiscoveringCashuWallet(modifier: Modifier) {
             text = stringRes(R.string.cashu_discovering_description),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            textAlign = TextAlign.Center,
         )
     }
 }
@@ -280,6 +294,8 @@ private fun CashuWalletContent(
     mints: List<String>,
     history: List<CashuSpendingHistoryEvent>,
     pendingQuoteCount: Int,
+    accountViewModel: AccountViewModel,
+    nav: INav,
     onReceive: () -> Unit,
     onSendLn: () -> Unit,
     onSendToken: () -> Unit,
@@ -334,7 +350,7 @@ private fun CashuWalletContent(
                 )
             }
             items(history, key = { it.id }) { entry ->
-                HistoryRow(entry)
+                HistoryRow(entry, accountViewModel, nav)
             }
         }
 
@@ -377,12 +393,11 @@ private fun PendingQuoteBanner(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text =
-                        androidx.compose.ui.res
-                            .pluralStringResource(
-                                R.plurals.cashu_pending_quotes_title,
-                                count,
-                                count,
-                            ),
+                        pluralStringResource(
+                            R.plurals.cashu_pending_quotes_title,
+                            count,
+                            count,
+                        ),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -450,29 +465,57 @@ private fun ActionRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        ActionButton(MaterialSymbols.Bolt, stringRes(R.string.cashu_action_receive), onReceive, Modifier.weight(1f))
-        ActionButton(MaterialSymbols.AutoMirrored.Send, stringRes(R.string.cashu_action_send_ln), onSendLn, Modifier.weight(1f))
-        ActionButton(MaterialSymbols.ContentPaste, stringRes(R.string.cashu_action_send_token), onSendToken, Modifier.weight(1f))
-        ActionButton(MaterialSymbols.Add, stringRes(R.string.cashu_action_redeem), onRedeem, Modifier.weight(1f))
+        ActionTile(MaterialSymbols.Bolt, stringRes(R.string.cashu_action_receive), onReceive, Modifier.weight(1f))
+        ActionTile(MaterialSymbols.AutoMirrored.Send, stringRes(R.string.cashu_action_send_ln), onSendLn, Modifier.weight(1f))
+        ActionTile(MaterialSymbols.ContentPaste, stringRes(R.string.cashu_action_send_token), onSendToken, Modifier.weight(1f))
+        ActionTile(MaterialSymbols.Add, stringRes(R.string.cashu_action_redeem), onRedeem, Modifier.weight(1f))
     }
 }
 
+/**
+ * Square-ish tile with the icon stacked over a 1-2 line label.
+ *
+ * Replaces an earlier OutlinedButton-per-tile layout: with 4 tiles in a row
+ * and OutlinedButton's default 24dp horizontal padding plus a 20dp icon,
+ * the "Send Token" label clipped on standard 360dp-wide phones. A Surface
+ * with explicit padding gives us full control over the content area.
+ */
 @Composable
-private fun ActionButton(
+private fun ActionTile(
     icon: MaterialSymbol,
     label: String,
     onClick: () -> Unit,
     modifier: Modifier,
 ) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = modifier,
+    Surface(
+        modifier = modifier.height(72.dp),
         shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(symbol = icon, contentDescription = null, modifier = Modifier.size(20.dp))
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+        Column(
+            modifier =
+                Modifier
+                    .clickable(onClick = onClick)
+                    .fillMaxSize()
+                    .padding(horizontal = 4.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Icon(
+                symbol = icon,
+                contentDescription = null,
+                modifier = Modifier.size(22.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -512,8 +555,49 @@ private fun MintRow(
     }
 }
 
+/**
+ * Renders one kind:7376 history event in the same visual language as the
+ * LN + on-chain transaction lists: counterparty avatar on the left,
+ * description on top, timestamp underneath, signed amount on the right.
+ *
+ * For inbound nutzap redemptions (kind:9321 referenced with a
+ * "redeemed" marker on the kind:7376) we can resolve the sender's
+ * Nostr pubkey from LocalCache and show their profile picture + name.
+ * For everything else (LN mint/melt, send-as-token, redeem cashuB)
+ * there is no Nostr counterparty, so we fall back to a directional
+ * arrow icon matching the LN wallet's empty-counterparty pattern.
+ */
 @Composable
-private fun HistoryRow(entry: CashuSpendingHistoryEvent) {
+private fun HistoryRow(
+    entry: CashuSpendingHistoryEvent,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val signer = accountViewModel.account.signer
+
+    // Decrypt the encrypted half of the spending history once per row.
+    // Cheap (NIP-44 on a few hundred bytes) and Compose memoizes the
+    // produceState by entry.id so it doesn't repeat on recomposition.
+    val decoded by produceState<DecodedHistoryRow?>(initialValue = null, key1 = entry.id) {
+        value = decodeHistoryRow(entry, signer)
+    }
+
+    val nutzapSenderHex =
+        remember(decoded) {
+            // Sender lookup: the redeemed-marker `e` tag points at the kind:9321
+            // event id; if it's already in LocalCache (we get it via our cashu
+            // wallet filter assembler) its event.pubKey is the sender.
+            entry.redeemedReferences().firstNotNullOfOrNull { ref ->
+                LocalCache
+                    .getOrCreateNote(ref.eventId)
+                    .event
+                    ?.takeIf { it is NutzapEvent }
+                    ?.pubKey
+            }
+        }
+
+    val isIncoming = decoded?.direction == SpendingDirection.IN
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -522,21 +606,114 @@ private fun HistoryRow(entry: CashuSpendingHistoryEvent) {
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = entry.id.take(12) + "…",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+            // Left avatar / icon.
+            if (nutzapSenderHex != null) {
+                UserPicture(
+                    userHex = nutzapSenderHex,
+                    size = 40.dp,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
                 )
+            } else {
+                Icon(
+                    symbol = if (isIncoming) MaterialSymbols.ArrowDownward else MaterialSymbols.ArrowUpward,
+                    contentDescription = null,
+                    modifier = Modifier.size(40.dp),
+                    tint =
+                        if (isIncoming) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Middle: title + timestamp.
+            Column(modifier = Modifier.weight(1f)) {
+                if (nutzapSenderHex != null) {
+                    HistoryUserName(nutzapSenderHex, accountViewModel)
+                } else {
+                    Text(
+                        text =
+                            stringRes(
+                                if (isIncoming) {
+                                    R.string.cashu_history_incoming
+                                } else {
+                                    R.string.cashu_history_outgoing
+                                },
+                            ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 Text(
                     text =
                         DateFormat
-                            .getDateTimeInstance()
+                            .getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
                             .format(Date(entry.createdAt * 1000)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+
+            // Right: signed amount.
+            val amount = decoded?.amount
+            if (amount != null) {
+                Text(
+                    text = (if (isIncoming) "+" else "−") + NumberFormat.getIntegerInstance().format(amount),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color =
+                        if (isIncoming) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                )
+            }
+        }
+    }
+}
+
+private data class DecodedHistoryRow(
+    val direction: SpendingDirection?,
+    val amount: Long?,
+)
+
+private suspend fun decodeHistoryRow(
+    entry: CashuSpendingHistoryEvent,
+    signer: NostrSigner,
+): DecodedHistoryRow =
+    runCatching {
+        DecodedHistoryRow(
+            direction = entry.direction(signer),
+            amount = entry.amount(signer),
+        )
+    }.getOrNull() ?: DecodedHistoryRow(direction = null, amount = null)
+
+@Composable
+private fun HistoryUserName(
+    pubkeyHex: String,
+    accountViewModel: AccountViewModel,
+) {
+    LoadUser(baseUserHex = pubkeyHex, accountViewModel = accountViewModel) { user ->
+        if (user != null) {
+            UsernameDisplay(
+                baseUser = user,
+                fontWeight = FontWeight.Medium,
+                accountViewModel = accountViewModel,
+            )
+        } else {
+            Text(
+                text = pubkeyHex.take(8) + "…",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -669,6 +846,17 @@ private fun ReceiveDialog(
                         },
                         enabled = amount.isNotBlank() && pickedMint.isNotBlank(),
                     ) { Text(stringRes(R.string.cashu_request_invoice)) }
+                }
+
+                is CashuMintFlowState.AwaitingPayment -> {
+                    // While the user is waiting for an invoice they may
+                    // decide they don't want it after all (typo'd amount,
+                    // wrong mint, lost interest). Discard NIP-09-deletes
+                    // the kind:7374 so the pending-invoice banner won't
+                    // re-surface it on next entry.
+                    TextButton(onClick = { viewModel.discardMintQuote() }) {
+                        Text(stringRes(R.string.cashu_discard_invoice))
+                    }
                 }
 
                 is CashuMintFlowState.Completed -> {

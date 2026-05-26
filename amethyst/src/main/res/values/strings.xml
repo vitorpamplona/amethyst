@@ -1915,6 +1915,9 @@
     <string name="cashu_token_label">Cashu token</string>
     <string name="cashu_copy_invoice">Copy invoice</string>
     <string name="cashu_request_invoice">Request invoice</string>
+    <string name="cashu_discard_invoice">Discard invoice</string>
+    <string name="cashu_history_incoming">Received</string>
+    <string name="cashu_history_outgoing">Sent</string>
     <string name="cashu_pay_invoice">Pay invoice</string>
     <string name="cashu_get_quote">Get quote</string>
     <string name="cashu_getting_quote">Asking mint for a quote…</string>
