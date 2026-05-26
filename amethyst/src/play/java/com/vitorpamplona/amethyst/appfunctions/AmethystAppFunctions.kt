@@ -1179,19 +1179,28 @@ class AmethystAppFunctions {
     }
 
     /**
-     * Tip a Nostr user with Lightning sats (NIP-57 profile zap). Use
-     * when the user asks "zap [X] on Nostr", "tip [user] [N] sats",
-     * "send a Lightning tip to [npub]", or "thank [user] with sats".
+     * Tip a Nostr user with Bitcoin sats. Use when the user asks "zap
+     * [X] on Nostr", "tip [user] [N] sats", "send a Lightning tip to
+     * [npub]", "send [N] sats onchain to [user]", "send Alice
+     * [N] sats via Bitcoin", or "thank [user] with sats".
      *
-     * Builds the NIP-57 kind:9734 zap request, fetches a BOLT11
-     * invoice from the recipient's Lightning service, and — when the
-     * user has a Nostr Wallet Connect wallet configured in Amethyst —
-     * pays the invoice automatically over NIP-47. Falls back to
-     * returning the invoice for manual payment when no NWC wallet is
-     * set up.
+     * Two rails are supported:
      *
-     * Defaults to 21 sats — the canonical "small thank-you" zap. Cap
-     * is 1,000,000 sats so an accidental tip can't drain a wallet.
+     *   * **Lightning** (default) — NIP-57 zap. Builds the kind:9734
+     *     request, fetches a BOLT11 invoice from the recipient's
+     *     Lightning service, and — when the user has a Nostr Wallet
+     *     Connect wallet configured — pays automatically over NIP-47.
+     *     Falls back to returning the invoice for manual payment.
+     *
+     *   * **Onchain** (NIP-BC kind:8333) — when [chain] is "onchain",
+     *     builds and broadcasts a Bitcoin transaction paying the
+     *     recipient's derived Taproot address, then publishes a
+     *     kind:8333 zap receipt. Requires the user to have a Bitcoin
+     *     chain backend configured in Amethyst (an Esplora-compatible
+     *     API like mempool.space — see Settings → Bitcoin).
+     *
+     * Defaults to 21 sats Lightning. Cap is 1,000,000 sats so an
+     * accidental tip can't drain a wallet.
      *
      * @param user npub (`npub1…`) or 64-character hex pubkey of the
      *   zap recipient.
@@ -1199,6 +1208,12 @@ class AmethystAppFunctions {
      *   sats. Default 21.
      * @param comment optional message to attach to the zap. Capped at
      *   280 characters.
+     * @param chain transport rail: "lightning" (default) or "onchain".
+     *   Null / blank is treated as Lightning.
+     * @param feeRateSatPerVByte miner fee rate for onchain zaps in
+     *   sats per virtual byte. Ignored for Lightning. Default 5.0,
+     *   which targets fast confirmation under typical mempool
+     *   conditions without being aggressive.
      */
     @AppFunction(isDescribedByKDoc = true)
     suspend fun zapUser(
@@ -1206,12 +1221,33 @@ class AmethystAppFunctions {
         user: String,
         sats: Long = 21,
         comment: String? = null,
+        chain: String? = null,
+        feeRateSatPerVByte: Double = 5.0,
     ): ZapResult {
         val cappedSats = sats.coerceIn(1L, MAX_ZAP_SATS)
         val trimmedComment = comment.orEmpty().trim().take(MAX_ZAP_COMMENT_LENGTH)
         val recipientPub = decodeUserOrThrow(user)
         val account = Amethyst.instance.sessionManager.loggedInAccount() ?: throw notSignedIn()
         requireInProcessSigner(account.signer)
+
+        val rail = chain?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: "lightning"
+        return when (rail) {
+            "lightning", "ln" -> zapUserViaLightning(account, recipientPub, cappedSats, trimmedComment)
+            "onchain", "btc", "bitcoin" ->
+                zapUserViaOnchain(account, recipientPub, cappedSats, trimmedComment, feeRateSatPerVByte)
+            else ->
+                throw AppFunctionInvalidArgumentException(
+                    "chain must be \"lightning\" or \"onchain\" (got \"$chain\").",
+                )
+        }
+    }
+
+    private suspend fun zapUserViaLightning(
+        account: com.vitorpamplona.amethyst.model.Account,
+        recipientPub: HexKey,
+        sats: Long,
+        comment: String,
+    ): ZapResult {
         val client = Amethyst.instance.client
 
         // Pull the recipient's kind:0 — needs lnAddress to receive the zap.
@@ -1225,25 +1261,26 @@ class AmethystAppFunctions {
                 ?.let { extractLnAddressFromMetadata(it) }
                 ?: fetchProfileForZap(client, account, recipientPub)
                 ?: throw AppFunctionInvalidArgumentException(
-                    "No kind:0 metadata for $user — recipient must have a Nostr profile first.",
+                    "No kind:0 metadata for ${NPub.create(recipientPub)} — recipient must have a Nostr profile first.",
                 )
         val lnAddress =
             metadata.takeIf { it.isNotBlank() }
                 ?: throw AppFunctionInvalidArgumentException(
-                    "Recipient has no lud16 or lud06 in their profile — they can't receive Lightning zaps.",
+                    "Recipient has no lud16 or lud06 in their profile — they can't receive Lightning zaps. " +
+                        "Try chain=\"onchain\" instead if they have NIP-BC enabled on their account.",
                 )
 
         val zapRequest =
             ZapActions.buildUserZapRequest(
                 signer = account.signer,
                 recipientPubkey = recipientPub,
-                amountMillisats = ZapActions.satsToMillisats(cappedSats),
+                amountMillisats = ZapActions.satsToMillisats(sats),
                 inboxRelays = account.nip65RelayList.inboxFlow.value,
-                comment = trimmedComment,
+                comment = comment,
                 zapType = LnZapEvent.ZapType.PUBLIC,
             )
 
-        val invoice = fetchInvoiceOrThrow(lnAddress, cappedSats, trimmedComment, zapRequest)
+        val invoice = fetchInvoiceOrThrow(lnAddress, sats, comment, zapRequest)
 
         // If the user has a Nostr Wallet Connect wallet configured, pay
         // the invoice automatically over NIP-47 so Gemini can answer
@@ -1253,19 +1290,123 @@ class AmethystAppFunctions {
         val nwc = payViaNwcOrNull(account, invoice, null)
 
         return ZapResult(
+            chain = "lightning",
             recipientNpub = NPub.create(recipientPub),
             recipientPubkeyHex = recipientPub,
             recipientDisplayName = displayNameOf(recipientPub),
             lnAddress = lnAddress,
-            amountSats = cappedSats,
-            comment = trimmedComment,
+            amountSats = sats,
+            comment = comment,
             invoice = invoice,
             zapRequestId = zapRequest.id,
             nwcAttempted = nwc != null,
             nwcPaid = nwc?.success == true,
             nwcPreimage = nwc?.preimage,
             nwcError = nwc?.errorMessage,
+            onchainTxid = null,
+            onchainFeeSats = null,
+            onchainChangeSats = null,
+            onchainReceiptEventId = null,
+            onchainError = null,
+            onchainStage = null,
         )
+    }
+
+    private suspend fun zapUserViaOnchain(
+        account: com.vitorpamplona.amethyst.model.Account,
+        recipientPub: HexKey,
+        sats: Long,
+        comment: String,
+        feeRateSatPerVByte: Double,
+    ): ZapResult {
+        // The Account.sendOnchainZap call returns Failure when the
+        // backend isn't configured; we surface that as a typed
+        // NotSupported error so the LLM can tell the user "you need to
+        // set up a Bitcoin backend in Amethyst Settings → Bitcoin."
+        if (account.cache.onchainBackend == null) {
+            throw AppFunctionNotSupportedException(
+                "Amethyst has no Bitcoin chain backend configured. " +
+                    "Open Settings → Bitcoin and add an Esplora-compatible endpoint (e.g. mempool.space) " +
+                    "before sending onchain zaps.",
+            )
+        }
+        if (feeRateSatPerVByte < 0.1) {
+            throw AppFunctionInvalidArgumentException(
+                "feeRateSatPerVByte must be at least 0.1 (got $feeRateSatPerVByte).",
+            )
+        }
+        if (feeRateSatPerVByte > 1000) {
+            throw AppFunctionInvalidArgumentException(
+                "feeRateSatPerVByte must be ≤ 1000 (got $feeRateSatPerVByte) — anything higher is almost certainly a mistake.",
+            )
+        }
+
+        val result =
+            account.sendOnchainZap(
+                recipientPubKey = recipientPub,
+                amountSats = sats,
+                feeRateSatPerVByte = feeRateSatPerVByte,
+                comment = comment,
+                // No zappedEvent: this is a profile zap. Event zaps via
+                // onchain would need a separate verb that takes an
+                // event id (and resolves splits) — deferred.
+                zappedEvent = null,
+            )
+
+        return when (result) {
+            is com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult.Success ->
+                ZapResult(
+                    chain = "onchain",
+                    recipientNpub = NPub.create(recipientPub),
+                    recipientPubkeyHex = recipientPub,
+                    recipientDisplayName = displayNameOf(recipientPub),
+                    // Onchain doesn't go through an LN service.
+                    lnAddress = "",
+                    amountSats = sats,
+                    comment = comment,
+                    // Onchain has no BOLT11; pre-fill empty to satisfy
+                    // the non-null result-class contract.
+                    invoice = "",
+                    zapRequestId = "",
+                    nwcAttempted = false,
+                    nwcPaid = false,
+                    nwcPreimage = null,
+                    nwcError = null,
+                    onchainTxid = result.txid,
+                    onchainFeeSats = result.feeSats,
+                    onchainChangeSats = result.changeSats,
+                    onchainReceiptEventId = result.receiptEventId,
+                    onchainError = null,
+                    onchainStage = null,
+                )
+
+            is com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult.Failure ->
+                ZapResult(
+                    chain = "onchain",
+                    recipientNpub = NPub.create(recipientPub),
+                    recipientPubkeyHex = recipientPub,
+                    recipientDisplayName = displayNameOf(recipientPub),
+                    lnAddress = "",
+                    amountSats = sats,
+                    comment = comment,
+                    invoice = "",
+                    zapRequestId = "",
+                    nwcAttempted = false,
+                    nwcPaid = false,
+                    nwcPreimage = null,
+                    nwcError = null,
+                    // When stage == PUBLISHING, the tx WAS broadcast
+                    // but the receipt couldn't be published — surface
+                    // the txid even on failure so the user can verify
+                    // on a block explorer.
+                    onchainTxid = result.broadcastTxid,
+                    onchainFeeSats = null,
+                    onchainChangeSats = null,
+                    onchainReceiptEventId = null,
+                    onchainError = result.message,
+                    onchainStage = result.stage.name.lowercase(),
+                )
+        }
     }
 
     /**
@@ -2192,34 +2333,35 @@ class SendDmResult(
 )
 
 /**
- * Result of [AmethystAppFunctions.zapUser]. Always carries the BOLT11
- * invoice so the caller can fall back to manual payment; when the
- * user has a Nostr Wallet Connect (NIP-47) wallet configured, the
- * verb also attempts to pay the invoice via that wallet and the
- * `nwc*` fields report the outcome.
+ * Result of [AmethystAppFunctions.zapUser]. Carries either the
+ * Lightning BOLT11 invoice (+ NWC payment outcome when configured) or
+ * the onchain Bitcoin broadcast result, depending on the rail used.
+ * The [chain] field tells callers which set of fields to read.
  */
 @AppFunctionSerializable(isDescribedByKDoc = true)
 class ZapResult(
+    /** Transport rail actually used: "lightning" or "onchain". */
+    val chain: String,
     /** Bech32 npub of the zap recipient. */
     val recipientNpub: String,
     /** Hex pubkey of the recipient. */
     val recipientPubkeyHex: String,
     /** Best-effort display name from the local kind:0 cache. */
     val recipientDisplayName: String?,
-    /** LN address the invoice was fetched from. */
+    /** LN address the invoice was fetched from. Empty for onchain zaps. */
     val lnAddress: String,
-    /** Amount actually requested (after capping). */
+    /** Amount actually billed (after capping). For onchain, the
+     *  miner fee is reported separately in [onchainFeeSats]. */
     val amountSats: Long,
     /** Comment attached to the zap (truncated to 280 chars). */
     val comment: String,
-    /** BOLT11 invoice — always set. Pay this manually if [nwcPaid]
-     *  is false. */
+    /** BOLT11 invoice — populated for Lightning, empty for onchain.
+     *  Pay manually if [nwcPaid] is false. */
     val invoice: String,
-    /** Hex event id of the signed kind:9734 zap request. */
+    /** Hex event id of the signed kind:9734 zap request. Empty for onchain. */
     val zapRequestId: String,
     /** True when the user has NWC configured and we tried to auto-pay.
-     *  False means the caller should surface the invoice for manual
-     *  payment. */
+     *  Always false for onchain. */
     val nwcAttempted: Boolean,
     /** True only when an NWC wallet confirmed the payment. */
     val nwcPaid: Boolean,
@@ -2227,6 +2369,24 @@ class ZapResult(
     val nwcPreimage: String?,
     /** Failure reason when [nwcAttempted] is true but [nwcPaid] is false. */
     val nwcError: String?,
+    /** Bitcoin transaction id on a successful onchain zap, or — when
+     *  the tx was broadcast but the receipt failed to publish — the
+     *  txid so the user can verify the payment manually. Null for
+     *  Lightning zaps. */
+    val onchainTxid: String?,
+    /** Miner fee paid in sats on a successful onchain zap. */
+    val onchainFeeSats: Long?,
+    /** Change returned to the sender's address on an onchain zap. */
+    val onchainChangeSats: Long?,
+    /** Hex event id of the kind:8333 onchain zap receipt. */
+    val onchainReceiptEventId: String?,
+    /** Failure reason when an onchain zap failed. */
+    val onchainError: String?,
+    /** Stage at which an onchain zap failed: "loading_utxos",
+     *  "building", "signing", "broadcasting", or "publishing"
+     *  (last means the tx is on-chain but the receipt didn't land
+     *  on relays — the payment is still real). */
+    val onchainStage: String?,
 )
 
 /**
