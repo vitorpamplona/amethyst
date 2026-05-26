@@ -62,6 +62,15 @@ object ArtiNative {
      * @return 0 on success.
      */
     external fun stopSocksProxy(): Int
+
+    /**
+     * Drop the in-process TorClient so the next [initialize] call rebuilds
+     * it from scratch (fresh bootstrap, new guards/circuits). Aborts the
+     * SOCKS listener and all in-flight connection handlers so the state
+     * file lock can be released.
+     * @return 0 on success.
+     */
+    external fun destroy(): Int
 }
 
 /**

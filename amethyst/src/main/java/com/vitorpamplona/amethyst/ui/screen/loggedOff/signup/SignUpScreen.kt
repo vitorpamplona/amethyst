@@ -54,8 +54,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Amethyst
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
-import com.vitorpamplona.amethyst.ui.screen.loggedOff.AcceptTerms
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.TorSettingsSetup
+import com.vitorpamplona.amethyst.ui.screen.loggedOff.legal.TermsGate
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.LoginErrorManager
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size10dp
@@ -187,18 +187,11 @@ fun SignUpPage(
             },
         )
 
-        AcceptTerms(
+        TermsGate(
             checked = signUpViewModel.acceptedTerms,
             onCheckedChange = signUpViewModel::updateAcceptedTerms,
+            showError = signUpViewModel.termsAcceptanceIsRequiredError,
         )
-
-        if (signUpViewModel.termsAcceptanceIsRequiredError) {
-            Text(
-                text = stringRes(R.string.acceptance_of_terms_is_required),
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
 
         Spacer(modifier = Modifier.height(Size10dp))
 

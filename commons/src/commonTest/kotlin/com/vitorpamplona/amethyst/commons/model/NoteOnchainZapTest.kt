@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import java.math.BigDecimal
+import com.vitorpamplona.quartz.utils.BigDecimal
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -67,7 +67,7 @@ class NoteOnchainZapTest {
         assertEquals(1000L, entry?.claimedSats)
         assertEquals(0L, entry?.verifiedSats)
         assertEquals(OnchainZapStatus.UNVERIFIED, entry?.status)
-        assertEquals(BigDecimal.ZERO, target.zapsAmount)
+        assertEquals(BigDecimal(0), target.zapsAmount)
     }
 
     @Test
@@ -82,7 +82,7 @@ class NoteOnchainZapTest {
         assertSame(src, entry?.source)
         assertEquals(1000L, entry?.verifiedSats)
         assertEquals(OnchainZapStatus.PENDING, entry?.status)
-        assertEquals(BigDecimal.ZERO, target.zapsAmount)
+        assertEquals(BigDecimal(0), target.zapsAmount)
     }
 
     @Test
@@ -93,7 +93,7 @@ class NoteOnchainZapTest {
         target.addOnchainZap(src, "tx1", claimedSats = 5000L, verifiedSats = 5000L, status = OnchainZapStatus.CONFIRMED)
 
         assertEquals(OnchainZapStatus.CONFIRMED, target.onchainZaps["tx1"]?.status)
-        assertEquals(BigDecimal.valueOf(5000L), target.zapsAmount)
+        assertEquals(BigDecimal(5000L), target.zapsAmount)
     }
 
     @Test
@@ -109,7 +109,7 @@ class NoteOnchainZapTest {
         assertSame(secondSrc, entry?.source)
         assertEquals(OnchainZapStatus.PENDING, entry?.status)
         assertEquals(2400L, entry?.verifiedSats)
-        assertEquals(BigDecimal.ZERO, target.zapsAmount)
+        assertEquals(BigDecimal(0), target.zapsAmount)
     }
 
     @Test
@@ -124,7 +124,7 @@ class NoteOnchainZapTest {
         val entry = target.onchainZaps["tx1"]
         assertSame(secondSrc, entry?.source)
         assertEquals(OnchainZapStatus.CONFIRMED, entry?.status)
-        assertEquals(BigDecimal.valueOf(2500L), target.zapsAmount)
+        assertEquals(BigDecimal(2500L), target.zapsAmount)
     }
 
     @Test
@@ -139,7 +139,7 @@ class NoteOnchainZapTest {
         val entry = target.onchainZaps["tx1"]
         assertSame(firstSrc, entry?.source)
         assertEquals(OnchainZapStatus.CONFIRMED, entry?.status)
-        assertEquals(BigDecimal.valueOf(7500L), target.zapsAmount)
+        assertEquals(BigDecimal(7500L), target.zapsAmount)
     }
 
     @Test
@@ -188,7 +188,7 @@ class NoteOnchainZapTest {
         val entry = target.onchainZaps["tx1"]
         assertSame(firstSrc, entry?.source)
         assertEquals(999L, entry?.verifiedSats)
-        assertEquals(BigDecimal.valueOf(999L), target.zapsAmount)
+        assertEquals(BigDecimal(999L), target.zapsAmount)
     }
 
     @Test
@@ -206,7 +206,7 @@ class NoteOnchainZapTest {
 
         val entry = target.onchainZaps["tx1"]
         assertSame(secondSrc, entry?.source)
-        assertEquals(BigDecimal.valueOf(1000L), target.zapsAmount)
+        assertEquals(BigDecimal(1000L), target.zapsAmount)
     }
 
     @Test
@@ -224,7 +224,7 @@ class NoteOnchainZapTest {
         val secondEntry = target.onchainZaps["tx1"]
 
         assertSame(firstEntry, secondEntry)
-        assertEquals(BigDecimal.valueOf(100L), target.zapsAmount)
+        assertEquals(BigDecimal(100L), target.zapsAmount)
     }
 
     @Test
@@ -238,13 +238,13 @@ class NoteOnchainZapTest {
 
         target.addOnchainZap(src, "tx1", claimedSats = 4200L, verifiedSats = 4200L, status = OnchainZapStatus.PENDING)
         // PENDING entries don't contribute to total per spec.
-        assertEquals(BigDecimal.ZERO, target.zapsAmount)
+        assertEquals(BigDecimal(0), target.zapsAmount)
         assertNotNull(target.onchainZaps["tx1"])
 
         target.removeOnchainZapForSource("tx1", srcKey)
 
         assertNull(target.onchainZaps["tx1"])
-        assertEquals(BigDecimal.ZERO, target.zapsAmount)
+        assertEquals(BigDecimal(0), target.zapsAmount)
     }
 
     @Test
@@ -277,13 +277,13 @@ class NoteOnchainZapTest {
         val src = sourceNote(srcKey)
 
         target.addOnchainZap(src, "tx1", claimedSats = 4200L, verifiedSats = 4200L, status = OnchainZapStatus.CONFIRMED)
-        assertEquals(BigDecimal.valueOf(4200L), target.zapsAmount)
+        assertEquals(BigDecimal(4200L), target.zapsAmount)
 
         target.removeOnchainZapForSource("tx1", srcKey)
 
         assertNotNull(target.onchainZaps["tx1"])
         assertEquals(OnchainZapStatus.CONFIRMED, target.onchainZaps["tx1"]?.status)
-        assertEquals(BigDecimal.valueOf(4200L), target.zapsAmount)
+        assertEquals(BigDecimal(4200L), target.zapsAmount)
     }
 
     @Test
@@ -342,7 +342,7 @@ class NoteOnchainZapTest {
         target.addOnchainZap(sourceNote("82".repeat(32)), "tx3", claimedSats = 9999L, verifiedSats = 9999L, status = OnchainZapStatus.PENDING)
         target.addOnchainZap(sourceNote("93".repeat(32)), "tx4", claimedSats = 1234L, verifiedSats = 0L, status = OnchainZapStatus.UNVERIFIED)
 
-        assertEquals(BigDecimal.valueOf(3000L), target.zapsAmount)
+        assertEquals(BigDecimal(3000L), target.zapsAmount)
         assertEquals(4, target.onchainZaps.size)
         assertTrue(target.onchainZaps.containsKey("tx3"))
         assertTrue(target.onchainZaps.containsKey("tx4"))

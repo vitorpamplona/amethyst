@@ -44,15 +44,16 @@ kotlin {
         }
     }
 
+    // iOS targets — Phase 2 spike. Compile-only for now (no framework binary
+    // configured yet). Reveals which transitive deps need iOS variants and
+    // which commonMain files still reach for platform-only APIs.
+    iosArm64()
+    iosSimulatorArm64()
+
     sourceSets {
         commonMain {
             dependencies {
                 implementation(project(":quartz"))
-                // Audio-rooms ViewModel needs the listener orchestration + audio
-                // pipeline types (NestsListener, AudioRoomPlayer, AudioPlayer
-                // interface). Concrete OkHttp/Quic/MediaCodec/AudioTrack actuals
-                // stay in :nestsClient's platform source sets.
-                implementation(project(":nestsClient"))
 
                 // Compose Multiplatform
                 implementation(libs.jetbrains.compose.ui)
@@ -61,13 +62,17 @@ kotlin {
                 implementation(libs.jetbrains.compose.material3)
                 implementation(libs.jetbrains.compose.ui.tooling.preview)
 
-                // Lifecycle ViewModel (KMP since 2.8.0)
-                implementation(libs.androidx.lifecycle.viewmodel.compose)
+                // Lifecycle (KMP since 2.8.0). lifecycle-viewmodel and
+                // lifecycle-runtime-compose ship iOS variants;
+                // lifecycle-viewmodel-compose (the viewModel() Composable
+                // helper) is Android-only and lives in jvmAndroid below.
+                implementation(libs.androidx.lifecycle.viewmodel)
                 implementation(libs.androidx.lifecycle.runtime.compose)
 
-                // Image loading (Coil 3 - KMP)
+                // Image loading (Coil 3 - KMP). The okhttp network fetcher is
+                // JVM-only and lives in jvmAndroid; iOS will pull coil-ktor
+                // when that target wires its actual.
                 implementation(libs.coil.compose)
-                implementation(libs.coil.okhttp)
 
                 // LruCache (KMP-ready)
                 implementation(libs.androidx.collection)
@@ -75,13 +80,12 @@ kotlin {
                 // Immutable collections
                 api(libs.kotlinx.collections.immutable)
 
+                // JSON for custom-feed definitions (KMP — replaces Jackson
+                // for the one commonMain serializer that was blocking iOS).
+                implementation(libs.kotlinx.serialization.json)
+
                 // Compose Multiplatform Resources
                 implementation(libs.jetbrains.compose.components.resources)
-
-                // Markdown rendering (richtext-commonmark)
-                implementation(libs.markdown.commonmark)
-                implementation(libs.markdown.ui)
-                implementation(libs.markdown.ui.material3)
             }
         }
 
@@ -97,6 +101,32 @@ kotlin {
             create("jvmAndroid") {
                 dependsOn(commonMain.get())
                 dependencies {
+                    // Audio-rooms ViewModel needs the listener orchestration +
+                    // audio pipeline types (NestsListener, AudioRoomPlayer,
+                    // AudioPlayer interface). The :nestsClient module is
+                    // jvmAndroid-only today (its QUIC + Opus + AudioRecord/Track
+                    // stacks are JVM-bound), so the dep lives here, not in
+                    // commonMain. iOS will need an audio-rooms reroute when
+                    // Phase 5 lands.
+                    implementation(project(":nestsClient"))
+
+                    // Coil's OkHttp network fetcher (JVM-only). iOS will use
+                    // coil-ktor when the iOS Compose UI ships.
+                    implementation(libs.coil.okhttp)
+
+                    // Markdown rendering (richtext-commonmark). The single
+                    // consumer (RenderMarkdown.kt) already lives in jvmAndroid.
+                    // iOS support pending Phase 3 markdown decision.
+                    implementation(libs.markdown.commonmark)
+                    implementation(libs.markdown.ui)
+                    implementation(libs.markdown.ui.material3)
+
+                    // viewModel() Compose helper. AndroidX publishes this
+                    // artifact for android/jvmStubs/linuxx64Stubs but not iOS,
+                    // so it stays in jvmAndroid until we either swap to the
+                    // org.jetbrains.androidx.lifecycle variant or accept a
+                    // platform-specific ViewModel access pattern on iOS.
+                    implementation(libs.androidx.lifecycle.viewmodel.compose)
                 }
             }
 
@@ -127,6 +157,14 @@ kotlin {
             }
         }
 
+        // iOS intermediate so iosArm64Main and iosSimulatorArm64Main share code.
+        val iosMain =
+            create("iosMain") {
+                dependsOn(commonMain.get())
+            }
+        getByName("iosArm64Main").dependsOn(iosMain)
+        getByName("iosSimulatorArm64Main").dependsOn(iosMain)
+
         getByName("androidHostTest") {
             dependencies {
                 implementation(libs.junit)
@@ -150,3 +188,68 @@ compose.resources {
     packageOfResClass = "com.vitorpamplona.amethyst.commons.resources"
     generateResClass = always
 }
+
+// iOS purity gate — same shape as :quartz:verifyKmpPurity. See the rationale
+// there. Commons gains this gate once FeedDefinitionSerializer.kt has been
+// migrated off Jackson; future commonMain code must not reintroduce JVM-only
+// JSON / HTTP deps.
+val verifyKmpPurity by tasks.registering {
+    group = "verification"
+    description = "Fails if iOS-targeted source sets import JVM-only deps."
+    val checkedDirs =
+        listOf(
+            "src/commonMain", "src/commonTest",
+            "src/appleMain", "src/appleTest",
+            "src/nativeMain", "src/nativeTest",
+            "src/iosMain", "src/iosTest",
+            "src/iosArm64Main", "src/iosArm64Test",
+            "src/iosSimulatorArm64Main", "src/iosSimulatorArm64Test",
+            "src/linuxMain", "src/linuxTest",
+            "src/linuxX64Main", "src/linuxX64Test",
+            "src/macosMain", "src/macosTest",
+            "src/macosArm64Main", "src/macosArm64Test",
+        ).map { layout.projectDirectory.dir(it).asFile }
+            .filter { it.exists() }
+    inputs.files(checkedDirs)
+    doLast {
+        // Each pattern is paired with a short hint so the failure message
+        // points at the canonical KMP replacement.
+        val forbidden =
+            listOf(
+                "com.fasterxml.jackson" to "Jackson is JVM-only — use kotlinx.serialization",
+                "okhttp3" to "OkHttp is JVM-only — wrap behind expect/actual or use Ktor on iOS",
+                "System.currentTimeMillis" to "use TimeUtils.now()",
+                "Thread.sleep" to "use kotlinx.coroutines.delay or platform-specific actual",
+                "java.util.UUID" to "use kotlin.uuid.Uuid",
+                "kotlin.jvm.Synchronized" to "use KmpLock.withLock {}",
+                "kotlin.jvm.Volatile" to "use kotlin.concurrent.Volatile",
+            )
+        val offenders =
+            checkedDirs.flatMap { dir ->
+                dir.walkTopDown()
+                    .filter { it.isFile && it.extension == "kt" }
+                    .flatMap { file ->
+                        file.readLines().withIndex().mapNotNull { (idx, line) ->
+                            val trimmed = line.trimStart()
+                            // Skip KDoc / line-comment lines — those legitimately
+                            // mention forbidden names (migration notes, doc refs).
+                            if (trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*")) {
+                                return@mapNotNull null
+                            }
+                            forbidden.firstOrNull { (pattern, _) -> line.contains(pattern) }?.let { (hit, hint) ->
+                                "${file.relativeTo(rootDir)}:${idx + 1}: '$hit' — $hint"
+                            }
+                        }
+                    }
+            }
+        if (offenders.isNotEmpty()) {
+            throw GradleException(
+                "iOS-targeted source sets must not reference JVM-only APIs. " +
+                    "Move the offending code to jvmAndroid/ or behind an expect/actual:\n  " +
+                    offenders.joinToString("\n  "),
+            )
+        }
+    }
+}
+
+tasks.named("check").configure { dependsOn(verifyKmpPurity) }

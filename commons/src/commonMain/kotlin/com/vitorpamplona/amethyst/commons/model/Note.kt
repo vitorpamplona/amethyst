@@ -24,9 +24,11 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponsesCache
 import com.vitorpamplona.amethyst.commons.threading.checkNotInMainThread
+import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.firstFullCharOrEmoji
 import com.vitorpamplona.amethyst.commons.util.replace
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.experimental.bounties.addedRewardValue
 import com.vitorpamplona.quartz.experimental.bounties.hasAdditionalReward
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
@@ -62,17 +64,19 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.anyAsync
 import com.vitorpamplona.quartz.utils.containsAny
 import com.vitorpamplona.quartz.utils.launchAndWaitAll
+import com.vitorpamplona.quartz.utils.plus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
-import java.math.BigDecimal
+import kotlin.concurrent.Volatile
 
 interface NotesGatherer {
     fun removeNote(note: Note)
@@ -105,6 +109,11 @@ class AddressableNote(
 open class Note(
     val idHex: HexKey,
 ) : NotesGatherer {
+    // Per-instance lock shared by the previously @Synchronized methods (zap /
+    // onchain-zap / zap-payment / relay-add / flowSet lifecycle). Replaces the
+    // JVM-only @Synchronized annotation so this class compiles on iOS.
+    private val syncLock = KmpLock()
+
     // These fields are only available after the Text Note event is received.
     // They are immutable after that.
     var event: Event? = null
@@ -154,7 +163,7 @@ open class Note(
     var zaps = mapOf<Note, Note?>()
         private set
 
-    var zapsAmount: BigDecimal = BigDecimal.ZERO
+    var zapsAmount: BigDecimal = BigDecimal(0)
 
     /**
      * NIP-BC onchain zaps targeting this note.
@@ -165,7 +174,7 @@ open class Note(
      * only counts CONFIRMED amounts.
      *
      * `@Volatile` ensures cross-thread visibility: writes happen on `applicationIOScope`
-     * (inside the @Synchronized inner methods) and reads happen on the Compose Main
+     * (inside the syncLock-guarded inner methods) and reads happen on the Compose Main
      * thread (gallery recomposition + the reverification driver's `any { … }` check).
      */
     @Volatile
@@ -349,7 +358,7 @@ open class Note(
         onchainZaps = mapOf()
         onchainZapResolved = false
         zapPayments = mapOf()
-        zapsAmount = BigDecimal.ZERO
+        zapsAmount = BigDecimal(0)
         relays = listOf()
 
         if (repliesChanged) flowSet?.replies?.invalidateData()
@@ -421,18 +430,17 @@ open class Note(
         }
     }
 
-    @Synchronized
     private fun innerAddZap(
         zapRequest: Note,
         zap: Note?,
-    ): Boolean {
-        if (zaps[zapRequest] == null) {
-            zaps = zaps + Pair(zapRequest, zap)
-            return true
+    ): Boolean =
+        syncLock.withLock {
+            if (zaps[zapRequest] == null) {
+                zaps = zaps + Pair(zapRequest, zap)
+                return@withLock true
+            }
+            return@withLock false
         }
-
-        return false
-    }
 
     fun addZap(
         zapRequest: Note,
@@ -447,48 +455,48 @@ open class Note(
         }
     }
 
-    @Synchronized
     private fun innerAddOnchainZap(
         txid: String,
         entry: OnchainZapEntry,
-    ): Boolean {
-        val existing = onchainZaps[txid]
-        if (existing != null) {
-            // Exact structural duplicate (same source Note + same fields) — typical
-            // relay echo of the same event. Skip the rewrite to avoid spurious
-            // flowSet invalidation.
-            if (entry == existing) return false
-            // Reject downgrades using the explicit OnchainZapStatus.level (not ordinal)
-            // so the upgrade contract survives future enum reordering or insertions.
-            if (entry.status.level < existing.status.level) return false
-            // Same level: accept only when verifiedSats grows OR the source differs
-            // (legitimate alternate signer republishing a split-zap receipt). A strictly
-            // smaller verifiedSats is a backend downgrade and we ignore it.
-            if (entry.status.level == existing.status.level && entry.verifiedSats < existing.verifiedSats) return false
+    ): Boolean =
+        syncLock.withLock {
+            val existing = onchainZaps[txid]
+            if (existing != null) {
+                // Exact structural duplicate (same source Note + same fields) — typical
+                // relay echo of the same event. Skip the rewrite to avoid spurious
+                // flowSet invalidation.
+                if (entry == existing) return@withLock false
+                // Reject downgrades using the explicit OnchainZapStatus.level (not ordinal)
+                // so the upgrade contract survives future enum reordering or insertions.
+                if (entry.status.level < existing.status.level) return@withLock false
+                // Same level: accept only when verifiedSats grows OR the source differs
+                // (legitimate alternate signer republishing a split-zap receipt). A strictly
+                // smaller verifiedSats is a backend downgrade and we ignore it.
+                if (entry.status.level == existing.status.level && entry.verifiedSats < existing.verifiedSats) return@withLock false
+            }
+            onchainZaps = onchainZaps + Pair(txid, entry)
+            return@withLock true
         }
-        onchainZaps = onchainZaps + Pair(txid, entry)
-        return true
-    }
 
-    @Synchronized
     private fun innerRemoveOnchainZapForSource(
         txid: String,
         sourceAuthorPubKey: HexKey,
-    ): Boolean {
-        val existing = onchainZaps[txid] ?: return false
-        // Anti-spoof: only remove the entry if its source matches the rejecting event.
-        // Otherwise a malicious third party could erase a legitimate CONFIRMED entry
-        // by publishing a spoofed kind:8333 with the same txid but a bystander recipient.
-        // Also refuse to remove a CONFIRMED entry — once chain-verified, only a fresh
-        // CONFIRMED replacement should change it; a transient backend hiccup must not
-        // wipe a previously-CONFIRMED entry just because some other target on the same
-        // event is still UNVERIFIED.
-        if (existing.status == OnchainZapStatus.CONFIRMED) return false
-        if (existing.source.author?.pubkeyHex == null) return false
-        if (existing.source.author?.pubkeyHex != sourceAuthorPubKey) return false
-        onchainZaps = onchainZaps - txid
-        return true
-    }
+    ): Boolean =
+        syncLock.withLock {
+            val existing = onchainZaps[txid] ?: return@withLock false
+            // Anti-spoof: only remove the entry if its source matches the rejecting event.
+            // Otherwise a malicious third party could erase a legitimate CONFIRMED entry
+            // by publishing a spoofed kind:8333 with the same txid but a bystander recipient.
+            // Also refuse to remove a CONFIRMED entry — once chain-verified, only a fresh
+            // CONFIRMED replacement should change it; a transient backend hiccup must not
+            // wipe a previously-CONFIRMED entry just because some other target on the same
+            // event is still UNVERIFIED.
+            if (existing.status == OnchainZapStatus.CONFIRMED) return@withLock false
+            if (existing.source.author?.pubkeyHex == null) return@withLock false
+            if (existing.source.author?.pubkeyHex != sourceAuthorPubKey) return@withLock false
+            onchainZaps = onchainZaps - txid
+            return@withLock true
+        }
 
     /**
      * Register a NIP-BC onchain zap targeting this note. `source` is the OnchainZapEvent's own
@@ -535,18 +543,17 @@ open class Note(
         }
     }
 
-    @Synchronized
     private fun innerAddZapPayment(
         zapPaymentRequest: Note,
         zapPayment: Note?,
-    ): Boolean {
-        if (zapPayments[zapPaymentRequest] == null) {
-            zapPayments = zapPayments + Pair(zapPaymentRequest, zapPayment)
-            return true
+    ): Boolean =
+        syncLock.withLock {
+            if (zapPayments[zapPaymentRequest] == null) {
+                zapPayments = zapPayments + Pair(zapPaymentRequest, zapPayment)
+                return@withLock true
+            }
+            return@withLock false
         }
-
-        return false
-    }
 
     fun addZapPayment(
         zapPaymentRequest: Note,
@@ -589,12 +596,12 @@ open class Note(
         }
     }
 
-    @Synchronized
-    fun addRelaySync(relay: NormalizedRelayUrl) {
-        if (relay !in relays) {
-            relays = relays + relay
+    fun addRelaySync(relay: NormalizedRelayUrl) =
+        syncLock.withLock {
+            if (relay !in relays) {
+                relays = relays + relay
+            }
         }
-    }
 
     fun hasRelay(relay: NormalizedRelayUrl) = relay in relays
 
@@ -737,13 +744,13 @@ open class Note(
             }.flatten()
 
     private fun updateZapTotal() {
-        var sumOfAmounts = BigDecimal.ZERO
+        var sumOfAmounts = BigDecimal(0)
 
         // Regular Zap Receipts
         zaps.forEach {
             val noteEvent = it.value?.event
             if (noteEvent is LnZapEvent) {
-                sumOfAmounts += noteEvent.amount ?: BigDecimal.ZERO
+                sumOfAmounts += noteEvent.amount ?: BigDecimal(0)
             }
         }
 
@@ -751,7 +758,7 @@ open class Note(
         // Unverified/pending entries are tracked but excluded from the total per spec.
         onchainZaps.values.forEach { entry ->
             if (entry.status == OnchainZapStatus.CONFIRMED) {
-                sumOfAmounts += BigDecimal.valueOf(entry.verifiedSats)
+                sumOfAmounts += BigDecimal(entry.verifiedSats)
             }
         }
 
@@ -828,7 +835,7 @@ open class Note(
                     val amount =
                         try {
                             LnInvoiceUtil.getAmountInSats(invoice)
-                        } catch (e: java.lang.Exception) {
+                        } catch (e: Exception) {
                             if (e is CancellationException) throw e
                             null
                         }
@@ -879,7 +886,7 @@ open class Note(
             .any {
                 val pledgeValue =
                     try {
-                        BigDecimal(it.event?.content)
+                        it.event?.content?.let { content -> BigDecimal(content) }
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
                         null
@@ -889,7 +896,13 @@ open class Note(
                 pledgeValue != null && it.author == user
             }
 
-    fun pledgedAmountByOthers(): BigDecimal = replies.sumOf { it.event?.addedRewardValue() ?: BigDecimal.ZERO }
+    // Manual fold rather than Iterable.sumOf { -> BigDecimal } because that
+    // overload is JVM-only; the common stdlib only ships sumOf for the
+    // primitive numeric types.
+    fun pledgedAmountByOthers(): BigDecimal =
+        replies.fold(BigDecimal(0)) { acc, note ->
+            acc + (note.event?.addedRewardValue() ?: BigDecimal(0))
+        }
 
     fun hasAnyReports(): Boolean {
         val dayAgo = TimeUtils.oneDayAgo()
@@ -978,7 +991,7 @@ open class Note(
         boosts = emptyList()
         reports = emptyMap()
         zaps = emptyMap()
-        zapsAmount = BigDecimal.ZERO
+        zapsAmount = BigDecimal(0)
     }
 
     fun isHiddenFor(accountChoices: LiveHiddenUsers): Boolean {
@@ -1035,18 +1048,18 @@ open class Note(
 
     var flowSet: NoteFlowSet? = null
 
-    @Synchronized
-    fun createOrDestroyFlowSync(create: Boolean) {
-        if (create) {
-            if (flowSet == null) {
-                flowSet = NoteFlowSet(this)
-            }
-        } else {
-            if (flowSet != null && flowSet?.isInUse() == false) {
-                flowSet = null
+    fun createOrDestroyFlowSync(create: Boolean) =
+        syncLock.withLock {
+            if (create) {
+                if (flowSet == null) {
+                    flowSet = NoteFlowSet(this)
+                }
+            } else {
+                if (flowSet != null && flowSet?.isInUse() == false) {
+                    flowSet = null
+                }
             }
         }
-    }
 
     fun flow(): NoteFlowSet {
         if (flowSet == null) {

@@ -26,6 +26,9 @@ import com.vitorpamplona.amethyst.commons.model.ListChange
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NotesGatherer
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.WeakReference
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
@@ -33,7 +36,6 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import java.lang.ref.WeakReference
 
 @Stable
 class Chatroom : NotesGatherer {
@@ -44,10 +46,13 @@ class Chatroom : NotesGatherer {
     var ownerSentMessage: Boolean = false
     var newestMessage: Note? = null
 
-    private var changesFlow: WeakReference<MutableSharedFlow<ListChange<Note>>> = WeakReference(null)
+    // Per-instance lock shared by previously @Synchronized methods.
+    private val syncLock = KmpLock()
+
+    private var changesFlow: WeakReference<MutableSharedFlow<ListChange<Note>>>? = null
 
     fun changesFlow(): MutableSharedFlow<ListChange<Note>> {
-        val current = changesFlow.get()
+        val current = changesFlow?.get()
         if (current != null) return current
         val new = MutableSharedFlow<ListChange<Note>>(0, 100, BufferOverflow.DROP_OLDEST)
         changesFlow = WeakReference(new)
@@ -58,68 +63,68 @@ class Chatroom : NotesGatherer {
         removeMessageSync(note)
     }
 
-    @Synchronized
-    fun addMessageSync(msg: Note): Boolean {
-        if (msg !in messages) {
-            messages = messages + msg
-            msg.addGatherer(this)
+    fun addMessageSync(msg: Note): Boolean =
+        syncLock.withLock {
+            if (msg !in messages) {
+                messages = messages + msg
+                msg.addGatherer(this)
 
-            msg.author?.let { author ->
-                if (author !in activeSenders) {
-                    activeSenders + author
-                }
-            }
-
-            val createdAt = msg.createdAt() ?: 0L
-            if (createdAt > (newestMessage?.createdAt() ?: 0L)) {
-                newestMessage = msg
-            }
-
-            val newSubject = msg.event?.subject()
-
-            if (newSubject != null && (msg.createdAt() ?: 0L) > (subjectCreatedAt ?: 0)) {
-                subject.tryEmit(newSubject)
-                subjectCreatedAt = msg.createdAt()
-            }
-
-            changesFlow.get()?.tryEmit(ListChange.Addition(msg))
-
-            return true
-        }
-        return false
-    }
-
-    @Synchronized
-    fun removeMessageSync(msg: Note): Boolean {
-        if (msg in messages) {
-            messages = messages - msg
-            msg.removeGatherer(this)
-
-            if (msg == newestMessage) {
-                newestMessage = messages.maxByOrNull { it.createdAt() ?: 0L }
-            }
-
-            if (msg.event?.subject() == subject.value) {
-                messages
-                    .maxByOrNull {
-                        val noteEvent = it.event
-                        if (noteEvent?.subject() != null) {
-                            noteEvent.createdAt
-                        } else {
-                            0
-                        }
-                    }?.let {
-                        subject.tryEmit(it.event?.subject())
-                        subjectCreatedAt = it.createdAt()
+                msg.author?.let { author ->
+                    if (author !in activeSenders) {
+                        activeSenders + author
                     }
+                }
+
+                val createdAt = msg.createdAt() ?: 0L
+                if (createdAt > (newestMessage?.createdAt() ?: 0L)) {
+                    newestMessage = msg
+                }
+
+                val newSubject = msg.event?.subject()
+
+                if (newSubject != null && (msg.createdAt() ?: 0L) > (subjectCreatedAt ?: 0)) {
+                    subject.tryEmit(newSubject)
+                    subjectCreatedAt = msg.createdAt()
+                }
+
+                changesFlow?.get()?.tryEmit(ListChange.Addition(msg))
+
+                return@withLock true
             }
-
-            changesFlow.get()?.tryEmit(ListChange.Deletion(msg))
-
-            return true
+            return@withLock false
         }
-        return false
-    }
+
+    fun removeMessageSync(msg: Note): Boolean =
+        syncLock.withLock {
+            if (msg in messages) {
+                messages = messages - msg
+                msg.removeGatherer(this)
+
+                if (msg == newestMessage) {
+                    newestMessage = messages.maxByOrNull { it.createdAt() ?: 0L }
+                }
+
+                if (msg.event?.subject() == subject.value) {
+                    messages
+                        .maxByOrNull {
+                            val noteEvent = it.event
+                            if (noteEvent?.subject() != null) {
+                                noteEvent.createdAt
+                            } else {
+                                0
+                            }
+                        }?.let {
+                            subject.tryEmit(it.event?.subject())
+                            subjectCreatedAt = it.createdAt()
+                        }
+                }
+
+                changesFlow?.get()?.tryEmit(ListChange.Deletion(msg))
+
+                return@withLock true
+            }
+            return@withLock false
+        }
 
     fun senderIntersects(keySet: Set<HexKey>): Boolean = activeSenders.any { it.pubkeyHex in keySet }
 
@@ -138,7 +143,7 @@ class Chatroom : NotesGatherer {
         val toRemove = messages.minus(toKeep)
         messages = toKeep
 
-        changesFlow.get()?.tryEmit(ListChange.SetDeletion<Note>(toRemove))
+        changesFlow?.get()?.tryEmit(ListChange.SetDeletion<Note>(toRemove))
 
         return toRemove
     }

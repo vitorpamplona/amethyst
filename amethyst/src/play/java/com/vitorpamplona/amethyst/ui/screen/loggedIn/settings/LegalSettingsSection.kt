@@ -18,41 +18,38 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedOff
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.buildAnnotatedString
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.components.appendLink
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 
 @Composable
-fun AcceptTerms(
-    checked: Boolean,
-    onCheckedChange: ((Boolean) -> Unit)?,
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
+fun LegalSettingsSection() {
+    val uriHandler = LocalUriHandler.current
+
+    SettingsSection(R.string.about_legal) {
+        SettingsItem(
+            title = R.string.privacy_policy,
+            icon = MaterialSymbols.Lock,
+            onClick = {
+                runCatching {
+                    uriHandler.openUri(
+                        "https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md",
+                    )
+                }
+            },
         )
-
-        val uri = LocalUriHandler.current
-        val primary = MaterialTheme.colorScheme.primary
-
-        Text(
-            buildAnnotatedString {
-                append(stringRes(R.string.i_accept_the))
-                appendLink(stringRes(R.string.terms_of_use), primary) {
-                    runCatching {
-                        uri.openUri("https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md")
-                    }
+        SettingsDivider()
+        SettingsItem(
+            title = R.string.child_safety_standards,
+            icon = MaterialSymbols.Shield,
+            onClick = {
+                runCatching {
+                    uriHandler.openUri(
+                        "https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md#child-safety-standards",
+                    )
                 }
             },
         )

@@ -195,6 +195,7 @@ verify_jni_symbols() {
         "Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_initialize"
         "Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_startSocksProxy"
         "Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_stopSocksProxy"
+        "Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_destroy"
     )
 
     for arch_dir in "$OUTPUT_DIR"/*/; do

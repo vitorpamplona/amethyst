@@ -21,7 +21,10 @@
 package com.vitorpamplona.amethyst.commons.feeds.custom
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.toImmutableList
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 class FeedDefinitionBuilder {
     var name: String = ""
@@ -70,13 +73,11 @@ class FeedDefinitionBuilder {
             pinOrder = Int.MAX_VALUE,
             source = source ?: error("FeedDefinition requires a source"),
             refreshMode = refreshMode,
-            createdAt = System.currentTimeMillis() / 1000,
+            createdAt = TimeUtils.now(),
         )
 
-    private fun generateId(): String =
-        java.util.UUID
-            .randomUUID()
-            .toString()
+    @OptIn(ExperimentalUuidApi::class)
+    private fun generateId(): String = Uuid.random().toString()
 }
 
 class FilterBuilder {

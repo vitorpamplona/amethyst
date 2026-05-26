@@ -21,13 +21,15 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.WeakReference
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import java.lang.ref.WeakReference
 
 @Stable
 abstract class Channel : NotesGatherer {
@@ -41,10 +43,14 @@ abstract class Channel : NotesGatherer {
 
     private var relays = mapOf<NormalizedRelayUrl, Counter>()
 
-    private var changesFlow: WeakReference<MutableSharedFlow<ListChange<Note>>> = WeakReference(null)
+    // Single per-instance lock that previously @Synchronized methods share.
+    // Replaces JVM-only @Synchronized so this class compiles on iOS.
+    private val syncLock = KmpLock()
+
+    private var changesFlow: WeakReference<MutableSharedFlow<ListChange<Note>>>? = null
 
     fun changesFlow(): MutableSharedFlow<ListChange<Note>> {
-        val current = changesFlow.get()
+        val current = changesFlow?.get()
         if (current != null) return current
         val new = MutableSharedFlow<ListChange<Note>>(0, 10, BufferOverflow.DROP_OLDEST)
         changesFlow = WeakReference(new)
@@ -64,23 +70,20 @@ abstract class Channel : NotesGatherer {
     abstract fun toBestDisplayName(): String
 
     open fun relays(): Set<NormalizedRelayUrl> =
-        relays.keys
-            .toSortedSet { o1, o2 ->
-                val o1Count = relays[o1]?.number ?: 0
-                val o2Count = relays[o2]?.number ?: 0
-                o2Count.compareTo(o1Count) // descending
-            }
+        relays.entries
+            .sortedByDescending { it.value.number }
+            .mapTo(LinkedHashSet(relays.size)) { it.key }
 
     fun updateChannelInfo() {
         flowSet?.metadata?.invalidateData()
     }
 
-    @Synchronized
-    fun addRelaySync(briefInfo: NormalizedRelayUrl) {
-        if (briefInfo !in relays) {
-            relays = relays + Pair(briefInfo, Counter(1))
+    fun addRelaySync(briefInfo: NormalizedRelayUrl) =
+        syncLock.withLock {
+            if (briefInfo !in relays) {
+                relays = relays + Pair(briefInfo, Counter(1))
+            }
         }
-    }
 
     fun addRelay(relay: NormalizedRelayUrl) {
         val counter = relays[relay]
@@ -107,7 +110,7 @@ abstract class Channel : NotesGatherer {
                 addRelay(relay)
             }
 
-            changesFlow.get()?.tryEmit(ListChange.Addition(note))
+            changesFlow?.get()?.tryEmit(ListChange.Addition(note))
 
             flowSet?.notes?.invalidateData()
         }
@@ -122,7 +125,7 @@ abstract class Channel : NotesGatherer {
                 lastNote = notes.values().sortedWith(DefaultFeedOrder).firstOrNull()
             }
 
-            changesFlow.get()?.tryEmit(ListChange.Deletion(note))
+            changesFlow?.get()?.tryEmit(ListChange.Deletion(note))
 
             flowSet?.notes?.invalidateData()
         }
@@ -140,7 +143,7 @@ abstract class Channel : NotesGatherer {
 
         toBeRemoved.forEach { notes.remove(it.idHex) }
 
-        changesFlow.get()?.tryEmit(ListChange.SetDeletion(toBeRemoved.toSet()))
+        changesFlow?.get()?.tryEmit(ListChange.SetDeletion(toBeRemoved.toSet()))
 
         flowSet?.notes?.invalidateData()
 
@@ -156,7 +159,7 @@ abstract class Channel : NotesGatherer {
 
         hidden.forEach { notes.remove(it.idHex) }
 
-        changesFlow.get()?.tryEmit(ListChange.SetDeletion(hidden))
+        changesFlow?.get()?.tryEmit(ListChange.SetDeletion(hidden))
 
         flowSet?.notes?.invalidateData()
 
@@ -165,18 +168,18 @@ abstract class Channel : NotesGatherer {
 
     var flowSet: ChannelFlowSet? = null
 
-    @Synchronized
-    fun createOrDestroyFlowSync(create: Boolean) {
-        if (create) {
-            if (flowSet == null) {
-                flowSet = ChannelFlowSet(this)
-            }
-        } else {
-            if (flowSet != null && flowSet?.isInUse() == false) {
-                flowSet = null
+    fun createOrDestroyFlowSync(create: Boolean) =
+        syncLock.withLock {
+            if (create) {
+                if (flowSet == null) {
+                    flowSet = ChannelFlowSet(this)
+                }
+            } else {
+                if (flowSet != null && flowSet?.isInUse() == false) {
+                    flowSet = null
+                }
             }
         }
-    }
 
     fun flow(): ChannelFlowSet {
         if (flowSet == null) {

@@ -12,6 +12,10 @@
         <item quantity="one">Det här inlägget har fler än %1$d hashtagg</item>
         <item quantity="other">Det här inlägget har fler än %1$d hashtaggar</item>
     </plurals>
+    <plurals name="nip82_assets_count">
+        <item quantity="one">%1$d tillgång paketerad</item>
+        <item quantity="other">%1$d tillgångar buntade</item>
+    </plurals>
     <string name="post_not_found">Inlägg hittades inte</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Kanal bild</string>
@@ -550,6 +554,11 @@
     <string name="profile_badges_description">Välj vilka av märkena du fått som ska visas på din profil.</string>
     <string name="profile_badges_empty">Du har inte fått några märken ännu.</string>
     <string name="pictures">Bilder</string>
+    <string name="software_apps">Appar</string>
+    <string name="route_software_apps">Appar</string>
+    <string name="nip82_repository_label">Källa: %1$s</string>
+    <string name="nip82_version_label">v%1$s</string>
+    <string name="nip82_download">Ladda ner</string>
     <string name="calendars">Kalendrar</string>
     <string name="shorts">Kortfilmer</string>
     <string name="public_chats">Offentliga chattar</string>
@@ -1184,6 +1193,8 @@
     <string name="posting_policy">Publiceringspolicy</string>
     <string name="privacy_policy">Integritetspolicy</string>
     <string name="terms_and_conditions">Villkor &amp; bestämmelser</string>
+    <string name="child_safety_standards">Standarder för barnsäkerhet</string>
+    <string name="about_legal">Om och juridiskt</string>
     <string name="not_available_acronym">N/A</string>
     <string name="relay_error_messages">Fel och meddelanden från detta relä</string>
     <string name="relay_monitor_reports">Reläövervakningsrapporter</string>
@@ -1751,6 +1762,7 @@
     <string name="calendar_relative_ongoing_with_end">%1$s · slutar %2$s</string>
     <string name="calendar_export_share_title">Dela kalenderhändelse</string>
     <string name="calendar_export_event">Exportera till kalender (.ics)</string>
+    <string name="calendar_reminder_channel_id">calendar_reminders</string>
     <string name="calendar_reminder_channel_name">Kalenderpåminnelser</string>
     <string name="calendar_reminder_channel_description">Påminnelse när en händelse du deltar i snart ska börja.</string>
     <string name="calendar_reminder_default_title">Kalenderhändelse</string>
@@ -1776,6 +1788,10 @@
     <string name="calendar_reminder_settings_enabled_subtitle">En notis visas när en händelse du deltar i snart ska börja.</string>
     <string name="calendar_reminder_settings_lead_title">Påminnelsetid</string>
     <string name="calendar_reminder_settings_lead_subtitle">Hur många minuter före händelsen du vill bli notifierad.</string>
+    <plurals name="calendar_reminder_settings_lead_choice">
+        <item quantity="one">%1$d min</item>
+        <item quantity="other">%1$d min</item>
+    </plurals>
     <string name="calendar_share_nostr">Dela som Nostr-länk</string>
     <string name="calendar_share_nostr_title">Dela kalenderlänk</string>
     <string name="calendar_filter_all">Alla kalendrar</string>
@@ -2756,5 +2772,7 @@
     <string name="nowhere_link_card_store">Nowhere Butik</string>
     <string name="nowhere_link_card_petition">Nowhere Namninsamling</string>
     <string name="nowhere_link_card_message">Nowhere Meddelande</string>
+    <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Konst</string>
+    <string name="nowhere_link_card_forum">Nowhere Forum</string>
 </resources>

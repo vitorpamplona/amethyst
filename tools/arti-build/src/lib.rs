@@ -20,6 +20,10 @@ static TOKIO_RUNTIME: Mutex<Option<tokio::runtime::Runtime>> = Mutex::new(None);
 static JAVA_VM: Mutex<Option<JavaVM>> = Mutex::new(None);
 static LOG_CALLBACK: Mutex<Option<GlobalRef>> = Mutex::new(None);
 static SOCKS_TASK: Mutex<Option<tokio::task::JoinHandle<()>>> = Mutex::new(None);
+// Per-connection handler tasks. Tracked so destroy() can abort in-flight handlers
+// — otherwise their Arc<TorClient> clones keep the client alive and the
+// state file lock would not be released for the next initialize().
+static HANDLER_TASKS: Mutex<Vec<tokio::task::JoinHandle<()>>> = Mutex::new(Vec::new());
 static INIT_ONCE: Once = Once::new();
 
 // ============================================================================
@@ -127,6 +131,12 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_initialize(
     log_info!("Initializing Arti with data directory: {}", data_dir_str);
 
     INIT_ONCE.call_once(|| {
+        // arti-v2.3.0's tor-rtcompat no longer installs a rustls CryptoProvider
+        // implicitly — without this, TorClient::create_bootstrapped panics on
+        // first TLS handshake. install_default() returns Err if a provider is
+        // already installed, which is fine; we just want at-least-one.
+        let _ = rustls::crypto::ring::default_provider().install_default();
+
         match tokio::runtime::Builder::new_multi_thread()
             .enable_all()
             .build()
@@ -160,8 +170,21 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_initialize(
     let result: Result<()> = runtime.block_on(async {
         log_info!("Creating Arti client...");
 
-        let config = TorClientConfigBuilder::from_directories(state_dir, cache_dir)
-            .build()?;
+        let mut builder = TorClientConfigBuilder::from_directories(state_dir, cache_dir);
+
+        // Arti's fs-mistrust walks every parent of the state dir and rejects any
+        // that has an "unsafe" owner. On Android the app's private filesDir is
+        // sandboxed by the OS, so the default strict check is correct. On JVM
+        // host runs (TorArtiNativeIntegrationTest) the data dir lives under
+        // /tmp and the check trips on container-style ownership of `/` (UID 999
+        // etc.). Disable it for non-Android targets — these are the test/dev
+        // surface, not a user-facing binary.
+        #[cfg(not(target_os = "android"))]
+        {
+            builder.storage().permissions().dangerously_trust_everyone();
+        }
+
+        let config = builder.build()?;
 
         let client = TorClient::create_bootstrapped(config).await?;
 
@@ -243,11 +266,14 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_startSocksPr
             match listener.accept().await {
                 Ok((stream, _peer_addr)) => {
                     let client_clone = Arc::clone(&client);
-                    tokio::spawn(async move {
+                    let h = tokio::spawn(async move {
                         if let Err(e) = handle_socks_connection(stream, client_clone).await {
                             log_error!("SOCKS connection error: {:?}", e);
                         }
                     });
+                    let mut handlers = HANDLER_TASKS.lock().unwrap();
+                    handlers.retain(|h| !h.is_finished());
+                    handlers.push(h);
                 }
                 Err(e) => {
                     log_error!("Failed to accept SOCKS connection: {:?}", e);
@@ -373,8 +399,13 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_stopSocksPro
         handle.abort();
     }
 
-    if let Some(rt) = TOKIO_RUNTIME.lock().unwrap().as_ref() {
-        rt.block_on(async {
+    let rt_handle = TOKIO_RUNTIME
+        .lock()
+        .unwrap()
+        .as_ref()
+        .map(|rt| rt.handle().clone());
+    if let Some(rh) = rt_handle {
+        rh.block_on(async {
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
         });
     }
@@ -382,5 +413,67 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_stopSocksPro
     // NOTE: TorClient is NOT destroyed — it persists for reuse.
 
     log_info!("SOCKS proxy stopped");
+    0
+}
+
+/// Destroy the TorClient — used by self-heal paths in Kotlin when Tor is
+/// stuck and the in-memory state (guards, circuits) needs to be rebuilt
+/// from scratch. Aborts the SOCKS listener and all in-flight per-connection
+/// handlers, then drops the static Arc so Arti's state file lock can be
+/// released. The next call to [initialize] will create a fresh TorClient
+/// (and re-bootstrap).
+#[no_mangle]
+pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_destroy(
+    _env: JNIEnv,
+    _class: JClass,
+) -> jint {
+    log_info!("Destroying Arti client");
+
+    // Clone the runtime handle and release the TOKIO_RUNTIME mutex immediately —
+    // we will hold it for ~500ms below, and other JNI calls that need the runtime
+    // (e.g. a Kotlin start() racing with us) would otherwise block on this mutex.
+    let rt_handle = TOKIO_RUNTIME
+        .lock()
+        .unwrap()
+        .as_ref()
+        .map(|rt| rt.handle().clone());
+
+    // Abort the listener and wait for it to actually terminate before draining
+    // HANDLER_TASKS. The accept loop has no .await between `accept` and
+    // `HANDLER_TASKS.push(h)`, so abort() alone is racy: a handler can be spawned
+    // and pushed AFTER our drain. Awaiting the JoinHandle (with timeout) closes
+    // that window — no new handlers can be pushed once the listener task is gone.
+    let socks_handle = SOCKS_TASK.lock().unwrap().take();
+    if let (Some(h), Some(rh)) = (socks_handle, rt_handle.as_ref()) {
+        h.abort();
+        rh.block_on(async {
+            let _ = tokio::time::timeout(tokio::time::Duration::from_secs(1), h).await;
+        });
+    }
+
+    // Abort all in-flight handlers — each holds an Arc<TorClient> clone, and
+    // the client cannot drop (state file lock cannot release) while any clone
+    // is alive.
+    let handlers = std::mem::take(&mut *HANDLER_TASKS.lock().unwrap());
+    for h in &handlers {
+        h.abort();
+    }
+    drop(handlers);
+
+    // Give tokio a moment to actually cancel and drop the task frames so the
+    // handler Arcs are released before we drop our static one.
+    if let Some(rh) = rt_handle {
+        rh.block_on(async {
+            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        });
+    }
+
+    // Drop the static Arc. If any handler is still holding a clone, the
+    // TorClient stays alive until that handler finishes — in which case the
+    // next initialize() will fail and Kotlin's clearAllArtiData retry path
+    // will handle it.
+    let _ = ARTI_CLIENT.lock().unwrap().take();
+
+    log_info!("Arti client destroyed");
     0
 }
