@@ -74,12 +74,19 @@ class TorManager(
             lastBypassApprovalMs = torPrefs.loadLastBypassApprovalMs()
         }
 
-        // Any user-initiated change to torType clears the in-memory bypass so the
-        // explicit user action wins over the implicit override.
+        // Any user-initiated change to torType clears the in-memory bypass AND the
+        // remembered-approval window. Otherwise a single past "Use regular connection"
+        // traps the user in a silent-bypass loop: every Connecting span >60s
+        // auto-flips sessionBypass without showing the dialog, force-stop preserves
+        // the DataStore-backed approval, and toggling Tor off/on only clears the
+        // in-memory half — so wiping app data becomes the only recovery path.
         torPrefs.value.torType
             .drop(1)
-            .onEach { sessionBypass.value = false }
-            .launchIn(scope)
+            .onEach {
+                sessionBypass.value = false
+                lastBypassApprovalMs = 0L
+                torPrefs.saveLastBypassApprovalMs(0L)
+            }.launchIn(scope)
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
