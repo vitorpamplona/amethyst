@@ -45,6 +45,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -60,6 +61,9 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -108,6 +112,14 @@ class AmethystAppFunctions {
      * configured search relays (kind:10007), with a fallback to
      * Amethyst's curated default search-relay set.
      *
+     * Results carrying a NIP-05 claim are verified in parallel and dropped
+     * when the claim explicitly fails — the listed domain doesn't sign for
+     * that pubkey, or returns a different one. Profiles with no NIP-05 at
+     * all are kept (no claim, nothing to refute). This is the
+     * anti-impersonation guard for the downstream write verbs: if Gemini
+     * asks the user "do you mean alice@damus.io?" the user should be able
+     * to trust that the npub actually controls that handle.
+     *
      * @param query free-form search text (display name, NIP-05 handle, etc.)
      * @param limit max number of profiles to return — capped to 50.
      */
@@ -145,15 +157,58 @@ class AmethystAppFunctions {
                 timeoutMs = GEMINI_FETCH_TIMEOUT_MS,
             )
 
-        val hits =
+        val candidates =
             events
                 .mapNotNull { it as? MetadataEvent }
                 .distinctBy { it.pubKey }
                 .sortedByDescending { it.createdAt }
                 .take(cappedLimit)
-                .map { it.toProfileHit() }
+
+        // Verify NIP-05 claims in parallel with a bounded timeout, then
+        // drop only the ones that explicitly fail (the domain returns a
+        // different pubkey, or no entry for the local part). Network
+        // errors / DNS failures / timeouts are inconclusive — keep those
+        // so a flaky .well-known doesn't censor legitimate users.
+        val verified =
+            withTimeoutOrNull(NIP05_FILTER_TIMEOUT_MS) {
+                coroutineScope {
+                    candidates
+                        .map { meta ->
+                            async { meta to nip05IsExplicitlyFailed(meta) }
+                        }.awaitAll()
+                }
+            } ?: candidates.map { it to false }
+
+        val hits =
+            verified
+                .filterNot { (_, failed) -> failed }
+                .map { (meta, _) -> meta.toProfileHit() }
 
         return SearchProfilesResult(matches = hits)
+    }
+
+    /**
+     * Returns true only when the recipient's kind:0 carries a NIP-05 claim
+     * that the listed domain actively refuses to sign for. Returns false
+     * for "no claim", "unparseable claim", "network error", "namecoin
+     * unreachable" — those are inconclusive, not refutations.
+     */
+    private suspend fun nip05IsExplicitlyFailed(meta: MetadataEvent): Boolean {
+        val claim =
+            meta
+                .contactMetaData()
+                ?.nip05
+                ?.trim()
+                .orEmpty()
+        if (claim.isEmpty()) return false
+        val parsed = Nip05Id.parse(claim) ?: return false
+        return runCatching {
+            !Amethyst.instance.nip05Client.verify(parsed, meta.pubKey)
+        }.getOrElse {
+            // verify() throws IllegalStateException on network / parse
+            // errors — treat as inconclusive rather than a failure.
+            false
+        }
     }
 
     /**
@@ -1013,12 +1068,26 @@ class AmethystAppFunctions {
      * and publishes the updated list. [WriteResult.changed] reports
      * `false` when the user is already followed.
      *
+     * **BEFORE INVOKING:** the agent MUST resolve [user] via
+     * [searchProfiles] / [getProfile] first and present the recipient
+     * to the human with all three identity signals — display name,
+     * npub, and NIP-05 handle — and wait for explicit confirmation
+     * ("yes, follow Vitor (vitor@vitorpamplona.com, npub1…)"). Nostr
+     * has no global namespace, so multiple users can share a display
+     * name; the NIP-05 + npub disambiguates.
+     *
      * @param user npub (`npub1…`) or 64-character hex pubkey.
+     * @param expectedDisplayName when set, the verb cross-checks that
+     *   the resolved profile's display name / NIP-05 contains (or is
+     *   contained by) this string. Pass the same name you showed the
+     *   user during the confirmation prompt — a mismatch aborts the
+     *   write with a typed error so the agent can re-prompt.
      */
     @AppFunction(isDescribedByKDoc = true)
     suspend fun followUser(
         appFunctionContext: AppFunctionContext,
         user: String,
+        expectedDisplayName: String? = null,
     ): WriteResult {
         val target = decodeUserOrThrow(user)
         val account = Amethyst.instance.sessionManager.loggedInAccount() ?: throw notSignedIn()
@@ -1026,6 +1095,7 @@ class AmethystAppFunctions {
             throw AppFunctionInvalidArgumentException("cannot follow yourself")
         }
         requireInProcessSigner(account.signer)
+        verifyExpectedRecipient(account, target, expectedDisplayName, requireFollow = false)
         val relays = account.outboxRelays.flow.value
         if (relays.isEmpty()) throw AppFunctionInvalidArgumentException("account has no outbox relays configured")
 
@@ -1105,15 +1175,38 @@ class AmethystAppFunctions {
      * DM-inbox list fall back through NIP-65 read relays then
      * bootstrap relays.
      *
+     * **BEFORE INVOKING:** the agent MUST resolve [recipient] via
+     * [searchProfiles] / [getProfile] first and confirm with the user
+     * using all three identity signals — display name, npub, and
+     * NIP-05 handle ("DM Alice (alice@damus.io, npub1…)?"). Nostr has
+     * no global namespace and impersonation is trivial; the npub +
+     * NIP-05 are the only cryptographic disambiguators.
+     *
+     * By default, the verb refuses to message anyone not in the user's
+     * follow list — a near-zero-cost guard against same-name
+     * impersonators. Pass `requireFollow = false` only after the user
+     * explicitly approves messaging a stranger.
+     *
      * @param recipient npub (`npub1…`) or 64-character hex pubkey.
      * @param text the message body. Cannot be blank; capped at 8000
      *   characters.
+     * @param expectedDisplayName when set, the verb cross-checks that
+     *   the resolved profile's display name / NIP-05 contains (or is
+     *   contained by) this string. Pass the same name you showed the
+     *   user during the confirmation prompt — a mismatch aborts the
+     *   send with a typed error.
+     * @param requireFollow when true (the default), the verb refuses
+     *   to send to a pubkey the user doesn't already follow on Nostr.
+     *   Override to false only when the user explicitly confirmed they
+     *   want to DM a stranger.
      */
     @AppFunction(isDescribedByKDoc = true)
     suspend fun sendDm(
         appFunctionContext: AppFunctionContext,
         recipient: String,
         text: String,
+        expectedDisplayName: String? = null,
+        requireFollow: Boolean = true,
     ): SendDmResult {
         val body = text.trim()
         if (body.isEmpty()) throw AppFunctionInvalidArgumentException("text cannot be blank")
@@ -1123,6 +1216,7 @@ class AmethystAppFunctions {
         val recipientPub = decodeUserOrThrow(recipient)
         val account = Amethyst.instance.sessionManager.loggedInAccount() ?: throw notSignedIn()
         requireInProcessSigner(account.signer)
+        verifyExpectedRecipient(account, recipientPub, expectedDisplayName, requireFollow)
 
         val client = Amethyst.instance.client
         val result = DmActions.buildTextDm(account.signer, recipientPub, body)
@@ -1202,6 +1296,21 @@ class AmethystAppFunctions {
      * Defaults to 21 sats Lightning. Cap is 1,000,000 sats so an
      * accidental tip can't drain a wallet.
      *
+     * **BEFORE INVOKING:** zaps move real money, so the agent MUST
+     * resolve [user] via [searchProfiles] / [getProfile] first and
+     * confirm with the human using all three identity signals —
+     * display name, npub, and NIP-05 handle ("Zap Alice
+     * (alice@damus.io, npub1…) 21 sats?"). Nostr has no global
+     * namespace; a same-name impersonator is the most likely way for
+     * a zap to go to the wrong person.
+     *
+     * By default, the verb refuses to zap anyone not in the user's
+     * follow list. This is the strongest guard against same-name
+     * impersonators — even if Gemini picked the wrong Alice, the user
+     * almost certainly isn't following her. Pass `requireFollow =
+     * false` only after the user explicitly approves zapping a
+     * stranger (e.g. a public-figure npub they read out themselves).
+     *
      * @param user npub (`npub1…`) or 64-character hex pubkey of the
      *   zap recipient.
      * @param sats amount to zap, in whole sats. Capped at 1,000,000
@@ -1214,6 +1323,15 @@ class AmethystAppFunctions {
      *   sats per virtual byte. Ignored for Lightning. Default 5.0,
      *   which targets fast confirmation under typical mempool
      *   conditions without being aggressive.
+     * @param expectedDisplayName when set, the verb cross-checks that
+     *   the resolved profile's display name / NIP-05 contains (or is
+     *   contained by) this string. Pass the same name you showed the
+     *   user during the confirmation prompt — a mismatch aborts the
+     *   zap before any money moves.
+     * @param requireFollow when true (the default), the verb refuses
+     *   to zap a pubkey the user doesn't already follow on Nostr.
+     *   Override to false only when the user explicitly confirmed
+     *   they want to zap a stranger.
      */
     @AppFunction(isDescribedByKDoc = true)
     suspend fun zapUser(
@@ -1223,12 +1341,15 @@ class AmethystAppFunctions {
         comment: String? = null,
         chain: String? = null,
         feeRateSatPerVByte: Double = 5.0,
+        expectedDisplayName: String? = null,
+        requireFollow: Boolean = true,
     ): ZapResult {
         val cappedSats = sats.coerceIn(1L, MAX_ZAP_SATS)
         val trimmedComment = comment.orEmpty().trim().take(MAX_ZAP_COMMENT_LENGTH)
         val recipientPub = decodeUserOrThrow(user)
         val account = Amethyst.instance.sessionManager.loggedInAccount() ?: throw notSignedIn()
         requireInProcessSigner(account.signer)
+        verifyExpectedRecipient(account, recipientPub, expectedDisplayName, requireFollow)
 
         val rail = chain?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: "lightning"
         return when (rail) {
@@ -1684,6 +1805,88 @@ class AmethystAppFunctions {
     }
 
     /**
+     * Anti-impersonation guard for write verbs. Two checks, both
+     * defensive against an agent that misroutes "DM Alice" to the wrong
+     * Alice:
+     *
+     *   1. If [expectedDisplayName] is provided, verify it loosely
+     *      matches the cached display name, name, or NIP-05 handle of
+     *      [target]. The match is case-insensitive and bidirectional
+     *      ("vitor" matches "Vitor Pamplona" and vice-versa) so the
+     *      agent can pass whatever the user said without having to
+     *      reconstruct the exact metadata string.
+     *
+     *   2. If [requireFollow] is true, verify the target is in the
+     *      active account's kind:3 follow list. This is the strongest
+     *      lever against wrong-recipient writes: even if Gemini picked
+     *      a same-name impersonator, the user is overwhelmingly
+     *      unlikely to be following them. Caller can pass
+     *      `requireFollow = false` to override (e.g. zapping a stranger
+     *      the user explicitly named by npub).
+     *
+     * Throws [AppFunctionInvalidArgumentException] with the npub +
+     * cached NIP-05 + display name on mismatch so the agent can render
+     * a clarifying prompt to the user.
+     */
+    private fun verifyExpectedRecipient(
+        account: com.vitorpamplona.amethyst.model.Account,
+        target: HexKey,
+        expectedDisplayName: String?,
+        requireFollow: Boolean,
+    ) {
+        val user = account.cache.checkGetOrCreateUser(target)
+        val meta =
+            user
+                ?.metadataOrNull()
+                ?.flow
+                ?.value
+                ?.info
+        val cachedName = meta?.bestName()
+        val cachedNip05 = meta?.nip05?.trim()?.takeIf { it.isNotEmpty() }
+        val npub = NPub.create(target)
+        val expected = expectedDisplayName?.trim()?.takeIf { it.isNotEmpty() }
+
+        if (expected != null) {
+            val normalized = expected.lowercase()
+            val candidates =
+                listOfNotNull(
+                    cachedName?.lowercase(),
+                    meta
+                        ?.displayName
+                        ?.trim()
+                        ?.lowercase()
+                        ?.takeIf { it.isNotEmpty() },
+                    meta
+                        ?.name
+                        ?.trim()
+                        ?.lowercase()
+                        ?.takeIf { it.isNotEmpty() },
+                    cachedNip05?.lowercase(),
+                    cachedNip05?.substringBefore('@')?.lowercase()?.takeIf { it.isNotEmpty() },
+                )
+            val matches =
+                candidates.any { it == normalized || it.contains(normalized) || normalized.contains(it) }
+            if (!matches) {
+                throw AppFunctionInvalidArgumentException(
+                    "Recipient mismatch: expectedDisplayName=\"$expected\" doesn't match the resolved " +
+                        "Nostr profile (npub=$npub, displayName=${cachedName ?: "<unknown>"}, " +
+                        "nip05=${cachedNip05 ?: "<none>"}). Ask the user to confirm with the agent " +
+                        "before retrying — there may be multiple users with the same name on Nostr.",
+                )
+            }
+        }
+
+        if (requireFollow && target !in account.kind3FollowList.flow.value.authors) {
+            throw AppFunctionInvalidArgumentException(
+                "Recipient is not in the user's Nostr follow list (npub=$npub, " +
+                    "displayName=${cachedName ?: "<unknown>"}, nip05=${cachedNip05 ?: "<none>"}). " +
+                    "Ask the user to confirm they want to act on this stranger, then retry with " +
+                    "requireFollow=false. This is a guard against acting on a same-name impersonator.",
+            )
+        }
+    }
+
+    /**
      * Reject the call when the active signer can't sign in-process —
      * NIP-55 external signers (Amber) need a foreground activity to
      * show the user an approval prompt, which we can't launch from a
@@ -1931,6 +2134,14 @@ class AmethystAppFunctions {
         /** Cap on the number of mentioned users surfaced in a feed
          *  digest. Same rationale as TOP_HASHTAGS_LIMIT. */
         private const val TOP_MENTIONS_LIMIT = 10
+
+        /** Overall budget for the NIP-05 verification pass inside
+         *  [searchProfiles]. We fan out one HTTP request per result so
+         *  the wall-clock is dominated by the slowest .well-known.
+         *  4s is short enough to keep search snappy and long enough to
+         *  catch most genuine refutations. On timeout we keep all
+         *  candidates rather than censoring them. */
+        private const val NIP05_FILTER_TIMEOUT_MS = 4_000L
     }
 }
 
