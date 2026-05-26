@@ -27,12 +27,12 @@ import com.vitorpamplona.quartz.utils.Log
 fun Event.generateId(): String = EventHasher.hashId(pubKey, createdAt, kind, tags, content)
 
 fun Event.verifyId(): Boolean {
-    if (id.isEmpty()) return false
+    if (id.length != 64) return false
     return EventHasher.hashIdCheck(id, pubKey, createdAt, kind, tags, content)
 }
 
 fun Event.verifySignature(): Boolean {
-    if (id.isEmpty() || sig.isEmpty()) return false
+    if (id.length != 64 || pubKey.length != 64 || sig.length != 128) return false
     return Nip01Crypto.verify(Hex.decode(sig), Hex.decode(id), Hex.decode(pubKey))
 }
 

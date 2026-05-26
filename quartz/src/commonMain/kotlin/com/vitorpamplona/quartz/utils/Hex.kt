@@ -146,7 +146,9 @@ object Hex {
 
     fun decode(hex: String): ByteArray {
         // faster version of hex decoder
-        require(hex.length and 1 == 0)
+        require(hex.length and 1 == 0) {
+            "Invalid hex $hex"
+        }
         return ByteArray(hex.length / 2) {
             (hexToByte[hex[2 * it].code] shl 4 or hexToByte[hex[2 * it + 1].code]).toByte()
         }
