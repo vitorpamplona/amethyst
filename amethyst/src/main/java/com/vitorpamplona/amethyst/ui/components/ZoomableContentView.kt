@@ -167,7 +167,7 @@ fun ZoomableContentView(
                 modifier = mediaSizingModifier(ratio, contentScale),
                 backdrop = (content.thumbhash ?: content.blurhash)?.let { { BlurhashBackdrop(content.blurhash, content.description, content.thumbhash) } },
             ) {
-                if (content.isGif()) {
+                if (content.isAnimatedMedia()) {
                     GifVideoView(
                         videoUri = bridgedUrl,
                         contentDescription = content.description,
@@ -233,7 +233,7 @@ fun ZoomableContentView(
         }
 
         is MediaLocalImage -> {
-            if (content.isGif()) {
+            if (content.isAnimatedMedia()) {
                 content.localFile?.let {
                     GifVideoView(
                         videoUri = it.toUri().toString(),
@@ -695,7 +695,7 @@ fun ShowHash(content: MediaUrlContent) {
     verifiedHash?.let { HashVerificationSymbol(it) }
 }
 
-fun BaseMediaContent.isGif(): Boolean =
+fun BaseMediaContent.isAnimatedMedia(): Boolean =
     if (this is MediaUrlContent) {
         mimeType == "image/gif" ||
             mimeType == "image/avif" ||

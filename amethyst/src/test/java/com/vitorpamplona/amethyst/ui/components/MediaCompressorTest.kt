@@ -28,7 +28,6 @@ import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.ui.components.util.MediaCompressorFileUtils
 import id.zelory.compressor.Compressor
-import io.mockk.MockKAnnotations
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -56,7 +55,6 @@ class MediaCompressorTest {
         mockkStatic(Looper::class)
         every { Looper.myLooper() } returns mockk<Looper>()
         every { Looper.getMainLooper() } returns mockk<Looper>()
-        MockKAnnotations.init(this)
     }
 
     @After

@@ -124,7 +124,7 @@ fun RobohashFallbackAsyncImage(
         remember(model, robot, useBridge) {
             bridgeProfilePictureUrl(model, useBridge, robot)
         }
-    if (bridgedModel != null && loadProfilePicture && isGifUrl(bridgedModel)) {
+    if (bridgedModel != null && loadProfilePicture && isAnimatedMediaUrl(bridgedModel)) {
         GifProfilePicture(
             userHex = robot,
             userPicture = bridgedModel,
@@ -169,17 +169,9 @@ fun RobohashFallbackAsyncImage(
 
             when (state) {
                 is AsyncImagePainter.State.Success -> SubcomposeAsyncImageContent()
-                is AsyncImagePainter.State.Loading ->
-                    Image(
-                        painter = fallbackPainter,
-                        contentDescription = contentDescription,
-                        modifier = Modifier.fillMaxSize(),
-                        alignment = alignment,
-                        contentScale = contentScale,
-                        alpha = alpha,
-                        colorFilter = colorFilter,
-                    )
-                is AsyncImagePainter.State.Error ->
+                is AsyncImagePainter.State.Loading,
+                is AsyncImagePainter.State.Error,
+                ->
                     Image(
                         painter = fallbackPainter,
                         contentDescription = contentDescription,

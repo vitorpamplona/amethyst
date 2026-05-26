@@ -27,6 +27,7 @@ import android.graphics.ImageDecoder
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
+import androidx.annotation.RequiresApi
 import com.vitorpamplona.amethyst.commons.blurhash.toBlurhash
 import com.vitorpamplona.amethyst.commons.thumbhash.toThumbhash
 import com.vitorpamplona.amethyst.service.images.BlurhashWrapper
@@ -184,19 +185,12 @@ object PreviewMetadataCalculator {
     }
 
     /**
-     * Decode AVIF bytes into a bitmap. Uses [ImageDecoder.ALLOCATOR_SOFTWARE] because hardware
-     * bitmaps reject `getPixels()`, which is required for blurhash computation.
+     * Decode an AVIF [ImageDecoder.Source] into a bitmap. Uses [ImageDecoder.ALLOCATOR_SOFTWARE]
+     * because hardware bitmaps reject `getPixels()`, which is required for blurhash computation.
      */
-    private fun decodeAvifBytes(data: ByteArray): Bitmap? {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-            // ImageDecoder is API 28+; AVIF is API 31+ regardless.
-            // Older devices: skip preview metadata for AVIF.
-            Log.d(LOG_TAG, "AVIF preview metadata skipped on API < 28")
-            return null
-        }
-        if (data.isEmpty()) return null
-        return try {
-            val source = ImageDecoder.createSource(ByteBuffer.wrap(data))
+    @RequiresApi(Build.VERSION_CODES.P)
+    private fun decodeAvif(source: ImageDecoder.Source): Bitmap? =
+        try {
             ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
                 decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
                 decoder.isMutableRequired = false
@@ -205,6 +199,14 @@ object PreviewMetadataCalculator {
             Log.w(LOG_TAG, "AVIF decode failed: ${e.message}", e)
             null
         }
+
+    private fun decodeAvifBytes(data: ByteArray): Bitmap? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            Log.d(LOG_TAG, "AVIF preview metadata skipped on API < 28")
+            return null
+        }
+        if (data.isEmpty()) return null
+        return decodeAvif(ImageDecoder.createSource(ByteBuffer.wrap(data)))
     }
 
     private fun decodeAvifFromUri(
@@ -215,16 +217,6 @@ object PreviewMetadataCalculator {
             Log.d(LOG_TAG, "AVIF preview metadata skipped on API < 28")
             return null
         }
-        return try {
-            val source = ImageDecoder.createSource(context.contentResolver, uri)
-            ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
-                // Same allocator rationale as decodeAvifBytes.
-                decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
-                decoder.isMutableRequired = false
-            }
-        } catch (e: Exception) {
-            Log.w(LOG_TAG, "AVIF decode failed: ${e.message}", e)
-            null
-        }
+        return decodeAvif(ImageDecoder.createSource(context.contentResolver, uri))
     }
 }

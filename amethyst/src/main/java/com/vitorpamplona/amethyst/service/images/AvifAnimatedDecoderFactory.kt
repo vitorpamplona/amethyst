@@ -58,7 +58,7 @@ class AvifAnimatedDecoderFactory : Decoder.Factory {
         return createAnimatedImageDecoder(result, options)
     }
 
-    @RequiresApi(Build.VERSION_CODES.P)
+    @RequiresApi(Build.VERSION_CODES.S)
     private fun createAnimatedImageDecoder(
         result: SourceFetchResult,
         options: Options,
@@ -66,16 +66,15 @@ class AvifAnimatedDecoderFactory : Decoder.Factory {
 
     private fun isAvif(source: BufferedSource): Boolean =
         source.rangeEquals(4, FTYP) &&
-            (
-                source.rangeEquals(8, AVIS) ||
-                    source.rangeEquals(8, AVIF) ||
-                    source.rangeEquals(8, AVO1)
-            )
+            AVIF_BRANDS.any { source.rangeEquals(8, it) }
 
     companion object {
         private val FTYP = "ftyp".encodeUtf8()
-        private val AVIS = "avis".encodeUtf8() // animated AVIF Image Sequence
-        private val AVIF = "avif".encodeUtf8() // still AVIF
-        private val AVO1 = "avo1".encodeUtf8() // older single-image AVIF brand
+        private val AVIF_BRANDS =
+            listOf(
+                "avis".encodeUtf8(), // animated AVIF Image Sequence
+                "avif".encodeUtf8(), // still AVIF
+                "avo1".encodeUtf8(), // older single-image AVIF brand
+            )
     }
 }
