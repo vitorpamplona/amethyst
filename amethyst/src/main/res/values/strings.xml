@@ -2857,6 +2857,13 @@
         <item quantity="other">%1$d mints</item>
     </plurals>
 
+    <plurals name="cashu_pending_quotes_title">
+        <item quantity="one">%1$d pending invoice</item>
+        <item quantity="other">%1$d pending invoices</item>
+    </plurals>
+    <string name="cashu_pending_quotes_subtitle">Tap to resume and check status.</string>
+    <string name="cashu_pending_quotes_resume">Resume</string>
+
     <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Connecting</string>
     <string name="event_sync_status_downloading">Downloading</string>

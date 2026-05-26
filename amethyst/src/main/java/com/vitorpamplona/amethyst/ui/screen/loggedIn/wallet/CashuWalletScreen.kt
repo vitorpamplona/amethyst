@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -107,15 +108,11 @@ fun CashuWalletScreen(
     var sendTokenOpen by remember { mutableStateOf(false) }
     var redeemOpen by remember { mutableStateOf(false) }
 
-    // If the user has an unfinished kind:7374 quote, surface it the next time
-    // they open the wallet so the in-flight invoice isn't lost. Auto-resumes
-    // the most recent quote on first composition.
-    LaunchedEffect(pendingQuotes) {
-        if (!receiveOpen && pendingQuotes.isNotEmpty()) {
-            viewModel.resumeMintQuote(pendingQuotes.first())
-            receiveOpen = true
-        }
-    }
+    // pendingQuotes drives a non-modal banner in the wallet body (see
+    // PendingQuoteBanner below). Tapping the banner is what opens the
+    // Receive dialog with the stored quote pre-loaded — we do NOT auto-pop
+    // the dialog on every entry to the screen, which would re-surface
+    // dismissed quotes every time the user navigates back.
 
     Scaffold(
         topBar = {
@@ -147,11 +144,18 @@ fun CashuWalletScreen(
                     balanceSats = balanceSats,
                     mints = mints,
                     history = history,
+                    pendingQuoteCount = pendingQuotes.size,
                     onReceive = { receiveOpen = true },
                     onSendLn = { sendLnOpen = true },
                     onSendToken = { sendTokenOpen = true },
                     onRedeem = { redeemOpen = true },
                     onRecommendMint = { viewModel.recommendMint(it) },
+                    onResumePendingQuote = {
+                        pendingQuotes.firstOrNull()?.let {
+                            viewModel.resumeMintQuote(it)
+                            receiveOpen = true
+                        }
+                    },
                 )
 
             // NIP-60 wallets are portable across clients — show a "looking
@@ -275,11 +279,13 @@ private fun CashuWalletContent(
     balanceSats: Long,
     mints: List<String>,
     history: List<CashuSpendingHistoryEvent>,
+    pendingQuoteCount: Int,
     onReceive: () -> Unit,
     onSendLn: () -> Unit,
     onSendToken: () -> Unit,
     onRedeem: () -> Unit,
     onRecommendMint: (String) -> Unit,
+    onResumePendingQuote: () -> Unit,
 ) {
     LazyColumn(
         modifier =
@@ -291,6 +297,10 @@ private fun CashuWalletContent(
         item {
             Spacer(modifier = Modifier.height(8.dp))
             BalanceCard(balanceSats)
+        }
+
+        if (pendingQuoteCount > 0) {
+            item { PendingQuoteBanner(count = pendingQuoteCount, onResume = onResumePendingQuote) }
         }
 
         item {
@@ -329,6 +339,67 @@ private fun CashuWalletContent(
         }
 
         item { Spacer(modifier = Modifier.height(24.dp)) }
+    }
+}
+
+/**
+ * Banner that surfaces unfinished mint quotes — tappable to resume the
+ * receive flow with the stored invoice. Driven by
+ * [com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState.pendingQuotes].
+ *
+ * Replaces the earlier auto-popup behaviour which re-surfaced the Receive
+ * dialog on every entry to the screen.
+ */
+@Composable
+private fun PendingQuoteBanner(
+    count: Int,
+    onResume: () -> Unit,
+) {
+    Card(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onResume),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                symbol = MaterialSymbols.Bolt,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text =
+                        androidx.compose.ui.res
+                            .pluralStringResource(
+                                R.plurals.cashu_pending_quotes_title,
+                                count,
+                                count,
+                            ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+                Text(
+                    text = stringRes(R.string.cashu_pending_quotes_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
+                )
+            }
+            Text(
+                text = stringRes(R.string.cashu_pending_quotes_resume),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+        }
     }
 }
 
