@@ -204,6 +204,12 @@ import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
+import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
+import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
+import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
@@ -3097,6 +3103,33 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 is CallRenegotiateEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                // ============================================================
+                // NIP-60 Cashu wallet + NIP-61 nutzaps
+                // ============================================================
+                is CashuWalletEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is CashuTokenEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is CashuSpendingHistoryEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is CashuMintQuoteEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is NutzapInfoEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is NutzapEvent -> {
                     consumeRegularEvent(event, relay, wasVerified)
                 }
 
