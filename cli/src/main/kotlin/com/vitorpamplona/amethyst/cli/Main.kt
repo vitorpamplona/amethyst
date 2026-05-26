@@ -159,6 +159,22 @@ private suspend fun dispatch(argv: Array<String>): Int {
             Commands.store(dataDir, tail)
         }
 
+        "follow" -> {
+            Commands.follow(dataDir, tail)
+        }
+
+        "unfollow" -> {
+            Commands.unfollow(dataDir, tail)
+        }
+
+        "search" -> {
+            Commands.search(dataDir, tail)
+        }
+
+        "zap" -> {
+            Commands.zap(dataDir, tail)
+        }
+
         else -> {
             System.err.println("unknown subcommand: $head")
             printUsage()
@@ -326,6 +342,28 @@ private fun printUsage() {
         |             [--limit N]                       --following: every contact-list pubkey)
         |             [--since TS] [--until TS]
         |             [--timeout SECS]
+        |
+        |Contacts (NIP-02 kind:3):
+        |  follow USER [--timeout SECS]               add USER to your contact list
+        |  unfollow USER [--timeout SECS]             remove USER from your contact list
+        |                                              (USER: npub|nprofile|hex|name@domain)
+        |
+        |Zaps (NIP-57):
+        |  zap user USER SATS               build a profile zap-request, fetch a BOLT11
+        |    [--comment X] [--anon|--private]  invoice from the recipient's LN service
+        |    [--timeout SECS]                   (no auto-payment — paste invoice into a wallet)
+        |  zap event EVENT-ID SATS           same, but attribute the zap to a specific
+        |    [--comment X] [--anon|--private]  event (must be in local store)
+        |    [--timeout SECS]
+        |
+        |Search (NIP-50):
+        |  search user QUERY [--limit N]              search kind:0 profiles
+        |                    [--timeout SECS]
+        |  search note QUERY [--limit N]              search event content
+        |                    [--kinds K[,K…]]          (default kind:1; e.g. 1,30023)
+        |                    [--timeout SECS]
+        |                                              uses your kind:10007 search-relay
+        |                                              list, falls back to Amethyst defaults
         |
         |Direct messages (NIP-17):
         |  dm send RECIPIENT TEXT                     send a gift-wrapped DM

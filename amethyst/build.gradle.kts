@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.googleServices)
     alias(libs.plugins.jetbrainsComposeCompiler)
     alias(libs.plugins.serialization)
+    alias(libs.plugins.googleKsp)
 }
 
 fun getCurrentBranch(): String =
@@ -271,6 +272,18 @@ android {
     }
 }
 
+// androidx.appfunctions-compiler runs in a per-module mode by default,
+// emitting only the dispatcher Kotlin code. The aggregator that builds
+// the `app_functions.xml` asset (which the system reads to discover our
+// @AppFunction methods) is gated behind this KSP argument — without it,
+// the manifest's `android.app.appfunctions` property points at a file
+// that doesn't exist and the System UI logs "Unable to resolve
+// AppFunctionMetadata." Set on the app module only; library modules
+// (commons/quartz) would set it to "false".
+ksp {
+    arg("appfunctions:aggregateAppFunctions", "true")
+}
+
 // TODO: until google merges and unifiedpush updates https://github.com/tink-crypto/tink-java-apps/pull/5
 configurations.all {
     val tink = "com.google.crypto.tink:tink-android:1.17.0"
@@ -412,6 +425,15 @@ dependencies {
     // framework hard-depends on Google Play services, which is unavailable
     // on de-Googled / GrapheneOS devices that ship the F-Droid build.
     "playImplementation"(libs.play.services.cast.framework)
+
+    // androidx.appfunctions — Gemini App Functions adapter. Pre-stable
+    // (alpha) as of May 2026 — scoped to the play channel so the F-Droid
+    // build stays free of Google AI dependencies. Surface is an
+    // AppFunctionService registered in amethyst/src/play/AndroidManifest.xml,
+    // generated at compile time by the KSP-driven appfunctions-compiler.
+    "playImplementation"(libs.androidx.appfunctions)
+    "playImplementation"(libs.androidx.appfunctions.service)
+    "kspPlay"(libs.androidx.appfunctions.compiler)
 
     // Charts
     implementation(libs.vico.charts.compose)
