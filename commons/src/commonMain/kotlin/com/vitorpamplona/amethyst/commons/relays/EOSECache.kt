@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.relays
 
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /**
@@ -33,14 +35,14 @@ open class EOSECache<K : Any>(
     private val maxSize: Int = 200,
 ) {
     private val cache = linkedMapOf<K, EOSERelayList>()
-    private val lock = Any()
+    private val lock = KmpLock()
 
     fun addOrUpdate(
         key: K,
         relayUrl: NormalizedRelayUrl,
         time: Long,
     ) {
-        synchronized(lock) {
+        lock.withLock {
             val relayList = cache[key]
             if (relayList == null) {
                 // Evict oldest if at capacity
@@ -57,7 +59,7 @@ open class EOSECache<K : Any>(
     }
 
     fun since(key: K): SincePerRelayMap? =
-        synchronized(lock) {
+        lock.withLock {
             cache[key]?.relayList?.toMutableMap()
         }
 
@@ -68,18 +70,18 @@ open class EOSECache<K : Any>(
     ) = addOrUpdate(key, relayUrl, time)
 
     fun remove(key: K) {
-        synchronized(lock) {
+        lock.withLock {
             cache.remove(key)
         }
     }
 
     fun clear() {
-        synchronized(lock) {
+        lock.withLock {
             cache.clear()
         }
     }
 
-    fun size(): Int = synchronized(lock) { cache.size }
+    fun size(): Int = lock.withLock { cache.size }
 }
 
 /**
@@ -91,7 +93,7 @@ open class EOSETwoLevelCache<K1 : Any, K2 : Any>(
     private val innerMaxSize: Int = 200,
 ) {
     private val cache = linkedMapOf<K1, EOSECache<K2>>()
-    private val lock = Any()
+    private val lock = KmpLock()
 
     fun addOrUpdate(
         outerKey: K1,
@@ -99,7 +101,7 @@ open class EOSETwoLevelCache<K1 : Any, K2 : Any>(
         relayUrl: NormalizedRelayUrl,
         time: Long,
     ) {
-        synchronized(lock) {
+        lock.withLock {
             val innerCache = cache[outerKey]
             if (innerCache == null) {
                 // Evict oldest if at capacity
@@ -119,7 +121,7 @@ open class EOSETwoLevelCache<K1 : Any, K2 : Any>(
         outerKey: K1,
         innerKey: K2,
     ): SincePerRelayMap? =
-        synchronized(lock) {
+        lock.withLock {
             cache[outerKey]?.since(innerKey)
         }
 
@@ -131,13 +133,13 @@ open class EOSETwoLevelCache<K1 : Any, K2 : Any>(
     ) = addOrUpdate(outerKey, innerKey, relayUrl, time)
 
     fun removeOuter(key: K1) {
-        synchronized(lock) {
+        lock.withLock {
             cache.remove(key)
         }
     }
 
     fun clear() {
-        synchronized(lock) {
+        lock.withLock {
             cache.clear()
         }
     }

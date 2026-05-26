@@ -18,20 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.search
+@file:OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)
 
-import com.vitorpamplona.amethyst.commons.util.KmpLock
-import com.vitorpamplona.amethyst.commons.util.withLock
+package com.vitorpamplona.amethyst.commons.util
 
-class EventDeduplicator {
-    private val lock = KmpLock()
-    private val seenIds = mutableSetOf<String>()
+import platform.Foundation.NSNumber
+import platform.Foundation.NSNumberFormatter
+import platform.Foundation.NSNumberFormatterDecimalStyle
+import platform.Foundation.numberWithLongLong
 
-    fun tryAdd(id: String): Boolean = lock.withLock { seenIds.add(id) }
+actual class PlatformNumberFormatter {
+    private val formatter: NSNumberFormatter =
+        NSNumberFormatter().apply {
+            numberStyle = NSNumberFormatterDecimalStyle
+        }
 
-    fun contains(id: String): Boolean = lock.withLock { id in seenIds }
-
-    fun clear() = lock.withLock { seenIds.clear() }
-
-    val size: Int get() = lock.withLock { seenIds.size }
+    actual fun format(value: Long): String = formatter.stringFromNumber(NSNumber.numberWithLongLong(value)) ?: value.toString()
 }

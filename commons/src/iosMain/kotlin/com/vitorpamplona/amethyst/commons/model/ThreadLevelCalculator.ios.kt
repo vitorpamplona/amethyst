@@ -18,20 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.search
+@file:OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)
 
-import com.vitorpamplona.amethyst.commons.util.KmpLock
-import com.vitorpamplona.amethyst.commons.util.withLock
+package com.vitorpamplona.amethyst.commons.model
 
-class EventDeduplicator {
-    private val lock = KmpLock()
-    private val seenIds = mutableSetOf<String>()
+import platform.Foundation.NSDate
+import platform.Foundation.NSDateFormatter
+import platform.Foundation.NSLocale
+import platform.Foundation.NSTimeZone
+import platform.Foundation.dateWithTimeIntervalSince1970
+import platform.Foundation.localTimeZone
 
-    fun tryAdd(id: String): Boolean = lock.withLock { seenIds.add(id) }
+// Format pattern matches the JVM actual ("uuuu-MM-dd-HH:mm:ss"). For the
+// post-1970 timestamps Nostr events use, `yyyy` and `uuuu` are equivalent
+// (proleptic Gregorian, year >= 1), so NSDateFormatter's `yyyy` is fine.
+private val levelFormatter: NSDateFormatter =
+    NSDateFormatter().apply {
+        dateFormat = "yyyy-MM-dd-HH:mm:ss"
+        timeZone = NSTimeZone.localTimeZone
+        locale = NSLocale("en_US_POSIX")
+    }
 
-    fun contains(id: String): Boolean = lock.withLock { id in seenIds }
-
-    fun clear() = lock.withLock { seenIds.clear() }
-
-    val size: Int get() = lock.withLock { seenIds.size }
-}
+actual fun formattedDateTime(timestamp: Long): String = levelFormatter.stringFromDate(NSDate.dateWithTimeIntervalSince1970(timestamp.toDouble()))

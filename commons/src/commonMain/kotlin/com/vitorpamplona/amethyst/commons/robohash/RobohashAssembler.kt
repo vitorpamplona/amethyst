@@ -168,7 +168,7 @@ class RobohashAssembler {
                 Hex.decode(msg)
             } else {
                 Log.w("Robohash") { "$msg is not a hex" }
-                sha256(msg.toByteArray())
+                sha256(msg.encodeToByteArray())
             }
 
         val bgColor = SolidColor(bytesToColor(hash[0], hash[1], hash[2], isLightTheme))

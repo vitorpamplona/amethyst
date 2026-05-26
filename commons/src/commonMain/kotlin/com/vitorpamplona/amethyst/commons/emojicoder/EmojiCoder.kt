@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.emojicoder
 
+import com.vitorpamplona.amethyst.commons.util.codePointAtKmp
+import com.vitorpamplona.amethyst.commons.util.codePointCharCount
+import com.vitorpamplona.amethyst.commons.util.codePointToChars
+
 object EmojiCoder {
     // Variation selectors block https://unicode.org/charts/nameslist/n_FE00.html
     // VS1..=VS16
@@ -35,8 +39,8 @@ object EmojiCoder {
         Array<CharArray>(256) {
             // converts to UTF-16. Always char[2] back
             when (it) {
-                in 0..15 -> Character.toChars(VARIATION_SELECTOR_START + it)
-                in 16..255 -> Character.toChars(VARIATION_SELECTOR_SUPPLEMENT_START + it - 16)
+                in 0..15 -> codePointToChars(VARIATION_SELECTOR_START + it)
+                in 16..255 -> codePointToChars(VARIATION_SELECTOR_SUPPLEMENT_START + it - 16)
                 else -> throw RuntimeException("This should never happen")
             }
         }
@@ -55,11 +59,11 @@ object EmojiCoder {
     fun isCoded(text: String): Boolean {
         if (text.length <= 3) return false
 
-        if (!isVariationChar(text.codePointAt(text.length - 2))) {
+        if (!isVariationChar(text.codePointAtKmp(text.length - 2))) {
             return false
         }
 
-        if (text.length > 4 && !isVariationChar(text.codePointAt(text.length - 4))) {
+        if (text.length > 4 && !isVariationChar(text.codePointAtKmp(text.length - 4))) {
             return false
         }
 
@@ -70,7 +74,7 @@ object EmojiCoder {
         emoji: String,
         text: String,
     ): String {
-        val input = text.toByteArray(Charsets.UTF_8)
+        val input = text.encodeToByteArray()
         val out = CharArray(input.size * 2)
         var outIdx = 0
         for (i in 0 until input.size) {
@@ -78,51 +82,34 @@ object EmojiCoder {
             out[outIdx++] = chars[0]
             out[outIdx++] = chars[1]
         }
-        return emoji + String(out)
+        return emoji + out.concatToString()
+    }
+
+    /**
+     * Scans [text] collecting variation-selector bytes until a non-selector is found
+     * after at least one byte has been collected.
+     * Returns the end index (exclusive) in [text] and the collected byte values.
+     */
+    private fun scanVariationBytes(text: String): Pair<Int, List<Int>> {
+        val bytes = mutableListOf<Int>()
+        var i = 0
+        while (i < text.length) {
+            val codePoint = text.codePointAtKmp(i)
+            val byte = fromVariationSelector(codePoint)
+            if (byte == null && bytes.isNotEmpty()) break
+            i += codePointCharCount(codePoint) // Advance by correct char count
+            if (byte != null) bytes.add(byte)
+        }
+        return i to bytes
     }
 
     fun decode(text: String): String {
-        val decoded = mutableListOf<Int>()
-
-        var i = 0
-        while (i < text.length) {
-            val codePoint = text.codePointAt(i)
-            val byte = fromVariationSelector(codePoint)
-
-            if (byte == null && decoded.isNotEmpty()) {
-                break
-            } else if (byte == null) {
-                i += Character.charCount(codePoint) // Advance index by correct number of chars
-                continue
-            }
-
-            decoded.add(byte)
-            i += Character.charCount(codePoint) // Advance index by correct number of chars
-        }
-
-        val decodedArray = ByteArray(decoded.size) { decoded[it].toByte() }
-        return String(decodedArray, Charsets.UTF_8)
+        val (_, bytes) = scanVariationBytes(text)
+        return ByteArray(bytes.size) { bytes[it].toByte() }.decodeToString()
     }
 
     fun cropToFirstMessage(text: String): String {
-        val decoded = mutableListOf<Int>()
-
-        var i = 0
-        while (i < text.length) {
-            val codePoint = text.codePointAt(i)
-            val byte = fromVariationSelector(codePoint)
-
-            if (byte == null && decoded.isNotEmpty()) {
-                break
-            } else if (byte == null) {
-                i += Character.charCount(codePoint) // Advance index by correct number of chars
-                continue
-            }
-
-            decoded.add(byte)
-            i += Character.charCount(codePoint) // Advance index by correct number of chars
-        }
-
-        return text.substring(0, i)
+        val (endIndex, _) = scanVariationBytes(text)
+        return text.substring(0, endIndex)
     }
 }

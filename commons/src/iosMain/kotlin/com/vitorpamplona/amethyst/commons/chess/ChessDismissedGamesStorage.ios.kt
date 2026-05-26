@@ -18,20 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.search
+package com.vitorpamplona.amethyst.commons.chess
 
-import com.vitorpamplona.amethyst.commons.util.KmpLock
-import com.vitorpamplona.amethyst.commons.util.withLock
+// Phase 2 compile-only iOS actual. In-memory only; persistence via
+// NSUserDefaults arrives with the iosApp module in Phase 3.
+actual class ChessDismissedGamesStorage private actual constructor() {
+    private val dismissed = mutableMapOf<String, Set<String>>()
 
-class EventDeduplicator {
-    private val lock = KmpLock()
-    private val seenIds = mutableSetOf<String>()
+    actual companion object {
+        actual fun create(context: Any?): ChessDismissedGamesStorage = ChessDismissedGamesStorage()
+    }
 
-    fun tryAdd(id: String): Boolean = lock.withLock { seenIds.add(id) }
+    actual fun load(userPubkey: String): Set<String> = dismissed[userPubkey] ?: emptySet()
 
-    fun contains(id: String): Boolean = lock.withLock { id in seenIds }
-
-    fun clear() = lock.withLock { seenIds.clear() }
-
-    val size: Int get() = lock.withLock { seenIds.size }
+    actual fun save(
+        userPubkey: String,
+        ids: Set<String>,
+    ) {
+        if (ids.isEmpty()) {
+            dismissed.remove(userPubkey)
+        } else {
+            dismissed[userPubkey] = ids
+        }
+    }
 }

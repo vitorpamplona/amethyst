@@ -18,20 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.search
+package com.vitorpamplona.amethyst.commons.utils
 
-import com.vitorpamplona.amethyst.commons.util.KmpLock
-import com.vitorpamplona.amethyst.commons.util.withLock
-
-class EventDeduplicator {
-    private val lock = KmpLock()
-    private val seenIds = mutableSetOf<String>()
-
-    fun tryAdd(id: String): Boolean = lock.withLock { seenIds.add(id) }
-
-    fun contains(id: String): Boolean = lock.withLock { id in seenIds }
-
-    fun clear() = lock.withLock { seenIds.clear() }
-
-    val size: Int get() = lock.withLock { seenIds.size }
-}
+// iosApp (Phase 3) can flip this from a build flag (`DEBUG` Swift compile
+// condition surfaced through the framework). Compile-only target ships false.
+actual val isDebug: Boolean = false

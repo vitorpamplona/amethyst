@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.chess
 
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
+
 /**
  * Global registry of accepted game IDs.
  *
@@ -29,28 +32,28 @@ package com.vitorpamplona.amethyst.commons.chess
  */
 object AcceptedGamesRegistry {
     private val acceptedGameIds = mutableSetOf<String>()
-    private val lock = Any()
+    private val lock = KmpLock()
 
     fun markAsAccepted(gameId: String) {
-        synchronized(lock) {
+        lock.withLock {
             acceptedGameIds.add(gameId)
         }
     }
 
     fun wasAccepted(gameId: String): Boolean =
-        synchronized(lock) {
+        lock.withLock {
             acceptedGameIds.contains(gameId)
         }
 
     fun clear() {
-        synchronized(lock) {
+        lock.withLock {
             acceptedGameIds.clear()
         }
     }
 
     /** Remove old entries - call periodically to prevent memory leak */
     fun clearOldEntries(keepGameIds: Set<String>) {
-        synchronized(lock) {
+        lock.withLock {
             acceptedGameIds.retainAll(keepGameIds)
         }
     }

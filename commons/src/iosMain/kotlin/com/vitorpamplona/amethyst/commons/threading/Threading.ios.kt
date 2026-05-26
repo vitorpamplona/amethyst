@@ -18,20 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.search
+package com.vitorpamplona.amethyst.commons.threading
 
-import com.vitorpamplona.amethyst.commons.util.KmpLock
-import com.vitorpamplona.amethyst.commons.util.withLock
-
-class EventDeduplicator {
-    private val lock = KmpLock()
-    private val seenIds = mutableSetOf<String>()
-
-    fun tryAdd(id: String): Boolean = lock.withLock { seenIds.add(id) }
-
-    fun contains(id: String): Boolean = lock.withLock { id in seenIds }
-
-    fun clear() = lock.withLock { seenIds.clear() }
-
-    val size: Int get() = lock.withLock { seenIds.size }
+// Mirrors the jvmMain no-op. The iosApp module (Phase 3) can swap this for an
+// `NSThread.isMainThread` check if iOS-specific main-thread restrictions need
+// enforcement; today there are none.
+actual fun checkNotInMainThread() {
+    // No-op
 }
