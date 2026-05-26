@@ -416,6 +416,7 @@ class Account(
             scope = scope,
             assembler = cashuWalletFilterAssembler(),
             outboxRelaysFlow = outboxRelays.flow,
+            settings = settings,
             okHttpClient = okHttpClientForMoney,
         )
 

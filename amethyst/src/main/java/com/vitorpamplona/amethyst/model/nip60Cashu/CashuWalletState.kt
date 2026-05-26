@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model.nip60Cashu
 
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuWalletFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuWalletQueryState
+import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -86,6 +87,7 @@ class CashuWalletState(
     private val scope: CoroutineScope,
     private val assembler: CashuWalletFilterAssembler,
     private val outboxRelaysFlow: StateFlow<Set<NormalizedRelayUrl>>,
+    private val settings: AccountSettings,
     okHttpClient: (String) -> OkHttpClient,
 ) {
     val ops: CashuWalletOps =
@@ -99,6 +101,7 @@ class CashuWalletState(
     // Raw indexes — keyed by event id, mutated only on the cache thread.
     // ============================================================
     private var walletEventInternal: CashuWalletEvent? = null
+    private var nutzapInfoEventInternal: NutzapInfoEvent? = null
     private val tokenEvents = ConcurrentHashMap<HexKey, CashuTokenEvent>()
     private val historyEvents = ConcurrentHashMap<HexKey, CashuSpendingHistoryEvent>()
     private val quoteEvents = ConcurrentHashMap<HexKey, CashuMintQuoteEvent>()
@@ -113,6 +116,9 @@ class CashuWalletState(
     // ============================================================
     private val _walletEvent = MutableStateFlow<CashuWalletEvent?>(null)
     val walletEvent: StateFlow<CashuWalletEvent?> = _walletEvent.asStateFlow()
+
+    private val _nutzapInfoEvent = MutableStateFlow<NutzapInfoEvent?>(null)
+    val nutzapInfoEvent: StateFlow<NutzapInfoEvent?> = _nutzapInfoEvent.asStateFlow()
 
     private val _mints = MutableStateFlow<List<String>>(emptyList())
     val mints: StateFlow<List<String>> = _mints.asStateFlow()
@@ -199,6 +205,26 @@ class CashuWalletState(
         started = true
         this.publish = publish
 
+        // Restore previously-seen wallet / nutzap-info events from the
+        // on-disk backup (sibling of `backupContactList`, `backupNIP65RelayList`,
+        // etc. in AccountSettings). Pushing them into LocalCache means the
+        // wallet screen renders the user's existing wallet immediately on
+        // launch, before any relay round-trip — important since kind:17375
+        // is replaceable and relays may be slow or unreachable. The events
+        // we just consumed will flow through `cache.live.newEventBundles`
+        // and be re-indexed by `applyEvents()` like any other arrival.
+        @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
+        scope.launch(Dispatchers.IO) {
+            settings.backupCashuWallet?.let {
+                Log.d("CashuWallet") { "Restoring cached kind:17375 from settings (id=${it.id.take(8)})" }
+                LocalCache.justConsumeMyOwnEvent(it)
+            }
+            settings.backupNutzapInfo?.let {
+                Log.d("CashuWallet") { "Restoring cached kind:10019 from settings (id=${it.id.take(8)})" }
+                LocalCache.justConsumeMyOwnEvent(it)
+            }
+        }
+
         // Show the "discovering" state until either a wallet event lands
         // (set inside applyEvents()) or the timeout below fires. Without
         // this the UI would render the empty-wallet CTA the moment the
@@ -284,7 +310,7 @@ class CashuWalletState(
     private fun isRelevantEvent(event: Event): Boolean =
         when (event) {
             is CashuWalletEvent, is CashuTokenEvent, is CashuSpendingHistoryEvent,
-            is CashuMintQuoteEvent,
+            is CashuMintQuoteEvent, is NutzapInfoEvent,
             -> event.pubKey == pubKey
             // Inbound nutzaps: addressed to us, possibly authored by someone
             // else. Match by the recipient `#p` tag.
@@ -294,6 +320,7 @@ class CashuWalletState(
 
     private suspend fun applyEvents(events: List<Event>) {
         var dirtyWallet = false
+        var dirtyNutzapInfo = false
         var dirtyTokens = false
         var dirtyHistory = false
         var dirtyQuotes = false
@@ -307,6 +334,13 @@ class CashuWalletState(
                     if (current == null || event.createdAt > current.createdAt) {
                         walletEventInternal = event
                         dirtyWallet = true
+                    }
+                }
+                is NutzapInfoEvent -> {
+                    val current = nutzapInfoEventInternal
+                    if (current == null || event.createdAt > current.createdAt) {
+                        nutzapInfoEventInternal = event
+                        dirtyNutzapInfo = true
                     }
                 }
                 is CashuTokenEvent -> {
@@ -335,7 +369,15 @@ class CashuWalletState(
                     runCatching { evt.mints(signer) }
                         .onFailure { Log.w("CashuWallet") { "Failed to decrypt wallet mints: ${it.message}" } }
                         .getOrNull() ?: emptyList()
+                // Persist the wallet event in AccountSettings so we can
+                // restore it before any relay round-trip on next launch —
+                // same backup pattern as kind:0 / kind:3 / NIP-65.
+                settings.updateCashuWallet(evt)
             } ?: run { _mints.value = emptyList() }
+        }
+        if (dirtyNutzapInfo) {
+            _nutzapInfoEvent.value = nutzapInfoEventInternal
+            nutzapInfoEventInternal?.let { settings.updateNutzapInfo(it) }
         }
         if (dirtyTokens) recomputeUnspent()
         if (dirtyHistory) {
@@ -357,6 +399,7 @@ class CashuWalletState(
         var dirtyQuotes = false
         var dirtyNutzaps = false
         var dirtyWallet = false
+        var dirtyNutzapInfo = false
 
         ids.forEach { id ->
             if (tokenEvents.remove(id) != null) {
@@ -370,12 +413,17 @@ class CashuWalletState(
                 walletEventInternal = null
                 dirtyWallet = true
             }
+            if (nutzapInfoEventInternal?.id == id) {
+                nutzapInfoEventInternal = null
+                dirtyNutzapInfo = true
+            }
         }
 
         if (dirtyWallet) {
             _walletEvent.value = null
             _mints.value = emptyList()
         }
+        if (dirtyNutzapInfo) _nutzapInfoEvent.value = null
         if (dirtyTokens) recomputeUnspent()
         if (dirtyHistory) _history.value = historyEvents.values.sortedByDescending { it.createdAt }
         if (dirtyQuotes || dirtyHistory) recomputePending()

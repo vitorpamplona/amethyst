@@ -53,6 +53,8 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.Permission
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
@@ -202,6 +204,8 @@ class AccountSettings(
     var backupGeohashList: GeohashListEvent? = null,
     var backupEphemeralChatList: EphemeralChatListEvent? = null,
     var backupTrustProviderList: TrustProviderListEvent? = null,
+    var backupCashuWallet: CashuWalletEvent? = null,
+    var backupNutzapInfo: NutzapInfoEvent? = null,
     val lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
     val hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     val dismissedPollNoteIds: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
@@ -769,6 +773,23 @@ class AccountSettings(
         // Events might be different objects, we have to compare their ids.
         if (backupNIP65RelayList?.id != newNIP65RelayList.id) {
             backupNIP65RelayList = newNIP65RelayList
+            saveAccountSettings()
+        }
+    }
+
+    fun updateCashuWallet(newWallet: CashuWalletEvent?) {
+        if (newWallet == null) return
+        // Replaceable: keep the latest by id (id changes on each re-sign).
+        if (backupCashuWallet?.id != newWallet.id) {
+            backupCashuWallet = newWallet
+            saveAccountSettings()
+        }
+    }
+
+    fun updateNutzapInfo(newNutzapInfo: NutzapInfoEvent?) {
+        if (newNutzapInfo == null || newNutzapInfo.tags.isEmpty()) return
+        if (backupNutzapInfo?.id != newNutzapInfo.id) {
+            backupNutzapInfo = newNutzapInfo
             saveAccountSettings()
         }
     }
