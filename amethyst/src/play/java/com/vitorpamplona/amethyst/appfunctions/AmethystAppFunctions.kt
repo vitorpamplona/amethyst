@@ -29,8 +29,10 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.actions.DmActions
 import com.vitorpamplona.amethyst.commons.actions.FollowActions
 import com.vitorpamplona.amethyst.commons.actions.SearchActions
+import com.vitorpamplona.amethyst.commons.actions.ZapActions
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull
+import com.vitorpamplona.amethyst.commons.services.lnurl.LightningAddressResolver
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -39,6 +41,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirmDetailed
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -88,10 +91,15 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  */
 class AmethystAppFunctions {
     /**
-     * Searches for Nostr user profiles matching [query] via NIP-50 full-text
-     * search across the active account's configured search relays
-     * (kind:10007), falling back to Amethyst's curated default search-relay
-     * set when none is configured.
+     * Find a person on Nostr by name, handle, or NIP-05. Use when the user
+     * wants to look someone up on Nostr ("find vitor on nostr", "search for
+     * jack dorsey", "who is alice@damus on nostr"), translate a display
+     * name to an npub, or discover a user before following / DMing /
+     * zapping them.
+     *
+     * Backed by NIP-50 full-text search across the active account's
+     * configured search relays (kind:10007), with a fallback to
+     * Amethyst's curated default search-relay set.
      *
      * @param query free-form search text (display name, NIP-05 handle, etc.)
      * @param limit max number of profiles to return — capped to 50.
@@ -142,13 +150,15 @@ class AmethystAppFunctions {
     }
 
     /**
-     * Drains recent kind:1 short text notes from the people the active
-     * account follows. The "what's new on Nostr" verb — same query the
-     * Amethyst home-feed UI runs, just truncated to one batch.
+     * Read the user's Nostr timeline / home feed. Use when the user asks
+     * "what's new on Nostr", "what's happening on Nostr today", "catch me
+     * up on my Nostr feed", or wants a summary of recent posts from
+     * people they follow.
      *
-     * Queried relays: the active account's home relays (NIP-65 outbox +
-     * any private storage + local relays). Same source the UI uses, so
-     * Gemini sees what the user would see on their timeline.
+     * Drains recent kind:1 short text notes from the people the active
+     * account follows; the same query the Amethyst home-feed UI runs,
+     * truncated to one batch. Queries the account's home relays (NIP-65
+     * outbox + any private storage + local relays).
      *
      * @param limit max notes to return, capped to 200. Default 30.
      */
@@ -191,13 +201,15 @@ class AmethystAppFunctions {
     }
 
     /**
-     * Recent kind:1 short text notes from a specific user. Use this when
-     * the user asks "what did Vitor post recently?" or "catch me up on
-     * Snowden" — pass that user's npub or 64-hex pubkey.
+     * Read recent Nostr posts from a specific user. Use when the user
+     * asks "what did Snowden post recently on Nostr", "catch me up on
+     * what Jack has been posting", "show me Alice's latest notes", or
+     * wants to see one specific Nostr user's activity.
      *
-     * Queried relays: prefer the target's NIP-65 write relays (where they
-     * publish) when their kind:10002 is cached locally; fall back to the
-     * active account's home relays.
+     * Pass the target user's npub or hex pubkey — use [searchProfiles]
+     * first if you only have a display name. Queries the target's
+     * NIP-65 write relays when cached, falling back to the active
+     * account's home relays.
      *
      * @param user npub (`npub1…`) or 64-character hex pubkey.
      * @param limit max notes to return, capped to 100. Default 20.
@@ -249,9 +261,14 @@ class AmethystAppFunctions {
     }
 
     /**
-     * Looks up one Nostr profile by [user] (npub or 64-hex). Returns the
-     * latest kind:0 metadata available — checks the local cache first,
-     * falls back to a short network drain.
+     * Look up one Nostr profile by npub or hex pubkey. Use when the user
+     * asks "who is npub1…", "tell me about [npub]", "what's [user]'s
+     * Nostr profile", or wants the bio / NIP-05 / Lightning address of a
+     * specific Nostr user.
+     *
+     * Returns the latest kind:0 metadata — cache-first, with a short
+     * network fallback when the user's profile hasn't been observed
+     * locally yet.
      *
      * @param user npub (`npub1…`) or 64-character hex pubkey.
      */
@@ -312,10 +329,14 @@ class AmethystAppFunctions {
     }
 
     /**
-     * Find kind:1 short text notes tagged with a hashtag (NIP-12 `t`
-     * tag). For "find me Nostr posts about Bitcoin" — pass `bitcoin`,
-     * not `#bitcoin`. The hashtag is lowercased before matching, which
-     * is the convention most Nostr clients (Amethyst included) follow.
+     * Find Nostr posts about a topic via hashtag. Use when the user asks
+     * "show me Nostr posts about Bitcoin", "find Nostr discussion of
+     * #Tor", "what's the Nostr take on [topic]", or wants to browse
+     * conversation about a specific subject.
+     *
+     * Pass the tag value without the leading `#` — "bitcoin", not
+     * "#bitcoin". The hashtag is lowercased before matching (the
+     * convention most Nostr clients follow).
      *
      * @param hashtag the tag value without the leading `#`.
      * @param limit max notes to return, capped to 100. Default 30.
@@ -359,10 +380,15 @@ class AmethystAppFunctions {
     }
 
     /**
-     * Returns who the user is currently signed in as on Nostr — their
-     * npub, best-effort display name, follow count, and how many relays
-     * are configured for outbox / inbox. Diagnostic verb for queries
-     * like "who am I logged in as?" or "what's my npub?".
+     * Report who the user is signed in as on Nostr. Use when the user
+     * asks "who am I logged in as on Nostr", "what's my npub", "what's
+     * my Nostr identity", "how many people do I follow on Nostr", or
+     * any other "tell me about my Nostr account" query.
+     *
+     * Returns the active account's npub, display name, NIP-05 handle,
+     * follow count, and how many relays are configured for outbox /
+     * DM inbox. Use this for Nostr-side diagnostics rather than as a
+     * general "who am I" answer.
      */
     @AppFunction(isDescribedByKDoc = true)
     suspend fun getActiveAccountInfo(appFunctionContext: AppFunctionContext): AccountInfoResult {
@@ -519,13 +545,14 @@ class AmethystAppFunctions {
     }
 
     /**
-     * Total sats received as NIP-57 zaps in the last [hoursBack] hours,
-     * plus a count of distinct zappers. For "did I earn any sats
-     * today?" — defaults to 24 hours.
+     * Report how many sats the user earned on Nostr in a time window.
+     * Use when the user asks "did I get any zaps today", "how many sats
+     * did I earn on Nostr this week", "did anyone zap my last post",
+     * or wants a summary of incoming NIP-57 Lightning zaps.
      *
-     * Each kind:9735 receipt carries a `bolt11` invoice; we parse the
-     * amount out and sum them. Receipts without a parseable amount are
-     * counted but contribute 0 sats.
+     * Drains kind:9735 zap receipts addressed to the user in the window
+     * and parses the bolt11 invoice from each to compute total sats.
+     * Returns total + per-window zap count + unique zapper count.
      *
      * @param hoursBack window size in hours. Capped to 168 (7 days),
      *   default 24.
@@ -595,12 +622,21 @@ class AmethystAppFunctions {
     }
 
     /**
-     * Recent direct messages addressed to the active account. Drains
-     * NIP-17 gift wraps from inbox relays, decrypts each, and returns
-     * the inner kind:14 messages.
+     * Read recent Nostr direct messages. Use when the user asks "did I
+     * get any Nostr DMs", "what did Alice DM me", "show me my recent
+     * Nostr messages", "summarize my unread Nostr DMs", or wants
+     * decrypted message content (not just notifications) from Nostr.
+     *
+     * Drains NIP-17 gift wraps from the active account's DM-inbox
+     * relays, decrypts each in-process (Amethyst is the only place
+     * the user's NIP-44 keys live), and returns the inner kind:14
+     * messages with sender display names attached. File-attachment
+     * DMs (kind:15) are filtered out for now to keep the response
+     * small.
      *
      * @param peer optional npub/hex; when set, only returns messages
-     *   from that specific peer. When null, returns from anyone.
+     *   to/from that specific peer. When null, returns conversations
+     *   with anyone.
      * @param hoursBack window size in hours. Capped to 168 (7 days),
      *   default 24.
      * @param limit max messages to return, capped to 100. Default 20.
@@ -803,9 +839,14 @@ class AmethystAppFunctions {
     // ------------------------------------------------------------------
 
     /**
-     * Publishes a short text note (NIP-10 kind:1) on Nostr as the
-     * signed-in user, broadcast to the account's configured outbox
-     * relays.
+     * Publish a short text note on Nostr. Use when the user asks "post
+     * this to Nostr", "tweet this on Nostr", "share [X] on Nostr",
+     * "publish a Nostr note saying [X]", or any other "send to Nostr"
+     * intent for plain-text content.
+     *
+     * Publishes a NIP-10 kind:1 short text note as the signed-in user,
+     * broadcast to the account's configured outbox relays. Returns per-
+     * relay ack so the caller can confirm the post landed.
      *
      * @param text the note body. Cannot be blank; capped at 8000
      *   characters so an accidentally-pasted document doesn't try to
@@ -838,9 +879,14 @@ class AmethystAppFunctions {
     }
 
     /**
+     * Follow a user on Nostr. Use when the user asks "follow [X] on
+     * Nostr", "add [npub] to my Nostr follows", or "subscribe to
+     * [user]" with a Nostr context. Idempotent — re-following someone
+     * already followed is a safe no-op.
+     *
      * Adds [user] to the signed-in account's NIP-02 kind:3 follow list
-     * and publishes the updated list. No-op when the user is already
-     * followed — [WriteResult.changed] reports `false` in that case.
+     * and publishes the updated list. [WriteResult.changed] reports
+     * `false` when the user is already followed.
      *
      * @param user npub (`npub1…`) or 64-character hex pubkey.
      */
@@ -884,9 +930,14 @@ class AmethystAppFunctions {
     }
 
     /**
-     * Removes [user] from the signed-in account's NIP-02 kind:3 follow
-     * list and publishes the updated list. No-op when the user wasn't
-     * followed — [WriteResult.changed] reports `false`.
+     * Unfollow a user on Nostr. Use when the user asks "unfollow [X]
+     * on Nostr", "remove [npub] from my Nostr follows", or "stop
+     * following [user]" with a Nostr context. Idempotent — unfollowing
+     * someone the user wasn't following is a safe no-op.
+     *
+     * Removes [user] from the signed-in account's NIP-02 kind:3
+     * follow list and publishes the updated list. [WriteResult.changed]
+     * reports `false` when the user wasn't followed.
      *
      * @param user npub (`npub1…`) or 64-character hex pubkey.
      */
@@ -918,16 +969,16 @@ class AmethystAppFunctions {
     }
 
     /**
-     * Sends a NIP-17 direct message to [recipient]. The message is
-     * gift-wrapped (kind:1059) per NIP-59 — only the recipient (and
-     * the signed-in user, who keeps their own copy) can decrypt it.
+     * Send a direct message to a user on Nostr. Use when the user asks
+     * "DM [X] on Nostr", "send a Nostr message to [user] saying [Y]",
+     * "message [npub] on Nostr", or any other "send a private message"
+     * intent in a Nostr context.
      *
-     * Recipients without a published kind:10050 DM-inbox list fall back
-     * through NIP-65 read relays then bootstrap relays. If you want the
-     * stricter NIP-17 behavior — refuse to send when no kind:10050 is
-     * available — read the recipient's profile via [getProfile] first
-     * and check yourself; this verb defaults to permissive so Gemini
-     * users don't see confusing failures from an unfamiliar spec rule.
+     * The message is gift-wrapped (kind:1059) per NIP-59 — only the
+     * recipient (and the signed-in user, who keeps their own copy)
+     * can decrypt it. Recipients without a published kind:10050
+     * DM-inbox list fall back through NIP-65 read relays then
+     * bootstrap relays.
      *
      * @param recipient npub (`npub1…`) or 64-character hex pubkey.
      * @param text the message body. Cannot be blank; capped at 8000
@@ -1000,6 +1051,269 @@ class AmethystAppFunctions {
             messageEventId = result.msg.id,
             deliveries = deliveries,
         )
+    }
+
+    /**
+     * Tip a Nostr user with Lightning sats (NIP-57 profile zap). Use
+     * when the user asks "zap [X] on Nostr", "tip [user] [N] sats",
+     * "send a Lightning tip to [npub]", or "thank [user] with sats".
+     *
+     * Builds the NIP-57 kind:9734 zap request and fetches a BOLT11
+     * invoice from the recipient's Lightning service. Returns the
+     * invoice — the user pastes it into a Lightning wallet to settle.
+     * (NWC auto-pay is a separate verb, not yet exposed.)
+     *
+     * Defaults to 21 sats — the canonical "small thank-you" zap. Cap
+     * is 1,000,000 sats so an accidental tip can't drain a wallet.
+     *
+     * @param user npub (`npub1…`) or 64-character hex pubkey of the
+     *   zap recipient.
+     * @param sats amount to zap, in whole sats. Capped at 1,000,000
+     *   sats. Default 21.
+     * @param comment optional message to attach to the zap. Capped at
+     *   280 characters.
+     */
+    @AppFunction(isDescribedByKDoc = true)
+    suspend fun zapUser(
+        appFunctionContext: AppFunctionContext,
+        user: String,
+        sats: Long = 21,
+        comment: String? = null,
+    ): ZapResult {
+        val cappedSats = sats.coerceIn(1L, MAX_ZAP_SATS)
+        val trimmedComment = comment.orEmpty().trim().take(MAX_ZAP_COMMENT_LENGTH)
+        val recipientPub = decodeUserOrThrow(user)
+        val account = Amethyst.instance.sessionManager.loggedInAccount() ?: throw notSignedIn()
+        requireInProcessSigner(account.signer)
+        val client = Amethyst.instance.client
+
+        // Pull the recipient's kind:0 — needs lnAddress to receive the zap.
+        val metadata =
+            account.cache
+                .checkGetOrCreateUser(recipientPub)
+                ?.metadataOrNull()
+                ?.flow
+                ?.value
+                ?.info
+                ?.let { extractLnAddressFromMetadata(it) }
+                ?: fetchProfileForZap(client, account, recipientPub)
+                ?: throw AppFunctionInvalidArgumentException(
+                    "No kind:0 metadata for $user — recipient must have a Nostr profile first.",
+                )
+        val lnAddress =
+            metadata.takeIf { it.isNotBlank() }
+                ?: throw AppFunctionInvalidArgumentException(
+                    "Recipient has no lud16 or lud06 in their profile — they can't receive Lightning zaps.",
+                )
+
+        val zapRequest =
+            ZapActions.buildUserZapRequest(
+                signer = account.signer,
+                recipientPubkey = recipientPub,
+                amountMillisats = ZapActions.satsToMillisats(cappedSats),
+                inboxRelays = account.nip65RelayList.inboxFlow.value,
+                comment = trimmedComment,
+                zapType = LnZapEvent.ZapType.PUBLIC,
+            )
+
+        val invoice = fetchInvoiceOrThrow(lnAddress, cappedSats, trimmedComment, zapRequest)
+
+        return ZapResult(
+            recipientNpub = NPub.create(recipientPub),
+            recipientPubkeyHex = recipientPub,
+            recipientDisplayName = displayNameOf(recipientPub),
+            lnAddress = lnAddress,
+            amountSats = cappedSats,
+            comment = trimmedComment,
+            invoice = invoice,
+            zapRequestId = zapRequest.id,
+        )
+    }
+
+    /**
+     * Zap a specific Nostr note (NIP-57 event zap). Use when the user
+     * asks "zap this Nostr post", "tip the author of [event id]",
+     * "send sats for that Nostr note about [X]", or "boost this Nostr
+     * post with sats".
+     *
+     * Honors NIP-57 zap-split tags — a post with multiple `zap` tags
+     * produces one invoice per recipient, proportional to weight, so
+     * a multi-party collab post pays everyone correctly. Returns one
+     * BOLT11 invoice per recipient; user pays each in a Lightning
+     * wallet to complete the zap.
+     *
+     * @param eventId 64-character hex id of the note to zap. Must be
+     *   in the local cache — get it via [getNotesByUser] /
+     *   [getRecentFromFollows] / [searchByHashtag] / [searchNotes]
+     *   first.
+     * @param sats total amount to zap, in whole sats. Capped at
+     *   1,000,000.
+     * @param comment optional message attached to every zap request.
+     *   Capped at 280 characters.
+     */
+    @AppFunction(isDescribedByKDoc = true)
+    suspend fun zapEvent(
+        appFunctionContext: AppFunctionContext,
+        eventId: String,
+        sats: Long = 21,
+        comment: String? = null,
+    ): ZapEventResult {
+        if (eventId.length != 64) {
+            throw AppFunctionInvalidArgumentException("eventId must be 64-character hex")
+        }
+        val cappedSats = sats.coerceIn(1L, MAX_ZAP_SATS)
+        val trimmedComment = comment.orEmpty().trim().take(MAX_ZAP_COMMENT_LENGTH)
+        val account = Amethyst.instance.sessionManager.loggedInAccount() ?: throw notSignedIn()
+        requireInProcessSigner(account.signer)
+
+        val note =
+            account.cache.getNoteIfExists(eventId)
+                ?: throw AppFunctionInvalidArgumentException(
+                    "Event $eventId not in local cache. Fetch it via getNotesByUser or " +
+                        "getRecentFromFollows first, or open the note in Amethyst.",
+                )
+        val event =
+            note.event
+                ?: throw AppFunctionInvalidArgumentException(
+                    "Event $eventId is referenced locally but its content hasn't been observed yet.",
+                )
+
+        val client = Amethyst.instance.client
+        val totalMsats = ZapActions.satsToMillisats(cappedSats)
+
+        // Lookups for the split resolver — first try the local cache,
+        // then fall back to a one-shot network drain.
+        val lookupLnAddress: suspend (HexKey) -> String? = { pk ->
+            account.cache
+                .checkGetOrCreateUser(pk)
+                ?.metadataOrNull()
+                ?.lnAddress()
+                ?: fetchProfileForZap(client, account, pk)
+        }
+        val lookupInboxRelays: suspend (HexKey) -> Set<NormalizedRelayUrl> = { pk ->
+            account.cache
+                .checkGetOrCreateUser(pk)
+                ?.inboxRelays()
+                ?.toSet()
+                .orEmpty()
+        }
+
+        val requests =
+            ZapActions.buildEventZapRequestsForSplits(
+                signer = account.signer,
+                zappedEvent = event,
+                totalAmountMillisats = totalMsats,
+                senderInboxRelays = account.nip65RelayList.inboxFlow.value,
+                lookupLnAddress = lookupLnAddress,
+                lookupInboxRelays = lookupInboxRelays,
+                comment = trimmedComment,
+                zapType = LnZapEvent.ZapType.PUBLIC,
+            )
+        if (requests.isEmpty()) {
+            throw AppFunctionInvalidArgumentException(
+                "No payable recipients — neither the author nor any zap-split recipient has a usable Lightning address.",
+            )
+        }
+
+        val invoices =
+            requests.map { req ->
+                val shareSats = req.amountMillisats / 1000
+                val result =
+                    runCatching {
+                        fetchInvoiceOrThrow(
+                            lnAddress = req.recipient.lnAddress,
+                            sats = shareSats,
+                            comment = trimmedComment,
+                            zapRequest = req.request,
+                        )
+                    }
+                ZapInvoice(
+                    recipientNpub = req.recipient.pubkey?.let { NPub.create(it) },
+                    recipientPubkeyHex = req.recipient.pubkey,
+                    recipientDisplayName = req.recipient.pubkey?.let { displayNameOf(it) },
+                    lnAddress = req.recipient.lnAddress,
+                    weight = req.recipient.weight,
+                    amountSats = shareSats,
+                    invoice = result.getOrNull(),
+                    invoiceError = result.exceptionOrNull()?.message,
+                    zapRequestId = req.request.id,
+                )
+            }
+
+        return ZapEventResult(
+            zappedEventId = eventId,
+            requestedSats = cappedSats,
+            billedSats = invoices.sumOf { it.amountSats },
+            comment = trimmedComment,
+            invoices = invoices,
+        )
+    }
+
+    /** Read lnAddress out of an already-resolved UserMetadata. */
+    private fun extractLnAddressFromMetadata(info: com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata): String? = info.lnAddress()
+
+    /**
+     * Cache miss path for zap recipient profile lookup. Drain the
+     * recipient's NIP-65 outbox / our home relays for their kind:0;
+     * returns the lnAddress directly so callers don't have to re-parse
+     * the metadata blob.
+     */
+    private suspend fun fetchProfileForZap(
+        client: com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient,
+        account: com.vitorpamplona.amethyst.model.Account,
+        pubkey: HexKey,
+    ): String? {
+        val relays =
+            account.cache
+                .checkGetOrCreateUser(pubkey)
+                ?.outboxRelays()
+                ?.toSet()
+                ?.ifEmpty { account.homeRelays.flow.value }
+                ?: account.homeRelays.flow.value
+        if (relays.isEmpty()) return null
+
+        val filter = Filter(kinds = listOf(MetadataEvent.KIND), authors = listOf(pubkey), limit = 1)
+        return client
+            .fetchAll(
+                filters = relays.associateWith { listOf(filter) },
+                timeoutMs = GEMINI_FETCH_TIMEOUT_MS,
+            ).mapNotNull { it as? MetadataEvent }
+            .maxByOrNull { it.createdAt }
+            ?.contactMetaData()
+            ?.lnAddress()
+    }
+
+    /**
+     * LNURL-pay round-trip: resolves the LN address to a callback URL,
+     * posts the zap request, returns the BOLT11 invoice. Uses
+     * Amethyst's roleBasedHttpClientBuilder so the request honors the
+     * user's Tor / money-routing preferences.
+     */
+    private suspend fun fetchInvoiceOrThrow(
+        lnAddress: String,
+        sats: Long,
+        comment: String,
+        zapRequest: com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent,
+    ): String {
+        // Compute the LNURL-pay endpoint so we can ask the privacy-aware
+        // HttpClient builder for the right OkHttpClient for that host.
+        val endpointUrl =
+            LightningAddressResolver(httpClient = okhttp3.OkHttpClient()).assembleUrl(lnAddress)
+                ?: throw AppFunctionInvalidArgumentException("Couldn't resolve LN address '$lnAddress' to an LNURL-pay URL.")
+        val client = Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForMoney(endpointUrl)
+        val resolver = LightningAddressResolver(httpClient = client)
+        val result =
+            resolver.fetchInvoice(
+                lnAddress = lnAddress,
+                milliSats = ZapActions.satsToMillisats(sats),
+                message = comment,
+                zapRequest = zapRequest,
+            )
+        return when (result) {
+            is LightningAddressResolver.Result.Success -> result.invoice
+            is LightningAddressResolver.Result.Error ->
+                throw AppFunctionInvalidArgumentException("Lightning service rejected the zap: ${result.message}")
+        }
     }
 
     /**
@@ -1204,6 +1518,16 @@ class AmethystAppFunctions {
          * with what `cli/Context.publish` uses.
          */
         private const val PUBLISH_TIMEOUT_SECS = 15L
+
+        /** Upper bound on a single zap. Anything above this is almost
+         *  certainly a typo; bail out instead of letting Gemini bill
+         *  the user a million sats by accident. */
+        private const val MAX_ZAP_SATS = 1_000_000L
+
+        /** LN providers typically reject longer comments — capping at
+         *  280 keeps us under the most aggressive ceilings while still
+         *  fitting a tweet-length thank-you note. */
+        private const val MAX_ZAP_COMMENT_LENGTH = 280
     }
 }
 
@@ -1533,4 +1857,79 @@ class SendDmResult(
     val messageEventId: String,
     /** One entry per gift-wrap delivery. */
     val deliveries: List<DmDelivery>,
+)
+
+/**
+ * Result of [AmethystAppFunctions.zapUser]. Carries the BOLT11 invoice
+ * the user needs to pay in their Lightning wallet — this verb doesn't
+ * auto-pay (NWC integration is a separate, not-yet-exposed verb).
+ */
+@AppFunctionSerializable(isDescribedByKDoc = true)
+class ZapResult(
+    /** Bech32 npub of the zap recipient. */
+    val recipientNpub: String,
+    /** Hex pubkey of the recipient. */
+    val recipientPubkeyHex: String,
+    /** Best-effort display name from the local kind:0 cache. */
+    val recipientDisplayName: String?,
+    /** LN address the invoice was fetched from. */
+    val lnAddress: String,
+    /** Amount actually requested (after capping). */
+    val amountSats: Long,
+    /** Comment attached to the zap (truncated to 280 chars). */
+    val comment: String,
+    /** BOLT11 invoice the user pastes into a Lightning wallet. */
+    val invoice: String,
+    /** Hex event id of the signed kind:9734 zap request. */
+    val zapRequestId: String,
+)
+
+/**
+ * Per-recipient BOLT11 invoice for an event zap. Multiple invoices
+ * appear when the zapped note carries NIP-57 zap-split tags.
+ */
+@AppFunctionSerializable(isDescribedByKDoc = true)
+class ZapInvoice(
+    /** Bech32 npub of the recipient, or null when the split tag carried
+     *  only an LN address with no pubkey. */
+    val recipientNpub: String?,
+    /** Hex pubkey of the recipient, or null when only an LN address was given. */
+    val recipientPubkeyHex: String?,
+    /** Best-effort display name from the cache, when the recipient is known. */
+    val recipientDisplayName: String?,
+    /** LN address the invoice was fetched from. */
+    val lnAddress: String,
+    /** Relative weight in the zap split — 1.0 for unweighted recipients. */
+    val weight: Double,
+    /** This recipient's share of the total in whole sats. */
+    val amountSats: Long,
+    /** BOLT11 invoice, or null when the Lightning provider failed
+     *  (see [invoiceError] for the reason). */
+    val invoice: String?,
+    /** Failure reason from the Lightning provider when [invoice] is null. */
+    val invoiceError: String?,
+    /** Hex event id of this recipient's kind:9734 zap request. */
+    val zapRequestId: String,
+)
+
+/**
+ * Result of [AmethystAppFunctions.zapEvent]. Total billed sats may
+ * differ from requested by a few sats due to whole-sat rounding in the
+ * splits — same drift the foreground UI has.
+ */
+@AppFunctionSerializable(isDescribedByKDoc = true)
+class ZapEventResult(
+    /** Hex event id of the note being zapped. */
+    val zappedEventId: String,
+    /** Total sats the caller asked for (capped, post-validation). */
+    val requestedSats: Long,
+    /** Sum of per-recipient sats actually billed across all invoices. */
+    val billedSats: Long,
+    /** Comment attached to every zap request. */
+    val comment: String,
+    /** One invoice per recipient — multiple entries when the note has
+     *  NIP-57 zap-split tags. Pay each one in a Lightning wallet to
+     *  complete the zap; invoices with non-null [ZapInvoice.invoiceError]
+     *  couldn't be fetched and won't go through. */
+    val invoices: List<ZapInvoice>,
 )
