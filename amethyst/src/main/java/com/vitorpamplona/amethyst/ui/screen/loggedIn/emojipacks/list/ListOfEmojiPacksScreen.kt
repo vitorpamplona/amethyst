@@ -301,8 +301,8 @@ private fun EmojiListToggleRow(
         remember(pack, accountViewModel) {
             Address(EmojiPackEvent.KIND, accountViewModel.account.signer.pubKey, pack.identifier)
         }
-    LoadAddressableNote(packAddress, accountViewModel) { note ->
-        note?.let { packNote ->
+    LoadAddressableNote(packAddress, accountViewModel) {
+        it?.let { packNote ->
             LoadAddressableNote(
                 accountViewModel.account.emoji.getEmojiPackSelectionAddress(),
                 accountViewModel,
@@ -311,14 +311,17 @@ private fun EmojiListToggleRow(
                     val hasAddedThis by observeNoteAndMap(usersEmojiList, accountViewModel) {
                         usersEmojiList.event?.isTaggedAddressableNote(packNote.idHex)
                     }
-                    val label =
-                        if (hasAddedThis == true) {
-                            stringRes(R.string.remove_from_emoji_list)
-                        } else {
-                            stringRes(R.string.add_to_emoji_list)
-                        }
-                    M3ActionRow(icon = MaterialSymbols.EmojiEmotions, text = label) {
-                        if (hasAddedThis == true) {
+                    val isAdded = hasAddedThis == true
+                    M3ActionRow(
+                        icon = MaterialSymbols.EmojiEmotions,
+                        text =
+                            if (isAdded) {
+                                stringRes(R.string.remove_from_emoji_list)
+                            } else {
+                                stringRes(R.string.add_to_emoji_list)
+                            },
+                    ) {
+                        if (isAdded) {
                             accountViewModel.removeEmojiPack(packNote)
                         } else {
                             accountViewModel.addEmojiPack(packNote)
