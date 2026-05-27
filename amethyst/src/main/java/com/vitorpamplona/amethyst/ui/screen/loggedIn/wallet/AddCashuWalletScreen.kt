@@ -41,16 +41,19 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -61,22 +64,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.hashtags.Cashu
-import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.nip60Cashu.CashuMintDirectoryEntry
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
-import androidx.compose.material3.Icon as Material3Icon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -106,7 +104,6 @@ fun AddCashuWalletScreen(
         )
     }
     var manualPrivkey by remember { mutableStateOf("") }
-    var showPicker by remember { mutableStateOf(false) }
     val createState by viewModel.createState.collectAsState()
 
     // Pre-fill the mints list with the existing wallet's mints whenever we
@@ -158,22 +155,11 @@ fun AddCashuWalletScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringRes(R.string.cashu_mints),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f),
-                )
-                OutlinedButton(onClick = { showPicker = true }) {
-                    Icon(MaterialSymbols.Search, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringRes(R.string.cashu_browse_mints))
-                }
-            }
+            Text(
+                text = stringRes(R.string.cashu_mints),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
             Spacer(modifier = Modifier.height(8.dp))
 
             mints.forEachIndexed { index, mint ->
@@ -248,34 +234,52 @@ fun AddCashuWalletScreen(
                 }
             }
 
-            // Autocomplete from the cache-backed mint directory.
-            // Suggestions are filtered to URLs the user hasn't already
-            // added and that aren't an exact case-insensitive match for
-            // the current input (no point suggesting what they already
-            // typed). Wrapped in `derivedStateOf` so the recompute only
-            // fires when `mintInput` or `mints` change, not on every
-            // recomposition of the surrounding form. An empty field
-            // shows no suggestions — the autocomplete should react to
-            // typing, not dump every mint we've ever seen unsolicited.
-            val suggestions by remember(mints) {
+            // Live mint directory subscription drives the rich
+            // suggestion rows below — open while this screen is on,
+            // closed via DisposableEffect when the user backs out so we
+            // don't keep relay subscriptions alive after the screen is
+            // dismissed.
+            DisposableEffect(Unit) {
+                viewModel.openMintDirectory()
+                onDispose { viewModel.closeMintDirectory() }
+            }
+            val directoryEntries by viewModel.directory.entries.collectAsState()
+
+            // Empty input → "Popular mints" (the same ranked list the
+            // old Browse sheet showed). Typed input → "Matching mints"
+            // filtered case-insensitively. Either way we exclude what
+            // the user already added so the list isn't padded with
+            // disabled rows.
+            val suggestions by remember(directoryEntries, mints) {
                 derivedStateOf {
                     val typed = mintInput.trim().trimEnd('/').lowercase()
-                    if (typed.isEmpty()) {
-                        emptyList()
-                    } else {
-                        val alreadyAdded = mints.map { it.lowercase().trimEnd('/') }.toSet()
-                        LocalCache.mintDirectory
-                            .suggest(typed, limit = 6)
-                            .filter { it != typed && it !in alreadyAdded }
-                    }
+                    val alreadyAdded = mints.map { it.lowercase().trimEnd('/') }.toSet()
+                    viewModel.directory
+                        .search(typed, limit = 6)
+                        .filter { it.url.lowercase().trimEnd('/') !in alreadyAdded }
                 }
             }
             if (suggestions.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text =
+                        stringRes(
+                            if (mintInput.isBlank()) {
+                                R.string.cashu_mint_popular_header
+                            } else {
+                                R.string.cashu_mint_matches_header
+                            },
+                        ),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Spacer(modifier = Modifier.height(4.dp))
                 MintSuggestionList(
                     suggestions = suggestions,
-                    onPick = { url ->
-                        mintInput = url
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    onPick = { entry ->
+                        mintInput = entry.url
                         viewModel.resetMintPing()
                     },
                 )
@@ -386,18 +390,6 @@ fun AddCashuWalletScreen(
             }
         }
     }
-
-    if (showPicker) {
-        MintPickerSheet(
-            viewModel = viewModel,
-            excludeUrls = mints.toSet(),
-            onPick = { entry ->
-                val url = entry.url.trim().trimEnd('/')
-                if (url.isNotEmpty() && url !in mints) mints.add(url)
-            },
-            onDismiss = { showPicker = false },
-        )
-    }
 }
 
 @Composable
@@ -431,76 +423,47 @@ private fun P2pkRadio(
 }
 
 /**
- * Cache-backed mint-URL autocomplete rendered inline under the mint
- * input. Each row fills the text field on tap so the user can verify /
- * add the same way they would with a hand-typed URL — we deliberately
- * don't auto-add on tap because users often want to ping first.
+ * Mint directory autocomplete rendered inline under the mint input.
+ * Each row uses [MintDirectoryRow] so the user sees follower avatars
+ * and recommendation counts the same way they would in a dedicated
+ * picker. Tapping a row fills the URL field rather than adding the
+ * mint directly — users typically want to verify first.
+ *
+ * Rows are visually separated by an outlined surface and divider so
+ * a long list reads as discrete entries instead of merging into a
+ * single coloured block.
  */
 @Composable
 private fun MintSuggestionList(
-    suggestions: List<String>,
-    onPick: (String) -> Unit,
+    suggestions: List<CashuMintDirectoryEntry>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onPick: (CashuMintDirectoryEntry) -> Unit,
 ) {
-    Card(
+    OutlinedCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface),
     ) {
-        Column(modifier = Modifier.padding(vertical = 4.dp)) {
-            suggestions.forEach { url ->
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable { onPick(url) }
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+        Column {
+            suggestions.forEachIndexed { index, entry ->
+                if (index > 0) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                }
+                MintDirectoryRow(
+                    entry = entry,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    modifier = Modifier.clickable { onPick(entry) },
                 ) {
-                    Material3Icon(
-                        imageVector = CustomHashTagIcons.Cashu,
+                    Icon(
+                        symbol = MaterialSymbols.AutoMirrored.ArrowForward,
                         contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = Color.Unspecified,
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = url,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
         }
-    }
-}
-
-// ============================================================
-// @Preview composables — Android Studio rendering only
-// ============================================================
-
-@Preview
-@Composable
-fun MintSuggestionListPreview() {
-    ThemeComparisonColumn {
-        MintSuggestionList(
-            suggestions =
-                listOf(
-                    "https://mint.minibits.cash/bitcoin",
-                    "https://mint.coinos.io",
-                    "https://nutmix.cash",
-                ),
-            onPick = {},
-        )
-    }
-}
-
-@Preview
-@Composable
-fun MintSuggestionListSinglePreview() {
-    ThemeComparisonColumn {
-        MintSuggestionList(
-            suggestions = listOf("https://mint.minibits.cash/bitcoin"),
-            onPick = {},
-        )
     }
 }

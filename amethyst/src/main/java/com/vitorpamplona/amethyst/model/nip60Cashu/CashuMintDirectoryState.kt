@@ -58,7 +58,19 @@ data class CashuMintDirectoryEntry(
     val recommendationCount: Int,
     /** Recommendations specifically by [followedPubkeys] — surfaced first in the picker. */
     val followsRecommendationCount: Int,
-)
+    /**
+     * Pubkeys of followed users who have recommended this mint, capped at
+     * [MAX_FOLLOWS_RECOMMENDER_AVATARS] for cheap rendering. Length equals
+     * `min(followsRecommendationCount, MAX_FOLLOWS_RECOMMENDER_AVATARS)`.
+     * The remaining `followsRecommendationCount - size` followers are
+     * implied by the count, not enumerated here.
+     */
+    val followsRecommenderPubkeys: List<HexKey>,
+) {
+    companion object {
+        const val MAX_FOLLOWS_RECOMMENDER_AVATARS: Int = 6
+    }
+}
 
 /**
  * Account-scoped index of cashu mint announcements + recommendations.
@@ -246,11 +258,17 @@ class CashuMintDirectoryState(
         val allUrls = byUrl.keys + perUrlAll.keys
         _entries.value =
             allUrls.map { url ->
+                val followsRecs = perUrlFollows[url].orEmpty()
                 CashuMintDirectoryEntry(
                     url = url,
                     announcement = byUrl[url],
                     recommendationCount = perUrlAll[url]?.size ?: 0,
-                    followsRecommendationCount = perUrlFollows[url]?.size ?: 0,
+                    followsRecommendationCount = followsRecs.size,
+                    // Cap the per-row pubkey list — the row only renders
+                    // a small avatar gallery; the full count is preserved
+                    // in followsRecommendationCount for the "+N more" suffix.
+                    followsRecommenderPubkeys =
+                        followsRecs.take(CashuMintDirectoryEntry.MAX_FOLLOWS_RECOMMENDER_AVATARS).toList(),
                 )
             }
     }
@@ -273,4 +291,34 @@ class CashuMintDirectoryState(
 
     /** Find a directory entry by exact URL match (used to surface metadata for an already-known mint). */
     fun lookup(url: String): CashuMintDirectoryEntry? = entries.value.firstOrNull { it.url == url }
+
+    /**
+     * Substring search ranked by the same comparator as [entries] —
+     * follows recommendations first, then total recommendations, then
+     * URL. Empty [query] returns the top mints overall, which is what
+     * the autocomplete dropdown shows before the user starts typing.
+     *
+     * Backs both the add-cashu-wallet autocomplete and the wallet
+     * settings "Add recommendation" flow; merging them onto one row
+     * composable lets both surfaces show the recommender avatar
+     * gallery and the +N suffix without each rolling their own join.
+     */
+    fun search(
+        query: String,
+        limit: Int = 6,
+    ): List<CashuMintDirectoryEntry> {
+        val needle = query.trim().lowercase()
+        val all = entries.value
+        val filtered =
+            if (needle.isEmpty()) {
+                all
+            } else {
+                all.filter {
+                    it.url.lowercase().contains(needle) ||
+                        (it.announcement?.content ?: "").lowercase().contains(needle) ||
+                        (it.announcement?.dTag() ?: "").lowercase().contains(needle)
+                }
+            }
+        return filtered.take(limit)
+    }
 }

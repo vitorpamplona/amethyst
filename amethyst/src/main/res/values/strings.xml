@@ -1942,17 +1942,18 @@
     <string name="cashu_p2pk_manual_label">P2PK private key (hex)</string>
     <string name="wallet_edit_cashu_title">Edit Cashu wallet</string>
     <string name="wallet_save_changes">Save changes</string>
-    <string name="cashu_browse_mints">Browse</string>
-    <string name="cashu_mint_picker_title">Pick a Cashu mint</string>
-    <string name="cashu_mint_picker_subtitle">From NIP-87 announcements + recommendations on your outbox relays.</string>
-    <string name="cashu_mint_picker_search_hint">Search by name, URL, or pubkey</string>
-    <string name="cashu_mint_picker_loading">Looking for mints on your relays…</string>
-    <string name="cashu_mint_picker_no_matches">No mints match \"%1$s\".</string>
-    <string name="cashu_mint_picker_add">Add</string>
-    <string name="cashu_mint_picker_added">Added</string>
-    <string name="cashu_mint_rec_follows">from people you follow</string>
-    <string name="cashu_mint_rec_total">recommendations</string>
     <string name="cashu_mint_no_recs">No recommendations yet</string>
+    <string name="cashu_mint_recommended_by">Recommended by</string>
+    <plurals name="cashu_mint_plus_others">
+        <item quantity="one">+%1$d more</item>
+        <item quantity="other">+%1$d more</item>
+    </plurals>
+    <plurals name="cashu_mint_recommended_by_others">
+        <item quantity="one">Recommended by %1$d other</item>
+        <item quantity="other">Recommended by %1$d others</item>
+    </plurals>
+    <string name="cashu_mint_popular_header">Popular mints</string>
+    <string name="cashu_mint_matches_header">Matching mints</string>
     <string name="cashu_recommend_mint">Recommend this mint</string>
     <string name="cashu_action_receive">Receive</string>
     <string name="cashu_action_send_ln">Send LN</string>
