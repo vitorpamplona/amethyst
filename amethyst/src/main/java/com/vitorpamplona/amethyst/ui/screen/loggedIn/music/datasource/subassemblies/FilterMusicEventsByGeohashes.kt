@@ -20,74 +20,51 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.subassemblies
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
-import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
-import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-internal val MUSIC_TRACK_KINDS = listOf(MusicTrackEvent.KIND, MusicPlaylistEvent.KIND)
-
-fun filterMusicTracksByAuthors(
+fun filterMusicEventsByGeohashes(
     relay: NormalizedRelayUrl,
-    authors: Set<HexKey>,
-    since: Long? = null,
+    kinds: List<Int>,
+    geotags: Set<String>,
+    since: Long?,
 ): List<RelayBasedFilter> {
-    val authorList = authors.sorted()
+    if (geotags.isEmpty()) return emptyList()
+
     return listOf(
         RelayBasedFilter(
             relay = relay,
             filter =
                 Filter(
-                    authors = authorList,
-                    kinds = MUSIC_TRACK_KINDS,
-                    limit = 200,
+                    kinds = kinds,
+                    tags = mapOf("g" to geotags.sorted()),
+                    limit = 100,
                     since = since,
                 ),
         ),
     )
 }
 
-fun filterMusicTracksByAuthors(
-    authorSet: AuthorsTopNavPerRelayFilterSet,
+fun filterMusicEventsByGeohashes(
+    geoSet: LocationTopNavPerRelayFilterSet,
+    kinds: List<Int>,
     since: SincePerRelayMap?,
-    defaultSince: Long? = null,
+    defaultSince: Long?,
 ): List<RelayBasedFilter> {
-    if (authorSet.set.isEmpty()) return emptyList()
+    if (geoSet.set.isEmpty()) return emptyList()
 
-    return authorSet.set
+    return geoSet.set
         .mapNotNull {
-            if (it.value.authors.isEmpty()) {
+            if (it.value.geotags.isEmpty()) {
                 null
             } else {
-                filterMusicTracksByAuthors(
+                filterMusicEventsByGeohashes(
                     relay = it.key,
-                    authors = it.value.authors,
-                    since = since?.get(it.key)?.time ?: defaultSince,
-                )
-            }
-        }.flatten()
-}
-
-fun filterMusicTracksByMutedAuthors(
-    authorSet: MutedAuthorsTopNavPerRelayFilterSet,
-    since: SincePerRelayMap?,
-    defaultSince: Long? = null,
-): List<RelayBasedFilter> {
-    if (authorSet.set.isEmpty()) return emptyList()
-
-    return authorSet.set
-        .mapNotNull {
-            if (it.value.authors.isEmpty()) {
-                null
-            } else {
-                filterMusicTracksByAuthors(
-                    relay = it.key,
-                    authors = it.value.authors,
+                    kinds = kinds,
+                    geotags = it.value.geotags,
                     since = since?.get(it.key)?.time ?: defaultSince,
                 )
             }

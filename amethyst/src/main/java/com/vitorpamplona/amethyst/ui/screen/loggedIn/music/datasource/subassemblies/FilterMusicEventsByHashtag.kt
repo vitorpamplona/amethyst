@@ -20,29 +20,50 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.subassemblies
 
-import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
-fun filterMusicTracksGlobal(
-    relays: GlobalTopNavPerRelayFilterSet,
+fun filterMusicEventsByHashtag(
+    relay: NormalizedRelayUrl,
+    kinds: List<Int>,
+    hashtags: Set<String>,
+    since: Long? = null,
+): List<RelayBasedFilter> =
+    listOf(
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                Filter(
+                    kinds = kinds,
+                    tags = mapOf("t" to hashtags.sorted()),
+                    limit = 200,
+                    since = since,
+                ),
+        ),
+    )
+
+fun filterMusicEventsByHashtag(
+    hashtagSet: HashtagTopNavPerRelayFilterSet,
+    kinds: List<Int>,
     since: SincePerRelayMap?,
     defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
-    if (relays.set.isEmpty()) return emptyList()
+    if (hashtagSet.set.isEmpty()) return emptyList()
 
-    return relays.set.map {
-        val sinceForRelay = since?.get(it.key)?.time ?: defaultSince ?: TimeUtils.oneWeekAgo()
-        RelayBasedFilter(
-            relay = it.key,
-            filter =
-                Filter(
-                    kinds = MUSIC_TRACK_KINDS,
-                    limit = 200,
-                    since = sinceForRelay,
-                ),
-        )
-    }
+    return hashtagSet.set
+        .mapNotNull { relayHashSet ->
+            if (relayHashSet.value.hashtags.isEmpty()) {
+                null
+            } else {
+                filterMusicEventsByHashtag(
+                    relay = relayHashSet.key,
+                    kinds = kinds,
+                    hashtags = relayHashSet.value.hashtags,
+                    since = since?.get(relayHashSet.key)?.time ?: defaultSince,
+                )
+            }
+        }.flatten()
 }

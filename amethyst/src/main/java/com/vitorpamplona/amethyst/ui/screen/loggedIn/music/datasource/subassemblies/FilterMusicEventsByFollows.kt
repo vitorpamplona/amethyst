@@ -24,8 +24,9 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavP
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
-fun filterMusicTracksByFollows(
+fun filterMusicEventsByFollows(
     followsSet: AllFollowsTopNavPerRelayFilterSet,
+    kinds: List<Int>,
     since: SincePerRelayMap?,
     defaultSince: Long? = null,
 ): List<RelayBasedFilter> {
@@ -37,7 +38,7 @@ fun filterMusicTracksByFollows(
 
         listOfNotNull(
             it.value.authors?.let { authors ->
-                filterMusicTracksByAuthors(relay, authors, sinceForRelay)
+                filterMusicEventsByAuthors(relay, kinds, authors, sinceForRelay)
             },
         ).flatten()
     }

@@ -41,8 +41,8 @@ import kotlinx.coroutines.launch
  * tracks subscription — so if the user picked, e.g., Global for playlists but Following for
  * tracks, the REQ only asked Following's authors and the playlists feed showed empty.
  *
- * Asks both kinds (36787 + 34139) per relay so the local cache also picks up any tracks
- * referenced by playlists in the same round-trip.
+ * Asks for kind 34139 only — tracks referenced by playlists are loaded on demand by each
+ * playlist row's own per-track observer (see MusicPlaylist.kt), not bundled into this REQ.
  */
 class MusicPlaylistsSubAssembler(
     client: INostrClient,
@@ -53,15 +53,9 @@ class MusicPlaylistsSubAssembler(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
         val feedSettings = key.followsPerRelay()
-        // Same REQ asks both kinds (36787 + 34139), so the `since` cursor has to be the
-        // older of the two feeds' cursors — otherwise the kind whose feed lags would
-        // miss older events.
-        val defaultSince =
-            listOfNotNull(
-                key.feedStates.musicTracksFeed.lastNoteCreatedAtIfFilled(),
-                key.feedStates.musicPlaylistsFeed.lastNoteCreatedAtIfFilled(),
-            ).minOrNull()
-        return makeMusicTracksFilter(feedSettings, since, defaultSince)
+        // REQ now only asks for kind 34139 (playlists), keyed to this screen's follow
+        // list selector — no cross-feed cursor min needed.
+        return makeMusicPlaylistsFilter(feedSettings, since, key.feedStates.musicPlaylistsFeed.lastNoteCreatedAtIfFilled())
     }
 
     override fun user(key: MusicPlaylistsQueryState) = key.account.userProfile()
@@ -96,13 +90,6 @@ class MusicPlaylistsSubAssembler(
                 },
                 key.account.scope.launch(Dispatchers.IO) {
                     key.feedStates.musicPlaylistsFeed.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
-                        invalidateFilters()
-                    }
-                },
-                key.account.scope.launch(Dispatchers.IO) {
-                    // REQ also asks for tracks (kind 36787), so pagination needs to react
-                    // to the tracks feed's cursor advancing too.
-                    key.feedStates.musicTracksFeed.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
                         invalidateFilters()
                     }
                 },

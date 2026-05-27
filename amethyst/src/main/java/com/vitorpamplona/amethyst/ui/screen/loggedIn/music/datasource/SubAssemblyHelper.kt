@@ -22,29 +22,64 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource
 
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.LocationTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.allcommunities.AllCommunitiesTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.subassemblies.filterMusicTracksByAuthors
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.subassemblies.filterMusicTracksByFollows
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.subassemblies.filterMusicTracksByMutedAuthors
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.subassemblies.filterMusicTracksGlobal
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.subassemblies.MUSIC_PLAYLIST_KINDS
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.subassemblies.MUSIC_TRACK_KINDS
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.subassemblies.filterMusicEventsByAllCommunities
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.subassemblies.filterMusicEventsByAuthors
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.subassemblies.filterMusicEventsByCommunity
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.subassemblies.filterMusicEventsByFollows
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.subassemblies.filterMusicEventsByGeohashes
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.subassemblies.filterMusicEventsByHashtag
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.subassemblies.filterMusicEventsByMutedAuthors
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.subassemblies.filterMusicEventsGlobal
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
+/**
+ * Builds a per-relay filter set for the music *tracks* feed (kind 36787).
+ * Mirrors `makeLongsFilter`/`makeArticlesFilter` — every supported top-bar list selector
+ * (follows, authors, global, mute, hashtag, geohash, communities) maps to a dedicated
+ * sub-assembly. Anything not listed (e.g. future selectors we don't yet support) returns
+ * `emptyList` so we don't subscribe to junk.
+ */
 fun makeMusicTracksFilter(
     feedSettings: IFeedTopNavPerRelayFilterSet,
     since: SincePerRelayMap?,
     defaultSince: Long? = null,
+): List<RelayBasedFilter> = makeMusicFilter(feedSettings, MUSIC_TRACK_KINDS, since, defaultSince)
+
+/**
+ * Builds a per-relay filter set for the music *playlists* feed (kind 34139).
+ * Same routing as [makeMusicTracksFilter] — only the kind list differs, so each screen's
+ * REQ asks for just the kind it actually renders instead of one combined REQ.
+ */
+fun makeMusicPlaylistsFilter(
+    feedSettings: IFeedTopNavPerRelayFilterSet,
+    since: SincePerRelayMap?,
+    defaultSince: Long? = null,
+): List<RelayBasedFilter> = makeMusicFilter(feedSettings, MUSIC_PLAYLIST_KINDS, since, defaultSince)
+
+private fun makeMusicFilter(
+    feedSettings: IFeedTopNavPerRelayFilterSet,
+    kinds: List<Int>,
+    since: SincePerRelayMap?,
+    defaultSince: Long?,
 ): List<RelayBasedFilter> =
     when (feedSettings) {
-        is AllFollowsTopNavPerRelayFilterSet -> filterMusicTracksByFollows(feedSettings, since, defaultSince)
-        is AuthorsTopNavPerRelayFilterSet -> filterMusicTracksByAuthors(feedSettings, since, defaultSince)
-        is GlobalTopNavPerRelayFilterSet -> filterMusicTracksGlobal(feedSettings, since, defaultSince)
-        is MutedAuthorsTopNavPerRelayFilterSet -> filterMusicTracksByMutedAuthors(feedSettings, since, defaultSince)
-        // Hashtag / Geohash / Community / AllCommunities / SingleCommunity filters cover
-        // discovery-oriented routes the music feed doesn't expose yet — fall through to
-        // emptyList so we don't subscribe to junk. Add per-case handlers when the spinner
-        // grows those options.
+        is AllCommunitiesTopNavPerRelayFilterSet -> filterMusicEventsByAllCommunities(feedSettings, kinds, since, defaultSince)
+        is AllFollowsTopNavPerRelayFilterSet -> filterMusicEventsByFollows(feedSettings, kinds, since, defaultSince)
+        is AuthorsTopNavPerRelayFilterSet -> filterMusicEventsByAuthors(feedSettings, kinds, since, defaultSince)
+        is GlobalTopNavPerRelayFilterSet -> filterMusicEventsGlobal(feedSettings, kinds, since, defaultSince)
+        is HashtagTopNavPerRelayFilterSet -> filterMusicEventsByHashtag(feedSettings, kinds, since, defaultSince)
+        is LocationTopNavPerRelayFilterSet -> filterMusicEventsByGeohashes(feedSettings, kinds, since, defaultSince)
+        is MutedAuthorsTopNavPerRelayFilterSet -> filterMusicEventsByMutedAuthors(feedSettings, kinds, since, defaultSince)
+        is SingleCommunityTopNavPerRelayFilterSet -> filterMusicEventsByCommunity(feedSettings, kinds, since, defaultSince)
         else -> emptyList()
     }

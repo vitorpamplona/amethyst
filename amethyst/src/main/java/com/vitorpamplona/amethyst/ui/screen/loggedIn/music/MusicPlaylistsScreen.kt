@@ -66,9 +66,10 @@ fun MusicPlaylistsScreen(
         accountViewModel = accountViewModel,
     )
     // Dedicated subscription keyed on the *playlists* follow list (the top-bar spinner
-    // writes to a different setting than the tracks screen), so changing this screen's
-    // list actually changes the REQ. The filter still asks for both kinds 36787 + 34139
-    // so opening the playlists screen alone is enough to populate referenced tracks.
+    // writes to a different setting than the tracks screen) and asking for only kind
+    // 34139, so this screen's REQ is isolated from the tracks screen's REQ. Each
+    // track referenced by a playlist is pulled separately by its own PlaylistTrackRow
+    // via observeNoteEvent.
     MusicPlaylistsFilterAssemblerSubscription(accountViewModel)
 
     DisappearingScaffold(
