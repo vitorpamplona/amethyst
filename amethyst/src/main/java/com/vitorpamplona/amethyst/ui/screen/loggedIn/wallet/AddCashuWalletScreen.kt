@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -31,6 +32,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -49,6 +51,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -62,6 +65,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -83,6 +87,11 @@ fun AddCashuWalletScreen(
 
     val mints = remember { mutableStateListOf<String>() }
     var mintInput by remember { mutableStateOf("") }
+
+    // Kick the one-shot backfill so the mint-URL autocomplete has
+    // suggestions on first open instead of waiting for the next relay
+    // round-trip. Cheap (one sweep over the existing cache); idempotent.
+    LaunchedEffect(Unit) { LocalCache.ensureMintDirectoryBackfilled() }
     var keyMode by remember {
         mutableStateOf(
             if (isEditMode) CashuWalletViewModel.P2pkKeyMode.KeepCurrent else CashuWalletViewModel.P2pkKeyMode.AutoGenerate,
@@ -229,6 +238,33 @@ fun AddCashuWalletScreen(
                 }
             }
 
+            // Autocomplete from the cache-backed mint directory.
+            // Suggestions are filtered to URLs the user hasn't already
+            // added and that aren't an exact case-insensitive match for
+            // the current input (no point suggesting what they already
+            // typed). Wrapped in `derivedStateOf` so the recompute only
+            // fires when `mintInput` or `mints` change, not on every
+            // recomposition of the surrounding form.
+            val suggestions by remember(mints) {
+                derivedStateOf {
+                    val typed = mintInput.trim().trimEnd('/').lowercase()
+                    val alreadyAdded = mints.map { it.lowercase().trimEnd('/') }.toSet()
+                    LocalCache.mintDirectory
+                        .suggest(typed, limit = 6)
+                        .filter { it != typed && it !in alreadyAdded }
+                }
+            }
+            if (suggestions.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                MintSuggestionList(
+                    suggestions = suggestions,
+                    onPick = { url ->
+                        mintInput = url
+                        viewModel.resetMintPing()
+                    },
+                )
+            }
+
             when (val ps = pingState) {
                 is MintPingState.Ok -> {
                     Spacer(modifier = Modifier.height(4.dp))
@@ -373,6 +409,50 @@ private fun P2pkRadio(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
+            }
+        }
+    }
+}
+
+/**
+ * Cache-backed mint-URL autocomplete rendered inline under the mint
+ * input. Each row fills the text field on tap so the user can verify /
+ * add the same way they would with a hand-typed URL — we deliberately
+ * don't auto-add on tap because users often want to ping first.
+ */
+@Composable
+private fun MintSuggestionList(
+    suggestions: List<String>,
+    onPick: (String) -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Column(modifier = Modifier.padding(vertical = 4.dp)) {
+            suggestions.forEach { url ->
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { onPick(url) }
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        symbol = MaterialSymbols.AccountBalanceWallet,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = url,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
         }
     }

@@ -25,6 +25,7 @@ package com.vitorpamplona.amethyst.model
 import android.util.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.cashu.MintDirectoryIndex
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
@@ -337,6 +338,45 @@ object LocalCache : ILocalCache, ICacheProvider {
     var lnurlEndpointResolver: LnurlEndpointResolver? = null
 
     val relayHints = HintIndexer()
+
+    /**
+     * Cashu mint URL directory, populated passively as
+     * `NutzapInfoEvent` / `MintRecommendationEvent` / `CashuMintEvent`
+     * flow through `updateMintIndex`. Backs the autocomplete in any text
+     * field where the user types a mint URL.
+     *
+     * Use [mintDirectoryBackfilled] semantics via [ensureMintDirectoryBackfilled]
+     * when reading from the UI — the first call sweeps already-cached
+     * events so suggestions are useful before the next relay round-trip.
+     */
+    val mintDirectory = MintDirectoryIndex()
+
+    @Volatile private var mintDirectoryBackfilled = false
+    private val mintDirectoryBackfillLock = Any()
+
+    /**
+     * Sweeps `notes` + `addressables` for any NIP-87 / NIP-61 event the
+     * cache already holds and feeds them into [mintDirectory]. The wallet
+     * directory + every other user's kind:10019 we've ever loaded may
+     * have arrived BEFORE [updateMintIndex] existed (or before any
+     * caller cared), so without this backfill the autocomplete is empty
+     * until new events arrive.
+     *
+     * Idempotent — subsequent calls return immediately. Best-effort: a
+     * scan failure is swallowed so the index stays usable even if the
+     * cache is in an unexpected state.
+     */
+    fun ensureMintDirectoryBackfilled() {
+        if (mintDirectoryBackfilled) return
+        synchronized(mintDirectoryBackfillLock) {
+            if (mintDirectoryBackfilled) return
+            runCatching {
+                notes.forEach { _, note -> note.event?.let(::updateMintIndex) }
+                addressables.forEach { _, note -> note.event?.let(::updateMintIndex) }
+            }
+            mintDirectoryBackfilled = true
+        }
+    }
 
     val deletionIndex = DeletionIndex()
 
@@ -2922,6 +2962,7 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         if (wasNew) {
             updateHintIndexes(event)
+            updateMintIndex(event)
         }
 
         if (relay != null) {
@@ -2982,6 +3023,29 @@ object LocalCache : ILocalCache, ICacheProvider {
             event.pubKeyHints().forEach {
                 relayHints.addKey(it.pubkey, it.relay)
             }
+        }
+    }
+
+    /**
+     * Feeds the Cashu mint URL directory from every event that names a
+     * mint, regardless of which user authored it. Three sources today:
+     *
+     *  - NutzapInfoEvent (kind:10019) — every nostr user with a Cashu
+     *    wallet publishes their accepted mints here, so a typical inbox
+     *    of cached profiles seeds a useful starter directory.
+     *  - MintRecommendationEvent (kind:38000) — explicit public vouches.
+     *  - CashuMintEvent (kind:38172) — formal mint announcements.
+     *
+     * Called only when the event is newly consumed (mirrors
+     * updateHintIndexes) so a re-emission of a cached event doesn't
+     * inflate the popularity counter.
+     */
+    fun updateMintIndex(event: Event) {
+        when (event) {
+            is NutzapInfoEvent -> mintDirectory.addAll(event.mints().map { it.mintUrl })
+            is MintRecommendationEvent -> mintDirectory.addAll(event.mintUrls())
+            is CashuMintEvent -> event.mintUrl()?.let { mintDirectory.add(it) }
+            else -> Unit
         }
     }
 
