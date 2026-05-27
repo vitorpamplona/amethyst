@@ -140,16 +140,18 @@ fun NewMusicTrackScreen(
             )
         },
     ) { pad ->
+        // Order matters: apply Scaffold's PaddingValues (system-bar insets + topBar height),
+        // then consumeWindowInsets so a later imePadding() only adds what's NOT already
+        // covered by `pad`. Without consumeWindowInsets, imePadding double-counts the nav
+        // bar inset (the IME inset includes it on Android 11+) and the bottom field is
+        // pushed too far up when the keyboard opens.
         Column(
             modifier =
                 Modifier
-                    .padding(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = pad.calculateTopPadding(),
-                        bottom = pad.calculateBottomPadding(),
-                    ).consumeWindowInsets(pad)
+                    .padding(pad)
+                    .consumeWindowInsets(pad)
                     .imePadding()
+                    .padding(horizontal = 16.dp)
                     .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -201,16 +203,10 @@ fun NewMusicTrackScreen(
                 isError = vm.audioUrl.value.isBlank() && vm.audioMedia.value == null,
             )
 
-            // Cover URL — same logic as audio: filled by the cover uploader, but a pasted
-            // URL is fine too. Optional (no isError) because tracks can ship without art.
-            OutlinedTextField(
-                value = vm.coverUrl.value,
-                onValueChange = { vm.coverUrl.value = it },
-                label = { Text(stringRes(R.string.music_track_image_url_label)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-            )
+            // No cover-URL text field: the upload tile at the top of the screen is the
+            // single source of truth for the cover image. When editing an existing track
+            // that carries an `image` URL the ViewModel still passes it through to
+            // MusicTrackEvent.edit, so we don't drop the cover on save.
 
             OutlinedTextField(
                 value = vm.album.value,
