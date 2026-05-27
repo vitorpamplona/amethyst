@@ -374,27 +374,41 @@ private fun formatDuration(seconds: Int): String {
 }
 
 private const val SYNTHETIC_WAVEFORM_SAMPLES = 96
+private const val TWO_PI = (Math.PI * 2).toFloat()
 
 /**
- * Builds a stable, decorative waveform from the track id. We just need something more
- * interesting to look at than a flat line; ExoPlayer continues to drive actual playback
- * progress. Seeded so each track's bars stay constant across recompositions and screen
- * re-entries, and shaped with two overlaid sines so the result reads as "music waveform"
- * rather than pure noise.
+ * Builds a stable, decorative waveform from the track id. ExoPlayer drives actual playback
+ * progress — these bars only exist so the audio player has the familiar "music silhouette"
+ * shape rather than a flat strip when the spec has no `waveform` tag.
+ *
+ * Every shape parameter (phase offset, carrier frequency, baseline, envelope skew, jitter
+ * envelope) is drawn from the seeded RNG before the per-bar loop, so two different track ids
+ * produce visibly different waveforms — earlier versions used a fixed envelope + carrier that
+ * only varied by per-bar noise, which made every track look like the same slow-fade sine with
+ * minor wiggle.
  */
 private fun syntheticWaveformFor(seed: String): com.vitorpamplona.amethyst.service.playback.composable.WaveformData {
-    val rng = kotlin.random.Random(seed.hashCode())
+    // Fold the seed's 32-bit hash into a Long so two ids whose hashCode happens to collide
+    // (rare for hex addresses but cheap to defend against) still differ via the bit shuffle.
+    val rng = kotlin.random.Random((seed.hashCode().toLong() * 0x9E3779B97F4A7C15uL.toLong()) xor seed.length.toLong())
+
+    // Shape parameters drawn once per track — these are what makes track A look different
+    // from track B at a glance.
+    val phaseOffset = rng.nextFloat() * TWO_PI
+    val carrierCycles = 2.5f + rng.nextFloat() * 5.5f // 2.5–8 full cycles across the strip
+    val carrierWeight = 0.18f + rng.nextFloat() * 0.18f // 0.18–0.36
+    val baseline = 0.28f + rng.nextFloat() * 0.22f // 0.28–0.50
+    val envelopeStrength = rng.nextFloat() * 0.45f // 0.0–0.45; some tracks fade in/out, others don't
+    val noiseStrength = 0.18f + rng.nextFloat() * 0.22f // 0.18–0.40
+
     val bars =
         List(SYNTHETIC_WAVEFORM_SAMPLES) { index ->
             val phase = index.toFloat() / SYNTHETIC_WAVEFORM_SAMPLES
-            val envelope =
-                kotlin.math
-                    .sin(phase * Math.PI)
-                    .toFloat()
-                    .coerceAtLeast(0.25f)
-            val carrier = (kotlin.math.sin(phase * Math.PI * 8) * 0.25f + 0.5f).toFloat()
-            val jitter = rng.nextFloat() * 0.35f + 0.15f
-            (envelope * (carrier * 0.6f + jitter * 0.4f)).coerceIn(0.05f, 1.0f)
+            // Optional gentle fade so some tracks taper at the ends, others stay even.
+            val envelope = 1f - envelopeStrength * (1f - kotlin.math.sin(phase * Math.PI).toFloat())
+            val carrier = kotlin.math.sin(phase * TWO_PI * carrierCycles + phaseOffset) * carrierWeight
+            val noise = (rng.nextFloat() - 0.5f) * 2f * noiseStrength
+            ((baseline + carrier + noise) * envelope).coerceIn(0.05f, 1.0f)
         }
     return com.vitorpamplona.amethyst.service.playback.composable
         .WaveformData(bars)
