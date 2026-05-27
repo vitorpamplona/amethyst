@@ -21,7 +21,10 @@
 package com.vitorpamplona.amethyst.service.playback.composable
 
 import android.graphics.Rect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.mutableStateOf
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -34,6 +37,10 @@ class MediaControllerState(
     val controller: Player,
     // visibility onscreen
     val visibility: VisibilityData = VisibilityData(),
+    // latest unrecoverable playback error, or null when playback is healthy. Set by the
+    // Player.Listener wired in WatchPlaybackErrors and read by RenderPlaybackError to show
+    // the codec-not-supported overlay with the "open in browser" fallback.
+    val playbackError: MutableState<PlaybackException?> = mutableStateOf(null),
 ) {
     fun isPlaying() = controller.isPlaying
 
