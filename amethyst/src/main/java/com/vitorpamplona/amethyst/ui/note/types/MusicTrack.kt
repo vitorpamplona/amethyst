@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +32,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -56,13 +58,17 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
 import com.vitorpamplona.amethyst.service.playback.composable.LoadThumbAndThenVideoView
+import com.vitorpamplona.amethyst.service.playback.composable.PauseControllerWhenInBackground
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
+import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -80,6 +86,14 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 private val COVER_ASPECT_RATIO = 1f
+
+// Content text prefixes that some music-publishing tools auto-fill — purely restate the
+// title/artist that the card already shows above. Suppress the description block in that case
+// so the card doesn't waste a paragraph echoing its own header.
+private val MUSIC_TRACK_BOILERPLATE_PREFIXES =
+    listOf(
+        "Listen to my song",
+    )
 
 @Composable
 fun RenderMusicTrack(
@@ -125,7 +139,16 @@ fun MusicTrackHeader(
     val duration = remember(noteEvent) { noteEvent.duration() }
     val format = remember(noteEvent) { noteEvent.format() }
     val isExplicit = remember(noteEvent) { noteEvent.isExplicit() }
-    val description = remember(noteEvent) { noteEvent.content.ifBlank { null } }
+    // Suppress publishing-tool boilerplate that just restates the title/artist already shown
+    // above. Today the only known offender is "Listen to my song ..." (emitted by some Blossom
+    // uploaders); extend MUSIC_TRACK_BOILERPLATE_PREFIXES if more turn up.
+    val description =
+        remember(noteEvent) {
+            noteEvent.content
+                .takeUnless { content ->
+                    MUSIC_TRACK_BOILERPLATE_PREFIXES.any { content.trim().startsWith(it, ignoreCase = true) }
+                }?.ifBlank { null }
+        }
     val topics =
         remember(noteEvent) {
             noteEvent.tags
@@ -167,27 +190,60 @@ fun MusicTrackHeader(
                 )
             }
         } else {
-            // Audio-only path: render the cover art as a proper album-art square, then a
-            // compact voice-style audio player underneath. VoiceView's tap-to-play + share /
-            // save / PiP / mute controls are exactly what an MP3 stream wants — VideoView's
-            // 16:9 frame just leaves a blank rectangle next to the controls for audio.
+            // Audio-only path. We *don't* call RenderAudioWithWaveform here for two reasons:
+            //   1. It wraps the player in `MaxWidthPaddingTop5dp` and renders its own
+            //      DisplayUncitedHashtags row. We need the player to butt directly against
+            //      the cover (no gap) and we already render hashtags as TopicChips below,
+            //      so the inner ones would duplicate.
+            //   2. It hard-codes the all-rounded `imageModifier` as the player border. The
+            //      music card wants the cover's top corners + the player's bottom corners
+            //      to read as one continuous unit.
+            // So we inline the GetMediaItem → GetVideoController → RenderVoicePlayer chain
+            // and supply a bottom-rounded border. ExoPlayer logic, controls, and PiP all
+            // come from the shared composables — only the chrome differs.
             MusicTrackCover(image, note, accountViewModel)
             if (url != null) {
-                // Spec doesn't carry a waveform for kind 36787, so we synthesize one keyed off
-                // the track address. The fake is purely decorative — the underlying ExoPlayer
-                // owns playback progress, not these bars — but it gives the player a familiar
-                // "music waveform" shape instead of the empty bar Voice events show when their
-                // waveform is missing.
+                // Spec doesn't carry a waveform for kind 36787, so we synthesize one keyed
+                // off the track address. The bars are purely decorative — ExoPlayer owns
+                // actual playback progress.
                 val syntheticWaveform = remember(note.idHex) { syntheticWaveformFor(note.idHex) }
-                RenderAudioWithWaveform(
-                    mediaUrl = url,
-                    title = title,
-                    mimeType = audioMimeType,
-                    waveform = syntheticWaveform,
-                    note = note,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
+                val callbackUri = remember(note) { note.toNostrUri() }
+                val playerBorder =
+                    remember {
+                        Modifier.clip(RoundedCornerShape(bottomStart = 15.dp, bottomEnd = 15.dp))
+                    }
+
+                Row(
+                    Modifier.fillMaxWidth().height(100.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    GetMediaItem(
+                        videoUri = url,
+                        title = title,
+                        artworkUri = null,
+                        authorName = note.author?.toBestDisplayName(),
+                        callbackUri = callbackUri,
+                        mimeType = audioMimeType,
+                        aspectRatio = null,
+                        proxyPort = accountViewModel.httpClientBuilder.proxyPortForVideo(url),
+                        keepPlaying = false,
+                        waveformData = syntheticWaveform,
+                    ) { mediaItem ->
+                        GetVideoController(
+                            mediaItem = mediaItem,
+                            muted = false,
+                        ) { controller ->
+                            PauseControllerWhenInBackground(controller)
+                            RenderVoicePlayer(
+                                mediaItem = mediaItem,
+                                controllerState = controller,
+                                waveform = syntheticWaveform,
+                                borderModifier = playerBorder,
+                                accountViewModel = accountViewModel,
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -275,7 +331,9 @@ fun MusicTrackHeader(
                     horizontalArrangement = Arrangement.spacedBy(Size5dp),
                     verticalArrangement = Arrangement.spacedBy(Size5dp),
                 ) {
-                    topics.forEach { TopicChip(it) }
+                    topics.forEach { topic ->
+                        TopicChip(topic) { nav.nav(Route.Hashtag(topic.lowercase())) }
+                    }
                 }
             }
         }
@@ -350,7 +408,18 @@ private fun ExplicitBadge() {
 }
 
 @Composable
-private fun TopicChip(topic: String) {
+private fun TopicChip(
+    topic: String,
+    onClick: (() -> Unit)? = null,
+) {
+    // clip→clickable→background→padding so the tap target is the same as the visible chip
+    // and the Material ripple stays inside the rounded shape.
+    val base =
+        Modifier
+            .clip(CircleShape)
+            .let { if (onClick != null) it.clickable(onClick = onClick) else it }
+            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+            .padding(horizontal = 8.dp, vertical = 2.dp)
     Text(
         text = "#$topic",
         style = MaterialTheme.typography.labelSmall,
@@ -359,11 +428,7 @@ private fun TopicChip(topic: String) {
         color = MaterialTheme.colorScheme.grayText,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier =
-            Modifier
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
-                .padding(horizontal = 8.dp, vertical = 2.dp),
+        modifier = base,
     )
 }
 
