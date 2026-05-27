@@ -182,6 +182,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UpdateZapAmountScr
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.UserSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.VideoPlayerSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.ShortsScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.SoftwareAppsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.ThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.NewHlsVideoScreen
@@ -259,6 +260,7 @@ fun BuildNavigation(
         composableFromEnd<Route.ProfileBadges> { ProfileBadgesScreen(accountViewModel, nav) }
         composableFromBottomArgs<Route.AwardBadge> { AwardBadgeScreen(it.kind, it.pubKeyHex, it.dTag, accountViewModel, nav) }
         composableFromEnd<Route.Pictures> { PicturesScreen(accountViewModel, nav) }
+        composableFromEnd<Route.SoftwareApps> { SoftwareAppsScreen(accountViewModel, nav) }
         composableFromEnd<Route.Calendars> { CalendarsScreen(accountViewModel, nav) }
         composableFromEnd<Route.CalendarCollections> { CalendarCollectionsScreen(accountViewModel, nav) }
         composableFromEnd<Route.CalendarReminderSettings> { CalendarReminderSettingsScreen(nav) }
@@ -283,9 +285,9 @@ fun BuildNavigation(
         composable<Route.Chess> { ChessLobbyScreen(accountViewModel, nav) }
 
         composableFromEnd<Route.Wallet> { WalletScreen(accountViewModel, nav) }
-        composableFromEnd<Route.WalletSend> { WalletSendScreen(accountViewModel, nav) }
-        composableFromEnd<Route.WalletReceive> { WalletReceiveScreen(accountViewModel, nav) }
-        composableFromEnd<Route.WalletTransactions> { WalletTransactionsScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.WalletSend> { WalletSendScreen(it.walletId, accountViewModel, nav) }
+        composableFromEndArgs<Route.WalletReceive> { WalletReceiveScreen(it.walletId, accountViewModel, nav) }
+        composableFromEndArgs<Route.WalletTransactions> { WalletTransactionsScreen(it.walletId, accountViewModel, nav) }
         composableFromEnd<Route.OnchainTransactions> { OnchainTransactionsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.WalletDetail> { WalletDetailScreen(it.walletId, accountViewModel, nav) }
         composableFromEnd<Route.WalletAdd> { AddWalletScreen(accountViewModel, nav) }

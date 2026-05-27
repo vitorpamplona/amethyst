@@ -81,6 +81,8 @@ sealed class Route {
 
     @Serializable object Pictures : Route()
 
+    @Serializable object SoftwareApps : Route()
+
     @Serializable object Calendars : Route()
 
     @Serializable object CalendarCollections : Route()
@@ -144,11 +146,20 @@ sealed class Route {
 
     @Serializable object Wallet : Route()
 
-    @Serializable object WalletSend : Route()
+    @Serializable
+    data class WalletSend(
+        val walletId: String,
+    ) : Route()
 
-    @Serializable object WalletReceive : Route()
+    @Serializable
+    data class WalletReceive(
+        val walletId: String,
+    ) : Route()
 
-    @Serializable object WalletTransactions : Route()
+    @Serializable
+    data class WalletTransactions(
+        val walletId: String,
+    ) : Route()
 
     @Serializable object OnchainTransactions : Route()
 

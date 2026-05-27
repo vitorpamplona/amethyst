@@ -42,6 +42,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.PollsFilte
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.products.datasource.ProductsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats.datasource.PublicChatsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.datasource.ShortsFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.datasource.SoftwareAppsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssemblerSubscription
 
 /**
@@ -85,6 +86,8 @@ private fun PreloadFor(
         NavBarItem.ARTICLES -> ArticlesFilterAssemblerSubscription(accountViewModel)
 
         NavBarItem.PICTURES -> PicturesFilterAssemblerSubscription(accountViewModel)
+
+        NavBarItem.SOFTWARE_APPS -> SoftwareAppsFilterAssemblerSubscription(accountViewModel)
 
         NavBarItem.CALENDARS,
         NavBarItem.CALENDAR_COLLECTIONS,

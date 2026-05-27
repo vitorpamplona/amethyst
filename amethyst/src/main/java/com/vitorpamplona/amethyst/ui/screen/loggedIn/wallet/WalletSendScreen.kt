@@ -64,13 +64,15 @@ import com.vitorpamplona.amethyst.ui.stringRes
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WalletSendScreen(
+    walletId: String,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val walletViewModel: WalletViewModel = viewModel()
 
-    LaunchedEffect(accountViewModel) {
+    LaunchedEffect(accountViewModel, walletId) {
         walletViewModel.init(accountViewModel)
+        walletViewModel.selectWallet(walletId)
     }
 
     DisposableEffect(Unit) {

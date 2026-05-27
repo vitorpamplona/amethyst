@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.commons.util
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 
-fun String.isUTF16Char(pos: Int): Boolean = Character.charCount(this.codePointAt(pos)) == 2
+fun String.isUTF16Char(pos: Int): Boolean = codePointCharCount(this.codePointAtKmp(pos)) == 2
 
 fun String.firstFullCharOld(): String {
     return when (this.length) {
@@ -64,11 +64,11 @@ fun String.firstFullChar(): String {
     var i = 0
 
     while (i < this.length) {
-        codePoint = codePointAt(i)
+        codePoint = codePointAtKmp(i)
 
         // Skips if it starts with the join char 0x200D
         if (codePoint == 0x200D && previousCharLength == 0) {
-            next = offsetByCodePoints(i, 1)
+            next = offsetByCodePointsKmp(i, 1)
             start = next
         } else {
             // If join, searches for the next char
@@ -78,7 +78,7 @@ fun String.firstFullChar(): String {
             } else {
                 // stops when two chars are not joined together
                 if (previousCharLength > 0 && !isInJoin) {
-                    if (Character.charCount(codePoint) == 1 || hasHadSecondChance) {
+                    if (codePointCharCount(codePoint) == 1 || hasHadSecondChance) {
                         break
                     } else {
                         hasHadSecondChance = true
@@ -91,7 +91,7 @@ fun String.firstFullChar(): String {
             }
 
             // next char to evaluate
-            next = offsetByCodePoints(i, 1)
+            next = offsetByCodePointsKmp(i, 1)
             previousCharLength += (next - i)
         }
 

@@ -20,15 +20,18 @@
  */
 package com.vitorpamplona.amethyst.commons.search
 
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
+
 class EventDeduplicator {
-    private val lock = Any()
+    private val lock = KmpLock()
     private val seenIds = mutableSetOf<String>()
 
-    fun tryAdd(id: String): Boolean = synchronized(lock) { seenIds.add(id) }
+    fun tryAdd(id: String): Boolean = lock.withLock { seenIds.add(id) }
 
-    fun contains(id: String): Boolean = synchronized(lock) { id in seenIds }
+    fun contains(id: String): Boolean = lock.withLock { id in seenIds }
 
-    fun clear() = synchronized(lock) { seenIds.clear() }
+    fun clear() = lock.withLock { seenIds.clear() }
 
-    val size: Int get() = synchronized(lock) { seenIds.size }
+    val size: Int get() = lock.withLock { seenIds.size }
 }

@@ -29,13 +29,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.OnchainZapEntry
+import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -65,20 +69,67 @@ internal fun WatchOnchainZapsAndRenderGallery(
 ) {
     // Reuse the same flow the lightning gallery subscribes to. Note.addOnchainZap
     // invalidates flowSet.zaps, so this composable refreshes when on-chain zaps
-    // arrive or upgrade pending → confirmed. The flow also fires for lightning
-    // zap arrivals on the same note, so memoize the list snapshot.
+    // arrive or upgrade pending → confirmed. The flow ALSO fires for lightning
+    // zap arrivals on the same note — memoize on the onchainZaps map reference
+    // (a fresh immutable map per onchain mutation, stable across lightning-only
+    // updates) so a busy lightning thread doesn't churn this gallery's state.
     val zapsState by observeNoteZaps(baseNote, accountViewModel)
+    val onchainZapsMap = zapsState?.note?.onchainZaps
     val entries =
-        remember(zapsState) {
-            zapsState
-                ?.note
-                ?.onchainZaps
-                ?.values
-                ?.toImmutableList() ?: persistentListOf()
+        remember(onchainZapsMap) {
+            onchainZapsMap?.values?.toImmutableList() ?: persistentListOf()
         }
 
     if (entries.isNotEmpty()) {
+        // Drive re-verification of any non-CONFIRMED entries while this gallery
+        // is on screen — covers home feed, profile, notifications, channels,
+        // single-note view, threads. Per-note in-flight gating inside the cache
+        // dedupes the work when multiple gallery instances for the same note
+        // (lazy-list off/on screen flicker, split feed) all fire together.
+        DriveOnchainZapReverification(baseNote, entries)
         RenderOnchainZapGallery(entries, nav, accountViewModel)
+    }
+}
+
+/**
+ * Drives on-chain zap re-verification for [note] while the gallery is composed.
+ *
+ * Three triggers fire reverify:
+ * 1. First view of this note (independent of tip availability — covers the cold-
+ *    start case where the chain backend isn't wired yet, or `tipHeight()` is slow).
+ * 2. A new pending entry arrives (`entries.size` changes).
+ * 3. The chain tip advances (the shared StateFlow emits a new value).
+ *
+ * The cache's per-note + per-event gates dedupe concurrent calls; this composable
+ * doesn't need its own throttling.
+ */
+@Composable
+private fun DriveOnchainZapReverification(
+    note: Note,
+    entries: ImmutableList<OnchainZapEntry>,
+) {
+    val pendingCount = remember(entries) { entries.count { it.status != OnchainZapStatus.CONFIRMED } }
+    if (pendingCount == 0) return
+
+    val resolver = LocalCache.onchainZapResolver
+
+    // First-view kick — unconditional, doesn't wait for the tip flow. Keyed on
+    // (idHex, pendingCount) so a brand-new pending entry arriving while the
+    // gallery is still on screen also kicks an immediate reverify instead of
+    // waiting up to a full tip-poll interval.
+    LaunchedEffect(note.idHex, pendingCount) {
+        resolver.reverifyOnchainZapsForNote(note)
+    }
+
+    // Tip-change kick — subscribes to the shared poller (lazy, WhileSubscribed
+    // so only one HTTP poller runs across the whole UI no matter how many
+    // galleries are visible). Skips the first emission (null) to avoid
+    // duplicating the first-view kick above.
+    val tip by resolver.onchainTipHeightFlow.collectAsStateWithLifecycle()
+    LaunchedEffect(note.idHex, tip) {
+        if (tip != null) {
+            resolver.reverifyOnchainZapsForNote(note)
+        }
     }
 }
 
@@ -122,18 +173,30 @@ private fun OnchainZapEntryRow(
     accountViewModel: AccountViewModel,
 ) {
     val user = entry.source.author
-    val amountText =
-        remember(entry.verifiedSats) {
-            showAmount(BigDecimal.valueOf(entry.verifiedSats))
+    val isConfirmed = entry.status == OnchainZapStatus.CONFIRMED
+    val avatarAlpha = if (isConfirmed) 1f else 0.6f
+
+    // Anti-spoof: `claimedSats` comes from the kind:8333 `amount` tag, which is
+    // attacker-controlled for incoming zaps. Only show the claimed amount for the
+    // signed-in user's own outgoing zap (where the user knows what they sent) —
+    // otherwise show the on-chain verified amount, or nothing while still unverified.
+    val displaySats =
+        when {
+            isConfirmed || entry.status == OnchainZapStatus.PENDING -> entry.verifiedSats
+            user != null && accountViewModel.isLoggedUser(user.pubkeyHex) -> entry.claimedSats
+            else -> 0L
         }
-    val avatarAlpha = if (entry.confirmed) 1f else 0.6f
+    val amountText =
+        remember(displaySats) {
+            if (displaySats > 0L) showAmount(BigDecimal.valueOf(displaySats)) else ""
+        }
 
     Box(
         modifier = Size35Modifier.clickable { onOnchainZapEntryClick(entry, nav) },
         contentAlignment = Alignment.BottomCenter,
     ) {
-        // Only the avatar dims for pending entries. The amount overlay and clock
-        // badge stay at full opacity so they remain readable.
+        // Only the avatar dims for unverified/pending entries. The amount overlay
+        // and clock badge stay at full opacity so they remain readable.
         Box(modifier = Modifier.alpha(avatarAlpha)) {
             WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
                 user,
@@ -141,9 +204,11 @@ private fun OnchainZapEntryRow(
             )
         }
 
-        CrossfadeToDisplayAmount(amountText)
+        if (amountText.isNotEmpty()) {
+            CrossfadeToDisplayAmount(amountText)
+        }
 
-        if (!entry.confirmed) {
+        if (!isConfirmed) {
             // TopStart so the badge doesn't collide with the FollowingIcon
             // that WatchUserMetadataAndFollowsAndRenderUserProfilePicture
             // paints at TopEnd for followed users.

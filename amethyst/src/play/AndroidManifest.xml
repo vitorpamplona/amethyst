@@ -38,6 +38,23 @@
             android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
             android:value="com.vitorpamplona.amethyst.service.cast.chromecast.AmethystCastOptionsProvider" />
 
+        <!-- Gemini / system-agent bridge via androidx.appfunctions
+             (pre-stable as of May 2026). The androidx-provided
+             PlatformAppFunctionService (registered automatically via
+             manifest merging by the library) dispatches to plain Kotlin
+             classes annotated with @AppFunction (see
+             com.vitorpamplona.amethyst.appfunctions.AmethystAppFunctions).
+             Play flavor only — the F-Droid channel ships without the
+             alpha Google AI dependency.
+
+             The `app_metadata` property below gives the system agent a
+             user-facing summary of what this app exposes. Without it,
+             system logcat logs "Unable to resolve AppFunctionMetadata"
+             and our functions never make it into Gemini's tool picker. -->
+        <property
+            android:name="android.app.appfunctions.app_metadata"
+            android:resource="@xml/app_metadata" />
+
     </application>
 
 </manifest>

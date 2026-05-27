@@ -22,7 +22,11 @@ package com.vitorpamplona.amethyst.commons.richtext
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
-import java.io.File
+
+// URL-based media content models (KMP). The locally-cached variants
+// (MediaPreloadedContent, MediaLocalImage, MediaLocalVideo) live in
+// MediaLocalContent.kt under the jvmAndroid source set because they depend
+// on java.io.File.
 
 @Immutable
 abstract class BaseMediaContent(
@@ -123,44 +127,3 @@ class EncryptedMediaUrlVideo(
     thumbhash: String? = null,
     authorPubKey: String? = null,
 ) : MediaUrlVideo(url, description, hash, dim, uri, artworkUri, authorName, blurhash, contentWarning, mimeType, thumbhash, authorPubKey = authorPubKey)
-
-@Immutable
-abstract class MediaPreloadedContent(
-    val localFile: File?,
-    description: String? = null,
-    val mimeType: String? = null,
-    val isVerified: Boolean? = null,
-    dim: DimensionTag? = null,
-    blurhash: String? = null,
-    val uri: String,
-    val id: String? = null,
-    thumbhash: String? = null,
-) : BaseMediaContent(description, dim, blurhash, thumbhash) {
-    fun localFileExists() = localFile != null && localFile.exists()
-}
-
-@Immutable
-class MediaLocalImage(
-    localFile: File?,
-    mimeType: String? = null,
-    description: String? = null,
-    dim: DimensionTag? = null,
-    blurhash: String? = null,
-    isVerified: Boolean? = null,
-    uri: String,
-    thumbhash: String? = null,
-) : MediaPreloadedContent(localFile, description, mimeType, isVerified, dim, blurhash, uri, thumbhash = thumbhash)
-
-@Immutable
-class MediaLocalVideo(
-    localFile: File?,
-    mimeType: String? = null,
-    description: String? = null,
-    dim: DimensionTag? = null,
-    blurhash: String? = null,
-    isVerified: Boolean? = null,
-    uri: String,
-    val artworkUri: String? = null,
-    val authorName: String? = null,
-    thumbhash: String? = null,
-) : MediaPreloadedContent(localFile, description, mimeType, isVerified, dim, blurhash, uri, thumbhash = thumbhash)

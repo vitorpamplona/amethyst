@@ -26,7 +26,10 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.toImmutableList
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @Stable
 class FeedBuilderState(
@@ -66,6 +69,7 @@ class FeedBuilderState(
 
     private val editId: String? = initial?.id
 
+    @OptIn(ExperimentalUuidApi::class)
     fun toDefinition(): FeedDefinition {
         val source =
             FeedSource.Filter(
@@ -77,17 +81,14 @@ class FeedBuilderState(
                 kinds = kinds.toImmutableList(),
             )
         return FeedDefinition(
-            id =
-                editId ?: java.util.UUID
-                    .randomUUID()
-                    .toString(),
+            id = editId ?: Uuid.random().toString(),
             name = name,
             emoji = emoji,
             pinned = false,
             pinOrder = Int.MAX_VALUE,
             source = source,
             refreshMode = refreshMode,
-            createdAt = System.currentTimeMillis() / 1000,
+            createdAt = TimeUtils.now(),
         )
     }
 }

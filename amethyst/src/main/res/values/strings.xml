@@ -14,6 +14,10 @@
         <item quantity="one">This post has more than %1$d hashtag</item>
         <item quantity="other">This post has more than %1$d hashtags</item>
     </plurals>
+    <plurals name="nip82_assets_count">
+        <item quantity="one">%1$d asset bundled</item>
+        <item quantity="other">%1$d assets bundled</item>
+    </plurals>
     <string name="post_not_found">Event is loading or can\'t be found in your relay list</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Channel Image</string>
@@ -583,6 +587,11 @@
     <string name="profile_badges_description">Choose which of the badges you\'ve received appear on your profile.</string>
     <string name="profile_badges_empty">You haven\'t received any badges yet.</string>
     <string name="pictures">Pictures</string>
+    <string name="software_apps">Apps</string>
+    <string name="route_software_apps">Apps</string>
+    <string name="nip82_repository_label">Source: %1$s</string>
+    <string name="nip82_version_label">v%1$s</string>
+    <string name="nip82_download">Download</string>
     <string name="calendars">Calendars</string>
     <string name="shorts">Shorts</string>
     <string name="public_chats">Public Chats</string>
@@ -1309,6 +1318,8 @@
     <string name="posting_policy">Posting policy</string>
     <string name="privacy_policy">Privacy Policy</string>
     <string name="terms_and_conditions">Terms &amp; Conditions</string>
+    <string name="child_safety_standards">Child Safety Standards</string>
+    <string name="about_legal">About &amp; Legal</string>
     <string name="not_available_acronym">N/A</string>
     <string name="relay_error_messages">Errors and Notices from this Relay</string>
     <string name="relay_monitor_reports">Relay Monitor Reports</string>
@@ -1859,6 +1870,7 @@
     <string name="wallet_invalid_uri">Invalid NWC connection URI</string>
     <string name="wallet_move_up">Move Up</string>
     <string name="wallet_move_down">Move Down</string>
+    <string name="wallet_reorder">Reorder wallet</string>
     <string name="wallet_onchain_transactions">Onchain Transactions</string>
     <string name="wallet_onchain_no_address">No on-chain address available for this account.</string>
     <string name="wallet_onchain_no_backend">No chain backend is configured.</string>

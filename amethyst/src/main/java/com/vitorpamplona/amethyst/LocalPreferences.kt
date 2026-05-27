@@ -323,8 +323,16 @@ object LocalPreferences {
     }
 
     suspend fun setDefaultAccount(accountSettings: AccountSettings) {
-        setCurrentAccount(accountSettings)
+        // Save the per-npub file before emitting onto the savedAccounts flow.
+        // Otherwise a collector (e.g. AlwaysOnNotificationServiceManager) can race in
+        // and call loadAccountConfigFromEncryptedStorage(npub) before NOSTR_PUBKEY is
+        // written, get null back, and poison `cachedAccounts[npub] = null` for the
+        // rest of the session — making every later switch to this account land on
+        // LoggedOff instead of LoggedIn.
         saveToEncryptedStorage(accountSettings)
+        val npub = accountSettings.keyPair.pubKey.toNpub()
+        mutex.withLock { cachedAccounts.put(npub, accountSettings) }
+        setCurrentAccount(accountSettings)
     }
 
     suspend fun allSavedAccounts(): List<AccountInfo> = savedAccounts()
@@ -489,19 +497,20 @@ object LocalPreferences {
 
     suspend fun loadAccountConfigFromEncryptedStorage(npub: String): AccountSettings? {
         // if already loaded, return right away
-        if (cachedAccounts.containsKey(npub)) {
-            return cachedAccounts[npub]
-        }
+        cachedAccounts[npub]?.let { return it }
 
         return withContext(Dispatchers.IO) {
             mutex.withLock {
-                if (cachedAccounts.containsKey(npub)) {
-                    return@withContext cachedAccounts.get(npub)
-                }
+                cachedAccounts[npub]?.let { return@withContext it }
 
                 val accountSettings = innerLoadCurrentAccountFromEncryptedStorage(npub)
 
-                cachedAccounts.put(npub, accountSettings)
+                // Only cache successful loads. Caching null would leave the account
+                // permanently unreachable for the rest of the session if a reader
+                // raced in before the per-npub file finished being written.
+                if (accountSettings != null) {
+                    cachedAccounts.put(npub, accountSettings)
+                }
 
                 return@withContext accountSettings
             }

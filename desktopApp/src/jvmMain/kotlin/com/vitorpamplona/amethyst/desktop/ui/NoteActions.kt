@@ -1354,6 +1354,13 @@ fun NoteActionsRow(
                         showOverflowMenu = false
                     },
                 )
+                DropdownMenuItem(
+                    text = { Text("Copy Raw JSON") },
+                    onClick = {
+                        copyToClipboard(event.toJson())
+                        showOverflowMenu = false
+                    },
+                )
             }
         }
     }
@@ -1400,6 +1407,7 @@ fun NoteActionsRow(
             onDismiss = { quoteEvent = null },
             relayManager = relayManager,
             account = account,
+            localCache = localCache,
             quoteOf = quoteEvent,
         )
     }
