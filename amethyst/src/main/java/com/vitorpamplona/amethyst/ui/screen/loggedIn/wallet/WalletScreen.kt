@@ -363,6 +363,22 @@ private fun WalletCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                // Drag handle leads the row — same convention as the
+                // relay reorder list — so a center-aligned icon doesn't
+                // land between the balance amount and its "sats" label.
+                if (dragState != null) {
+                    Icon(
+                        MaterialSymbols.DragIndicator,
+                        contentDescription = stringRes(R.string.wallet_reorder),
+                        modifier =
+                            Modifier
+                                .size(24.dp)
+                                .relayDragHandle(index, dragState),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
@@ -387,20 +403,6 @@ private fun WalletCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                }
-
-                // Drag handle for reordering
-                if (dragState != null) {
-                    Icon(
-                        MaterialSymbols.DragIndicator,
-                        contentDescription = stringRes(R.string.wallet_reorder),
-                        modifier =
-                            Modifier
-                                .size(24.dp)
-                                .relayDragHandle(index, dragState),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
                 }
 
                 // Balance
