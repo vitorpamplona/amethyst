@@ -122,6 +122,15 @@ class CashuWalletState(
                     reserveCounters = { keysetId, count -> settings.reserveCashuCounters(keysetId, count) },
                 ),
             seedWarmer = { ensureSeed() },
+            // Recovery hooks: when a mint replies "outputs already
+            // signed" on a quote we already paid (prior attempt
+            // crashed after the mint signed our outputs but before
+            // we published the kind:7375), completeMintFromLightning
+            // re-derives those exact outputs from the seed and asks
+            // the mint to redeliver via NUT-09 /v1/restore.
+            seedForRestore = { ensureSeed() },
+            peekCashuCounter = { keysetId -> settings.peekCashuCounter(keysetId) },
+            reserveCashuCounters = { keysetId, count -> settings.reserveCashuCounters(keysetId, count) },
         )
 
     // ============================================================

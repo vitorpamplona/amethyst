@@ -418,13 +418,21 @@ class CashuWalletViewModel : ViewModel() {
     fun checkAndCompleteMint() {
         val vm = accountViewModel ?: return
         val current = _mintState.value as? CashuMintFlowState.AwaitingPayment ?: return
+        // Atomic flip to Completing so a concurrent poll (the receive
+        // dialog fires this every 3s) can't both reach
+        // completeMintFromLightning. Without the gate, poll 1 consumed
+        // the mint quote and poll 2 hit "outputs already signed".
+        if (!_mintState.compareAndSet(current, CashuMintFlowState.Completing)) return
         vm.launchSigner {
             try {
                 val status = ops.checkMintQuote(current.mintUrl, current.flow.mintQuote.quote)
                 val paid = status.paid == true || status.state == "PAID" || status.state == "ISSUED"
-                if (!paid) return@launchSigner
-
-                _mintState.value = CashuMintFlowState.Completing
+                if (!paid) {
+                    // Roll back to AwaitingPayment so the polling
+                    // LaunchedEffect picks up again on the next tick.
+                    _mintState.value = current
+                    return@launchSigner
+                }
                 ops.completeMintFromLightning(current.mintUrl, current.flow.quoteEvent, current.amountSats)
                 _mintState.value = CashuMintFlowState.Completed(current.amountSats)
             } catch (e: Exception) {
@@ -455,6 +463,11 @@ class CashuWalletViewModel : ViewModel() {
                 _mintState.value = CashuMintFlowState.Error("Quote has no mint tag")
                 return
             }
+        // Double-tap on the pending banner would otherwise race two
+        // completeMintFromLightning calls against the mint — same hazard
+        // as the receive-dialog poller. Only proceed when there's no
+        // mint flow already in progress.
+        if (!_mintState.compareAndSet(CashuMintFlowState.Idle, CashuMintFlowState.Completing)) return
         vm.launchSigner {
             try {
                 val quoteId = quoteEvent.quoteId(account!!.signer)
@@ -469,7 +482,6 @@ class CashuWalletViewModel : ViewModel() {
                         .getOrElse { 0L }
                 val paid = status.paid == true || status.state == "PAID" || status.state == "ISSUED"
                 if (paid && amountSats > 0) {
-                    _mintState.value = CashuMintFlowState.Completing
                     ops.completeMintFromLightning(mintUrl, quoteEvent, amountSats)
                     _mintState.value = CashuMintFlowState.Completed(amountSats)
                 } else {
