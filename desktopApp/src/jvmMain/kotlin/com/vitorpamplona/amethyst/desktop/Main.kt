@@ -973,7 +973,10 @@ fun App(
                             val namecoinPreferences = remember { DesktopNamecoinPreferences() }
                             val namecoinService =
                                 remember {
-                                    DesktopNamecoinNameService(preferencesProvider = { namecoinPreferences.current })
+                                    DesktopNamecoinNameService(
+                                        preferencesProvider = { namecoinPreferences.current },
+                                        pinnedCertsProvider = { namecoinPreferences.loadPinnedCerts() },
+                                    )
                                 }
 
                             // NWC loaded during startup in loadSavedAccount flow
@@ -1652,6 +1655,7 @@ fun RelaySettingsScreen(
 
             // Namecoin Settings (ElectrumX servers for .bit / d/ / id/ resolution)
             val namecoinPrefsHere = namecoinPreferences ?: LocalNamecoinPreferences.current
+            val namecoinServiceHere = LocalNamecoinService.current
             if (namecoinPrefsHere != null) {
                 val namecoinScope = rememberCoroutineScope()
                 val namecoinSettings by namecoinPrefsHere.settings.collectAsState()
@@ -1669,6 +1673,26 @@ fun RelaySettingsScreen(
                     onReset = {
                         namecoinScope.launch { namecoinPrefsHere.reset() }
                     },
+                    onTestServer =
+                        namecoinServiceHere?.let { svc ->
+                            { server -> svc.client.testServer(server) }
+                        },
+                    onPinCert =
+                        namecoinServiceHere?.let { svc ->
+                            { pem ->
+                                namecoinPrefsHere.addPinnedCert(pem)
+                                // Apply immediately so the next lookup uses the new pin.
+                                namecoinScope.launch {
+                                    try {
+                                        svc.client.setDynamicCerts(
+                                            namecoinPrefsHere.loadPinnedCerts(),
+                                        )
+                                    } catch (_: Exception) {
+                                        // Best-effort — persisted, will apply on next restart.
+                                    }
+                                }
+                            }
+                        },
                 )
                 Spacer(Modifier.height(24.dp))
                 HorizontalDivider()
