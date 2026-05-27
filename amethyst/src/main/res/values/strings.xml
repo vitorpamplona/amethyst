@@ -1505,6 +1505,19 @@
 
     <string name="long_form_reading_minutes">%1$d min read</string>
 
+    <plurals name="music_playlist_track_count">
+        <item quantity="one">%1$d track</item>
+        <item quantity="other">%1$d tracks</item>
+    </plurals>
+    <plurals name="music_playlist_more_tracks">
+        <item quantity="one">+%1$d more track</item>
+        <item quantity="other">+%1$d more tracks</item>
+    </plurals>
+    <string name="music_playlist_collaborative">Collaborative</string>
+    <string name="music_playlist_private">Private</string>
+    <string name="music_playlist_unknown_track">Unknown track</string>
+    <string name="music_playlist_loading_track">Loading track…</string>
+
 
     <string name="loading_location">Loading location</string>
     <string name="lack_location_permissions">No Location Permissions</string>

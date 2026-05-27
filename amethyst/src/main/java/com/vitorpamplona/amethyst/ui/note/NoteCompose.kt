@@ -148,6 +148,8 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderLongFormContent
 import com.vitorpamplona.amethyst.ui.note.types.RenderMeetingRoomEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderMeetingSpaceEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderMintRecommendation
+import com.vitorpamplona.amethyst.ui.note.types.RenderMusicPlaylist
+import com.vitorpamplona.amethyst.ui.note.types.RenderMusicTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90ContentDiscoveryResponse
 import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90Status
 import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent
@@ -215,6 +217,8 @@ import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
+import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
+import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
@@ -916,6 +920,14 @@ private fun RenderNoteRow(
 
         is AudioHeaderEvent -> {
             RenderAudioHeader(baseNote, ContentScale.FillWidth, accountViewModel, nav)
+        }
+
+        is MusicTrackEvent -> {
+            RenderMusicTrack(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+        }
+
+        is MusicPlaylistEvent -> {
+            RenderMusicPlaylist(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
         }
 
         is DraftWrapEvent -> {

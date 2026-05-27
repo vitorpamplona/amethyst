@@ -168,6 +168,8 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderLnZap
 import com.vitorpamplona.amethyst.ui.note.types.RenderMeetingRoomEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderMeetingSpaceEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderMintRecommendation
+import com.vitorpamplona.amethyst.ui.note.types.RenderMusicPlaylist
+import com.vitorpamplona.amethyst.ui.note.types.RenderMusicTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderOnchainZap
 import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
@@ -228,6 +230,8 @@ import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
+import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
+import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
@@ -638,6 +642,10 @@ private fun FullBleedNoteCompose(
                     AudioTrackHeader(noteEvent, baseNote, ContentScale.FillWidth, accountViewModel, nav)
                 } else if (noteEvent is AudioHeaderEvent) {
                     AudioHeader(noteEvent, baseNote, ContentScale.FillWidth, accountViewModel, nav)
+                } else if (noteEvent is MusicTrackEvent) {
+                    RenderMusicTrack(baseNote, makeItShort = false, canPreview = true, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is MusicPlaylistEvent) {
+                    RenderMusicPlaylist(baseNote, makeItShort = false, canPreview = true, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is CommunityPostApprovalEvent) {
                     RenderPostApproval(
                         baseNote,
