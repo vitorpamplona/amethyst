@@ -286,59 +286,70 @@ fun NoteDropDownMenu(
                     }
                 }
             }
-            // Music tracks (kind 36787) can additionally be added to one of the user's
-            // own playlists (kind 34139). This is independent of bookmarking — the menu
-            // still falls through to the bookmark rows below.
-            if (note.event is MusicTrackEvent && note is AddressableNote) {
-                M3ActionRow(icon = MaterialSymbols.AutoMirrored.PlaylistAdd, text = stringRes(R.string.add_to_music_playlist)) {
-                    nav.nav(Route.AddToMusicPlaylist(note.address.toValue()))
-                    onDismiss()
-                }
-            }
-            // Emoji packs belong in the user's emoji list (kind 10030), not the bookmark list.
-            if (note.event is EmojiPackEvent) {
-                val emojiText =
-                    if (state.isEmojiPackInMyList) {
-                        stringRes(R.string.remove_from_emoji_list)
-                    } else {
-                        stringRes(R.string.add_to_emoji_list)
+            // Pick exactly one curation flow per kind: music tracks go to playlists, emoji
+            // packs go to the emoji list, everything else gets the standard bookmark rows.
+            // Showing both at once is noisy and makes "bookmark" feel like the catch-all when
+            // it really isn't for these kinds.
+            when {
+                note.event is MusicTrackEvent && note is AddressableNote -> {
+                    // Music tracks (kind 36787) belong in playlists (kind 34139). The
+                    // sheet behind this nav lets the user toggle membership across all of
+                    // their own playlists in one place — that subsumes the private/public
+                    // bookmark add+remove pair for this kind.
+                    M3ActionRow(icon = MaterialSymbols.AutoMirrored.PlaylistAdd, text = stringRes(R.string.add_to_music_playlist)) {
+                        nav.nav(Route.AddToMusicPlaylist(note.address.toValue()))
+                        onDismiss()
                     }
-                M3ActionRow(icon = MaterialSymbols.EmojiEmotions, text = emojiText) {
-                    val address = (note as AddressableNote).address
-                    nav.nav(Route.EmojiPackSelection(kind = EmojiPackEvent.KIND, pubKeyHex = address.pubKeyHex, dTag = address.dTag))
-                    onDismiss()
                 }
-            } else {
-                val noteBookmarkType = if (note.event is LongTextNoteEvent) stringRes(R.string.article) else stringRes(R.string.post)
-                M3ActionRow(icon = MaterialSymbols.BookmarkAdd, text = stringRes(R.string.manage_bookmark_label, noteBookmarkType)) {
-                    if (note.event is LongTextNoteEvent) {
-                        nav.nav(Route.ArticleBookmarkManagement((note as AddressableNote).address))
-                    } else {
-                        nav.nav(Route.PostBookmarkManagement(note.idHex))
+
+                note.event is EmojiPackEvent -> {
+                    // Emoji packs belong in the user's emoji list (kind 10030), not the
+                    // bookmark list.
+                    val emojiText =
+                        if (state.isEmojiPackInMyList) {
+                            stringRes(R.string.remove_from_emoji_list)
+                        } else {
+                            stringRes(R.string.add_to_emoji_list)
+                        }
+                    M3ActionRow(icon = MaterialSymbols.EmojiEmotions, text = emojiText) {
+                        val address = (note as AddressableNote).address
+                        nav.nav(Route.EmojiPackSelection(kind = EmojiPackEvent.KIND, pubKeyHex = address.pubKeyHex, dTag = address.dTag))
+                        onDismiss()
                     }
-                    onDismiss()
                 }
-            }
-            if (state.isPrivateBookmarkNote) {
-                M3ActionRow(icon = MaterialSymbols.LockOpen, text = stringRes(R.string.remove_from_private_bookmarks)) {
-                    accountViewModel.removePrivateBookmark(note)
-                    onDismiss()
-                }
-            } else {
-                M3ActionRow(icon = MaterialSymbols.Lock, text = stringRes(R.string.add_to_private_bookmarks)) {
-                    accountViewModel.addPrivateBookmark(note)
-                    onDismiss()
-                }
-            }
-            if (state.isPublicBookmarkNote) {
-                M3ActionRow(icon = MaterialSymbols.BookmarkRemove, text = stringRes(R.string.remove_from_public_bookmarks)) {
-                    accountViewModel.removePublicBookmark(note)
-                    onDismiss()
-                }
-            } else {
-                M3ActionRow(icon = MaterialSymbols.Bookmark, text = stringRes(R.string.add_to_public_bookmarks)) {
-                    accountViewModel.addPublicBookmark(note)
-                    onDismiss()
+
+                else -> {
+                    val noteBookmarkType = if (note.event is LongTextNoteEvent) stringRes(R.string.article) else stringRes(R.string.post)
+                    M3ActionRow(icon = MaterialSymbols.BookmarkAdd, text = stringRes(R.string.manage_bookmark_label, noteBookmarkType)) {
+                        if (note.event is LongTextNoteEvent) {
+                            nav.nav(Route.ArticleBookmarkManagement((note as AddressableNote).address))
+                        } else {
+                            nav.nav(Route.PostBookmarkManagement(note.idHex))
+                        }
+                        onDismiss()
+                    }
+                    if (state.isPrivateBookmarkNote) {
+                        M3ActionRow(icon = MaterialSymbols.LockOpen, text = stringRes(R.string.remove_from_private_bookmarks)) {
+                            accountViewModel.removePrivateBookmark(note)
+                            onDismiss()
+                        }
+                    } else {
+                        M3ActionRow(icon = MaterialSymbols.Lock, text = stringRes(R.string.add_to_private_bookmarks)) {
+                            accountViewModel.addPrivateBookmark(note)
+                            onDismiss()
+                        }
+                    }
+                    if (state.isPublicBookmarkNote) {
+                        M3ActionRow(icon = MaterialSymbols.BookmarkRemove, text = stringRes(R.string.remove_from_public_bookmarks)) {
+                            accountViewModel.removePublicBookmark(note)
+                            onDismiss()
+                        }
+                    } else {
+                        M3ActionRow(icon = MaterialSymbols.Bookmark, text = stringRes(R.string.add_to_public_bookmarks)) {
+                            accountViewModel.addPublicBookmark(note)
+                            onDismiss()
+                        }
+                    }
                 }
             }
         }
