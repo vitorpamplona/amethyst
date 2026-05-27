@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.allUserFollows.AllUserFollow
 import com.vitorpamplona.amethyst.model.topNavFeeds.allUserFollows.Kind3UserFollowsFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.AroundMeFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe.GeohashFeedFlow
+import com.vitorpamplona.amethyst.model.topNavFeeds.bookmarks.PublicBookmarksFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds.AllFavoriteAlgoFeedsFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.favoriteAlgoFeeds.FavoriteAlgoFeedFlow
 import com.vitorpamplona.amethyst.model.topNavFeeds.global.GlobalFeedFlow
@@ -86,6 +87,10 @@ class FeedTopNavFilterState(
 
             TopFilter.DefaultFollows -> {
                 Kind3UserFollowsFeedFlow(kind3Follows, followsRelays, blockedRelays, proxyRelays)
+            }
+
+            TopFilter.FollowedBookmarks -> {
+                PublicBookmarksFeedFlow(kind3Follows, followsRelays, blockedRelays, proxyRelays, LocalCache)
             }
 
             TopFilter.AroundMe -> {

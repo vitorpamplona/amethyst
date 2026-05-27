@@ -42,7 +42,10 @@ import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 class HomeConversationsFeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultHomeFollowList.value
+    override fun feedKey(): String =
+        account.userProfile().pubkeyHex +
+            "-" + account.settings.defaultHomeFollowList.value.code +
+            "-" + account.liveHomeFollowLists.value.hashCode()
 
     override fun showHiddenKey(): Boolean =
         account.liveHomeFollowLists.value is MutedAuthorsByOutboxTopNavFilter ||

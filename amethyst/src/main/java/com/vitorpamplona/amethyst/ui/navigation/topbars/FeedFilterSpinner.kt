@@ -533,6 +533,10 @@ private fun FeedIcon(
                 MaterialSymbols.Groups
             }
 
+            is TopFilter.FollowedBookmarks -> {
+                MaterialSymbols.Bookmark
+            }
+
             is TopFilter.MuteList -> {
                 MaterialSymbols.AutoMirrored.VolumeOff
             }

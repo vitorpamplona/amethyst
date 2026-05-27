@@ -982,6 +982,7 @@
     <string name="follow_list_kind3follows_users_only">All User Follows</string>
     <string name="follow_list_kind3_follows_users_only">Default Follow List</string>
     <string name="follow_list_kind3follows_proxy">Follows via Proxy</string>
+    <string name="follow_list_followed_bookmarks">Follows\' Bookmarks</string>
     <string name="follow_list_aroundme">Around Me</string>
     <string name="follow_list_global">Global</string>
     <string name="follow_list_chess">Chess</string>

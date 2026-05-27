@@ -66,7 +66,10 @@ class HomeNewThreadFeedFilter(
             )
     }
 
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultHomeFollowList.value
+    override fun feedKey(): String =
+        account.userProfile().pubkeyHex +
+            "-" + account.settings.defaultHomeFollowList.value.code +
+            "-" + account.liveHomeFollowLists.value.hashCode()
 
     override fun showHiddenKey(): Boolean =
         account.liveHomeFollowLists.value is MutedAuthorsByOutboxTopNavFilter ||

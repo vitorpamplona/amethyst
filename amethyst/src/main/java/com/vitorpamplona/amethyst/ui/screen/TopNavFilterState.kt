@@ -76,6 +76,12 @@ class TopNavFilterState(
             name = ResourceName(R.string.follow_list_kind3_follows_users_only),
         )
 
+    val followedBookmarks =
+        FeedDefinition(
+            code = TopFilter.FollowedBookmarks,
+            name = ResourceName(R.string.follow_list_followed_bookmarks),
+        )
+
     val globalFollow =
         FeedDefinition(
             code = TopFilter.Global,
@@ -106,7 +112,7 @@ class TopNavFilterState(
             name = ResourceName(R.string.follow_list_all_favorite_dvms),
         )
 
-    val defaultLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, muteListFollow)
+    val defaultLists = persistentListOf(allFollows, userFollows, kind3Follows, followedBookmarks, aroundMe, globalFollow, muteListFollow)
 
     fun mergePeopleLists(
         peopleLists: List<AddressableNote>,
@@ -250,7 +256,7 @@ class TopNavFilterState(
             checkNotInMainThread()
             emit(
                 listOf(
-                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow),
+                    listOf(allFollows, userFollows, kind3Follows, followedBookmarks, aroundMe, globalFollow),
                     peopleLists,
                     interests,
                     listOf(muteListFollow),
@@ -287,7 +293,7 @@ class TopNavFilterState(
             checkNotInMainThread()
             emit(
                 listOf(
-                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow),
+                    listOf(allFollows, userFollows, kind3Follows, followedBookmarks, aroundMe, globalFollow),
                     peopleLists,
                     listOf(muteListFollow),
                 ).flatten().toImmutableList(),

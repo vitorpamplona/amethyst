@@ -93,6 +93,9 @@ sealed class TopFilter(
     object DefaultFollows : TopFilter(" Main User Follows ")
 
     @Serializable
+    object FollowedBookmarks : TopFilter(" Followed Bookmarks ")
+
+    @Serializable
     object AroundMe : TopFilter(" Around Me ")
 
     @Serializable
