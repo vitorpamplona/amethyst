@@ -101,12 +101,20 @@ class CashuMintOperations(
 
         val keyset = fetchKeyset()
 
+        // NUT-02: reserve per-input fees from the output total. Without
+        // this, fee-charging mints reject the swap with "amount mismatch".
+        val feeAtoms = computeInputFee(proofs.size, keyset.inputFeePpk)
+        val outputTotal = total - feeAtoms
+        if (targetSplit != null && targetSplit > outputTotal) {
+            throw IllegalArgumentException("Target split $targetSplit exceeds outputs after fee ($outputTotal)")
+        }
+        if (outputTotal < 0L) throw IllegalArgumentException("Inputs $total don't cover NUT-02 fee $feeAtoms")
+
         val sendOutputs =
             if (targetSplit != null) splitAmounts(targetSplit).map { secretOutputFor(it, keyset) } else emptyList()
+        val keepAmount = if (targetSplit != null) outputTotal - targetSplit else outputTotal
         val keepOutputs =
-            splitAmounts(
-                if (targetSplit != null) total - targetSplit else total,
-            ).map { secretOutputFor(it, keyset) }
+            if (keepAmount > 0L) splitAmounts(keepAmount).map { secretOutputFor(it, keyset) } else emptyList()
 
         val allOutputs = sendOutputs + keepOutputs
 
@@ -177,8 +185,16 @@ class CashuMintOperations(
         if (targetSplit > total) throw IllegalArgumentException("Target split exceeds available proofs")
 
         val keyset = fetchKeyset()
+        // NUT-02: reserve per-input fees; change shrinks by the fee, send
+        // amount stays whole (the recipient gets exactly targetSplit sats).
+        val feeAtoms = computeInputFee(proofs.size, keyset.inputFeePpk)
+        val keepAmount = total - targetSplit - feeAtoms
+        if (keepAmount < 0L) {
+            throw IllegalArgumentException("Inputs $total don't cover send $targetSplit + fee $feeAtoms")
+        }
         val sendOutputs = splitAmounts(targetSplit).map { lockedOutputFor(it, keyset, recipientP2pkPubkeyHex) }
-        val keepOutputs = splitAmounts(total - targetSplit).map { secretOutputFor(it, keyset) }
+        val keepOutputs =
+            if (keepAmount > 0L) splitAmounts(keepAmount).map { secretOutputFor(it, keyset) } else emptyList()
         val allOutputs = sendOutputs + keepOutputs
 
         val response =
@@ -223,13 +239,18 @@ class CashuMintOperations(
         inputs: List<CashuProof>,
     ): MeltResult {
         val total = inputs.sumOf { it.amount }
-        val required = quote.amount + quote.feeReserve
+        val keyset = fetchKeyset()
+        // NUT-02 input fee — separate from quote.feeReserve, which is the
+        // upper bound on LN routing fees. The mint subtracts both from
+        // inputs before paying the invoice; we must reserve both.
+        val inputFee = computeInputFee(inputs.size, keyset.inputFeePpk)
+        val required = quote.amount + quote.feeReserve + inputFee
         if (total < required) throw IllegalArgumentException("Inputs total $total < required $required")
 
-        val keyset = fetchKeyset()
         // Pre-blind change outputs at the fee_reserve denominations so the
-        // mint can return whatever fees were not consumed.
-        val changeAmount = total - quote.amount // upper bound; mint will use ≤ this much
+        // mint can return whatever LN fees were not consumed. Upper bound
+        // excludes the (already-paid) NUT-02 input fee.
+        val changeAmount = total - quote.amount - inputFee
         val changeOutputs =
             if (changeAmount > 0) splitAmounts(changeAmount).map { secretOutputFor(it, keyset) } else emptyList()
 
@@ -353,6 +374,26 @@ class CashuMintOperations(
     companion object {
         /** Re-exported from [splitAmountIntoDenominations] for convenience. */
         fun splitAmounts(amount: Long): List<Long> = splitAmountIntoDenominations(amount)
+
+        /**
+         * NUT-02 input-fee math. Total fee in atoms for [numInputs] proofs
+         * spent against a keyset with [inputFeePpk] parts-per-thousand:
+         * `ceil(numInputs * inputFeePpk / 1000)`. Absent (null) ppk means
+         * the mint is on an older NUT-02 release and charges no fee.
+         *
+         * Ceiling division avoids the underpay-by-one-sat case that mints
+         * reject as "amount-mismatch". `(a + b - 1) / b` is the standard
+         * positive-integer ceiling formula; no overflow concerns at the
+         * scales any wallet hits (numInputs * 1000 fits in Long).
+         */
+        fun computeInputFee(
+            numInputs: Int,
+            inputFeePpk: Long?,
+        ): Long {
+            val ppk = inputFeePpk ?: 0L
+            if (ppk <= 0L || numInputs <= 0) return 0L
+            return (numInputs.toLong() * ppk + 999L) / 1000L
+        }
     }
 
     private data class BlindOutput(

@@ -84,6 +84,14 @@ data class KeysetDto(
     val unit: String,
     /** amount (as decimal string) → mint pubkey for that amount (33-byte compressed hex). */
     val keys: Map<String, String>,
+    /**
+     * NUT-02 per-input fee, in parts-per-thousand of one input proof. The
+     * mint charges `ceil(numInputs * inputFeePpk / 1000)` extra atoms on
+     * every swap/melt — the wallet must reserve this from inputs or the
+     * mint rejects with "amount-mismatch". Older mints don't include this
+     * field; treat absent as zero fee.
+     */
+    @SerialName("input_fee_ppk") val inputFeePpk: Long? = null,
 )
 
 @Serializable
