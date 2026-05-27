@@ -628,8 +628,11 @@ class CashuWalletState(
         val ourMints = _mints.value.toSet()
         if (ourMints.isEmpty()) return null
 
-        val infoNote = cache.getOrCreateAddressableNote(NutzapInfoEvent.createAddress(recipientPubKey))
-        val info = infoNote.event as? NutzapInfoEvent ?: return null
+        // Read the recipient's kind:10019 via their User — User pins the
+        // addressable note for its own lifetime, so the previous race
+        // (notes.LargeSoftCache evicts the WeakReference even though the
+        // event was delivered) no longer drops the chip.
+        val info = cache.getOrCreateUser(recipientPubKey).nutzapInfo() ?: return null
 
         val recipientPubkeyHex = info.p2pkPubkey() ?: return null
         val shared = info.mints().firstOrNull { it.mintUrl in ourMints } ?: return null

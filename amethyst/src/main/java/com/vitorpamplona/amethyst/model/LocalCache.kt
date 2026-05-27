@@ -536,13 +536,14 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     override fun getOrCreateUser(pubkey: HexKey): User {
         require(isValidHex(key = pubkey)) { "$pubkey is not a valid hex" }
-
-        return users.getOrCreate(pubkey) {
-            val nip65RelayListNote = getOrCreateAddressableNoteInternal(AdvertisedRelayListEvent.createAddress(pubkey))
-            val dmRelayListNote = getOrCreateAddressableNoteInternal(ChatMessageRelayListEvent.createAddress(pubkey))
-            User(it, nip65RelayListNote, dmRelayListNote)
-        }
+        // Pass `this` as the UserContext — User now resolves each pinned
+        // addressable note (kind:10002 / 10050 / 10019) lazily on first
+        // read, instead of all-or-nothing at construction time.
+        return users.getOrCreate(pubkey) { User(it, userContext) }
     }
+
+    /** [UserContext] bridge to this cache's addressable lookup. */
+    private val userContext = UserContext(::getOrCreateAddressableNoteInternal)
 
     override fun getUserIfExists(pubkey: String): User? {
         if (pubkey.isEmpty()) return null

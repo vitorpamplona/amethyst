@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.UserStatusCach
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.UserReportCache
 import com.vitorpamplona.amethyst.commons.model.trustedAssertions.UserCardsCache
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.UserMetadata
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -35,17 +36,51 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.info.tags.NutzapMintTag
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.Hex
 
 interface UserDependencies
 
+/**
+ * Lookup capability the [User] needs from the surrounding cache. Kept
+ * narrow on purpose — only what the lazy pinned-note accessors require,
+ * so test fakes are a one-liner and User stays decoupled from the full
+ * `LocalCache` surface.
+ */
+fun interface UserContext {
+    fun addressableNote(addr: Address): Note
+}
+
 @Stable
 class User(
     val pubkeyHex: String,
-    val nip65RelayListNote: Note,
-    val dmRelayListNote: Note,
+    private val context: UserContext,
 ) {
+    // ============================================================
+    // Per-user pinned replaceable notes (kind:10002 / 10050 / 10019)
+    // ============================================================
+    // Each is resolved lazily on first read and then held by this
+    // strong-reference field until the User itself is collected. The
+    // underlying `LocalCache.addressables` map is WeakReference-backed,
+    // so without these strong refs the note shells (and any event
+    // loaded into them) could vanish on the next GC even though the
+    // event was successfully delivered to the cache. Adding a new
+    // pinned kind is a one-liner here.
+
+    val nip65RelayListNote: Note by lazy {
+        context.addressableNote(AdvertisedRelayListEvent.createAddress(pubkeyHex))
+    }
+
+    val dmRelayListNote: Note by lazy {
+        context.addressableNote(ChatMessageRelayListEvent.createAddress(pubkeyHex))
+    }
+
+    val nutzapInfoNote: Note by lazy {
+        context.addressableNote(NutzapInfoEvent.createAddress(pubkeyHex))
+    }
+
     // These objects are designed to keep the cache
     // while this user obj is being used anywhere.
     private var metadata: UserMetadataCache? = null
@@ -64,6 +99,17 @@ class User(
     fun dmInboxRelayList() = dmRelayListNote.event as? ChatMessageRelayListEvent
 
     fun authorRelayList() = nip65RelayListNote.event as? AdvertisedRelayListEvent
+
+    fun nutzapInfo() = nutzapInfoNote.event as? NutzapInfoEvent
+
+    /** True when this user has published a kind:10019 with a P2PK pubkey. */
+    fun acceptsNutzaps(): Boolean = nutzapInfo()?.p2pkPubkey() != null
+
+    /** Mints the user has declared accept nutzaps. Empty when no kind:10019. */
+    fun nutzapMints(): List<NutzapMintTag> = nutzapInfo()?.mints().orEmpty()
+
+    /** The recipient P2PK pubkey nutzaps to this user must lock to. */
+    fun nutzapP2pkPubkey(): String? = nutzapInfo()?.p2pkPubkey()
 
     fun toNProfile() = NProfile.create(pubkeyHex, relayHints())
 
