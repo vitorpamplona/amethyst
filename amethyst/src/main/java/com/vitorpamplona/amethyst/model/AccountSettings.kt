@@ -24,6 +24,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatRepository
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListRepository
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcWalletEntryNorm
+import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
@@ -36,6 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
@@ -844,28 +846,48 @@ class AccountSettings(
     }
 
     /**
-     * Reserve [count] consecutive NUT-13 counters for [keysetId], returning
-     * the first one. Caller derives `(secret, r)` from `(seed, keysetId, i)`
-     * for `i in [returned .. returned+count-1]`. Persisted immediately so
-     * a crash mid-mint doesn't reuse the same counter on next launch.
-     *
-     * Synchronized to make the read-modify-write atomic — two coroutines
-     * minting concurrently must each get their own counter range.
+     * NUT-13 keyset counters live in [CashuPreferences], a dedicated
+     * SharedPreferences file with synchronous (`commit = true`) writes.
+     * AccountSettings goes through a 1-second debounce on its own save
+     * path; the cashu counter cannot tolerate that window because the
+     * mint persists signed (keyset, blind_message) pairs the moment it
+     * sees them, so any local lag → "outputs already signed" on retry.
+     * See [CashuPreferences] for the full rationale.
      */
-    @Synchronized
+    private val cashuPrefs: CashuPreferences by lazy {
+        CashuPreferences.forAccount(keyPair.pubKey.toNpub())
+    }
+
+    /**
+     * Reserve [count] consecutive NUT-13 counters for [keysetId],
+     * returning the first one. Caller derives `(secret, r)` from
+     * `(seed, keysetId, i)` for `i in [returned .. returned+count-1]`.
+     * Persisted synchronously before returning — see [CashuPreferences].
+     *
+     * One-time migration: when this keyset has a non-zero value in the
+     * legacy [cashuKeysetCounters] map (from a build that persisted
+     * counters inside AccountSettings) and the dedicated store is
+     * still at zero, the legacy value is copied over before we reserve
+     * so an upgrade doesn't reset the counter.
+     */
     fun reserveCashuCounters(
         keysetId: String,
         count: Int,
     ): Long {
-        require(count > 0) { "Counter reservation must be positive" }
-        val current = cashuKeysetCounters[keysetId] ?: 0L
-        cashuKeysetCounters[keysetId] = current + count.toLong()
-        saveAccountSettings()
-        return current
+        migrateLegacyCashuCounter(keysetId)
+        return cashuPrefs.reserveCounters(keysetId, count)
     }
 
     /** Inspect the next counter for [keysetId] without consuming any. */
-    fun peekCashuCounter(keysetId: String): Long = cashuKeysetCounters[keysetId] ?: 0L
+    fun peekCashuCounter(keysetId: String): Long {
+        migrateLegacyCashuCounter(keysetId)
+        return cashuPrefs.peekCounter(keysetId)
+    }
+
+    private fun migrateLegacyCashuCounter(keysetId: String) {
+        val legacy = cashuKeysetCounters[keysetId] ?: return
+        cashuPrefs.seedCounterIfMissing(keysetId, legacy)
+    }
 
     fun updateNIPA3PaymentTargets(newNIPA3PaymentTargets: PaymentTargetsEvent?) {
         if (newNIPA3PaymentTargets == null || newNIPA3PaymentTargets.tags.isEmpty()) return
