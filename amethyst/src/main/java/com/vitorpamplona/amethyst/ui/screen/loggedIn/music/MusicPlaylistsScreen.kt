@@ -39,7 +39,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.MusicTracksFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.MusicPlaylistsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
 @Composable
@@ -65,9 +65,11 @@ fun MusicPlaylistsScreen(
         playlistsFeedState = playlistsFeedContentState,
         accountViewModel = accountViewModel,
     )
-    // Reuses MusicTracks' subscription because the same REQ already asks for both kinds
-    // 36787 + 34139 — opening the playlists screen alone is enough to populate the cache.
-    MusicTracksFilterAssemblerSubscription(accountViewModel)
+    // Dedicated subscription keyed on the *playlists* follow list (the top-bar spinner
+    // writes to a different setting than the tracks screen), so changing this screen's
+    // list actually changes the REQ. The filter still asks for both kinds 36787 + 34139
+    // so opening the playlists screen alone is enough to populate referenced tracks.
+    MusicPlaylistsFilterAssemblerSubscription(accountViewModel)
 
     DisappearingScaffold(
         isInvertedLayout = false,
