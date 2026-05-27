@@ -25,3 +25,13 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 fun Event.hasZapSplitSetup() = tags.hasZapSplitSetup()
 
 fun Event.zapSplitSetup(): List<BaseZapSplitSetup> = tags.zapSplitSetup()
+
+fun Event.hasZapSplitSetupBesidesAuthor(): Boolean {
+    val list = zapSplitSetup()
+    if (list.isEmpty()) return false
+    if (list.size == 1) {
+        val only = list.first()
+        if (only is ZapSplitSetup && only.pubKeyHex == pubKey) return false
+    }
+    return true
+}
