@@ -20,49 +20,41 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.music
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.recalculateWindowInsets
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.NewListButton
 import com.vitorpamplona.amethyst.ui.stringRes
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddToMusicPlaylistSheet(
     trackAddress: String,
@@ -72,141 +64,123 @@ fun AddToMusicPlaylistSheet(
     val vm: AddToMusicPlaylistViewModel = viewModel()
     vm.init(accountViewModel, trackAddress)
 
+    var creating by rememberSaveable { mutableStateOf(false) }
+
     Scaffold(
+        modifier = Modifier.fillMaxSize().recalculateWindowInsets(),
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringRes(R.string.add_to_music_playlist_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                },
-                actions = {
-                    Button(
-                        onClick = { nav.popBack() },
-                        colors = ButtonDefaults.textButtonColors(),
-                    ) {
-                        Text(stringRes(R.string.add_to_music_playlist_done))
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(),
+            TopBarWithBackButton(
+                caption = stringRes(R.string.add_to_music_playlist_title),
+                nav = nav,
             )
         },
-    ) { pad ->
+        floatingActionButton = {
+            FabBottomBarPadded(nav) {
+                NewListButton(onClick = { creating = true })
+            }
+        },
+    ) { contentPadding ->
         Column(
             modifier =
                 Modifier
-                    .padding(pad)
-                    .consumeWindowInsets(pad)
-                    .imePadding()
-                    .fillMaxWidth(),
+                    .padding(
+                        top = contentPadding.calculateTopPadding(),
+                        bottom = contentPadding.calculateBottomPadding(),
+                    ).consumeWindowInsets(contentPadding)
+                    .imePadding(),
         ) {
-            NewPlaylistRow(vm = vm, accountViewModel = accountViewModel)
-
-            HorizontalDivider()
-
-            val playlists by vm.ownedPlaylists
-            if (playlists.isEmpty()) {
-                Text(
-                    text = stringRes(R.string.add_to_music_playlist_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                )
-            } else {
-                LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                    items(playlists, key = { it.address.toValue() }) { summary ->
-                        PlaylistPickerRow(
-                            summary = summary,
-                            onToggle = {
-                                accountViewModel.launchSigner {
-                                    vm.toggle(summary.address)
-                                }
-                            },
-                        )
-                        HorizontalDivider()
-                    }
-                }
-            }
+            AddToMusicPlaylistBody(vm = vm, accountViewModel = accountViewModel, nav = nav)
         }
     }
-}
 
-@Composable
-private fun NewPlaylistRow(
-    vm: AddToMusicPlaylistViewModel,
-    accountViewModel: AccountViewModel,
-) {
-    var newName by rememberSaveable { mutableStateOf("") }
-
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        OutlinedTextField(
-            value = newName,
-            onValueChange = { newName = it },
-            placeholder = { Text(stringRes(R.string.music_playlist_new_title_placeholder)) },
-            modifier = Modifier.weight(1f),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
-        )
-
-        Spacer(Modifier.width(12.dp))
-
-        Button(
-            onClick = {
-                val name = newName.trim()
-                if (name.isNotBlank()) {
-                    accountViewModel.launchSigner {
-                        if (vm.createWithTrack(name) != null) {
-                            newName = ""
-                        }
+    if (creating) {
+        NewMusicPlaylistDialog(
+            onDismiss = { creating = false },
+            onCreate = { name ->
+                accountViewModel.launchSigner {
+                    if (vm.createWithTrack(name) != null) {
+                        creating = false
                     }
                 }
             },
-            enabled = newName.trim().isNotBlank() && !vm.isWorking.value,
-        ) {
-            Text(stringRes(R.string.add_to_music_playlist_new))
+        )
+    }
+}
+
+@Composable
+private fun AddToMusicPlaylistBody(
+    vm: AddToMusicPlaylistViewModel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val playlists by vm.ownedPlaylists
+
+    if (playlists.isEmpty()) {
+        Text(
+            text = stringRes(R.string.add_to_music_playlist_empty),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+        )
+        return
+    }
+
+    LazyColumn(
+        state = rememberLazyListState(),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        itemsIndexed(
+            items = playlists,
+            key = { _, item -> item.address.toValue() },
+        ) { _, summary ->
+            MusicPlaylistManagementItem(
+                modifier = Modifier.fillMaxWidth().animateItem(),
+                playlistTitle = summary.title,
+                isTrackInPlaylist = summary.containsTrack,
+                totalTracks = summary.trackCount,
+                onClick = { nav.nav(Route.Note(summary.address.toValue())) },
+                onToggle = {
+                    accountViewModel.launchSigner {
+                        vm.toggle(summary.address)
+                    }
+                },
+            )
         }
     }
 }
 
 @Composable
-private fun PlaylistPickerRow(
-    summary: OwnedPlaylistSummary,
-    onToggle: () -> Unit,
+private fun NewMusicPlaylistDialog(
+    onDismiss: () -> Unit,
+    onCreate: (String) -> Unit,
 ) {
-    val trackCount = summary.trackCount
+    var name by rememberSaveable { mutableStateOf("") }
 
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onToggle)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Checkbox(checked = summary.containsTrack, onCheckedChange = { onToggle() })
-        Column(
-            modifier = Modifier.padding(start = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                text = summary.title.ifBlank { stringRes(R.string.add_to_music_playlist_new) },
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(R.string.music_playlist_new_dialog_title)) },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                placeholder = { Text(stringRes(R.string.music_playlist_new_title_placeholder)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                modifier = Modifier.fillMaxWidth(),
             )
-            Text(
-                text = pluralStringResource(R.plurals.music_playlist_track_count_short, trackCount, trackCount),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onCreate(name.trim()) },
+                enabled = name.trim().isNotBlank(),
+            ) {
+                Text(stringRes(R.string.music_playlist_create_action))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringRes(R.string.cancel))
+            }
+        },
+    )
 }
