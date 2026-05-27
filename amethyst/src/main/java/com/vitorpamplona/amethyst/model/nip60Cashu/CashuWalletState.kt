@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.DeterministicSecretFactory
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.MeltQuoteBolt11ResponseDto
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.ProofState
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
 import com.vitorpamplona.quartz.nip60Cashu.seed.CashuDeterministic
@@ -349,21 +350,17 @@ class CashuWalletState(
                 }
         }
 
-        // Backfill from cache once, then run a one-shot NUT-07 sweep
-        // that asks each mint which of our held proofs are still
-        // unspent and NIP-09 deletes any kind:7375 the mint reports
-        // as fully spent. Heals state when a prior swap (send, nutzap,
-        // migration) consumed proofs at the mint but failed to publish
-        // the kind:5 locally — without this, the next send picks the
-        // ghost proofs and the user sees "proofs already spent".
-        // Read-only at the mint, so safe to auto-run.
+        // Backfill from cache once. Stale-proof healing is deferred
+        // until the user actually sends/zaps ([scrubLocallyStaleProofs]
+        // is called inline from [sendNutzap] / [sendAsToken]) — running
+        // it here races against kind:7375 events that arrive from
+        // relays after start() returns, so the sweep would find
+        // _tokenEntries empty and no-op.
         scope.launch(Dispatchers.Default) {
             val initial = scanCacheForOwnEvents()
             applyEvents(initial)
             recomputePending()
             triggerAutoRedeem()
-            runCatching { scrubLocallyStaleProofs() }
-                .onFailure { Log.w("CashuWallet", "Initial stale-proof sweep failed", it) }
         }
 
         // Keep the relay subscription in sync with the outbox set.
@@ -797,15 +794,26 @@ class CashuWalletState(
      * "proofs already spent" on the next user-initiated send.
      *
      * Read-only at the mint (no swap, no signing of new tokens),
-     * so safe to auto-run on every wallet load. Mixed-state entries
-     * (some proofs spent, some unspent in the same kind:7375 — rare,
-     * happens only when a partial sub-swap lands) are left alone and
-     * logged for visibility; they self-resolve once the user spends
-     * the entry.
+     * so safe to call on demand. Mixed-state entries (some proofs
+     * spent, some unspent in the same kind:7375 — rare, happens only
+     * when a partial sub-swap lands) are NIP-09 deleted as well so
+     * the next send can't pick them and 400; the unspent portion is
+     * lost until a NUT-09 restore re-derives them. Single-mint scope
+     * lets [sendNutzap] / [sendAsToken] heal only what they're about
+     * to spend, keeping latency to one /v1/checkstate per click.
+     *
+     * Also immediately removes the stale events from internal
+     * indexes via [removeEvents] so the very next read of
+     * [_tokenEntries] excludes them — without this, the bundled
+     * newEventBundles round-trip (~1s) leaves a window where the
+     * caller would still pick the ghosts.
      */
-    suspend fun scrubLocallyStaleProofs() {
+    suspend fun scrubLocallyStaleProofs(mintUrlFilter: String? = null) {
         check(started) { "CashuWalletState.start() not called" }
-        val byMint = _tokenEntries.value.groupBy { it.content.mint }
+        val byMint =
+            _tokenEntries.value
+                .groupBy { it.content.mint }
+                .filterKeys { mintUrlFilter == null || it == mintUrlFilter }
         for ((mintUrl, entries) in byMint) {
             val allProofs = entries.flatMap { it.content.proofs }
             if (allProofs.isEmpty()) continue
@@ -816,27 +824,18 @@ class CashuWalletState(
                     }.getOrNull()
                     ?: continue
 
+            // Any entry with at least one SPENT proof gets purged. Keeping
+            // mixed-state entries around would let the next send pick them
+            // and trip the same HTTP 400 we're trying to prevent.
             val staleEntries =
                 entries.filter { entry ->
-                    val statesForEntry = entry.content.proofs.map { states[it.secret] }
-                    statesForEntry.all { it == ProofState.SPENT }
+                    entry.content.proofs.any { states[it.secret] == ProofState.SPENT }
                 }
-            val mixedEntries =
-                entries.filter { entry ->
-                    val statesForEntry = entry.content.proofs.map { states[it.secret] }
-                    val spent = statesForEntry.count { it == ProofState.SPENT }
-                    spent in 1 until statesForEntry.size
-                }
-            if (mixedEntries.isNotEmpty()) {
-                Log.w("CashuWallet") {
-                    "Skipping ${mixedEntries.size} mixed-state token event(s) at $mintUrl " +
-                        "(some proofs spent, some unspent); user must spend to resolve."
-                }
-            }
             if (staleEntries.isEmpty()) continue
             Log.i("CashuWallet") {
-                "Scrubbing ${staleEntries.size} fully-spent kind:7375 event(s) at $mintUrl"
+                "Scrubbing ${staleEntries.size} stale kind:7375 event(s) at $mintUrl"
             }
+            val staleIds = staleEntries.map { it.event.id }.toSet()
             runCatching {
                 val template = DeletionEvent.build(staleEntries.map { it.event })
                 val signed = signer.sign(template)
@@ -844,6 +843,10 @@ class CashuWalletState(
             }.onFailure {
                 Log.w("CashuWallet", "Failed to NIP-09 delete stale entries for $mintUrl", it)
             }
+            // Drop from internal indexes regardless of publish success — even
+            // if the kind:5 didn't go out, we know these proofs are unusable
+            // and shouldn't be selected for the next swap.
+            removeEvents(staleIds)
         }
     }
 
@@ -897,6 +900,13 @@ class CashuWalletState(
             peekNutzapTarget(recipientPubKey)
                 ?: throw IllegalStateException("Recipient does not accept nutzaps from any of our mints")
 
+        // NUT-07 check + immediate state cleanup before selecting.
+        // The startup scrub can't catch entries that arrive from relays
+        // after start() finished, so a "ghost proof" from a prior
+        // partial-failure persists until the user clicks send. Heal
+        // first so the selection below works on a known-fresh view.
+        scrubLocallyStaleProofs(target.mintUrl)
+
         val available = _tokenEntries.value.filter { it.content.mint == target.mintUrl }
         if (available.isEmpty()) {
             throw IllegalStateException("No proofs available at ${target.mintUrl}")
@@ -911,6 +921,52 @@ class CashuWalletState(
             message = message,
             available = available,
         )
+    }
+
+    /**
+     * Mint a cashuB token for [amountSats] from proofs held at [mintUrl].
+     * Heals stale proofs first (NUT-07 + NIP-09) so the swap doesn't trip
+     * "proofs already spent" on a ghost entry. Caller surfaces errors via
+     * [describeMintError].
+     */
+    suspend fun sendAsToken(
+        mintUrl: String,
+        amountSats: Long,
+        memo: String? = null,
+    ): SendTokenCompleted {
+        check(started) { "CashuWalletState.start() not called" }
+        if (amountSats <= 0) throw IllegalArgumentException("Amount must be positive")
+        if (mintUrl.isBlank()) throw IllegalArgumentException("Pick a mint")
+
+        scrubLocallyStaleProofs(mintUrl)
+
+        val available = _tokenEntries.value.filter { it.content.mint == mintUrl }
+        val balance = available.sumOf { it.content.totalAmount() }
+        if (balance < amountSats) {
+            throw IllegalStateException("Mint $mintUrl has only $balance sat")
+        }
+        return ops.sendAsToken(mintUrl, amountSats, available, memo)
+    }
+
+    /**
+     * Pay a lightning invoice via mint melt. Heals stale proofs first
+     * (NUT-07 + NIP-09) so the melt doesn't trip "proofs already spent"
+     * on a ghost entry. Caller surfaces errors via [describeMintError].
+     */
+    suspend fun meltToLightning(
+        mintUrl: String,
+        quote: MeltQuoteBolt11ResponseDto,
+    ): MeltCompleted {
+        check(started) { "CashuWalletState.start() not called" }
+        if (mintUrl.isBlank()) throw IllegalArgumentException("Pick a mint")
+
+        scrubLocallyStaleProofs(mintUrl)
+
+        val available = _tokenEntries.value.filter { it.content.mint == mintUrl }
+        if (available.isEmpty()) {
+            throw IllegalStateException("No proofs available at $mintUrl")
+        }
+        return ops.meltToLightning(mintUrl, quote, available)
     }
 
     // ============================================================

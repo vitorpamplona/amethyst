@@ -529,12 +529,11 @@ class CashuWalletViewModel : ViewModel() {
     fun confirmMelt() {
         val vm = accountViewModel ?: return
         val quoted = _meltState.value as? CashuMeltFlowState.Quoted ?: return
-        val available = tokenEntries.value.filter { it.content.mint == quoted.mintUrl }
 
         _meltState.value = CashuMeltFlowState.Paying
         vm.launchSigner {
             try {
-                val result = ops.meltToLightning(quoted.mintUrl, quoted.quote, available)
+                val result = state.meltToLightning(quoted.mintUrl, quoted.quote)
                 _meltState.value = CashuMeltFlowState.Completed(result.paidAmount, result.fees, result.preimage)
             } catch (e: Exception) {
                 _meltState.value = CashuMeltFlowState.Error(describeMintError(e))
@@ -554,26 +553,13 @@ class CashuWalletViewModel : ViewModel() {
         memo: String? = null,
     ) {
         val vm = accountViewModel ?: return
-        if (amountSats <= 0) {
-            _sendTokenState.value = CashuSendTokenFlowState.Error("Amount must be positive")
-            return
-        }
-        if (mintUrl.isBlank()) {
-            _sendTokenState.value = CashuSendTokenFlowState.Error("Pick a mint")
-            return
-        }
-        val available = tokenEntries.value.filter { it.content.mint == mintUrl }
-        val balanceAtMint = available.sumOf { it.content.totalAmount() }
-        if (balanceAtMint < amountSats) {
-            _sendTokenState.value =
-                CashuSendTokenFlowState.Error("Mint $mintUrl has only $balanceAtMint sat")
-            return
-        }
-
+        // sendAsToken on the state runs a NUT-07 scrub + balance check
+        // before invoking the mint swap, so the viewmodel only needs to
+        // surface failures.
         _sendTokenState.value = CashuSendTokenFlowState.Building
         vm.launchSigner {
             try {
-                val result = ops.sendAsToken(mintUrl, amountSats, available, memo)
+                val result = state.sendAsToken(mintUrl, amountSats, memo)
                 _sendTokenState.value = CashuSendTokenFlowState.Ready(result.cashuToken, result.amount)
             } catch (e: Exception) {
                 _sendTokenState.value = CashuSendTokenFlowState.Error(describeMintError(e))
