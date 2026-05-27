@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.ui.profile
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -41,7 +42,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -406,9 +406,14 @@ fun EditProfileContent(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    // Avatar
+                    // Avatar — tappable circle with upload overlay
                     Box(
-                        modifier = Modifier.size(100.dp),
+                        modifier =
+                            Modifier
+                                .size(100.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .clickable(enabled = !isUploadingAvatar) { onPickAvatar() },
                         contentAlignment = Alignment.Center,
                     ) {
                         if (pictureValue.isNotBlank()) {
@@ -419,17 +424,32 @@ fun EditProfileContent(
                                 contentScale = ContentScale.Crop,
                             )
                         }
-                        IconButton(
-                            onClick = onPickAvatar,
-                            modifier = Modifier.align(Alignment.BottomEnd).size(32.dp),
+                        // Overlay: upload icon centered (or spinner while uploading)
+                        Box(
+                            modifier =
+                                Modifier
+                                    .size(100.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        MaterialTheme.colorScheme.surface.copy(
+                                            alpha = if (pictureValue.isNotBlank()) 0.5f else 0f,
+                                        ),
+                                    ),
+                            contentAlignment = Alignment.Center,
                         ) {
                             if (isUploadingAvatar) {
-                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                                CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 3.dp)
                             } else {
                                 Icon(
                                     MaterialSymbols.AddPhotoAlternate,
                                     contentDescription = "Upload avatar",
-                                    modifier = Modifier.size(20.dp),
+                                    modifier = Modifier.size(32.dp),
+                                    tint =
+                                        if (pictureValue.isNotBlank()) {
+                                            MaterialTheme.colorScheme.onSurface
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
                                 )
                             }
                         }
