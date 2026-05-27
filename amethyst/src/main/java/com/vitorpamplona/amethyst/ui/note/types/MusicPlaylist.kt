@@ -67,12 +67,16 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.ui.note.WatchAuthor
+import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageBanner
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.grayText
@@ -285,34 +289,66 @@ private fun MusicPlaylistCover(
                 onLoadingBackground = { DefaultImageHeaderBackground(note, accountViewModel, imageModifier) },
                 onError = { DefaultImageHeader(note, accountViewModel, imageModifier) },
             )
-        } else {
-            DefaultImageHeader(note, accountViewModel, imageModifier)
-        }
 
-        Box(
-            modifier =
-                Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(12.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color.Black.copy(alpha = 0.55f))
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    symbol = MaterialSymbols.AutoMirrored.PlaylistAdd,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(16.dp),
-                )
-                Spacer(Modifier.padding(start = 6.dp))
-                Text(
-                    text = pluralStringResource(R.plurals.music_playlist_track_count, trackCount, trackCount),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White,
-                    fontWeight = FontWeight.SemiBold,
-                )
+            // When a real cover loads, the chip floats on top of the artwork in the
+            // bottom-left corner — no avatar to collide with.
+            TrackCountChip(
+                trackCount = trackCount,
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(12.dp),
+            )
+        } else {
+            // No cover artwork: render the author's banner alone (DefaultImageBanner instead
+            // of DefaultImageHeader, which would bake its own avatar into BottomStart and
+            // collide with the chip). Then place the avatar and chip in a single bottom-row
+            // so they sit side-by-side instead of stacking.
+            DefaultImageBanner(note, accountViewModel, imageModifier)
+
+            WatchAuthor(baseNote = note, accountViewModel = accountViewModel) { author ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(10.dp),
+                ) {
+                    BaseUserPicture(author, Size55dp, accountViewModel, Modifier)
+                    Spacer(Modifier.padding(start = 8.dp))
+                    TrackCountChip(trackCount = trackCount)
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun TrackCountChip(
+    trackCount: Int,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color.Black.copy(alpha = 0.55f))
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                symbol = MaterialSymbols.AutoMirrored.PlaylistAdd,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(16.dp),
+            )
+            Spacer(Modifier.padding(start = 6.dp))
+            Text(
+                text = pluralStringResource(R.plurals.music_playlist_track_count, trackCount, trackCount),
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold,
+            )
         }
     }
 }
