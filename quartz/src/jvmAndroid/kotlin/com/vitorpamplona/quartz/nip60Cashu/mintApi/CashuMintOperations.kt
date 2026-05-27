@@ -417,27 +417,28 @@ class CashuMintOperations(
         while (emptyStreak < emptyBatchesToStop) {
             // Pre-sized collections — without these, the ArrayList /
             // HashMap resize ~10 times per 1000-output batch.
-            val outputsByCounter = HashMap<String, Pair<Long, BlindOutput>>(perBatchSize)
+            // One materials slot per counter (bTick is 1-to-1 with the
+            // deterministic (secret, r) pair derived from the counter),
+            // not per (counter, amount) — the wallet only ever minted
+            // one denomination per counter under NUT-13.
+            val matsByBTick = HashMap<String, CounterMaterials>(effectiveBatchSize)
+            val recoveredCounters = HashSet<Long>(effectiveBatchSize)
             val outputDtos = ArrayList<BlindedMessageDto>(perBatchSize)
 
             for (offset in 0 until effectiveBatchSize) {
                 val c = counter + offset
                 // Per-counter derivation: same (secret, r) pair the
-                // wallet would have minted at this counter slot. We try
-                // each amount denomination — the mint will only return
-                // the one(s) it actually signed at this slot, if any.
+                // wallet would have minted at this counter slot. We
+                // try each amount denomination — the mint will only
+                // return the signature(s) it actually issued at this
+                // slot, if any.
                 val secretBytes = CashuDeterministic.secretBytes(seed, keysetId, c)
                 val r = CashuDeterministic.blindingFactor(seed, keysetId, c)
                 val secretHex = secretBytes.toHexKey()
                 val bTick = Bdhke.blind(secretHex.encodeToByteArray(), r)
-                // Hoist hex once per counter — `bTick` doesn't vary by
-                // amount, so the old code called toHexKey() twice per
-                // output (once for the dedup key, once inside toDto()).
                 val bTickHex = bTick.toHexKey()
+                matsByBTick[bTickHex] = CounterMaterials(c, secretHex, r, bTick)
                 for (amount in denominations) {
-                    val output = BlindOutput(amount, keysetId, r, secretHex, bTick)
-                    val key = "$amount:$bTickHex"
-                    outputsByCounter[key] = c to output
                     outputDtos += BlindedMessageDto(amount = amount, id = keysetId, bTick = bTickHex)
                 }
             }
@@ -448,16 +449,24 @@ class CashuMintOperations(
             } else {
                 emptyStreak = 0
                 // Mint echoes the original outputs alongside signatures
-                // (NUT-09 §2). Match by output content rather than index
-                // because the mint omits non-signed slots.
+                // (NUT-09 §2). Match by bTick alone — some mints match
+                // their internal table by blind point only and return
+                // the signed denomination in the signature even when
+                // the echoed output's amount field is one we passed
+                // for a different denomination. The signed (amount, C_)
+                // is the source of truth, the echoed amount is not.
                 for (i in response.signatures.indices) {
                     val echo = response.outputs.getOrNull(i) ?: continue
                     val sig = response.signatures[i]
-                    val key = "${echo.amount}:${echo.bTick}"
-                    val (c, output) = outputsByCounter[key] ?: continue
+                    val mat = matsByBTick[echo.bTick] ?: continue
+                    // Skip duplicates — a spec-tolerant mint may return
+                    // one entry per (amount, bTick) we asked about even
+                    // though only one of them carries the real signature.
+                    if (!recoveredCounters.add(mat.counter)) continue
+                    val output = BlindOutput(sig.amount, keysetId, mat.r, mat.secretHex, mat.bTick)
                     val proof = unblindOne(output, sig, keyset)
-                    recovered += RecoveredProof(proof, c)
-                    if (c > highestSeenCounter) highestSeenCounter = c
+                    recovered += RecoveredProof(proof, mat.counter)
+                    if (mat.counter > highestSeenCounter) highestSeenCounter = mat.counter
                 }
             }
 
@@ -770,6 +779,19 @@ data class MeltResult(
 data class RecoveredProof(
     val proof: CashuProof,
     val counter: Long,
+)
+
+/**
+ * Per-counter derivation materials reused across every denomination
+ * we probe inside one /v1/restore batch. `bTick` is deterministic in
+ * `(seed, keysetId, counter)` so it identifies the counter slot on
+ * its own — the amount is whatever the mint actually signed.
+ */
+private data class CounterMaterials(
+    val counter: Long,
+    val secretHex: String,
+    val r: ByteArray,
+    val bTick: ByteArray,
 )
 
 /**
