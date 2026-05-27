@@ -173,6 +173,9 @@ class AccountSettings(
     val defaultNestsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultLongsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultArticlesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
+    val defaultMusicTracksFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultMusicPlaylistsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultSoftwareAppsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultBadgesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Mine),
     val defaultBrowseEmojiSetsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultCommunitiesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
@@ -640,6 +643,39 @@ class AccountSettings(
     fun changeDefaultArticlesFollowList(name: TopFilter) {
         if (defaultArticlesFollowList.value != name) {
             defaultArticlesFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultMusicTracksFollowList(name: FeedDefinition) {
+        changeDefaultMusicTracksFollowList(name.code)
+    }
+
+    fun changeDefaultMusicTracksFollowList(name: TopFilter) {
+        if (defaultMusicTracksFollowList.value != name) {
+            defaultMusicTracksFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultMusicPlaylistsFollowList(name: FeedDefinition) {
+        changeDefaultMusicPlaylistsFollowList(name.code)
+    }
+
+    fun changeDefaultMusicPlaylistsFollowList(name: TopFilter) {
+        if (defaultMusicPlaylistsFollowList.value != name) {
+            defaultMusicPlaylistsFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultSoftwareAppsFollowList(name: FeedDefinition) {
+        changeDefaultSoftwareAppsFollowList(name.code)
+    }
+
+    fun changeDefaultSoftwareAppsFollowList(name: TopFilter) {
+        if (defaultSoftwareAppsFollowList.value != name) {
+            defaultSoftwareAppsFollowList.tryEmit(name)
             saveAccountSettings()
         }
     }

@@ -142,7 +142,7 @@ fun RenderVideoPlayer(
             hasBlurhash = hasBlurhash,
         )
 
-        if (showControls) {
+        if (showControls && controllerState.playbackError.value == null) {
             TopGradientOverlay(
                 controllerVisible = controllerVisible,
                 modifier = Modifier.align(Alignment.TopCenter),

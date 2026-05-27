@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin
 
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinBackend
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinCoreRpcConfig
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -177,5 +179,64 @@ class NamecoinSettingsTest {
         assertTrue(d.enabled)
         assertTrue(d.customServers.isEmpty())
         assertFalse(d.hasCustomServers)
+    }
+
+    // ── Backend / RPC plumbing ─────────────────────────────────────────
+
+    @Test
+    fun `default backend is electrumx`() {
+        assertEquals(NamecoinBackend.ELECTRUMX, NamecoinSettings.DEFAULT.backend)
+    }
+
+    @Test
+    fun `default fallback policy is all-off`() {
+        val s = NamecoinSettings.DEFAULT
+        assertFalse(s.fallbackToCustomElectrumx)
+        assertFalse(s.fallbackToDefaultElectrumx)
+        val policy = s.toFallbackPolicy()
+        assertFalse(policy.fallbackToCustomElectrumx)
+        assertFalse(policy.fallbackToDefaultElectrumx)
+    }
+
+    @Test
+    fun `hasUsableCoreRpc requires http url`() {
+        assertFalse(NamecoinSettings.DEFAULT.hasUsableCoreRpc)
+        val ok =
+            NamecoinSettings.DEFAULT.copy(
+                namecoinCoreRpc =
+                    NamecoinCoreRpcConfig(
+                        url = "http://node.local:8336/",
+                        username = "u",
+                        password = "p",
+                    ),
+            )
+        assertTrue(ok.hasUsableCoreRpc)
+
+        val bad =
+            NamecoinSettings.DEFAULT.copy(
+                namecoinCoreRpc = NamecoinCoreRpcConfig(url = "node.local:8336"),
+            )
+        assertFalse(bad.hasUsableCoreRpc)
+    }
+
+    @Test
+    fun `toFallbackPolicy mirrors toggles`() {
+        val s =
+            NamecoinSettings.DEFAULT.copy(
+                fallbackToCustomElectrumx = true,
+                fallbackToDefaultElectrumx = true,
+            )
+        val p = s.toFallbackPolicy()
+        assertTrue(p.fallbackToCustomElectrumx)
+        assertTrue(p.fallbackToDefaultElectrumx)
+    }
+
+    @Test
+    fun `backend can be set to namecoin core rpc`() {
+        val s =
+            NamecoinSettings.DEFAULT.copy(
+                backend = NamecoinBackend.NAMECOIN_CORE_RPC,
+            )
+        assertEquals(NamecoinBackend.NAMECOIN_CORE_RPC, s.backend)
     }
 }

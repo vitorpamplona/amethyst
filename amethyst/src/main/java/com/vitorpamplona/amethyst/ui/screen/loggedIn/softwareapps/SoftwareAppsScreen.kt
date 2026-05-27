@@ -27,6 +27,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -42,7 +43,6 @@ import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
 import com.vitorpamplona.amethyst.ui.note.types.RenderSoftwareApplication
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.datasource.SoftwareAppsFilterAssemblerSubscription
@@ -69,12 +69,13 @@ fun SoftwareAppsScreen(
     nav: INav,
 ) {
     WatchLifecycleAndUpdateModel(feedContentState)
+    WatchAccountForSoftwareAppsScreen(feedContentState = feedContentState, accountViewModel = accountViewModel)
     SoftwareAppsFilterAssemblerSubscription(accountViewModel)
 
     DisappearingScaffold(
         isInvertedLayout = false,
         topBar = {
-            UserDrawerSearchTopBar(accountViewModel, nav) {}
+            SoftwareAppsTopBar(accountViewModel, nav)
         },
         bottomBar = {
             AppBottomBar(Route.SoftwareApps, nav, accountViewModel) { route ->
@@ -106,6 +107,21 @@ fun SoftwareAppsScreen(
                 )
             }
         }
+    }
+}
+
+@Composable
+fun WatchAccountForSoftwareAppsScreen(
+    feedContentState: FeedContentState,
+    accountViewModel: AccountViewModel,
+) {
+    val listState by accountViewModel.account.liveSoftwareAppsFollowLists.collectAsStateWithLifecycle()
+    val hiddenUsers =
+        accountViewModel.account.hiddenUsers.flow
+            .collectAsStateWithLifecycle()
+
+    LaunchedEffect(accountViewModel, listState, hiddenUsers) {
+        feedContentState.checkKeysInvalidateDataAndSendToTop()
     }
 }
 

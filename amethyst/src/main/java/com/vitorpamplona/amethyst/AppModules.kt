@@ -281,11 +281,26 @@ class AppModules(
      */
     val namecoinCoreRpcClient by lazy {
         Log.d("AppModules", "NamecoinCoreRpcClient Init")
-        NamecoinCoreRpcClient(
-            httpClientForUrl = roleBasedHttpClientBuilder::okHttpClientForNip05,
-        ).also {
-            it.setConfig(namecoinPrefs.current.namecoinCoreRpc)
+        val client =
+            NamecoinCoreRpcClient(
+                httpClientForUrl = roleBasedHttpClientBuilder::okHttpClientForNip05,
+            )
+        // Bootstrap the active config and the pinned trust store from the
+        // same shared SharedPreferences entry the ElectrumX client uses.
+        // Mirrors the ElectrumXClient init path above so user-pinned certs
+        // are available on both backends after process restart.
+        applicationIOScope.launch {
+            try {
+                client.setConfig(namecoinPrefs.current.namecoinCoreRpc)
+                val pinnedCerts = namecoinPrefs.loadPinnedCerts()
+                if (pinnedCerts.isNotEmpty()) {
+                    client.setDynamicCerts(pinnedCerts)
+                }
+            } catch (_: Exception) {
+                // Non-fatal — user can re-pin via Settings.
+            }
         }
+        client
     }
 
     /**

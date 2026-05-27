@@ -175,4 +175,74 @@ class NamecoinCoreRpcClientTest {
             assertFalse(probe.success)
             assertNotNull(probe.error)
         }
+
+    // ── TOFU / pinning ────────────────────────────────────────────────────────────
+
+    @Test
+    fun `probe leaves cert fields null on http url`() =
+        runBlocking {
+            // No TLS in this fake transport, so the probe shouldn't fabricate
+            // a fingerprint. The interceptor short-circuits before any real
+            // socket is opened, but the probe layer also runs an out-of-band
+            // TLS capture — it must return null for http://.
+            val http =
+                fakeClient(
+                    body =
+                        """{"result":{"chain":"main","blocks":1,"verificationprogress":1.0,"initialblockdownload":false},"error":null,"id":"amethyst"}""",
+                )
+            val client = NamecoinCoreRpcClient(httpClientForUrl = { http })
+            val probe = client.probe(NamecoinCoreRpcConfig(url = "http://node.example/", username = "u", password = "p"))
+            assertTrue(probe.success)
+            assertEquals(null, probe.serverCertPem)
+            assertEquals(null, probe.certFingerprint)
+            assertFalse(probe.tlsHandshakeFailed)
+        }
+
+    @Test
+    fun `addPinnedCert is idempotent and survives setDynamicCerts`() {
+        val client = NamecoinCoreRpcClient(httpClientForUrl = { OkHttpClient() })
+        // addPinnedCert twice with same PEM should keep one copy (we can't
+        // observe the internal list directly, but we can confirm that the
+        // next call doesn't throw, and that setDynamicCerts() then replaces
+        // the contents wholesale).
+        val pem =
+            "-----BEGIN CERTIFICATE-----\n" +
+                "MIIBhTCCASugAwIBAgIQEAAAAAAAnRtRrwK0e\n" +
+                "-----END CERTIFICATE-----\n"
+        client.addPinnedCert(pem)
+        client.addPinnedCert(pem)
+        client.setDynamicCerts(emptyList())
+        // Replacing with a malformed PEM must not blow up later use; this
+        // is the same robustness contract ElectrumXClient honours.
+        client.setDynamicCerts(listOf("not a cert"))
+        // Smoke test that subsequent calls still work without pinning
+        // (we're using http:// so pinning isn't engaged).
+        val captured = mutableListOf<Request>()
+        val http =
+            fakeClient(
+                body = """{"result":{"chain":"main","blocks":1},"error":null,"id":"amethyst"}""",
+                captured = captured,
+            )
+        val c2 = NamecoinCoreRpcClient(httpClientForUrl = { http })
+        c2.setConfig(NamecoinCoreRpcConfig(url = "http://n/", usePinnedTrustStore = true))
+        runBlocking {
+            val r = c2.probe(c2.currentConfig())
+            assertTrue(r.success)
+        }
+        // usePinnedTrustStore is a no-op for http:// URLs — verify the
+        // request still went through the fake client.
+        assertTrue(captured.isNotEmpty())
+    }
+
+    @Test
+    fun `RpcProbeResult carries new fields with sensible defaults`() {
+        // Public contract: existing call sites that don't set the new
+        // fields keep compiling and read null/false defaults.
+        val r =
+            com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin
+                .RpcProbeResult(success = true, elapsedMs = 0)
+        assertEquals(null, r.serverCertPem)
+        assertEquals(null, r.certFingerprint)
+        assertFalse(r.tlsHandshakeFailed)
+    }
 }

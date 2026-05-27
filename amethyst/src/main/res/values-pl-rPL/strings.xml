@@ -896,6 +896,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="payment_target_authority">Adres</string>
     <string name="delete_payment_target">Usuń dane płatności</string>
     <string name="no_payment_app_found">Nie znaleziono aplikacji do obsługi tej płatności. Zainstaluj kompatybilny portfel.</string>
+    <string name="no_payment_app_found_for_type">Nie zainstalowano aplikacji do obsługi płatności %1$s . Zainstaluj kompatybilny portfel.</string>
     <string name="error_dialog_payment_error">Nie można otworzyć płatności</string>
     <string name="uploading_state_ready">Nie rozpoczęte</string>
     <string name="uploading_state_compressing">Kompresja</string>
@@ -1462,6 +1463,9 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="wallet_number">Portfel %1$s</string>
     <string name="error_opening_external_signer">Błąd podczas otwierania aplikacji logującej</string>
     <string name="error_opening_external_signer_description">Nie można odnaleźć aplikacji logującej. Sprawdź, czy aplikacja nie została odinstalowana</string>
+    <string name="error_video_playback_failed">Nie można odtworzyć tego filmu</string>
+    <string name="error_video_playback_failed_description">Kodek lub format nie jest obsługiwany na tym urządzeniu (%1$s). Spróbuj go otworzyć w przeglądarce.</string>
+    <string name="error_video_open_in_browser">Otwórz w przeglądarce</string>
     <string name="sign_request_rejected2">Prośba o zalogowanie została odrzucona</string>
     <string name="sign_request_rejected">Prośba o zalogowanie odrzucona</string>
     <string name="sign_request_rejected_description">Upewnij się, że aplikacja logującego autoryzuje tę operację</string>
@@ -1610,6 +1614,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="metadata_strip_failed_upload">Prześlij mimo wszystko</string>
     <string name="metadata_strip_failed_upload_cancelled">Nie udało się usunąć prywatnych metadanych z plików multimedialnych. Przesyłanie anulowane.</string>
     <string name="upload_cancelled">Anulowano przesyłanie</string>
+    <string name="avif_metadata_strip_failed">Nie można usunąć metadanych z AVIF: %1$s</string>
     <string name="edit_draft">Edytuj wersję roboczą</string>
     <string name="login_with_qr_code">Zaloguj się przy użyciu QR kodu</string>
     <string name="route">Ścieżka</string>
@@ -1672,6 +1677,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="wallet_invalid_uri">Nieprawidłowy URI połączenia NWC</string>
     <string name="wallet_move_up">W górę</string>
     <string name="wallet_move_down">W dół</string>
+    <string name="wallet_reorder">Powtórne zamów portfel</string>
     <string name="wallet_onchain_transactions">Transakcje w łańcuchu</string>
     <string name="wallet_onchain_no_address">Brak dostępnego adresu w łańcuchu dla tego konta.</string>
     <string name="wallet_onchain_no_backend">Nie skonfigurowano backendu łańcucha.</string>

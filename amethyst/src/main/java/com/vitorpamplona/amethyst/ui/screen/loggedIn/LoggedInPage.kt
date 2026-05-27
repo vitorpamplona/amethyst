@@ -75,7 +75,9 @@ fun LoggedInPage(
                 ),
         )
 
-    accountViewModel.firstRoute = route
+    LaunchedEffect(Unit) {
+        accountViewModel.firstRoute = route
+    }
 
     // Adds this account to the authentication procedures for relays.
     RelayAuthSubscription(accountViewModel)

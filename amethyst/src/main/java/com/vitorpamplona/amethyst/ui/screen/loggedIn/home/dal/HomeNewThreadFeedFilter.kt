@@ -36,6 +36,8 @@ import com.vitorpamplona.quartz.experimental.attestations.request.AttestationReq
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
+import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -57,6 +59,8 @@ class HomeNewThreadFeedFilter(
         val ADDRESSABLE_KINDS =
             listOf(
                 AudioTrackEvent.KIND,
+                MusicTrackEvent.KIND,
+                MusicPlaylistEvent.KIND,
                 InteractiveStoryPrologueEvent.KIND,
                 WikiNoteEvent.KIND,
                 ClassifiedsEvent.KIND,
@@ -125,6 +129,8 @@ class HomeNewThreadFeedFilter(
                 noteEvent is InteractiveStoryPrologueEvent ||
                 noteEvent is CommentEvent ||
                 noteEvent is AudioTrackEvent ||
+                noteEvent is MusicTrackEvent ||
+                noteEvent is MusicPlaylistEvent ||
                 noteEvent is VoiceEvent ||
                 noteEvent is AudioHeaderEvent ||
                 noteEvent is ChessGameEvent ||
