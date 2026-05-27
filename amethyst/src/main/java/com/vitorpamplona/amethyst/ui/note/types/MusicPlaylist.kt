@@ -20,16 +20,15 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -56,8 +55,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImagePainter
-import coil3.compose.SubcomposeAsyncImage
-import coil3.compose.SubcomposeAsyncImageContent
+import coil3.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -282,49 +280,44 @@ private fun MusicPlaylistCover(
             .clip(imageShape)
 
     Box(imageModifier) {
-        if (image != null) {
-            // Driving SubcomposeAsyncImage directly (rather than going through MyAsyncImage)
-            // so each painter state can choose its own overlay: only `Success` floats the
-            // chip alone over the loaded artwork; `Loading` and `Error` fall back to the
-            // banner with the author's avatar + chip side-by-side — same treatment as the
-            // no-image case below — so the chip never sits on top of the avatar.
-            SubcomposeAsyncImage(
-                model = image,
-                contentDescription = stringRes(R.string.preview_card_image_for, image),
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                val state by painter.state.collectAsState()
-                when (state) {
-                    is AsyncImagePainter.State.Success -> {
-                        SubcomposeAsyncImageContent(imageModifier)
-                        FloatingTrackCountChip(trackCount)
-                    }
+        if (image == null) {
+            // No artwork at all: banner + author avatar + chip side-by-side at the bottom.
+            BannerWithAuthorChip(note, trackCount, imageModifier, accountViewModel, blurred = false)
+        } else {
+            // Drive the painter directly so we can layer the loaded image and the chip as
+            // separate siblings of the same Box — using SubcomposeAsyncImage's content-lambda
+            // confused its layout (the chip's wrap-content Box was stretched to the cover's
+            // full size). A plain Image + painter-state observation behaves predictably.
+            val painter = rememberAsyncImagePainter(model = image)
+            val state by painter.state.collectAsState()
 
-                    is AsyncImagePainter.State.Error -> {
-                        BannerWithAuthorChip(note, trackCount, imageModifier, accountViewModel, blurred = false)
-                    }
+            when (state) {
+                is AsyncImagePainter.State.Success -> {
+                    Image(
+                        painter = painter,
+                        contentDescription = stringRes(R.string.preview_card_image_for, image),
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.matchParentSize(),
+                    )
+                    TrackCountChip(
+                        trackCount = trackCount,
+                        modifier =
+                            Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(12.dp),
+                    )
+                }
 
-                    else -> {
-                        BannerWithAuthorChip(note, trackCount, imageModifier, accountViewModel, blurred = true)
-                    }
+                is AsyncImagePainter.State.Error -> {
+                    BannerWithAuthorChip(note, trackCount, imageModifier, accountViewModel, blurred = false)
+                }
+
+                else -> {
+                    BannerWithAuthorChip(note, trackCount, imageModifier, accountViewModel, blurred = true)
                 }
             }
-        } else {
-            BannerWithAuthorChip(note, trackCount, imageModifier, accountViewModel, blurred = false)
         }
     }
-}
-
-@Composable
-private fun BoxScope.FloatingTrackCountChip(trackCount: Int) {
-    TrackCountChip(
-        trackCount = trackCount,
-        modifier =
-            Modifier
-                .align(Alignment.BottomStart)
-                .padding(12.dp),
-    )
 }
 
 /**
