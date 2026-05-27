@@ -137,7 +137,34 @@ fun MusicTrackHeader(
         }
 
     Column(MaterialTheme.colorScheme.replyModifier) {
-        MusicTrackCover(image, note, accountViewModel)
+        if (playableUri != null) {
+            if (image != null) {
+                LoadThumbAndThenVideoView(
+                    videoUri = playableUri,
+                    mimeType = mimeType,
+                    title = title,
+                    thumbUri = image,
+                    authorName = note.author?.toBestDisplayName(),
+                    roundedCorner = true,
+                    contentScale = ContentScale.FillWidth,
+                    nostrUriCallback = "nostr:${note.toNEvent()}",
+                    accountViewModel = accountViewModel,
+                )
+            } else {
+                VideoView(
+                    videoUri = playableUri,
+                    mimeType = mimeType,
+                    title = title,
+                    authorName = note.author?.toBestDisplayName(),
+                    roundedCorner = true,
+                    contentScale = ContentScale.FillWidth,
+                    nostrUriCallback = "nostr:${note.toNEvent()}",
+                    accountViewModel = accountViewModel,
+                )
+            }
+        } else {
+            MusicTrackCover(image, note, accountViewModel)
+        }
 
         Column(
             modifier =
@@ -192,36 +219,6 @@ fun MusicTrackHeader(
                     duration?.let { MetaText(text = formatDuration(it)) }
                     if (duration != null && isExplicit) MetaSeparator()
                     if (isExplicit) ExplicitBadge()
-                }
-            }
-
-            if (playableUri != null) {
-                Spacer(Modifier.padding(top = 4.dp))
-                Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))) {
-                    if (image != null) {
-                        LoadThumbAndThenVideoView(
-                            videoUri = playableUri,
-                            mimeType = mimeType,
-                            title = title,
-                            thumbUri = image,
-                            authorName = note.author?.toBestDisplayName(),
-                            roundedCorner = true,
-                            contentScale = ContentScale.FillWidth,
-                            nostrUriCallback = "nostr:${note.toNEvent()}",
-                            accountViewModel = accountViewModel,
-                        )
-                    } else {
-                        VideoView(
-                            videoUri = playableUri,
-                            mimeType = mimeType,
-                            title = title,
-                            authorName = note.author?.toBestDisplayName(),
-                            roundedCorner = true,
-                            contentScale = ContentScale.FillWidth,
-                            nostrUriCallback = "nostr:${note.toNEvent()}",
-                            accountViewModel = accountViewModel,
-                        )
-                    }
                 }
             }
 
@@ -290,24 +287,6 @@ private fun MusicTrackCover(
             )
         } else {
             DefaultImageHeader(note, accountViewModel, imageModifier)
-        }
-
-        Box(
-            modifier =
-                Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(12.dp)
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.92f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                symbol = MaterialSymbols.PlayArrow,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.size(32.dp),
-            )
         }
     }
 }
