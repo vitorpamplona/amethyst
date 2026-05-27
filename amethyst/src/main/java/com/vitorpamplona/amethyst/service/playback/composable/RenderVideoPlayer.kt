@@ -95,6 +95,8 @@ fun RenderVideoPlayer(
     val containerWidth = remember { intArrayOf(0) }
     val isLive = remember(mediaItem.src.videoUri) { isLiveStreaming(mediaItem.src.videoUri) }
 
+    WatchPlaybackErrors(controllerState)
+
     Box(
         modifier =
             borderModifier
@@ -125,6 +127,12 @@ fun RenderVideoPlayer(
             // through (blurhash backdrop in the with-blurhash branch, or the post
             // background otherwise) avoids the black blink when re-entering the feed.
             shutter = {},
+        )
+
+        RenderPlaybackError(
+            controllerState = controllerState,
+            videoUri = mediaItem.src.videoUri,
+            modifier = Modifier.align(Alignment.Center),
         )
 
         AudioPlayingAnimation(
