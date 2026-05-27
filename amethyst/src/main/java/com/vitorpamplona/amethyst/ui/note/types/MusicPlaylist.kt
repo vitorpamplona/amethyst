@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -221,6 +222,13 @@ fun MusicPlaylistHeader(
                             }
                             LoadAddressableNote(address, accountViewModel) { trackNote ->
                                 if (trackNote != null) {
+                                    // Ask relays for the track event itself (and its
+                                    // reactions/replies) so a playlist whose tracks aren't
+                                    // already in cache populates instead of sitting on the
+                                    // "Loading…" placeholder. The subscription is keyed on
+                                    // the AddressableNote and lifecycle-aware, so it stops
+                                    // when the playlist scrolls off-screen.
+                                    EventFinderFilterAssemblerSubscription(trackNote, accountViewModel)
                                     PlaylistTrackRow(
                                         position = index + 1,
                                         trackNote = trackNote,
