@@ -46,6 +46,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -73,6 +74,9 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.service.namecoin.NamecoinSettings
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinBackend
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinCoreRpcConfig
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.RpcProbeResult
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ServerTestResult
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -102,6 +106,13 @@ fun NamecoinSettingsSection(
     onReset: () -> Unit,
     onTestServer: suspend (ElectrumxServer) -> ServerTestResult,
     onPinCert: (String) -> Unit = {},
+    onSetBackend: (NamecoinBackend) -> Unit = {},
+    onSetCoreRpcConfig: (NamecoinCoreRpcConfig) -> Unit = {},
+    onSetFallbackToCustomElectrumx: (Boolean) -> Unit = {},
+    onSetFallbackToDefaultElectrumx: (Boolean) -> Unit = {},
+    onTestCoreRpc: suspend (NamecoinCoreRpcConfig) -> RpcProbeResult = { _ ->
+        RpcProbeResult(success = false, elapsedMs = 0, error = "not wired")
+    },
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.padding(16.dp)) {
@@ -118,12 +129,45 @@ fun NamecoinSettingsSection(
 
                 // ── Explanation ─────────────────────────────────────
                 Text(
-                    "Namecoin names (.bit, d/, id/) are resolved via ElectrumX servers. " +
-                        "By default, public community servers are used. " +
-                        "For maximum privacy, add your own server below — when custom " +
-                        "servers are set, the defaults are completely ignored.",
+                    "Namecoin names (.bit, d/, id/) are resolved by querying the Namecoin " +
+                        "blockchain. Choose ElectrumX (light-client) or Namecoin Core RPC " +
+                        "(your own full node) below.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                BackendSelector(
+                    selected = settings.backend,
+                    onSelect = onSetBackend,
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                AnimatedVisibility(
+                    visible = settings.backend == NamecoinBackend.NAMECOIN_CORE_RPC,
+                    enter = expandVertically(),
+                    exit = shrinkVertically(),
+                ) {
+                    Column {
+                        NamecoinCoreRpcSection(
+                            config = settings.namecoinCoreRpc,
+                            onConfigChange = onSetCoreRpcConfig,
+                            onTestCoreRpc = onTestCoreRpc,
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                        )
+                        Spacer(Modifier.height(16.dp))
+                    }
+                }
+
+                FallbacksSection(
+                    settings = settings,
+                    onSetFallbackToCustomElectrumx = onSetFallbackToCustomElectrumx,
+                    onSetFallbackToDefaultElectrumx = onSetFallbackToDefaultElectrumx,
                 )
 
                 Spacer(Modifier.height(16.dp))
@@ -765,6 +809,384 @@ private fun ServerRow(
             style = MaterialTheme.typography.bodySmall,
             fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+// ── Backend selector ───────────────────────────────────────────────────
+
+@Composable
+private fun BackendSelector(
+    selected: NamecoinBackend,
+    onSelect: (NamecoinBackend) -> Unit,
+) {
+    Column {
+        Text(
+            "Resolution backend",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.height(6.dp))
+
+        BackendRadioRow(
+            label = "ElectrumX (light client)",
+            description = "Query public or custom ElectrumX servers. Lightweight, no full node required.",
+            selected = selected == NamecoinBackend.ELECTRUMX,
+            onClick = { onSelect(NamecoinBackend.ELECTRUMX) },
+        )
+        BackendRadioRow(
+            label = "Namecoin Core RPC",
+            description = "Query your own Namecoin Core node directly via JSON-RPC. Most sovereign.",
+            selected = selected == NamecoinBackend.NAMECOIN_CORE_RPC,
+            onClick = { onSelect(NamecoinBackend.NAMECOIN_CORE_RPC) },
+        )
+    }
+}
+
+@Composable
+private fun BackendRadioRow(
+    label: String,
+    description: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        RadioButton(
+            selected = selected,
+            onClick = onClick,
+        )
+        Spacer(Modifier.width(4.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+// ── Namecoin Core RPC section ──────────────────────────────────────────
+
+@Composable
+private fun NamecoinCoreRpcSection(
+    config: NamecoinCoreRpcConfig,
+    onConfigChange: (NamecoinCoreRpcConfig) -> Unit,
+    onTestCoreRpc: suspend (NamecoinCoreRpcConfig) -> RpcProbeResult,
+) {
+    val scope = rememberCoroutineScope()
+    var url by rememberSaveable(config.url) { mutableStateOf(config.url) }
+    var user by rememberSaveable(config.username) { mutableStateOf(config.username) }
+    var pass by rememberSaveable(config.password) { mutableStateOf(config.password) }
+    var passVisible by remember { mutableStateOf(false) }
+    var testing by remember { mutableStateOf(false) }
+    var lastProbe by remember { mutableStateOf<RpcProbeResult?>(null) }
+
+    fun commit() {
+        onConfigChange(
+            config.copy(
+                url = url.trim(),
+                username = user.trim(),
+                password = pass,
+            ),
+        )
+    }
+
+    Column {
+        Text(
+            "Namecoin Core RPC endpoint",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "URL, username and password for your Namecoin Core node. " +
+                "StartOS users: copy these from the package's Properties tab " +
+                "(Tor onion URL recommended for remote access).",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = url,
+            onValueChange = { url = it },
+            label = { Text("RPC URL") },
+            placeholder = { Text("http://<onion>.onion:8336/") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+            keyboardActions = KeyboardActions(onAny = { commit() }),
+            textStyle =
+                MaterialTheme.typography.bodySmall.copy(
+                    fontFamily = FontFamily.Monospace,
+                ),
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = user,
+            onValueChange = { user = it },
+            label = { Text("RPC username") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+            keyboardActions = KeyboardActions(onAny = { commit() }),
+            textStyle =
+                MaterialTheme.typography.bodySmall.copy(
+                    fontFamily = FontFamily.Monospace,
+                ),
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = pass,
+            onValueChange = { pass = it },
+            label = { Text("RPC password") },
+            singleLine = true,
+            visualTransformation =
+                if (passVisible) {
+                    androidx.compose.ui.text.input.VisualTransformation.None
+                } else {
+                    androidx.compose.ui.text.input
+                        .PasswordVisualTransformation()
+                },
+            trailingIcon = {
+                IconButton(onClick = { passVisible = !passVisible }) {
+                    Icon(
+                        if (passVisible) MaterialSymbols.Lock else MaterialSymbols.Lock,
+                        contentDescription = null,
+                    )
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            keyboardOptions =
+                KeyboardOptions(
+                    imeAction = ImeAction.Done,
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Password,
+                ),
+            keyboardActions = KeyboardActions(onDone = { commit() }),
+            textStyle =
+                MaterialTheme.typography.bodySmall.copy(
+                    fontFamily = FontFamily.Monospace,
+                ),
+        )
+
+        Spacer(Modifier.height(10.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Button(
+                onClick = {
+                    commit()
+                },
+                modifier = Modifier.weight(1f),
+            ) {
+                Text("Save")
+            }
+            Button(
+                onClick = {
+                    commit()
+                    if (testing) return@Button
+                    testing = true
+                    lastProbe = null
+                    val candidate =
+                        config.copy(
+                            url = url.trim(),
+                            username = user.trim(),
+                            password = pass,
+                        )
+                    scope.launch {
+                        try {
+                            lastProbe = onTestCoreRpc(candidate)
+                        } finally {
+                            testing = false
+                        }
+                    }
+                },
+                modifier = Modifier.weight(1f),
+                enabled = !testing && url.isNotBlank(),
+            ) {
+                if (testing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(14.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                } else {
+                    Text("Test RPC")
+                }
+            }
+        }
+
+        lastProbe?.let { probe ->
+            Spacer(Modifier.height(10.dp))
+            Card(
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor =
+                            if (probe.success) {
+                                Color(0x222E8B57)
+                            } else {
+                                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f)
+                            },
+                    ),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(modifier = Modifier.padding(10.dp)) {
+                    if (probe.success) {
+                        Text(
+                            "Connected (${probe.elapsedMs} ms)",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        val chain = probe.chain ?: "?"
+                        val blocks = probe.blocks?.toString() ?: "?"
+                        val pct =
+                            probe.verificationProgress?.let { String.format(Locale.ROOT, "%.2f%%", it * 100) }
+                                ?: "?"
+                        Text(
+                            "chain=$chain  height=$blocks  sync=$pct" +
+                                (if (probe.initialBlockDownload == true) "  (IBD)" else ""),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontFamily = FontFamily.Monospace,
+                        )
+                    } else {
+                        Text(
+                            "Failed",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            probe.error.orEmpty(),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontFamily = FontFamily.Monospace,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ── Fallback policy section ────────────────────────────────────────────
+
+@Composable
+private fun FallbacksSection(
+    settings: NamecoinSettings,
+    onSetFallbackToCustomElectrumx: (Boolean) -> Unit,
+    onSetFallbackToDefaultElectrumx: (Boolean) -> Unit,
+) {
+    Column {
+        Text(
+            "Fallback policy",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "What to try if the primary backend can't be reached. " +
+                "Off by default — fallbacks can leak your lookups to other operators.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        if (settings.backend == NamecoinBackend.NAMECOIN_CORE_RPC) {
+            ToggleRow(
+                label = "Fall back to my custom ElectrumX servers",
+                description =
+                    if (settings.hasCustomServers) {
+                        "If Namecoin Core RPC fails, try the ${settings.customServers.size} custom ElectrumX server(s) configured below."
+                    } else {
+                        "No custom ElectrumX servers configured. Add one in the section below to enable this option."
+                    },
+                checked = settings.fallbackToCustomElectrumx,
+                onCheckedChange = onSetFallbackToCustomElectrumx,
+                enabled = settings.hasCustomServers,
+            )
+        }
+
+        ToggleRow(
+            label = "Fall back to default public ElectrumX servers",
+            description =
+                if (settings.backend == NamecoinBackend.ELECTRUMX) {
+                    if (settings.hasCustomServers) {
+                        "If all of my custom ElectrumX servers fail, also try the hardcoded public defaults."
+                    } else {
+                        "(Already using defaults — toggle has no extra effect.)"
+                    }
+                } else {
+                    "If everything above fails, try the hardcoded public ElectrumX servers."
+                },
+            checked = settings.fallbackToDefaultElectrumx,
+            onCheckedChange = onSetFallbackToDefaultElectrumx,
+            enabled =
+                settings.backend == NamecoinBackend.NAMECOIN_CORE_RPC ||
+                    settings.hasCustomServers,
+        )
+    }
+}
+
+@Composable
+private fun ToggleRow(
+    label: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    enabled: Boolean = true,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color =
+                    if (enabled) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            enabled = enabled,
         )
     }
 }
