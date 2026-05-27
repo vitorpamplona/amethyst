@@ -335,12 +335,18 @@ class CashuWalletState(
                 }
         }
 
-        // Backfill from cache once.
+        // Backfill from cache once, then run a one-shot keyset
+        // migration sweep so any proofs we hold on rotated-out
+        // keysets get consolidated onto the current active one before
+        // the mint retires the old private key (after which they'd be
+        // un-spendable). Best-effort: mint-side failures just log.
         scope.launch(Dispatchers.Default) {
             val initial = scanCacheForOwnEvents()
             applyEvents(initial)
             recomputePending()
             triggerAutoRedeem()
+            runCatching { migrateStaleKeysets() }
+                .onFailure { Log.w("CashuWallet", "Initial keyset migration sweep failed", it) }
         }
 
         // Keep the relay subscription in sync with the outbox set.
@@ -752,6 +758,38 @@ class CashuWalletState(
         val delta = (outcome.nextCounterAfterScan - current).coerceAtLeast(0L)
         if (delta > 0) settings.reserveCashuCounters(outcome.keysetId, delta.toInt())
         return outcome
+    }
+
+    /**
+     * Migrate proofs held on inactive keysets onto each mint's current
+     * active keyset. Cheap when nothing needs migrating (one /v1/keys
+     * per mint to learn the current active id). When stale proofs exist,
+     * consolidates them via a swap and republishes as a single kind:7375,
+     * NIP-09-deleting the source events the same way [sendNutzap] does.
+     *
+     * Triggered lazily on wallet load. Mint rotations don't happen often,
+     * so doing this once per session keeps us ahead of the mint
+     * retiring an old keyset's private key (after which our proofs
+     * become un-spendable).
+     */
+    suspend fun migrateStaleKeysets() {
+        check(started) { "CashuWalletState.start() not called" }
+        // Group held tokens by mint URL — each mint has its own keysets.
+        val byMint = _tokenEntries.value.groupBy { it.content.mint }
+        for ((mintUrl, entries) in byMint) {
+            val activeId =
+                runCatching { ops.fetchActiveKeysetId(mintUrl) }
+                    .onFailure {
+                        Log.w("CashuWallet", "fetchActiveKeysetId($mintUrl) failed; skipping migration", it)
+                    }.getOrNull()
+                    ?: continue
+            val staleEntries = entries.filter { entry -> entry.content.proofs.any { it.id != activeId } }
+            if (staleEntries.isEmpty()) continue
+            runCatching { ops.migrateToActiveKeyset(mintUrl, staleEntries, activeId) }
+                .onFailure {
+                    Log.w("CashuWallet", "migrateToActiveKeyset($mintUrl) failed", it)
+                }
+        }
     }
 
     /**

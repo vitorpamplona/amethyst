@@ -64,7 +64,33 @@ class MintHttpClient(
 ) {
     private val baseUrl: String = mintUrl.trimEnd('/')
 
-    suspend fun info(): MintInfoDto = get("/v1/info")
+    // Mint /v1/info changes infrequently (mint name, icon, supported
+    // NUTs, motd). Cache it for [INFO_CACHE_TTL_MS] so the Verify
+    // button + future NUT-17 feature-detection + any UI surface that
+    // shows mint metadata doesn't refetch on every interaction.
+    // Volatile pair so the read on the hot path doesn't need a lock —
+    // a torn read just causes one extra HTTP call.
+    @Volatile private var cachedInfo: Pair<MintInfoDto, Long>? = null
+
+    /**
+     * Fetch mint info, caching the last successful response for
+     * [INFO_CACHE_TTL_MS]. Pass [force]=true to bypass and refetch
+     * (e.g. user-initiated refresh, after a known mint upgrade).
+     * Failures don't poison the cache — a stale-but-good entry beats
+     * a transient network error.
+     */
+    suspend fun info(force: Boolean = false): MintInfoDto {
+        if (!force) {
+            cachedInfo?.let { (info, at) ->
+                if (System.currentTimeMillis() - at < INFO_CACHE_TTL_MS) {
+                    return info
+                }
+            }
+        }
+        val fresh = get<MintInfoDto>("/v1/info")
+        cachedInfo = fresh to System.currentTimeMillis()
+        return fresh
+    }
 
     suspend fun activeKeysets(): KeysResponseDto = get("/v1/keys")
 
@@ -152,5 +178,15 @@ class MintHttpClient(
             }
 
         private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
+
+        /**
+         * Mint info TTL. /v1/info typically changes on the order of
+         * weeks (mint name, supported NUTs, motd updates). 30 minutes
+         * is a compromise between "stale enough to matter" and "fresh
+         * enough that a user-visible mint upgrade reaches the UI
+         * without an app restart". Callers that need certainty (e.g.
+         * after the user explicitly retries) pass force=true.
+         */
+        private const val INFO_CACHE_TTL_MS: Long = 30L * 60L * 1000L
     }
 }

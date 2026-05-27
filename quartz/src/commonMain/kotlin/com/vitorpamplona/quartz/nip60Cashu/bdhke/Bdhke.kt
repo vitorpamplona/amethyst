@@ -305,6 +305,62 @@ object Bdhke {
     }
 
     /**
+     * NUT-12 §3 Carol-side DLEQ verification.
+     *
+     * Carol is the recipient of a proof that was minted by some other
+     * wallet ("Alice") — the proof carries `(e, s)` AND the original
+     * blinding factor `r` that Alice used. Carol can't recompute `B'`
+     * from `(secret, r)` herself without knowing both, so the sender
+     * including `r` in the dleq alongside `(e, s)` is what makes the
+     * proof verifiable WITHOUT a round-trip to the mint.
+     *
+     * Reconstructs `B' = hashToCurve(secret) + r·G` from the proof's
+     * secret bytes and the carried blinding factor, then delegates to
+     * the existing [verifyDleq] (Alice-side) which checks
+     * `e == SHA256(R1 || R2 || A || C')`.
+     *
+     * Returns false on any malformed input (wrong sizes, off-curve
+     * points, etc.) or mismatch. Callers should treat false as either
+     * a malicious sender or a buggy mint-of-origin and refuse the
+     * proof — without DLEQ verification, accepting it means the next
+     * spend attempt will fail at the mint with no recourse.
+     *
+     * @param secret The proof's secret bytes (UTF-8 of the hex string
+     *               that the mint hashed in hash-to-curve, NOT raw 32
+     *               bytes). Same form as [CashuProof.secret].
+     * @param r 32-byte blinding factor the original minter used; carried
+     *          in the proof's dleq tuple by spec.
+     * @param e 32-byte challenge scalar from the dleq tuple.
+     * @param s 32-byte response scalar from the dleq tuple.
+     * @param blindSignature 33-byte unblinded `C` from the proof
+     *                       (despite the misleading name; the function
+     *                       only needs to recompute `B'` and delegate).
+     * @param mintPubKey 33-byte compressed `A = k·G` for this amount,
+     *                   looked up from the mint's keyset.
+     */
+    fun verifyDleqCarol(
+        secret: ByteArray,
+        r: ByteArray,
+        e: ByteArray,
+        s: ByteArray,
+        blindSignature: ByteArray,
+        mintPubKey: ByteArray,
+    ): Boolean {
+        if (r.size != 32) return false
+        // Reconstruct B' the same way Alice did at mint time:
+        // `B' = hashToCurve(secret) + r·G`. Bdhke.blind handles both.
+        val bTick =
+            runCatching { blind(secret, r) }.getOrNull() ?: return false
+        return verifyDleq(
+            e = e,
+            s = s,
+            blindedMessage = bTick,
+            blindSignature = blindSignature,
+            mintPubKey = mintPubKey,
+        )
+    }
+
+    /**
      * Mint-side NUT-12 DLEQ-signing — produces `(C', e, s)` for the given
      * `B'`. Test-only; real mints have their own signers. Useful for
      * round-tripping verification in unit tests without standing up a mint.

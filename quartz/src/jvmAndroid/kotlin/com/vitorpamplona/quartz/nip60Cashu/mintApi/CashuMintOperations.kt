@@ -471,6 +471,62 @@ class CashuMintOperations(
     suspend fun activeKeyset(): KeysetDto = fetchKeyset()
 
     /**
+     * NUT-12 §3 Carol-side DLEQ verification on a batch of proofs that
+     * arrived from OUTSIDE the wallet's own mint round-trips (an
+     * incoming nutzap, an imported cashuB token, anything with a
+     * `dleq.r` field). Without this, a malicious sender can hand us
+     * junk proofs that look fine until spend time.
+     *
+     * For each proof:
+     *  - if `proof.dleq` is null → skip silently. The sender's mint
+     *    didn't emit NUT-12 or stripped it in transit. Treat as
+     *    "no DLEQ data" rather than failure; spend-time validation
+     *    still catches outright-invalid proofs.
+     *  - if `proof.dleq.r` is null → skip. We can't reconstruct B'
+     *    without the blinding factor. This is the case for the
+     *    Alice-side proof (mint→wallet) where r is only known
+     *    locally; should never happen on a proof we received from
+     *    another wallet.
+     *  - otherwise, look up the keyset's amount-pubkey and call
+     *    [Bdhke.verifyDleqCarol]. Mismatch returns false and the
+     *    caller should reject the whole token.
+     *
+     * Per-keyset: the function fetches whatever keyset id the first
+     * proof references and assumes every other proof uses the same
+     * one (or one of the mint's exposed keysets). Cross-keyset proofs
+     * are allowed; each proof is verified against its own keyset's
+     * amount key.
+     */
+    suspend fun verifyTokenDleq(proofs: List<CashuProof>): Boolean {
+        if (proofs.isEmpty()) return true
+        // Fetch all keysets the mint exposes so cross-keyset tokens
+        // verify against the right amount key. Cheap — one round-trip.
+        val allKeysets = client.activeKeysets().keysets.associateBy { it.id }
+        for (proof in proofs) {
+            val dleq = proof.dleq ?: continue
+            val r = dleq.r ?: continue
+            val keyset =
+                allKeysets[proof.id]
+                    // Mint that issued the proof may have rotated keysets
+                    // since — without the original keyset's keys we can't
+                    // verify offline. Fall through to spend-time check.
+                    ?: continue
+            val mintPubKeyHex = keyset.keys[proof.amount.toString()] ?: return false
+            val ok =
+                Bdhke.verifyDleqCarol(
+                    secret = proof.secret.encodeToByteArray(),
+                    r = r.hexToByteArray(),
+                    e = dleq.e.hexToByteArray(),
+                    s = dleq.s.hexToByteArray(),
+                    blindSignature = proof.c.hexToByteArray(),
+                    mintPubKey = mintPubKeyHex.hexToByteArray(),
+                )
+            if (!ok) return false
+        }
+        return true
+    }
+
+    /**
      * NUT-07 batched proof-state query. Returns a map from each proof's
      * secret to its mint-side state ("UNSPENT", "SPENT", "PENDING").
      * Used by NUT-09 restore to filter spent proofs out of the recovered
@@ -604,11 +660,30 @@ class CashuMintOperations(
                 r = output.r,
                 mintPubKey = mintPubKey,
             )
+        // Retain (e, s, r) on the resulting proof per NUT-12 §3 so
+        // anything that later forwards this proof to another wallet —
+        // a cashuB token, a kind:9321 nutzap — gives the recipient the
+        // full Carol-verification tuple. Without `r`, the recipient
+        // can't reconstruct B' and falls back to "trust on first
+        // spend"; with all three, they can verify against the mint's
+        // keyset key offline. When the mint doesn't emit dleq the
+        // field stays null and downstream consumers handle that the
+        // same way they do today (no Carol check, fall back to spend-
+        // time validation).
+        val dleq =
+            signature.dleq?.let { src ->
+                DleqProofDto(
+                    e = src.e,
+                    s = src.s,
+                    r = output.r.toHexKey(),
+                )
+            }
         return CashuProof(
             id = output.keysetId,
             amount = output.amount,
             secret = output.secretHex,
             c = c.toHexKey(),
+            dleq = dleq,
         )
     }
 

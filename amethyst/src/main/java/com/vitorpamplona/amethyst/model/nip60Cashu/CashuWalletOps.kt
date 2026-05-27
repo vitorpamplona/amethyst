@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.SpendingDirection
 import com.vitorpamplona.quartz.nip60Cashu.history.TokenReference
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.CashuMintOperations
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.DleqProofDto
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MeltQuoteBolt11ResponseDto
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpClient
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpException
@@ -572,6 +573,14 @@ class CashuWalletOps(
             secret = secret,
             c = c,
             witness = witness,
+            // Forward the NUT-12 DLEQ tuple if we have it. Lets the
+            // recipient Carol-verify the proofs against the mint's
+            // keyset key offline — without it they're stuck with
+            // spend-time validation.
+            dleq =
+                dleq?.let { src ->
+                    NutzapDleqJson(e = src.e, s = src.s, r = src.r)
+                },
         )
 
     /**
@@ -611,8 +620,26 @@ class CashuWalletOps(
                     amount = dto.amount,
                     secret = dto.secret,
                     c = dto.c,
+                    dleq =
+                        dto.dleq?.let { d ->
+                            DleqProofDto(e = d.e, s = d.s, r = d.r)
+                        },
                 )
             }
+
+        // NUT-12 §3 Carol verification on the incoming proofs. When the
+        // sender includes the dleq tuple we can check the proofs against
+        // the mint's keyset key BEFORE swapping — defends against a
+        // malicious sender handing us proofs the mint won't honour at
+        // spend time. Verification is best-effort: legacy nutzaps
+        // without dleq skip the check (returns true) and we fall back
+        // to spend-time validation.
+        val dleqOk = ops(mintUrl).verifyTokenDleq(parsedProofs)
+        if (!dleqOk) {
+            throw MintProtocolException(
+                "NUT-12 Carol verification failed on inbound nutzap — proofs don't match mint's published keys",
+            )
+        }
 
         // Verify the lock points at us before spending a mint round-trip. The
         // pubkey in the P2PK secret can be 64-char x-only or 66-char
@@ -688,6 +715,64 @@ class CashuWalletOps(
      * Throws on failure so the UI can surface the underlying reason.
      */
     suspend fun pingMint(mintUrl: String): String? = MintHttpClient(mintUrl, okHttpClient).info().name
+
+    /**
+     * Fetch the currently-active keyset id for [mintUrl]. Cheap wrapper
+     * over [CashuMintOperations.activeKeyset] used by the migration
+     * driver to detect proofs minted under rotated-out keysets — see
+     * [CashuWalletState.migrateStaleKeysets].
+     */
+    suspend fun fetchActiveKeysetId(mintUrl: String): String = ops(mintUrl).activeKeyset().id
+
+    /**
+     * Swap every proof inside [entries] (which the caller has already
+     * filtered to "contains at least one stale-keyset proof") onto the
+     * mint's current active keyset, publish the result as a single
+     * fresh kind:7375 event, and NIP-09 the originals. Mirrors the
+     * change-rollover pattern used by [sendNutzap].
+     *
+     * No-op when [entries] is empty. The [activeKeysetId] is passed in
+     * by the caller so we don't double-fetch /v1/keys between
+     * [fetchActiveKeysetId] and this method.
+     */
+    suspend fun migrateToActiveKeyset(
+        mintUrl: String,
+        entries: List<TokenEntry>,
+        activeKeysetId: String,
+    ): MigrationResult {
+        if (entries.isEmpty()) return MigrationResult(amountMigrated = 0L, proofsMigrated = 0)
+        seedWarmer()
+        val allProofs = entries.flatMap { it.content.proofs }
+        // Defensive: skip if every input is already on the active
+        // keyset. Caller is supposed to pre-filter but a race against
+        // mint rotation could land us here with nothing to do.
+        if (allProofs.all { it.id == activeKeysetId }) {
+            return MigrationResult(amountMigrated = 0L, proofsMigrated = 0)
+        }
+        val swap = ops(mintUrl).swap(allProofs, targetSplit = null)
+        val migratedTotal = swap.keep.sumOf { it.amount }
+
+        // Publish the consolidated proofs as one kind:7375 and delete
+        // the originals.
+        val tokenContent =
+            TokenContent(
+                mint = mintUrl,
+                proofs = swap.keep,
+                del = entries.map { it.event.id },
+            )
+        val template = CashuTokenEvent.build(tokenContent, signer)
+        val signed = signer.sign(template)
+        publish(signed)
+
+        val delTemplate = DeletionEvent.build(entries.map { it.event })
+        val delEvent = signer.sign(delTemplate)
+        publish(delEvent)
+
+        return MigrationResult(
+            amountMigrated = migratedTotal,
+            proofsMigrated = swap.keep.size,
+        )
+    }
 
     /**
      * Publish a NIP-87 kind:38000 recommendation for [mintUrl].
@@ -839,6 +924,12 @@ class CashuWalletOps(
     }
 }
 
+/** Result of a keyset migration. See [CashuWalletOps.migrateToActiveKeyset]. */
+data class MigrationResult(
+    val amountMigrated: Long,
+    val proofsMigrated: Int,
+)
+
 /** Result of a NUT-09 wallet restore. See [CashuWalletOps.restoreFromMint]. */
 data class RestoreOutcome(
     val keysetId: String,
@@ -872,6 +963,22 @@ private data class NutzapProofJson(
     val secret: String,
     @SerialName("C") val c: String,
     val witness: String? = null,
+    /**
+     * NUT-12 DLEQ tuple — `(e, s, r)` where `r` is the original
+     * blinding factor the sender's wallet used at mint time. Carried
+     * along the nutzap so the recipient can verify the proof against
+     * the mint's keyset key WITHOUT a mint round-trip (Carol
+     * verification). Optional — older sender wallets omit it; we then
+     * fall back to spend-time validation.
+     */
+    val dleq: NutzapDleqJson? = null,
+)
+
+@Serializable
+private data class NutzapDleqJson(
+    val e: String,
+    val s: String,
+    val r: String? = null,
 )
 
 private val nutzapProofJson =
