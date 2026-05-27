@@ -60,6 +60,8 @@ import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStory
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
+import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
+import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
@@ -3382,6 +3384,14 @@ object LocalCache : ILocalCache, ICacheProvider {
 
                 is MeetingRoomPresenceEvent -> {
                     consume(event, relay, wasVerified)
+                }
+
+                is MusicTrackEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is MusicPlaylistEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
                 }
 
                 is LnZapEvent -> {
