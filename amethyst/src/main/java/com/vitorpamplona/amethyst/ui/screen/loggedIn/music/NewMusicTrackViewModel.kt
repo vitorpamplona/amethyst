@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.music
 
 import android.content.Context
+import android.media.MediaMetadataRetriever
+import android.net.Uri
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -130,19 +132,82 @@ class NewMusicTrackViewModel : ViewModel() {
         coverMedia.value = null
     }
 
-    fun setPickedAudio(uri: SelectedMedia?) {
+    fun setPickedAudio(
+        context: Context,
+        uri: SelectedMedia?,
+    ) {
         if (uri == null) {
             audioMedia.value = null
             pickedAudioName.value = null
-        } else {
-            audioMedia.value = MultiOrchestrator(persistentListOf(uri))
-            // Fall back to the last path segment of the content:// URI — Android picker URIs
-            // rarely expose a clean filename, but the segment is at least stable across recomposes.
-            pickedAudioName.value = uri.uri.lastPathSegment?.substringAfterLast('/')
+            return
+        }
+
+        audioMedia.value = MultiOrchestrator(persistentListOf(uri))
+        // Fall back to the last path segment of the content:// URI — Android picker URIs
+        // rarely expose a clean filename, but the segment is at least stable across recomposes.
+        pickedAudioName.value = uri.uri.lastPathSegment?.substringAfterLast('/')
+
+        // Auto-fill title/artist/album/duration from the picked file's embedded metadata so
+        // the user doesn't have to retype what's already in the ID3 / mp4 / FLAC tags.
+        // MediaMetadataRetriever is heavy (opens the file), so do it on IO. We use the
+        // application context to avoid leaking the Activity if the picker outlives the screen.
+        val appContext = context.applicationContext
+        viewModelScope.launch(Dispatchers.IO) {
+            val probed = probeAudioMetadata(appContext, uri.uri) ?: return@launch
+            withContext(Dispatchers.Main.immediate) {
+                // Only fill empty fields — don't clobber whatever the user already typed.
+                // Duration is the exception: it's a derived number, not an opinion the user
+                // typed, so overwrite if the file actually reports one.
+                probed.duration?.let { durationSeconds.value = it.toString() }
+                if (title.value.isBlank()) probed.title?.let { title.value = it }
+                if (artist.value.isBlank()) probed.artist?.let { artist.value = it }
+                if (album.value.isBlank()) probed.album?.let { album.value = it }
+            }
         }
     }
 
-    fun clearPickedAudio() = setPickedAudio(null)
+    fun clearPickedAudio() {
+        audioMedia.value = null
+        pickedAudioName.value = null
+    }
+
+    private data class AudioMetadata(
+        val duration: Int?,
+        val title: String?,
+        val artist: String?,
+        val album: String?,
+    )
+
+    private fun probeAudioMetadata(
+        context: Context,
+        uri: Uri,
+    ): AudioMetadata? {
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(context, uri)
+            val durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
+            AudioMetadata(
+                duration = durationMs?.let { (it / 1000).toInt().takeIf { secs -> secs > 0 } },
+                title = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)?.trim()?.ifBlank { null },
+                // MediaMetadataRetriever returns the album artist under ARTIST; ALBUMARTIST is
+                // distinct on multi-artist albums. Prefer ARTIST (the track-level credit), fall
+                // back to ALBUMARTIST if the file only has the latter.
+                artist =
+                    (
+                        retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
+                            ?: retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUMARTIST)
+                    )?.trim()?.ifBlank { null },
+                album = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM)?.trim()?.ifBlank { null },
+            )
+        } catch (_: Exception) {
+            // Some content providers reject MediaMetadataRetriever or the file isn't a real
+            // audio container yet (rare). Fall through to leaving the fields untouched — the
+            // user can fill them manually.
+            null
+        } finally {
+            retriever.release()
+        }
+    }
 
     /**
      * Valid when we have a title, an artist, and a way to resolve an audio URL — either a

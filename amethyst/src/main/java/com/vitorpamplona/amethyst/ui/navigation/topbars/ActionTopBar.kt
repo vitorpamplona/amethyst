@@ -116,6 +116,23 @@ fun SavingTopBar(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+fun SendingTopBar(
+    titleRes: Int? = null,
+    isActive: () -> Boolean = { true },
+    onCancel: () -> Unit,
+    onPost: () -> Unit,
+    additionalActions: @Composable (() -> Unit)? = null,
+) = ActionTopBar(
+    titleRes = titleRes,
+    postRes = R.string.send,
+    isActive = isActive,
+    onCancel = onCancel,
+    onPost = onPost,
+    additionalActions = additionalActions,
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun CreatingTopBar(
     titleRes: Int? = null,
     isActive: () -> Boolean = { true },

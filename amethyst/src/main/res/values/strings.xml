@@ -142,6 +142,7 @@
     <string name="write_a_message">Write a message…</string>
     <string name="post">Post</string>
     <string name="save">Save</string>
+    <string name="send">Send</string>
     <string name="create">Create</string>
     <string name="rename">Rename</string>
     <string name="cancel">Cancel</string>

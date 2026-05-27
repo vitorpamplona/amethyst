@@ -73,14 +73,22 @@ class AddToMusicPlaylistViewModel : ViewModel() {
         accountViewModel: AccountViewModel,
         trackAddressTag: String,
     ) {
-        if (::account.isInitialized) return
+        // Always refresh the parsed track address. The previous guard (`if account already
+        // set, return`) silently kept the FIRST track this VM ever saw — any later call with
+        // a different track would route toggle() at the stale address, adding/removing the
+        // wrong track from playlists. ViewModels survive process recreation and can also be
+        // reused by navigation in less common shapes, so the input has to drive the state.
+        val parsed = AddressSerializer.parse(trackAddressTag)
+        if (parsed == trackAddress && ::account.isInitialized && account == accountViewModel.account) {
+            // Same inputs — nothing to do. The live-scan job stays running.
+            return
+        }
         this.account = accountViewModel.account
-        this.trackAddress = AddressSerializer.parse(trackAddressTag)
+        this.trackAddress = parsed
 
-        // Both the initial scan and the live-event re-scan walk LocalCache.addressables, which
-        // is in-memory but still wants to be off the composition thread. The live scan also
-        // debounces by checking the bundle for our kind first so we don't re-walk on every
-        // unrelated event (text notes, reactions, etc).
+        // (Re)start the scan against the new track so each playlist's `containsTrack` flag
+        // reflects the *current* trackAddress instead of the previous one.
+        liveScanJob?.cancel()
         liveScanJob =
             viewModelScope.launch(Dispatchers.IO) {
                 rescan()

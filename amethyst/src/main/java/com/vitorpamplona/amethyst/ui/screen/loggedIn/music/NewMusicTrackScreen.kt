@@ -77,7 +77,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.ShowImageUploadGallery
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
+import com.vitorpamplona.amethyst.ui.navigation.topbars.SendingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -117,7 +117,7 @@ fun NewMusicTrackScreen(
         AudioFileSelect(
             onAudioPicked = { picked ->
                 wantsToPickAudio = false
-                vm.setPickedAudio(picked)
+                vm.setPickedAudio(context, picked)
             },
         )
     }
@@ -126,11 +126,11 @@ fun NewMusicTrackScreen(
 
     Scaffold(
         topBar = {
-            SavingTopBar(
+            SendingTopBar(
                 titleRes = R.string.new_music_track,
                 onCancel = { nav.popBack() },
                 onPost = {
-                    if (!vm.isValid() || isBusy) return@SavingTopBar
+                    if (!vm.isValid() || isBusy) return@SendingTopBar
                     vm.saveAndPublish(
                         context = context,
                         onSuccess = { nav.popBack() },
@@ -188,25 +188,11 @@ fun NewMusicTrackScreen(
                 isError = vm.artist.value.isBlank(),
             )
 
-            // Audio URL — pre-filled by the audio file uploader, also accepts pasted URLs
-            // (Wavlake, Stemstr, etc.) when the user doesn't have a local file to upload.
-            OutlinedTextField(
-                value = vm.audioUrl.value,
-                onValueChange = { vm.audioUrl.value = it },
-                label = { Text(stringRes(R.string.music_track_audio_url_label)) },
-                placeholder = { Text(stringRes(R.string.music_track_audio_url_placeholder)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                // Either an URL or a picked file is enough to satisfy the gate, so only flag
-                // the field as an error when both are missing.
-                isError = vm.audioUrl.value.isBlank() && vm.audioMedia.value == null,
-            )
-
-            // No cover-URL text field: the upload tile at the top of the screen is the
-            // single source of truth for the cover image. When editing an existing track
-            // that carries an `image` URL the ViewModel still passes it through to
-            // MusicTrackEvent.edit, so we don't drop the cover on save.
+            // No audio-URL or cover-URL text fields: the upload tiles at the top are the
+            // single source of truth for both. When editing an existing track the
+            // ViewModel still threads the previous `image` / `url` through to
+            // MusicTrackEvent.edit, so we don't drop them on save when the user keeps
+            // the existing files.
 
             OutlinedTextField(
                 value = vm.album.value,
