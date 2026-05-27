@@ -159,6 +159,19 @@ class CashuWalletState(
      */
     private val sessionRedeemedNutzaps = ConcurrentHashMap.newKeySet<HexKey>()
 
+    /**
+     * Nutzap event ids that failed redemption with a deterministic
+     * (non-retryable) error this session — wrong P2PK lock, malformed
+     * proofs, mint we don't trust. Tracked so the auto-redeem doesn't
+     * hammer the mint with /v1/keys on every triggerAutoRedeem firing.
+     * Without this, an inbound nutzap locked to a stale wallet key
+     * (sender saw an old kind:10019) would cost one mint round-trip
+     * for every cache update for the rest of the session. The set is
+     * process-local — if the user rotates their P2PK key, restarting
+     * gives the redeem another shot.
+     */
+    private val sessionUnredeemableNutzaps = ConcurrentHashMap.newKeySet<HexKey>()
+
     // ============================================================
     // Public flows
     // ============================================================
@@ -687,31 +700,39 @@ class CashuWalletState(
         try {
             val privkey = walletPrivkeyHex() ?: return
             val pubkey = p2pkPubkeyHex() ?: return
-            val alreadyRedeemed =
-                historyEvents.values
-                    .asSequence()
-                    .flatMap { it.redeemedReferences().asSequence() }
-                    .map { it.eventId }
-                    .toMutableSet()
-                    .apply { addAll(sessionRedeemedNutzaps) }
+            val skipIds = HashSet<HexKey>()
+            historyEvents.values.forEach { h ->
+                h.redeemedReferences().forEach { skipIds.add(it.eventId) }
+            }
+            skipIds.addAll(sessionRedeemedNutzaps)
+            skipIds.addAll(sessionUnredeemableNutzaps)
 
-            val candidates = nutzapEvents.values.filter { it.id !in alreadyRedeemed }
+            val candidates = nutzapEvents.values.filter { it.id !in skipIds }
             if (candidates.isEmpty()) return
 
             for (ev in candidates) {
-                runCatching { ops.redeemNutzap(ev, privkey, pubkey) }
-                    .onSuccess {
-                        // Pin redemption in-memory immediately. The kind:7376
-                        // history event is bundled via newEventBundles (~1s)
-                        // before it lands in historyEvents — until then a
-                        // concurrent trigger would re-pick this nutzap and
-                        // get HTTP 400 "proofs already spent" from the mint.
-                        sessionRedeemedNutzaps.add(ev.id)
-                    }.onFailure { e ->
-                        Log.w("CashuWallet") {
-                            "Auto-redeem of nutzap ${ev.id.take(8)} failed: ${describeMintError(e)}"
-                        }
+                try {
+                    ops.redeemNutzap(ev, privkey, pubkey)
+                    // Pin redemption in-memory immediately. The kind:7376
+                    // history event is bundled via newEventBundles (~1s)
+                    // before it lands in historyEvents — until then a
+                    // concurrent trigger would re-pick this nutzap and
+                    // get HTTP 400 "proofs already spent" from the mint.
+                    sessionRedeemedNutzaps.add(ev.id)
+                } catch (e: IllegalArgumentException) {
+                    // Deterministic local failure (wrong P2PK lock, no
+                    // mint tag, no proofs, not P2PK-locked). Won't get
+                    // better by retrying — pin so the next cache update
+                    // doesn't re-trigger the mint round-trips.
+                    sessionUnredeemableNutzaps.add(ev.id)
+                    Log.w("CashuWallet") {
+                        "Auto-redeem of nutzap ${ev.id.take(8)} skipped: ${e.message}"
                     }
+                } catch (e: Exception) {
+                    Log.w("CashuWallet") {
+                        "Auto-redeem of nutzap ${ev.id.take(8)} failed: ${describeMintError(e)}"
+                    }
+                }
             }
         } finally {
             redeemMutex.unlock()

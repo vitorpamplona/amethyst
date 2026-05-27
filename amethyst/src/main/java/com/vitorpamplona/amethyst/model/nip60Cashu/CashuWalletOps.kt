@@ -627,6 +627,27 @@ class CashuWalletOps(
                 )
             }
 
+        // Verify the lock points at us BEFORE any mint round-trip. The
+        // pubkey in the P2PK secret can be 64-char x-only or 66-char
+        // compressed; normalize to x-only for the comparison since BIP-340
+        // verification (which the mint uses) is parity-agnostic. Doing
+        // this first means a nutzap locked to a stale wallet key (sender
+        // saw an old kind:10019 and locked to that pubkey, we've since
+        // rotated) is rejected without burning a /v1/keys fetch — and
+        // without the auto-redeem loop hammering the mint on every
+        // triggerAutoRedeem.
+        val ourXOnly = walletP2pkPubkeyHex.lastHex64()
+        parsedProofs.forEach { proof ->
+            val parsed =
+                P2PK.parseSecret(proof.secret)
+                    ?: throw IllegalArgumentException("Nutzap proof is not P2PK-locked")
+            if (parsed.pubKeyHex.lastHex64() != ourXOnly) {
+                throw IllegalArgumentException(
+                    "Nutzap proof is locked to a different pubkey (${parsed.pubKeyHex.take(16)}…)",
+                )
+            }
+        }
+
         // NUT-12 §3 Carol verification on the incoming proofs. When the
         // sender includes the dleq tuple we can check the proofs against
         // the mint's keyset key BEFORE swapping — defends against a
@@ -639,22 +660,6 @@ class CashuWalletOps(
             throw MintProtocolException(
                 "NUT-12 Carol verification failed on inbound nutzap — proofs don't match mint's published keys",
             )
-        }
-
-        // Verify the lock points at us before spending a mint round-trip. The
-        // pubkey in the P2PK secret can be 64-char x-only or 66-char
-        // compressed; normalize to x-only for the comparison since BIP-340
-        // verification (which the mint uses) is parity-agnostic.
-        val ourXOnly = walletP2pkPubkeyHex.lastHex64()
-        parsedProofs.forEach { proof ->
-            val parsed =
-                P2PK.parseSecret(proof.secret)
-                    ?: throw IllegalArgumentException("Nutzap proof is not P2PK-locked")
-            if (parsed.pubKeyHex.lastHex64() != ourXOnly) {
-                throw IllegalArgumentException(
-                    "Nutzap proof is locked to a different pubkey (${parsed.pubKeyHex.take(16)}…)",
-                )
-            }
         }
 
         val swap = ops(mintUrl).redeemNutzap(parsedProofs, walletPrivkeyHex)
