@@ -1927,6 +1927,11 @@
     <string name="cashu_settings_delete_confirm_title">Retract recommendation?</string>
     <string name="cashu_settings_delete_confirm_body">Publish a delete request for your kind:38000 recommendation of %1$s. Relays that honor NIP-09 will drop it.</string>
     <string name="cashu_settings_add_recommendation">Recommend a mint</string>
+    <string name="cashu_settings_restore_title">Recover from seed</string>
+    <string name="cashu_settings_restore_subtitle">Re-derive every past secret and ask each mint to return any blind signatures still on file. Useful after a device loss or rogue-relay deletion of your token events.</string>
+    <string name="cashu_settings_restore_running">Scanning mints…</string>
+    <string name="cashu_settings_restore_nothing_found">No recoverable proofs found.</string>
+    <string name="cashu_settings_restore_result">Recovered %1$s sats across %2$s proofs.</string>
     <string name="cashu_pay_invoice">Pay invoice</string>
     <string name="cashu_get_quote">Get quote</string>
     <string name="cashu_getting_quote">Asking mint for a quote…</string>

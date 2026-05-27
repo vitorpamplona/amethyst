@@ -273,6 +273,38 @@ data class CheckStateResponseDto(
     val states: List<CheckStateRowDto>,
 )
 
+/**
+ * NUT-07 proof states. The mint reports each of:
+ *  - [UNSPENT] — proof is valid and the secret has never been used.
+ *    Can be spent in a swap/melt.
+ *  - [SPENT] — proof's secret has already been consumed. Recovered
+ *    via NUT-09 restore but the mint will reject any attempt to spend it.
+ *  - [PENDING] — proof is referenced by an in-flight melt that hasn't
+ *    finalised yet. Should not be re-used; the mint will refuse.
+ *
+ * [UNKNOWN] is a wallet-side fallback for future state strings we
+ * haven't taught the enum about — never sent by the mint as a literal,
+ * but lets the wallet gracefully ignore unrecognised states instead of
+ * crashing on a forwards-compat enum mismatch.
+ */
+enum class ProofState {
+    UNSPENT,
+    SPENT,
+    PENDING,
+    UNKNOWN,
+    ;
+
+    companion object {
+        fun fromWire(raw: String): ProofState =
+            when (raw) {
+                "UNSPENT" -> UNSPENT
+                "SPENT" -> SPENT
+                "PENDING" -> PENDING
+                else -> UNKNOWN
+            }
+    }
+}
+
 @Serializable
 data class MintErrorDto(
     val detail: String? = null,

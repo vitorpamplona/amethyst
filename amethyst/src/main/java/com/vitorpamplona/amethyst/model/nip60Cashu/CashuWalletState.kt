@@ -698,6 +698,40 @@ class CashuWalletState(
     }
 
     /**
+     * NUT-09 wallet restore — recover proofs minted at [mintUrl] whose
+     * kind:7375 token events have been lost. Scans deterministic
+     * secret/r derivations from the wallet's NUT-13 seed and asks the
+     * mint which it has signed; surviving UNSPENT proofs get published
+     * as a fresh kind:7375 + kind:7376 IN history row, exactly like a
+     * mint-from-LN flow.
+     *
+     * After recovery, advances [AccountSettings.cashuKeysetCounters]
+     * past the highest recovered counter so subsequent mints don't
+     * reuse a slot the mint already has signatures for.
+     *
+     * Returns null when the wallet hasn't yet decrypted its kind:17375
+     * (no seed available); the UI should retry after the wallet event
+     * is loaded.
+     */
+    suspend fun restoreFromMint(mintUrl: String): RestoreOutcome? {
+        check(started) { "CashuWalletState.start() not called" }
+        val seed = ensureSeed() ?: return null
+        // Always scan from counter 0 — a fresh-device recovery doesn't
+        // know which slots were used. The internal gap-limit heuristic
+        // in CashuMintOperations.restore (3 consecutive empty batches)
+        // bounds the work for wallets that minted only a handful of
+        // proofs.
+        val outcome = ops.restoreFromMint(mintUrl = mintUrl, seed = seed, startCounter = 0L)
+        // Bump persisted counter past every slot we just confirmed in
+        // use. reserveCashuCounters atomically increments + persists,
+        // so two restores running concurrently can't collide either.
+        val current = settings.peekCashuCounter(outcome.keysetId)
+        val delta = (outcome.nextCounterAfterScan - current).coerceAtLeast(0L)
+        if (delta > 0) settings.reserveCashuCounters(outcome.keysetId, delta.toInt())
+        return outcome
+    }
+
+    /**
      * Send a NIP-61 nutzap of [amountSats] to [recipientPubKey] referencing
      * [zappedEvent]. Returns the resulting [NutzapSent] on success or throws
      * — callers should surface errors via [describeMintError].

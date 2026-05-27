@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip60Cashu.bdhke.Bdhke
 import com.vitorpamplona.quartz.nip60Cashu.p2pk.P2PK
+import com.vitorpamplona.quartz.nip60Cashu.seed.CashuDeterministic
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuProof
 import com.vitorpamplona.quartz.nip60Cashu.token.TokenContent
 
@@ -328,6 +329,155 @@ class CashuMintOperations(
         )
     }
 
+    /**
+     * NUT-09 restore — recover previously-minted blind signatures from
+     * the mint by replaying deterministic blind messages and asking which
+     * the mint has signed. Bridges a wallet's NUT-13 seed back into a
+     * full proof set when the on-disk kind:7375s have been lost.
+     *
+     * Driver loop:
+     *  1. Re-derive blind messages for counters `[startCounter, startCounter+batchSize)`
+     *     at every NUT-13 amount denomination the mint exposes.
+     *  2. POST to /v1/restore. Mint returns the subset it has signed —
+     *     paired arrays of original blinded messages and the matching
+     *     blind signatures, omitting any counter it never signed.
+     *  3. Unblind each returned signature. The DLEQ check on
+     *     [unblindOne] still applies — recovered proofs are verified
+     *     identically to freshly-minted ones.
+     *  4. Repeat with the next counter window. Stop after [emptyBatchesToStop]
+     *     consecutive batches return zero proofs — that's the gap-limit
+     *     heuristic (analogous to BIP-32 wallet recovery), bounding the
+     *     scan to "where the seed has actually been used + one safety
+     *     buffer" instead of scanning to Long.MAX.
+     *
+     * Note: NUT-09 only guarantees the mint returns signatures for
+     * blinded messages it has signed. It does NOT tell us whether the
+     * resulting proofs are unspent. The caller MUST run /v1/checkstate
+     * on the returned proofs to filter out spent ones before treating
+     * them as wallet balance. [CashuWalletOps] does this.
+     *
+     * @param seed The wallet's NUT-13 seed (64 bytes).
+     * @param keysetId Single keyset to restore against. Caller iterates
+     *                 across multiple keysets if needed.
+     * @param startCounter First counter to try (0 for fresh recovery).
+     * @param batchSize Counters per /v1/restore round-trip. CDK defaults
+     *                  to 100; larger means fewer round-trips but
+     *                  larger request bodies. 100 is a reasonable
+     *                  compromise.
+     * @param emptyBatchesToStop Consecutive zero-hit batches before we
+     *                           call it done. CDK's default is 3 —
+     *                           enough buffer for accidental gaps from
+     *                           failed mints.
+     * @param amounts Denominations to try at each counter. Defaults to
+     *                the keyset's full amount list. The wallet may
+     *                narrow this if it knows specific amounts were used.
+     */
+    suspend fun restore(
+        seed: ByteArray,
+        keysetId: String,
+        startCounter: Long = 0L,
+        batchSize: Int = 100,
+        emptyBatchesToStop: Int = 3,
+        amounts: List<Long>? = null,
+    ): RestoreResult {
+        val keyset = fetchKeysetById(keysetId)
+        val denominations = (amounts ?: keyset.keys.keys.mapNotNull { it.toLongOrNull() }).sorted()
+        if (denominations.isEmpty()) {
+            throw IllegalStateException("Keyset $keysetId exposes no amount denominations")
+        }
+
+        val recovered = mutableListOf<RecoveredProof>()
+        var counter = startCounter
+        var emptyStreak = 0
+        var highestSeenCounter = startCounter - 1
+
+        while (emptyStreak < emptyBatchesToStop) {
+            val outputsByCounter = mutableMapOf<String, Pair<Long, BlindOutput>>()
+            val outputDtos = mutableListOf<BlindedMessageDto>()
+
+            for (offset in 0 until batchSize) {
+                val c = counter + offset
+                // Per-counter derivation: same (secret, r) pair the
+                // wallet would have minted at this counter slot. We try
+                // each amount denomination — the mint will only return
+                // the one(s) it actually signed at this slot, if any.
+                val secretBytes = CashuDeterministic.secretBytes(seed, keysetId, c)
+                val r = CashuDeterministic.blindingFactor(seed, keysetId, c)
+                val secretHex = secretBytes.toHexKey()
+                val bTick = Bdhke.blind(secretHex.encodeToByteArray(), r)
+                for (amount in denominations) {
+                    val output = BlindOutput(amount, keysetId, r, secretHex, bTick)
+                    val key = "$amount:${bTick.toHexKey()}"
+                    outputsByCounter[key] = c to output
+                    outputDtos += output.toDto()
+                }
+            }
+
+            val response = client.restore(RestoreRequestDto(outputs = outputDtos))
+            if (response.signatures.isEmpty()) {
+                emptyStreak++
+            } else {
+                emptyStreak = 0
+                // Mint echoes the original outputs alongside signatures
+                // (NUT-09 §2). Match by output content rather than index
+                // because the mint omits non-signed slots.
+                for (i in response.signatures.indices) {
+                    val echo = response.outputs.getOrNull(i) ?: continue
+                    val sig = response.signatures[i]
+                    val key = "${echo.amount}:${echo.bTick}"
+                    val (c, output) = outputsByCounter[key] ?: continue
+                    val proof = unblindOne(output, sig, keyset)
+                    recovered += RecoveredProof(proof, c)
+                    if (c > highestSeenCounter) highestSeenCounter = c
+                }
+            }
+
+            counter += batchSize
+        }
+
+        return RestoreResult(
+            keysetId = keysetId,
+            proofs = recovered,
+            // Caller should bump its persisted counter past this so a
+            // subsequent mint doesn't reuse a slot we just confirmed
+            // (with `+ 1` because the highest seen IS used).
+            nextCounterAfterScan = if (recovered.isEmpty()) startCounter else highestSeenCounter + 1L,
+        )
+    }
+
+    private suspend fun fetchKeysetById(keysetId: String): KeysetDto {
+        val response = client.activeKeysets()
+        return response.keysets.firstOrNull { it.id == keysetId }
+            ?: throw IllegalStateException("Mint doesn't expose keyset $keysetId")
+    }
+
+    /** Public surface for callers that need the active keyset (NUT-09 restore driver). */
+    suspend fun activeKeyset(): KeysetDto = fetchKeyset()
+
+    /**
+     * NUT-07 batched proof-state query. Returns a map from each proof's
+     * secret to its mint-side state ("UNSPENT", "SPENT", "PENDING").
+     * Used by NUT-09 restore to filter spent proofs out of the recovered
+     * set before publishing — the mint will sign blind messages whether
+     * the underlying secret has been spent or not.
+     */
+    suspend fun checkStates(proofs: List<CashuProof>): Map<String, ProofState> {
+        if (proofs.isEmpty()) return emptyMap()
+        // NUT-07 keys check requests by `Y` (hash-to-curve of the secret).
+        val ys = proofs.map { Bdhke.hashToCurveCompressed(it.secret.encodeToByteArray()).toHexKey() }
+        val response = client.checkState(CheckStateRequestDto(ys = ys))
+        val secretByY =
+            proofs.associateBy {
+                Bdhke.hashToCurveCompressed(it.secret.encodeToByteArray()).toHexKey()
+            }
+        val out = mutableMapOf<String, ProofState>()
+        for (row in response.states) {
+            val proof = secretByY[row.y] ?: continue
+            out[proof.secret] = ProofState.fromWire(row.state)
+        }
+        return out
+    }
+
     private suspend fun fetchKeyset(): KeysetDto {
         val response = client.activeKeysets()
         return response.keysets.firstOrNull { it.unit == "sat" }
@@ -490,4 +640,24 @@ data class MeltResult(
     val preimage: String?,
     val changeProofs: List<CashuProof>,
     val keysetId: String,
+)
+
+/** A single proof recovered via NUT-09 plus the counter that derived it. */
+data class RecoveredProof(
+    val proof: CashuProof,
+    val counter: Long,
+)
+
+/**
+ * Outcome of [CashuMintOperations.restore]. [proofs] are unblinded
+ * NUT-12-verified blind signatures the mint returned for this keyset;
+ * the caller must still run /v1/checkstate to filter out spent ones.
+ * [nextCounterAfterScan] is `max(scanned_counter) + 1` (or
+ * `startCounter` when nothing was recovered) — the wallet should bump
+ * its persisted counter to at least this value to avoid future reuse.
+ */
+data class RestoreResult(
+    val keysetId: String,
+    val proofs: List<RecoveredProof>,
+    val nextCounterAfterScan: Long,
 )

@@ -242,6 +242,73 @@ class CashuWalletViewModel : ViewModel() {
         }
     }
 
+    // -------- NUT-09 restore --------
+
+    sealed class RestoreFlowState {
+        data object Idle : RestoreFlowState()
+
+        data object Running : RestoreFlowState()
+
+        data class Completed(
+            val totalSatsRecovered: Long,
+            val proofsRecovered: Int,
+            val mintsScanned: Int,
+        ) : RestoreFlowState()
+
+        data class Error(
+            val message: String,
+        ) : RestoreFlowState()
+    }
+
+    private val _restoreState = MutableStateFlow<RestoreFlowState>(RestoreFlowState.Idle)
+    val restoreState = _restoreState.asStateFlow()
+
+    /**
+     * NUT-09 wallet restore — scans every mint in the wallet's mint list
+     * for proofs the user previously minted but whose kind:7375 events
+     * have been lost. Recovered unspent proofs are republished as fresh
+     * kind:7375 + kind:7376 IN history rows.
+     *
+     * Best-effort across mints: a failure on one mint logs and moves to
+     * the next. The total reported in [RestoreFlowState.Completed]
+     * aggregates across all mints scanned.
+     */
+    fun restoreFromAllMints() {
+        val vm = accountViewModel ?: return
+        if (_restoreState.value is RestoreFlowState.Running) return
+        _restoreState.value = RestoreFlowState.Running
+        vm.launchSigner {
+            try {
+                val mintsToScan = state.mints.value
+                var totalSats = 0L
+                var totalProofs = 0
+                for (mint in mintsToScan) {
+                    runCatching { state.restoreFromMint(mint) }
+                        .onSuccess { outcome ->
+                            if (outcome != null) {
+                                totalSats += outcome.amountRecoveredSats
+                                totalProofs += outcome.proofsRecovered
+                            }
+                        }.onFailure {
+                            Log.w("CashuWallet") { "restoreFromMint($mint) failed: ${describeMintError(it)}" }
+                        }
+                }
+                _restoreState.value =
+                    RestoreFlowState.Completed(
+                        totalSatsRecovered = totalSats,
+                        proofsRecovered = totalProofs,
+                        mintsScanned = mintsToScan.size,
+                    )
+            } catch (e: Exception) {
+                _restoreState.value = RestoreFlowState.Error(describeMintError(e))
+            }
+        }
+    }
+
+    fun resetRestoreState() {
+        _restoreState.value = RestoreFlowState.Idle
+    }
+
     /** What to do with the wallet's P2PK key during a save. */
     enum class P2pkKeyMode {
         /** Keep the existing key from the on-cache wallet (edit only). */

@@ -142,6 +142,42 @@ fun CashuWalletSettingsScreen(
                 )
             }
 
+            // NUT-09 recovery: ask every mint in our list which blind
+            // signatures it has previously issued for our seed and
+            // republish them as fresh kind:7375 events. Useful after a
+            // device loss or rogue-relay NIP-09 of our token events.
+            item {
+                val restoreState by viewModel.restoreState.collectAsState()
+                val restoreSubtitle =
+                    when (val s = restoreState) {
+                        is CashuWalletViewModel.RestoreFlowState.Idle ->
+                            stringRes(R.string.cashu_settings_restore_subtitle)
+                        is CashuWalletViewModel.RestoreFlowState.Running ->
+                            stringRes(R.string.cashu_settings_restore_running)
+                        is CashuWalletViewModel.RestoreFlowState.Completed ->
+                            if (s.totalSatsRecovered == 0L) {
+                                stringRes(R.string.cashu_settings_restore_nothing_found)
+                            } else {
+                                stringRes(
+                                    R.string.cashu_settings_restore_result,
+                                    s.totalSatsRecovered.toString(),
+                                    s.proofsRecovered.toString(),
+                                )
+                            }
+                        is CashuWalletViewModel.RestoreFlowState.Error -> s.message
+                    }
+                SettingsRow(
+                    icon = MaterialSymbols.CloudDownload,
+                    title = stringRes(R.string.cashu_settings_restore_title),
+                    subtitle = restoreSubtitle,
+                    onClick = {
+                        if (restoreState !is CashuWalletViewModel.RestoreFlowState.Running) {
+                            viewModel.restoreFromAllMints()
+                        }
+                    },
+                )
+            }
+
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(

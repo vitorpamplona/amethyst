@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpClient
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpException
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintProtocolException
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintQuoteBolt11ResponseDto
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.ProofState
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.RandomSecretFactory
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.SecretFactory
 import com.vitorpamplona.quartz.nip60Cashu.p2pk.P2PK
@@ -737,7 +738,115 @@ class CashuWalletOps(
         val delEvent = signer.sign(template)
         publish(delEvent)
     }
+
+    /**
+     * NUT-09 wallet restore — recover proofs the wallet previously
+     * minted at [mintUrl] but whose kind:7375 token events have been lost
+     * (rogue relay, NIP-09 from a compromised key, fresh device with no
+     * cache backup). Uses the wallet's NUT-13 seed to re-derive every
+     * past secret/r pair and asks the mint which it has signed.
+     *
+     * Process:
+     *  1. Fetch the mint's active keyset.
+     *  2. Drive [CashuMintOperations.restore] — scans counters in batches
+     *     until [emptyBatchesToStop] empty batches in a row signal
+     *     "this keyset has no more proofs further down".
+     *  3. Filter the returned proofs through /v1/checkstate to keep
+     *     only UNSPENT ones — NUT-09 alone returns even spent proofs.
+     *  4. Publish surviving proofs as one kind:7375.
+     *  5. Bump the persisted counter past the highest seen so future
+     *     mints don't reuse a slot we just confirmed in use.
+     *
+     * Returns the number of unspent sats recovered. The caller's UI
+     * surfaces this to the user.
+     *
+     * Idempotent — re-running after a successful restore returns 0
+     * (every counter still produces the same proofs the mint already
+     * marked spent in the previous round of publishing + redemption).
+     */
+    suspend fun restoreFromMint(
+        mintUrl: String,
+        seed: ByteArray,
+        startCounter: Long = 0L,
+    ): RestoreOutcome {
+        seedWarmer()
+        val mintOps = ops(mintUrl)
+        val activeKeyset = mintOps.activeKeyset()
+        val result =
+            mintOps.restore(
+                seed = seed,
+                keysetId = activeKeyset.id,
+                startCounter = startCounter,
+            )
+        if (result.proofs.isEmpty()) {
+            return RestoreOutcome(
+                keysetId = result.keysetId,
+                amountRecoveredSats = 0L,
+                proofsRecovered = 0,
+                nextCounterAfterScan = result.nextCounterAfterScan,
+                tokenEvent = null,
+            )
+        }
+
+        // /v1/checkstate filters out proofs that were minted but already
+        // melted or sent. Without this, recovered "balance" would include
+        // already-spent proofs that the mint would reject at next swap.
+        val stateMap = mintOps.checkStates(result.proofs.map { it.proof })
+        val unspent =
+            result.proofs.filter { recovered ->
+                stateMap[recovered.proof.secret] == ProofState.UNSPENT
+            }
+        if (unspent.isEmpty()) {
+            return RestoreOutcome(
+                keysetId = result.keysetId,
+                amountRecoveredSats = 0L,
+                proofsRecovered = 0,
+                nextCounterAfterScan = result.nextCounterAfterScan,
+                tokenEvent = null,
+            )
+        }
+
+        val totalSats = unspent.sumOf { it.proof.amount }
+        val tokenContent =
+            TokenContent(
+                mint = mintUrl,
+                proofs = unspent.map { it.proof },
+            )
+        val tokenTemplate = CashuTokenEvent.build(tokenContent, signer)
+        val tokenEvent = signer.sign(tokenTemplate)
+        publish(tokenEvent)
+
+        val historyTemplate =
+            CashuSpendingHistoryEvent.build(
+                direction = SpendingDirection.IN,
+                amount = totalSats,
+                tokenReferences =
+                    listOf(
+                        TokenReference(tokenEvent.id, null, TokenReference.MARKER_CREATED),
+                    ),
+                signer = signer,
+            )
+        val historyEvent = signer.sign(historyTemplate)
+        publish(historyEvent)
+
+        return RestoreOutcome(
+            keysetId = result.keysetId,
+            amountRecoveredSats = totalSats,
+            proofsRecovered = unspent.size,
+            nextCounterAfterScan = result.nextCounterAfterScan,
+            tokenEvent = tokenEvent,
+        )
+    }
 }
+
+/** Result of a NUT-09 wallet restore. See [CashuWalletOps.restoreFromMint]. */
+data class RestoreOutcome(
+    val keysetId: String,
+    val amountRecoveredSats: Long,
+    val proofsRecovered: Int,
+    val nextCounterAfterScan: Long,
+    val tokenEvent: CashuTokenEvent?,
+)
 
 /** Drop the leading parity byte if present so two pubkeys can be compared. */
 private fun String.lastHex64(): String = if (length == 66) substring(2) else this
