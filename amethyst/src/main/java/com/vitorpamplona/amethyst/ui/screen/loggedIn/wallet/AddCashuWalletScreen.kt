@@ -60,6 +60,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
@@ -69,6 +70,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -461,5 +463,36 @@ private fun MintSuggestionList(
                 }
             }
         }
+    }
+}
+
+// ============================================================
+// @Preview composables — Android Studio rendering only
+// ============================================================
+
+@Preview
+@Composable
+fun MintSuggestionListPreview() {
+    ThemeComparisonColumn {
+        MintSuggestionList(
+            suggestions =
+                listOf(
+                    "https://mint.minibits.cash/bitcoin",
+                    "https://mint.coinos.io",
+                    "https://nutmix.cash",
+                ),
+            onPick = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+fun MintSuggestionListSinglePreview() {
+    ThemeComparisonColumn {
+        MintSuggestionList(
+            suggestions = listOf("https://mint.minibits.cash/bitcoin"),
+            onPick = {},
+        )
     }
 }

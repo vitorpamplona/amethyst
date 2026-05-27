@@ -57,6 +57,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
@@ -68,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 
 /**
@@ -451,5 +453,134 @@ private fun RecommendationRow(
                 )
             }
         }
+    }
+}
+
+// ============================================================
+// @Preview composables — Android Studio rendering only
+// ============================================================
+// Each preview is rendered in both dark and light themes via
+// ThemeComparisonColumn so we can eyeball both at once. Plain-data
+// composables only — anything that takes AccountViewModel / INav /
+// CashuWalletViewModel can't be cheaply mocked, so those are skipped.
+
+/** Synthesise a [MintRecommendationEvent] for previews without touching the signer. */
+private fun fakeRecommendation(
+    mintUrl: String,
+    review: String = "",
+): MintRecommendationEvent =
+    MintRecommendationEvent(
+        id = "0".repeat(64),
+        pubKey = "1".repeat(64),
+        createdAt = 1_700_000_000L,
+        tags =
+            arrayOf(
+                arrayOf("d", mintUrl),
+                arrayOf("k", "38172"),
+                arrayOf("u", mintUrl),
+            ),
+        content = review,
+        sig = "2".repeat(128),
+    )
+
+@Preview
+@Composable
+fun SettingsRowEditWalletPreview() {
+    ThemeComparisonColumn {
+        SettingsRow(
+            icon = MaterialSymbols.Edit,
+            title = "Edit wallet details",
+            subtitle = "Mints, nutzap key",
+            onClick = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+fun SettingsRowNoSubtitlePreview() {
+    ThemeComparisonColumn {
+        SettingsRow(
+            icon = MaterialSymbols.Settings,
+            title = "Some setting",
+            subtitle = null,
+            onClick = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+fun EmptyRecommendationsHintPreview() {
+    ThemeComparisonColumn {
+        EmptyRecommendationsHint()
+    }
+}
+
+@Preview
+@Composable
+fun AddRecommendationRowEmptyPreview() {
+    ThemeComparisonColumn {
+        AddRecommendationRow(
+            input = "",
+            onInputChange = {},
+            canAdd = false,
+            onAdd = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+fun AddRecommendationRowTypingPreview() {
+    ThemeComparisonColumn {
+        AddRecommendationRow(
+            input = "https://mint.minibits.cash",
+            onInputChange = {},
+            canAdd = true,
+            onAdd = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+fun RecommendationSuggestionListPreview() {
+    ThemeComparisonColumn {
+        RecommendationSuggestionList(
+            suggestions =
+                listOf(
+                    "https://mint.minibits.cash/bitcoin",
+                    "https://mint.coinos.io",
+                    "https://nutmix.cash",
+                ),
+            onPick = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+fun RecommendationRowPreview() {
+    ThemeComparisonColumn {
+        RecommendationRow(
+            event = fakeRecommendation("https://mint.minibits.cash/bitcoin"),
+            onDelete = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+fun RecommendationRowWithReviewPreview() {
+    ThemeComparisonColumn {
+        RecommendationRow(
+            event =
+                fakeRecommendation(
+                    mintUrl = "https://mint.coinos.io",
+                    review = "Fast and reliable, been using for months.",
+                ),
+            onDelete = {},
+        )
     }
 }
