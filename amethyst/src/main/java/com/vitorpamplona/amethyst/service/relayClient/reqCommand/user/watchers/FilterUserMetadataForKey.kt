@@ -56,9 +56,20 @@ fun filterUserMetadataForKey(
     val perRelayUsers =
         mapOfSet {
             authors.forEach { key ->
+                val outbox = key.outboxRelays()
                 val relays =
-                    key.outboxRelays()
-                        ?: (key.allUsedRelays() + LocalCache.relayHints.hintsForKey(key.pubkeyHex) + indexRelays)
+                    when {
+                        outbox == null ->
+                            key.allUsedRelays() + LocalCache.relayHints.hintsForKey(key.pubkeyHex) + indexRelays
+                        // Outbox is published but exhausted (every relay either EOSE'd
+                        // or is known-unreachable) and metadata is still missing —
+                        // widen to indexers so a misconfigured outbox doesn't strand
+                        // the user's profile.
+                        key.metadataOrNull()?.flow?.value == null &&
+                            outbox.all { it in cannotConnectRelays || since.since(key)?.get(it) != null } ->
+                            outbox + indexRelays
+                        else -> outbox
+                    }
 
                 (relays - cannotConnectRelays).forEach {
                     add(it, key)
