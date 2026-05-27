@@ -149,7 +149,7 @@ fun WalletDetailScreen(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Button(
-                    onClick = { nav.nav(Route.WalletReceive) },
+                    onClick = { nav.nav(Route.WalletReceive(walletId)) },
                     modifier =
                         Modifier
                             .weight(1f)
@@ -171,7 +171,7 @@ fun WalletDetailScreen(
                 }
 
                 Button(
-                    onClick = { nav.nav(Route.WalletSend) },
+                    onClick = { nav.nav(Route.WalletSend(walletId)) },
                     modifier =
                         Modifier
                             .weight(1f)
@@ -192,7 +192,7 @@ fun WalletDetailScreen(
 
             // Transactions button
             OutlinedButton(
-                onClick = { nav.nav(Route.WalletTransactions) },
+                onClick = { nav.nav(Route.WalletTransactions(walletId)) },
                 modifier =
                     Modifier
                         .fillMaxWidth()
