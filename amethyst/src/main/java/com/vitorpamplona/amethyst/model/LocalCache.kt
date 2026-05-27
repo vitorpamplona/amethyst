@@ -62,6 +62,8 @@ import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStory
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
@@ -177,6 +179,7 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
+import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
@@ -3542,12 +3545,24 @@ object LocalCache : ILocalCache, ICacheProvider {
                     consume(event, relay, wasVerified)
                 }
 
+                is ReleaseArtifactSetEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
                 is SealedRumorEvent -> {
                     consumeRegularEvent(event, relay, wasVerified)
                 }
 
                 is SearchRelayListEvent -> {
                     consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is SoftwareApplicationEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is SoftwareAssetEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
                 }
 
                 is StatusEvent -> {

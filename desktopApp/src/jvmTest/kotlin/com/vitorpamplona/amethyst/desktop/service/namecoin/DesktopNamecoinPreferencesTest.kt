@@ -162,4 +162,68 @@ class DesktopNamecoinPreferencesTest {
             val reloaded = DesktopNamecoinPreferences(prefs = testPrefs)
             assertEquals(settings, reloaded.current)
         }
+
+    // ── Pinned certs ─────────────────────────────────────────────────────
+
+    private val samplePem1 =
+        "-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----"
+    private val samplePem2 =
+        "-----BEGIN CERTIFICATE-----\nBBBB\n-----END CERTIFICATE-----"
+
+    @Test
+    fun `loadPinnedCerts returns empty by default`() {
+        assertTrue(namecoinPrefs.loadPinnedCerts().isEmpty())
+    }
+
+    @Test
+    fun `addPinnedCert persists and survives reload`() {
+        namecoinPrefs.addPinnedCert(samplePem1)
+        assertEquals(listOf(samplePem1), namecoinPrefs.loadPinnedCerts())
+
+        val reloaded = DesktopNamecoinPreferences(prefs = testPrefs)
+        assertEquals(listOf(samplePem1), reloaded.loadPinnedCerts())
+    }
+
+    @Test
+    fun `addPinnedCert appends without duplicating`() {
+        namecoinPrefs.addPinnedCert(samplePem1)
+        namecoinPrefs.addPinnedCert(samplePem2)
+        namecoinPrefs.addPinnedCert(samplePem1) // duplicate
+
+        assertEquals(listOf(samplePem1, samplePem2), namecoinPrefs.loadPinnedCerts())
+    }
+
+    @Test
+    fun `addPinnedCert ignores blank input`() {
+        namecoinPrefs.addPinnedCert("")
+        namecoinPrefs.addPinnedCert("   ")
+        assertTrue(namecoinPrefs.loadPinnedCerts().isEmpty())
+    }
+
+    @Test
+    fun `reset clears pinned certs`() =
+        runBlocking {
+            namecoinPrefs.addPinnedCert(samplePem1)
+            namecoinPrefs.addPinnedCert(samplePem2)
+            assertEquals(2, namecoinPrefs.loadPinnedCerts().size)
+
+            namecoinPrefs.reset()
+            assertTrue(namecoinPrefs.loadPinnedCerts().isEmpty())
+
+            // Verify persistence — cleared certs stay cleared after reload.
+            val reloaded = DesktopNamecoinPreferences(prefs = testPrefs)
+            assertTrue(reloaded.loadPinnedCerts().isEmpty())
+        }
+
+    @Test
+    fun `pinned certs are independent of settings copy`() =
+        runBlocking {
+            // Add some pinned certs.
+            namecoinPrefs.addPinnedCert(samplePem1)
+            // Mutating other settings must not clobber the pinned-cert list.
+            namecoinPrefs.addServer("example.com:50006")
+            namecoinPrefs.setEnabled(false)
+
+            assertEquals(listOf(samplePem1), namecoinPrefs.loadPinnedCerts())
+        }
 }

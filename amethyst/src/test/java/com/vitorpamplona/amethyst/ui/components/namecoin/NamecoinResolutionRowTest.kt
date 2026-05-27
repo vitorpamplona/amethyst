@@ -90,6 +90,51 @@ class NamecoinResolutionRowTest {
         assertFalse(looksLikeNamecoinIdentifier("foo@bar.com"))
     }
 
+    @Test
+    fun `d slash name is a namecoin identifier`() {
+        // Direct domain-namespace references are accepted both via the
+        // search bar (mirrors NamecoinNameResolver.isNamecoinIdentifier)
+        // and via the dropdown's leading-at-sign convention.
+        assertTrue(looksLikeNamecoinIdentifier("d/mstrofnone"))
+        assertTrue(looksLikeNamecoinIdentifier("D/Example"))
+        assertTrue(looksLikeNamecoinIdentifier("@d/mstrofnone"))
+    }
+
+    @Test
+    fun `id slash name is a namecoin identifier`() {
+        // Identity-namespace references must also flow to the resolver;
+        // the parser at NamecoinNameResolver.parseIdentifier maps these
+        // to (id/<name>, localPart="_").
+        assertTrue(looksLikeNamecoinIdentifier("id/mstrofnone"))
+        assertTrue(looksLikeNamecoinIdentifier("ID/Alice"))
+        assertTrue(looksLikeNamecoinIdentifier("@id/alice"))
+    }
+
+    @Test
+    fun `short single-label d and id names still trigger`() {
+        // Namecoin allows single-character labels in both namespaces;
+        // "d/a" / "id/a" should not be filtered out by the length floor.
+        assertTrue(looksLikeNamecoinIdentifier("d/a"))
+        assertTrue(looksLikeNamecoinIdentifier("id/a"))
+    }
+
+    @Test
+    fun `bare namespace prefix with no name does not match`() {
+        // "d/" and "id/" alone are not lookups.
+        assertFalse(looksLikeNamecoinIdentifier("d/"))
+        assertFalse(looksLikeNamecoinIdentifier("id/"))
+    }
+
+    @Test
+    fun `other namecoin namespaces are not surfaced by the search row`() {
+        // The Nostr-NIP05 contract only spans the domain (d/) and
+        // identity (id/) namespaces. Other Namecoin namespaces exist on
+        // chain but aren't part of the resolution surface, so the row
+        // should stay quiet.
+        assertFalse(looksLikeNamecoinIdentifier("a/somealias"))
+        assertFalse(looksLikeNamecoinIdentifier("u/someuser"))
+    }
+
     // ── mapOutcomeToResolveState ───────────────────────────────────────────
     // Reuses the shared NamecoinResolveState already used by
     // NamecoinNameService and the desktop SearchScreen so all surfaces

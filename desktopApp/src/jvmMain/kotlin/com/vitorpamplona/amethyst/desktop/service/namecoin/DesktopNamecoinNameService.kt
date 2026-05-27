@@ -45,13 +45,36 @@ import javax.net.SocketFactory
  */
 class DesktopNamecoinNameService(
     private val preferencesProvider: () -> NamecoinSettings = { NamecoinSettings.DEFAULT },
+    pinnedCertsProvider: () -> List<String> = { emptyList() },
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private val electrumxClient =
         ElectrumXClient(
             socketFactory = { SocketFactory.getDefault() },
-        )
+        ).also { client ->
+            // Push any persisted TOFU-pinned certs into the client at startup so
+            // user-accepted pins survive process restart. Mirrors Android's
+            // AppModules.kt path.
+            scope.launch {
+                try {
+                    val pinned = pinnedCertsProvider()
+                    if (pinned.isNotEmpty()) {
+                        client.setDynamicCerts(pinned)
+                    }
+                } catch (_: Exception) {
+                    // Non-fatal — defaults still work, user can re-pin via Settings.
+                }
+            }
+        }
+
+    /**
+     * Expose the underlying ElectrumX client so the Settings UI can push a
+     * newly-accepted cert in via [ElectrumXClient.setDynamicCerts] without
+     * waiting for an app restart, and so a Test Connection button can call
+     * [ElectrumXClient.testServer] directly.
+     */
+    val client: ElectrumXClient get() = electrumxClient
 
     private val resolver =
         NamecoinNameResolver(

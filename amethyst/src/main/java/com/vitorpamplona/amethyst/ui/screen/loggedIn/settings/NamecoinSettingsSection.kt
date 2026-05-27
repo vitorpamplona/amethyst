@@ -71,7 +71,7 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.service.namecoin.NamecoinSettings
+import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinSettings
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinBackend
@@ -155,6 +155,7 @@ fun NamecoinSettingsSection(
                             config = settings.namecoinCoreRpc,
                             onConfigChange = onSetCoreRpcConfig,
                             onTestCoreRpc = onTestCoreRpc,
+                            onPinCert = onPinCert,
                         )
                         Spacer(Modifier.height(16.dp))
                         HorizontalDivider(
@@ -884,6 +885,7 @@ private fun NamecoinCoreRpcSection(
     config: NamecoinCoreRpcConfig,
     onConfigChange: (NamecoinCoreRpcConfig) -> Unit,
     onTestCoreRpc: suspend (NamecoinCoreRpcConfig) -> RpcProbeResult,
+    onPinCert: (String) -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
     var url by rememberSaveable(config.url) { mutableStateOf(config.url) }
@@ -892,6 +894,61 @@ private fun NamecoinCoreRpcSection(
     var passVisible by remember { mutableStateOf(false) }
     var testing by remember { mutableStateOf(false) }
     var lastProbe by remember { mutableStateOf<RpcProbeResult?>(null) }
+    // Cert that the probe captured but the user hasn't yet accepted/rejected.
+    var pendingPin by remember { mutableStateOf<PendingCertPin?>(null) }
+
+    // ── Cert confirmation dialog (TOFU) ─────────────────────────────────────
+    pendingPin?.let { pin ->
+        AlertDialog(
+            onDismissRequest = { pendingPin = null },
+            title = { Text(stringResource(R.string.namecoin_pin_cert_title)) },
+            text = {
+                Column {
+                    Text(
+                        stringResource(R.string.namecoin_pin_cert_body, pin.serverHost),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "SHA-256:",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = pin.fingerprint,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    // Persist the PEM to the shared trust store AND flip
+                    // usePinnedTrustStore on the config so future calls
+                    // route through the pinned factory.
+                    onPinCert(pin.pem)
+                    onConfigChange(
+                        config.copy(
+                            url = url.trim(),
+                            username = user.trim(),
+                            password = pass,
+                            usePinnedTrustStore = true,
+                        ),
+                    )
+                    pendingPin = null
+                }) {
+                    Text(stringResource(R.string.namecoin_pin_cert_accept))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingPin = null }) {
+                    Text(stringResource(R.string.namecoin_pin_cert_reject))
+                }
+            },
+        )
+    }
 
     fun commit() {
         onConfigChange(
@@ -1019,7 +1076,37 @@ private fun NamecoinCoreRpcSection(
                         )
                     scope.launch {
                         try {
-                            lastProbe = onTestCoreRpc(candidate)
+                            val probe = onTestCoreRpc(candidate)
+                            lastProbe = probe
+                            // Offer TOFU when the probe captured a leaf cert and
+                            // either: (a) the handshake failed (so the user has
+                            // to pin to get further), or (b) the user isn't
+                            // pinning yet but the cert isn't already in their
+                            // trust store — we surface the option pre-emptively
+                            // so they can lock the identity in. Skip when
+                            // already pinned to this exact PEM.
+                            val pem = probe.serverCertPem
+                            val fp = probe.certFingerprint
+                            if (
+                                pem != null && fp != null && (
+                                    probe.tlsHandshakeFailed ||
+                                        !candidate.usePinnedTrustStore
+                                )
+                            ) {
+                                val host =
+                                    try {
+                                        java.net.URI(candidate.url).host
+                                            ?: candidate.url
+                                    } catch (_: Exception) {
+                                        candidate.url
+                                    }
+                                pendingPin =
+                                    PendingCertPin(
+                                        serverHost = host,
+                                        fingerprint = fp,
+                                        pem = pem,
+                                    )
+                            }
                         } finally {
                             testing = false
                         }
@@ -1083,6 +1170,29 @@ private fun NamecoinCoreRpcSection(
                             probe.error.orEmpty(),
                             style = MaterialTheme.typography.bodySmall,
                             fontFamily = FontFamily.Monospace,
+                        )
+                        if (probe.tlsHandshakeFailed && probe.certFingerprint != null) {
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                "TLS rejected by the system trust store. Tap Test RPC " +
+                                    "again, then choose Trust to pin this server's certificate.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    val fp = probe.certFingerprint
+                    if (fp != null) {
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text =
+                                "cert SHA-256: ${fp.take(23)}\u2026" +
+                                    if (config.usePinnedTrustStore) "  (pinned)" else "",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontFamily = FontFamily.Monospace,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }

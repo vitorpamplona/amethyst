@@ -18,31 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.datasource
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.datasource.subassemblies
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.lifecycle.viewModelScope
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.model.topNavFeeds.allFollows.AllFollowsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
-@Composable
-fun SoftwareAppsFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
-    SoftwareAppsFilterAssemblerSubscription(
-        accountViewModel.dataSources().softwareApps,
-        accountViewModel,
-    )
-}
+fun filterSoftwareAppsByFollows(
+    followsSet: AllFollowsTopNavPerRelayFilterSet,
+    since: SincePerRelayMap?,
+    defaultSince: Long? = null,
+): List<RelayBasedFilter> {
+    if (followsSet.set.isEmpty()) return emptyList()
 
-@Composable
-fun SoftwareAppsFilterAssemblerSubscription(
-    dataSource: SoftwareAppsFilterAssembler,
-    accountViewModel: AccountViewModel,
-) {
-    val state =
-        remember(accountViewModel.account) {
-            SoftwareAppsQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.viewModelScope)
-        }
+    return followsSet.set.flatMap {
+        val sinceForRelay = since?.get(it.key)?.time ?: defaultSince
+        val relay = it.key
 
-    LifecycleAwareKeyDataSourceSubscription(state, dataSource)
+        listOfNotNull(
+            it.value.authors?.let {
+                filterSoftwareAppsByAuthors(relay, it, sinceForRelay)
+            },
+        ).flatten()
+    }
 }

@@ -49,6 +49,7 @@ class DesktopNamecoinPreferences(
     companion object {
         private const val KEY_ENABLED = "namecoin.enabled"
         private const val KEY_CUSTOM_SERVERS = "namecoin.customServers"
+        private const val KEY_PINNED_CERTS = "namecoin.pinnedCerts"
     }
 
     private val _settings = MutableStateFlow(loadFromDisk())
@@ -84,7 +85,53 @@ class DesktopNamecoinPreferences(
 
     suspend fun reset() {
         persist(NamecoinSettings.DEFAULT)
+        clearPinnedCerts()
     }
+
+    // ── Pinned certs (TOFU) ────────────────────────────────────────────
+
+    /**
+     * Store a PEM-encoded certificate that the user accepted via Test
+     * Connection. The cert is appended to the existing list (deduplicated)
+     * and persisted; callers are expected to push the updated list into
+     * [com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumXClient]
+     * via `setDynamicCerts(...)` so it takes effect immediately.
+     *
+     * Mirrors the Android API in `NamecoinSharedPreferences`.
+     */
+    fun addPinnedCert(pem: String) {
+        if (pem.isBlank()) return
+        val existing = loadPinnedCertsFromDisk()
+        val updated = (existing + pem).distinct()
+        savePinnedCerts(updated)
+    }
+
+    /** Load all user-pinned certs from disk (for startup sync). */
+    fun loadPinnedCerts(): List<String> = loadPinnedCertsFromDisk()
+
+    /** Wipe all user-pinned certs. Called by [reset]. */
+    private fun clearPinnedCerts() = savePinnedCerts(emptyList())
+
+    private fun savePinnedCerts(certs: List<String>) {
+        try {
+            prefs.put(KEY_PINNED_CERTS, mapper.writeValueAsString(certs))
+            prefs.flush()
+        } catch (e: Exception) {
+            System.err.println("NamecoinPrefs: Error writing pinned certs: ${e.message}")
+        }
+    }
+
+    private fun loadPinnedCertsFromDisk(): List<String> =
+        try {
+            val raw = prefs.get(KEY_PINNED_CERTS, null)
+            if (raw != null) {
+                mapper.readValue<List<String>>(raw)
+            } else {
+                emptyList()
+            }
+        } catch (_: Exception) {
+            emptyList()
+        }
 
     // ── Internal ───────────────────────────────────────────────────────
 
