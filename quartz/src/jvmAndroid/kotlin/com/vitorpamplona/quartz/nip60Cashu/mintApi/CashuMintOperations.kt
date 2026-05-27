@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip60Cashu.p2pk.P2PK
 import com.vitorpamplona.quartz.nip60Cashu.seed.CashuDeterministic
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuProof
 import com.vitorpamplona.quartz.nip60Cashu.token.TokenContent
+import com.vitorpamplona.quartz.utils.Log
 
 /**
  * High-level mint operations: mint-from-LN, swap, melt-to-LN, send-as-token,
@@ -222,12 +223,15 @@ class CashuMintOperations(
         recipientP2pkPubkeyHex: String,
         targetSplit: Long,
     ): SwapResult {
+        Log.i("CashuTrace") { "swapToLocked enter: inputs=${proofs.size}, target=$targetSplit" }
         if (proofs.isEmpty()) throw IllegalArgumentException("Nothing to swap")
         if (targetSplit <= 0) throw IllegalArgumentException("Target split must be > 0")
         val total = proofs.sumOf { it.amount }
         if (targetSplit > total) throw IllegalArgumentException("Target split exceeds available proofs")
 
+        Log.i("CashuTrace") { "swapToLocked: fetchKeyset begin" }
         val keyset = fetchKeyset()
+        Log.i("CashuTrace") { "swapToLocked: fetchKeyset end id=${keyset.id}" }
         // NUT-02: reserve per-input fees; change shrinks by the fee, send
         // amount stays whole (the recipient gets exactly targetSplit sats).
         val feeAtoms = computeInputFee(proofs.size, keyset.inputFeePpk)
@@ -239,10 +243,13 @@ class CashuMintOperations(
         // proof, so NUT-13 recovery doesn't apply to those bytes), but
         // our change outputs go through the deterministic factory in one
         // batch — see [secretOutputsFor].
+        Log.i("CashuTrace") { "swapToLocked: building ${splitAmounts(targetSplit).size} locked outputs (P2PK blinds)" }
         val sendOutputs = splitAmounts(targetSplit).map { lockedOutputFor(it, keyset, recipientP2pkPubkeyHex) }
+        Log.i("CashuTrace") { "swapToLocked: building ${if (keepAmount > 0L) splitAmounts(keepAmount).size else 0} keep outputs (NUT-13 deterministic blinds)" }
         val keepOutputs =
             if (keepAmount > 0L) secretOutputsFor(splitAmounts(keepAmount), keyset) else emptyList()
         val allOutputs = sendOutputs + keepOutputs
+        Log.i("CashuTrace") { "swapToLocked: POST /v1/swap with ${allOutputs.size} outputs" }
 
         val response =
             client.swap(
@@ -251,6 +258,7 @@ class CashuMintOperations(
                     outputs = allOutputs.map { it.toDto() },
                 ),
             )
+        Log.i("CashuTrace") { "swapToLocked: swap response sigs=${response.signatures.size}" }
 
         if (response.signatures.size != allOutputs.size) {
             throw MintProtocolException(
@@ -258,7 +266,9 @@ class CashuMintOperations(
             )
         }
 
+        Log.i("CashuTrace") { "swapToLocked: unblindAll begin (${allOutputs.size})" }
         val unblinded = unblindAll(allOutputs, response.signatures, keyset)
+        Log.i("CashuTrace") { "swapToLocked: unblindAll end" }
         val sendProofs = unblinded.subList(0, sendOutputs.size)
         val keepProofs = unblinded.subList(sendOutputs.size, unblinded.size)
         return SwapResult(send = sendProofs, keep = keepProofs, keysetId = keyset.id)
@@ -596,12 +606,14 @@ class CashuMintOperations(
         keyset: KeysetDto,
     ): List<BlindOutput> {
         if (amounts.isEmpty()) return emptyList()
+        Log.i("CashuTrace") { "secretOutputsFor: nextSecrets(${amounts.size})" }
         // NUT-00: secret is a UTF-8 hex string of 32 secret bytes.
         // [secretFactory] decides whether those bytes are pure-random or
         // NUT-13-derived from a wallet seed; either way the on-wire shape
         // is identical so the mint can't tell which scheme we're using.
         val derived = secretFactory.nextSecrets(keyset.id, amounts.size)
         return amounts.mapIndexed { i, amount ->
+            Log.i("CashuTrace") { "  Bdhke.blind[$i/${amounts.size}] amount=$amount" }
             val pair = derived[i]
             val bTick = Bdhke.blind(pair.secretHex.encodeToByteArray(), pair.blindingFactor)
             BlindOutput(amount, keyset.id, pair.blindingFactor, pair.secretHex, bTick)
@@ -634,7 +646,13 @@ class CashuMintOperations(
                 "Got ${signatures.size} signatures for ${outputs.size} outputs",
             )
         }
-        return outputs.mapIndexed { i, o -> unblindOne(o, signatures[i], keyset) }
+        val out = ArrayList<CashuProof>(outputs.size)
+        for (i in outputs.indices) {
+            Log.i("CashuTrace") { "unblindOne[$i/${outputs.size}] begin amount=${outputs[i].amount}" }
+            out += unblindOne(outputs[i], signatures[i], keyset)
+            Log.i("CashuTrace") { "unblindOne[$i/${outputs.size}] end" }
+        }
+        return out
     }
 
     private fun unblindOne(
@@ -668,12 +686,14 @@ class CashuMintOperations(
         // continue to be Carol-verified via [verifyTokenDleq] — that's
         // where the untrust boundary actually lives.
 
+        Log.i("CashuTrace") { "  unblindOne: Bdhke.unblind begin" }
         val c =
             Bdhke.unblind(
                 blindSignature = cTickBytes,
                 r = output.r,
                 mintPubKey = mintPubKey,
             )
+        Log.i("CashuTrace") { "  unblindOne: Bdhke.unblind end" }
         // Retain (e, s, r) on the resulting proof per NUT-12 §3 so
         // anything that later forwards this proof to another wallet —
         // a cashuB token, a kind:9321 nutzap — gives the recipient the
