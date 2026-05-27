@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.report.ReportNoteDialog
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
+import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.isTaggedAddressableNote
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -283,6 +284,15 @@ fun NoteDropDownMenu(
                         accountViewModel.addPin(note)
                         onDismiss()
                     }
+                }
+            }
+            // Music tracks (kind 36787) can additionally be added to one of the user's
+            // own playlists (kind 34139). This is independent of bookmarking — the menu
+            // still falls through to the bookmark rows below.
+            if (note.event is MusicTrackEvent && note is AddressableNote) {
+                M3ActionRow(icon = MaterialSymbols.AutoMirrored.PlaylistAdd, text = stringRes(R.string.add_to_music_playlist)) {
+                    nav.nav(Route.AddToMusicPlaylist(note.address.toValue()))
+                    onDismiss()
                 }
             }
             // Emoji packs belong in the user's emoji list (kind 10030), not the bookmark list.

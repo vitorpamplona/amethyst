@@ -142,6 +142,18 @@ sealed class Route {
 
     @Serializable object Articles : Route()
 
+    @Serializable object MusicTracks : Route()
+
+    @Serializable
+    data class NewMusicTrack(
+        val dTag: String? = null,
+    ) : Route()
+
+    @Serializable
+    data class AddToMusicPlaylist(
+        val trackAddress: String,
+    ) : Route()
+
     @Serializable object Chess : Route()
 
     @Serializable object Wallet : Route()

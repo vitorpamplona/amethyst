@@ -95,6 +95,11 @@ private fun PreloadFor(
 
         NavBarItem.SHORTS -> ShortsFilterAssemblerSubscription(accountViewModel)
 
+        // No dedicated relay subscription yet — music tracks (kind 36787) arrive through the
+        // existing per-author home and profile subscriptions. When music gets its own
+        // FilterAssembler, replace this with `MusicTracksFilterAssemblerSubscription(...)`.
+        NavBarItem.MUSIC_TRACKS -> Unit
+
         NavBarItem.PUBLIC_CHATS -> PublicChatsFilterAssemblerSubscription(accountViewModel)
 
         NavBarItem.FOLLOW_PACKS -> FollowPacksFilterAssemblerSubscription(accountViewModel)
