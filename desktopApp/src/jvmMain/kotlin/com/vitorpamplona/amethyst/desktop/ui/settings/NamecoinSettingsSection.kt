@@ -34,6 +34,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -45,6 +48,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -64,6 +68,9 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinSettings
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ServerTestResult
+import kotlinx.coroutines.launch
 
 /**
  * Complete settings section for Namecoin ElectrumX server configuration.
@@ -77,6 +84,13 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_S
  * @param onAddServer     Called with `host:port[:tcp]` when user adds a server
  * @param onRemoveServer  Called with the server string to remove
  * @param onReset         Called when user resets to defaults
+ * @param onTestServer    Suspend function to test a single server. When
+ *                        `null`, the Test Connection UI is hidden — useful
+ *                        for previews or when no [DesktopNamecoinNameService]
+ *                        is available.
+ * @param onPinCert       Called with a PEM-encoded cert when the user
+ *                        accepts a TOFU pin prompt. Mirrors the Android
+ *                        callback contract.
  */
 @Composable
 fun NamecoinSettingsSection(
@@ -86,6 +100,8 @@ fun NamecoinSettingsSection(
     onRemoveServer: (String) -> Unit,
     onReset: () -> Unit,
     modifier: Modifier = Modifier,
+    onTestServer: (suspend (ElectrumxServer) -> ServerTestResult)? = null,
+    onPinCert: ((String) -> Unit)? = null,
 ) {
     Column(modifier = modifier.padding(16.dp)) {
         // ── Section header ─────────────────────────────────────────
@@ -126,8 +142,22 @@ fun NamecoinSettingsSection(
                     onRemove = onRemoveServer,
                 )
 
-                // ── Add server input ───────────────────────────────
+                // ── Add server input ───────────────────────────────────────────
                 NamecoinAddServerInput(onAdd = onAddServer)
+
+                // ── Test connection + TOFU pin ────────────────────────────────
+                if (onTestServer != null) {
+                    Spacer(Modifier.height(12.dp))
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    NamecoinTestConnectionSection(
+                        settings = settings,
+                        onTestServer = onTestServer,
+                        onPinCert = onPinCert ?: {},
+                    )
+                }
 
                 Spacer(Modifier.height(8.dp))
 
@@ -367,6 +397,192 @@ private fun NamecoinAddServerInput(onAdd: (String) -> Unit) {
                 MaterialSymbols.Add,
                 contentDescription = "Add server",
                 tint = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
+}
+
+// ── Test connection sub-section ────────────────────────────────────────────────
+
+private data class PendingCertPin(
+    val serverHost: String,
+    val fingerprint: String,
+    val pem: String,
+)
+
+@Composable
+private fun NamecoinTestConnectionSection(
+    settings: NamecoinSettings,
+    onTestServer: suspend (ElectrumxServer) -> ServerTestResult,
+    onPinCert: (String) -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    var isTesting by remember { mutableStateOf(false) }
+    var testResults by remember { mutableStateOf<List<ServerTestResult>>(emptyList()) }
+    var pendingCerts by remember { mutableStateOf<List<PendingCertPin>>(emptyList()) }
+    var confirmingCert by remember { mutableStateOf<PendingCertPin?>(null) }
+
+    val servers = settings.toElectrumxServers() ?: DEFAULT_ELECTRUMX_SERVERS
+
+    // ── Cert confirmation dialog ──────────────────────────────────────────
+    confirmingCert?.let { pending ->
+        AlertDialog(
+            onDismissRequest = {
+                pendingCerts = pendingCerts.drop(1)
+                confirmingCert = pendingCerts.firstOrNull()
+            },
+            title = { Text("Pin server certificate?") },
+            text = {
+                Column {
+                    Text(
+                        "Trust this certificate for ${pending.serverHost}? " +
+                            "Subsequent lookups against this host will require the same cert.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "SHA-256:",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = pending.fingerprint,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    onPinCert(pending.pem)
+                    pendingCerts = pendingCerts.drop(1)
+                    confirmingCert = pendingCerts.firstOrNull()
+                }) {
+                    Text("Pin")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    pendingCerts = pendingCerts.drop(1)
+                    confirmingCert = pendingCerts.firstOrNull()
+                }) {
+                    Text("Skip")
+                }
+            },
+        )
+    }
+
+    Column {
+        Button(
+            onClick = {
+                if (!isTesting) {
+                    isTesting = true
+                    testResults = emptyList()
+                    pendingCerts = emptyList()
+                    scope.launch {
+                        val results = mutableListOf<ServerTestResult>()
+                        val newCerts = mutableListOf<PendingCertPin>()
+                        for (server in servers) {
+                            val result = onTestServer(server)
+                            results.add(result)
+                            testResults = results.toList()
+                            val pem = result.serverCertPem
+                            val fp = result.certFingerprint
+                            if (result.success && pem != null && fp != null) {
+                                newCerts.add(
+                                    PendingCertPin(
+                                        serverHost = "${server.host}:${server.port}",
+                                        fingerprint = fp,
+                                        pem = pem,
+                                    ),
+                                )
+                            }
+                        }
+                        isTesting = false
+                        if (newCerts.isNotEmpty()) {
+                            pendingCerts = newCerts
+                            confirmingCert = newCerts.first()
+                        }
+                    }
+                }
+            },
+            enabled = !isTesting,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            if (isTesting) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(18.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("Testing…")
+            } else {
+                Text("Test connection & pin certs")
+            }
+        }
+
+        if (testResults.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            Text(
+                "Test results",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Medium,
+            )
+            Spacer(Modifier.height(6.dp))
+            testResults.forEach { result ->
+                NamecoinServerTestResultRow(result)
+            }
+        }
+    }
+}
+
+@Composable
+private fun NamecoinServerTestResultRow(result: ServerTestResult) {
+    val serverLabel = "${result.server.host}:${result.server.port}"
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = if (result.success) "✓" else "✗",
+            color =
+                if (result.success) {
+                    Color(0xFF2E8B57)
+                } else {
+                    MaterialTheme.colorScheme.error
+                },
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(end = 8.dp),
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = serverLabel,
+                style = MaterialTheme.typography.bodySmall,
+                fontFamily = FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            val detail: String =
+                when {
+                    result.success && result.tlsVersion != null ->
+                        "${result.tlsVersion} · ${result.responseTimeMs} ms"
+                    result.success -> "${result.responseTimeMs} ms"
+                    !result.error.isNullOrBlank() -> result.error!!
+                    else -> "Failed"
+                }
+            Text(
+                text = detail,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
