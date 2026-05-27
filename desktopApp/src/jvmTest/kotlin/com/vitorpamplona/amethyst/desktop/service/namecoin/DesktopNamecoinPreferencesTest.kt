@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.desktop.service.namecoin
 
+import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinSettings
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinBackend
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinCoreRpcConfig
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -225,5 +228,121 @@ class DesktopNamecoinPreferencesTest {
             namecoinPrefs.setEnabled(false)
 
             assertEquals(listOf(samplePem1), namecoinPrefs.loadPinnedCerts())
+        }
+
+    // ── Backend / Core RPC / fallback round-trip ──────────────────────
+
+    @Test
+    fun `default backend is ElectrumX with empty Core RPC config and no fallbacks`() {
+        val settings = namecoinPrefs.current
+        assertEquals(NamecoinBackend.ELECTRUMX, settings.backend)
+        assertEquals(NamecoinCoreRpcConfig(), settings.namecoinCoreRpc)
+        assertFalse(settings.fallbackToCustomElectrumx)
+        assertFalse(settings.fallbackToDefaultElectrumx)
+    }
+
+    @Test
+    fun `setBackend persists and updates flow`() =
+        runBlocking {
+            namecoinPrefs.setBackend(NamecoinBackend.NAMECOIN_CORE_RPC)
+            assertEquals(NamecoinBackend.NAMECOIN_CORE_RPC, namecoinPrefs.current.backend)
+
+            val reloaded = DesktopNamecoinPreferences(prefs = testPrefs)
+            assertEquals(NamecoinBackend.NAMECOIN_CORE_RPC, reloaded.current.backend)
+        }
+
+    @Test
+    fun `setCoreRpcConfig persists URL username password`() =
+        runBlocking {
+            val cfg =
+                NamecoinCoreRpcConfig(
+                    url = "http://abc.onion:8336/",
+                    username = "rpcuser",
+                    password = "hunter2",
+                )
+            namecoinPrefs.setCoreRpcConfig(cfg)
+            assertEquals(cfg, namecoinPrefs.current.namecoinCoreRpc)
+
+            val reloaded = DesktopNamecoinPreferences(prefs = testPrefs)
+            assertEquals(cfg, reloaded.current.namecoinCoreRpc)
+        }
+
+    @Test
+    fun `setCoreRpcConfig round-trips usePinnedTrustStore flag`() =
+        runBlocking {
+            val cfg =
+                NamecoinCoreRpcConfig(
+                    url = "https://lan-host:8336/",
+                    username = "u",
+                    password = "p",
+                    usePinnedTrustStore = true,
+                )
+            namecoinPrefs.setCoreRpcConfig(cfg)
+            val reloaded = DesktopNamecoinPreferences(prefs = testPrefs)
+            assertTrue(reloaded.current.namecoinCoreRpc.usePinnedTrustStore)
+        }
+
+    @Test
+    fun `setFallbackToCustomElectrumx persists`() =
+        runBlocking {
+            namecoinPrefs.setFallbackToCustomElectrumx(true)
+            assertTrue(namecoinPrefs.current.fallbackToCustomElectrumx)
+
+            val reloaded = DesktopNamecoinPreferences(prefs = testPrefs)
+            assertTrue(reloaded.current.fallbackToCustomElectrumx)
+        }
+
+    @Test
+    fun `setFallbackToDefaultElectrumx persists`() =
+        runBlocking {
+            namecoinPrefs.setFallbackToDefaultElectrumx(true)
+            assertTrue(namecoinPrefs.current.fallbackToDefaultElectrumx)
+
+            val reloaded = DesktopNamecoinPreferences(prefs = testPrefs)
+            assertTrue(reloaded.current.fallbackToDefaultElectrumx)
+        }
+
+    @Test
+    fun `reset clears backend Core RPC and fallback flags`() =
+        runBlocking {
+            namecoinPrefs.setBackend(NamecoinBackend.NAMECOIN_CORE_RPC)
+            namecoinPrefs.setCoreRpcConfig(
+                NamecoinCoreRpcConfig(url = "http://x:8336/", username = "u", password = "p"),
+            )
+            namecoinPrefs.setFallbackToCustomElectrumx(true)
+            namecoinPrefs.setFallbackToDefaultElectrumx(true)
+
+            namecoinPrefs.reset()
+
+            val s = namecoinPrefs.current
+            assertEquals(NamecoinBackend.ELECTRUMX, s.backend)
+            assertEquals(NamecoinCoreRpcConfig(), s.namecoinCoreRpc)
+            assertFalse(s.fallbackToCustomElectrumx)
+            assertFalse(s.fallbackToDefaultElectrumx)
+
+            val reloaded = DesktopNamecoinPreferences(prefs = testPrefs)
+            assertEquals(NamecoinSettings.DEFAULT, reloaded.current)
+        }
+
+    @Test
+    fun `full round-trip across all backend fields`() =
+        runBlocking {
+            namecoinPrefs.setEnabled(true)
+            namecoinPrefs.addServer("server1.com:50006")
+            namecoinPrefs.setBackend(NamecoinBackend.NAMECOIN_CORE_RPC)
+            val cfg =
+                NamecoinCoreRpcConfig(
+                    url = "http://onion.onion:8336/",
+                    username = "alice",
+                    password = "s3cret",
+                    usePinnedTrustStore = false,
+                )
+            namecoinPrefs.setCoreRpcConfig(cfg)
+            namecoinPrefs.setFallbackToCustomElectrumx(true)
+            namecoinPrefs.setFallbackToDefaultElectrumx(true)
+
+            val snapshot = namecoinPrefs.current
+            val reloaded = DesktopNamecoinPreferences(prefs = testPrefs)
+            assertEquals(snapshot, reloaded.current)
         }
 }
