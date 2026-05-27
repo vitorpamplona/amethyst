@@ -24,6 +24,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -40,6 +41,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,6 +55,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImagePainter
+import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImageContent
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -71,8 +76,7 @@ import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.WatchAuthor
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageBanner
-import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
-import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
+import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageBannerBackground
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -279,45 +283,82 @@ private fun MusicPlaylistCover(
 
     Box(imageModifier) {
         if (image != null) {
-            MyAsyncImage(
-                imageUrl = image,
+            // Driving SubcomposeAsyncImage directly (rather than going through MyAsyncImage)
+            // so each painter state can choose its own overlay: only `Success` floats the
+            // chip alone over the loaded artwork; `Loading` and `Error` fall back to the
+            // banner with the author's avatar + chip side-by-side — same treatment as the
+            // no-image case below — so the chip never sits on top of the avatar.
+            SubcomposeAsyncImage(
+                model = image,
                 contentDescription = stringRes(R.string.preview_card_image_for, image),
                 contentScale = ContentScale.Crop,
-                mainImageModifier = Modifier.fillMaxSize(),
-                loadedImageModifier = imageModifier,
-                accountViewModel = accountViewModel,
-                onLoadingBackground = { DefaultImageHeaderBackground(note, accountViewModel, imageModifier) },
-                onError = { DefaultImageHeader(note, accountViewModel, imageModifier) },
-            )
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                val state by painter.state.collectAsState()
+                when (state) {
+                    is AsyncImagePainter.State.Success -> {
+                        SubcomposeAsyncImageContent(imageModifier)
+                        FloatingTrackCountChip(trackCount)
+                    }
 
-            // When a real cover loads, the chip floats on top of the artwork in the
-            // bottom-left corner — no avatar to collide with.
-            TrackCountChip(
-                trackCount = trackCount,
+                    is AsyncImagePainter.State.Error -> {
+                        BannerWithAuthorChip(note, trackCount, imageModifier, accountViewModel, blurred = false)
+                    }
+
+                    else -> {
+                        BannerWithAuthorChip(note, trackCount, imageModifier, accountViewModel, blurred = true)
+                    }
+                }
+            }
+        } else {
+            BannerWithAuthorChip(note, trackCount, imageModifier, accountViewModel, blurred = false)
+        }
+    }
+}
+
+@Composable
+private fun BoxScope.FloatingTrackCountChip(trackCount: Int) {
+    TrackCountChip(
+        trackCount = trackCount,
+        modifier =
+            Modifier
+                .align(Alignment.BottomStart)
+                .padding(12.dp),
+    )
+}
+
+/**
+ * Author-banner cover used whenever the playlist has no album artwork to show — either
+ * because the playlist doesn't carry an `image` tag, or because the configured URL is
+ * still loading or failed to load. Lays out the author's avatar and the track-count chip
+ * side-by-side at the bottom-left so the chip never overlaps the avatar.
+ */
+@Composable
+private fun BannerWithAuthorChip(
+    note: Note,
+    trackCount: Int,
+    imageModifier: Modifier,
+    accountViewModel: AccountViewModel,
+    blurred: Boolean,
+) {
+    Box(imageModifier) {
+        if (blurred) {
+            DefaultImageBannerBackground(note, accountViewModel, imageModifier)
+        } else {
+            DefaultImageBanner(note, accountViewModel, imageModifier)
+        }
+
+        WatchAuthor(baseNote = note, accountViewModel = accountViewModel) { author ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier =
                     Modifier
                         .align(Alignment.BottomStart)
-                        .padding(12.dp),
-            )
-        } else {
-            // No cover artwork: render the author's banner alone (DefaultImageBanner instead
-            // of DefaultImageHeader, which would bake its own avatar into BottomStart and
-            // collide with the chip). Then place the avatar and chip in a single bottom-row
-            // so they sit side-by-side instead of stacking.
-            DefaultImageBanner(note, accountViewModel, imageModifier)
-
-            WatchAuthor(baseNote = note, accountViewModel = accountViewModel) { author ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier =
-                        Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(10.dp),
-                ) {
-                    BaseUserPicture(author, Size55dp, accountViewModel, Modifier)
-                    Spacer(Modifier.padding(start = 8.dp))
-                    TrackCountChip(trackCount = trackCount)
-                }
+                        .padding(10.dp),
+            ) {
+                BaseUserPicture(author, Size55dp, accountViewModel, Modifier)
+                Spacer(Modifier.padding(start = 8.dp))
+                TrackCountChip(trackCount = trackCount)
             }
         }
     }
@@ -524,9 +565,9 @@ private fun formatTrackDuration(seconds: Int): String {
 // @Preview composables. Constructs a MusicPlaylistEvent plus a handful of
 // MusicTrackEvents it references, pushes them through LocalCache, then
 // renders the same code path the production feed uses. The cover image URL
-// is unreachable on purpose so MyAsyncImage falls back to the deterministic
-// DefaultImageHeader robohash — that's what users see while the real cover
-// is still loading.
+// is unreachable on purpose so the cover falls back to the deterministic
+// banner + author-avatar layout — that's what users see while the real
+// cover is still loading.
 // ---------------------------------------------------------------------------
 
 private const val PREVIEW_PLAYLIST_PUBKEY = "989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799"
