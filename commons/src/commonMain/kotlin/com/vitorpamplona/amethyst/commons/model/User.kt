@@ -56,30 +56,23 @@ fun interface UserContext {
 @Stable
 class User(
     val pubkeyHex: String,
-    private val context: UserContext,
+    context: UserContext,
 ) {
     // ============================================================
     // Per-user pinned replaceable notes (kind:10002 / 10050 / 10019)
     // ============================================================
-    // Each is resolved lazily on first read and then held by this
-    // strong-reference field until the User itself is collected. The
-    // underlying `LocalCache.addressables` map is WeakReference-backed,
-    // so without these strong refs the note shells (and any event
-    // loaded into them) could vanish on the next GC even though the
-    // event was successfully delivered to the cache. Adding a new
-    // pinned kind is a one-liner here.
+    // Held by strong-reference fields until the User itself is collected.
+    // The underlying `LocalCache.addressables` map is WeakReference-backed,
+    // so without these strong refs the note shells (and any event loaded
+    // into them) could vanish on the next GC even though the event was
+    // successfully delivered to the cache. Adding a new pinned kind is a
+    // one-liner here.
 
-    val nip65RelayListNote: Note by lazy {
-        context.addressableNote(AdvertisedRelayListEvent.createAddress(pubkeyHex))
-    }
+    val nip65RelayListNote: Note = context.addressableNote(AdvertisedRelayListEvent.createAddress(pubkeyHex))
 
-    val dmRelayListNote: Note by lazy {
-        context.addressableNote(ChatMessageRelayListEvent.createAddress(pubkeyHex))
-    }
+    val dmRelayListNote: Note = context.addressableNote(ChatMessageRelayListEvent.createAddress(pubkeyHex))
 
-    val nutzapInfoNote: Note by lazy {
-        context.addressableNote(NutzapInfoEvent.createAddress(pubkeyHex))
-    }
+    val nutzapInfoNote: Note = context.addressableNote(NutzapInfoEvent.createAddress(pubkeyHex))
 
     // These objects are designed to keep the cache
     // while this user obj is being used anywhere.
