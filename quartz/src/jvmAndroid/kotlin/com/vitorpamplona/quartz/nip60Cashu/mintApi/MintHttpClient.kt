@@ -88,6 +88,8 @@ class MintHttpClient(
 
     suspend fun checkState(request: CheckStateRequestDto): CheckStateResponseDto = post("/v1/checkstate", request, CheckStateRequestDto.serializer())
 
+    suspend fun restore(request: RestoreRequestDto): RestoreResponseDto = post("/v1/restore", request, RestoreRequestDto.serializer())
+
     private suspend inline fun <reified R> get(path: String): R =
         withContext(Dispatchers.IO) {
             val url = baseUrl + path

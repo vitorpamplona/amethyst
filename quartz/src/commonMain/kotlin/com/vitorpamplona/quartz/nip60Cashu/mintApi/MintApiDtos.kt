@@ -106,6 +106,28 @@ data class BlindedMessageDto(
     @SerialName("B_") val bTick: String,
 )
 
+/**
+ * NUT-09 restore request: send a batch of blinded messages we may have
+ * previously asked the mint to sign. The mint echoes back the subset of
+ * those it has indeed signed so we can unblind them.
+ */
+@Serializable
+data class RestoreRequestDto(
+    val outputs: List<BlindedMessageDto>,
+)
+
+/**
+ * NUT-09 restore response: parallel arrays of original outputs the mint
+ * recognised plus the signatures it issued for them. Length of [outputs]
+ * == length of [signatures] and indexes correspond; the mint omits any
+ * blinded messages it never signed.
+ */
+@Serializable
+data class RestoreResponseDto(
+    val outputs: List<BlindedMessageDto>,
+    val signatures: List<BlindSignatureDto>,
+)
+
 @Serializable
 data class BlindSignatureDto(
     val amount: Long,
