@@ -103,6 +103,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
+import com.vitorpamplona.amethyst.commons.hashtags.Cashu
+import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.Note
@@ -195,6 +197,7 @@ import kotlinx.serialization.json.Json
 import kotlin.math.roundToInt
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
+import androidx.compose.material3.Icon as Material3Icon
 
 @Composable
 fun ReactionsRow(
@@ -2099,11 +2102,15 @@ private fun NutzapAmountChip(
                     .padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = CenterVertically,
         ) {
-            Icon(
-                symbol = MaterialSymbols.AccountBalanceWallet,
+            // CustomHashTagIcons.Cashu ships a multi-tone Cashu logo; using
+            // tint=Unspecified preserves it instead of flattening to onTertiary
+            // (which would lose the cashu-orange brand cue that distinguishes
+            // this chip from the orange Lightning bolt next to it).
+            Material3Icon(
+                imageVector = CustomHashTagIcons.Cashu,
                 contentDescription = stringRes(R.string.nutzap),
                 modifier = Size18Modifier,
-                tint = MaterialTheme.colorScheme.onTertiary,
+                tint = Color.Unspecified,
             )
             Spacer(Modifier.width(2.dp))
             Text(
