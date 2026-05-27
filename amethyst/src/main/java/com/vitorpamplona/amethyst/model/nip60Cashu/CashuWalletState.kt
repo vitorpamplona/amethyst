@@ -57,6 +57,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import okhttp3.OkHttpClient
 import java.util.concurrent.ConcurrentHashMap
 
@@ -110,7 +111,12 @@ class CashuWalletState(
             secretFactory =
                 DeterministicSecretFactory(
                     seedProvider = ::cachedSeedOrNull,
-                    reserveCounter = { keysetId -> settings.reserveCashuCounters(keysetId, count = 1) },
+                    // Batched reservation: the factory asks for N
+                    // counters at once (one for every output of the
+                    // current mint/swap/melt), so the @Synchronized
+                    // critical section + AccountSettings save fires
+                    // once per op instead of per-output.
+                    reserveCounters = { keysetId, count -> settings.reserveCashuCounters(keysetId, count) },
                 ),
             seedWarmer = { ensureSeed() },
         )
@@ -232,18 +238,35 @@ class CashuWalletState(
     @Volatile private var cachedSeed: ByteArray? = null
 
     /**
+     * Serialises [ensureSeed] so two concurrent first-time callers don't
+     * both pay the signer round-trip for [walletPrivkeyHex]. The seed
+     * derivation is pure (HMAC-SHA512 of the P2PK key) so even the
+     * unprotected version would produce the same bytes — but for NIP-46
+     * bunker signers the duplicate decrypt round-trip is observable
+     * latency the user doesn't need to pay twice.
+     */
+    private val seedLoadMutex = Mutex()
+
+    /**
      * Fetch (and cache on first call) the NUT-13 master seed. Returns
      * null when the wallet hasn't decrypted its kind:17375 yet — the
      * secret factory falls back to random in that window. Once the seed
      * is cached, every subsequent mint operation gets deterministic
      * secrets and the counter advances monotonically.
+     *
+     * Double-checked under [seedLoadMutex]: the unlocked fast-path reads
+     * the cache; if empty, contend for the mutex and re-check (someone
+     * else may have populated the cache while we waited).
      */
     private suspend fun ensureSeed(): ByteArray? {
         cachedSeed?.let { return it }
-        val priv = walletPrivkeyHex() ?: return null
-        val seed = CashuDeterministic.deriveWalletSeed(priv.hexToByteArray())
-        cachedSeed = seed
-        return seed
+        return seedLoadMutex.withLock {
+            cachedSeed?.let { return@withLock it }
+            val priv = walletPrivkeyHex() ?: return@withLock null
+            val seed = CashuDeterministic.deriveWalletSeed(priv.hexToByteArray())
+            cachedSeed = seed
+            seed
+        }
     }
 
     /**

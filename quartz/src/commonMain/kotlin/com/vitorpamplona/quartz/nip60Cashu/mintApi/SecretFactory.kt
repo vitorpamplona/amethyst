@@ -60,8 +60,22 @@ data class DerivedSecret(
  * seed+counter), and the counter is per-keyset.
  */
 interface SecretFactory {
-    /** Mint one (secret, r) pair for use on the specified keyset. */
-    fun nextSecret(keysetId: String): DerivedSecret
+    /**
+     * Mint [count] (secret, r) pairs for use on the specified keyset.
+     *
+     * Batched on purpose: the deterministic implementation reserves a
+     * contiguous counter range via a single atomic critical section on
+     * `AccountSettings.reserveCashuCounters`. Calling one-at-a-time
+     * inside `splitAmounts(amount).map { ... }` would take the lock N
+     * times per mint — wasteful for both contention and disk writes.
+     */
+    fun nextSecrets(
+        keysetId: String,
+        count: Int,
+    ): List<DerivedSecret>
+
+    /** Convenience for ops that need a single output. */
+    fun nextSecret(keysetId: String): DerivedSecret = nextSecrets(keysetId, 1).first()
 }
 
 /**
@@ -71,10 +85,16 @@ interface SecretFactory {
  * pre-dates the NUT-13 wiring).
  */
 object RandomSecretFactory : SecretFactory {
-    override fun nextSecret(keysetId: String): DerivedSecret {
-        val secret = Bdhke.randomSecret()
-        val r = Bdhke.randomScalar()
-        return DerivedSecret(secret.toHexKey(), r)
+    override fun nextSecrets(
+        keysetId: String,
+        count: Int,
+    ): List<DerivedSecret> {
+        require(count > 0) { "Must request at least one secret" }
+        return List(count) {
+            val secret = Bdhke.randomSecret()
+            val r = Bdhke.randomScalar()
+            DerivedSecret(secret.toHexKey(), r)
+        }
     }
 }
 
@@ -104,16 +124,32 @@ object RandomSecretFactory : SecretFactory {
  */
 class DeterministicSecretFactory(
     private val seedProvider: () -> ByteArray?,
-    private val reserveCounter: (keysetId: String) -> Long,
+    /**
+     * Atomically reserves [count] consecutive counters for a keyset and
+     * returns the FIRST one — the factory then derives at indices
+     * `[returned .. returned+count)`. Persisting in one shot avoids the
+     * lock-N-times-per-mint waste of the old per-secret API.
+     *
+     * `AccountSettings.reserveCashuCounters(keysetId, count)` is the
+     * canonical implementation.
+     */
+    private val reserveCounters: (keysetId: String, count: Int) -> Long,
     private val fallback: SecretFactory = RandomSecretFactory,
 ) : SecretFactory {
-    override fun nextSecret(keysetId: String): DerivedSecret {
-        val seed = seedProvider() ?: return fallback.nextSecret(keysetId)
-        val counter = reserveCounter(keysetId)
-        // CashuDeterministic.secretBytes returns the raw 32 bytes; the
-        // hex form is what BDHKE/proof storage actually use.
-        val secretHex = CashuDeterministic.secretBytes(seed, keysetId, counter).toHexKey()
-        val r = CashuDeterministic.blindingFactor(seed, keysetId, counter)
-        return DerivedSecret(secretHex, r)
+    override fun nextSecrets(
+        keysetId: String,
+        count: Int,
+    ): List<DerivedSecret> {
+        require(count > 0) { "Must request at least one secret" }
+        val seed = seedProvider() ?: return fallback.nextSecrets(keysetId, count)
+        val first = reserveCounters(keysetId, count)
+        return List(count) { offset ->
+            val counter = first + offset
+            // CashuDeterministic.secretBytes returns the raw 32 bytes;
+            // the hex form is what BDHKE/proof storage actually use.
+            val secretHex = CashuDeterministic.secretBytes(seed, keysetId, counter).toHexKey()
+            val r = CashuDeterministic.blindingFactor(seed, keysetId, counter)
+            DerivedSecret(secretHex, r)
+        }
     }
 }

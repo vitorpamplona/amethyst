@@ -148,11 +148,16 @@ class CashuMintOperations(
         }
         if (outputTotal < 0L) throw IllegalArgumentException("Inputs $total don't cover NUT-02 fee $feeAtoms")
 
-        val sendOutputs =
-            if (targetSplit != null) splitAmounts(targetSplit).map { secretOutputFor(it, keyset) } else emptyList()
+        // Batch all output construction into ONE secret reservation —
+        // see [secretOutputsFor]. The wallet's persisted counter
+        // advances by `sendAmounts.size + keepAmounts.size` in one
+        // synchronized critical section.
+        val sendAmounts = if (targetSplit != null) splitAmounts(targetSplit) else emptyList()
         val keepAmount = if (targetSplit != null) outputTotal - targetSplit else outputTotal
-        val keepOutputs =
-            if (keepAmount > 0L) splitAmounts(keepAmount).map { secretOutputFor(it, keyset) } else emptyList()
+        val keepAmounts = if (keepAmount > 0L) splitAmounts(keepAmount) else emptyList()
+        val combined = secretOutputsFor(sendAmounts + keepAmounts, keyset)
+        val sendOutputs = combined.subList(0, sendAmounts.size)
+        val keepOutputs = combined.subList(sendAmounts.size, combined.size)
 
         val allOutputs = sendOutputs + keepOutputs
 
@@ -230,9 +235,13 @@ class CashuMintOperations(
         if (keepAmount < 0L) {
             throw IllegalArgumentException("Inputs $total don't cover send $targetSplit + fee $feeAtoms")
         }
+        // Recipient-locked outputs use random `r` (the recipient owns the
+        // proof, so NUT-13 recovery doesn't apply to those bytes), but
+        // our change outputs go through the deterministic factory in one
+        // batch — see [secretOutputsFor].
         val sendOutputs = splitAmounts(targetSplit).map { lockedOutputFor(it, keyset, recipientP2pkPubkeyHex) }
         val keepOutputs =
-            if (keepAmount > 0L) splitAmounts(keepAmount).map { secretOutputFor(it, keyset) } else emptyList()
+            if (keepAmount > 0L) secretOutputsFor(splitAmounts(keepAmount), keyset) else emptyList()
         val allOutputs = sendOutputs + keepOutputs
 
         val response =
@@ -290,7 +299,7 @@ class CashuMintOperations(
         // excludes the (already-paid) NUT-02 input fee.
         val changeAmount = total - quote.amount - inputFee
         val changeOutputs =
-            if (changeAmount > 0) splitAmounts(changeAmount).map { secretOutputFor(it, keyset) } else emptyList()
+            if (changeAmount > 0) secretOutputsFor(splitAmounts(changeAmount), keyset) else emptyList()
 
         val response =
             client.meltBolt11(
@@ -391,9 +400,12 @@ class CashuMintOperations(
         var emptyStreak = 0
         var highestSeenCounter = startCounter - 1
 
+        val perBatchSize = batchSize * denominations.size
         while (emptyStreak < emptyBatchesToStop) {
-            val outputsByCounter = mutableMapOf<String, Pair<Long, BlindOutput>>()
-            val outputDtos = mutableListOf<BlindedMessageDto>()
+            // Pre-sized collections — without these, the ArrayList /
+            // HashMap resize ~10 times per 1000-output batch.
+            val outputsByCounter = HashMap<String, Pair<Long, BlindOutput>>(perBatchSize)
+            val outputDtos = ArrayList<BlindedMessageDto>(perBatchSize)
 
             for (offset in 0 until batchSize) {
                 val c = counter + offset
@@ -405,11 +417,15 @@ class CashuMintOperations(
                 val r = CashuDeterministic.blindingFactor(seed, keysetId, c)
                 val secretHex = secretBytes.toHexKey()
                 val bTick = Bdhke.blind(secretHex.encodeToByteArray(), r)
+                // Hoist hex once per counter — `bTick` doesn't vary by
+                // amount, so the old code called toHexKey() twice per
+                // output (once for the dedup key, once inside toDto()).
+                val bTickHex = bTick.toHexKey()
                 for (amount in denominations) {
                     val output = BlindOutput(amount, keysetId, r, secretHex, bTick)
-                    val key = "$amount:${bTick.toHexKey()}"
+                    val key = "$amount:$bTickHex"
                     outputsByCounter[key] = c to output
-                    outputDtos += output.toDto()
+                    outputDtos += BlindedMessageDto(amount = amount, id = keysetId, bTick = bTickHex)
                 }
             }
 
@@ -488,19 +504,30 @@ class CashuMintOperations(
     private fun createBlindedOutputs(
         amount: Long,
         keyset: KeysetDto,
-    ): List<BlindOutput> = splitAmounts(amount).map { secretOutputFor(it, keyset) }
+    ): List<BlindOutput> = secretOutputsFor(splitAmounts(amount), keyset)
 
-    private fun secretOutputFor(
-        amount: Long,
+    /**
+     * Construct standard (non-P2PK) blind outputs for a list of amounts
+     * with ONE batch call to the secret factory. Reserves all required
+     * counters in a single atomic critical section — calling
+     * [SecretFactory.nextSecret] per amount instead would take the
+     * @Synchronized lock + dirty `AccountSettings.saveable` N times.
+     */
+    private fun secretOutputsFor(
+        amounts: List<Long>,
         keyset: KeysetDto,
-    ): BlindOutput {
+    ): List<BlindOutput> {
+        if (amounts.isEmpty()) return emptyList()
         // NUT-00: secret is a UTF-8 hex string of 32 secret bytes.
         // [secretFactory] decides whether those bytes are pure-random or
         // NUT-13-derived from a wallet seed; either way the on-wire shape
         // is identical so the mint can't tell which scheme we're using.
-        val derived = secretFactory.nextSecret(keyset.id)
-        val bTick = Bdhke.blind(derived.secretHex.encodeToByteArray(), derived.blindingFactor)
-        return BlindOutput(amount, keyset.id, derived.blindingFactor, derived.secretHex, bTick)
+        val derived = secretFactory.nextSecrets(keyset.id, amounts.size)
+        return amounts.mapIndexed { i, amount ->
+            val pair = derived[i]
+            val bTick = Bdhke.blind(pair.secretHex.encodeToByteArray(), pair.blindingFactor)
+            BlindOutput(amount, keyset.id, pair.blindingFactor, pair.secretHex, bTick)
+        }
     }
 
     /**

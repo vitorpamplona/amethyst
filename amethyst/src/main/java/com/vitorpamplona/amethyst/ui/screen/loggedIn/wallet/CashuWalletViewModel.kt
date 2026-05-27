@@ -222,7 +222,9 @@ class CashuWalletViewModel : ViewModel() {
                 ops.recommendMint(mintUrl = mintUrl, mintAnnouncementDTag = dTag, review = review)
             } catch (e: Exception) {
                 // Best-effort — the UI doesn't need to block on the result.
-                Log.w("CashuWallet") { "recommendMint($mintUrl) failed: ${describeMintError(e)}" }
+                // Pass the throwable through so support reports keep the
+                // stack trace; the lambda-only Log.w overload swallows it.
+                Log.w("CashuWallet", "recommendMint($mintUrl) failed: ${describeMintError(e)}", e)
             }
         }
     }
@@ -237,7 +239,7 @@ class CashuWalletViewModel : ViewModel() {
         vm.launchSigner {
             runCatching { ops.deleteRecommendation(event) }
                 .onFailure {
-                    Log.w("CashuWallet") { "deleteRecommendation failed: ${describeMintError(it)}" }
+                    Log.w("CashuWallet", "deleteRecommendation failed: ${describeMintError(it)}", it)
                 }
         }
     }
@@ -290,7 +292,7 @@ class CashuWalletViewModel : ViewModel() {
                                 totalProofs += outcome.proofsRecovered
                             }
                         }.onFailure {
-                            Log.w("CashuWallet") { "restoreFromMint($mint) failed: ${describeMintError(it)}" }
+                            Log.w("CashuWallet", "restoreFromMint($mint) failed: ${describeMintError(it)}", it)
                         }
                 }
                 _restoreState.value =
@@ -473,7 +475,7 @@ class CashuWalletViewModel : ViewModel() {
         vm.launchSigner {
             runCatching { ops.cancelMintQuote(quoteEvent) }
                 .onFailure {
-                    Log.w("CashuWallet") { "cancelMintQuote failed: ${describeMintError(it)}" }
+                    Log.w("CashuWallet", "cancelMintQuote failed: ${describeMintError(it)}", it)
                 }
             _mintState.value = CashuMintFlowState.Idle
         }

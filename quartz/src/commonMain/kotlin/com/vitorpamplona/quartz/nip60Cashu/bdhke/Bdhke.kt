@@ -248,10 +248,19 @@ object Bdhke {
         U256.fromBytesInto(eScalar, e, 0)
         val sScalar = Fe4()
         U256.fromBytesInto(sScalar, s, 0)
-        // ScalarN.isValid rejects zero AND values >= n. Both are protocol
-        // violations for DLEQ — a zero `e` would let any junk signature
-        // verify, and `s >= n` is an unencodable scalar.
-        if (!ScalarN.isValid(eScalar) || !ScalarN.isValid(sScalar)) return false
+        // `s` is `r' + e*k mod n` by construction (NUT-12 §2), so it must
+        // be a canonical scalar < n; reject if not.
+        if (!ScalarN.isValid(sScalar)) return false
+        // `e` is a SHA-256 hash output that NUT-12 treats as raw bytes,
+        // NOT a scalar mod n — there's no requirement that `e < n`. With
+        // probability ~2^-128 a valid proof has `e >= n`; rejecting on
+        // `isValid` here would spuriously fail those. We only check that
+        // `e` isn't zero (a zero `e` would let any junk signature pass
+        // because R1_check / R2_check would collapse to `sG` / `sB'`,
+        // independent of the mint's keyset key). Downstream point
+        // multiplications (`ECPoint.mul(_, A, eScalar)`) handle e >= n
+        // correctly via internal GLV reduction.
+        if (eScalar.isZero()) return false
 
         val aX = Fe4()
         val aY = Fe4()
