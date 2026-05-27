@@ -96,7 +96,11 @@ private fun PreloadFor(
 
         NavBarItem.SHORTS -> ShortsFilterAssemblerSubscription(accountViewModel)
 
-        NavBarItem.MUSIC_TRACKS -> MusicTracksFilterAssemblerSubscription(accountViewModel)
+        NavBarItem.MUSIC_TRACKS,
+        NavBarItem.MUSIC_PLAYLISTS,
+        // Same REQ fetches both kinds 36787 + 34139, so one subscription serves both
+        // tabs no matter which one the user pinned.
+        -> MusicTracksFilterAssemblerSubscription(accountViewModel)
 
         NavBarItem.PUBLIC_CHATS -> PublicChatsFilterAssemblerSubscription(accountViewModel)
 

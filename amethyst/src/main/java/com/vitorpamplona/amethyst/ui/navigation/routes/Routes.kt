@@ -144,6 +144,8 @@ sealed class Route {
 
     @Serializable object MusicTracks : Route()
 
+    @Serializable object MusicPlaylists : Route()
+
     @Serializable
     data class NewMusicTrack(
         val dTag: String? = null,
