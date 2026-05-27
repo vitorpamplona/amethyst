@@ -25,6 +25,8 @@ import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
+import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -62,6 +64,8 @@ object SearchFilterFactory {
             OldBookmarkListEvent.KIND,
             AudioHeaderEvent.KIND,
             AudioTrackEvent.KIND,
+            MusicTrackEvent.KIND,
+            MusicPlaylistEvent.KIND,
             PinListEvent.KIND,
             ZapPollEvent.KIND,
             ChannelCreateEvent.KIND,

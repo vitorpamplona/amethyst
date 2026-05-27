@@ -26,6 +26,8 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
+import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
+import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -78,7 +80,9 @@ class GeoHashFeedFilter(
                 event is ChannelMessageEvent ||
                 event is PrivateDmEvent ||
                 event is ZapPollEvent ||
-                event is AudioHeaderEvent
+                event is AudioHeaderEvent ||
+                event is MusicTrackEvent ||
+                event is MusicPlaylistEvent
         ) &&
             event.isTaggedGeoHash(geohash)
 

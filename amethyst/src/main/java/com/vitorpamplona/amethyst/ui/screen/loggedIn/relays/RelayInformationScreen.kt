@@ -122,6 +122,8 @@ import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStory
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
+import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
+import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
@@ -536,6 +538,8 @@ fun kindDisplayName(kind: Int): Int =
         AppSpecificDataEvent.KIND -> R.string.kind_user_settings
         AudioHeaderEvent.KIND -> R.string.kind_audio_header
         AudioTrackEvent.KIND -> R.string.kind_audio_track
+        MusicTrackEvent.KIND -> R.string.kind_music_track
+        MusicPlaylistEvent.KIND -> R.string.kind_music_playlist
         AttestationEvent.KIND -> R.string.attestation
         AttestationRequestEvent.KIND -> R.string.attestation_request
         AttestorRecommendationEvent.KIND -> R.string.attestor_recommendation

@@ -24,6 +24,8 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
+import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -57,6 +59,8 @@ val PostsByRelayKinds2 =
         InteractiveStorySceneEvent.KIND,
         AudioTrackEvent.KIND,
         AudioHeaderEvent.KIND,
+        MusicTrackEvent.KIND,
+        MusicPlaylistEvent.KIND,
         NipTextEvent.KIND,
         ZapPollEvent.KIND,
     )

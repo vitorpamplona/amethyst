@@ -2541,6 +2541,8 @@
     <string name="kind_user_settings">User Settings</string>
     <string name="kind_audio_header">Audio Header</string>
     <string name="kind_audio_track">Audio Track</string>
+    <string name="kind_music_track">Music Track</string>
+    <string name="kind_music_playlist">Music Playlist</string>
     <string name="kind_badge_awards">Badge Awards</string>
     <string name="kind_badge_definitions">Badge Definitions</string>
     <string name="kind_accepted_badge_set">Accepted Badge Set</string>
