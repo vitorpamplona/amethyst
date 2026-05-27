@@ -24,6 +24,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -55,7 +56,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -94,6 +98,10 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import java.awt.datatransfer.DataFlavor
+import java.awt.dnd.DnDConstants
+import java.awt.dnd.DropTargetDropEvent
+import java.io.File
 
 sealed class Nip05Status {
     data object Idle : Nip05Status()
@@ -166,13 +174,12 @@ fun EditProfileDialog(
     val orchestrator = remember { UploadOrchestrator() }
     val serverBaseUrl = DesktopPreferences.preferredBlossomServer
 
-    fun pickAndUpload(
+    fun uploadFile(
+        file: File,
         onUrl: (String) -> Unit,
         setUploading: (Boolean) -> Unit,
     ) {
         scope.launch(Dispatchers.IO) {
-            val files = DesktopFilePicker.pickMediaFiles()
-            val file = files.firstOrNull() ?: return@launch
             setUploading(true)
             try {
                 val result = orchestrator.upload(file, null, serverBaseUrl, account.signer)
@@ -184,6 +191,17 @@ fun EditProfileDialog(
             } finally {
                 setUploading(false)
             }
+        }
+    }
+
+    fun pickAndUpload(
+        onUrl: (String) -> Unit,
+        setUploading: (Boolean) -> Unit,
+    ) {
+        scope.launch(Dispatchers.IO) {
+            val files = DesktopFilePicker.pickMediaFiles()
+            val file = files.firstOrNull() ?: return@launch
+            uploadFile(file, onUrl, setUploading)
         }
     }
 
@@ -291,6 +309,12 @@ fun EditProfileDialog(
                 setUploading = { isUploadingBanner = it },
             )
         },
+        onDropAvatar = { file ->
+            uploadFile(file, { fields.picture.value = it }, { isUploadingAvatar = it })
+        },
+        onDropBanner = { file ->
+            uploadFile(file, { fields.banner.value = it }, { isUploadingBanner = it })
+        },
         isUploadingAvatar = isUploadingAvatar,
         isUploadingBanner = isUploadingBanner,
         isSaving = isSaving,
@@ -327,6 +351,8 @@ fun EditProfileContent(
     onCancel: () -> Unit,
     onPickAvatar: () -> Unit,
     onPickBanner: () -> Unit,
+    onDropAvatar: (File) -> Unit,
+    onDropBanner: (File) -> Unit,
     isUploadingAvatar: Boolean,
     isUploadingBanner: Boolean,
     isSaving: Boolean,
@@ -407,14 +433,32 @@ fun EditProfileContent(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // Avatar — tappable circle with upload overlay
+                    // Avatar — tappable circle with drag-and-drop
+                    var isAvatarDragOver by remember { mutableStateOf(false) }
+                    val avatarDropTarget =
+                        remember {
+                            imageDropTarget(
+                                onDrop = { onDropAvatar(it) },
+                                onDragOver = { isAvatarDragOver = it },
+                            )
+                        }
                     Box(
                         modifier =
                             Modifier
                                 .size(120.dp)
                                 .clip(CircleShape)
                                 .background(MaterialTheme.colorScheme.surfaceVariant)
-                                .clickable(enabled = !isUploadingAvatar) { onPickAvatar() },
+                                .clickable(enabled = !isUploadingAvatar) { onPickAvatar() }
+                                .dragAndDropTarget(
+                                    shouldStartDragAndDrop = { true },
+                                    target = avatarDropTarget,
+                                ).then(
+                                    if (isAvatarDragOver) {
+                                        Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                    } else {
+                                        Modifier
+                                    },
+                                ),
                         contentAlignment = Alignment.Center,
                     ) {
                         if (pictureValue.isNotBlank()) {
@@ -424,20 +468,8 @@ fun EditProfileContent(
                                 modifier = Modifier.size(120.dp).clip(CircleShape),
                                 contentScale = ContentScale.Crop,
                             )
-                        }
-                        // Overlay: upload icon centered (or spinner while uploading)
-                        Box(
-                            modifier =
-                                Modifier
-                                    .size(120.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        MaterialTheme.colorScheme.surface.copy(
-                                            alpha = if (pictureValue.isNotBlank()) 0.5f else 0f,
-                                        ),
-                                    ),
-                            contentAlignment = Alignment.Center,
-                        ) {
+                        } else {
+                            // Placeholder icon — only when no image
                             if (isUploadingAvatar) {
                                 CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 3.dp)
                             } else {
@@ -445,12 +477,7 @@ fun EditProfileContent(
                                     MaterialSymbols.AddPhotoAlternate,
                                     contentDescription = "Upload avatar",
                                     modifier = Modifier.size(32.dp),
-                                    tint =
-                                        if (pictureValue.isNotBlank()) {
-                                            MaterialTheme.colorScheme.onSurface
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                        },
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
@@ -486,16 +513,36 @@ fun EditProfileContent(
 
                 Spacer(Modifier.height(8.dp))
 
-                // Banner
+                // Banner with drag-and-drop
                 Text("Banner", style = MaterialTheme.typography.labelMedium)
+                var isBannerDragOver by remember { mutableStateOf(false) }
+                val bannerDropTarget =
+                    remember {
+                        imageDropTarget(
+                            onDrop = { onDropBanner(it) },
+                            onDragOver = { isBannerDragOver = it },
+                        )
+                    }
                 Box(
                     modifier =
                         Modifier
                             .fillMaxWidth()
                             .height(120.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
-                            .clickable { onPickBanner() },
+                            .border(
+                                width = if (isBannerDragOver) 2.dp else 1.dp,
+                                color =
+                                    if (isBannerDragOver) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.outline
+                                    },
+                                shape = RoundedCornerShape(8.dp),
+                            ).clickable { onPickBanner() }
+                            .dragAndDropTarget(
+                                shouldStartDragAndDrop = { true },
+                                target = bannerDropTarget,
+                            ),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (bannerValue.isNotBlank()) {
@@ -711,3 +758,39 @@ private fun SocialProofsSection(
         }
     }
 }
+
+private val IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "gif", "webp", "avif")
+
+@OptIn(ExperimentalComposeUiApi::class)
+private fun imageDropTarget(
+    onDrop: (File) -> Unit,
+    onDragOver: (Boolean) -> Unit,
+): DragAndDropTarget =
+    object : DragAndDropTarget {
+        override fun onDrop(event: DragAndDropEvent): Boolean {
+            onDragOver(false)
+            val dropEvent = event.nativeEvent as? DropTargetDropEvent ?: return false
+            dropEvent.acceptDrop(DnDConstants.ACTION_COPY)
+            val transferable = dropEvent.transferable
+            if (transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+                @Suppress("UNCHECKED_CAST")
+                val files = transferable.getTransferData(DataFlavor.javaFileListFlavor) as List<File>
+                val imageFile = files.firstOrNull { it.extension.lowercase() in IMAGE_EXTENSIONS }
+                if (imageFile != null) {
+                    onDrop(imageFile)
+                    dropEvent.dropComplete(true)
+                    return true
+                }
+            }
+            dropEvent.dropComplete(false)
+            return false
+        }
+
+        override fun onStarted(event: DragAndDropEvent) {
+            onDragOver(true)
+        }
+
+        override fun onEnded(event: DragAndDropEvent) {
+            onDragOver(false)
+        }
+    }
