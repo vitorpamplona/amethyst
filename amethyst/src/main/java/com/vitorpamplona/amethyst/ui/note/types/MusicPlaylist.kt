@@ -40,6 +40,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,27 +50,36 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.AddressableNote
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 
 private val PLAYLIST_COVER_ASPECT_RATIO = 1f
 private const val MAX_PREVIEW_TRACKS = 25
@@ -450,4 +460,203 @@ private fun formatTrackDuration(seconds: Int): String {
     val minutes = seconds / 60
     val secs = seconds % 60
     return "%d:%02d".format(minutes, secs)
+}
+
+// ---------------------------------------------------------------------------
+// @Preview composables. Constructs a MusicPlaylistEvent plus a handful of
+// MusicTrackEvents it references, pushes them through LocalCache, then
+// renders the same code path the production feed uses. The cover image URL
+// is unreachable on purpose so MyAsyncImage falls back to the deterministic
+// DefaultImageHeader robohash — that's what users see while the real cover
+// is still loading.
+// ---------------------------------------------------------------------------
+
+private const val PREVIEW_PLAYLIST_PUBKEY = "989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799"
+private val PREVIEW_PLAYLIST_SIG = "0".repeat(128)
+
+private fun previewPlaylistTrack(
+    dTag: String,
+    title: String,
+    artist: String,
+    duration: Int,
+): MusicTrackEvent =
+    MusicTrackEvent(
+        id = "ptrack_${dTag}_${title.hashCode()}".padEnd(64, '0').take(64),
+        pubKey = PREVIEW_PLAYLIST_PUBKEY,
+        createdAt = 1_730_000_000L,
+        tags =
+            arrayOf(
+                arrayOf("d", dTag),
+                arrayOf("title", title),
+                arrayOf("artist", artist),
+                arrayOf("url", "https://example.invalid/$dTag.mp3"),
+                arrayOf("duration", duration.toString()),
+                arrayOf("t", "music"),
+            ),
+        content = "",
+        sig = PREVIEW_PLAYLIST_SIG,
+    )
+
+private fun previewPlaylistEvent(
+    dTag: String,
+    title: String,
+    description: String,
+    tracks: List<MusicTrackEvent>,
+    image: String? = "https://example.invalid/playlist.jpg",
+    isCollaborative: Boolean = false,
+    isPrivate: Boolean = false,
+    content: String = "",
+): MusicPlaylistEvent {
+    val tags =
+        buildList {
+            add(arrayOf("d", dTag))
+            add(arrayOf("title", title))
+            add(arrayOf("description", description))
+            image?.let { add(arrayOf("image", it)) }
+            add(arrayOf("t", "playlist"))
+            tracks.forEach { track ->
+                add(arrayOf("a", "${MusicTrackEvent.KIND}:${track.pubKey}:${track.dTag()}"))
+            }
+            if (isPrivate) add(arrayOf("private", "true")) else add(arrayOf("public", "true"))
+            if (isCollaborative) add(arrayOf("collaborative", "true"))
+        }.toTypedArray()
+
+    return MusicPlaylistEvent(
+        id = "pl_${dTag}_${title.hashCode()}".padEnd(64, '0').take(64),
+        pubKey = PREVIEW_PLAYLIST_PUBKEY,
+        createdAt = 1_730_000_000L,
+        tags = tags,
+        content = content,
+        sig = PREVIEW_PLAYLIST_SIG,
+    )
+}
+
+@Preview
+@Composable
+private fun RenderMusicPlaylistPreview() {
+    val tracks =
+        listOf(
+            previewPlaylistTrack("summer-nights-2024", "Summer Nights", "The Midnight Collective", 245),
+            previewPlaylistTrack("sunset-dreams", "Sunset Dreams", "Pacific Wave", 198),
+            previewPlaylistTrack("ocean-breeze", "Ocean Breeze", "The Midnight Collective", 312),
+        )
+    val event =
+        previewPlaylistEvent(
+            dTag = "summer-vibes-2024",
+            title = "Summer Vibes 2024",
+            description = "Chill electronic tracks for summer",
+            tracks = tracks,
+            content = "My favorite summer vibes from 2024",
+        )
+
+    runBlocking {
+        withContext(Dispatchers.IO) {
+            tracks.forEach { LocalCache.justConsume(it, null, true) }
+            LocalCache.justConsume(event, null, true)
+        }
+    }
+
+    ThemeComparisonColumn {
+        LoadNote(baseNoteHex = event.address().toValue(), accountViewModel = mockAccountViewModel()) { note ->
+            note?.let {
+                RenderMusicPlaylist(
+                    note = it,
+                    makeItShort = false,
+                    canPreview = true,
+                    backgroundColor = remember { mutableStateOf(Color.Transparent) },
+                    accountViewModel = mockAccountViewModel(),
+                    nav = EmptyNav(),
+                )
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun RenderMusicPlaylistCollaborativePrivatePreview() {
+    val event =
+        previewPlaylistEvent(
+            dTag = "friends-collab",
+            title = "Friends Collab",
+            description = "Everyone adds their picks",
+            tracks = emptyList(),
+            isPrivate = true,
+            isCollaborative = true,
+            content = "",
+        )
+
+    runBlocking { withContext(Dispatchers.IO) { LocalCache.justConsume(event, null, true) } }
+
+    ThemeComparisonColumn {
+        LoadNote(baseNoteHex = event.address().toValue(), accountViewModel = mockAccountViewModel()) { note ->
+            note?.let {
+                RenderMusicPlaylist(
+                    note = it,
+                    makeItShort = false,
+                    canPreview = true,
+                    backgroundColor = remember { mutableStateOf(Color.Transparent) },
+                    accountViewModel = mockAccountViewModel(),
+                    nav = EmptyNav(),
+                )
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun MusicPlaylistCoverPreview() {
+    val event =
+        previewPlaylistEvent(
+            dTag = "cover-only",
+            title = "Cover Only",
+            description = "",
+            tracks = emptyList(),
+            image = null,
+        )
+
+    runBlocking { withContext(Dispatchers.IO) { LocalCache.justConsume(event, null, true) } }
+
+    ThemeComparisonColumn {
+        LoadNote(baseNoteHex = event.address().toValue(), accountViewModel = mockAccountViewModel()) { note ->
+            note?.let {
+                MusicPlaylistCover(
+                    image = null,
+                    note = it,
+                    trackCount = 7,
+                    accountViewModel = mockAccountViewModel(),
+                )
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun MissingPlaylistTrackRowPreview() {
+    ThemeComparisonColumn {
+        MissingPlaylistTrackRow(position = 4)
+    }
+}
+
+@Preview
+@Composable
+private fun TrackCoverPlaceholderPreview() {
+    ThemeComparisonColumn {
+        Row(modifier = Modifier.padding(8.dp)) {
+            TrackCoverPlaceholder()
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun PlaylistTagPreview() {
+    ThemeComparisonColumn {
+        Row(modifier = Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            PlaylistTag(text = "Collaborative")
+            PlaylistTag(text = "Private")
+        }
+    }
 }

@@ -25,15 +25,19 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 
 @Composable
 fun NewMusicTrackButton(
@@ -52,5 +56,13 @@ fun NewMusicTrackButton(
             modifier = Size26Modifier,
             tint = Color.White,
         )
+    }
+}
+
+@Preview
+@Composable
+private fun NewMusicTrackButtonPreview() {
+    ThemeComparisonRow {
+        NewMusicTrackButton(accountViewModel = mockAccountViewModel(), nav = EmptyNav())
     }
 }

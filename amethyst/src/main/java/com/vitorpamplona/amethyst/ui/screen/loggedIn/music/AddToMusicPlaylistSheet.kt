@@ -44,16 +44,20 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.lists.list.NewListButton
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
 @Composable
 fun AddToMusicPlaylistSheet(
@@ -183,4 +187,26 @@ private fun NewMusicPlaylistDialog(
             }
         },
     )
+}
+
+@Preview
+@Composable
+private fun NewMusicPlaylistDialogPreview() {
+    ThemeComparisonColumn {
+        NewMusicPlaylistDialog(onDismiss = {}, onCreate = {})
+    }
+}
+
+@Preview
+@Composable
+private fun AddToMusicPlaylistSheetEmptyPreview() {
+    ThemeComparisonColumn {
+        AddToMusicPlaylistSheet(
+            // No matching addressable in LocalCache → the VM resolves zero playlists,
+            // which is the empty-state path we want to capture.
+            trackAddress = "36787:0000000000000000000000000000000000000000000000000000000000000000:preview-empty",
+            accountViewModel = mockAccountViewModel(),
+            nav = EmptyNav(),
+        )
+    }
 }

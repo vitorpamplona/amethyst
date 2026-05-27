@@ -39,6 +39,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,29 +48,38 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.playback.composable.LoadThumbAndThenVideoView
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
+import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font10SP
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 
 private val COVER_ASPECT_RATIO = 1f
 
@@ -349,4 +359,158 @@ private fun formatDuration(seconds: Int): String {
     val minutes = seconds / 60
     val secs = seconds % 60
     return "%d:%02d".format(minutes, secs)
+}
+
+// ---------------------------------------------------------------------------
+// @Preview composables. These wire a constructed MusicTrackEvent through
+// LocalCache so the renderer pulls the real Note path it would in production.
+// The audio/image URLs are intentionally unreachable — VideoView falls back to
+// its tap-to-load thumbnail state, and MyAsyncImage falls back to the
+// DefaultImageHeader robohash. That's the same first-paint state real users
+// see for a track they haven't tapped to download yet, which is what the
+// preview is meant to show.
+// ---------------------------------------------------------------------------
+
+private const val PREVIEW_TRACK_PUBKEY = "989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799"
+private val PREVIEW_TRACK_SIG = "0".repeat(128)
+
+private fun previewMusicTrackEvent(
+    dTag: String,
+    title: String,
+    artist: String,
+    album: String? = null,
+    duration: Int? = null,
+    released: String? = null,
+    trackNumber: Int? = null,
+    explicit: Boolean = false,
+    image: String? = "https://example.invalid/cover.jpg",
+    url: String = "https://example.invalid/track.mp3",
+    content: String = "",
+): MusicTrackEvent {
+    val tags =
+        buildList {
+            add(arrayOf("d", dTag))
+            add(arrayOf("title", title))
+            add(arrayOf("artist", artist))
+            add(arrayOf("url", url))
+            add(arrayOf("t", "music"))
+            image?.let { add(arrayOf("image", it)) }
+            album?.let { add(arrayOf("album", it)) }
+            trackNumber?.let { add(arrayOf("track_number", it.toString())) }
+            released?.let { add(arrayOf("released", it)) }
+            duration?.let { add(arrayOf("duration", it.toString())) }
+            if (explicit) add(arrayOf("explicit", "true"))
+        }.toTypedArray()
+
+    return MusicTrackEvent(
+        id = "track_${dTag}_${title.hashCode()}".padEnd(64, '0').take(64),
+        pubKey = PREVIEW_TRACK_PUBKEY,
+        createdAt = 1_730_000_000L,
+        tags = tags,
+        content = content,
+        sig = PREVIEW_TRACK_SIG,
+    )
+}
+
+@Preview
+@Composable
+private fun RenderMusicTrackPreview() {
+    val event =
+        previewMusicTrackEvent(
+            dTag = "summer-nights-2024",
+            title = "Summer Nights",
+            artist = "The Midnight Collective",
+            album = "Endless Summer",
+            duration = 245,
+            released = "2024-06-15",
+            trackNumber = 3,
+            explicit = false,
+            content = "Lyrics:\n[Verse 1]\nWalking through the city lights...\n\nProducer: John Doe",
+        )
+
+    runBlocking { withContext(Dispatchers.IO) { LocalCache.justConsume(event, null, true) } }
+
+    ThemeComparisonColumn {
+        LoadNote(baseNoteHex = event.address().toValue(), accountViewModel = mockAccountViewModel()) { note ->
+            note?.let {
+                RenderMusicTrack(
+                    note = it,
+                    makeItShort = false,
+                    canPreview = true,
+                    backgroundColor = remember { mutableStateOf(Color.Transparent) },
+                    accountViewModel = mockAccountViewModel(),
+                    nav = EmptyNav(),
+                )
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun RenderMusicTrackExplicitPreview() {
+    val event =
+        previewMusicTrackEvent(
+            dTag = "loud-and-clear",
+            title = "Loud and Clear",
+            artist = "Static Riot",
+            album = "Distortion",
+            duration = 187,
+            explicit = true,
+            content = "",
+        )
+
+    runBlocking { withContext(Dispatchers.IO) { LocalCache.justConsume(event, null, true) } }
+
+    ThemeComparisonColumn {
+        LoadNote(baseNoteHex = event.address().toValue(), accountViewModel = mockAccountViewModel()) { note ->
+            note?.let {
+                RenderMusicTrack(
+                    note = it,
+                    makeItShort = false,
+                    canPreview = true,
+                    backgroundColor = remember { mutableStateOf(Color.Transparent) },
+                    accountViewModel = mockAccountViewModel(),
+                    nav = EmptyNav(),
+                )
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun MusicTrackCoverPreview() {
+    val event = previewMusicTrackEvent(dTag = "cover-only", title = "Cover Only", artist = "Anon")
+    runBlocking { withContext(Dispatchers.IO) { LocalCache.justConsume(event, null, true) } }
+
+    ThemeComparisonColumn {
+        LoadNote(baseNoteHex = event.address().toValue(), accountViewModel = mockAccountViewModel()) { note ->
+            note?.let { MusicTrackCover(image = null, note = it, accountViewModel = mockAccountViewModel()) }
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun ExplicitBadgePreview() {
+    ThemeComparisonColumn {
+        Row(modifier = Modifier.padding(8.dp)) {
+            ExplicitBadge()
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun TopicChipPreview() {
+    ThemeComparisonColumn {
+        Row(modifier = Modifier.padding(8.dp)) {
+            TopicChip("electronic")
+            Spacer(Modifier.padding(start = 4.dp))
+            TopicChip("synthwave")
+            Spacer(Modifier.padding(start = 4.dp))
+            TopicChip("80s")
+        }
+    }
 }

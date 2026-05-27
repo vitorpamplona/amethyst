@@ -46,13 +46,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -211,6 +215,18 @@ private fun DeleteMusicTrackRow(
                     Text(stringRes(R.string.cancel))
                 }
             },
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun NewMusicTrackScreenPreview() {
+    ThemeComparisonColumn {
+        NewMusicTrackScreen(
+            editDTag = null,
+            accountViewModel = mockAccountViewModel(),
+            nav = EmptyNav(),
         )
     }
 }

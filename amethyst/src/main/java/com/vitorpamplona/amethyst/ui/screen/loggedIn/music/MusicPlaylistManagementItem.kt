@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -45,6 +46,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size50Modifier
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
 /**
  * One row in the Add-to-Playlist sheet. Mirrors `BookmarkGroupManagementItem` so the visual
@@ -174,5 +176,61 @@ private fun PlaylistToggleButton(
                 }
             }
         }
+    }
+}
+
+@Preview
+@Composable
+private fun MusicPlaylistManagementItemNotInPreview() {
+    ThemeComparisonColumn {
+        MusicPlaylistManagementItem(
+            playlistTitle = "Summer Vibes 2024",
+            isTrackInPlaylist = false,
+            totalTracks = 12,
+            onClick = {},
+            onToggle = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun MusicPlaylistManagementItemInPreview() {
+    ThemeComparisonColumn {
+        MusicPlaylistManagementItem(
+            playlistTitle = "Late-night Coding Beats",
+            isTrackInPlaylist = true,
+            totalTracks = 47,
+            onClick = {},
+            onToggle = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun MusicPlaylistManagementItemEmptyPreview() {
+    ThemeComparisonColumn {
+        MusicPlaylistManagementItem(
+            playlistTitle = "Fresh Picks",
+            isTrackInPlaylist = false,
+            totalTracks = 0,
+            onClick = {},
+            onToggle = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+private fun MusicPlaylistManagementItemUntitledPreview() {
+    ThemeComparisonColumn {
+        MusicPlaylistManagementItem(
+            playlistTitle = "",
+            isTrackInPlaylist = false,
+            totalTracks = 3,
+            onClick = {},
+            onToggle = {},
+        )
     }
 }
