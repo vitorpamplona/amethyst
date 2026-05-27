@@ -1546,6 +1546,13 @@
     <string name="music_playlist_private">Private</string>
     <string name="music_playlist_unknown_track">Unknown track</string>
     <string name="music_playlist_loading_track">Loading track…</string>
+    <string name="music_track_cover_upload_cta">Upload a cover image</string>
+    <string name="music_track_cover_upload_hint">Pick a square image to be the artwork for this track.</string>
+    <string name="music_track_audio_upload_cta">Upload an audio file</string>
+    <string name="music_track_audio_upload_hint">Pick an MP3, WAV, or FLAC. It will be uploaded to your media server on Save.</string>
+    <string name="music_track_audio_picked">Audio file ready to upload</string>
+    <string name="music_track_uploading">Uploading…</string>
+    <string name="music_track_upload_failed">Upload failed: %1$s</string>
 
 
     <string name="loading_location">Loading location</string>
