@@ -31,7 +31,9 @@ import com.vitorpamplona.amethyst.service.cashu.v3.V3Parser
 import com.vitorpamplona.amethyst.service.cashu.v4.V4Parser
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MeltQuoteBolt11ResponseDto
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpException
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuProof
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.utils.Log
@@ -407,6 +409,11 @@ class CashuWalletViewModel : ViewModel() {
     /**
      * Polls the mint to see if the user's bolt11 has been paid yet. If so,
      * completes the mint flow (proof issuance + kind:7375/7376 publish).
+     *
+     * If the mint replies "quote not found" the local kind:7374 is NIP-09
+     * deleted — the quote is either expired or already issued in a prior
+     * session whose cleanup didn't land, so keeping it would just leave
+     * the pending banner stuck pointing at dead state.
      */
     fun checkAndCompleteMint() {
         val vm = accountViewModel ?: return
@@ -421,12 +428,26 @@ class CashuWalletViewModel : ViewModel() {
                 ops.completeMintFromLightning(current.mintUrl, current.flow.quoteEvent, current.amountSats)
                 _mintState.value = CashuMintFlowState.Completed(current.amountSats)
             } catch (e: Exception) {
-                _mintState.value = CashuMintFlowState.Error(describeMintError(e))
+                if (isQuoteGoneError(e)) {
+                    runCatching { ops.cancelMintQuote(current.flow.quoteEvent) }
+                    _mintState.value = CashuMintFlowState.Idle
+                } else {
+                    _mintState.value = CashuMintFlowState.Error(describeMintError(e))
+                }
             }
         }
     }
 
-    /** Resume polling an unfulfilled kind:7374 quote left over from a previous session. */
+    /**
+     * Resume an unfulfilled kind:7374 quote from a previous session.
+     *
+     * If the mint reports the quote PAID/ISSUED, complete the mint inline
+     * (proof issuance + kind:7375 + history + kind:5 of the quote) — the
+     * user already paid outside Amethyst and would otherwise see the
+     * banner forever. If the mint says "quote not found" (expired, or
+     * issued earlier whose kind:5 didn't land), NIP-09 delete the local
+     * kind:7374 so the banner clears.
+     */
     fun resumeMintQuote(quoteEvent: com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent) {
         val vm = accountViewModel ?: return
         val mintUrl =
@@ -438,16 +459,53 @@ class CashuWalletViewModel : ViewModel() {
             try {
                 val quoteId = quoteEvent.quoteId(account!!.signer)
                 val status = ops.checkMintQuote(mintUrl, quoteId)
-                _mintState.value =
-                    CashuMintFlowState.AwaitingPayment(
-                        flow = MintQuoteStarted(quoteEvent = quoteEvent, mintQuote = status, invoice = status.request),
-                        mintUrl = mintUrl,
-                        amountSats = 0L, // unknown — caller may have to re-enter, mint will validate
-                    )
+                // Recover amount from the bolt11 invoice — kind:7374 doesn't
+                // carry the sat amount, and the mint quote status DTO doesn't
+                // echo it either. The bolt11 itself does, so parsing it back
+                // is the only reliable way to drive completeMintFromLightning
+                // on resume.
+                val amountSats =
+                    runCatching { LnInvoiceUtil.getAmountInSats(status.request).toLong() }
+                        .getOrElse { 0L }
+                val paid = status.paid == true || status.state == "PAID" || status.state == "ISSUED"
+                if (paid && amountSats > 0) {
+                    _mintState.value = CashuMintFlowState.Completing
+                    ops.completeMintFromLightning(mintUrl, quoteEvent, amountSats)
+                    _mintState.value = CashuMintFlowState.Completed(amountSats)
+                } else {
+                    _mintState.value =
+                        CashuMintFlowState.AwaitingPayment(
+                            flow = MintQuoteStarted(quoteEvent = quoteEvent, mintQuote = status, invoice = status.request),
+                            mintUrl = mintUrl,
+                            amountSats = amountSats,
+                        )
+                }
             } catch (e: Exception) {
-                _mintState.value = CashuMintFlowState.Error(describeMintError(e))
+                if (isQuoteGoneError(e)) {
+                    runCatching { ops.cancelMintQuote(quoteEvent) }
+                    _mintState.value = CashuMintFlowState.Idle
+                } else {
+                    _mintState.value = CashuMintFlowState.Error(describeMintError(e))
+                }
             }
         }
+    }
+
+    /**
+     * True when the mint reports the quote no longer exists — either
+     * because the bolt11 expired before payment or because the wallet
+     * issued the proofs in an earlier session and the local kind:5
+     * cleanup didn't land. Either way the resume path should drop the
+     * local kind:7374 instead of leaving it in the pending banner.
+     */
+    private fun isQuoteGoneError(e: Throwable): Boolean {
+        if (e !is MintHttpException) return false
+        if (e.httpStatus == 404) return true
+        // Most cashu mints return 400 with `detail: "quote not found"` —
+        // match by substring to cover phrasing variants ("quote not
+        // found", "Quote does not exist", etc.).
+        val detail = e.detail?.lowercase() ?: return false
+        return "quote" in detail && ("not found" in detail || "does not exist" in detail || "unknown" in detail)
     }
 
     fun resetMintState() {
