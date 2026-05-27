@@ -1656,6 +1656,7 @@
     <string name="wallet_invalid_uri">无效的 NWC 连接 URI</string>
     <string name="wallet_move_up">上移</string>
     <string name="wallet_move_down">下移</string>
+    <string name="wallet_reorder">调整钱包顺序</string>
     <string name="wallet_onchain_transactions">链上交易</string>
     <string name="wallet_onchain_no_address">此账户没有链上地址可用。</string>
     <string name="wallet_onchain_no_backend">没有配置链后端。</string>
