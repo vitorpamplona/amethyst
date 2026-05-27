@@ -73,6 +73,31 @@ object CashuDeterministic {
     private const val CASHU_PURPOSE: Long = 129372L
     private const val CASHU_COIN_TYPE: Long = 0L
     private val V01_HMAC_PREFIX = "Cashu_KDF_HMAC_SHA256".encodeToByteArray()
+    private val WALLET_SEED_KEY = "Cashu-Wallet-Seed-v1".encodeToByteArray()
+
+    /**
+     * Derive a 64-byte NUT-13 master seed from a wallet's P2PK private
+     * key. Useful for wallets that don't (yet) carry a BIP-39 mnemonic
+     * but do persist a long-lived private key — the kind:17375 wallet
+     * event is the canonical example.
+     *
+     * Derivation: `HMAC-SHA512("Cashu-Wallet-Seed-v1", p2pk_priv)`.
+     *  - Output shape (64 bytes) matches BIP-39's PBKDF2-HMAC-SHA512
+     *    output so existing NUT-13 derivation paths accept it unchanged.
+     *  - Using HMAC ensures any leakage of secrets derived from the seed
+     *    doesn't reveal the P2PK key itself — distinct key-derivation
+     *    domains.
+     *  - The "v1" tag isolates this derivation from any future scheme
+     *    we want to roll out without breaking existing wallets.
+     *
+     * Idempotent and pure; safe to recompute on every wallet load.
+     */
+    fun deriveWalletSeed(p2pkPrivkey: ByteArray): ByteArray {
+        require(p2pkPrivkey.size == 32) { "P2PK private key must be 32 bytes" }
+        val mac = MacInstance("HmacSHA512", WALLET_SEED_KEY)
+        mac.update(p2pkPrivkey)
+        return mac.doFinal()
+    }
 
     /**
      * 32 raw bytes of the derived secret. The Cashu protocol uses these

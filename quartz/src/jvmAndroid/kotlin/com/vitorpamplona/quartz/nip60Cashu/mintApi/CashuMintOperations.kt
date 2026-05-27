@@ -38,6 +38,13 @@ import com.vitorpamplona.quartz.nip60Cashu.token.TokenContent
  */
 class CashuMintOperations(
     private val client: MintHttpClient,
+    /**
+     * NUT-13 strategy for secret + blinding-factor generation. Defaults to
+     * pure-random; the wallet supplies a [DeterministicSecretFactory] when
+     * it has a seed available so future kind:7375 losses can be recovered
+     * via NUT-09 /v1/restore.
+     */
+    private val secretFactory: SecretFactory = RandomSecretFactory,
 ) {
     /**
      * Step 1 of mint-from-LN: ask the mint for a bolt11 invoice for `amount`
@@ -307,12 +314,13 @@ class CashuMintOperations(
         amount: Long,
         keyset: KeysetDto,
     ): BlindOutput {
-        val secret = Bdhke.randomSecret()
-        val r = Bdhke.randomScalar()
-        // NUT-00 spec: secret is a hex string of 32 random bytes.
-        val secretHex = secret.toHexKey()
-        val bTick = Bdhke.blind(secretHex.encodeToByteArray(), r)
-        return BlindOutput(amount, keyset.id, r, secretHex, bTick)
+        // NUT-00: secret is a UTF-8 hex string of 32 secret bytes.
+        // [secretFactory] decides whether those bytes are pure-random or
+        // NUT-13-derived from a wallet seed; either way the on-wire shape
+        // is identical so the mint can't tell which scheme we're using.
+        val derived = secretFactory.nextSecret(keyset.id)
+        val bTick = Bdhke.blind(derived.secretHex.encodeToByteArray(), derived.blindingFactor)
+        return BlindOutput(amount, keyset.id, derived.blindingFactor, derived.secretHex, bTick)
     }
 
     /**

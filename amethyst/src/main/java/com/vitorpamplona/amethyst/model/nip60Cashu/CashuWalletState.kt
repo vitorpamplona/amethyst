@@ -33,7 +33,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.DeterministicSecretFactory
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
+import com.vitorpamplona.quartz.nip60Cashu.seed.CashuDeterministic
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
 import com.vitorpamplona.quartz.nip60Cashu.token.TokenContent
 import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
@@ -97,6 +99,20 @@ class CashuWalletState(
             signer = signer,
             publish = ::publishEvent,
             okHttpClient = okHttpClient,
+            // NUT-13 wiring: the factory closure reads the cached seed at
+            // mint-op time. cachedSeed is populated by ensureSeed() —
+            // CashuWalletOps' seedWarmer below calls it before any blind
+            // op so the cache is warm. When the cache is empty (no wallet
+            // decrypted yet) the factory falls back to random, matching
+            // pre-NUT-13 behaviour. Counter allocation is synchronous +
+            // persistent via AccountSettings; an atomic read-modify-write
+            // makes concurrent mints safe.
+            secretFactory =
+                DeterministicSecretFactory(
+                    seedProvider = ::cachedSeedOrNull,
+                    reserveCounter = { keysetId -> settings.reserveCashuCounters(keysetId, count = 1) },
+                ),
+            seedWarmer = { ensureSeed() },
         )
 
     // ============================================================
@@ -199,6 +215,44 @@ class CashuWalletState(
         _walletEvent.value?.let { evt ->
             runCatching { evt.privkey(signer) }.getOrNull()
         }
+
+    /**
+     * Cached NUT-13 master seed derived from the wallet's P2PK private
+     * key. Volatile + double-checked lazy init — the seed never changes
+     * for a given wallet (it's a pure function of the P2PK key, which is
+     * a constant in kind:17375), so once derived we hold it for the
+     * wallet's lifetime. Null until the first time something asks.
+     *
+     * Derivation: HMAC-SHA512("Cashu-Wallet-Seed-v1", p2pk_priv) — yields
+     * a 64-byte seed shaped like BIP-39's PBKDF2 output. We use HMAC
+     * rather than the raw private key so any downstream NIP-44-style
+     * leakage of secrets derived from `seed` doesn't compromise the
+     * P2PK key itself.
+     */
+    @Volatile private var cachedSeed: ByteArray? = null
+
+    /**
+     * Fetch (and cache on first call) the NUT-13 master seed. Returns
+     * null when the wallet hasn't decrypted its kind:17375 yet — the
+     * secret factory falls back to random in that window. Once the seed
+     * is cached, every subsequent mint operation gets deterministic
+     * secrets and the counter advances monotonically.
+     */
+    private suspend fun ensureSeed(): ByteArray? {
+        cachedSeed?.let { return it }
+        val priv = walletPrivkeyHex() ?: return null
+        val seed = CashuDeterministic.deriveWalletSeed(priv.hexToByteArray())
+        cachedSeed = seed
+        return seed
+    }
+
+    /**
+     * Synchronous seed accessor for the [SecretFactory] thunk. Returns
+     * whatever's already in [cachedSeed] — does NOT trigger derivation
+     * (which is suspend). Callers must invoke [ensureSeed] before the
+     * mint op so the cache is warm by the time the factory queries it.
+     */
+    private fun cachedSeedOrNull(): ByteArray? = cachedSeed
 
     // ============================================================
     // Lifecycle

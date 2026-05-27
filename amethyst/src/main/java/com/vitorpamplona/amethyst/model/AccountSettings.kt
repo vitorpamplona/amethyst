@@ -206,6 +206,19 @@ class AccountSettings(
     var backupTrustProviderList: TrustProviderListEvent? = null,
     var backupCashuWallet: CashuWalletEvent? = null,
     var backupNutzapInfo: NutzapInfoEvent? = null,
+    /**
+     * NUT-13 deterministic-secret counter map, keyed by keyset id. The
+     * wallet derives every blind message from `(seed, keysetId, counter)`,
+     * incrementing the counter every time it consumes one; reusing a
+     * counter would expose the secret. Persisted here so the counter
+     * survives app restart even though the wallet's seed is also stored
+     * in kind:17375 (which would otherwise be the only persistence).
+     *
+     * Empty map = no NUT-13 usage yet (e.g. wallet created before this
+     * feature shipped). Per-keyset; the same counter under different
+     * keysets is fine because the derivation includes the keyset id.
+     */
+    var cashuKeysetCounters: MutableMap<String, Long> = mutableMapOf(),
     val lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
     val hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     val dismissedPollNoteIds: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
@@ -793,6 +806,30 @@ class AccountSettings(
             saveAccountSettings()
         }
     }
+
+    /**
+     * Reserve [count] consecutive NUT-13 counters for [keysetId], returning
+     * the first one. Caller derives `(secret, r)` from `(seed, keysetId, i)`
+     * for `i in [returned .. returned+count-1]`. Persisted immediately so
+     * a crash mid-mint doesn't reuse the same counter on next launch.
+     *
+     * Synchronized to make the read-modify-write atomic — two coroutines
+     * minting concurrently must each get their own counter range.
+     */
+    @Synchronized
+    fun reserveCashuCounters(
+        keysetId: String,
+        count: Int,
+    ): Long {
+        require(count > 0) { "Counter reservation must be positive" }
+        val current = cashuKeysetCounters[keysetId] ?: 0L
+        cashuKeysetCounters[keysetId] = current + count.toLong()
+        saveAccountSettings()
+        return current
+    }
+
+    /** Inspect the next counter for [keysetId] without consuming any. */
+    fun peekCashuCounter(keysetId: String): Long = cashuKeysetCounters[keysetId] ?: 0L
 
     fun updateNIPA3PaymentTargets(newNIPA3PaymentTargets: PaymentTargetsEvent?) {
         if (newNIPA3PaymentTargets == null || newNIPA3PaymentTargets.tags.isEmpty()) return

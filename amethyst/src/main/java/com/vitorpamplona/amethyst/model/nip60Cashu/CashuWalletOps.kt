@@ -41,6 +41,8 @@ import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpClient
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpException
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintProtocolException
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintQuoteBolt11ResponseDto
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.RandomSecretFactory
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.SecretFactory
 import com.vitorpamplona.quartz.nip60Cashu.p2pk.P2PK
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuProof
@@ -77,12 +79,27 @@ class CashuWalletOps(
     private val signer: NostrSigner,
     private val publish: suspend (Event) -> Unit,
     private val okHttpClient: (String) -> OkHttpClient,
+    /**
+     * NUT-13 secret strategy. Defaults to random for backwards
+     * compatibility with tests that don't carry a seed. The wallet state
+     * supplies a [DeterministicSecretFactory] in production so kind:7375
+     * loss is recoverable via NUT-09 /v1/restore.
+     */
+    private val secretFactory: SecretFactory = RandomSecretFactory,
+    /**
+     * Suspend callback that ensures the NUT-13 seed is materialised in
+     * the caller's cache before any blinding op runs. The factory above
+     * reads that cache synchronously — without warming first, a fresh
+     * wallet falls back to random secrets for its very first mint.
+     * Default is a no-op for tests / random-only callers.
+     */
+    private val seedWarmer: suspend () -> Unit = {},
 ) {
     private val opsCache = ConcurrentHashMap<String, CashuMintOperations>()
 
     private fun ops(mintUrl: String): CashuMintOperations =
         opsCache.getOrPut(mintUrl.trimEnd('/')) {
-            CashuMintOperations(MintHttpClient(mintUrl, okHttpClient))
+            CashuMintOperations(MintHttpClient(mintUrl, okHttpClient), secretFactory)
         }
 
     /**
@@ -187,6 +204,7 @@ class CashuWalletOps(
         quoteEvent: CashuMintQuoteEvent,
         amountSats: Long,
     ): MintCompleted {
+        seedWarmer()
         val quoteId = quoteEvent.quoteId(signer)
         val minted = ops(mintUrl).mintProofs(quoteId, amountSats)
 
@@ -246,6 +264,7 @@ class CashuWalletOps(
         quote: MeltQuoteBolt11ResponseDto,
         available: List<TokenEntry>,
     ): MeltCompleted {
+        seedWarmer()
         if (available.isEmpty()) throw IllegalStateException("No proofs available to spend")
 
         val ops = ops(mintUrl)
@@ -459,6 +478,7 @@ class CashuWalletOps(
         available: List<TokenEntry>,
     ): NutzapSent {
         if (amountSats <= 0) throw IllegalArgumentException("Amount must be positive")
+        seedWarmer()
         val (selected, totalSelected) = selectProofsCovering(available, amountSats)
         if (totalSelected < amountSats) throw IllegalStateException("Insufficient balance for $mintUrl")
 
@@ -556,6 +576,7 @@ class CashuWalletOps(
         walletPrivkeyHex: String,
         walletP2pkPubkeyHex: String,
     ): RedeemCompleted {
+        seedWarmer()
         val mintUrl =
             nutzap.mintUrl()
                 ?: throw IllegalArgumentException("Nutzap has no mint tag")
