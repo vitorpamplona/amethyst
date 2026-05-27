@@ -89,7 +89,7 @@ fun DisplayPaymentTargets(
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.padding(vertical = 4.dp),
                 ) {
-                    targets.forEach { target -> PaymentTargetChip(target) }
+                    targets.forEach { target -> PaymentTargetChip(target, accountViewModel) }
                 }
             }
         }
@@ -97,7 +97,10 @@ fun DisplayPaymentTargets(
 }
 
 @Composable
-private fun PaymentTargetChip(target: PaymentTarget) {
+private fun PaymentTargetChip(
+    target: PaymentTarget,
+    accountViewModel: AccountViewModel,
+) {
     val style = remember(target.type) { paymentTargetStyleFor(target.type) }
     val uriHandler = LocalUriHandler.current
     val context = LocalContext.current
@@ -114,6 +117,13 @@ private fun PaymentTargetChip(target: PaymentTarget) {
             Modifier.combinedClickable(
                 onClick = {
                     runCatching { uriHandler.openUri(style.uriFor(target.authority)) }
+                        .onFailure {
+                            accountViewModel.toastManager.toast(
+                                R.string.error_dialog_payment_error,
+                                R.string.no_payment_app_found_for_type,
+                                style.label,
+                            )
+                        }
                 },
                 onLongClick = {
                     scope.launch {
