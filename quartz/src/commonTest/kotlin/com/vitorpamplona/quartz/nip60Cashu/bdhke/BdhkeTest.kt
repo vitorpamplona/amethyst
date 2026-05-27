@@ -140,6 +140,119 @@ class BdhkeTest {
         assertEquals(p1.toHexKey(), p2.toHexKey())
     }
 
+    // ============================================================
+    // NUT-12 DLEQ proofs — verifyDleq / signFull round-trip
+    // ============================================================
+
+    private val mintKey =
+        "0000000000000000000000000000000000000000000000000000000000001234"
+            .hexToByteArray()
+
+    private val secret =
+        "1111111111111111111111111111111111111111111111111111111111111111"
+            .hexToByteArray()
+
+    private val r =
+        "2222222222222222222222222222222222222222222222222222222222222222"
+            .hexToByteArray()
+
+    private val rPrime =
+        "3333333333333333333333333333333333333333333333333333333333333333"
+            .hexToByteArray()
+
+    @Test
+    fun dleqRoundTripVerifies() {
+        val bTick = Bdhke.blind(secret, r)
+        val (cTick, e, s) = Bdhke.signFull(bTick, mintKey, rPrime)
+        val mintPub = Secp256k1.pubKeyCompress(Secp256k1.pubkeyCreate(mintKey))
+        assertTrue(Bdhke.verifyDleq(e = e, s = s, blindedMessage = bTick, blindSignature = cTick, mintPubKey = mintPub))
+    }
+
+    @Test
+    fun dleqRejectsWrongMintPubkey() {
+        // Mint signs with mintKey but we verify against a DIFFERENT pubkey —
+        // the protocol-level "this mint is impersonating another keyset" case.
+        val bTick = Bdhke.blind(secret, r)
+        val (cTick, e, s) = Bdhke.signFull(bTick, mintKey, rPrime)
+        val otherKey = ByteArray(32).also { it[31] = 0x42 }
+        val wrongPub = Secp256k1.pubKeyCompress(Secp256k1.pubkeyCreate(otherKey))
+        assertEquals(false, Bdhke.verifyDleq(e, s, bTick, cTick, wrongPub))
+    }
+
+    @Test
+    fun dleqRejectsTamperedC() {
+        // Same secret, same B', but C' is replaced with a junk signature —
+        // the "malicious mint hands us proofs it can't spend later" case.
+        val bTick = Bdhke.blind(secret, r)
+        val (_, e, s) = Bdhke.signFull(bTick, mintKey, rPrime)
+        val mintPub = Secp256k1.pubKeyCompress(Secp256k1.pubkeyCreate(mintKey))
+        val junkC = Bdhke.sign(bTick, ByteArray(32).also { it[31] = 0x99.toByte() })
+        assertEquals(false, Bdhke.verifyDleq(e, s, bTick, junkC, mintPub))
+    }
+
+    @Test
+    fun dleqRejectsTamperedE() {
+        val bTick = Bdhke.blind(secret, r)
+        val (cTick, e, s) = Bdhke.signFull(bTick, mintKey, rPrime)
+        val mintPub = Secp256k1.pubKeyCompress(Secp256k1.pubkeyCreate(mintKey))
+        // Flip one bit in e — any modification must be caught.
+        val tamperedE = e.copyOf().also { it[0] = (it[0].toInt() xor 1).toByte() }
+        assertEquals(false, Bdhke.verifyDleq(tamperedE, s, bTick, cTick, mintPub))
+    }
+
+    @Test
+    fun dleqRejectsTamperedS() {
+        val bTick = Bdhke.blind(secret, r)
+        val (cTick, e, s) = Bdhke.signFull(bTick, mintKey, rPrime)
+        val mintPub = Secp256k1.pubKeyCompress(Secp256k1.pubkeyCreate(mintKey))
+        val tamperedS = s.copyOf().also { it[0] = (it[0].toInt() xor 1).toByte() }
+        assertEquals(false, Bdhke.verifyDleq(e, tamperedS, bTick, cTick, mintPub))
+    }
+
+    @Test
+    fun dleqRejectsWrongLengthInputs() {
+        // Wrong-length inputs are protocol violations; reject without
+        // attempting any expensive curve operations.
+        val mintPub = Secp256k1.pubKeyCompress(Secp256k1.pubkeyCreate(mintKey))
+        val bTick = Bdhke.blind(secret, r)
+        val (cTick, e, s) = Bdhke.signFull(bTick, mintKey, rPrime)
+
+        assertEquals(false, Bdhke.verifyDleq(ByteArray(31), s, bTick, cTick, mintPub))
+        assertEquals(false, Bdhke.verifyDleq(e, ByteArray(31), bTick, cTick, mintPub))
+        assertEquals(false, Bdhke.verifyDleq(e, s, ByteArray(32), cTick, mintPub))
+        assertEquals(false, Bdhke.verifyDleq(e, s, bTick, ByteArray(32), mintPub))
+        assertEquals(false, Bdhke.verifyDleq(e, s, bTick, cTick, ByteArray(32)))
+    }
+
+    @Test
+    fun dleqRejectsZeroScalars() {
+        val mintPub = Secp256k1.pubKeyCompress(Secp256k1.pubkeyCreate(mintKey))
+        val bTick = Bdhke.blind(secret, r)
+        val (cTick, _, s) = Bdhke.signFull(bTick, mintKey, rPrime)
+        assertEquals(false, Bdhke.verifyDleq(ByteArray(32), s, bTick, cTick, mintPub))
+    }
+
+    @Test
+    fun dleqDifferentNoncesProduceDifferentSignatures() {
+        // The (e, s) pair depends on the DLEQ nonce r' the mint picks —
+        // different nonces yield different valid proofs over the same
+        // (B', C') / (k, A) tuple. Both must verify; sanity check that
+        // they're actually different proofs.
+        val bTick = Bdhke.blind(secret, r)
+        val nonce2 = "4444444444444444444444444444444444444444444444444444444444444444".hexToByteArray()
+        val (c1, e1, s1) = Bdhke.signFull(bTick, mintKey, rPrime)
+        val (c2, e2, s2) = Bdhke.signFull(bTick, mintKey, nonce2)
+        val mintPub = Secp256k1.pubKeyCompress(Secp256k1.pubkeyCreate(mintKey))
+        // C' is deterministic given (k, B'); nonces only affect (e, s).
+        assertEquals(c1.toHexKey(), c2.toHexKey())
+        // Both proofs verify ...
+        assertTrue(Bdhke.verifyDleq(e1, s1, bTick, c1, mintPub))
+        assertTrue(Bdhke.verifyDleq(e2, s2, bTick, c2, mintPub))
+        // ... but the proofs themselves differ (different e and s).
+        assertEquals(true, !e1.contentEquals(e2))
+        assertEquals(true, !s1.contentEquals(s2))
+    }
+
     private fun compress(p: MutablePoint): ByteArray {
         val x = Fe4()
         val y = Fe4()

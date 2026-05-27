@@ -357,11 +357,37 @@ class CashuMintOperations(
         val mintPubKeyHex =
             keyset.keys[output.amount.toString()]
                 ?: throw IllegalStateException("Mint keyset has no key for amount ${output.amount}")
+        val mintPubKey = mintPubKeyHex.hexToByteArray()
+        val cTickBytes = signature.cTick.hexToByteArray()
+
+        // NUT-12 DLEQ verification. When the mint emits a DLEQ proof
+        // alongside the blind signature, we MUST verify it before we
+        // treat the resulting proof as valid — without this check, a
+        // malicious or buggy mint can hand us a junk C' that fails only
+        // at spend time, by which point a sender already considers the
+        // payment complete. Older mints omit the dleq field entirely;
+        // we accept those silently for backwards compatibility.
+        signature.dleq?.let { dleq ->
+            val ok =
+                Bdhke.verifyDleq(
+                    e = dleq.e.hexToByteArray(),
+                    s = dleq.s.hexToByteArray(),
+                    blindedMessage = output.bTick,
+                    blindSignature = cTickBytes,
+                    mintPubKey = mintPubKey,
+                )
+            if (!ok) {
+                throw MintProtocolException(
+                    "NUT-12 DLEQ verification failed for amount ${output.amount} — mint signature does not match its published keyset key",
+                )
+            }
+        }
+
         val c =
             Bdhke.unblind(
-                blindSignature = signature.cTick.hexToByteArray(),
+                blindSignature = cTickBytes,
                 r = output.r,
-                mintPubKey = mintPubKeyHex.hexToByteArray(),
+                mintPubKey = mintPubKey,
             )
         return CashuProof(
             id = output.keysetId,

@@ -111,6 +111,27 @@ data class BlindSignatureDto(
     val amount: Long,
     val id: String,
     @SerialName("C_") val cTick: String,
+    /**
+     * NUT-12 DLEQ proof — proves the mint used the same private key for
+     * both [cTick] and the published amount-pubkey in the keyset. Optional
+     * (older mints don't emit it); when present, the wallet MUST verify
+     * before treating the resulting proof as valid, or a malicious mint
+     * can hand us junk signatures we'll only discover at spend time.
+     */
+    val dleq: DleqProofDto? = null,
+)
+
+/**
+ * NUT-12 DLEQ proof returned alongside a [BlindSignatureDto]. Both fields
+ * are 32-byte big-endian scalars hex-encoded. The optional `r` blinding
+ * factor is only ever populated in proofs that travel between WALLETS
+ * (NUT-12 §3 Carol verification) — on mint→wallet responses it's null.
+ */
+@Serializable
+data class DleqProofDto(
+    val e: String,
+    val s: String,
+    val r: String? = null,
 )
 
 @Serializable

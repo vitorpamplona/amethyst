@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.utils.secp256k1.Fe4
 import com.vitorpamplona.quartz.utils.secp256k1.FieldP
 import com.vitorpamplona.quartz.utils.secp256k1.KeyCodec
 import com.vitorpamplona.quartz.utils.secp256k1.MutablePoint
+import com.vitorpamplona.quartz.utils.secp256k1.ScalarN
 import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
 import com.vitorpamplona.quartz.utils.secp256k1.U256
 import com.vitorpamplona.quartz.utils.sha256.sha256
@@ -206,6 +207,148 @@ object Bdhke {
     }
 
     /**
+     * NUT-12 Alice-side DLEQ verification.
+     *
+     * Without this, the mint can return a junk `C'` and we won't notice
+     * until we try to spend the proof — by which point any sender has
+     * already considered the payment done. DLEQ proves the mint used the
+     * private key whose pubkey is the [mintPubKey] we read from
+     * `/v1/keys` — i.e. the same key for both [blindSignature] and
+     * [mintPubKey].
+     *
+     * Math (from NUT-12):
+     * ```
+     *   R1 = sG - eA          where A = mintPubKey, e and s are the
+     *   R2 = sB' - eC'        scalars the mint returns alongside C'.
+     *   e' = SHA256(R1 || R2 || A || C')   (compressed, 33-byte each)
+     *   return e' == e
+     * ```
+     *
+     * Returns false on any malformed input (wrong byte length, scalars
+     * outside [1, n), points not on curve) or DLEQ mismatch. Callers
+     * should treat false as a protocol violation and abort the swap/mint.
+     *
+     * @param e 32-byte challenge scalar from the mint.
+     * @param s 32-byte response scalar from the mint.
+     * @param blindedMessage 33-byte compressed `B_` we sent.
+     * @param blindSignature 33-byte compressed `C_` the mint returned.
+     * @param mintPubKey 33-byte compressed `A = k·G` for this amount.
+     */
+    fun verifyDleq(
+        e: ByteArray,
+        s: ByteArray,
+        blindedMessage: ByteArray,
+        blindSignature: ByteArray,
+        mintPubKey: ByteArray,
+    ): Boolean {
+        if (e.size != 32 || s.size != 32) return false
+        if (blindedMessage.size != 33 || blindSignature.size != 33 || mintPubKey.size != 33) return false
+
+        val eScalar = Fe4()
+        U256.fromBytesInto(eScalar, e, 0)
+        val sScalar = Fe4()
+        U256.fromBytesInto(sScalar, s, 0)
+        // ScalarN.isValid rejects zero AND values >= n. Both are protocol
+        // violations for DLEQ — a zero `e` would let any junk signature
+        // verify, and `s >= n` is an unencodable scalar.
+        if (!ScalarN.isValid(eScalar) || !ScalarN.isValid(sScalar)) return false
+
+        val aX = Fe4()
+        val aY = Fe4()
+        if (!KeyCodec.parsePublicKey(mintPubKey, aX, aY)) return false
+        val aPoint = MutablePoint().also { it.setAffine(aX, aY) }
+
+        val bX = Fe4()
+        val bY = Fe4()
+        if (!KeyCodec.parsePublicKey(blindedMessage, bX, bY)) return false
+        val bPoint = MutablePoint().also { it.setAffine(bX, bY) }
+
+        val cX = Fe4()
+        val cY = Fe4()
+        if (!KeyCodec.parsePublicKey(blindSignature, cX, cY)) return false
+        val cPoint = MutablePoint().also { it.setAffine(cX, cY) }
+
+        // R1 = sG - eA, R2 = sB' - eC'. We use the unblind() pattern for
+        // point negation: compute the positive multiple, take affine, flip
+        // the Y coordinate. Cheaper than computing (n-e) and re-multiplying.
+        val sG = MutablePoint().also { ECPoint.mulG(it, sScalar) }
+        val eA = MutablePoint().also { ECPoint.mul(it, aPoint, eScalar) }
+        val negEa = negate(eA) ?: return false
+        val r1 = MutablePoint().also { ECPoint.addPoints(it, sG, negEa) }
+
+        val sB = MutablePoint().also { ECPoint.mul(it, bPoint, sScalar) }
+        val eC = MutablePoint().also { ECPoint.mul(it, cPoint, eScalar) }
+        val negEc = negate(eC) ?: return false
+        val r2 = MutablePoint().also { ECPoint.addPoints(it, sB, negEc) }
+
+        val r1Bytes = toCompressedOrNull(r1) ?: return false
+        val r2Bytes = toCompressedOrNull(r2) ?: return false
+
+        // 33*4 = 132 bytes. Order matters and is fixed by the spec.
+        val hashInput = ByteArray(132)
+        r1Bytes.copyInto(hashInput, 0)
+        r2Bytes.copyInto(hashInput, 33)
+        mintPubKey.copyInto(hashInput, 66)
+        blindSignature.copyInto(hashInput, 99)
+
+        val computed = sha256(hashInput)
+        return computed.contentEquals(e)
+    }
+
+    /**
+     * Mint-side NUT-12 DLEQ-signing — produces `(C', e, s)` for the given
+     * `B'`. Test-only; real mints have their own signers. Useful for
+     * round-tripping verification in unit tests without standing up a mint.
+     *
+     * Returns `Triple(cTick, e, s)` where each is 33 / 32 / 32 bytes.
+     */
+    fun signFull(
+        blindedMessage: ByteArray,
+        mintPrivKey: ByteArray,
+        rPrime: ByteArray = randomScalar(),
+    ): Triple<ByteArray, ByteArray, ByteArray> {
+        require(rPrime.size == 32) { "DLEQ nonce must be 32 bytes" }
+        require(Secp256k1.secKeyVerify(rPrime)) { "Invalid DLEQ nonce" }
+
+        val cTick = sign(blindedMessage, mintPrivKey)
+
+        val rPrimeScalar = Fe4()
+        U256.fromBytesInto(rPrimeScalar, rPrime, 0)
+
+        val r1 = MutablePoint().also { ECPoint.mulG(it, rPrimeScalar) }
+        val r1Bytes = toCompressed(r1)
+
+        val bX = Fe4()
+        val bY = Fe4()
+        require(KeyCodec.parsePublicKey(blindedMessage, bX, bY)) { "Invalid B'" }
+        val bPoint = MutablePoint().also { it.setAffine(bX, bY) }
+        val r2 = MutablePoint().also { ECPoint.mul(it, bPoint, rPrimeScalar) }
+        val r2Bytes = toCompressed(r2)
+
+        // pubkeyCreate returns 65-byte uncompressed; the NUT-12 hash uses
+        // the 33-byte compressed form for every point.
+        val aBytes = Secp256k1.pubKeyCompress(Secp256k1.pubkeyCreate(mintPrivKey))
+
+        val hashInput = ByteArray(132)
+        r1Bytes.copyInto(hashInput, 0)
+        r2Bytes.copyInto(hashInput, 33)
+        aBytes.copyInto(hashInput, 66)
+        cTick.copyInto(hashInput, 99)
+        val e = sha256(hashInput)
+
+        // s = r' + e*k mod n
+        val eScalar = Fe4()
+        U256.fromBytesInto(eScalar, e, 0)
+        val kScalar = Fe4()
+        U256.fromBytesInto(kScalar, mintPrivKey, 0)
+        val ek = ScalarN.mul(eScalar, kScalar)
+        val sScalar = ScalarN.add(rPrimeScalar, ek)
+        val s = U256.toBytes(sScalar)
+
+        return Triple(cTick, e, s)
+    }
+
+    /**
      * Generate a uniformly random 32-byte scalar suitable as a BDHKE blinding
      * factor or wallet P2PK private key. Rejects values >= n; in practice this
      * succeeds on the first sample with overwhelming probability.
@@ -229,6 +372,22 @@ object Bdhke {
         val y = Fe4()
         require(ECPoint.toAffine(p, x, y)) { "Point is at infinity" }
         return KeyCodec.serializeCompressed(x, y)
+    }
+
+    /** Non-throwing variant for verification paths — infinity → null instead of crash. */
+    private fun toCompressedOrNull(p: MutablePoint): ByteArray? {
+        val x = Fe4()
+        val y = Fe4()
+        return if (ECPoint.toAffine(p, x, y)) KeyCodec.serializeCompressed(x, y) else null
+    }
+
+    /** Negate a point via the affine-Y flip pattern used in [unblind]. Returns null on infinity. */
+    private fun negate(p: MutablePoint): MutablePoint? {
+        val x = Fe4()
+        val y = Fe4()
+        if (!ECPoint.toAffine(p, x, y)) return null
+        FieldP.neg(y, y)
+        return MutablePoint().also { it.setAffine(x, y) }
     }
 
     // Spec doesn't bound this; in practice the first iteration succeeds with
