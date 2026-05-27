@@ -35,7 +35,22 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.coroutines.executeAsync
+import java.io.ByteArrayInputStream
+import java.net.Socket
+import java.net.URI
+import java.security.KeyStore
+import java.security.MessageDigest
+import java.security.SecureRandom
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
+import java.util.Base64
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLHandshakeException
+import javax.net.ssl.SSLSocket
+import javax.net.ssl.SSLSocketFactory
+import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.X509TrustManager
 
 /**
  * Namecoin Core JSON-RPC client.
@@ -86,11 +101,47 @@ class NamecoinCoreRpcClient(
     @Volatile
     private var config: NamecoinCoreRpcConfig = NamecoinCoreRpcConfig()
 
+    /**
+     * User-supplied PEM certificates the user has explicitly trusted
+     * via the Settings "Test RPC" TOFU prompt. Shared with
+     * [ElectrumXClient] at the SharedPreferences layer but kept in a
+     * private list here so each client owns its own [SSLSocketFactory].
+     */
+    private val dynamicCerts = mutableListOf<String>()
+
+    /** Lazy-cached SSLSocketFactory for pinned certs. Thread-safe via volatile + DCL. */
+    @Volatile
+    private var pinnedFactory: SSLSocketFactory? = null
+
     fun setConfig(cfg: NamecoinCoreRpcConfig) {
         config = cfg
     }
 
     fun currentConfig(): NamecoinCoreRpcConfig = config
+
+    /**
+     * Append a PEM-encoded certificate to the dynamic trust store.
+     * Typically called after the user confirms a cert fingerprint via
+     * the Settings "Test RPC" flow. Invalidates the cached factory so
+     * the next connection picks it up.
+     */
+    fun addPinnedCert(pem: String) {
+        synchronized(this) {
+            if (pem !in dynamicCerts) dynamicCerts.add(pem)
+            pinnedFactory = null
+        }
+    }
+
+    /**
+     * Replace all dynamic certs (e.g. loaded from preferences on startup).
+     */
+    fun setDynamicCerts(pems: List<String>) {
+        synchronized(this) {
+            dynamicCerts.clear()
+            dynamicCerts.addAll(pems)
+            pinnedFactory = null
+        }
+    }
 
     /**
      * Run `name_show <identifier>` against the configured Namecoin Core node.
@@ -110,6 +161,14 @@ class NamecoinCoreRpcClient(
      */
     suspend fun probe(cfg: NamecoinCoreRpcConfig): RpcProbeResult {
         val started = System.currentTimeMillis()
+        // Capture the leaf cert + fingerprint as a best-effort side channel
+        // before issuing the RPC. This lets the Settings UI show the
+        // server's certificate even when the subsequent RPC call fails
+        // (e.g. wrong username) and — crucially — even when the RPC
+        // call would fail TLS verification (so the user can choose to
+        // pin it via TOFU). Only meaningful for https URLs.
+        val captured: CapturedLeafCert? =
+            withContext(Dispatchers.IO) { captureLeafCert(cfg) }
         return try {
             // Use a cheap, side-effect-free call: getblockchaininfo. It works on every
             // bitcoin-derived node, doesn't require -namehistoric, and answers
@@ -136,18 +195,30 @@ class NamecoinCoreRpcClient(
                 blocks = blocks,
                 verificationProgress = verification,
                 initialBlockDownload = initialDownload,
+                serverCertPem = captured?.pem,
+                certFingerprint = captured?.fingerprint,
             )
         } catch (e: NamecoinLookupException.ServersUnreachable) {
+            val cause = e.cause
+            val tlsFailure =
+                cause is SSLHandshakeException ||
+                    (cause is javax.net.ssl.SSLException && cause.message?.contains("trust", ignoreCase = true) == true)
             RpcProbeResult(
                 success = false,
                 elapsedMs = System.currentTimeMillis() - started,
-                error = e.cause?.message ?: e.message ?: "Unreachable",
+                error = cause?.message ?: e.message ?: "Unreachable",
+                serverCertPem = captured?.pem,
+                certFingerprint = captured?.fingerprint,
+                tlsHandshakeFailed = tlsFailure,
             )
         } catch (e: Exception) {
             RpcProbeResult(
                 success = false,
                 elapsedMs = System.currentTimeMillis() - started,
                 error = e.message ?: e::class.simpleName ?: "Error",
+                serverCertPem = captured?.pem,
+                certFingerprint = captured?.fingerprint,
+                tlsHandshakeFailed = e is SSLHandshakeException,
             )
         }
     }
@@ -233,14 +304,24 @@ class NamecoinCoreRpcClient(
                 )
             }
 
-            val client =
+            val builder =
                 httpClientForUrl(cfg.url)
                     .newBuilder()
                     .followRedirects(false)
                     .connectTimeout(cfg.timeoutMs, TimeUnit.MILLISECONDS)
                     .readTimeout(cfg.timeoutMs, TimeUnit.MILLISECONDS)
                     .callTimeout(cfg.timeoutMs, TimeUnit.MILLISECONDS)
-                    .build()
+            if (cfg.usePinnedTrustStore && cfg.url.startsWith("https://")) {
+                // Route this call through the pinned trust store + a permissive
+                // hostname verifier. We've already vouched for the cert by
+                // pinning it, and Namecoin Core LAN/onion deployments
+                // commonly present certs whose SAN doesn't match the URL
+                // the user typed (e.g. IP-in-SAN vs hostname).
+                val tm = pinnedTrustManager()
+                builder.sslSocketFactory(cachedPinnedSslFactory(), tm)
+                builder.hostnameVerifier { _, _ -> true }
+            }
+            val client = builder.build()
 
             val request = requestBuilder.build()
 
@@ -299,6 +380,190 @@ class NamecoinCoreRpcClient(
                     lastError = IllegalStateException("RPC response missing result"),
                 )
         }
+
+    // ── TLS pinning helpers ────────────────────────────────────────────────
+
+    private data class CapturedLeafCert(
+        val pem: String,
+        val fingerprint: String,
+    )
+
+    /**
+     * Open a short-lived TLS connection to [cfg]'s host:port and return
+     * the server's leaf certificate as PEM + SHA-256 fingerprint.
+     *
+     * Used by [probe] so the Settings UI can show the certificate the
+     * server presented — even if the subsequent RPC call rejects it.
+     * Done via a separate socket (no HTTP, no Authorization header) so:
+     *   1. We never send credentials over an untrusted connection.
+     *   2. The capture works regardless of whether the OkHttp request
+     *      below would have failed TLS verification.
+     *
+     * Returns null for non-https URLs, or when the TCP/TLS connection
+     * itself fails (server down, port closed, etc.).
+     */
+    private fun captureLeafCert(cfg: NamecoinCoreRpcConfig): CapturedLeafCert? {
+        if (!cfg.url.startsWith("https://")) return null
+        val uri =
+            try {
+                URI(cfg.url)
+            } catch (_: Exception) {
+                return null
+            }
+        val host = uri.host ?: return null
+        val port = if (uri.port > 0) uri.port else 443
+
+        // Use a trust-all SSLContext just for the capture handshake.
+        // We're not making any trust decision here — we're inspecting.
+        // The actual call below applies the user's pinning policy.
+        val trustAll =
+            arrayOf<javax.net.ssl.TrustManager>(
+                object : X509TrustManager {
+                    override fun checkClientTrusted(
+                        chain: Array<X509Certificate>,
+                        authType: String,
+                    ) {}
+
+                    override fun checkServerTrusted(
+                        chain: Array<X509Certificate>,
+                        authType: String,
+                    ) {}
+
+                    override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+                },
+            )
+        val ctx =
+            try {
+                SSLContext.getInstance("TLSv1.2")
+            } catch (_: Exception) {
+                SSLContext.getInstance("TLS")
+            }
+        ctx.init(null, trustAll, SecureRandom())
+        val factory = ctx.socketFactory
+
+        return try {
+            // Bound the TCP connect with the configured timeout. The
+            // capture is best-effort; never let it stall the probe.
+            val raw = Socket()
+            raw.connect(
+                java.net.InetSocketAddress(host, port),
+                cfg.timeoutMs.coerceAtMost(10_000L).toInt(),
+            )
+            raw.soTimeout = cfg.timeoutMs.coerceAtMost(10_000L).toInt()
+            val ssl = factory.createSocket(raw, host, port, true) as SSLSocket
+            ssl.useClientMode = true
+            try {
+                ssl.startHandshake()
+                val peerCerts = ssl.session.peerCertificates
+                if (peerCerts.isEmpty() || peerCerts[0] !is X509Certificate) return null
+                val x509 = peerCerts[0] as X509Certificate
+                val encoded =
+                    Base64.getMimeEncoder(76, "\n".toByteArray()).encodeToString(x509.encoded)
+                val pem = "-----BEGIN CERTIFICATE-----\n$encoded\n-----END CERTIFICATE-----\n"
+                val digest = MessageDigest.getInstance("SHA-256").digest(x509.encoded)
+                val fp = digest.joinToString(":") { "%02X".format(it) }
+                CapturedLeafCert(pem = pem, fingerprint = fp)
+            } finally {
+                runCatching { ssl.close() }
+                runCatching { raw.close() }
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun cachedPinnedSslFactory(): SSLSocketFactory {
+        pinnedFactory?.let { return it }
+        synchronized(this) {
+            pinnedFactory?.let { return it }
+            return buildPinnedSslFactory().also { pinnedFactory = it }
+        }
+    }
+
+    /**
+     * Build an [SSLSocketFactory] that trusts user-pinned certificates
+     * plus the system CA store. Same shape as the ElectrumX pinned
+     * factory, minus the hardcoded list (Namecoin Core RPC endpoints
+     * are 100% user-configured — there are no public defaults to ship).
+     */
+    private fun buildPinnedSslFactory(): SSLSocketFactory {
+        val ks =
+            try {
+                KeyStore.getInstance(KeyStore.getDefaultType()).apply { load(null, null) }
+            } catch (_: Exception) {
+                KeyStore.getInstance("PKCS12").apply { load(null, null) }
+            }
+
+        val cf = CertificateFactory.getInstance("X.509")
+        val pems = synchronized(this) { dynamicCerts.toList() }
+        for ((index, pem) in pems.withIndex()) {
+            try {
+                val cert = cf.generateCertificate(ByteArrayInputStream(pem.toByteArray(Charsets.US_ASCII)))
+                ks.setCertificateEntry("namecoin_rpc_$index", cert)
+            } catch (_: Exception) {
+                // Skip malformed certs — the rest may still work.
+            }
+        }
+
+        val systemTmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        systemTmf.init(null as KeyStore?)
+        val systemTm = systemTmf.trustManagers.filterIsInstance<X509TrustManager>().firstOrNull()
+        if (systemTm != null) {
+            for ((index, issuer) in systemTm.acceptedIssuers.withIndex()) {
+                try {
+                    ks.setCertificateEntry("system_$index", issuer)
+                } catch (_: Exception) {
+                    // Some OEMs reject re-inserts; skip.
+                }
+            }
+        }
+
+        val tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        tmf.init(ks)
+        val sslContext =
+            try {
+                SSLContext.getInstance("TLSv1.2")
+            } catch (_: Exception) {
+                SSLContext.getInstance("TLS")
+            }
+        sslContext.init(null, tmf.trustManagers, SecureRandom())
+        return sslContext.socketFactory
+    }
+
+    /** Return an [X509TrustManager] backed by the same pinned keystore. */
+    private fun pinnedTrustManager(): X509TrustManager {
+        val ks =
+            try {
+                KeyStore.getInstance(KeyStore.getDefaultType()).apply { load(null, null) }
+            } catch (_: Exception) {
+                KeyStore.getInstance("PKCS12").apply { load(null, null) }
+            }
+        val cf = CertificateFactory.getInstance("X.509")
+        val pems = synchronized(this) { dynamicCerts.toList() }
+        for ((index, pem) in pems.withIndex()) {
+            try {
+                val cert = cf.generateCertificate(ByteArrayInputStream(pem.toByteArray(Charsets.US_ASCII)))
+                ks.setCertificateEntry("namecoin_rpc_$index", cert)
+            } catch (_: Exception) {
+                // skip
+            }
+        }
+        val systemTmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        systemTmf.init(null as KeyStore?)
+        val systemTm = systemTmf.trustManagers.filterIsInstance<X509TrustManager>().firstOrNull()
+        if (systemTm != null) {
+            for ((index, issuer) in systemTm.acceptedIssuers.withIndex()) {
+                try {
+                    ks.setCertificateEntry("system_$index", issuer)
+                } catch (_: Exception) {
+                    // skip
+                }
+            }
+        }
+        val tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        tmf.init(ks)
+        return tmf.trustManagers.filterIsInstance<X509TrustManager>().first()
+    }
 }
 
 /** Outcome of a `Test RPC` probe in Settings. */
@@ -310,4 +575,23 @@ data class RpcProbeResult(
     val verificationProgress: Double? = null,
     val initialBlockDownload: Boolean? = null,
     val error: String? = null,
+    /**
+     * PEM-encoded server leaf certificate captured during the probe.
+     * Only populated when the URL scheme is https and the TLS handshake
+     * succeeded (even if the subsequent HTTP request failed). Used by
+     * the Settings UI to prompt for a TOFU pin.
+     */
+    val serverCertPem: String? = null,
+    /**
+     * SHA-256 fingerprint of the captured leaf certificate, formatted
+     * as colon-separated uppercase hex bytes (matches
+     * [ServerTestResult.certFingerprint] for ElectrumX).
+     */
+    val certFingerprint: String? = null,
+    /**
+     * True when the probe failed specifically because the TLS handshake
+     * was rejected (self-signed cert, untrusted CA, hostname mismatch).
+     * Used by the Settings UI to suggest a TOFU pin as the fix.
+     */
+    val tlsHandshakeFailed: Boolean = false,
 )

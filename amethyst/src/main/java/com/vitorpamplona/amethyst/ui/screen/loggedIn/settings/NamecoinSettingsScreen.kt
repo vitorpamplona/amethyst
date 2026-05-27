@@ -95,7 +95,10 @@ fun NamecoinSettingsScreen(
                 onPinCert = { pem ->
                     scope.launch {
                         namecoinPrefs.addPinnedCert(pem)
+                        // Share the pinned PEM across both backends so the
+                        // user only has to confirm a self-signed cert once.
                         electrumXClient().addPinnedCert(pem)
+                        namecoinCoreRpcClient().addPinnedCert(pem)
                     }
                 },
                 onSetBackend = { backend ->
