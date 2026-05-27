@@ -405,12 +405,13 @@ fun EditProfileContent(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     // Avatar — tappable circle with upload overlay
                     Box(
                         modifier =
                             Modifier
-                                .size(100.dp)
+                                .size(120.dp)
                                 .clip(CircleShape)
                                 .background(MaterialTheme.colorScheme.surfaceVariant)
                                 .clickable(enabled = !isUploadingAvatar) { onPickAvatar() },
@@ -420,7 +421,7 @@ fun EditProfileContent(
                             AsyncImage(
                                 model = pictureValue,
                                 contentDescription = "Avatar preview",
-                                modifier = Modifier.size(100.dp).clip(CircleShape),
+                                modifier = Modifier.size(120.dp).clip(CircleShape),
                                 contentScale = ContentScale.Crop,
                             )
                         }
@@ -428,7 +429,7 @@ fun EditProfileContent(
                         Box(
                             modifier =
                                 Modifier
-                                    .size(100.dp)
+                                    .size(120.dp)
                                     .clip(CircleShape)
                                     .background(
                                         MaterialTheme.colorScheme.surface.copy(
