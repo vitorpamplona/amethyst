@@ -950,6 +950,7 @@
     <string name="payment_target_authority">Address</string>
     <string name="delete_payment_target">Delete payment target</string>
     <string name="no_payment_app_found">No app found to handle this payment. Please install a compatible wallet.</string>
+    <string name="no_payment_app_found_for_type">No app installed to handle %1$s payments. Please install a compatible wallet.</string>
     <string name="error_dialog_payment_error">Unable to open payment</string>
 
     <string name="uploading_state_ready">Not Started</string>
