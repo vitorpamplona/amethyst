@@ -34,8 +34,8 @@ import kotlinx.coroutines.flow.StateFlow
 
 class SoftwareAppsFeedFilter(
     val account: Account,
-    val topFilterFlow: StateFlow<TopFilter> = account.settings.defaultSoftwareAppsFollowList,
-    val liveFollowListsFlow: StateFlow<IFeedTopNavFilter> = account.liveSoftwareAppsFollowLists,
+    val topFilterFlow: StateFlow<TopFilter>,
+    val liveFollowListsFlow: StateFlow<IFeedTopNavFilter>,
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code
 

@@ -116,7 +116,16 @@ class AccountFeedContentStates(
     val articlesFeed = FeedContentState(ArticlesFeedFilter(account), scope, LocalCache)
     val musicTracksFeed = FeedContentState(MusicTracksFeedFilter(account), scope, LocalCache)
     val musicPlaylistsFeed = FeedContentState(MusicPlaylistsFeedFilter(account), scope, LocalCache)
-    val softwareAppsFeed = FeedContentState(SoftwareAppsFeedFilter(account), scope, LocalCache)
+    val softwareAppsFeed =
+        FeedContentState(
+            SoftwareAppsFeedFilter(
+                account = account,
+                topFilterFlow = account.settings.defaultSoftwareAppsFollowList,
+                liveFollowListsFlow = account.liveSoftwareAppsFollowLists,
+            ),
+            scope,
+            LocalCache,
+        )
 
     val notifications = CardFeedContentState(NotificationFeedFilter(account), scope)
     val notificationsFollowing = CardFeedContentState(NotificationFeedFilter(account, TopFilter.AllFollows), scope)
