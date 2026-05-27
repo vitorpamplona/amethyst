@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.MusicTracksFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 
 @Composable
@@ -64,6 +65,11 @@ fun MusicTracksScreen(
         musicFeedState = musicTracksFeedContentState,
         accountViewModel = accountViewModel,
     )
+    // Drives the relay subscription that fetches kind 36787 / 34139 — without this the music
+    // feed only shows tracks already cached via some other path (a direct nostr: link, a
+    // hashtag visit, the user's own publish), so a fresh user lands on an empty feed even on
+    // Global.
+    MusicTracksFilterAssemblerSubscription(accountViewModel)
 
     DisappearingScaffold(
         isInvertedLayout = false,

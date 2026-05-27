@@ -65,7 +65,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
-import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -75,7 +74,6 @@ import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -175,11 +173,17 @@ fun MusicTrackHeader(
             // 16:9 frame just leaves a blank rectangle next to the controls for audio.
             MusicTrackCover(image, note, accountViewModel)
             if (url != null) {
+                // Spec doesn't carry a waveform for kind 36787, so we synthesize one keyed off
+                // the track address. The fake is purely decorative — the underlying ExoPlayer
+                // owns playback progress, not these bars — but it gives the player a familiar
+                // "music waveform" shape instead of the empty bar Voice events show when their
+                // waveform is missing.
+                val syntheticWaveform = remember(note.idHex) { syntheticWaveformFor(note.idHex) }
                 RenderAudioWithWaveform(
                     mediaUrl = url,
                     title = title,
                     mimeType = audioMimeType,
-                    waveform = null, // spec has no `waveform` tag for kind 36787
+                    waveform = syntheticWaveform,
                     note = note,
                     accountViewModel = accountViewModel,
                     nav = nav,
@@ -260,12 +264,9 @@ fun MusicTrackHeader(
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
-
-                if (noteEvent.hasHashtags()) {
-                    Row(Modifier.fillMaxWidth()) {
-                        DisplayUncitedHashtags(noteEvent, it, callbackUri, accountViewModel, nav)
-                    }
-                }
+                // No DisplayUncitedHashtags here — the TopicChip FlowRow below already shows
+                // every non-genre-marker hashtag, and stacking both produces visually identical
+                // duplicate chip rows.
             }
 
             if (topics.isNotEmpty()) {
@@ -370,6 +371,33 @@ private fun formatDuration(seconds: Int): String {
     val minutes = seconds / 60
     val secs = seconds % 60
     return "%d:%02d".format(minutes, secs)
+}
+
+private const val SYNTHETIC_WAVEFORM_SAMPLES = 96
+
+/**
+ * Builds a stable, decorative waveform from the track id. We just need something more
+ * interesting to look at than a flat line; ExoPlayer continues to drive actual playback
+ * progress. Seeded so each track's bars stay constant across recompositions and screen
+ * re-entries, and shaped with two overlaid sines so the result reads as "music waveform"
+ * rather than pure noise.
+ */
+private fun syntheticWaveformFor(seed: String): com.vitorpamplona.amethyst.service.playback.composable.WaveformData {
+    val rng = kotlin.random.Random(seed.hashCode())
+    val bars =
+        List(SYNTHETIC_WAVEFORM_SAMPLES) { index ->
+            val phase = index.toFloat() / SYNTHETIC_WAVEFORM_SAMPLES
+            val envelope =
+                kotlin.math
+                    .sin(phase * Math.PI)
+                    .toFloat()
+                    .coerceAtLeast(0.25f)
+            val carrier = (kotlin.math.sin(phase * Math.PI * 8) * 0.25f + 0.5f).toFloat()
+            val jitter = rng.nextFloat() * 0.35f + 0.15f
+            (envelope * (carrier * 0.6f + jitter * 0.4f)).coerceIn(0.05f, 1.0f)
+        }
+    return com.vitorpamplona.amethyst.service.playback.composable
+        .WaveformData(bars)
 }
 
 // ---------------------------------------------------------------------------

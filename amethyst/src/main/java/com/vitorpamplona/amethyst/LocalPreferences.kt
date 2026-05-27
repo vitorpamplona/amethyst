@@ -112,6 +112,7 @@ private object PrefKeys {
     const val DEFAULT_NESTS_FOLLOW_LIST = "defaultNestsFollowList"
     const val DEFAULT_LONGS_FOLLOW_LIST = "defaultLongsFollowList"
     const val DEFAULT_ARTICLES_FOLLOW_LIST = "defaultArticlesFollowList"
+    const val DEFAULT_MUSIC_TRACKS_FOLLOW_LIST = "defaultMusicTracksFollowList"
     const val DEFAULT_BADGES_FOLLOW_LIST = "defaultBadgesFollowList"
     const val DEFAULT_BROWSE_EMOJI_SETS_FOLLOW_LIST = "defaultBrowseEmojiSetsFollowList"
     const val DEFAULT_COMMUNITIES_FOLLOW_LIST = "defaultCommunitiesFollowList"
@@ -378,6 +379,7 @@ object LocalPreferences {
                     putString(PrefKeys.DEFAULT_NESTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultNestsFollowList.value))
                     putString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultLongsFollowList.value))
                     putString(PrefKeys.DEFAULT_ARTICLES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultArticlesFollowList.value))
+                    putString(PrefKeys.DEFAULT_MUSIC_TRACKS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultMusicTracksFollowList.value))
                     putString(PrefKeys.DEFAULT_BADGES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultBadgesFollowList.value))
                     putString(PrefKeys.DEFAULT_BROWSE_EMOJI_SETS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultBrowseEmojiSetsFollowList.value))
                     putString(PrefKeys.DEFAULT_COMMUNITIES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultCommunitiesFollowList.value))
@@ -659,6 +661,7 @@ object LocalPreferences {
                         defaultLiveStreamsFollowList = MutableStateFlow(followListPrefs.liveStreams),
                         defaultNestsFollowList = MutableStateFlow(followListPrefs.nests),
                         defaultLongsFollowList = MutableStateFlow(followListPrefs.longs),
+                        defaultMusicTracksFollowList = MutableStateFlow(followListPrefs.musicTracks),
                         defaultArticlesFollowList = MutableStateFlow(followListPrefs.articles),
                         defaultBadgesFollowList = MutableStateFlow(followListPrefs.badges),
                         defaultBrowseEmojiSetsFollowList = MutableStateFlow(followListPrefs.browseEmojiSets),
@@ -732,6 +735,7 @@ object LocalPreferences {
         val nests: TopFilter,
         val longs: TopFilter,
         val articles: TopFilter,
+        val musicTracks: TopFilter,
         val badges: TopFilter,
         val browseEmojiSets: TopFilter,
         val communities: TopFilter,
@@ -754,6 +758,7 @@ object LocalPreferences {
             nests = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_NESTS_FOLLOW_LIST, null), TopFilter.Global),
             longs = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_LONGS_FOLLOW_LIST, null), TopFilter.Global),
             articles = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_ARTICLES_FOLLOW_LIST, null), TopFilter.AllFollows),
+            musicTracks = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_MUSIC_TRACKS_FOLLOW_LIST, null), TopFilter.Global),
             badges = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_BADGES_FOLLOW_LIST, null), TopFilter.Mine),
             browseEmojiSets = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_BROWSE_EMOJI_SETS_FOLLOW_LIST, null), TopFilter.Global),
             communities = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_COMMUNITIES_FOLLOW_LIST, null), TopFilter.AllFollows),
