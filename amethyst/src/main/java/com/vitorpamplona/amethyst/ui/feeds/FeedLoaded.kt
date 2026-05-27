@@ -50,6 +50,8 @@ fun FeedLoaded(
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
+    StickToTopOnPrepend(listState, items.list.firstOrNull()?.idHex)
+
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,

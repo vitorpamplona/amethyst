@@ -74,6 +74,7 @@ import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.ui.feeds.StickToTopOnPrepend
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
@@ -190,6 +191,8 @@ private fun WebBookmarksFeedLoaded(
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
+
+    StickToTopOnPrepend(listState, items.list.firstOrNull()?.idHex)
 
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),

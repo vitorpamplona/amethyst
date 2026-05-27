@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.feeds.StickToTopOnPrepend
 import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserCompose
@@ -89,6 +90,8 @@ private fun FeedLoaded(
 ) {
     val items by state.feed.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+
+    StickToTopOnPrepend(listState, items.firstOrNull()?.pubkeyHex)
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
