@@ -474,6 +474,11 @@ private fun formatTrackDuration(seconds: Int): String {
 private const val PREVIEW_PLAYLIST_PUBKEY = "989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799"
 private val PREVIEW_PLAYLIST_SIG = "0".repeat(128)
 
+private fun previewPlaylistHexId(prefix: String): String {
+    val mixed = (prefix.hashCode().toLong() and 0xFFFFFFFFL).toString(16)
+    return mixed.padStart(64, 'a').take(64)
+}
+
 private fun previewPlaylistTrack(
     dTag: String,
     title: String,
@@ -481,7 +486,7 @@ private fun previewPlaylistTrack(
     duration: Int,
 ): MusicTrackEvent =
     MusicTrackEvent(
-        id = "ptrack_${dTag}_${title.hashCode()}".padEnd(64, '0').take(64),
+        id = previewPlaylistHexId("ptrack-$dTag-$title"),
         pubKey = PREVIEW_PLAYLIST_PUBKEY,
         createdAt = 1_730_000_000L,
         tags =
@@ -522,7 +527,7 @@ private fun previewPlaylistEvent(
         }.toTypedArray()
 
     return MusicPlaylistEvent(
-        id = "pl_${dTag}_${title.hashCode()}".padEnd(64, '0').take(64),
+        id = previewPlaylistHexId("pl-$dTag-$title"),
         pubKey = PREVIEW_PLAYLIST_PUBKEY,
         createdAt = 1_730_000_000L,
         tags = tags,
@@ -549,10 +554,12 @@ private fun RenderMusicPlaylistPreview() {
             content = "My favorite summer vibes from 2024",
         )
 
-    runBlocking {
-        withContext(Dispatchers.IO) {
-            tracks.forEach { LocalCache.justConsume(it, null, true) }
-            LocalCache.justConsume(event, null, true)
+    remember(event) {
+        runBlocking {
+            withContext(Dispatchers.IO) {
+                tracks.forEach { LocalCache.justConsume(it, null, true) }
+                LocalCache.justConsume(event, null, true)
+            }
         }
     }
 
@@ -586,7 +593,7 @@ private fun RenderMusicPlaylistCollaborativePrivatePreview() {
             content = "",
         )
 
-    runBlocking { withContext(Dispatchers.IO) { LocalCache.justConsume(event, null, true) } }
+    remember(event) { runBlocking { withContext(Dispatchers.IO) { LocalCache.justConsume(event, null, true) } } }
 
     ThemeComparisonColumn {
         LoadNote(baseNoteHex = event.address().toValue(), accountViewModel = mockAccountViewModel()) { note ->
@@ -616,7 +623,7 @@ private fun MusicPlaylistCoverPreview() {
             image = null,
         )
 
-    runBlocking { withContext(Dispatchers.IO) { LocalCache.justConsume(event, null, true) } }
+    remember(event) { runBlocking { withContext(Dispatchers.IO) { LocalCache.justConsume(event, null, true) } } }
 
     ThemeComparisonColumn {
         LoadNote(baseNoteHex = event.address().toValue(), accountViewModel = mockAccountViewModel()) { note ->

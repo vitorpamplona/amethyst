@@ -139,8 +139,11 @@ fun MusicTrackHeader(
     val playableUri = videoUrl ?: url
     val mimeType =
         remember(format, videoUrl) {
+            // `format` per spec is the AUDIO format (mp3/flac/m4a/ogg). When a `video` URL is
+            // chosen, the audio-format hint doesn't apply — pass null and let ExoPlayer sniff
+            // the container itself instead of synthesizing nonsense like "video/mp3".
             when {
-                videoUrl != null -> "video/${format ?: "mp4"}"
+                videoUrl != null -> null
                 format != null -> "audio/$format"
                 else -> null
             }
@@ -374,6 +377,14 @@ private fun formatDuration(seconds: Int): String {
 private const val PREVIEW_TRACK_PUBKEY = "989c3734c46abac7ce3ce229971581a5a6ee39cdd6aa7261a55823fa7f8c4799"
 private val PREVIEW_TRACK_SIG = "0".repeat(128)
 
+// Deterministic 64-char hex from any string — Event ids must be hex even for previews so
+// downstream consumers that validate the format don't blow up. Not cryptographic; just
+// reproducible per (preview, dTag, title) so the LocalCache slot stays stable across recomposes.
+private fun previewHexId(prefix: String): String {
+    val mixed = (prefix.hashCode().toLong() and 0xFFFFFFFFL).toString(16)
+    return mixed.padStart(64, 'a').take(64)
+}
+
 private fun previewMusicTrackEvent(
     dTag: String,
     title: String,
@@ -403,7 +414,7 @@ private fun previewMusicTrackEvent(
         }.toTypedArray()
 
     return MusicTrackEvent(
-        id = "track_${dTag}_${title.hashCode()}".padEnd(64, '0').take(64),
+        id = previewHexId("track-$dTag-$title"),
         pubKey = PREVIEW_TRACK_PUBKEY,
         createdAt = 1_730_000_000L,
         tags = tags,
@@ -428,7 +439,7 @@ private fun RenderMusicTrackPreview() {
             content = "Lyrics:\n[Verse 1]\nWalking through the city lights...\n\nProducer: John Doe",
         )
 
-    runBlocking { withContext(Dispatchers.IO) { LocalCache.justConsume(event, null, true) } }
+    remember(event) { runBlocking { withContext(Dispatchers.IO) { LocalCache.justConsume(event, null, true) } } }
 
     ThemeComparisonColumn {
         LoadNote(baseNoteHex = event.address().toValue(), accountViewModel = mockAccountViewModel()) { note ->
@@ -460,7 +471,7 @@ private fun RenderMusicTrackExplicitPreview() {
             content = "",
         )
 
-    runBlocking { withContext(Dispatchers.IO) { LocalCache.justConsume(event, null, true) } }
+    remember(event) { runBlocking { withContext(Dispatchers.IO) { LocalCache.justConsume(event, null, true) } } }
 
     ThemeComparisonColumn {
         LoadNote(baseNoteHex = event.address().toValue(), accountViewModel = mockAccountViewModel()) { note ->
@@ -482,7 +493,7 @@ private fun RenderMusicTrackExplicitPreview() {
 @Composable
 private fun MusicTrackCoverPreview() {
     val event = previewMusicTrackEvent(dTag = "cover-only", title = "Cover Only", artist = "Anon")
-    runBlocking { withContext(Dispatchers.IO) { LocalCache.justConsume(event, null, true) } }
+    remember(event) { runBlocking { withContext(Dispatchers.IO) { LocalCache.justConsume(event, null, true) } } }
 
     ThemeComparisonColumn {
         LoadNote(baseNoteHex = event.address().toValue(), accountViewModel = mockAccountViewModel()) { note ->

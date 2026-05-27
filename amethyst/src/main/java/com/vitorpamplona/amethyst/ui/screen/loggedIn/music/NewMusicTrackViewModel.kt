@@ -33,8 +33,12 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
  * and cover URLs (typically from a Blossom upload they ran separately). A future iteration
  * can wire NewMediaModel + GallerySelect here so the composer uploads the audio itself.
  *
- * In edit mode (`editDTag` set), preserves the `d` tag so the published event replaces the
- * earlier addressable instead of creating a new track.
+ * In edit mode (`editDTag` set AND the event resolves from LocalCache), publishes via
+ * [MusicTrackEvent.edit] so every tag the composer doesn't surface (video, released,
+ * track_number, format, bitrate, sample_rate, language, explicit, extra `t` hashtags,
+ * zap-split tags, etc) is preserved across save. When `editDTag` is set but the event isn't in
+ * cache, falls back to create-mode so the user isn't trapped on a Delete button that wouldn't
+ * do anything.
  */
 class NewMusicTrackViewModel : ViewModel() {
     private lateinit var account: Account
@@ -51,11 +55,12 @@ class NewMusicTrackViewModel : ViewModel() {
     /** Stable d-tag for the addressable: null = create-new, non-null = edit-existing. */
     private var dTag: String? = null
 
-    /** The loaded event in edit mode; needed to publish a NIP-09 deletion. */
+    /** The loaded event in edit mode; needed for `edit()` + NIP-09 deletion. */
     private var loadedEvent: MusicTrackEvent? = null
 
+    /** Only `true` once an existing event has been resolved from cache. */
     val isEditing: Boolean
-        get() = dTag != null
+        get() = loadedEvent != null
 
     fun init(
         accountViewModel: AccountViewModel,
@@ -63,12 +68,12 @@ class NewMusicTrackViewModel : ViewModel() {
     ) {
         if (::account.isInitialized) return // idempotent across recompositions
         this.account = accountViewModel.account
-        dTag = editDTag
 
-        editDTag?.let { existingDTag ->
-            val existingAddress = Address(MusicTrackEvent.KIND, account.userProfile().pubkeyHex, existingDTag)
+        if (editDTag != null) {
+            val existingAddress = Address(MusicTrackEvent.KIND, account.userProfile().pubkeyHex, editDTag)
             val existingNote = LocalCache.addressables.get(existingAddress)
             (existingNote?.event as? MusicTrackEvent)?.let { existing ->
+                dTag = editDTag
                 loadedEvent = existing
                 title.value = existing.title().orEmpty()
                 artist.value = existing.artist().orEmpty()
@@ -78,6 +83,7 @@ class NewMusicTrackViewModel : ViewModel() {
                 durationSeconds.value = existing.duration()?.toString().orEmpty()
                 description.value = existing.content
             }
+            // If the lookup fails, dTag stays null and the screen renders as create-mode.
         }
     }
 
@@ -87,7 +93,6 @@ class NewMusicTrackViewModel : ViewModel() {
         if (!isValid()) return false
         isPublishing.value = true
         try {
-            val effectiveDTag = dTag
             val parsedTitle = title.value.trim()
             val parsedArtist = artist.value.trim()
             val parsedUrl = audioUrl.value.trim()
@@ -96,9 +101,11 @@ class NewMusicTrackViewModel : ViewModel() {
             val parsedDuration = durationSeconds.value.trim().toIntOrNull()
             val parsedDescription = description.value
 
-            account.signAndComputeBroadcast(
-                if (effectiveDTag != null) {
-                    MusicTrackEvent.build(
+            val existing = loadedEvent
+            val template =
+                if (existing != null) {
+                    MusicTrackEvent.edit(
+                        earlierVersion = existing,
                         title = parsedTitle,
                         artist = parsedArtist,
                         url = parsedUrl,
@@ -106,7 +113,6 @@ class NewMusicTrackViewModel : ViewModel() {
                         image = parsedCover,
                         album = parsedAlbum,
                         duration = parsedDuration,
-                        dTag = effectiveDTag,
                     )
                 } else {
                     MusicTrackEvent.build(
@@ -118,8 +124,9 @@ class NewMusicTrackViewModel : ViewModel() {
                         album = parsedAlbum,
                         duration = parsedDuration,
                     )
-                },
-            )
+                }
+
+            account.signAndComputeBroadcast(template)
             return true
         } finally {
             isPublishing.value = false

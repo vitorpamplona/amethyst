@@ -34,6 +34,9 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressSerializer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 /** Lightweight projection for the picker rows. */
 @Immutable
@@ -58,6 +61,14 @@ class AddToMusicPlaylistViewModel : ViewModel() {
 
     private var liveScanJob: Job? = null
 
+    /**
+     * Serializes concurrent toggle/create calls. `isWorking` alone is a UI gate, not a
+     * concurrency primitive — quick double taps on different rows would otherwise both pass
+     * the early-return check, both read the same `existing` event, and the loser's broadcast
+     * would replace the winner's (last-write-wins by `createdAt`).
+     */
+    private val mutationLock = Mutex()
+
     fun init(
         accountViewModel: AccountViewModel,
         trackAddressTag: String,
@@ -66,13 +77,18 @@ class AddToMusicPlaylistViewModel : ViewModel() {
         this.account = accountViewModel.account
         this.trackAddress = AddressSerializer.parse(trackAddressTag)
 
-        rescan()
-
-        // Re-scan when new events arrive — a playlist published from another screen, or one
-        // arriving fresh from a relay, should show up here without forcing the user to re-open.
+        // Both the initial scan and the live-event re-scan walk LocalCache.addressables, which
+        // is in-memory but still wants to be off the composition thread. The live scan also
+        // debounces by checking the bundle for our kind first so we don't re-walk on every
+        // unrelated event (text notes, reactions, etc).
         liveScanJob =
             viewModelScope.launch(Dispatchers.IO) {
-                LocalCache.live.newEventBundles.collect { rescan() }
+                rescan()
+                LocalCache.live.newEventBundles.collect { bundle ->
+                    if (bundle.any { it.event?.kind == MusicPlaylistEvent.KIND }) {
+                        rescan()
+                    }
+                }
             }
     }
 
@@ -103,41 +119,31 @@ class AddToMusicPlaylistViewModel : ViewModel() {
 
     /**
      * Toggle membership: if the playlist already contains the track, drop it; otherwise append
-     * to the end. Either way we re-publish the playlist event with the same `dTag` so the
-     * addressable replaces the prior version. Returns false if no track was supplied (the route
-     * was opened in a malformed state).
+     * to the end. Uses [MusicPlaylistEvent.addTrack] / [MusicPlaylistEvent.removeTrack] so every
+     * non-`a` tag the original event carried (custom `t` tags, description, image, etc) is
+     * preserved. Returns false if no track was supplied or the playlist isn't in cache.
      */
     suspend fun toggle(playlistAddress: Address): Boolean {
         val targetTrack = trackAddress ?: return false
-        if (isWorking.value) return false
-        isWorking.value = true
-        try {
-            val existing = LocalCache.addressables.get(playlistAddress)?.event as? MusicPlaylistEvent ?: return false
+        return mutationLock.withLock {
+            if (isWorking.value) return@withLock false
+            isWorking.value = true
+            try {
+                val existing = LocalCache.addressables.get(playlistAddress)?.event as? MusicPlaylistEvent ?: return@withLock false
 
-            val current = existing.trackAddresses()
-            val nextTracks =
-                if (current.any { it == targetTrack }) {
-                    current.filterNot { it == targetTrack }
-                } else {
-                    current + targetTrack
-                }
+                val template =
+                    if (existing.trackAddresses().any { it == targetTrack }) {
+                        MusicPlaylistEvent.removeTrack(existing, targetTrack)
+                    } else {
+                        MusicPlaylistEvent.addTrack(existing, targetTrack)
+                    }
 
-            account.signAndComputeBroadcast(
-                MusicPlaylistEvent.build(
-                    title = existing.title().orEmpty(),
-                    description = existing.content,
-                    image = existing.image(),
-                    shortDescription = existing.description(),
-                    tracks = nextTracks,
-                    isPrivate = existing.isPrivate(),
-                    isCollaborative = existing.isCollaborative(),
-                    dTag = existing.dTag(),
-                ),
-            )
-            rescan()
-            return true
-        } finally {
-            isWorking.value = false
+                account.signAndComputeBroadcast(template)
+                withContext(Dispatchers.IO) { rescan() }
+                true
+            } finally {
+                isWorking.value = false
+            }
         }
     }
 
@@ -145,20 +151,22 @@ class AddToMusicPlaylistViewModel : ViewModel() {
     suspend fun createWithTrack(title: String): Address? {
         val targetTrack = trackAddress ?: return null
         if (title.isBlank()) return null
-        if (isWorking.value) return null
-        isWorking.value = true
-        try {
-            val event =
-                account.signAndComputeBroadcast(
-                    MusicPlaylistEvent.build(
-                        title = title.trim(),
-                        tracks = listOf(targetTrack),
-                    ),
-                )
-            rescan()
-            return event.address()
-        } finally {
-            isWorking.value = false
+        return mutationLock.withLock {
+            if (isWorking.value) return@withLock null
+            isWorking.value = true
+            try {
+                val event =
+                    account.signAndComputeBroadcast(
+                        MusicPlaylistEvent.build(
+                            title = title.trim(),
+                            tracks = listOf(targetTrack),
+                        ),
+                    )
+                withContext(Dispatchers.IO) { rescan() }
+                event.address()
+            } finally {
+                isWorking.value = false
+            }
         }
     }
 }

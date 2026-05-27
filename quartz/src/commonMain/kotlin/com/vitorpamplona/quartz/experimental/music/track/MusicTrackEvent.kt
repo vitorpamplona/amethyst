@@ -38,10 +38,13 @@ import com.vitorpamplona.quartz.experimental.music.track.tags.VideoUrlTag
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.core.builder
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -54,7 +57,16 @@ class MusicTrackEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent(): String =
+        buildString {
+            append("title: ").append(title().orEmpty()).append('\n')
+            append("artist: ").append(artist().orEmpty()).append('\n')
+            album()?.let { append("album: ").append(it).append('\n') }
+            append(content)
+        }
+
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
     fun artist() = tags.firstNotNullOfOrNull(ArtistTag::parse)
@@ -130,6 +142,50 @@ class MusicTrackEvent(
             if (explicit) explicit(true)
 
             initializer()
+        }
+
+        /**
+         * Builds a replacement event from an existing one, preserving every tag the composer
+         * doesn't surface (e.g. `video`, `released`, `track_number`, `format`, `bitrate`,
+         * `sample_rate`, `language`, `explicit`, extra `t` genre tags, `zap` splits, etc).
+         *
+         * `title`, `artist`, and `url` always replace. The composer-managed optional fields
+         * (`image`, `album`, `duration`) follow "null/blank = delete the tag" — the composer
+         * is authoritative for the fields it owns, so a user clearing the album field means
+         * "remove the album tag", not "leave whatever was there". The new event keeps the
+         * same `d` tag as `earlierVersion`, so relays treat the publish as the next version of
+         * the same addressable. Always re-derives `alt` from the new title+artist.
+         */
+        fun edit(
+            earlierVersion: MusicTrackEvent,
+            title: String,
+            artist: String,
+            url: String,
+            description: String,
+            image: String?,
+            album: String?,
+            duration: Int?,
+            createdAt: Long = TimeUtils.now(),
+        ): EventTemplate<MusicTrackEvent> {
+            val newTags =
+                earlierVersion.tags.builder<MusicTrackEvent> {
+                    title(title)
+                    artist(artist)
+                    url(url)
+                    alt("$ALT_DESCRIPTION_PREFIX: $title by $artist")
+                    setOrRemove(image, ImageTag.TAG_NAME, ::image)
+                    setOrRemove(album, AlbumTag.TAG_NAME, ::album)
+                    if (duration != null) duration(duration) else remove(DurationTag.TAG_NAME)
+                }
+            return EventTemplate(createdAt, KIND, newTags, description)
+        }
+
+        private fun TagArrayBuilder<MusicTrackEvent>.setOrRemove(
+            value: String?,
+            tagName: String,
+            setter: (String) -> Unit,
+        ) {
+            if (value.isNullOrBlank()) remove(tagName) else setter(value)
         }
     }
 }

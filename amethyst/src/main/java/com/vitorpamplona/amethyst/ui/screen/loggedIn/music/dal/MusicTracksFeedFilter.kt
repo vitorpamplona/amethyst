@@ -41,7 +41,9 @@ import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 class MusicTracksFeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code
+    // Class prefix avoids collisions with other feeds that key off the same Home follow list
+    // (Articles, Longs, etc) — the FeedContentState cache keys off feedKey().
+    override fun feedKey(): String = "music-" + account.userProfile().pubkeyHex + "-" + followList().code
 
     override fun limit() = 200
 
@@ -59,8 +61,7 @@ class MusicTracksFeedFilter(
         val params = buildFilterParams(account)
         val notes =
             LocalCache.addressables.filterIntoSet(MusicTrackEvent.KIND) { _, it ->
-                val noteEvent = it.event
-                noteEvent is MusicTrackEvent && params.match(noteEvent, it.relays)
+                accept(it, params)
             }
         return sort(notes)
     }
@@ -75,11 +76,19 @@ class MusicTracksFeedFilter(
 
     private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
         val params = buildFilterParams(account)
+        return collection.filterTo(HashSet()) { accept(it, params) }
+    }
 
-        return collection.filterTo(HashSet()) {
-            val noteEvent = it.event
-            noteEvent is MusicTrackEvent && params.match(noteEvent, it.relays)
-        }
+    private fun accept(
+        note: Note,
+        params: FilterByListParams,
+    ): Boolean {
+        val noteEvent = note.event
+        // params.match() consults the follow list but not mute/spammer/word lists, so a muted
+        // author would leak through if we only relied on it. Mirror the LongsFeedFilter pattern.
+        return noteEvent is MusicTrackEvent &&
+            params.match(noteEvent, note.relays) &&
+            (params.isHiddenList || account.isAcceptable(note))
     }
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
