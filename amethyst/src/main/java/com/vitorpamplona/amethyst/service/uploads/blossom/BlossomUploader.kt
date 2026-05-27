@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.service.uploads.PreviewMetadataCalculator
+import com.vitorpamplona.amethyst.service.uploads.extensionFromMimeType
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
@@ -142,7 +143,9 @@ class BlossomUploader {
 
         val fileName = baseFileName ?: RandomInstance.randomChars(16)
         val extension =
-            contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
+            contentType?.let {
+                MimeTypeMap.getSingleton().getExtensionFromMimeType(it) ?: extensionFromMimeType(it)
+            } ?: ""
 
         val apiUrl = serverBaseUrl.removeSuffix("/") + "/upload"
 
@@ -241,7 +244,9 @@ class BlossomUploader {
         context: Context,
     ): Boolean {
         val extension =
-            contentType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) } ?: ""
+            contentType?.let {
+                MimeTypeMap.getSingleton().getExtensionFromMimeType(it) ?: extensionFromMimeType(it)
+            } ?: ""
 
         val apiUrl = serverBaseUrl
 

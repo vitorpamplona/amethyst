@@ -317,6 +317,8 @@ class UploadOrchestrator {
                 // assume it stripped metadata successfully.
                 StrippingResult(compressed.uri, true)
             } else {
+                // AvifMetadataNotVerifiableException is allowed to propagate so the caller
+                // can emit a specific error rather than the generic "Upload cancelled".
                 MetadataStripper.strip(compressed.uri, effectiveMimeType, context.applicationContext)
             }
 
@@ -362,10 +364,15 @@ class UploadOrchestrator {
         val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context, useH265, convertGifToMp4)
 
         val finalUri =
-            stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed, context)
-                ?: return error(R.string.upload_cancelled).also {
+            try {
+                stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed, context)
+            } catch (e: AvifMetadataNotVerifiableException) {
+                return error(R.string.avif_metadata_strip_failed, e.message ?: e.javaClass.simpleName).also {
                     deleteTempUri(compressed.uri, uri)
                 }
+            } ?: return error(R.string.upload_cancelled).also {
+                deleteTempUri(compressed.uri, uri)
+            }
 
         if (compressed.uri != finalUri) deleteTempUri(compressed.uri, uri)
 
@@ -398,10 +405,15 @@ class UploadOrchestrator {
         val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context, useH265, convertGifToMp4)
 
         val finalUri =
-            stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed, context)
-                ?: return error(R.string.upload_cancelled).also {
+            try {
+                stripAfterCompression(uri, compressed, mimeType, compressionQuality, stripMetadata, onStrippingFailed, context)
+            } catch (e: AvifMetadataNotVerifiableException) {
+                return error(R.string.avif_metadata_strip_failed, e.message ?: e.javaClass.simpleName).also {
                     deleteTempUri(compressed.uri, uri)
                 }
+            } ?: return error(R.string.upload_cancelled).also {
+                deleteTempUri(compressed.uri, uri)
+            }
 
         if (compressed.uri != finalUri) deleteTempUri(compressed.uri, uri)
 

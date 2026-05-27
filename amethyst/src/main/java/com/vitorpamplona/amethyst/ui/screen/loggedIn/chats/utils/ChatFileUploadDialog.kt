@@ -216,27 +216,25 @@ private fun ImageVideoPostChat(
         )
     }
 
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(Size5dp),
-    ) {
-        Text(
-            text = stringRes(R.string.media_compression_quality_label),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            text = stringRes(R.string.media_compression_quality_explainer),
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.Gray,
-            maxLines = 5,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
+    if (fileUploadState.multiOrchestrator?.hasCompressible() == true) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(Size5dp),
+        ) {
+            Text(
+                text = stringRes(R.string.media_compression_quality_label),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = stringRes(R.string.media_compression_quality_explainer),
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray,
+                maxLines = 5,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
 
-    val firstMedia = fileUploadState.multiOrchestrator?.first()?.media
-
-    if (firstMedia?.isVideo() == true || firstMedia?.isImage() == true) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(modifier = Modifier.fillMaxWidth()) {
                 Text(

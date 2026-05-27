@@ -352,9 +352,7 @@ fun ImageVideoDescription(
                 )
             }
 
-            val firstMedia = uris.first().media
-
-            if ((firstMedia.isVideo() == true || firstMedia.isImage() == true) && !convertGifToMp4) {
+            if (uris.hasCompressible() && !convertGifToMp4) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier =

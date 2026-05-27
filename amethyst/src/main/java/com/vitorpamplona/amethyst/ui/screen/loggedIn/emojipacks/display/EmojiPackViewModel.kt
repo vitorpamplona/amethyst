@@ -31,6 +31,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.uploads.AvifMetadataNotVerifiableException
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MetadataStripper
@@ -104,19 +105,28 @@ class EmojiPackViewModel(
         onUploading(true)
 
         val sourceUri =
-            if (account.settings.stripLocationOnUpload) {
-                val result = MetadataStripper.strip(galleryUri.uri, galleryUri.mimeType, context.applicationContext)
-                if (!result.stripped) {
-                    onError(
-                        stringRes(context, R.string.metadata_strip_failed_title),
-                        stringRes(context, R.string.metadata_strip_failed_upload_cancelled),
-                    )
-                    onUploading(false)
-                    return
+            try {
+                if (account.settings.stripLocationOnUpload) {
+                    val result = MetadataStripper.strip(galleryUri.uri, galleryUri.mimeType, context.applicationContext)
+                    if (!result.stripped) {
+                        onError(
+                            stringRes(context, R.string.metadata_strip_failed_title),
+                            stringRes(context, R.string.metadata_strip_failed_upload_cancelled),
+                        )
+                        onUploading(false)
+                        return
+                    }
+                    result.uri
+                } else {
+                    galleryUri.uri
                 }
-                result.uri
-            } else {
-                galleryUri.uri
+            } catch (e: AvifMetadataNotVerifiableException) {
+                onUploading(false)
+                onError(
+                    stringRes(context, R.string.metadata_strip_failed_title),
+                    stringRes(context, R.string.avif_metadata_strip_failed, e.message ?: e.javaClass.simpleName),
+                )
+                return
             }
         val compResult = MediaCompressor().compress(sourceUri, galleryUri.mimeType, CompressorQuality.MEDIUM, context.applicationContext)
 
