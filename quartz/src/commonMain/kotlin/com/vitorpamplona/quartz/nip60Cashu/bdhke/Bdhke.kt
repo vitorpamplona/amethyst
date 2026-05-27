@@ -144,32 +144,46 @@ object Bdhke {
     ): ByteArray {
         require(r.size == 32) { "Blinding factor must be 32 bytes" }
 
-        val cTickX = Fe4()
-        val cTickY = Fe4()
-        require(KeyCodec.parsePublicKey(blindSignature, cTickX, cTickY)) { "Invalid blind signature" }
-        val cTick = MutablePoint().also { it.setAffine(cTickX, cTickY) }
+        // The body was previously inlined here as one ~30-line method
+        // with ~10 short-lived Fe4 / MutablePoint allocations. Android
+        // 15+ ART crashes (SIGSEGV at 0x48 in "Jit thread pool") when
+        // it tries to escape-analyze that exact allocation density.
+        // Splitting into three smaller methods gives the JIT three
+        // small bodies it can compile cleanly instead of one big one
+        // that triggers the optimizer bug.
+        val cTick = parseAffinePoint(blindSignature, "blind signature")
+        val k = parseAffinePoint(mintPubKey, "mint public key")
+        val negRk = computeNegRk(k, r)
+        val out = MutablePoint()
+        ECPoint.addPoints(out, cTick, negRk)
+        return toCompressed(out)
+    }
 
-        val kx = Fe4()
-        val ky = Fe4()
-        require(KeyCodec.parsePublicKey(mintPubKey, kx, ky)) { "Invalid mint public key" }
-        val k = MutablePoint().also { it.setAffine(kx, ky) }
+    /** Parse a 33-byte compressed pubkey into an affine [MutablePoint]. */
+    private fun parseAffinePoint(
+        compressed: ByteArray,
+        label: String,
+    ): MutablePoint {
+        val px = Fe4()
+        val py = Fe4()
+        require(KeyCodec.parsePublicKey(compressed, px, py)) { "Invalid $label" }
+        return MutablePoint().also { it.setAffine(px, py) }
+    }
 
-        // r·K, then negate Y to get -r·K
+    /** Compute `-r·K` as an affine [MutablePoint]. */
+    private fun computeNegRk(
+        k: MutablePoint,
+        r: ByteArray,
+    ): MutablePoint {
         val rScalar = Fe4()
         U256.fromBytesInto(rScalar, r, 0)
         val rk = MutablePoint()
         ECPoint.mul(rk, k, rScalar)
-
-        // Convert to affine first, then negate Y.
         val rkX = Fe4()
         val rkY = Fe4()
         require(ECPoint.toAffine(rk, rkX, rkY)) { "rK is point at infinity" }
         FieldP.neg(rkY, rkY)
-        val negRk = MutablePoint().also { it.setAffine(rkX, rkY) }
-
-        val out = MutablePoint()
-        ECPoint.addPoints(out, cTick, negRk)
-        return toCompressed(out)
+        return MutablePoint().also { it.setAffine(rkX, rkY) }
     }
 
     /**
