@@ -23,34 +23,56 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.dal
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
+import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
 
 class SoftwareAppsFeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String = account.userProfile().pubkeyHex
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code
 
     override fun limit() = 200
 
-    override fun showHiddenKey(): Boolean = false
+    fun followList(): TopFilter = account.settings.defaultSoftwareAppsFollowList.value
+
+    fun TopFilter.isMuteList() = this is TopFilter.MuteList
+
+    fun TopFilter.isBlockList() = this is TopFilter.PeopleList && this.address == account.blockPeopleList.getBlockListAddress()
+
+    fun TopFilter.wantsToSeeNegativeStuff() = isMuteList() || isBlockList()
+
+    override fun showHiddenKey(): Boolean = followList().wantsToSeeNegativeStuff()
 
     override fun feed(): List<Note> {
+        val params = buildFilterParams(account)
         val notes =
             LocalCache.addressables.filterIntoSet(SoftwareApplicationEvent.KIND) { _, it ->
                 val ev = it.event
-                ev is SoftwareApplicationEvent && account.isAcceptable(it)
+                ev is SoftwareApplicationEvent && params.match(ev, it.relays) && (params.isHiddenList || account.isAcceptable(it))
             }
         return sort(notes)
     }
 
-    override fun applyFilter(newItems: Set<Note>): Set<Note> =
-        newItems.filterTo(HashSet()) {
+    override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
+
+    fun buildFilterParams(account: Account): FilterByListParams =
+        FilterByListParams.create(
+            account.liveSoftwareAppsFollowLists.value,
+            account.hiddenUsers.flow.value,
+        )
+
+    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
+        val params = buildFilterParams(account)
+
+        return collection.filterTo(HashSet()) {
             val ev = it.event
-            ev is SoftwareApplicationEvent && account.isAcceptable(it)
+            ev is SoftwareApplicationEvent && params.match(ev, it.relays) && (params.isHiddenList || account.isAcceptable(it))
         }
+    }
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
 }

@@ -23,17 +23,13 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.datasource
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
-import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.SoftwareReleaseEvent
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import kotlinx.coroutines.CoroutineScope
 
 class SoftwareAppsQueryState(
     val account: Account,
+    val feedStates: AccountFeedContentStates,
     val scope: CoroutineScope,
 )
 
@@ -41,38 +37,14 @@ class SoftwareAppsQueryState(
 class SoftwareAppsFilterAssembler(
     client: INostrClient,
 ) : ComposeSubscriptionManager<SoftwareAppsQueryState>() {
-    val sub = SoftwareAppsSubAssembler(client, ::allKeys)
+    val group =
+        listOf(
+            SoftwareAppsSubAssembler(client, ::allKeys),
+        )
 
     override fun invalidateKeys() = invalidateFilters()
 
-    override fun invalidateFilters() = sub.invalidateFilters()
+    override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
 
-    override fun destroy() = sub.destroy()
-}
-
-class SoftwareAppsSubAssembler(
-    client: INostrClient,
-    allKeys: () -> Set<SoftwareAppsQueryState>,
-) : PerUserEoseManager<SoftwareAppsQueryState>(client, allKeys) {
-    override fun user(key: SoftwareAppsQueryState) = key.account.userProfile()
-
-    override fun updateFilter(
-        key: SoftwareAppsQueryState,
-        since: SincePerRelayMap?,
-    ): List<RelayBasedFilter> {
-        val relays = key.account.outboxRelays.flow.value
-        if (relays.isEmpty()) return emptyList()
-
-        return relays.map { relay ->
-            RelayBasedFilter(
-                relay = relay,
-                filter =
-                    Filter(
-                        kinds = listOf(SoftwareApplicationEvent.KIND, SoftwareReleaseEvent.KIND),
-                        limit = 200,
-                        since = since?.get(relay)?.time,
-                    ),
-            )
-        }
-    }
+    override fun destroy() = group.forEach { it.destroy() }
 }
