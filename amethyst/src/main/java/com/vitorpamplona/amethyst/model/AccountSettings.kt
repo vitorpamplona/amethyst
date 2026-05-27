@@ -171,6 +171,7 @@ class AccountSettings(
     val defaultNestsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultLongsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultArticlesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
+    val defaultMusicTracksFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultBadgesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Mine),
     val defaultBrowseEmojiSetsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultCommunitiesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
@@ -623,6 +624,17 @@ class AccountSettings(
     fun changeDefaultArticlesFollowList(name: TopFilter) {
         if (defaultArticlesFollowList.value != name) {
             defaultArticlesFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultMusicTracksFollowList(name: FeedDefinition) {
+        changeDefaultMusicTracksFollowList(name.code)
+    }
+
+    fun changeDefaultMusicTracksFollowList(name: TopFilter) {
+        if (defaultMusicTracksFollowList.value != name) {
+            defaultMusicTracksFollowList.tryEmit(name)
             saveAccountSettings()
         }
     }

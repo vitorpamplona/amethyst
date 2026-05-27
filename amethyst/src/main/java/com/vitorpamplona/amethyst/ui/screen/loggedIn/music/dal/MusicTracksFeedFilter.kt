@@ -32,22 +32,19 @@ import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 
 /**
  * Pulls every MusicTrackEvent (kind 36787) in the addressable cache that passes the user's
- * Home follow list and hidden/blocked rules. Reuses `liveHomeFollowLists` rather than
- * defining a dedicated music-feed follow list so the MVP doesn't have to touch
- * AccountSettings + Account state plumbing — the trade-off is that changing the Home
- * filter also changes this feed, which mirrors what users already expect from the Home
- * tab itself.
+ * dedicated music follow list and hidden/blocked rules. Backed by
+ * `account.settings.defaultMusicTracksFollowList` so the music screen's top-bar spinner
+ * stays in sync with this feed.
  */
 class MusicTracksFeedFilter(
     val account: Account,
 ) : AdditiveFeedFilter<Note>() {
-    // Class prefix avoids collisions with other feeds that key off the same Home follow list
-    // (Articles, Longs, etc) — the FeedContentState cache keys off feedKey().
+    // Class prefix avoids collisions with other feeds that key off the same follow list.
     override fun feedKey(): String = "music-" + account.userProfile().pubkeyHex + "-" + followList().code
 
     override fun limit() = 200
 
-    fun followList(): TopFilter = account.settings.defaultHomeFollowList.value
+    fun followList(): TopFilter = account.settings.defaultMusicTracksFollowList.value
 
     fun TopFilter.isMuteList() = this is TopFilter.MuteList
 
@@ -70,7 +67,7 @@ class MusicTracksFeedFilter(
 
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(
-            account.liveHomeFollowLists.value,
+            account.liveMusicTracksFollowLists.value,
             account.hiddenUsers.flow.value,
         )
 

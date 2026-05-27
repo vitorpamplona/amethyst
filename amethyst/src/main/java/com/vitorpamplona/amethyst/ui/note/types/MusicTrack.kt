@@ -136,25 +136,18 @@ fun MusicTrackHeader(
                 .take(4)
                 .toImmutableList()
         }
-    val playableUri = videoUrl ?: url
-    val mimeType =
-        remember(format, videoUrl) {
-            // `format` per spec is the AUDIO format (mp3/flac/m4a/ogg). When a `video` URL is
-            // chosen, the audio-format hint doesn't apply — pass null and let ExoPlayer sniff
-            // the container itself instead of synthesizing nonsense like "video/mp3".
-            when {
-                videoUrl != null -> null
-                format != null -> "audio/$format"
-                else -> null
-            }
-        }
+    // Per spec, `format` is the AUDIO format (mp3/flac/m4a/ogg) — only meaningful on the
+    // audio path. The video path lets ExoPlayer sniff the container.
+    val audioMimeType = remember(format) { format?.let { "audio/$it" } }
 
     Column(MaterialTheme.colorScheme.replyModifier) {
-        if (playableUri != null) {
+        if (videoUrl != null) {
+            // A track with a `video` tag is an actual music-video file — show it through the
+            // full video player (with the album cover as thumb when we have one).
             if (image != null) {
                 LoadThumbAndThenVideoView(
-                    videoUri = playableUri,
-                    mimeType = mimeType,
+                    videoUri = videoUrl,
+                    mimeType = null,
                     title = title,
                     thumbUri = image,
                     authorName = note.author?.toBestDisplayName(),
@@ -165,8 +158,8 @@ fun MusicTrackHeader(
                 )
             } else {
                 VideoView(
-                    videoUri = playableUri,
-                    mimeType = mimeType,
+                    videoUri = videoUrl,
+                    mimeType = null,
                     title = title,
                     authorName = note.author?.toBestDisplayName(),
                     roundedCorner = true,
@@ -176,7 +169,22 @@ fun MusicTrackHeader(
                 )
             }
         } else {
+            // Audio-only path: render the cover art as a proper album-art square, then a
+            // compact voice-style audio player underneath. VoiceView's tap-to-play + share /
+            // save / PiP / mute controls are exactly what an MP3 stream wants — VideoView's
+            // 16:9 frame just leaves a blank rectangle next to the controls for audio.
             MusicTrackCover(image, note, accountViewModel)
+            if (url != null) {
+                RenderAudioWithWaveform(
+                    mediaUrl = url,
+                    title = title,
+                    mimeType = audioMimeType,
+                    waveform = null, // spec has no `waveform` tag for kind 36787
+                    note = note,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
         }
 
         Column(

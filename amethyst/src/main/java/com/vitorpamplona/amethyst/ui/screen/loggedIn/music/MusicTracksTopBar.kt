@@ -20,15 +20,18 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.music
 
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.topbars.FeedFilterSpinner
 import com.vitorpamplona.amethyst.ui.navigation.topbars.UserDrawerSearchTopBar
+import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
+import com.vitorpamplona.amethyst.ui.screen.TopNavFilterState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -40,15 +43,37 @@ fun MusicTracksTopBar(
     nav: INav,
 ) {
     UserDrawerSearchTopBar(accountViewModel, nav) {
-        // MVP doesn't expose a dedicated follow-list spinner here — the feed inherits the
-        // user's Home follow list (see MusicTracksFeedFilter). When music gets its own
-        // setting, swap this for a FeedFilterSpinner like LongsTopBar / BadgesTopBar.
-        Text(
-            text = stringRes(R.string.route_music_tracks),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+        val list by accountViewModel.account.settings.defaultMusicTracksFollowList
+            .collectAsStateWithLifecycle()
+
+        MusicTracksTopNavFilterBar(
+            followListsModel = accountViewModel.feedStates.feedListOptions,
+            listName = list,
+            accountViewModel = accountViewModel,
+            onChange = accountViewModel.account.settings::changeDefaultMusicTracksFollowList,
         )
     }
+}
+
+@Composable
+private fun MusicTracksTopNavFilterBar(
+    followListsModel: TopNavFilterState,
+    listName: TopFilter,
+    accountViewModel: AccountViewModel,
+    onChange: (FeedDefinition) -> Unit,
+) {
+    // Music is content-style (like Articles / Long-form), so reuse the same route catalog
+    // as those feeds — All Follows, Your Follows, kind3 Follows, Around Me, Global, custom
+    // people lists, interest sets, mute list.
+    val allLists by followListsModel.kind3GlobalPeopleRoutes.collectAsStateWithLifecycle()
+
+    FeedFilterSpinner(
+        placeholderCode = listName,
+        explainer = stringRes(R.string.select_list_to_filter),
+        options = allLists,
+        onSelect = onChange,
+        accountViewModel = accountViewModel,
+    )
 }
 
 @Preview

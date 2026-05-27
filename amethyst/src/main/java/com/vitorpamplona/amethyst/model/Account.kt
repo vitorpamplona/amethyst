@@ -514,6 +514,9 @@ class Account(
     val liveArticlesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultArticlesFollowList)
     val liveArticlesFollowListsPerRelay = OutboxLoaderState(liveArticlesFollowLists, cache, scope).flow
 
+    val liveMusicTracksFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultMusicTracksFollowList)
+    val liveMusicTracksFollowListsPerRelay = OutboxLoaderState(liveMusicTracksFollowLists, cache, scope).flow
+
     val liveBadgesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultBadgesFollowList)
     val liveBadgesFollowListsPerRelay = OutboxLoaderState(liveBadgesFollowLists, cache, scope).flow
 

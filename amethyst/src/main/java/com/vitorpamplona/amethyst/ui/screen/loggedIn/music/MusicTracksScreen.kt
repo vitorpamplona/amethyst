@@ -113,7 +113,7 @@ fun WatchAccountForMusicTracksScreen(
     musicFeedState: FeedContentState,
     accountViewModel: AccountViewModel,
 ) {
-    val listState by accountViewModel.account.liveHomeFollowLists.collectAsStateWithLifecycle()
+    val listState by accountViewModel.account.liveMusicTracksFollowLists.collectAsStateWithLifecycle()
     val hiddenUsers =
         accountViewModel.account.hiddenUsers.flow
             .collectAsStateWithLifecycle()
