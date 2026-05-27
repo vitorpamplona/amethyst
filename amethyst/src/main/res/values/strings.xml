@@ -142,6 +142,7 @@
     <string name="write_a_message">Write a message…</string>
     <string name="post">Post</string>
     <string name="save">Save</string>
+    <string name="send">Send</string>
     <string name="create">Create</string>
     <string name="rename">Rename</string>
     <string name="cancel">Cancel</string>
@@ -752,6 +753,34 @@
     <string name="nests_servers_empty">No nest servers yet. Add one below or pick a recommended server.</string>
     <string name="longs">Videos</string>
     <string name="articles">Articles</string>
+    <string name="route_music_tracks">Music</string>
+    <string name="route_music_playlists">Playlists</string>
+    <string name="new_music_track">New music track</string>
+    <string name="new_music_playlist">New playlist</string>
+    <string name="music_track_title_label">Title</string>
+    <string name="music_track_title_placeholder">Track title</string>
+    <string name="music_track_artist_label">Artist</string>
+    <string name="music_track_artist_placeholder">Artist name</string>
+    <string name="music_track_audio_url_label">Audio URL</string>
+    <string name="music_track_audio_url_placeholder">https://… .mp3</string>
+    <string name="music_track_image_url_label">Cover image URL (optional)</string>
+    <string name="music_track_album_label">Album (optional)</string>
+    <string name="music_track_duration_label">Duration in seconds (optional)</string>
+    <string name="music_track_description_label">Lyrics or credits (optional)</string>
+    <string name="music_track_delete">Delete this track</string>
+    <string name="music_track_delete_confirm">Publish a NIP-09 deletion for this music track?</string>
+    <string name="add_to_music_playlist">Add to playlist</string>
+    <string name="add_to_music_playlist_title">Add to playlist</string>
+    <string name="add_to_music_playlist_empty">You don\'t own any playlists yet. Use the field above to create one.</string>
+    <string name="add_to_music_playlist_manage_all">Manage all playlists</string>
+    <string name="music_playlist_new_dialog_title">New playlist</string>
+    <string name="music_playlist_new_title_placeholder">Playlist name</string>
+    <string name="music_playlist_create_action">Create</string>
+    <string name="music_playlist_untitled">(untitled playlist)</string>
+    <plurals name="music_playlist_track_count_short">
+        <item quantity="one">%1$d track</item>
+        <item quantity="other">%1$d tracks</item>
+    </plurals>
     <string name="private_bookmarks">Private Bookmarks</string>
     <string name="public_bookmarks">Public Bookmarks</string>
     <string name="add_to_private_bookmarks">Add to Private Bookmarks</string>
@@ -1505,6 +1534,27 @@
     <string name="external_id_scope">Comment on an external resource</string>
 
     <string name="long_form_reading_minutes">%1$d min read</string>
+
+    <plurals name="music_playlist_track_count">
+        <item quantity="one">%1$d track</item>
+        <item quantity="other">%1$d tracks</item>
+    </plurals>
+    <plurals name="music_playlist_more_tracks">
+        <item quantity="one">+%1$d more track</item>
+        <item quantity="other">+%1$d more tracks</item>
+    </plurals>
+    <string name="music_playlist_collaborative">Collaborative</string>
+    <string name="music_playlist_private">Private</string>
+    <string name="music_playlist_unknown_track">Unknown track</string>
+    <string name="music_playlist_loading_track">Loading track…</string>
+    <string name="music_track_cover_upload_cta">Upload a cover image</string>
+    <string name="music_track_cover_upload_hint">Pick a square image to be the artwork for this track.</string>
+    <string name="music_track_audio_upload_cta">Upload an audio file</string>
+    <string name="music_track_audio_upload_hint">Pick an MP3, WAV, or FLAC. It will be uploaded to your media server on Save.</string>
+    <string name="music_track_audio_picked">Audio file ready to upload</string>
+    <string name="music_track_uploading">Uploading…</string>
+    <string name="music_track_uploading_banner">Uploading cover + audio and publishing. This will keep going even if you leave the screen.</string>
+    <string name="music_track_upload_failed">Upload failed: %1$s</string>
 
 
     <string name="loading_location">Loading location</string>
@@ -2535,6 +2585,8 @@
     <string name="kind_user_settings">User Settings</string>
     <string name="kind_audio_header">Audio Header</string>
     <string name="kind_audio_track">Audio Track</string>
+    <string name="kind_music_track">Music Track</string>
+    <string name="kind_music_playlist">Music Playlist</string>
     <string name="kind_badge_awards">Badge Awards</string>
     <string name="kind_badge_definitions">Badge Definitions</string>
     <string name="kind_accepted_badge_set">Accepted Badge Set</string>

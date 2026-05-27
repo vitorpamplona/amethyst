@@ -34,6 +34,8 @@ import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
+import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
+import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -94,6 +96,8 @@ class NotificationFeedFilter(
         val ADDRESSABLE_KINDS =
             listOf(
                 AudioTrackEvent.KIND,
+                MusicTrackEvent.KIND,
+                MusicPlaylistEvent.KIND,
                 CalendarTimeSlotEvent.KIND,
                 CalendarDateSlotEvent.KIND,
                 CalendarRSVPEvent.KIND,
