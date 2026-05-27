@@ -53,9 +53,19 @@ class CashuMintOperations(
      * The wallet should publish a kind:7374 quote event before returning to the
      * UI so that an interrupted flow can be recovered on next login.
      */
-    suspend fun requestMintQuote(amountSats: Long): MintQuoteBolt11ResponseDto =
+    suspend fun requestMintQuote(
+        amountSats: Long,
+        /**
+         * NUT-20: optional 33-byte compressed pubkey hex that binds this
+         * quote to a wallet keypair. Mints that support NUT-20 will refuse
+         * to honour [mintProofs] without a matching signature. Mints that
+         * don't ignore the field (extra-JSON tolerance), so always-on is
+         * safe — no feature detection needed at quote time.
+         */
+        signingPubkey: String? = null,
+    ): MintQuoteBolt11ResponseDto =
         client.mintQuoteBolt11(
-            MintQuoteBolt11RequestDto(unit = "sat", amount = amountSats),
+            MintQuoteBolt11RequestDto(unit = "sat", amount = amountSats, pubkey = signingPubkey),
         )
 
     suspend fun mintQuoteStatus(quote: String): MintQuoteBolt11ResponseDto = client.mintQuoteBolt11Status(quote)
@@ -72,15 +82,35 @@ class CashuMintOperations(
     suspend fun mintProofs(
         quote: String,
         amountSats: Long,
+        /**
+         * NUT-20: when [requestMintQuote] was called with `signingPubkey`,
+         * the matching mint request MUST carry a BIP-340 Schnorr signature
+         * from the same key over `sha256(quote || B_0 || B_1 || …)`.
+         * Pass the 32-byte private key (hex) here and the operation
+         * computes + attaches the signature; pass null to skip NUT-20 and
+         * fall back to NUT-04 behaviour.
+         */
+        signingPrivkey: String? = null,
     ): MintedProofs {
         val keyset = fetchKeyset()
         val outputs = createBlindedOutputs(amountSats, keyset)
+
+        val outputDtos = outputs.map { it.toDto() }
+        val signature =
+            signingPrivkey?.let {
+                MintQuoteSignature.sign(
+                    quoteId = quote,
+                    blindedMessageHexes = outputDtos.map { dto -> dto.bTick },
+                    signingPrivkey = it.hexToByteArray(),
+                )
+            }
 
         val response =
             client.mintBolt11(
                 MintBolt11RequestDto(
                     quote = quote,
-                    outputs = outputs.map { it.toDto() },
+                    outputs = outputDtos,
+                    signature = signature,
                 ),
             )
         val proofs = unblindAll(outputs, response.signatures, keyset)

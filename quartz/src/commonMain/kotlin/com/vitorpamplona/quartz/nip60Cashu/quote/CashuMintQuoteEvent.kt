@@ -30,6 +30,9 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 /**
  * NIP-60 Cashu Mint Quote Event (kind:7374).
@@ -52,9 +55,39 @@ class CashuMintQuoteEvent(
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     /**
-     * Decrypts the content to get the quote ID.
+     * Decrypt the full quote payload — quote id plus, when present, the
+     * NUT-20 signing privkey that binds this quote to a specific wallet
+     * keypair. The content schema has two historic shapes:
+     *   - pre-NUT-20: plain string == the quote id
+     *   - post-NUT-20: JSON `{"quote_id": "...", "p2pk_priv": "..."}`
+     * The decode tries the JSON shape first; on parse failure it treats
+     * the entire decrypted payload as the quote id (legacy events).
      */
-    suspend fun quoteId(signer: NostrSigner): String = signer.nip44Decrypt(content, pubKey)
+    suspend fun decrypt(signer: NostrSigner): Decrypted {
+        val plaintext = signer.nip44Decrypt(content, pubKey)
+        return runCatching { jsonCodec.decodeFromString<Decrypted>(plaintext) }
+            .getOrElse { Decrypted(quoteId = plaintext, p2pkPriv = null) }
+    }
+
+    /**
+     * Decrypts the content to get the quote ID. Kept for backwards
+     * compatibility with callers that don't care about the NUT-20 key.
+     */
+    suspend fun quoteId(signer: NostrSigner): String = decrypt(signer).quoteId
+
+    /**
+     * The NUT-20 signing private key for this quote, when one was generated
+     * at quote-creation time. Null for pre-NUT-20 events or quotes the
+     * wallet chose not to bind to a key.
+     */
+    suspend fun signingPrivkey(signer: NostrSigner): String? = decrypt(signer).p2pkPriv
+
+    /** Decrypted kind:7374 content. See [decrypt]. */
+    @Serializable
+    data class Decrypted(
+        @SerialName("quote_id") val quoteId: String,
+        @SerialName("p2pk_priv") val p2pkPriv: String? = null,
+    )
 
     /**
      * Gets the mint URL from the public tags.
@@ -73,6 +106,15 @@ class CashuMintQuoteEvent(
             quoteId: String,
             mintUrl: String,
             signer: NostrSigner,
+            /**
+             * NUT-20: the ephemeral signing private key (32-byte hex) the
+             * wallet committed to when opening this mint quote. Carried
+             * inside the encrypted content so the resume-on-next-launch
+             * path can pick it up and sign the matching mint request.
+             * Null skips NUT-20 entirely — older wallets / mints stay
+             * compatible (plain-string content shape).
+             */
+            signingPrivkey: String? = null,
             expirationTimestamp: Long = TimeUtils.now() + TWO_WEEKS_SECONDS,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<CashuMintQuoteEvent>.() -> Unit = {},
@@ -82,7 +124,19 @@ class CashuMintQuoteEvent(
             add(arrayOf("mint", mintUrl))
             initializer()
         }.let { template ->
-            val encryptedContent = signer.nip44Encrypt(quoteId, signer.pubKey)
+            val payload =
+                if (signingPrivkey != null) {
+                    jsonCodec.encodeToString(
+                        Decrypted.serializer(),
+                        Decrypted(quoteId = quoteId, p2pkPriv = signingPrivkey),
+                    )
+                } else {
+                    // Legacy plain-string shape for events that don't carry
+                    // a signing key — keeps wire compatibility with any
+                    // pre-NUT-20 reader that expects a bare quote id.
+                    quoteId
+                }
+            val encryptedContent = signer.nip44Encrypt(payload, signer.pubKey)
 
             EventTemplate<CashuMintQuoteEvent>(
                 template.createdAt,
@@ -91,5 +145,7 @@ class CashuMintQuoteEvent(
                 encryptedContent,
             )
         }
+
+        private val jsonCodec = Json { ignoreUnknownKeys = true }
     }
 }

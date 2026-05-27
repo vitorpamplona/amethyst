@@ -155,12 +155,20 @@ class CashuWalletOps(
         mintUrl: String,
         amountSats: Long,
     ): MintQuoteStarted {
-        val response = ops(mintUrl).requestMintQuote(amountSats)
+        // NUT-20: generate a fresh per-quote keypair, bind the mint quote
+        // to it, and persist the privkey inside the encrypted kind:7374
+        // so the resume-on-next-launch path can sign the matching mint
+        // request later. Mints that don't support NUT-20 ignore the
+        // pubkey field (per spec), so always-on is safe.
+        val signingPriv = Bdhke.randomScalar()
+        val signingPub = Secp256k1.pubKeyCompress(Secp256k1.pubkeyCreate(signingPriv)).toHexKey()
+        val response = ops(mintUrl).requestMintQuote(amountSats, signingPubkey = signingPub)
         val quoteTemplate =
             CashuMintQuoteEvent.build(
                 quoteId = response.quote,
                 mintUrl = mintUrl,
                 signer = signer,
+                signingPrivkey = signingPriv.toHexKey(),
             )
         val quoteEvent = signer.sign(quoteTemplate)
         publish(quoteEvent)
@@ -205,8 +213,19 @@ class CashuWalletOps(
         amountSats: Long,
     ): MintCompleted {
         seedWarmer()
-        val quoteId = quoteEvent.quoteId(signer)
-        val minted = ops(mintUrl).mintProofs(quoteId, amountSats)
+        // NUT-20: pull both the quote id and the persisted signing privkey
+        // out of the kind:7374 in one decrypt. Legacy quote events stored
+        // only the quote id (string), so signingPrivkey is null in that
+        // case and we skip the signature — mints that need it will
+        // reject, but old quotes opened pre-NUT-20 wouldn't have had a
+        // pubkey on them anyway, so the mint should accept.
+        val decryptedQuote = quoteEvent.decrypt(signer)
+        val minted =
+            ops(mintUrl).mintProofs(
+                quote = decryptedQuote.quoteId,
+                amountSats = amountSats,
+                signingPrivkey = decryptedQuote.p2pkPriv,
+            )
 
         val tokenContent = minted.toTokenContent(mintUrl)
         val tokenTemplate = CashuTokenEvent.build(tokenContent, signer)
