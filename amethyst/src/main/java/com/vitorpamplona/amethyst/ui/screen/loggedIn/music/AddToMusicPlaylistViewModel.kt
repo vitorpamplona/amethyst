@@ -97,7 +97,7 @@ class AddToMusicPlaylistViewModel : ViewModel() {
         super.onCleared()
     }
 
-    private fun rescan() {
+    private suspend fun rescan() {
         val mePubKey = account.userProfile().pubkeyHex
         val target = trackAddress
         val results =
@@ -114,7 +114,12 @@ class AddToMusicPlaylistViewModel : ViewModel() {
                         containsTrack = target != null && tracks.any { it == target },
                     )
                 }.sortedByDescending { it.containsTrack }
-        ownedPlaylists.value = results
+        // Hop back to the main thread to publish the new list — Compose State writes go
+        // through Snapshot.apply, and doing them off-main is the anti-pattern flagged in
+        // prior reviews of this codebase even though Snapshot makes it not-yet-broken.
+        withContext(Dispatchers.Main.immediate) {
+            ownedPlaylists.value = results
+        }
     }
 
     /**
@@ -127,7 +132,7 @@ class AddToMusicPlaylistViewModel : ViewModel() {
         val targetTrack = trackAddress ?: return false
         return mutationLock.withLock {
             if (isWorking.value) return@withLock false
-            isWorking.value = true
+            setWorking(true)
             try {
                 val existing = LocalCache.addressables.get(playlistAddress)?.event as? MusicPlaylistEvent ?: return@withLock false
 
@@ -139,10 +144,10 @@ class AddToMusicPlaylistViewModel : ViewModel() {
                     }
 
                 account.signAndComputeBroadcast(template)
-                withContext(Dispatchers.IO) { rescan() }
+                rescan()
                 true
             } finally {
-                isWorking.value = false
+                setWorking(false)
             }
         }
     }
@@ -153,7 +158,7 @@ class AddToMusicPlaylistViewModel : ViewModel() {
         if (title.isBlank()) return null
         return mutationLock.withLock {
             if (isWorking.value) return@withLock null
-            isWorking.value = true
+            setWorking(true)
             try {
                 val event =
                     account.signAndComputeBroadcast(
@@ -162,11 +167,23 @@ class AddToMusicPlaylistViewModel : ViewModel() {
                             tracks = listOf(targetTrack),
                         ),
                     )
-                withContext(Dispatchers.IO) { rescan() }
+                rescan()
                 event.address()
             } finally {
-                isWorking.value = false
+                setWorking(false)
             }
+        }
+    }
+
+    /**
+     * Publish the [isWorking] flag on the main thread. See the comment in [rescan]: this
+     * coroutine is launched on [Dispatchers.IO] (via `launchSigner`), and Compose State
+     * writes belong on the main dispatcher even when Snapshot would technically tolerate
+     * them off-main.
+     */
+    private suspend fun setWorking(working: Boolean) {
+        withContext(Dispatchers.Main.immediate) {
+            isWorking.value = working
         }
     }
 }

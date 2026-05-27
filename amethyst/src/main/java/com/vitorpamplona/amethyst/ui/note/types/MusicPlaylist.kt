@@ -555,12 +555,6 @@ private fun PlaylistTag(text: String) {
     }
 }
 
-private fun formatTrackDuration(seconds: Int): String {
-    val minutes = seconds / 60
-    val secs = seconds % 60
-    return "%d:%02d".format(minutes, secs)
-}
-
 // ---------------------------------------------------------------------------
 // @Preview composables. Constructs a MusicPlaylistEvent plus a handful of
 // MusicTrackEvents it references, pushes them through LocalCache, then

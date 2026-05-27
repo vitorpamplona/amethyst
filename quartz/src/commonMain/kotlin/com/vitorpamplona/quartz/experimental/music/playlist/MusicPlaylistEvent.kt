@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.experimental.music.playlist.tags.CollaborativeTa
 import com.vitorpamplona.quartz.experimental.music.playlist.tags.DescriptionTag
 import com.vitorpamplona.quartz.experimental.music.playlist.tags.ImageTag
 import com.vitorpamplona.quartz.experimental.music.playlist.tags.PrivateTag
-import com.vitorpamplona.quartz.experimental.music.playlist.tags.PublicTag
 import com.vitorpamplona.quartz.experimental.music.playlist.tags.TitleTag
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -68,7 +67,13 @@ class MusicPlaylistEvent(
      */
     fun isPrivate() = tags.firstNotNullOfOrNull(PrivateTag::parse) ?: false
 
-    fun isPublic() = tags.firstNotNullOfOrNull(PublicTag::parse) ?: !isPrivate()
+    /**
+     * Always the inverse of [isPrivate] so a playlist that tags both `public=true` AND
+     * `private=true` still gets reported as private — matching the doc on [isPrivate]
+     * ("isPrivate wins"). If we honored a standalone `public` tag here, the two methods
+     * would contradict each other when both tags are present.
+     */
+    fun isPublic() = !isPrivate()
 
     fun isCollaborative() = tags.firstNotNullOfOrNull(CollaborativeTag::parse) ?: false
 

@@ -48,6 +48,8 @@ import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun NewMusicPlaylistFab(accountViewModel: AccountViewModel) {
@@ -72,12 +74,17 @@ fun NewMusicPlaylistFab(accountViewModel: AccountViewModel) {
             onDismiss = { dialogOpen = false },
             onCreate = { name ->
                 // Empty playlist: user adds tracks later via the "Add to playlist" sheet on
-                // any music-track note.
+                // any music-track note. `name` is already trimmed by the dialog's confirm
+                // button, no need to .trim() again here.
                 accountViewModel.launchSigner {
                     accountViewModel.account.signAndComputeBroadcast(
-                        MusicPlaylistEvent.build(title = name.trim()),
+                        MusicPlaylistEvent.build(title = name),
                     )
-                    dialogOpen = false
+                    // Compose state writes belong on the main dispatcher — launchSigner is
+                    // Dispatchers.IO, so we hop back before flipping the dialog flag.
+                    withContext(Dispatchers.Main.immediate) {
+                        dialogOpen = false
+                    }
                 }
             },
         )

@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
 import com.vitorpamplona.amethyst.service.playback.composable.LoadThumbAndThenVideoView
 import com.vitorpamplona.amethyst.service.playback.composable.PauseControllerWhenInBackground
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
+import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
@@ -297,7 +298,7 @@ fun MusicTrackHeader(
                     if (album != null && (released != null || duration != null || isExplicit)) MetaSeparator()
                     released?.let { MetaText(text = it) }
                     if (released != null && (duration != null || isExplicit)) MetaSeparator()
-                    duration?.let { MetaText(text = formatDuration(it)) }
+                    duration?.let { MetaText(text = formatTrackDuration(it)) }
                     if (duration != null && isExplicit) MetaSeparator()
                     if (isExplicit) ExplicitBadge()
                 }
@@ -432,12 +433,6 @@ private fun TopicChip(
     )
 }
 
-private fun formatDuration(seconds: Int): String {
-    val minutes = seconds / 60
-    val secs = seconds % 60
-    return "%d:%02d".format(minutes, secs)
-}
-
 private const val SYNTHETIC_WAVEFORM_SAMPLES = 96
 private const val TWO_PI = (Math.PI * 2).toFloat()
 
@@ -452,7 +447,7 @@ private const val TWO_PI = (Math.PI * 2).toFloat()
  * only varied by per-bar noise, which made every track look like the same slow-fade sine with
  * minor wiggle.
  */
-private fun syntheticWaveformFor(seed: String): com.vitorpamplona.amethyst.service.playback.composable.WaveformData {
+private fun syntheticWaveformFor(seed: String): WaveformData {
     // Fold the seed's 32-bit hash into a Long so two ids whose hashCode happens to collide
     // (rare for hex addresses but cheap to defend against) still differ via the bit shuffle.
     val rng = kotlin.random.Random((seed.hashCode().toLong() * 0x9E3779B97F4A7C15uL.toLong()) xor seed.length.toLong())
@@ -475,8 +470,7 @@ private fun syntheticWaveformFor(seed: String): com.vitorpamplona.amethyst.servi
             val noise = (rng.nextFloat() - 0.5f) * 2f * noiseStrength
             ((baseline + carrier + noise) * envelope).coerceIn(0.05f, 1.0f)
         }
-    return com.vitorpamplona.amethyst.service.playback.composable
-        .WaveformData(bars)
+    return WaveformData(bars)
 }
 
 // ---------------------------------------------------------------------------

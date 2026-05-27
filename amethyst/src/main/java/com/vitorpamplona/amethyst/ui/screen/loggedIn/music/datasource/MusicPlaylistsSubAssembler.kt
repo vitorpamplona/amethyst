@@ -53,7 +53,15 @@ class MusicPlaylistsSubAssembler(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
         val feedSettings = key.followsPerRelay()
-        return makeMusicTracksFilter(feedSettings, since, key.feedStates.musicPlaylistsFeed.lastNoteCreatedAtIfFilled())
+        // Same REQ asks both kinds (36787 + 34139), so the `since` cursor has to be the
+        // older of the two feeds' cursors — otherwise the kind whose feed lags would
+        // miss older events.
+        val defaultSince =
+            listOfNotNull(
+                key.feedStates.musicTracksFeed.lastNoteCreatedAtIfFilled(),
+                key.feedStates.musicPlaylistsFeed.lastNoteCreatedAtIfFilled(),
+            ).minOrNull()
+        return makeMusicTracksFilter(feedSettings, since, defaultSince)
     }
 
     override fun user(key: MusicPlaylistsQueryState) = key.account.userProfile()
@@ -88,6 +96,13 @@ class MusicPlaylistsSubAssembler(
                 },
                 key.account.scope.launch(Dispatchers.IO) {
                     key.feedStates.musicPlaylistsFeed.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
+                        invalidateFilters()
+                    }
+                },
+                key.account.scope.launch(Dispatchers.IO) {
+                    // REQ also asks for tracks (kind 36787), so pagination needs to react
+                    // to the tracks feed's cursor advancing too.
+                    key.feedStates.musicTracksFeed.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
                         invalidateFilters()
                     }
                 },
