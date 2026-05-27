@@ -41,12 +41,15 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,6 +63,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -92,6 +96,11 @@ fun CashuWalletSettingsScreen(
 
     val recommendations by viewModel.ownRecommendations.collectAsState()
     var pendingDelete by remember { mutableStateOf<MintRecommendationEvent?>(null) }
+    var newRecommendationInput by remember { mutableStateOf("") }
+
+    // Kick the one-shot directory backfill so the autocomplete is useful
+    // on first screen open instead of waiting for new relay deliveries.
+    LaunchedEffect(Unit) { LocalCache.ensureMintDirectoryBackfilled() }
 
     Scaffold(
         topBar = {
@@ -134,6 +143,65 @@ fun CashuWalletSettingsScreen(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
+            }
+
+            // Add-recommendation input + autocomplete. Suggestions come
+            // from LocalCache.mintDirectory (kind:10019 / kind:38000 /
+            // kind:38172 the cache has seen), filtered to drop URLs the
+            // user has already recommended so they can't double-publish
+            // and the same row doesn't show up twice on screen.
+            item {
+                val alreadyRecommended =
+                    remember(recommendations) {
+                        recommendations
+                            .flatMap { it.mintUrls() }
+                            .map { it.lowercase().trimEnd('/') }
+                            .toSet()
+                    }
+                val suggestions by remember(newRecommendationInput, alreadyRecommended) {
+                    derivedStateOf {
+                        val typed = newRecommendationInput.trim().trimEnd('/').lowercase()
+                        // Only react to what the user types — never show
+                        // the full directory on an empty field, which
+                        // would dump every mint we've ever seen as
+                        // unsolicited suggestions.
+                        if (typed.isEmpty()) {
+                            emptyList()
+                        } else {
+                            LocalCache.mintDirectory
+                                .suggest(typed, limit = 6)
+                                .filter { it != typed && it !in alreadyRecommended }
+                        }
+                    }
+                }
+                AddRecommendationRow(
+                    input = newRecommendationInput,
+                    onInputChange = { newRecommendationInput = it },
+                    canAdd =
+                        newRecommendationInput.isNotBlank() &&
+                            newRecommendationInput.trim().trimEnd('/').lowercase() !in alreadyRecommended,
+                    onAdd = {
+                        val trimmed = newRecommendationInput.trim().trimEnd('/')
+                        if (trimmed.isNotEmpty()) {
+                            viewModel.recommendMint(trimmed)
+                            newRecommendationInput = ""
+                        }
+                    },
+                )
+                if (suggestions.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    RecommendationSuggestionList(
+                        suggestions = suggestions,
+                        onPick = { url ->
+                            // One-tap recommend: publish straight from
+                            // the suggestion and clear the field so the
+                            // user can chain multiple adds without
+                            // re-tapping the text input.
+                            viewModel.recommendMint(url)
+                            newRecommendationInput = ""
+                        },
+                    )
+                }
             }
 
             if (recommendations.isEmpty()) {
@@ -224,6 +292,86 @@ private fun SettingsRow(
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+@Composable
+private fun AddRecommendationRow(
+    input: String,
+    onInputChange: (String) -> Unit,
+    canAdd: Boolean,
+    onAdd: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        OutlinedTextField(
+            value = input,
+            onValueChange = onInputChange,
+            label = { Text(stringRes(R.string.cashu_settings_add_recommendation)) },
+            placeholder = { Text("https://mint.example.com") },
+            singleLine = true,
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        IconButton(onClick = onAdd, enabled = canAdd) {
+            Icon(
+                symbol = MaterialSymbols.Add,
+                contentDescription = stringRes(R.string.cashu_settings_add_recommendation),
+                modifier = Modifier.size(22.dp),
+                tint =
+                    if (canAdd) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+            )
+        }
+    }
+}
+
+@Composable
+private fun RecommendationSuggestionList(
+    suggestions: List<String>,
+    onPick: (String) -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Column(modifier = Modifier.padding(vertical = 4.dp)) {
+            suggestions.forEach { url ->
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { onPick(url) }
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        symbol = MaterialSymbols.AccountBalanceWallet,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = url,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Icon(
+                        symbol = MaterialSymbols.ThumbUp,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
         }
     }
 }

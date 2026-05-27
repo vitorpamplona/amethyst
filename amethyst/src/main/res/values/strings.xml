@@ -1926,6 +1926,7 @@
     <string name="cashu_settings_delete_recommendation">Delete recommendation</string>
     <string name="cashu_settings_delete_confirm_title">Retract recommendation?</string>
     <string name="cashu_settings_delete_confirm_body">Publish a delete request for your kind:38000 recommendation of %1$s. Relays that honor NIP-09 will drop it.</string>
+    <string name="cashu_settings_add_recommendation">Recommend a mint</string>
     <string name="cashu_pay_invoice">Pay invoice</string>
     <string name="cashu_get_quote">Get quote</string>
     <string name="cashu_getting_quote">Asking mint for a quote…</string>

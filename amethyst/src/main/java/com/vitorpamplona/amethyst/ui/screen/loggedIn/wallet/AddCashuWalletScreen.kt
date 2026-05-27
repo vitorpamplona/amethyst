@@ -244,14 +244,20 @@ fun AddCashuWalletScreen(
             // the current input (no point suggesting what they already
             // typed). Wrapped in `derivedStateOf` so the recompute only
             // fires when `mintInput` or `mints` change, not on every
-            // recomposition of the surrounding form.
+            // recomposition of the surrounding form. An empty field
+            // shows no suggestions — the autocomplete should react to
+            // typing, not dump every mint we've ever seen unsolicited.
             val suggestions by remember(mints) {
                 derivedStateOf {
                     val typed = mintInput.trim().trimEnd('/').lowercase()
-                    val alreadyAdded = mints.map { it.lowercase().trimEnd('/') }.toSet()
-                    LocalCache.mintDirectory
-                        .suggest(typed, limit = 6)
-                        .filter { it != typed && it !in alreadyAdded }
+                    if (typed.isEmpty()) {
+                        emptyList()
+                    } else {
+                        val alreadyAdded = mints.map { it.lowercase().trimEnd('/') }.toSet()
+                        LocalCache.mintDirectory
+                            .suggest(typed, limit = 6)
+                            .filter { it != typed && it !in alreadyAdded }
+                    }
                 }
             }
             if (suggestions.isNotEmpty()) {
