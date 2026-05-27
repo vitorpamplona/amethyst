@@ -28,6 +28,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.SuspendableConfirmation
@@ -40,6 +41,12 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -66,9 +73,27 @@ class NewMusicTrackViewModel : ViewModel() {
     val album = mutableStateOf("")
     val durationSeconds = mutableStateOf("")
     val description = mutableStateOf("")
-    val isPublishing = mutableStateOf(false)
-    val isUploading = mutableStateOf(false)
-    val uploadError = mutableStateOf<String?>(null)
+
+    /**
+     * Single in-flight flag covering both the parallel uploads and the subsequent publish.
+     * Drives the Send button's spinner, gates double-tap, and overlays each picker with a
+     * progress indicator. Kept as one boolean rather than separate upload/publish flags
+     * because the user experience is "one Send action" — the two phases blur into each
+     * other and showing them as separate states only confuses the picture.
+     */
+    val isSending = mutableStateOf(false)
+
+    /**
+     * One-shot success channel. Emits exactly once when an upload+publish round succeeds;
+     * the screen collects it and pops back. We can't rely on a callback because the
+     * coroutine runs on [AccountViewModel.viewModelScope] (so the work survives screen
+     * dismissal), but the screen's nav handle becomes stale the moment the user leaves.
+     * Tying the popBack to a flow the screen subscribes to keeps it correct: if the user
+     * has already left, no one is listening and nothing pops; if they're still on screen,
+     * the dismissal fires.
+     */
+    private val _completionEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val completionEvents: SharedFlow<Unit> = _completionEvents.asSharedFlow()
 
     /**
      * Two separate orchestrators because the cover image and the audio file go through
@@ -219,123 +244,177 @@ class NewMusicTrackViewModel : ViewModel() {
             (audioMedia.value != null || audioUrl.value.isNotBlank())
 
     /**
-     * Upload any picked files (cover + audio), then sign and broadcast the event with the
-     * resulting URLs. Returns true on success. The `Save` button on the screen is gated on
-     * [isValid] AND [isUploading] / [isPublishing], so the user can't double-trigger this.
+     * Upload any picked files (cover + audio) in parallel, then sign and broadcast the
+     * event with the resulting URLs. The whole operation runs on
+     * [AccountViewModel.viewModelScope] via `launchSigner`, so it keeps running even if
+     * the user leaves the screen — they get a toast notification when it finishes either
+     * way, and we don't lose half-uploaded data.
+     *
+     * Errors are reported through the global toast manager rather than a callback because
+     * the screen may already be gone by the time we know the outcome.
      */
     fun saveAndPublish(
         context: Context,
-        onSuccess: () -> Unit,
-        onError: (String, String) -> Unit,
+        accountViewModel: AccountViewModel,
     ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                setUploading(true)
-                uploadError.value = null
+        if (isSending.value) return // double-tap guard
 
-                if (!performUploads(context, onError)) {
-                    setUploading(false)
-                    return@launch
+        // Snapshot every input the upload needs into immutable locals BEFORE launching, so
+        // user edits to the form after pressing Send don't poison the in-flight publish
+        // (and so the screen-bound mutableState references survive even after the VM is
+        // cleared by the user navigating away).
+        val acc = account
+        val server = selectedServer.value
+        if (server == null) {
+            accountViewModel.toastManager.toast(
+                "No upload server selected",
+                "Pick a media server in settings before uploading.",
+            )
+            return
+        }
+        val snapshot =
+            SendSnapshot(
+                title = title.value.trim(),
+                artist = artist.value.trim(),
+                description = description.value,
+                album = album.value.trim().ifBlank { null },
+                duration = durationSeconds.value.trim().toIntOrNull(),
+                coverOrchestrator = coverMedia.value,
+                audioOrchestrator = audioMedia.value,
+                existingCoverUrl = coverUrl.value.trim().ifBlank { null },
+                existingAudioUrl = audioUrl.value.trim(),
+                server = server,
+                quality = MediaCompressor.intToCompressorQuality(mediaQualitySlider.value),
+                stripMetadata = stripMetadata.value,
+                loadedEvent = loadedEvent,
+                appContext = context.applicationContext,
+            )
+
+        isSending.value = true
+
+        // launchSigner runs on AccountViewModel.viewModelScope, which outlives this
+        // per-screen VM. So if the user navigates away mid-upload, the work keeps going
+        // and the toast still fires on completion.
+        accountViewModel.launchSigner {
+            try {
+                val (newCoverUrl, newAudioUrl) = performParallelUploads(snapshot, accountViewModel)
+
+                val finalCoverUrl = newCoverUrl ?: snapshot.existingCoverUrl
+                val finalAudioUrl = newAudioUrl ?: snapshot.existingAudioUrl
+                if (finalAudioUrl.isBlank()) {
+                    accountViewModel.toastManager.toast(
+                        "Audio upload failed",
+                        "No audio URL ended up available for the published track.",
+                    )
+                    return@launchSigner
                 }
 
-                setUploading(false)
-                setPublishing(true)
-                publishEvent()
-                withContext(Dispatchers.Main.immediate) { onSuccess() }
+                publishEvent(snapshot, finalCoverUrl, finalAudioUrl)
+
+                // Remember the server + strip-metadata choice so the user doesn't have to
+                // re-pick them on the next track.
+                acc.settings.changeDefaultFileServer(snapshot.server)
+                acc.settings.changeStripLocationOnUpload(snapshot.stripMetadata)
+
+                withContext(Dispatchers.Main.immediate) {
+                    // Only NOW clear the pickers — keeping them populated through the
+                    // whole upload+publish phase means each picker tile keeps showing the
+                    // user the file it's working on, so they don't think the cover is
+                    // already done while the audio is still uploading.
+                    coverMedia.value = null
+                    audioMedia.value = null
+                    pickedAudioName.value = null
+                    if (newCoverUrl != null) coverUrl.value = newCoverUrl
+                    if (newAudioUrl != null) audioUrl.value = newAudioUrl
+                }
+                _completionEvents.tryEmit(Unit)
             } catch (t: Throwable) {
-                // Surface the failure on the toast layer so the user sees what happened
-                // instead of silently sitting on a Save button that did nothing.
-                onError("Failed to save music track", t.message ?: t.javaClass.simpleName)
+                accountViewModel.toastManager.toast(
+                    "Failed to send music track",
+                    t.message ?: t.javaClass.simpleName,
+                )
             } finally {
-                setUploading(false)
-                setPublishing(false)
+                withContext(Dispatchers.Main.immediate) { isSending.value = false }
             }
         }
     }
 
     /**
-     * Runs the cover and audio uploads in sequence (not parallel — the audio path is much
-     * heavier and uploading them concurrently double-spikes RAM on the device). On success,
-     * the resulting URLs are written back into [coverUrl] / [audioUrl] so a retry after
-     * [publishEvent] failure doesn't re-upload the same files.
+     * Snapshot of every input the send coroutine needs. Captured before launching so the
+     * coroutine sees a stable view even after the VM is cleared, and so user edits to the
+     * form after pressing Send don't change what gets uploaded.
      */
-    private suspend fun performUploads(
-        context: Context,
-        onError: (String, String) -> Unit,
-    ): Boolean {
-        val acc = account
-        val server =
-            selectedServer.value ?: return run {
-                onError("No upload server selected", "Pick a media server in settings before uploading.")
-                false
-            }
-        val quality = MediaCompressor.intToCompressorQuality(mediaQualitySlider.value)
+    private data class SendSnapshot(
+        val title: String,
+        val artist: String,
+        val description: String,
+        val album: String?,
+        val duration: Int?,
+        val coverOrchestrator: MultiOrchestrator?,
+        val audioOrchestrator: MultiOrchestrator?,
+        val existingCoverUrl: String?,
+        val existingAudioUrl: String,
+        val server: ServerName,
+        val quality: CompressorQuality,
+        val stripMetadata: Boolean,
+        val loadedEvent: MusicTrackEvent?,
+        val appContext: Context,
+    )
 
-        coverMedia.value?.let { orch ->
-            val res =
-                orch.upload(
-                    alt = title.value.ifBlank { null },
-                    contentWarningReason = null,
-                    mediaQuality = quality,
-                    server = server,
-                    account = acc,
-                    context = context,
-                    useH265 = false,
-                    stripMetadata = stripMetadata.value,
-                    onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
+    /**
+     * Uploads the cover and audio in parallel via `async`/`awaitAll`. Each side is
+     * independent: if cover fails, audio still completes (and vice versa); the first
+     * failure throws and propagates out through the catch in [saveAndPublish].
+     *
+     * Returns `(coverUrl?, audioUrl?)`. A null means "no orchestrator was provided for
+     * that slot" (the caller falls back to the existing URL from the snapshot).
+     */
+    private suspend fun performParallelUploads(
+        snapshot: SendSnapshot,
+        accountViewModel: AccountViewModel,
+    ): Pair<String?, String?> =
+        coroutineScope {
+            val deferreds =
+                listOf(
+                    async {
+                        snapshot.coverOrchestrator?.let { runSingleUpload(it, snapshot, "cover") }
+                    },
+                    async {
+                        snapshot.audioOrchestrator?.let { runSingleUpload(it, snapshot, "audio") }
+                    },
                 )
-            if (!res.allGood) {
-                onError("Cover upload failed", formatUploadErrors(res.errors, context))
-                return false
-            }
-            val url =
-                firstUploadedUrl(res.successful) ?: return run {
-                    onError("Cover upload failed", "Server didn't return a URL for the uploaded cover.")
-                    false
-                }
-            withContext(Dispatchers.Main.immediate) {
-                coverUrl.value = url
-                coverMedia.value = null
-            }
+            val results = deferreds.awaitAll()
+            results[0] to results[1]
         }
 
-        audioMedia.value?.let { orch ->
-            val res =
-                orch.upload(
-                    alt = title.value.ifBlank { null },
-                    contentWarningReason = null,
-                    // Audio files aren't re-encoded by MediaCompressor (no codec path for
-                    // them), so the quality slider is effectively no-op here; pass it through
-                    // anyway for symmetry.
-                    mediaQuality = quality,
-                    server = server,
-                    account = acc,
-                    context = context,
-                    useH265 = false,
-                    stripMetadata = stripMetadata.value,
-                    onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
-                )
-            if (!res.allGood) {
-                onError("Audio upload failed", formatUploadErrors(res.errors, context))
-                return false
-            }
-            val url =
-                firstUploadedUrl(res.successful) ?: return run {
-                    onError("Audio upload failed", "Server didn't return a URL for the uploaded audio.")
-                    false
-                }
-            withContext(Dispatchers.Main.immediate) {
-                audioUrl.value = url
-                audioMedia.value = null
-                pickedAudioName.value = null
-            }
+    private suspend fun runSingleUpload(
+        orch: MultiOrchestrator,
+        snapshot: SendSnapshot,
+        kind: String,
+    ): String {
+        val res =
+            orch.upload(
+                alt = snapshot.title.ifBlank { null },
+                contentWarningReason = null,
+                mediaQuality = snapshot.quality,
+                server = snapshot.server,
+                account = account,
+                context = snapshot.appContext,
+                useH265 = false,
+                stripMetadata = snapshot.stripMetadata,
+                onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
+            )
+        if (!res.allGood) {
+            throw UploadException(kind, formatUploadErrors(res.errors, snapshot.appContext))
         }
-
-        // Remember the server choice for next time so the user doesn't have to pick it again.
-        acc.settings.changeDefaultFileServer(server)
-        acc.settings.changeStripLocationOnUpload(stripMetadata.value)
-        return true
+        return firstUploadedUrl(res.successful)
+            ?: throw UploadException(kind, "Server didn't return a URL for the uploaded $kind.")
     }
+
+    private class UploadException(
+        kind: String,
+        details: String,
+    ) : Exception("$kind upload failed: $details")
 
     private fun firstUploadedUrl(successful: List<com.vitorpamplona.amethyst.service.uploads.UploadingState.Finished>): String? =
         successful
@@ -351,37 +430,33 @@ class NewMusicTrackViewModel : ViewModel() {
             .distinct()
             .joinToString(".\n")
 
-    private suspend fun publishEvent() {
-        val parsedTitle = title.value.trim()
-        val parsedArtist = artist.value.trim()
-        val parsedUrl = audioUrl.value.trim()
-        val parsedCover = coverUrl.value.trim().ifBlank { null }
-        val parsedAlbum = album.value.trim().ifBlank { null }
-        val parsedDuration = durationSeconds.value.trim().toIntOrNull()
-        val parsedDescription = description.value
-
-        val existing = loadedEvent
+    private suspend fun publishEvent(
+        snapshot: SendSnapshot,
+        coverUrl: String?,
+        audioUrl: String,
+    ) {
+        val existing = snapshot.loadedEvent
         val template =
             if (existing != null) {
                 MusicTrackEvent.edit(
                     earlierVersion = existing,
-                    title = parsedTitle,
-                    artist = parsedArtist,
-                    url = parsedUrl,
-                    description = parsedDescription,
-                    image = parsedCover,
-                    album = parsedAlbum,
-                    duration = parsedDuration,
+                    title = snapshot.title,
+                    artist = snapshot.artist,
+                    url = audioUrl,
+                    description = snapshot.description,
+                    image = coverUrl,
+                    album = snapshot.album,
+                    duration = snapshot.duration,
                 )
             } else {
                 MusicTrackEvent.build(
-                    title = parsedTitle,
-                    artist = parsedArtist,
-                    url = parsedUrl,
-                    description = parsedDescription,
-                    image = parsedCover,
-                    album = parsedAlbum,
-                    duration = parsedDuration,
+                    title = snapshot.title,
+                    artist = snapshot.artist,
+                    url = audioUrl,
+                    description = snapshot.description,
+                    image = coverUrl,
+                    album = snapshot.album,
+                    duration = snapshot.duration,
                 )
             }
 
@@ -393,8 +468,4 @@ class NewMusicTrackViewModel : ViewModel() {
         account.delete(target, emptySet())
         return true
     }
-
-    private suspend fun setUploading(value: Boolean) = withContext(Dispatchers.Main.immediate) { isUploading.value = value }
-
-    private suspend fun setPublishing(value: Boolean) = withContext(Dispatchers.Main.immediate) { isPublishing.value = value }
 }

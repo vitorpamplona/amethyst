@@ -1553,6 +1553,7 @@
     <string name="music_track_audio_upload_hint">Pick an MP3, WAV, or FLAC. It will be uploaded to your media server on Save.</string>
     <string name="music_track_audio_picked">Audio file ready to upload</string>
     <string name="music_track_uploading">Uploading…</string>
+    <string name="music_track_uploading_banner">Uploading cover + audio and publishing. This will keep going even if you leave the screen.</string>
     <string name="music_track_upload_failed">Upload failed: %1$s</string>
 
 

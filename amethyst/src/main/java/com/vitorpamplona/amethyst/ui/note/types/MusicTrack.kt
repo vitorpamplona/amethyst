@@ -215,7 +215,12 @@ fun MusicTrackHeader(
                     }
 
                 Row(
-                    Modifier.fillMaxWidth().height(100.dp),
+                    // 80dp shrinks the visible top/bottom border around the 75dp play
+                    // button to ~2.5dp on each side — the default 100dp inherited from
+                    // VoiceHeightModifier left a 12.5dp empty band that the user flagged
+                    // as too tall on a music card (where the player butts up against
+                    // the cover and there's no breathing room needed).
+                    Modifier.fillMaxWidth().height(80.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     GetMediaItem(

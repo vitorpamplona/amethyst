@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.music
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -43,6 +44,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -59,6 +61,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -122,19 +125,28 @@ fun NewMusicTrackScreen(
         )
     }
 
-    val isBusy = vm.isUploading.value || vm.isPublishing.value
+    val isBusy = vm.isSending.value
+
+    // The send coroutine lives on accountViewModel.viewModelScope so it survives the
+    // screen, but the screen still owns the pop-back. Subscribe to the one-shot
+    // completion flow: if the user is still here when the upload finishes, we pop back;
+    // if they've already left, no one is listening and nothing happens here (the
+    // launchSigner coroutine already wrote the cleared state + fired the toast).
+    LaunchedEffect(vm) {
+        vm.completionEvents.collect { nav.popBack() }
+    }
 
     Scaffold(
         topBar = {
             SendingTopBar(
                 titleRes = R.string.new_music_track,
                 onCancel = { nav.popBack() },
+                isActive = { vm.isValid() && !isBusy },
                 onPost = {
                     if (!vm.isValid() || isBusy) return@SendingTopBar
                     vm.saveAndPublish(
                         context = context,
-                        onSuccess = { nav.popBack() },
-                        onError = accountViewModel.toastManager::toast,
+                        accountViewModel = accountViewModel,
                     )
                 },
             )
@@ -155,15 +167,25 @@ fun NewMusicTrackScreen(
                     .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            // Inline send banner — only shown while the upload+publish is in flight. The
+            // banner replaces the per-picker "Uploading…" message we used to hide behind
+            // the placeholder; this way both the cover and the audio remain visible in
+            // their tiles for the whole operation (so the user doesn't think one phase is
+            // done while the other is still running), and the banner gives clear
+            // top-of-screen feedback that something IS happening.
+            if (isBusy) UploadInProgressBanner()
+
             CoverImagePicker(
                 vm = vm,
                 accountViewModel = accountViewModel,
                 onPick = { wantsToPickCover = true },
+                enabled = !isBusy,
             )
 
             AudioFilePicker(
                 vm = vm,
                 onPick = { wantsToPickAudio = true },
+                enabled = !isBusy,
             )
 
             OutlinedTextField(
@@ -237,14 +259,18 @@ private fun CoverImagePicker(
     vm: NewMusicTrackViewModel,
     accountViewModel: AccountViewModel,
     onPick: () -> Unit,
+    enabled: Boolean,
 ) {
     val picked = vm.coverMedia.value
     if (picked != null) {
         // Tap the preview to swap to a different image — same gesture as the Badge composer.
-        Box(modifier = Modifier.clickable(onClick = onPick)) {
+        // While the upload is in flight (enabled = false) we drop the tap handler so the
+        // user can't trigger a re-pick mid-upload; the picker stays visible so they can
+        // see what's being sent.
+        Box(modifier = if (enabled) Modifier.clickable(onClick = onPick) else Modifier) {
             ShowImageUploadGallery(
                 list = picked,
-                onDelete = { vm.clearPickedCover() },
+                onDelete = { if (enabled) vm.clearPickedCover() },
                 accountViewModel = accountViewModel,
             )
         }
@@ -254,6 +280,7 @@ private fun CoverImagePicker(
             ctaRes = R.string.music_track_cover_upload_cta,
             hintRes = R.string.music_track_cover_upload_hint,
             onClick = onPick,
+            enabled = enabled,
         )
     }
 }
@@ -262,6 +289,7 @@ private fun CoverImagePicker(
 private fun AudioFilePicker(
     vm: NewMusicTrackViewModel,
     onPick: () -> Unit,
+    enabled: Boolean,
 ) {
     val pickedName = vm.pickedAudioName.value
     if (pickedName != null) {
@@ -273,7 +301,7 @@ private fun AudioFilePicker(
                         width = 1.dp,
                         color = MaterialTheme.colorScheme.outline,
                         shape = RoundedCornerShape(12.dp),
-                    ).clickable(onClick = onPick)
+                    ).let { if (enabled) it.clickable(onClick = onPick) else it }
                     .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -296,8 +324,10 @@ private fun AudioFilePicker(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            TextButton(onClick = { vm.clearPickedAudio() }) {
-                Text(stringRes(R.string.cancel))
+            if (enabled) {
+                TextButton(onClick = { vm.clearPickedAudio() }) {
+                    Text(stringRes(R.string.cancel))
+                }
             }
         }
     } else {
@@ -307,6 +337,39 @@ private fun AudioFilePicker(
             hintRes = R.string.music_track_audio_upload_hint,
             onClick = onPick,
             aspectRatio = null,
+            enabled = enabled,
+        )
+    }
+}
+
+/**
+ * Banner shown at the top of the form while the send coroutine is in flight. The
+ * coroutine runs on `accountViewModel.viewModelScope` so it survives the screen, but
+ * this banner is the user's primary feedback that something IS happening — without it
+ * the previous flow looked like a no-op after pressing Send while the cover finished
+ * uploading and reverted to the picker placeholder mid-flight.
+ */
+@Composable
+private fun UploadInProgressBanner() {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.primaryContainer)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(20.dp),
+            strokeWidth = 2.dp,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+        Spacer(modifier = Modifier.size(12.dp))
+        Text(
+            text = stringRes(R.string.music_track_uploading_banner),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
         )
     }
 }
@@ -323,6 +386,7 @@ private fun UploadPlaceholder(
     hintRes: Int,
     onClick: () -> Unit,
     aspectRatio: Float? = 1f,
+    enabled: Boolean = true,
 ) {
     val baseModifier =
         Modifier
@@ -331,7 +395,7 @@ private fun UploadPlaceholder(
                 width = 1.dp,
                 color = MaterialTheme.colorScheme.outline,
                 shape = RoundedCornerShape(12.dp),
-            ).clickable(onClick = onClick)
+            ).let { if (enabled) it.clickable(onClick = onClick) else it }
             .padding(24.dp)
 
     val finalModifier =
