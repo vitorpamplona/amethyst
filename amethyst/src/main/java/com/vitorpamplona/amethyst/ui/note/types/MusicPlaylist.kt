@@ -40,6 +40,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -59,7 +60,7 @@ import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
@@ -94,10 +95,15 @@ fun RenderMusicPlaylist(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val noteEvent = note.event as? MusicPlaylistEvent ?: return
+    // Observe so the card recomposes when a newer version of this playlist arrives from
+    // a relay (e.g. tracks added/removed, title changed). observeNoteEvent also drives
+    // the underlying EventFinderFilterAssembler subscription, so the playlist body itself
+    // gets fetched from relays if only the address was known.
+    val noteEvent by observeNoteEvent<MusicPlaylistEvent>(note, accountViewModel)
+    val event = noteEvent ?: return
 
     MusicPlaylistHeader(
-        noteEvent = noteEvent,
+        noteEvent = event,
         note = note,
         makeItShort = makeItShort,
         canPreview = canPreview,
@@ -222,13 +228,6 @@ fun MusicPlaylistHeader(
                             }
                             LoadAddressableNote(address, accountViewModel) { trackNote ->
                                 if (trackNote != null) {
-                                    // Ask relays for the track event itself (and its
-                                    // reactions/replies) so a playlist whose tracks aren't
-                                    // already in cache populates instead of sitting on the
-                                    // "Loading…" placeholder. The subscription is keyed on
-                                    // the AddressableNote and lifecycle-aware, so it stops
-                                    // when the playlist scrolls off-screen.
-                                    EventFinderFilterAssemblerSubscription(trackNote, accountViewModel)
                                     PlaylistTrackRow(
                                         position = index + 1,
                                         trackNote = trackNote,
@@ -325,7 +324,12 @@ private fun PlaylistTrackRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val trackEvent = trackNote.event as? MusicTrackEvent
+    // Observe the track note so each row recomposes when the track event arrives from a
+    // relay (cards switch from "Unknown track" placeholder to the real title/artist/cover)
+    // or a newer revision replaces the cached one. observeNoteEvent also drives the
+    // EventFinderFilterAssembler subscription, so the row pulls the track itself if only
+    // the address is known.
+    val trackEvent by observeNoteEvent<MusicTrackEvent>(trackNote, accountViewModel)
     val title = trackEvent?.title() ?: stringRes(R.string.music_playlist_unknown_track)
     val artist = trackEvent?.artist()
     val duration = trackEvent?.duration()
