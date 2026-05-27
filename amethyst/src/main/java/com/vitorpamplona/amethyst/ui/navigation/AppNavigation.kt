@@ -285,9 +285,9 @@ fun BuildNavigation(
         composable<Route.Chess> { ChessLobbyScreen(accountViewModel, nav) }
 
         composableFromEnd<Route.Wallet> { WalletScreen(accountViewModel, nav) }
-        composableFromEnd<Route.WalletSend> { WalletSendScreen(accountViewModel, nav) }
-        composableFromEnd<Route.WalletReceive> { WalletReceiveScreen(accountViewModel, nav) }
-        composableFromEnd<Route.WalletTransactions> { WalletTransactionsScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.WalletSend> { WalletSendScreen(it.walletId, accountViewModel, nav) }
+        composableFromEndArgs<Route.WalletReceive> { WalletReceiveScreen(it.walletId, accountViewModel, nav) }
+        composableFromEndArgs<Route.WalletTransactions> { WalletTransactionsScreen(it.walletId, accountViewModel, nav) }
         composableFromEnd<Route.OnchainTransactions> { OnchainTransactionsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.WalletDetail> { WalletDetailScreen(it.walletId, accountViewModel, nav) }
         composableFromEnd<Route.WalletAdd> { AddWalletScreen(accountViewModel, nav) }
