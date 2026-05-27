@@ -45,6 +45,7 @@ import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintQuoteBolt11ResponseDto
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.ProofState
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.RandomSecretFactory
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.SecretFactory
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.splitAmountIntoDenominations
 import com.vitorpamplona.quartz.nip60Cashu.p2pk.P2PK
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuProof
@@ -269,7 +270,7 @@ class CashuWalletOps(
                 if (isOutputsAlreadySignedError(e)) {
                     // Mint already issued for this quote on a prior crashed
                     // attempt. Recover via NUT-09 instead of bailing.
-                    recoverPreviouslyIssuedProofs(mintUrl, quoteEvent)
+                    recoverPreviouslyIssuedProofs(mintUrl, amountSats)
                         ?: throw MintProtocolException(
                             "Mint already issued for this quote, but seed-based restore found no recoverable proofs",
                         )
@@ -313,12 +314,17 @@ class CashuWalletOps(
 
     /**
      * NUT-09 fallback for the "outputs already signed" / "quote already
-     * issued" mint response — re-derives our deterministic blinded
-     * outputs from the seed and asks the mint which it has signed. The
-     * scope is intentionally narrow: we only need the proofs the mint
-     * issued for this quote, so start from the wallet's persisted
-     * counter for the active keyset and let the gap-limit heuristic
-     * inside [CashuMintOperations.restore] bound the work.
+     * issued" mint response — re-derives the deterministic blinded
+     * outputs from the seed and asks the mint which it has signed.
+     *
+     * Scope is intentionally narrow: the prior `/v1/mint/bolt11` call
+     * reserved exactly `splitAmounts(amountSats).size` counters and
+     * signed one output per slot, so we restrict the restore to
+     *   - those amount denominations (skips the ~63-denom fan-out that
+     *     would push request size past the mint's 1000-item cap), and
+     *   - one batch starting at `peekCashuCounter - DEFAULT_RESTORE_SCAN_BACK`
+     *     (the wallet reserved the counters before the failed call, so
+     *     the relevant slots sit just below the current high-water mark).
      *
      * Returns null when there's no seed yet (kind:17375 not decrypted)
      * or when the restore turns up no unspent proofs — caller surfaces
@@ -326,17 +332,30 @@ class CashuWalletOps(
      */
     private suspend fun recoverPreviouslyIssuedProofs(
         mintUrl: String,
-        quoteEvent: CashuMintQuoteEvent,
+        amountSats: Long,
     ): TokenContent? {
         val seed = seedForRestore() ?: return null
         val mintOps = ops(mintUrl)
         val keysetId = mintOps.activeKeyset().id
-        // Walk back the counter so the next derivation re-mints the same
-        // B_ values the mint already has signatures for. Without rewinding,
-        // we'd ask the mint about a fresh counter window it never saw.
         val counterBefore = peekCashuCounter(keysetId)
         val startCounter = (counterBefore - DEFAULT_RESTORE_SCAN_BACK).coerceAtLeast(0L)
-        val restoreResult = mintOps.restore(seed = seed, keysetId = keysetId, startCounter = startCounter)
+        // splitAmountIntoDenominations is what the mint flow itself used
+        // to decide which amounts to ask /v1/mint/bolt11 for, so the
+        // signatures the mint has correspond to exactly these denoms.
+        val expectedDenoms = splitAmountIntoDenominations(amountSats).distinct()
+        // One batch of DEFAULT_RESTORE_SCAN_BACK counters across just the
+        // expected denoms is enough — the proofs we're looking for sit in
+        // a contiguous window of `expectedDenoms.size` counters at the top
+        // of [startCounter, counterBefore).
+        val restoreResult =
+            mintOps.restore(
+                seed = seed,
+                keysetId = keysetId,
+                startCounter = startCounter,
+                batchSize = DEFAULT_RESTORE_SCAN_BACK.toInt(),
+                emptyBatchesToStop = 1,
+                amounts = expectedDenoms,
+            )
         if (restoreResult.proofs.isEmpty()) return null
         val states = mintOps.checkStates(restoreResult.proofs.map { it.proof })
         val unspent =

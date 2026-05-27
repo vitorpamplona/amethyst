@@ -395,19 +395,32 @@ class CashuMintOperations(
             throw IllegalStateException("Keyset $keysetId exposes no amount denominations")
         }
 
+        // Cap each /v1/restore request at MAX_RESTORE_REQUEST_ITEMS outputs.
+        // A keyset with the full power-of-2 denomination set (up to ~63 amounts)
+        // multiplied by the default batchSize=100 produces 6300 outputs per
+        // round-trip — far above the 1000-item validation cap that nutshell /
+        // CDK enforce, which surfaces as "List should have at most 1000 items".
+        // Honour the caller's batchSize when it already fits.
+        val effectiveBatchSize =
+            if (batchSize * denominations.size > MAX_RESTORE_REQUEST_ITEMS) {
+                (MAX_RESTORE_REQUEST_ITEMS / denominations.size).coerceAtLeast(1)
+            } else {
+                batchSize
+            }
+
         val recovered = mutableListOf<RecoveredProof>()
         var counter = startCounter
         var emptyStreak = 0
         var highestSeenCounter = startCounter - 1
 
-        val perBatchSize = batchSize * denominations.size
+        val perBatchSize = effectiveBatchSize * denominations.size
         while (emptyStreak < emptyBatchesToStop) {
             // Pre-sized collections — without these, the ArrayList /
             // HashMap resize ~10 times per 1000-output batch.
             val outputsByCounter = HashMap<String, Pair<Long, BlindOutput>>(perBatchSize)
             val outputDtos = ArrayList<BlindedMessageDto>(perBatchSize)
 
-            for (offset in 0 until batchSize) {
+            for (offset in 0 until effectiveBatchSize) {
                 val c = counter + offset
                 // Per-counter derivation: same (secret, r) pair the
                 // wallet would have minted at this counter slot. We try
@@ -448,7 +461,7 @@ class CashuMintOperations(
                 }
             }
 
-            counter += batchSize
+            counter += effectiveBatchSize
         }
 
         return RestoreResult(
@@ -688,6 +701,15 @@ class CashuMintOperations(
     }
 
     companion object {
+        /**
+         * Upper bound on outputs per `/v1/restore` request body. The cashu
+         * spec doesn't pin a value; nutshell + CDK + minibits all enforce
+         * a 1000-item Pydantic cap. 500 leaves headroom for response
+         * doubling (mint echoes outputs alongside signatures) and any
+         * future tightening.
+         */
+        const val MAX_RESTORE_REQUEST_ITEMS: Int = 500
+
         /** Re-exported from [splitAmountIntoDenominations] for convenience. */
         fun splitAmounts(amount: Long): List<Long> = splitAmountIntoDenominations(amount)
 
