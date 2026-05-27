@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.model.nip30CustomEmojis.OwnedEmojiPack
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
@@ -66,6 +67,7 @@ import com.vitorpamplona.amethyst.ui.navigation.bottombars.fabBottomBarPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.emojipacks.common.EmojiPackCard
@@ -73,6 +75,9 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Size40Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.isTaggedAddressableNote
+import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
@@ -147,6 +152,7 @@ fun ListOfEmojiPacksFeed(
                 openItem = openEmojiPack,
                 editItem = editEmojiPack,
                 deleteItem = deleteEmojiPack,
+                accountViewModel = accountViewModel,
                 gridState = gridState,
             )
         }
@@ -161,6 +167,7 @@ fun ListOfEmojiPacksFeedView(
     openItem: (OwnedEmojiPack) -> Unit,
     editItem: (OwnedEmojiPack) -> Unit,
     deleteItem: (OwnedEmojiPack) -> Unit,
+    accountViewModel: AccountViewModel,
     gridState: LazyGridState = rememberLazyGridState(),
 ) {
     val feedState by listSource.collectAsStateWithLifecycle()
@@ -200,6 +207,7 @@ fun ListOfEmojiPacksFeedView(
                         onClick = { openItem(pack) },
                         onEdit = { editItem(pack) },
                         onDelete = { deleteItem(pack) },
+                        accountViewModel = accountViewModel,
                     )
                 }
             }
@@ -214,6 +222,7 @@ private fun OwnedEmojiPackCard(
     onClick: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    accountViewModel: AccountViewModel,
 ) {
     val emojiUrls =
         remember(pack) {
@@ -232,8 +241,10 @@ private fun OwnedEmojiPackCard(
         )
         Box(modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)) {
             EmojiPackOptionsButton(
+                pack = pack,
                 onEdit = onEdit,
                 onDelete = onDelete,
+                accountViewModel = accountViewModel,
             )
         }
     }
@@ -241,8 +252,10 @@ private fun OwnedEmojiPackCard(
 
 @Composable
 private fun EmojiPackOptionsButton(
+    pack: OwnedEmojiPack,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    accountViewModel: AccountViewModel,
 ) {
     val isMenuOpen = remember { mutableStateOf(false) }
 
@@ -262,11 +275,59 @@ private fun EmojiPackOptionsButton(
                     onEdit()
                     isMenuOpen.value = false
                 }
+                EmojiListToggleRow(
+                    pack = pack,
+                    accountViewModel = accountViewModel,
+                    onDismiss = { isMenuOpen.value = false },
+                )
             }
             M3ActionSection {
                 M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(R.string.quick_action_delete), isDestructive = true) {
                     onDelete()
                     isMenuOpen.value = false
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmojiListToggleRow(
+    pack: OwnedEmojiPack,
+    accountViewModel: AccountViewModel,
+    onDismiss: () -> Unit,
+) {
+    val packAddress =
+        remember(pack, accountViewModel) {
+            Address(EmojiPackEvent.KIND, accountViewModel.account.signer.pubKey, pack.identifier)
+        }
+    LoadAddressableNote(packAddress, accountViewModel) {
+        it?.let { packNote ->
+            LoadAddressableNote(
+                accountViewModel.account.emoji.getEmojiPackSelectionAddress(),
+                accountViewModel,
+            ) { selectionNote ->
+                selectionNote?.let { usersEmojiList ->
+                    val hasAddedThis by observeNoteAndMap(usersEmojiList, accountViewModel) {
+                        usersEmojiList.event?.isTaggedAddressableNote(packNote.idHex)
+                    }
+                    val isAdded = hasAddedThis == true
+                    M3ActionRow(
+                        icon = MaterialSymbols.EmojiEmotions,
+                        text =
+                            if (isAdded) {
+                                stringRes(R.string.remove_from_emoji_list)
+                            } else {
+                                stringRes(R.string.add_to_emoji_list)
+                            },
+                    ) {
+                        if (isAdded) {
+                            accountViewModel.removeEmojiPack(packNote)
+                        } else {
+                            accountViewModel.addEmojiPack(packNote)
+                        }
+                        onDismiss()
+                    }
                 }
             }
         }
