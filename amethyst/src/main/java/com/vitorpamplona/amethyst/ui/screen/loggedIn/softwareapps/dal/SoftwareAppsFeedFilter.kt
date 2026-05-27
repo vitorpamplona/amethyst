@@ -25,19 +25,23 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.filterIntoSet
+import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
+import kotlinx.coroutines.flow.StateFlow
 
 class SoftwareAppsFeedFilter(
     val account: Account,
+    val topFilterFlow: StateFlow<TopFilter> = account.settings.defaultSoftwareAppsFollowList,
+    val liveFollowListsFlow: StateFlow<IFeedTopNavFilter> = account.liveSoftwareAppsFollowLists,
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code
 
     override fun limit() = 200
 
-    fun followList(): TopFilter = account.settings.defaultSoftwareAppsFollowList.value
+    fun followList(): TopFilter = topFilterFlow.value
 
     fun TopFilter.isMuteList() = this is TopFilter.MuteList
 
@@ -61,7 +65,7 @@ class SoftwareAppsFeedFilter(
 
     fun buildFilterParams(account: Account): FilterByListParams =
         FilterByListParams.create(
-            account.liveSoftwareAppsFollowLists.value,
+            liveFollowListsFlow.value,
             account.hiddenUsers.flow.value,
         )
 

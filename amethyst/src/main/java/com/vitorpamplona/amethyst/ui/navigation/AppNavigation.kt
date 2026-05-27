@@ -264,7 +264,7 @@ fun BuildNavigation(
         composableFromEnd<Route.ProfileBadges> { ProfileBadgesScreen(accountViewModel, nav) }
         composableFromBottomArgs<Route.AwardBadge> { AwardBadgeScreen(it.kind, it.pubKeyHex, it.dTag, accountViewModel, nav) }
         composableFromEnd<Route.Pictures> { PicturesScreen(accountViewModel, nav) }
-        composableFromEnd<Route.SoftwareApps> { SoftwareAppsScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.SoftwareApps> { SoftwareAppsScreen(it, accountViewModel, nav) }
         composableFromEnd<Route.Calendars> { CalendarsScreen(accountViewModel, nav) }
         composableFromEnd<Route.CalendarCollections> { CalendarCollectionsScreen(accountViewModel, nav) }
         composableFromEnd<Route.CalendarReminderSettings> { CalendarReminderSettingsScreen(nav) }

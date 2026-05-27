@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -56,9 +57,11 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.LinkIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -170,7 +173,14 @@ fun RenderSoftwareApplication(
 
         if (platforms.isNotEmpty() || topics.isNotEmpty() || license != null) {
             Spacer(StdVertSpacer)
-            ChipFlowRow(platforms = platforms, topics = topics, license = license)
+            ChipFlowRow(
+                platforms = platforms,
+                topics = topics,
+                license = license,
+                onTopicClick = { topic ->
+                    nav.nav(Route.SoftwareApps(TopFilter.Hashtag(topic.lowercase())))
+                },
+            )
         }
 
         if (website != null || repo != null) {
@@ -206,11 +216,12 @@ private fun ChipFlowRow(
     platforms: List<String>,
     topics: List<String>,
     license: String?,
+    onTopicClick: (String) -> Unit,
 ) {
     // FlowRow is in compose foundation but we use a simple LazyRow to keep this compatible.
     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         items(platforms) { Chip(it) }
-        items(topics) { Chip("#$it") }
+        items(topics) { topic -> Chip("#$topic", onClick = { onTopicClick(topic) }) }
         license?.let { item { Chip(it, tint = MaterialTheme.colorScheme.secondaryContainer) } }
     }
 }
@@ -219,13 +230,14 @@ private fun ChipFlowRow(
 private fun Chip(
     text: String,
     tint: Color = MaterialTheme.colorScheme.surfaceVariant,
+    onClick: (() -> Unit)? = null,
 ) {
-    Box(
+    val base =
         Modifier
             .clip(RoundedCornerShape(12.dp))
             .background(tint)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-    ) {
+    val withClick = if (onClick != null) base.clickable(onClick = onClick) else base
+    Box(withClick.padding(horizontal = 8.dp, vertical = 4.dp)) {
         Text(text = text, fontSize = 11.sp, style = MaterialTheme.typography.labelSmall)
     }
 }

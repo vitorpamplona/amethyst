@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.navigation.routes
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.toRoute
+import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.bookmarkgroups.BookmarkType
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -81,7 +82,9 @@ sealed class Route {
 
     @Serializable object Pictures : Route()
 
-    @Serializable object SoftwareApps : Route()
+    @Serializable data class SoftwareApps(
+        val topFilter: TopFilter? = null,
+    ) : Route()
 
     @Serializable object Calendars : Route()
 

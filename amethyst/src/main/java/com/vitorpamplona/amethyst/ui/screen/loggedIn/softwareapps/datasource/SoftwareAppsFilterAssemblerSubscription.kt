@@ -24,12 +24,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.model.TopFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import kotlinx.coroutines.flow.StateFlow
 
 @Composable
 fun SoftwareAppsFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
     SoftwareAppsFilterAssemblerSubscription(
         accountViewModel.dataSources().softwareApps,
+        accountViewModel.feedStates.softwareAppsFeed,
+        accountViewModel.account.settings.defaultSoftwareAppsFollowList,
+        accountViewModel.account.liveSoftwareAppsFollowListsPerRelay,
         accountViewModel,
     )
 }
@@ -37,11 +44,20 @@ fun SoftwareAppsFilterAssemblerSubscription(accountViewModel: AccountViewModel) 
 @Composable
 fun SoftwareAppsFilterAssemblerSubscription(
     dataSource: SoftwareAppsFilterAssembler,
+    feedContentState: FeedContentState,
+    topFilterFlow: StateFlow<TopFilter>,
+    followsPerRelayFlow: StateFlow<IFeedTopNavPerRelayFilterSet>,
     accountViewModel: AccountViewModel,
 ) {
     val state =
-        remember(accountViewModel.account) {
-            SoftwareAppsQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.viewModelScope)
+        remember(accountViewModel.account, feedContentState, topFilterFlow, followsPerRelayFlow) {
+            SoftwareAppsQueryState(
+                account = accountViewModel.account,
+                feedContentState = feedContentState,
+                topFilterFlow = topFilterFlow,
+                followsPerRelayFlow = followsPerRelayFlow,
+                scope = accountViewModel.viewModelScope,
+            )
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)

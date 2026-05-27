@@ -42,22 +42,14 @@ class SoftwareAppsSubAssembler(
         key: SoftwareAppsQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
-        val feedSettings = key.followsPerRelay()
+        val feedSettings = key.followsPerRelayFlow.value
 
-        return makeSoftwareAppsFilter(feedSettings, since, key.feedStates.softwareAppsFeed.lastNoteCreatedAtIfFilled())
+        return makeSoftwareAppsFilter(feedSettings, since, key.feedContentState.lastNoteCreatedAtIfFilled())
     }
 
     override fun user(key: SoftwareAppsQueryState) = key.account.userProfile()
 
-    override fun list(key: SoftwareAppsQueryState) = key.listName()
-
-    fun SoftwareAppsQueryState.listNameFlow() = account.settings.defaultSoftwareAppsFollowList
-
-    fun SoftwareAppsQueryState.listName() = listNameFlow().value
-
-    fun SoftwareAppsQueryState.followsPerRelayFlow() = account.liveSoftwareAppsFollowListsPerRelay
-
-    fun SoftwareAppsQueryState.followsPerRelay() = followsPerRelayFlow().value
+    override fun list(key: SoftwareAppsQueryState) = key.topFilterFlow.value
 
     val userJobMap = mutableMapOf<User, List<Job>>()
 
@@ -68,17 +60,17 @@ class SoftwareAppsSubAssembler(
         userJobMap[user] =
             listOf(
                 key.scope.launch(Dispatchers.IO) {
-                    key.listNameFlow().collectLatest {
+                    key.topFilterFlow.collectLatest {
                         invalidateFilters()
                     }
                 },
                 key.scope.launch(Dispatchers.IO) {
-                    key.followsPerRelayFlow().sample(500).collectLatest {
+                    key.followsPerRelayFlow.sample(500).collectLatest {
                         invalidateFilters()
                     }
                 },
                 key.account.scope.launch(Dispatchers.IO) {
-                    key.feedStates.softwareAppsFeed.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
+                    key.feedContentState.lastNoteCreatedAtWhenFullyLoaded.sample(5000).collectLatest {
                         invalidateFilters()
                     }
                 },

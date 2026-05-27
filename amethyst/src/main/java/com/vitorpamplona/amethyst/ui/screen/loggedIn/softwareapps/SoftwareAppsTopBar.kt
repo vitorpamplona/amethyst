@@ -32,21 +32,23 @@ import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
 import com.vitorpamplona.amethyst.ui.screen.TopNavFilterState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import kotlinx.coroutines.flow.StateFlow
 
 @Composable
 fun SoftwareAppsTopBar(
+    topFilterFlow: StateFlow<TopFilter>,
+    onChangeFilter: (TopFilter) -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     UserDrawerSearchTopBar(accountViewModel, nav) {
-        val list by accountViewModel.account.settings.defaultSoftwareAppsFollowList
-            .collectAsStateWithLifecycle()
+        val list by topFilterFlow.collectAsStateWithLifecycle()
 
         SoftwareAppsTopNavFilterBar(
             followListsModel = accountViewModel.feedStates.feedListOptions,
             listName = list,
             accountViewModel = accountViewModel,
-            onChange = accountViewModel.account.settings::changeDefaultSoftwareAppsFollowList,
+            onChange = { onChangeFilter(it.code) },
         )
     }
 }

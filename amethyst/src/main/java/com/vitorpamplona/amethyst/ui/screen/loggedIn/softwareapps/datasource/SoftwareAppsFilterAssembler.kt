@@ -22,14 +22,19 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.datasource
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
+import com.vitorpamplona.amethyst.model.TopFilter
+import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.StateFlow
 
 class SoftwareAppsQueryState(
     val account: Account,
-    val feedStates: AccountFeedContentStates,
+    val feedContentState: FeedContentState,
+    val topFilterFlow: StateFlow<TopFilter>,
+    val followsPerRelayFlow: StateFlow<IFeedTopNavPerRelayFilterSet>,
     val scope: CoroutineScope,
 )
 

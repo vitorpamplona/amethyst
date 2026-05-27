@@ -209,7 +209,7 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 id = NavBarItem.SOFTWARE_APPS,
                 labelRes = R.string.software_apps,
                 icon = MaterialSymbols.Apps,
-                resolveRoute = { Route.SoftwareApps },
+                resolveRoute = { Route.SoftwareApps() },
             ),
         NavBarItem.CALENDARS to
             NavBarItemDef(
