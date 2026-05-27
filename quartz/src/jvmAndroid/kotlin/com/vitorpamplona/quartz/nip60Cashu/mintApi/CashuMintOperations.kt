@@ -518,7 +518,7 @@ class CashuMintOperations(
                     r = r.hexToByteArray(),
                     e = dleq.e.hexToByteArray(),
                     s = dleq.s.hexToByteArray(),
-                    blindSignature = proof.c.hexToByteArray(),
+                    unblindedC = proof.c.hexToByteArray(),
                     mintPubKey = mintPubKeyHex.hexToByteArray(),
                 )
             if (!ok) return false

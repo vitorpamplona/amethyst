@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip60Cashu.bdhke
 
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.secp256k1.ECPoint
 import com.vitorpamplona.quartz.utils.secp256k1.Fe4
@@ -290,15 +291,26 @@ object Bdhke {
         val negEc = negate(eC) ?: return false
         val r2 = MutablePoint().also { ECPoint.addPoints(it, sB, negEc) }
 
-        val r1Bytes = toCompressedOrNull(r1) ?: return false
-        val r2Bytes = toCompressedOrNull(r2) ?: return false
+        val r1Uncompressed = toUncompressedOrNull(r1) ?: return false
+        val r2Uncompressed = toUncompressedOrNull(r2) ?: return false
+        val aUncompressed = compressedToUncompressed(mintPubKey) ?: return false
+        val cUncompressed = compressedToUncompressed(blindSignature) ?: return false
 
-        // 33*4 = 132 bytes. Order matters and is fixed by the spec.
-        val hashInput = ByteArray(132)
-        r1Bytes.copyInto(hashInput, 0)
-        r2Bytes.copyInto(hashInput, 33)
-        mintPubKey.copyInto(hashInput, 66)
-        blindSignature.copyInto(hashInput, 99)
+        // NUT-12 §2 hash input. The spec text says `sha256(R1 || R2 || A || C')`
+        // but the normative behaviour established by every reference impl
+        // (cashu-ts, nutshell, CDK) is:
+        //   1. Serialize each point as 65-byte UNCOMPRESSED form (04 || X || Y)
+        //   2. Hex-encode each (130 chars per point)
+        //   3. Concatenate the four hex strings (520 chars)
+        //   4. Hash the UTF-8 bytes of that concatenation
+        // Real mints emit `e` computed this way. Earlier versions of this
+        // code used raw 33-byte compressed bytes — round-tripping our own
+        // [signFull] hid the mismatch but every real mint rejected the
+        // proof. CDK's `hash_e` in crates/cashu/src/dhke.rs is the
+        // authoritative reference.
+        val hashInput =
+            (r1Uncompressed.toHexKey() + r2Uncompressed.toHexKey() + aUncompressed.toHexKey() + cUncompressed.toHexKey())
+                .encodeToByteArray()
 
         val computed = sha256(hashInput)
         return computed.contentEquals(e)
@@ -308,33 +320,39 @@ object Bdhke {
      * NUT-12 §3 Carol-side DLEQ verification.
      *
      * Carol is the recipient of a proof that was minted by some other
-     * wallet ("Alice") — the proof carries `(e, s)` AND the original
-     * blinding factor `r` that Alice used. Carol can't recompute `B'`
-     * from `(secret, r)` herself without knowing both, so the sender
-     * including `r` in the dleq alongside `(e, s)` is what makes the
-     * proof verifiable WITHOUT a round-trip to the mint.
+     * wallet ("Alice"). The proof carries the UNBLINDED `C` and `(e, s, r)`,
+     * where `r` is Alice's original blinding factor. To verify, Carol
+     * has to reconstruct BOTH points that the DLEQ was proven over:
      *
-     * Reconstructs `B' = hashToCurve(secret) + r·G` from the proof's
-     * secret bytes and the carried blinding factor, then delegates to
-     * the existing [verifyDleq] (Alice-side) which checks
-     * `e == SHA256(R1 || R2 || A || C')`.
+     *   `B' = hashToCurve(secret) + r·G`   (the blinded message Alice sent)
+     *   `C' = C + r·A`                     (the blinded signature the mint returned)
+     *
+     * Then she runs the same checks Alice did at mint-receive time.
+     * Without `r` she couldn't compute either, which is exactly why the
+     * NUT-12 dleq tuple carries `r` between wallets but never between
+     * mint and wallet.
+     *
+     * Common pitfall (and the source of a real DLEQ-rejected-by-mint
+     * production report): an earlier version of this code passed the
+     * UNBLINDED `C` straight to [verifyDleq] as if it were `C'`. That
+     * always failed because the math is over the blinded form. The
+     * function name's `blindSignature` parameter is misleading — it's
+     * actually the unblinded `C` from the proof; [verifyDleq] gets the
+     * reconstructed `C'`.
      *
      * Returns false on any malformed input (wrong sizes, off-curve
-     * points, etc.) or mismatch. Callers should treat false as either
-     * a malicious sender or a buggy mint-of-origin and refuse the
-     * proof — without DLEQ verification, accepting it means the next
-     * spend attempt will fail at the mint with no recourse.
+     * points, infinity arithmetic) or mismatch.
      *
      * @param secret The proof's secret bytes (UTF-8 of the hex string
-     *               that the mint hashed in hash-to-curve, NOT raw 32
-     *               bytes). Same form as [CashuProof.secret].
-     * @param r 32-byte blinding factor the original minter used; carried
-     *          in the proof's dleq tuple by spec.
+     *               the mint hashed in hash-to-curve, NOT raw 32 bytes).
+     *               Same form as [CashuProof.secret].
+     * @param r 32-byte blinding factor Alice used; carried in the proof's
+     *          dleq tuple by spec.
      * @param e 32-byte challenge scalar from the dleq tuple.
      * @param s 32-byte response scalar from the dleq tuple.
-     * @param blindSignature 33-byte unblinded `C` from the proof
-     *                       (despite the misleading name; the function
-     *                       only needs to recompute `B'` and delegate).
+     * @param unblindedC 33-byte `C` from the proof — the unblinded
+     *                   signature the wallet stores after Alice's
+     *                   [unblind].
      * @param mintPubKey 33-byte compressed `A = k·G` for this amount,
      *                   looked up from the mint's keyset.
      */
@@ -343,21 +361,56 @@ object Bdhke {
         r: ByteArray,
         e: ByteArray,
         s: ByteArray,
-        blindSignature: ByteArray,
+        unblindedC: ByteArray,
         mintPubKey: ByteArray,
     ): Boolean {
         if (r.size != 32) return false
-        // Reconstruct B' the same way Alice did at mint time:
-        // `B' = hashToCurve(secret) + r·G`. Bdhke.blind handles both.
-        val bTick =
-            runCatching { blind(secret, r) }.getOrNull() ?: return false
+        if (unblindedC.size != 33) return false
+        if (mintPubKey.size != 33) return false
+        // Reconstruct B' the way Alice did at mint time.
+        val bTick = runCatching { blind(secret, r) }.getOrNull() ?: return false
+        // Reconstruct C' = C + r·A. Without this, verifyDleq is computing
+        // the DLEQ check against the wrong point and always returns false
+        // — this was a real production bug.
+        val cTick = runCatching { addRTimesA(unblindedC, r, mintPubKey) }.getOrNull() ?: return false
         return verifyDleq(
             e = e,
             s = s,
             blindedMessage = bTick,
-            blindSignature = blindSignature,
+            blindSignature = cTick,
             mintPubKey = mintPubKey,
         )
+    }
+
+    /**
+     * Returns `C + r·A` as a 33-byte compressed point. Inverse of the
+     * `C' - r·A` step inside [unblind]; used by [verifyDleqCarol] to
+     * reconstruct the blinded signature from its unblinded form plus
+     * the blinding factor.
+     */
+    private fun addRTimesA(
+        c: ByteArray,
+        r: ByteArray,
+        mintPubKey: ByteArray,
+    ): ByteArray {
+        val cX = Fe4()
+        val cY = Fe4()
+        require(KeyCodec.parsePublicKey(c, cX, cY)) { "Invalid C" }
+        val cPoint = MutablePoint().also { it.setAffine(cX, cY) }
+
+        val kx = Fe4()
+        val ky = Fe4()
+        require(KeyCodec.parsePublicKey(mintPubKey, kx, ky)) { "Invalid mint public key" }
+        val k = MutablePoint().also { it.setAffine(kx, ky) }
+
+        val rScalar = Fe4()
+        U256.fromBytesInto(rScalar, r, 0)
+        val rk = MutablePoint()
+        ECPoint.mul(rk, k, rScalar)
+
+        val out = MutablePoint()
+        ECPoint.addPoints(out, cPoint, rk)
+        return toCompressed(out)
     }
 
     /**
@@ -381,24 +434,27 @@ object Bdhke {
         U256.fromBytesInto(rPrimeScalar, rPrime, 0)
 
         val r1 = MutablePoint().also { ECPoint.mulG(it, rPrimeScalar) }
-        val r1Bytes = toCompressed(r1)
+        val r1Uncompressed = toUncompressedOrNull(r1) ?: error("R1 is at infinity")
 
         val bX = Fe4()
         val bY = Fe4()
         require(KeyCodec.parsePublicKey(blindedMessage, bX, bY)) { "Invalid B'" }
         val bPoint = MutablePoint().also { it.setAffine(bX, bY) }
         val r2 = MutablePoint().also { ECPoint.mul(it, bPoint, rPrimeScalar) }
-        val r2Bytes = toCompressed(r2)
+        val r2Uncompressed = toUncompressedOrNull(r2) ?: error("R2 is at infinity")
 
-        // pubkeyCreate returns 65-byte uncompressed; the NUT-12 hash uses
-        // the 33-byte compressed form for every point.
-        val aBytes = Secp256k1.pubKeyCompress(Secp256k1.pubkeyCreate(mintPrivKey))
+        // pubkeyCreate returns 65-byte uncompressed — exactly what
+        // NUT-12 wants in the hash input. Don't compress.
+        val aUncompressed = Secp256k1.pubkeyCreate(mintPrivKey)
+        val cUncompressed = compressedToUncompressed(cTick) ?: error("Invalid C' from sign()")
 
-        val hashInput = ByteArray(132)
-        r1Bytes.copyInto(hashInput, 0)
-        r2Bytes.copyInto(hashInput, 33)
-        aBytes.copyInto(hashInput, 66)
-        cTick.copyInto(hashInput, 99)
+        // See [verifyDleq] for the hash format. Uncompressed (65-byte)
+        // points serialized as UTF-8 hex strings concatenated, NOT raw
+        // bytes. Real mints emit `e` this way; CDK / cashu-ts / nutshell
+        // all agree.
+        val hashInput =
+            (r1Uncompressed.toHexKey() + r2Uncompressed.toHexKey() + aUncompressed.toHexKey() + cUncompressed.toHexKey())
+                .encodeToByteArray()
         val e = sha256(hashInput)
 
         // s = r' + e*k mod n
@@ -437,6 +493,30 @@ object Bdhke {
         val y = Fe4()
         require(ECPoint.toAffine(p, x, y)) { "Point is at infinity" }
         return KeyCodec.serializeCompressed(x, y)
+    }
+
+    /**
+     * 65-byte uncompressed form `04 || X || Y`. Used only by the
+     * NUT-12 hash input — the on-wire form for everything else is
+     * compressed. Null on infinity.
+     */
+    private fun toUncompressedOrNull(p: MutablePoint): ByteArray? {
+        val x = Fe4()
+        val y = Fe4()
+        return if (ECPoint.toAffine(p, x, y)) KeyCodec.serializeUncompressed(x, y) else null
+    }
+
+    /**
+     * Convert a 33-byte compressed point to its 65-byte uncompressed
+     * form. Used for the NUT-12 hash input where the spec requires
+     * uncompressed bytes (`04 || X || Y`) rather than the wire form
+     * (`02/03 || X`). Returns null on parse failure.
+     */
+    private fun compressedToUncompressed(compressed: ByteArray): ByteArray? {
+        val x = Fe4()
+        val y = Fe4()
+        if (!KeyCodec.parsePublicKey(compressed, x, y)) return null
+        return KeyCodec.serializeUncompressed(x, y)
     }
 
     /** Non-throwing variant for verification paths — infinity → null instead of crash. */

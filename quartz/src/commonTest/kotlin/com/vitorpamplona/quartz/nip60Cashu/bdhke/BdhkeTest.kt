@@ -253,6 +253,51 @@ class BdhkeTest {
         assertEquals(true, !s1.contentEquals(s2))
     }
 
+    // ============================================================
+    // NUT-12 official spec vectors — from cashubtc/nuts/tests/12-tests.md
+    // ============================================================
+    // Pinning these is load-bearing: every reference impl (cashu-ts,
+    // nutshell, CDK) hashes the UTF-8 of the four hex strings, NOT the
+    // raw 33-byte point bytes. An earlier version of this code rolled
+    // its own raw-bytes convention; round-tripping signFull/verifyDleq
+    // hid the wire mismatch because both halves agreed. Real mints
+    // (minibits, etc.) rejected every verify. These vectors catch that
+    // regression without needing a live mint.
+
+    @Test
+    fun dleqProofTestVectorHashToCurveAgrees() {
+        // For k=1, C = hashToCurve(secret_utf8). If our hashToCurve disagrees
+        // with the spec, the full DLEQ check will fail for a reason that
+        // has nothing to do with DLEQ math.
+        val proofSecret = "daf4dd00a2b68a0858a80450f52c8a7d2ccf87d375e43e216e0c571f089f63e9"
+        val expectedC = "024369d2d22a80ecf78f3937da9d5f30c1b9f74f0c32684d583cca0fa6a61cdcfc"
+        val computed = Bdhke.hashToCurveCompressed(proofSecret.encodeToByteArray())
+        assertEquals(expectedC, computed.toHexKey())
+    }
+
+    @Test
+    fun dleqProofTestVector() {
+        // Mint with k=1 → A = G (compressed even-parity).
+        val a = "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798".hexToByteArray()
+        val proofSecret = "daf4dd00a2b68a0858a80450f52c8a7d2ccf87d375e43e216e0c571f089f63e9"
+        val unblindedC = "024369d2d22a80ecf78f3937da9d5f30c1b9f74f0c32684d583cca0fa6a61cdcfc".hexToByteArray()
+        val proofE = "b31e58ac6527f34975ffab13e70a48b6d2b0d35abc4b03f0151f09ee1a9763d4".hexToByteArray()
+        val proofS = "8fbae004c59e754d71df67e392b6ae4e29293113ddc2ec86592a0431d16306d8".hexToByteArray()
+        val proofR = "a6d13fcd7a18442e6076f5e1e7c887ad5de40a019824bdfa9fe740d302e8d861".hexToByteArray()
+
+        assertTrue(
+            Bdhke.verifyDleqCarol(
+                secret = proofSecret.encodeToByteArray(),
+                r = proofR,
+                e = proofE,
+                s = proofS,
+                unblindedC = unblindedC,
+                mintPubKey = a,
+            ),
+            "Spec vector for proof-side DLEQ must verify against reference values",
+        )
+    }
+
     private fun compress(p: MutablePoint): ByteArray {
         val x = Fe4()
         val y = Fe4()
