@@ -27,6 +27,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.vitorpamplona.amethyst.service.namecoin.NamecoinSettings
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinBackend
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinCoreRpcConfig
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -58,6 +60,10 @@ class NamecoinSharedPreferences(
         val KEY_ENABLED = booleanPreferencesKey("namecoin.enabled")
         val KEY_CUSTOM_SERVERS = stringPreferencesKey("namecoin.customServers")
         val KEY_PINNED_CERTS = stringPreferencesKey("namecoin.pinnedCerts")
+        val KEY_BACKEND = stringPreferencesKey("namecoin.backend")
+        val KEY_CORE_RPC = stringPreferencesKey("namecoin.coreRpc")
+        val KEY_FALLBACK_CUSTOM_EX = booleanPreferencesKey("namecoin.fallback.customElectrumx")
+        val KEY_FALLBACK_DEFAULT_EX = booleanPreferencesKey("namecoin.fallback.defaultElectrumx")
     }
 
     /**
@@ -97,6 +103,26 @@ class NamecoinSharedPreferences(
 
     suspend fun removeServer(server: String) {
         val updated = current.copy(customServers = current.customServers - server)
+        persist(updated)
+    }
+
+    suspend fun setBackend(backend: NamecoinBackend) {
+        val updated = current.copy(backend = backend)
+        persist(updated)
+    }
+
+    suspend fun setCoreRpcConfig(cfg: NamecoinCoreRpcConfig) {
+        val updated = current.copy(namecoinCoreRpc = cfg)
+        persist(updated)
+    }
+
+    suspend fun setFallbackToCustomElectrumx(enabled: Boolean) {
+        val updated = current.copy(fallbackToCustomElectrumx = enabled)
+        persist(updated)
+    }
+
+    suspend fun setFallbackToDefaultElectrumx(enabled: Boolean) {
+        val updated = current.copy(fallbackToDefaultElectrumx = enabled)
         persist(updated)
     }
 
@@ -155,6 +181,10 @@ class NamecoinSharedPreferences(
                     json.encodeToString(
                         settings.customServers.filter { it.isNotBlank() },
                     )
+                prefs[KEY_BACKEND] = settings.backend.name
+                prefs[KEY_CORE_RPC] = json.encodeToString(settings.namecoinCoreRpc)
+                prefs[KEY_FALLBACK_CUSTOM_EX] = settings.fallbackToCustomElectrumx
+                prefs[KEY_FALLBACK_DEFAULT_EX] = settings.fallbackToDefaultElectrumx
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -177,7 +207,32 @@ class NamecoinSharedPreferences(
                 } else {
                     emptyList()
                 }
-            NamecoinSettings(enabled = enabled, customServers = servers)
+            val backend =
+                prefs[KEY_BACKEND]?.let {
+                    try {
+                        NamecoinBackend.valueOf(it)
+                    } catch (_: Exception) {
+                        NamecoinBackend.ELECTRUMX
+                    }
+                } ?: NamecoinBackend.ELECTRUMX
+            val coreRpc =
+                prefs[KEY_CORE_RPC]?.let { raw ->
+                    try {
+                        json.decodeFromString<NamecoinCoreRpcConfig>(raw)
+                    } catch (_: Exception) {
+                        null
+                    }
+                } ?: NamecoinCoreRpcConfig()
+            val fallbackCustom = prefs[KEY_FALLBACK_CUSTOM_EX] ?: false
+            val fallbackDefault = prefs[KEY_FALLBACK_DEFAULT_EX] ?: false
+            NamecoinSettings(
+                enabled = enabled,
+                customServers = servers,
+                backend = backend,
+                namecoinCoreRpc = coreRpc,
+                fallbackToCustomElectrumx = fallbackCustom,
+                fallbackToDefaultElectrumx = fallbackDefault,
+            )
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e("NamecoinPrefs") { "Error reading DataStore: ${e.message}" }
