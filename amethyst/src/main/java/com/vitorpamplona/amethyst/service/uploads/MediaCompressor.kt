@@ -27,6 +27,7 @@ import androidx.core.net.toUri
 import androidx.media3.common.MimeTypes
 import com.davotoula.lightcompressor.video.GifToMp4Converter
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
+import com.vitorpamplona.amethyst.service.uploads.isAvif
 import com.vitorpamplona.amethyst.ui.components.util.MediaCompressorFileUtils
 import com.vitorpamplona.quartz.utils.Log
 import id.zelory.compressor.Compressor
@@ -78,7 +79,8 @@ class MediaCompressor {
 
             contentType?.startsWith("image", ignoreCase = true) == true &&
                 !contentType.contains("gif") &&
-                !contentType.contains("svg") -> {
+                !contentType.contains("svg") &&
+                !isAvif(contentType) -> {
                 compressImage(uri, contentType, applicationContext, mediaQuality)
             }
 

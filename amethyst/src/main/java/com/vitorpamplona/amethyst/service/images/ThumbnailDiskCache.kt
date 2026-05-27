@@ -88,6 +88,15 @@ class ThumbnailDiskCache(
     ): Boolean {
         if (!inFlight.add(url)) return false
 
+        if (isAnimatedAvif(sourceFile)) {
+            // Skip caching — animated AVIF must always go through the AVIF decoder
+            // so it can produce an AnimatedImageDrawable. A static JPEG thumbnail
+            // would permanently freeze the avatar on the first frame.
+            inFlight.remove(url)
+            Log.d("ThumbnailDiskCache") { "Skipping animated AVIF thumbnail for $url" }
+            return false
+        }
+
         try {
             val key = keyFor(url)
             val finalFile = File(cacheDir, key)
@@ -184,4 +193,33 @@ class ThumbnailDiskCache(
                 .forEach { it.delete() }
         }
     }
+
+    /**
+     * Returns true if the source file is an AVIF Image Sequence (animated AVIF).
+     *
+     * Sniffs the ISOBMFF `ftyp` box brand at offset 8. Only `avis` is treated as
+     * potentially animated; still AVIF (`avif`, `avo1`) is allowed to be cached
+     * as a JPEG thumbnail because the visual result is the same.
+     *
+     * Returning true causes [generateFromFile] to skip thumbnail caching so the
+     * full AVIF stays in Coil's normal disk cache and is decoded by the AVIF
+     * decoder on every load — preserving animation.
+     */
+    private fun isAnimatedAvif(sourceFile: File): Boolean =
+        runCatching {
+            sourceFile.inputStream().use { stream ->
+                val header = ByteArray(12)
+                if (stream.read(header) != 12) return@use false
+                // Offset 4..7 must be "ftyp" (the standard ISOBMFF box type)
+                header[4] == 'f'.code.toByte() &&
+                    header[5] == 't'.code.toByte() &&
+                    header[6] == 'y'.code.toByte() &&
+                    header[7] == 'p'.code.toByte() &&
+                    // Offset 8..11 must be "avis" (AVIF Image Sequence brand)
+                    header[8] == 'a'.code.toByte() &&
+                    header[9] == 'v'.code.toByte() &&
+                    header[10] == 'i'.code.toByte() &&
+                    header[11] == 's'.code.toByte()
+            }
+        }.getOrDefault(false)
 }

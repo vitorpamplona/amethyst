@@ -78,6 +78,9 @@ class ImageLoaderSetup {
                     .precision(Precision.INEXACT)
                     .logger(debugLogger)
                     .components {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            add(AvifAnimatedDecoderFactory()) // handle animated AVIF that Coil's AnimatedImageDecoder misses
+                        }
                         add(gifFactory)
                         add(svgFactory)
                         add(VideoFrameDecoder.Factory())

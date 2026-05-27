@@ -279,7 +279,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEven
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetupBesidesAuthor
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
@@ -731,7 +731,7 @@ fun InnerNoteWithReactions(
 
             if (!makeItShort) {
                 val noteEvent = baseNote.event
-                val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetup() ?: false }
+                val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetupBesidesAuthor() ?: false }
                 if (zapSplits && noteEvent != null) {
                     Spacer(modifier = HalfDoubleVertSpacer)
                     DisplayZapSplits(noteEvent, false, accountViewModel, nav)
@@ -855,7 +855,7 @@ fun NoteBody(
 
     if (!makeItShort) {
         val noteEvent = baseNote.event
-        val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetup() ?: false }
+        val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetupBesidesAuthor() ?: false }
         if (zapSplits && noteEvent != null) {
             Spacer(modifier = HalfDoubleVertSpacer)
             DisplayZapSplits(noteEvent, false, accountViewModel, nav)
@@ -1514,7 +1514,7 @@ fun RenderDraft(
             nav = nav,
         )
 
-        val zapSplits = remember(it.event) { it.event?.hasZapSplitSetup() }
+        val zapSplits = remember(it.event) { it.event?.hasZapSplitSetupBesidesAuthor() }
         if (zapSplits == true) {
             Spacer(modifier = HalfDoubleVertSpacer)
             DisplayZapSplits(it.event!!, false, accountViewModel, nav)

@@ -77,11 +77,20 @@ class ChatFileUploader(
                 viewState.reset()
             } else {
                 val errorMessages = results.errors.map { stringRes(context, it.errorResource, *it.params) }.distinct()
+                val allAvifMetadata = results.errors.all { it.errorResource == R.string.avif_metadata_strip_failed }
 
-                onEncryptedUploadError(
-                    stringRes(context, R.string.failed_to_upload_encrypted_media_title),
-                    stringRes(context, R.string.failed_to_upload_encrypted_media_message) + "\n\n" + errorMessages.joinToString(".\n"),
-                )
+                if (allAvifMetadata) {
+                    // AVIF strip refusal is a pre-encryption check — "retry without encryption" wouldn't help.
+                    onError(
+                        stringRes(context, R.string.failed_to_upload_media_no_details),
+                        errorMessages.joinToString(".\n"),
+                    )
+                } else {
+                    onEncryptedUploadError(
+                        stringRes(context, R.string.failed_to_upload_encrypted_media_title),
+                        stringRes(context, R.string.failed_to_upload_encrypted_media_message) + "\n\n" + errorMessages.joinToString(".\n"),
+                    )
+                }
             }
         } else {
             justUploadNIP17Unencrypted(viewState, onError, context, onStrippingFailed, onceUploaded)

@@ -73,13 +73,15 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WalletTransactionsScreen(
+    walletId: String,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val walletViewModel: WalletViewModel = viewModel()
 
-    LaunchedEffect(accountViewModel) {
+    LaunchedEffect(accountViewModel, walletId) {
         walletViewModel.init(accountViewModel)
+        walletViewModel.selectWallet(walletId)
         walletViewModel.fetchTransactions()
     }
 

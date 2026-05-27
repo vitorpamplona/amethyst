@@ -98,8 +98,15 @@ import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.OkHttpNip05Fetcher
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.CompositeNamecoinBackend
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumXClient
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxNameBackend
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.IElectrumXClient
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NameShowResult
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinBackend
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinCoreRpcClient
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.TOR_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
@@ -266,13 +273,89 @@ class AppModules(
         client
     }
 
+    /**
+     * Long-lived Namecoin Core JSON-RPC client. The current
+     * [NamecoinCoreRpcConfig] is pushed in via [setConfig] each time the
+     * user saves settings; this avoids reading SharedPreferences on the
+     * hot lookup path.
+     */
+    val namecoinCoreRpcClient by lazy {
+        Log.d("AppModules", "NamecoinCoreRpcClient Init")
+        NamecoinCoreRpcClient(
+            httpClientForUrl = roleBasedHttpClientBuilder::okHttpClientForNip05,
+        ).also {
+            it.setConfig(namecoinPrefs.current.namecoinCoreRpc)
+        }
+    }
+
+    /**
+     * Compose the active Namecoin lookup backend based on user settings.
+     *
+     * The returned [IElectrumXClient] is what the resolver actually calls.
+     * It dispatches to either Namecoin Core RPC or ElectrumX (custom-only,
+     * default-only, or both) and applies the user's fallback policy.
+     *
+     * The function builds a fresh composite per call so that settings
+     * changes take effect immediately (no app restart required).
+     */
+    fun buildNamecoinBackend(): IElectrumXClient {
+        val settings = namecoinPrefs.current
+        val custom = settings.toElectrumxServers()
+        val defaults =
+            if (roleBasedHttpClientBuilder.shouldUseTorForNIP05("https://electrumx.example.com")) {
+                TOR_ELECTRUMX_SERVERS
+            } else {
+                DEFAULT_ELECTRUMX_SERVERS
+            }
+
+        val customExBackend =
+            custom?.let { servers -> ElectrumxNameBackend(electrumXClient) { servers } }
+        val defaultExBackend = ElectrumxNameBackend(electrumXClient) { defaults }
+
+        return when (settings.backend) {
+            NamecoinBackend.NAMECOIN_CORE_RPC -> {
+                // Refresh client config in case the user just saved it.
+                namecoinCoreRpcClient.setConfig(settings.namecoinCoreRpc)
+                CompositeNamecoinBackend(
+                    primary = namecoinCoreRpcClient,
+                    customElectrumx = customExBackend,
+                    defaultElectrumx = defaultExBackend,
+                    policy = settings.toFallbackPolicy(),
+                    isPrimaryCoreRpc = true,
+                )
+            }
+            NamecoinBackend.ELECTRUMX -> {
+                // Custom servers first (if any). If the user only has the public
+                // defaults configured, primary == defaultElectrumx and the
+                // fallback toggle is moot.
+                val primary: com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameBackend =
+                    customExBackend ?: defaultExBackend
+                CompositeNamecoinBackend(
+                    primary = primary,
+                    customElectrumx = null,
+                    defaultElectrumx = if (customExBackend != null) defaultExBackend else null,
+                    policy = settings.toFallbackPolicy(),
+                    isPrimaryCoreRpc = false,
+                )
+            }
+        }
+    }
+
     val namecoinResolver by
         lazy {
             Log.d("AppModules", "Namecoin Resolver Init")
             NamecoinNameResolver(
-                electrumxClient = electrumXClient,
+                electrumxClient =
+                    object : IElectrumXClient {
+                        override suspend fun nameShowWithFallback(
+                            identifier: String,
+                            servers: List<ElectrumxServer>,
+                        ): NameShowResult? = buildNamecoinBackend().nameShowWithFallback(identifier, servers)
+                    },
                 serverListProvider = {
-                    // User-configured custom servers take priority
+                    // Kept for compatibility with NamecoinNameResolver's API;
+                    // the composite backend ignores this and consults user
+                    // settings directly via buildNamecoinBackend().
                     namecoinPrefs.customServersOrNull
                         ?: if (roleBasedHttpClientBuilder.shouldUseTorForNIP05("https://electrumx.example.com")) {
                             TOR_ELECTRUMX_SERVERS

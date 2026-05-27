@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumXClient
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinCoreRpcClient
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,6 +49,7 @@ fun NamecoinSettingsScreen(nav: INav) {
     NamecoinSettingsScreen(
         Amethyst.instance.namecoinPrefs,
         electrumXClient = { Amethyst.instance.electrumXClient },
+        namecoinCoreRpcClient = { Amethyst.instance.namecoinCoreRpcClient },
         nav,
     )
 }
@@ -57,6 +59,7 @@ fun NamecoinSettingsScreen(nav: INav) {
 fun NamecoinSettingsScreen(
     namecoinPrefs: NamecoinSharedPreferences,
     electrumXClient: () -> ElectrumXClient,
+    namecoinCoreRpcClient: () -> NamecoinCoreRpcClient,
     nav: INav,
 ) {
     val namecoinSettings by namecoinPrefs.settings.collectAsStateWithLifecycle()
@@ -95,6 +98,22 @@ fun NamecoinSettingsScreen(
                         electrumXClient().addPinnedCert(pem)
                     }
                 },
+                onSetBackend = { backend ->
+                    scope.launch { namecoinPrefs.setBackend(backend) }
+                },
+                onSetCoreRpcConfig = { cfg ->
+                    scope.launch {
+                        namecoinPrefs.setCoreRpcConfig(cfg)
+                        namecoinCoreRpcClient().setConfig(cfg)
+                    }
+                },
+                onSetFallbackToCustomElectrumx = { enabled ->
+                    scope.launch { namecoinPrefs.setFallbackToCustomElectrumx(enabled) }
+                },
+                onSetFallbackToDefaultElectrumx = { enabled ->
+                    scope.launch { namecoinPrefs.setFallbackToDefaultElectrumx(enabled) }
+                },
+                onTestCoreRpc = { cfg -> namecoinCoreRpcClient().probe(cfg) },
             )
         }
     }

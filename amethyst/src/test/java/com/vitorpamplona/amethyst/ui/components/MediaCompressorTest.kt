@@ -28,7 +28,6 @@ import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.ui.components.util.MediaCompressorFileUtils
 import id.zelory.compressor.Compressor
-import io.mockk.MockKAnnotations
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -56,7 +55,6 @@ class MediaCompressorTest {
         mockkStatic(Looper::class)
         every { Looper.myLooper() } returns mockk<Looper>()
         every { Looper.getMainLooper() } returns mockk<Looper>()
-        MockKAnnotations.init(this)
     }
 
     @After
@@ -177,5 +175,51 @@ class MediaCompressorTest {
             assertEquals(mockUri, result.uri)
             assertEquals("image/jpeg", result.contentType)
             assertEquals(null, result.size)
+        }
+
+    @Test
+    fun `AVIF media should not be re-encoded as JPEG`() =
+        runTest {
+            // setup
+            val mockContext = mockk<Context>(relaxed = true)
+            val mockUri = mockk<Uri>()
+
+            mockkObject(MediaCompressorFileUtils)
+            every { MediaCompressorFileUtils.from(any(), any()) } returns File("test")
+
+            // Execute with AVIF MIME
+            val result =
+                MediaCompressor().compress(
+                    uri = mockUri,
+                    contentType = "image/avif",
+                    applicationContext = mockContext,
+                    mediaQuality = CompressorQuality.MEDIUM,
+                )
+
+            // Verify: original URI, original content type, no JPEG conversion, no size set
+            assertEquals(mockUri, result.uri)
+            assertEquals("image/avif", result.contentType)
+            assertEquals(null, result.size)
+            coVerify(exactly = 0) { Compressor.compress(any(), any(), any(), any()) }
+        }
+
+    @Test
+    fun `AVIF MIME is case insensitive`() =
+        runTest {
+            val mockContext = mockk<Context>(relaxed = true)
+            val mockUri = mockk<Uri>()
+            mockkObject(MediaCompressorFileUtils)
+            every { MediaCompressorFileUtils.from(any(), any()) } returns File("test")
+
+            val result =
+                MediaCompressor().compress(
+                    uri = mockUri,
+                    contentType = "IMAGE/AVIF",
+                    applicationContext = mockContext,
+                    mediaQuality = CompressorQuality.MEDIUM,
+                )
+
+            assertEquals(mockUri, result.uri)
+            coVerify(exactly = 0) { Compressor.compress(any(), any(), any(), any()) }
         }
 }
