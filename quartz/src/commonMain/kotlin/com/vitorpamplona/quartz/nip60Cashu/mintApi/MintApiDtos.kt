@@ -175,6 +175,14 @@ data class MintQuoteBolt11RequestDto(
     val unit: String,
     val amount: Long,
     val description: String? = null,
+    /**
+     * NUT-20: 33-byte compressed secp256k1 pubkey the mint will bind to
+     * this quote. When set, the matching POST /v1/mint/bolt11 MUST carry
+     * a BIP-340 Schnorr signature from the same key — prevents quote
+     * theft over shared / observable transport. Wallets that don't care
+     * leave it null and the mint falls back to NUT-04 behaviour.
+     */
+    val pubkey: String? = null,
 )
 
 @Serializable
@@ -190,6 +198,14 @@ data class MintQuoteBolt11ResponseDto(
 data class MintBolt11RequestDto(
     val quote: String,
     val outputs: List<BlindedMessageDto>,
+    /**
+     * NUT-20: BIP-340 Schnorr signature (64-byte hex) over
+     * `sha256(quote_utf8 || B_0_utf8 || B_1_utf8 || ...)` where each
+     * `B_i_utf8` is the UTF-8 of the output's blinded-message hex string.
+     * Required only when the matching quote was opened with a `pubkey`;
+     * the mint validates against that pubkey before issuing proofs.
+     */
+    val signature: String? = null,
 )
 
 @Serializable
