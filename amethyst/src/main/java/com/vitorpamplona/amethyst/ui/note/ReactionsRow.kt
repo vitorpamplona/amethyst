@@ -2035,6 +2035,17 @@ fun ZapAmountChoicePopupContent(
                 verticalArrangement = Arrangement.Center,
                 itemVerticalAlignment = CenterVertically,
             ) {
+                // Order: Cashu first (instant, no fees), then Lightning,
+                // then on-chain — matches the recipient-capability fallback
+                // order used elsewhere (RailCapabilityResolver) so the
+                // "happiest path" rail surfaces first for the eye.
+                nutzapAmountChoices.forEach { amountInSats ->
+                    NutzapAmountChip(
+                        amountInSats = amountInSats,
+                        onClick = { onNutzap(amountInSats) },
+                        onLongClick = onChangeAmount,
+                    )
+                }
                 zapAmountChoices.forEach { amountInSats ->
                     ZapAmountChip(
                         amountInSats = amountInSats,
@@ -2046,13 +2057,6 @@ fun ZapAmountChoicePopupContent(
                     OnchainZapAmountChip(
                         amountInSats = amountInSats,
                         onClick = { onOnchainAmount(amountInSats) },
-                        onLongClick = onChangeAmount,
-                    )
-                }
-                nutzapAmountChoices.forEach { amountInSats ->
-                    NutzapAmountChip(
-                        amountInSats = amountInSats,
-                        onClick = { onNutzap(amountInSats) },
                         onLongClick = onChangeAmount,
                     )
                 }
