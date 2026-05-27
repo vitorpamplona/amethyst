@@ -725,6 +725,19 @@ class CashuWalletOps(
     suspend fun fetchActiveKeysetId(mintUrl: String): String = ops(mintUrl).activeKeyset().id
 
     /**
+     * NUT-07 batched proof-state query. Returns a map keyed by each
+     * proof's secret to the mint-side state. Used by the wallet's
+     * stale-proof sweep to detect kind:7375 events whose proofs are
+     * already spent at the mint (so the parent event can be NIP-09
+     * deleted before the next send picks them and hits HTTP 400
+     * "proofs already spent").
+     */
+    suspend fun checkProofStates(
+        mintUrl: String,
+        proofs: List<CashuProof>,
+    ): Map<String, ProofState> = ops(mintUrl).checkStates(proofs)
+
+    /**
      * Swap every proof inside [entries] (which the caller has already
      * filtered to "contains at least one stale-keyset proof") onto the
      * mint's current active keyset, publish the result as a single

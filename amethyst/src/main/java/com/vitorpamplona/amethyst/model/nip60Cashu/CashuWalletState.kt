@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.DeterministicSecretFactory
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.ProofState
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
 import com.vitorpamplona.quartz.nip60Cashu.seed.CashuDeterministic
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
@@ -82,8 +83,9 @@ import java.util.concurrent.ConcurrentHashMap
  * or addressed to this account. The full [LocalCache.notes] map is scanned
  * ONCE during init to backfill; after that all updates are incremental.
  *
- * Auto-redeem is serialized through a [Mutex] so concurrent cache updates
- * don't fire duplicate /v1/swap calls against the mint.
+ * Auto-redeem is serialized through a [Mutex], with successful redemptions
+ * pinned in an in-memory set so a second triggerAutoRedeem firing before
+ * the kind:7376 history event propagates back doesn't double-spend.
  */
 class CashuWalletState(
     private val pubKey: HexKey,
@@ -143,6 +145,18 @@ class CashuWalletState(
     /** NIP-44 decryption cache for token contents, keyed by event id. */
     private val tokenContents = ConcurrentHashMap<HexKey, TokenContent>()
     private val redeemMutex = Mutex()
+
+    /**
+     * Nutzap event ids whose redemption swap has already completed at
+     * the mint this session. Recorded inside [redeemMutex] right after
+     * the mint accepts the swap, so a second [triggerAutoRedeem] firing
+     * before the kind:7376 history event propagates back through
+     * [LocalCache.live.newEventBundles] still sees the nutzap as
+     * redeemed and skips it — preventing the "proofs already spent"
+     * double-redeem race. The set is process-local; on next launch the
+     * persisted kind:7376 events rebuild equivalent state.
+     */
+    private val sessionRedeemedNutzaps = ConcurrentHashMap.newKeySet<HexKey>()
 
     // ============================================================
     // Public flows
@@ -335,18 +349,21 @@ class CashuWalletState(
                 }
         }
 
-        // Backfill from cache once, then run a one-shot keyset
-        // migration sweep so any proofs we hold on rotated-out
-        // keysets get consolidated onto the current active one before
-        // the mint retires the old private key (after which they'd be
-        // un-spendable). Best-effort: mint-side failures just log.
+        // Backfill from cache once, then run a one-shot NUT-07 sweep
+        // that asks each mint which of our held proofs are still
+        // unspent and NIP-09 deletes any kind:7375 the mint reports
+        // as fully spent. Heals state when a prior swap (send, nutzap,
+        // migration) consumed proofs at the mint but failed to publish
+        // the kind:5 locally — without this, the next send picks the
+        // ghost proofs and the user sees "proofs already spent".
+        // Read-only at the mint, so safe to auto-run.
         scope.launch(Dispatchers.Default) {
             val initial = scanCacheForOwnEvents()
             applyEvents(initial)
             recomputePending()
             triggerAutoRedeem()
-            runCatching { migrateStaleKeysets() }
-                .onFailure { Log.w("CashuWallet", "Initial keyset migration sweep failed", it) }
+            runCatching { scrubLocallyStaleProofs() }
+                .onFailure { Log.w("CashuWallet", "Initial stale-proof sweep failed", it) }
         }
 
         // Keep the relay subscription in sync with the outbox set.
@@ -675,16 +692,25 @@ class CashuWalletState(
             val pubkey = p2pkPubkeyHex() ?: return
             val alreadyRedeemed =
                 historyEvents.values
-                    .flatMap { it.redeemedReferences() }
+                    .asSequence()
+                    .flatMap { it.redeemedReferences().asSequence() }
                     .map { it.eventId }
-                    .toSet()
+                    .toMutableSet()
+                    .apply { addAll(sessionRedeemedNutzaps) }
 
             val candidates = nutzapEvents.values.filter { it.id !in alreadyRedeemed }
             if (candidates.isEmpty()) return
 
             for (ev in candidates) {
                 runCatching { ops.redeemNutzap(ev, privkey, pubkey) }
-                    .onFailure { e ->
+                    .onSuccess {
+                        // Pin redemption in-memory immediately. The kind:7376
+                        // history event is bundled via newEventBundles (~1s)
+                        // before it lands in historyEvents — until then a
+                        // concurrent trigger would re-pick this nutzap and
+                        // get HTTP 400 "proofs already spent" from the mint.
+                        sessionRedeemedNutzaps.add(ev.id)
+                    }.onFailure { e ->
                         Log.w("CashuWallet") {
                             "Auto-redeem of nutzap ${ev.id.take(8)} failed: ${describeMintError(e)}"
                         }
@@ -761,16 +787,79 @@ class CashuWalletState(
     }
 
     /**
+     * NUT-07 sanity sweep: ask each mint which of our held proofs it
+     * still considers unspent, and NIP-09 delete any kind:7375 whose
+     * proofs are all marked SPENT.
+     *
+     * Heals the local wallet after a prior swap (send, nutzap,
+     * migration) consumed proofs at the mint but failed to publish
+     * the kind:5 locally — the most common cause of HTTP 400
+     * "proofs already spent" on the next user-initiated send.
+     *
+     * Read-only at the mint (no swap, no signing of new tokens),
+     * so safe to auto-run on every wallet load. Mixed-state entries
+     * (some proofs spent, some unspent in the same kind:7375 — rare,
+     * happens only when a partial sub-swap lands) are left alone and
+     * logged for visibility; they self-resolve once the user spends
+     * the entry.
+     */
+    suspend fun scrubLocallyStaleProofs() {
+        check(started) { "CashuWalletState.start() not called" }
+        val byMint = _tokenEntries.value.groupBy { it.content.mint }
+        for ((mintUrl, entries) in byMint) {
+            val allProofs = entries.flatMap { it.content.proofs }
+            if (allProofs.isEmpty()) continue
+            val states =
+                runCatching { ops.checkProofStates(mintUrl, allProofs) }
+                    .onFailure {
+                        Log.w("CashuWallet", "checkProofStates($mintUrl) failed; skipping sweep", it)
+                    }.getOrNull()
+                    ?: continue
+
+            val staleEntries =
+                entries.filter { entry ->
+                    val statesForEntry = entry.content.proofs.map { states[it.secret] }
+                    statesForEntry.all { it == ProofState.SPENT }
+                }
+            val mixedEntries =
+                entries.filter { entry ->
+                    val statesForEntry = entry.content.proofs.map { states[it.secret] }
+                    val spent = statesForEntry.count { it == ProofState.SPENT }
+                    spent in 1 until statesForEntry.size
+                }
+            if (mixedEntries.isNotEmpty()) {
+                Log.w("CashuWallet") {
+                    "Skipping ${mixedEntries.size} mixed-state token event(s) at $mintUrl " +
+                        "(some proofs spent, some unspent); user must spend to resolve."
+                }
+            }
+            if (staleEntries.isEmpty()) continue
+            Log.i("CashuWallet") {
+                "Scrubbing ${staleEntries.size} fully-spent kind:7375 event(s) at $mintUrl"
+            }
+            runCatching {
+                val template = DeletionEvent.build(staleEntries.map { it.event })
+                val signed = signer.sign(template)
+                publishEvent(signed)
+            }.onFailure {
+                Log.w("CashuWallet", "Failed to NIP-09 delete stale entries for $mintUrl", it)
+            }
+        }
+    }
+
+    /**
      * Migrate proofs held on inactive keysets onto each mint's current
      * active keyset. Cheap when nothing needs migrating (one /v1/keys
      * per mint to learn the current active id). When stale proofs exist,
      * consolidates them via a swap and republishes as a single kind:7375,
      * NIP-09-deleting the source events the same way [sendNutzap] does.
      *
-     * Triggered lazily on wallet load. Mint rotations don't happen often,
-     * so doing this once per session keeps us ahead of the mint
-     * retiring an old keyset's private key (after which our proofs
-     * become un-spendable).
+     * No longer auto-triggered on wallet load — the swap-then-publish
+     * sequence isn't atomic, and a failure mid-sequence corrupts local
+     * state (mint spent proofs, our kind:7375 still holds them). The
+     * non-destructive [scrubLocallyStaleProofs] runs in its place at
+     * startup; this method stays available for explicit user-driven
+     * migration (e.g. a future "compact wallet" action).
      */
     suspend fun migrateStaleKeysets() {
         check(started) { "CashuWalletState.start() not called" }
