@@ -118,8 +118,18 @@ fun MusicPlaylistHeader(
 ) {
     val title = remember(noteEvent) { noteEvent.title() }
     val image = remember(noteEvent) { noteEvent.image() }
-    val shortDescription = remember(noteEvent) { noteEvent.description() }
+    // Some publishing tools copy the same string into both the `description` tag and the JSON
+    // `content` field. Dedupe so we only show the long-form once: keep `content` (the
+    // richer of the two — Markdown / NIP-19 references render through TranslatableRichTextViewer
+    // below) and suppress the short description when it would just duplicate it.
+    val rawShortDescription = remember(noteEvent) { noteEvent.description() }
     val longDescription = remember(noteEvent) { noteEvent.content.ifBlank { null } }
+    val shortDescription =
+        remember(rawShortDescription, longDescription) {
+            rawShortDescription?.takeUnless { short ->
+                longDescription != null && short.trim().equals(longDescription.trim(), ignoreCase = true)
+            }
+        }
     val trackAddresses = remember(noteEvent) { noteEvent.trackAddresses() }
     val isCollaborative = remember(noteEvent) { noteEvent.isCollaborative() }
     val isPrivate = remember(noteEvent) { noteEvent.isPrivate() }
