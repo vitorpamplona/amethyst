@@ -47,9 +47,10 @@ enum class NamecoinBackend {
  *
  * The URL is expected to be the root of the RPC server (e.g.
  * `http://192.168.1.42:8336/`, `http://<onion>.onion:8336/`, or
- * `https://lan-host/` when StartOS terminates TLS for you). The user
- * supplies username and password; cookie-auth is not supported because
- * the user typically isn't running this on the same host as the node.
+ * `https://lan-host/` when StartOS or umbrel terminate TLS for you).
+ * The user supplies username and password; cookie-auth is not
+ * supported because the user typically isn't running this on the same
+ * host as the node.
  *
  * Tor onion endpoints are resolved through the same `socketFactoryForNip05`
  * path as the existing ElectrumX traffic, so they obey the user's Tor
@@ -57,7 +58,7 @@ enum class NamecoinBackend {
  *
  * `usePinnedTrustStore` mirrors the ElectrumX flag: set true to route
  * the HTTPS request through the pinned-cert socket factory (used for
- * StartOS LAN endpoints with self-signed root, etc.).
+ * StartOS / umbrel LAN endpoints with self-signed root, etc.).
  */
 @Serializable
 data class NamecoinCoreRpcConfig(
@@ -67,9 +68,9 @@ data class NamecoinCoreRpcConfig(
      * reverse proxy mounts the RPC under a sub-path).
      */
     val url: String = "",
-    /** RPC username (StartOS "RPC Credentials" → Username). */
+    /** RPC username (StartOS "RPC Credentials" → Username, umbrel 'Connect From Outside' → RPC User). */
     val username: String = "",
-    /** RPC password (StartOS "RPC Credentials" → Password). */
+    /** RPC password (StartOS "RPC Credentials" → Password, umbrel 'Connect From Outside' → RPC Password). */
     val password: String = "",
     /**
      * Per-call timeout in milliseconds. Defaults to 15 seconds, well
@@ -77,7 +78,7 @@ data class NamecoinCoreRpcConfig(
      * single slow node doesn't burn the whole budget.
      */
     val timeoutMs: Long = 15_000L,
-    /** Use the pinned trust store (self-signed StartOS LAN cert, etc.). */
+    /** Use the pinned trust store (self-signed StartOS / umbrel LAN cert, etc.). */
     val usePinnedTrustStore: Boolean = false,
 ) {
     val isUsable: Boolean

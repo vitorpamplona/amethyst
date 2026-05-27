@@ -912,8 +912,9 @@ private fun NamecoinCoreRpcSection(
         Spacer(Modifier.height(4.dp))
         Text(
             "URL, username and password for your Namecoin Core node. " +
-                "StartOS users: copy these from the package's Properties tab " +
-                "(Tor onion URL recommended for remote access).",
+                "StartOS / Start9 users: copy these from the package's Properties tab. " +
+                "Umbrel users: see the Namecoin Core app's 'Connect From Outside' card. " +
+                "Tor onion URL recommended for remote access.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

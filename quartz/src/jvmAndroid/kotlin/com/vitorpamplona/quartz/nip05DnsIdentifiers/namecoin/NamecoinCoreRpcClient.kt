@@ -41,8 +41,8 @@ import java.util.concurrent.TimeUnit
  * Namecoin Core JSON-RPC client.
  *
  * Implements [NamecoinNameBackend] by issuing a `name_show` JSON-RPC call
- * against a user-configured Namecoin Core node — typically a StartOS
- * install reached over its Tor hidden service or LAN URL.
+ * against a user-configured Namecoin Core node — typically a StartOS or
+ * umbrel install reached over its Tor hidden service or LAN URL.
  *
  * The transport is delegated to an [OkHttpClient] supplied by the caller
  * (Amethyst plumbs it through `roleBasedHttpClientBuilder.okHttpClientForNip05(url)`
