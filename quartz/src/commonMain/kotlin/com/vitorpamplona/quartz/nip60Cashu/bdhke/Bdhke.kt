@@ -66,7 +66,20 @@ object Bdhke {
      * Internal because [MutablePoint] is internal to the Quartz crypto package.
      * External callers should use [hashToCurveCompressed] to get a 33-byte point.
      */
-    internal fun hashToCurve(x: ByteArray): MutablePoint {
+    internal fun hashToCurve(x: ByteArray): MutablePoint = hashToCurveInto(x, BdhkeScratchpad())
+
+    /**
+     * Allocation-free [hashToCurve] variant — writes the resulting
+     * affine point into [scratch.blindPointY] using
+     * [scratch.blindFe4X] / [scratch.blindFe4Y] / [scratch.blindFe4Scalar]
+     * as inner scratch, then returns that same shared point. The caller
+     * must consume the result before the next BDHKE operation on the
+     * same scratchpad — see [BdhkeScratchpad] for the contract.
+     */
+    internal fun hashToCurveInto(
+        x: ByteArray,
+        scratch: BdhkeScratchpad,
+    ): MutablePoint {
         val msgToHash = sha256(DOMAIN_SEPARATOR + x)
         val buf = ByteArray(36)
         msgToHash.copyInto(buf, 0)
@@ -79,13 +92,10 @@ object Bdhke {
             buf[35] = ((counter ushr 24) and 0xFF).toByte()
 
             val candidate = sha256(buf)
-            val x4 = U256.fromBytes(candidate)
-            val outX = Fe4()
-            val outY = Fe4()
-            if (KeyCodec.liftX(outX, outY, x4)) {
-                val point = MutablePoint()
-                point.setAffine(outX, outY)
-                return point
+            U256.fromBytesInto(scratch.blindFe4Scalar, candidate, 0)
+            if (KeyCodec.liftX(scratch.blindFe4X, scratch.blindFe4Y, scratch.blindFe4Scalar)) {
+                scratch.blindPointY.setAffine(scratch.blindFe4X, scratch.blindFe4Y)
+                return scratch.blindPointY
             }
             counter++
         }
@@ -107,20 +117,30 @@ object Bdhke {
     fun blind(
         secret: ByteArray,
         r: ByteArray,
+    ): ByteArray = blind(secret, r, BdhkeScratchpad())
+
+    /**
+     * Allocation-free [blind] variant — same ART JIT escape-analysis
+     * mitigation as [unblind]. A hot loop like NUT-09 restore runs
+     * [blind] hundreds of times in sequence; the scratchpad shaves
+     * ~5 allocations off each iteration AND keeps the JIT from
+     * crashing on the (Android 15+ ART) bug.
+     */
+    fun blind(
+        secret: ByteArray,
+        r: ByteArray,
+        scratch: BdhkeScratchpad,
     ): ByteArray {
         require(r.size == 32) { "Blinding factor must be 32 bytes" }
         require(Secp256k1.secKeyVerify(r)) { "Invalid blinding factor" }
 
-        val y = hashToCurve(secret)
-        val rg = MutablePoint()
-        val rScalar = Fe4()
-        U256.fromBytesInto(rScalar, r, 0)
-        ECPoint.mulG(rg, rScalar)
+        val y = hashToCurveInto(secret, scratch)
+        U256.fromBytesInto(scratch.blindFe4Scalar, r, 0)
+        ECPoint.mulG(scratch.blindPointRg, scratch.blindFe4Scalar)
 
-        val out = MutablePoint()
-        ECPoint.addPoints(out, y, rg)
+        ECPoint.addPoints(scratch.blindPointOut, y, scratch.blindPointRg)
 
-        return toCompressed(out)
+        return toCompressed(scratch.blindPointOut)
     }
 
     /**

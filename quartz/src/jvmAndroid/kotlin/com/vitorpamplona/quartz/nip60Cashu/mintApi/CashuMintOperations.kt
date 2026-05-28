@@ -433,9 +433,16 @@ class CashuMintOperations(
             // deterministic (secret, r) pair derived from the counter),
             // not per (counter, amount) — the wallet only ever minted
             // one denomination per counter under NUT-13.
+            Log.i("CashuTrace") { "restore: batch counter=$counter size=$effectiveBatchSize denoms=${denominations.size}" }
             val matsByBTick = HashMap<String, CounterMaterials>(effectiveBatchSize)
             val recoveredCounters = HashSet<Long>(effectiveBatchSize)
             val outputDtos = ArrayList<BlindedMessageDto>(perBatchSize)
+            // One scratchpad reused across all per-counter Bdhke.blind
+            // calls in this batch — see [BdhkeScratchpad]. Critical for
+            // restore: without it we'd allocate ~6 short-lived holders
+            // per counter × batchSize counters per batch and trip the
+            // Android 15+ ART JIT escape-analysis crash.
+            val batchScratch = BdhkeScratchpad()
 
             for (offset in 0 until effectiveBatchSize) {
                 val c = counter + offset
@@ -447,7 +454,7 @@ class CashuMintOperations(
                 val secretBytes = CashuDeterministic.secretBytes(seed, keysetId, c)
                 val r = CashuDeterministic.blindingFactor(seed, keysetId, c)
                 val secretHex = secretBytes.toHexKey()
-                val bTick = Bdhke.blind(secretHex.encodeToByteArray(), r)
+                val bTick = Bdhke.blind(secretHex.encodeToByteArray(), r, batchScratch)
                 val bTickHex = bTick.toHexKey()
                 matsByBTick[bTickHex] = CounterMaterials(c, secretHex, r, bTick)
                 for (amount in denominations) {
@@ -615,10 +622,10 @@ class CashuMintOperations(
         // NUT-13-derived from a wallet seed; either way the on-wire shape
         // is identical so the mint can't tell which scheme we're using.
         val derived = secretFactory.nextSecrets(keyset.id, amounts.size)
+        val scratch = BdhkeScratchpad()
         return amounts.mapIndexed { i, amount ->
-            Log.i("CashuTrace") { "  Bdhke.blind[$i/${amounts.size}] amount=$amount" }
             val pair = derived[i]
-            val bTick = Bdhke.blind(pair.secretHex.encodeToByteArray(), pair.blindingFactor)
+            val bTick = Bdhke.blind(pair.secretHex.encodeToByteArray(), pair.blindingFactor, scratch)
             BlindOutput(amount, keyset.id, pair.blindingFactor, pair.secretHex, bTick)
         }
     }

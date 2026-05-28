@@ -57,6 +57,7 @@ import com.vitorpamplona.quartz.utils.secp256k1.MutablePoint
  * allocate their own. The cost is negligible (~10 small objects).
  */
 class BdhkeScratchpad {
+    // Holders used by [Bdhke.unblind].
     internal val fe4A: Fe4 = Fe4()
     internal val fe4B: Fe4 = Fe4()
     internal val fe4C: Fe4 = Fe4()
@@ -69,4 +70,16 @@ class BdhkeScratchpad {
     internal val pointC: MutablePoint = MutablePoint()
     internal val pointD: MutablePoint = MutablePoint()
     internal val outPoint: MutablePoint = MutablePoint()
+
+    // Holders used by [Bdhke.blind] and [Bdhke.hashToCurve].
+    // Kept distinct from the unblind holders so a future refactor that
+    // calls blind from inside unblind (or vice versa) doesn't silently
+    // overwrite live state. Currently the operations don't nest, but
+    // the separation makes the safety invariant local.
+    internal val blindFe4X: Fe4 = Fe4()
+    internal val blindFe4Y: Fe4 = Fe4()
+    internal val blindFe4Scalar: Fe4 = Fe4()
+    internal val blindPointY: MutablePoint = MutablePoint()
+    internal val blindPointRg: MutablePoint = MutablePoint()
+    internal val blindPointOut: MutablePoint = MutablePoint()
 }
