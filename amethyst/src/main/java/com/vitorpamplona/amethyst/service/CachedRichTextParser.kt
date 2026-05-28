@@ -83,26 +83,147 @@ object CachedRichTextParser {
 
     private fun computeIsMarkdown(content: String): Boolean {
         // Cashu v2/cashuB tokens are base64url payloads that routinely
-        // contain '__' (the base64url alphabet uses '_'; a token whose
-        // CBOR ends with a fixed-bytes break easily produces a tail
-        // like `______`). Without this exemption, the markdown detector
-        // tags any chat message carrying a cashuB token as markdown,
-        // the content is routed through RenderContentAsMarkdown, which
-        // has no knowledge of CashuSegment, and the user sees the raw
-        // base64 instead of the redeem card. cashuA (v3 JSON+base64url)
-        // shares the same alphabet and the same risk. Force the
-        // rich-text path whenever a cashu token is present so the
-        // inline CashuPreview renders.
+        // contain '__' and lone '_' pairs (the base64url alphabet uses
+        // '_'; a token whose CBOR ends with a fixed-bytes break easily
+        // produces a tail like `______`). The detector below treats
+        // those as markdown bold/italic and routes the chat through
+        // RenderContentAsMarkdown, which has no CashuSegment support,
+        // so the user sees raw base64 instead of the redeem card.
+        // cashuA shares the same alphabet and the same risk. Force the
+        // rich-text path whenever a cashu token is present.
         if (content.contains("cashuA", true) || content.contains("cashuB", true)) return false
 
-        return content.startsWith("> ") ||
-            content.startsWith("# ") ||
-            content.contains("##") ||
-            content.contains("__") ||
-            content.contains("**") ||
-            content.contains("```") ||
-            content.contains("](")
+        val len = content.length
+        if (len == 0) return false
+
+        var isNewLine = true
+        var nonSpaceCharCountOnLine = 0
+        var lastNonSpaceChar = ' '
+        // True while every non-whitespace char on the current line has
+        // been the same '=' or '-' as the first. Required for the
+        // setext-heading check below — without it, an ordinary sentence
+        // ending in `-` would be promoted to a heading underline.
+        var lineIsHomogeneousSetextChar = false
+
+        for (i in 0 until len) {
+            val c = content[i]
+            val cCode = c.code
+
+            // O(1) trigger-char gate. Allocated once at object init.
+            if (cCode < 128 && IS_MARKDOWN_TRIGGER[cCode]) {
+                if (c == '`' || c == '|') return true
+                if (c == '~' && i + 1 < len && content[i + 1] == '~') return true
+
+                if (isNewLine) {
+                    if (c == '#') {
+                        var j = i + 1
+                        while (j < len && content[j] == '#') j++
+                        if (j < len && content[j] == ' ' && (j - i) <= 6) return true
+                    }
+                    if (c == '>') {
+                        if (i + 1 < len && content[i + 1] == ' ') return true
+                    }
+                    if ((c == '-' || c == '*' || c == '+') && i + 1 < len && content[i + 1] == ' ') return true
+                }
+
+                if (c == '*' || c == '_') {
+                    if (i + 1 < len && content[i + 1] == c) return true
+                    var j = i + 1
+                    while (j < len) {
+                        if (content[j] == c) return true
+                        if (content[j] == '\n') break
+                        j++
+                    }
+                }
+                if (c == '[') {
+                    var j = i + 1
+                    while (j < len && content[j] != ']') {
+                        if (content[j] == '\n') break
+                        j++
+                    }
+                    if (j + 1 < len && content[j] == ']' && content[j + 1] == '(') {
+                        // A markdown link's URL portion can't span a
+                        // newline — bail if we hit '\n' before ')'.
+                        var k = j + 2
+                        while (k < len && content[k] != ')') {
+                            if (content[k] == '\n') break
+                            k++
+                        }
+                        if (k < len && content[k] == ')') return true
+                    }
+                }
+            }
+
+            // Structural line tracking — drives isNewLine for the next
+            // iteration and powers the ordered-list + setext-heading
+            // checks that need to know "how much non-space text has
+            // appeared on the current line".
+            if (isNewLine) {
+                if (c != ' ' && c != '\t') {
+                    isNewLine = false
+                    nonSpaceCharCountOnLine = 1
+                    lastNonSpaceChar = c
+                    lineIsHomogeneousSetextChar = (c == '=' || c == '-')
+
+                    // Ordered list: digit+ followed by `. ` at line start.
+                    if (cCode in 48..57) {
+                        var j = i + 1
+                        while (j < len && content[j].code in 48..57) j++
+                        if (j + 1 < len && content[j] == '.' && content[j + 1] == ' ') return true
+                    }
+                }
+            } else {
+                if (c != ' ' && c != '\t' && c != '\n' && c != '\r') {
+                    nonSpaceCharCountOnLine++
+                    if (c != lastNonSpaceChar) lineIsHomogeneousSetextChar = false
+                    lastNonSpaceChar = c
+                }
+
+                if (c == '\n' || c == '\r') {
+                    // Setext heading: a line of 3+ '=' or '-' (and
+                    // nothing else) under non-empty text. Without the
+                    // homogeneity check, an ordinary sentence ending
+                    // in `-` would be promoted to a heading underline.
+                    if (lineIsHomogeneousSetextChar &&
+                        nonSpaceCharCountOnLine >= 3 &&
+                        (lastNonSpaceChar == '=' || lastNonSpaceChar == '-')
+                    ) {
+                        return true
+                    }
+                    isNewLine = true
+                    nonSpaceCharCountOnLine = 0
+                    lineIsHomogeneousSetextChar = false
+                }
+            }
+        }
+
+        // Trailing-line setext check for content not terminated by '\n'.
+        if (lineIsHomogeneousSetextChar &&
+            nonSpaceCharCountOnLine >= 3 &&
+            (lastNonSpaceChar == '=' || lastNonSpaceChar == '-')
+        ) {
+            return true
+        }
+
+        return false
     }
+
+    // Allocated once at object init; every isMarkdown call does an
+    // O(1) lookup against this table instead of branching through ten
+    // `contains(...)` calls.
+    private val IS_MARKDOWN_TRIGGER =
+        BooleanArray(128).apply {
+            this['#'.code] = true
+            this['*'.code] = true
+            this['_'.code] = true
+            this['['.code] = true
+            this['`'.code] = true
+            this['>'.code] = true
+            this['-'.code] = true
+            this['+'.code] = true
+            this['~'.code] = true
+            this['|'.code] = true
+        }
 }
 
 object CachedUrlParser {
