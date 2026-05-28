@@ -2812,4 +2812,15 @@
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Umění</string>
     <string name="nowhere_link_card_forum">Nowhere Fórum</string>
+    <string name="music_track_uploading_banner">Nahrávání obalu a zvuku a publikování. Bude pokračovat, i když opustíte obrazovku.</string>
+    <string name="nip82_no_comments">Buďte první, kdo přidá komentář.</string>
+    <string name="nip82_older_releases_hide">Skrýt starší verze</string>
+    <string name="nip82_older_releases_show">Zobrazit starší verze</string>
+    <string name="nip82_section_about">O aplikaci</string>
+    <string name="nip82_section_comments">Komentáře</string>
+    <string name="nip82_section_latest_release">Nejnovější verze</string>
+    <string name="nip82_section_links">Odkazy</string>
+    <string name="nip82_section_platforms">Platformy</string>
+    <string name="nip82_section_topics">Témata</string>
+    <string name="send">Odeslat</string>
 </resources>

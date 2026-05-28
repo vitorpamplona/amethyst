@@ -2775,4 +2775,15 @@
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Konst</string>
     <string name="nowhere_link_card_forum">Nowhere Forum</string>
+    <string name="music_track_uploading_banner">Laddar upp omslag och ljud och publicerar. Detta fortsätter även om du lämnar skärmen.</string>
+    <string name="nip82_no_comments">Bli först med att kommentera.</string>
+    <string name="nip82_older_releases_hide">Dölj äldre utgåvor</string>
+    <string name="nip82_older_releases_show">Visa äldre utgåvor</string>
+    <string name="nip82_section_about">Om</string>
+    <string name="nip82_section_comments">Kommentarer</string>
+    <string name="nip82_section_latest_release">Senaste utgåvan</string>
+    <string name="nip82_section_links">Länkar</string>
+    <string name="nip82_section_platforms">Plattformar</string>
+    <string name="nip82_section_topics">Ämnen</string>
+    <string name="send">Skicka</string>
 </resources>
