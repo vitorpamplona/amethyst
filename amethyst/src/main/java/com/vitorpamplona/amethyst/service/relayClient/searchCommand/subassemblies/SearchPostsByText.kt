@@ -56,6 +56,8 @@ import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 
 val SearchPostsByTextKinds1 =
     listOf(
@@ -69,6 +71,8 @@ val SearchPostsByTextKinds1 =
         AudioTrackEvent.KIND,
         MusicTrackEvent.KIND,
         MusicPlaylistEvent.KIND,
+        PodcastEpisodeEvent.KIND,
+        PodcastMetadataEvent.KIND,
         PinListEvent.KIND,
         ZapPollEvent.KIND,
         ChannelCreateEvent.KIND,

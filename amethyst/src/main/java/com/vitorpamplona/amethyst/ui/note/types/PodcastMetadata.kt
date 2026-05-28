@@ -21,51 +21,38 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
-import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
-
-private val COVER_ASPECT_RATIO = 1.0f
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RenderPodcastMetadata(
     note: Note,
     makeItShort: Boolean,
-    canPreview: Boolean,
-    backgroundColor: MutableState<Color>,
+    @Suppress("UNUSED_PARAMETER") canPreview: Boolean,
+    @Suppress("UNUSED_PARAMETER") backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    nav: INav,
+    @Suppress("UNUSED_PARAMETER") nav: INav,
 ) {
     val noteEvent = note.event as? PodcastMetadataEvent ?: return
 
@@ -75,7 +62,7 @@ fun RenderPodcastMetadata(
     val websites = remember(noteEvent) { noteEvent.websites() }
 
     Column(MaterialTheme.colorScheme.replyModifier) {
-        PodcastCover(image, note, accountViewModel)
+        PodcastCoverCard(image, note, accountViewModel)
 
         Column(
             modifier =
@@ -121,37 +108,6 @@ fun RenderPodcastMetadata(
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun PodcastCover(
-    image: String?,
-    note: Note,
-    accountViewModel: AccountViewModel,
-) {
-    val imageShape = RoundedCornerShape(topStart = 15.dp, topEnd = 15.dp)
-    val imageModifier =
-        Modifier
-            .fillMaxWidth()
-            .aspectRatio(COVER_ASPECT_RATIO)
-            .clip(imageShape)
-
-    Box(imageModifier) {
-        if (image != null) {
-            MyAsyncImage(
-                imageUrl = image,
-                contentDescription = stringRes(R.string.preview_card_image_for, image),
-                contentScale = ContentScale.Crop,
-                mainImageModifier = Modifier.fillMaxSize(),
-                loadedImageModifier = imageModifier,
-                accountViewModel = accountViewModel,
-                onLoadingBackground = { DefaultImageHeaderBackground(note, accountViewModel, imageModifier) },
-                onError = { DefaultImageHeader(note, accountViewModel, imageModifier) },
-            )
-        } else {
-            DefaultImageHeader(note, accountViewModel, imageModifier)
         }
     }
 }

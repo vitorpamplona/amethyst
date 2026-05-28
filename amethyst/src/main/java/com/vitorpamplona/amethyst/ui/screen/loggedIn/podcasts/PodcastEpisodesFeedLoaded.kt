@@ -39,8 +39,10 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
+// One shared body for both Episodes (kind 54) and Shows (kind 10154) — NoteCompose's
+// renderer dispatch picks the right card per item, the list scaffolding is identical.
 @Composable
-fun PodcastEpisodesFeedLoaded(
+internal fun PodcastFeedLoaded(
     loaded: FeedState.Loaded,
     listState: LazyListState,
     accountViewModel: AccountViewModel,
@@ -57,8 +59,6 @@ fun PodcastEpisodesFeedLoaded(
             key = { _, item -> item.idHex },
             contentType = { _, item -> item.event?.kind ?: -1 },
         ) { _, item ->
-            // NoteCompose wraps the episode card with the standard reactions row + author chrome
-            // so zap/reply/etc. work the same as on the home feed.
             NoteCompose(
                 baseNote = item,
                 modifier = Modifier,
@@ -74,3 +74,11 @@ fun PodcastEpisodesFeedLoaded(
         }
     }
 }
+
+@Composable
+fun PodcastEpisodesFeedLoaded(
+    loaded: FeedState.Loaded,
+    listState: LazyListState,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) = PodcastFeedLoaded(loaded, listState, accountViewModel, nav)

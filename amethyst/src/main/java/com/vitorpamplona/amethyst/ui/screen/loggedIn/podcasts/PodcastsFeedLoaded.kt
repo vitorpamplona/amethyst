@@ -20,55 +20,19 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts
 
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
-import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 
+// Episodes (kind 54) and Shows (kind 10154) feeds render identically — each note flows
+// through NoteCompose's renderer dispatch. Keeping one shared composable means a divider
+// or padding tweak ships to both screens at once.
 @Composable
 fun PodcastsFeedLoaded(
     loaded: FeedState.Loaded,
     listState: LazyListState,
     accountViewModel: AccountViewModel,
     nav: INav,
-) {
-    val items by loaded.feed.collectAsStateWithLifecycle()
-
-    LazyColumn(
-        contentPadding = rememberFeedContentPadding(FeedPadding),
-        state = listState,
-    ) {
-        itemsIndexed(
-            items.list,
-            key = { _, item -> item.idHex },
-            contentType = { _, item -> item.event?.kind ?: -1 },
-        ) { _, item ->
-            NoteCompose(
-                baseNote = item,
-                modifier = Modifier,
-                isBoostedNote = false,
-                quotesLeft = 1,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-
-            HorizontalDivider(thickness = DividerThickness)
-
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-    }
-}
+) = PodcastFeedLoaded(loaded, listState, accountViewModel, nav)

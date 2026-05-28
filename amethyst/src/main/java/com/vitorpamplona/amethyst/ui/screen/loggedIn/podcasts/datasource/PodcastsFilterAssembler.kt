@@ -37,14 +37,11 @@ class PodcastsQueryState(
 class PodcastsFilterAssembler(
     client: INostrClient,
 ) : ComposeSubscriptionManager<PodcastsQueryState>() {
-    val group =
-        listOf(
-            PodcastsSubAssembler(client, ::allKeys),
-        )
+    private val podcasts = PodcastsSubAssembler(client, ::allKeys)
 
     override fun invalidateKeys() = invalidateFilters()
 
-    override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
+    override fun invalidateFilters() = podcasts.invalidateFilters()
 
-    override fun destroy() = group.forEach { it.destroy() }
+    override fun destroy() = podcasts.destroy()
 }

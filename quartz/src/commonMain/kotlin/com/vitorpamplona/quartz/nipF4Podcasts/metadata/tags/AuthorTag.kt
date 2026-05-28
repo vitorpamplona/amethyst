@@ -49,13 +49,18 @@ class AuthorTag(
         const val ROLE_COHOST = "cohost"
         const val ROLE_EDITOR = "editor"
 
+        private val KNOWN_ROLES = setOf(ROLE_HOST, ROLE_COHOST, ROLE_EDITOR)
+
         fun isTagged(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].length == 64
 
         fun parse(tag: Array<String>): AuthorTag? {
             ensure(tag.has(1)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].length == 64) { return null }
-            val role = tag.getOrNull(2)?.takeIf { it.isNotEmpty() }
+            // NIP-F4 overloads slot 2 as role — but only host/cohost/editor are spec-defined.
+            // Anything else (notably a stale relay-hint URL copied from a kind:3 p-tag) gets
+            // dropped so it doesn't render as 'Role: wss://relay…' under the author chip.
+            val role = tag.getOrNull(2)?.takeIf { it in KNOWN_ROLES }
             return AuthorTag(tag[1], role)
         }
 

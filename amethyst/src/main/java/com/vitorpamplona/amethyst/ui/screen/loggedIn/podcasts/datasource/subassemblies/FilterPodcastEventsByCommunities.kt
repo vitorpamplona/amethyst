@@ -73,15 +73,14 @@ fun filterPodcastEventsByAllCommunities(
 ): List<RelayBasedFilter> {
     if (communitySet.set.isEmpty()) return emptyList()
 
-    return communitySet.set
-        .mapNotNull {
-            filterPodcastEventsFromAllCommunities(
-                relay = it.key,
-                kinds = kinds,
-                communities = it.value.communities,
-                since = since?.get(it.key)?.time ?: defaultSince,
-            )
-        }.flatten()
+    return communitySet.set.flatMap {
+        filterPodcastEventsFromAllCommunities(
+            relay = it.key,
+            kinds = kinds,
+            communities = it.value.communities,
+            since = since?.get(it.key)?.time ?: defaultSince,
+        )
+    }
 }
 
 fun filterPodcastEventsFromCommunity(
@@ -131,14 +130,13 @@ fun filterPodcastEventsByCommunity(
 ): List<RelayBasedFilter> {
     if (communitySet.set.isEmpty()) return emptyList()
 
-    return communitySet.set
-        .mapNotNull {
-            filterPodcastEventsFromCommunity(
-                relay = it.key,
-                kinds = kinds,
-                community = it.value.community,
-                authors = it.value.authors,
-                since = since?.get(it.key)?.time ?: defaultSince,
-            )
-        }.flatten()
+    return communitySet.set.flatMap {
+        filterPodcastEventsFromCommunity(
+            relay = it.key,
+            kinds = kinds,
+            community = it.value.community,
+            authors = it.value.authors,
+            since = since?.get(it.key)?.time ?: defaultSince,
+        )
+    }
 }

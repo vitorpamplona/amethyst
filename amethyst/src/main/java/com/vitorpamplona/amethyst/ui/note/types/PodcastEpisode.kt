@@ -21,12 +21,9 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -40,29 +37,32 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
 import com.vitorpamplona.amethyst.service.playback.composable.PauseControllerWhenInBackground
 import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
-import com.vitorpamplona.amethyst.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeader
-import com.vitorpamplona.amethyst.ui.note.elements.DefaultImageHeaderBackground
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 
-private val COVER_ASPECT_RATIO = 1f
+// NIP-F4 doesn't carry a waveform tag, so every episode renders with the same flat baseline.
+// Hoist to a top-level constant so we share one List<Float>+WaveformData across the whole
+// feed instead of allocating a fresh 96-element list per visible card.
+private const val WAVEFORM_SAMPLES = 96
+private val FLAT_WAVEFORM = WaveformData(List(WAVEFORM_SAMPLES) { 0.4f })
+
+// Bottom-rounded border on the audio player so it visually butts up against the cover's
+// top-rounded corners as one card. Constant — keep out of recomposition.
+private val PLAYER_BORDER_MODIFIER =
+    Modifier.clip(RoundedCornerShape(bottomStart = 15.dp, bottomEnd = 15.dp))
 
 @Composable
 fun RenderPodcastEpisode(
@@ -75,51 +75,20 @@ fun RenderPodcastEpisode(
 ) {
     val noteEvent = note.event as? PodcastEpisodeEvent ?: return
 
-    PodcastEpisodeBody(
-        noteEvent = noteEvent,
-        note = note,
-        makeItShort = makeItShort,
-        canPreview = canPreview,
-        backgroundColor = backgroundColor,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-}
-
-@Composable
-private fun PodcastEpisodeBody(
-    noteEvent: PodcastEpisodeEvent,
-    note: Note,
-    makeItShort: Boolean,
-    canPreview: Boolean,
-    backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
     val title = remember(noteEvent) { noteEvent.title() }
     val image = remember(noteEvent) { noteEvent.image() }
     val description = remember(noteEvent) { noteEvent.description() }
-    // Pick the first audio URL. If a publisher provides multiple containers, this is the
-    // ordering they emitted — clients with codec preferences can extend this later.
+    // Pick the first audio URL. Publishers may emit multiple containers in their preferred
+    // order; clients with codec preferences can extend this later.
     val firstAudio = remember(noteEvent) { noteEvent.audios().firstOrNull() }
-    // Suppress the markdown content block if it's blank (the title + description already
-    // describe a short episode); otherwise let RichText render it below.
-    val markdown =
-        remember(noteEvent) {
-            noteEvent.content.ifBlank { null }
-        }
+    // Suppress the markdown block if blank — title + description already describe a short
+    // episode. Otherwise hand off to RichText below.
+    val markdown = remember(noteEvent) { noteEvent.content.ifBlank { null } }
 
     Column(MaterialTheme.colorScheme.replyModifier) {
-        PodcastEpisodeCover(image, note, accountViewModel)
+        PodcastCoverCard(image, note, accountViewModel)
         firstAudio?.let { audio ->
-            // No waveform tag in NIP-F4, synthesize a flat baseline. ExoPlayer drives
-            // actual playback progress; the bars are purely decorative.
-            val waveform = remember(note.idHex) { flatWaveform() }
-            val callbackUri = remember(note) { note.toNostrUri() }
-            val playerBorder =
-                remember {
-                    Modifier.clip(RoundedCornerShape(bottomStart = 15.dp, bottomEnd = 15.dp))
-                }
+            val callbackUri = remember(noteEvent) { note.toNostrUri() }
 
             Row(
                 Modifier.fillMaxWidth().height(80.dp),
@@ -135,7 +104,7 @@ private fun PodcastEpisodeBody(
                     aspectRatio = null,
                     proxyPort = accountViewModel.httpClientBuilder.proxyPortForVideo(audio.url),
                     keepPlaying = false,
-                    waveformData = waveform,
+                    waveformData = FLAT_WAVEFORM,
                 ) { mediaItem ->
                     GetVideoController(
                         mediaItem = mediaItem,
@@ -145,8 +114,8 @@ private fun PodcastEpisodeBody(
                         RenderVoicePlayer(
                             mediaItem = mediaItem,
                             controllerState = controller,
-                            waveform = waveform,
-                            borderModifier = playerBorder,
+                            waveform = FLAT_WAVEFORM,
+                            borderModifier = PLAYER_BORDER_MODIFIER,
                             accountViewModel = accountViewModel,
                         )
                     }
@@ -185,7 +154,7 @@ private fun PodcastEpisodeBody(
             markdown?.takeIf { !makeItShort }?.let {
                 Spacer(Modifier.padding(top = 4.dp))
                 val tags = remember(noteEvent) { noteEvent.tags.toImmutableListOfLists() }
-                val callbackUri = remember(note) { note.toNostrUri() }
+                val callbackUri = remember(noteEvent) { note.toNostrUri() }
 
                 TranslatableRichTextViewer(
                     content = it,
@@ -203,40 +172,3 @@ private fun PodcastEpisodeBody(
         }
     }
 }
-
-@Composable
-private fun PodcastEpisodeCover(
-    image: String?,
-    note: Note,
-    accountViewModel: AccountViewModel,
-) {
-    val imageShape = RoundedCornerShape(topStart = 15.dp, topEnd = 15.dp)
-    val imageModifier =
-        Modifier
-            .fillMaxWidth()
-            .aspectRatio(COVER_ASPECT_RATIO)
-            .clip(imageShape)
-
-    Box(imageModifier) {
-        if (image != null) {
-            MyAsyncImage(
-                imageUrl = image,
-                contentDescription = stringRes(R.string.preview_card_image_for, image),
-                contentScale = ContentScale.Crop,
-                mainImageModifier = Modifier.fillMaxSize(),
-                loadedImageModifier = imageModifier,
-                accountViewModel = accountViewModel,
-                onLoadingBackground = { DefaultImageHeaderBackground(note, accountViewModel, imageModifier) },
-                onError = { DefaultImageHeader(note, accountViewModel, imageModifier) },
-            )
-        } else {
-            DefaultImageHeader(note, accountViewModel, imageModifier)
-        }
-    }
-}
-
-private const val WAVEFORM_SAMPLES = 96
-
-private fun flatWaveform(): WaveformData =
-    // Even baseline — purely decorative since NIP-F4 doesn't carry waveform data.
-    WaveformData(List(WAVEFORM_SAMPLES) { 0.4f })

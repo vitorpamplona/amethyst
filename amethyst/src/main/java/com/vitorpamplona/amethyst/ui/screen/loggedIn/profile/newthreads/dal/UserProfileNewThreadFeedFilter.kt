@@ -50,6 +50,8 @@ import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 
 class UserProfileNewThreadFeedFilter(
     val user: User,
@@ -93,6 +95,8 @@ class UserProfileNewThreadFeedFilter(
                     it.event is AudioTrackEvent ||
                     it.event is MusicTrackEvent ||
                     it.event is MusicPlaylistEvent ||
+                    it.event is PodcastEpisodeEvent ||
+                    it.event is PodcastMetadataEvent ||
                     it.event is AudioHeaderEvent ||
                     it.event is VoiceEvent ||
                     it.event is TorrentEvent ||

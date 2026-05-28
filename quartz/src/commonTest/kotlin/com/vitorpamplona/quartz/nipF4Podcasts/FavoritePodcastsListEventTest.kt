@@ -122,6 +122,60 @@ class FavoritePodcastsListEventTest {
         }
 
     @Test
+    fun `moving public favorite to private strips the public p-tag`() =
+        runTest {
+            val publicFirst =
+                FavoritePodcastsListEvent.create(
+                    publicFavorites = listOf(UserTag(podcast1)),
+                    signer = signer,
+                    createdAt = 1_700_000_000,
+                )
+
+            val nowPrivate =
+                FavoritePodcastsListEvent.add(
+                    earlierVersion = publicFirst,
+                    podcast = UserTag(podcast1),
+                    isPrivate = true,
+                    signer = signer,
+                    createdAt = 1_700_000_001,
+                )
+
+            assertFalse(
+                nowPrivate.tags.any { it.size >= 2 && it[0] == "p" && it[1] == podcast1 },
+                "Moving a public favorite to private must strip it from the unencrypted tag list",
+            )
+            val priv = assertNotNull(nowPrivate.privateFavorites(signer))
+            assertEquals(listOf(podcast1), priv.map { it.pubKey })
+        }
+
+    @Test
+    fun `moving private favorite to public strips the encrypted entry`() =
+        runTest {
+            val privateFirst =
+                FavoritePodcastsListEvent.create(
+                    privateFavorites = listOf(UserTag(podcast1)),
+                    signer = signer,
+                    createdAt = 1_700_000_000,
+                )
+
+            val nowPublic =
+                FavoritePodcastsListEvent.add(
+                    earlierVersion = privateFirst,
+                    podcast = UserTag(podcast1),
+                    isPrivate = false,
+                    signer = signer,
+                    createdAt = 1_700_000_001,
+                )
+
+            assertTrue(
+                nowPublic.tags.any { it.size >= 2 && it[0] == "p" && it[1] == podcast1 },
+                "Promoted entry must be present as a public p-tag",
+            )
+            val priv = assertNotNull(nowPublic.privateFavorites(signer))
+            assertTrue(priv.isEmpty(), "Promoted entry must no longer be in the encrypted list")
+        }
+
+    @Test
     fun `remove drops the matching pubkey from public tags`() =
         runTest {
             val first =

@@ -35,6 +35,13 @@ import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 internal val PODCAST_EPISODE_KINDS = listOf(PodcastEpisodeEvent.KIND)
 internal val PODCAST_KINDS = listOf(PodcastMetadataEvent.KIND)
 
+// NOTE on TopFilter.AllFollows / Following for the Podcasts tab: per NIP-F4 each podcast is
+// its own keypair, so podcast pubkeys generally aren't in the user's kind:3 contact list —
+// they live in kind:10054 (FavoritePodcastsListEvent) and kind:10064 (AuthoredPodcastsEvent).
+// With the current resolution the "Following" Podcasts tab returns content only if the user
+// also kind:3-follows a podcast key. A future change should plumb a TopFilter.PodcastFavorites
+// selector through the topNav state and resolve authors via the user's own 10054 list.
+
 fun filterPodcastEventsByAuthors(
     relay: NormalizedRelayUrl,
     kinds: List<Int>,

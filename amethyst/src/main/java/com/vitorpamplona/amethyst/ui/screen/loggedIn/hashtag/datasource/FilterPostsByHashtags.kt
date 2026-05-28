@@ -43,6 +43,8 @@ import com.vitorpamplona.quartz.nip73ExternalIds.topics.HashtagId
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 
 val PostsByHashtagsKinds =
     listOf(
@@ -64,6 +66,8 @@ val PostsByHashtagKinds2 =
         AudioHeaderEvent.KIND,
         MusicTrackEvent.KIND,
         MusicPlaylistEvent.KIND,
+        PodcastEpisodeEvent.KIND,
+        PodcastMetadataEvent.KIND,
         NipTextEvent.KIND,
         ZapPollEvent.KIND,
     )

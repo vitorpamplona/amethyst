@@ -86,19 +86,33 @@ class FavoritePodcastsListEvent(
                 val privateTags =
                     earlierVersion.privateTags(signer)
                         ?: throw SignerExceptions.UnauthorizedDecryptionException()
+                // MUST strip from public too — a podcast that was previously public and is now
+                // being made private must not stay visible in the unencrypted tag list.
                 resign(
-                    tags = earlierVersion.tags,
+                    tags = earlierVersion.tags.remove(podcast.toTagIdOnly()),
                     privateTags = privateTags.remove(podcast.toTagIdOnly()) + podcast.toTagArray(),
                     signer = signer,
                     createdAt = createdAt,
                 )
             } else {
-                resign(
-                    content = earlierVersion.content,
-                    tags = earlierVersion.tags.remove(podcast.toTagIdOnly()) + podcast.toTagArray(),
-                    signer = signer,
-                    createdAt = createdAt,
-                )
+                // Symmetric: strip from private tags too when moving a previously-private
+                // podcast to the public list, otherwise it sits in both halves.
+                val privateTags = earlierVersion.privateTags(signer)
+                if (privateTags != null) {
+                    resign(
+                        tags = earlierVersion.tags.remove(podcast.toTagIdOnly()) + podcast.toTagArray(),
+                        privateTags = privateTags.remove(podcast.toTagIdOnly()),
+                        signer = signer,
+                        createdAt = createdAt,
+                    )
+                } else {
+                    resign(
+                        content = earlierVersion.content,
+                        tags = earlierVersion.tags.remove(podcast.toTagIdOnly()) + podcast.toTagArray(),
+                        signer = signer,
+                        createdAt = createdAt,
+                    )
+                }
             }
 
         suspend fun remove(
