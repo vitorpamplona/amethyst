@@ -2781,15 +2781,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Kunst</string>
     <string name="nowhere_link_card_forum">Nowhere Forum</string>
-    <string name="music_track_uploading_banner">Cover und Audio werden hochgeladen und veröffentlicht. Der Vorgang läuft weiter, auch wenn du den Bildschirm verlässt.</string>
-    <string name="nip82_no_comments">Sei der Erste, der kommentiert.</string>
-    <string name="nip82_older_releases_hide">Ältere Versionen ausblenden</string>
-    <string name="nip82_older_releases_show">Ältere Versionen anzeigen</string>
-    <string name="nip82_section_about">Über</string>
-    <string name="nip82_section_comments">Kommentare</string>
-    <string name="nip82_section_latest_release">Neueste Version</string>
-    <string name="nip82_section_links">Links</string>
-    <string name="nip82_section_platforms">Plattformen</string>
-    <string name="nip82_section_topics">Themen</string>
-    <string name="send">Senden</string>
 </resources>
