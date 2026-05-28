@@ -446,6 +446,7 @@ class CashuMintOperations(
 
             for (offset in 0 until effectiveBatchSize) {
                 val c = counter + offset
+                Log.i("CashuTrace") { "restore.derive c=$c: CashuDeterministic" }
                 // Per-counter derivation: same (secret, r) pair the
                 // wallet would have minted at this counter slot. We
                 // try each amount denomination — the mint will only
@@ -454,7 +455,9 @@ class CashuMintOperations(
                 val secretBytes = CashuDeterministic.secretBytes(seed, keysetId, c)
                 val r = CashuDeterministic.blindingFactor(seed, keysetId, c)
                 val secretHex = secretBytes.toHexKey()
+                Log.i("CashuTrace") { "restore.derive c=$c: Bdhke.blind" }
                 val bTick = Bdhke.blind(secretHex.encodeToByteArray(), r, batchScratch)
+                Log.i("CashuTrace") { "restore.derive c=$c: build dtos for ${denominations.size} denoms" }
                 val bTickHex = bTick.toHexKey()
                 matsByBTick[bTickHex] = CounterMaterials(c, secretHex, r, bTick)
                 for (amount in denominations) {
@@ -462,7 +465,9 @@ class CashuMintOperations(
                 }
             }
 
+            Log.i("CashuTrace") { "restore: HTTP /v1/restore (request ${outputDtos.size} outputs)" }
             val response = client.restore(RestoreRequestDto(outputs = outputDtos))
+            Log.i("CashuTrace") { "restore: HTTP response sigs=${response.signatures.size} echoes=${response.outputs.size}" }
             if (response.signatures.isEmpty()) {
                 emptyStreak++
             } else {
@@ -476,6 +481,7 @@ class CashuMintOperations(
                 // is the source of truth, the echoed amount is not.
                 val restoreScratch = BdhkeScratchpad()
                 for (i in response.signatures.indices) {
+                    Log.i("CashuTrace") { "restore.unblind[$i/${response.signatures.size}] begin" }
                     val echo = response.outputs.getOrNull(i) ?: continue
                     val sig = response.signatures[i]
                     val mat = matsByBTick[echo.bTick] ?: continue
@@ -485,6 +491,7 @@ class CashuMintOperations(
                     if (!recoveredCounters.add(mat.counter)) continue
                     val output = BlindOutput(sig.amount, keysetId, mat.r, mat.secretHex, mat.bTick)
                     val proof = unblindOne(output, sig, keyset, restoreScratch)
+                    Log.i("CashuTrace") { "restore.unblind[$i/${response.signatures.size}] end (counter=${mat.counter} amt=${sig.amount})" }
                     recovered += RecoveredProof(proof, mat.counter)
                     if (mat.counter > highestSeenCounter) highestSeenCounter = mat.counter
                 }

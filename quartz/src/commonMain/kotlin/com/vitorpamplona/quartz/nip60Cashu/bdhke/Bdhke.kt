@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip60Cashu.bdhke
 
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.secp256k1.ECPoint
 import com.vitorpamplona.quartz.utils.secp256k1.Fe4
@@ -116,7 +117,7 @@ object Bdhke {
     fun hashToCurveCompressed(
         x: ByteArray,
         scratch: BdhkeScratchpad,
-    ): ByteArray = toCompressed(hashToCurveInto(x, scratch))
+    ): ByteArray = toCompressedScratch(hashToCurveInto(x, scratch), scratch)
 
     /**
      * Step 1 of BDHKE — Alice creates a blinded message.
@@ -142,16 +143,25 @@ object Bdhke {
         r: ByteArray,
         scratch: BdhkeScratchpad,
     ): ByteArray {
+        Log.i("BdhkeTrace") { " blind enter (secret=${secret.size}b r=${r.size}b)" }
         require(r.size == 32) { "Blinding factor must be 32 bytes" }
+        Log.i("BdhkeTrace") { " blind: Secp256k1.secKeyVerify" }
         require(Secp256k1.secKeyVerify(r)) { "Invalid blinding factor" }
 
+        Log.i("BdhkeTrace") { " blind: hashToCurveInto" }
         val y = hashToCurveInto(secret, scratch)
+        Log.i("BdhkeTrace") { " blind: U256.fromBytesInto" }
         U256.fromBytesInto(scratch.blindFe4Scalar, r, 0)
+        Log.i("BdhkeTrace") { " blind: ECPoint.mulG" }
         ECPoint.mulG(scratch.blindPointRg, scratch.blindFe4Scalar)
 
+        Log.i("BdhkeTrace") { " blind: ECPoint.addPoints" }
         ECPoint.addPoints(scratch.blindPointOut, y, scratch.blindPointRg)
 
-        return toCompressed(scratch.blindPointOut)
+        Log.i("BdhkeTrace") { " blind: toCompressedScratch" }
+        val out = toCompressedScratch(scratch.blindPointOut, scratch)
+        Log.i("BdhkeTrace") { " blind exit" }
+        return out
     }
 
     /**
@@ -207,13 +217,21 @@ object Bdhke {
         mintPubKey: ByteArray,
         scratch: BdhkeScratchpad,
     ): ByteArray {
+        Log.i("BdhkeTrace") { " unblind enter" }
         require(r.size == 32) { "Blinding factor must be 32 bytes" }
 
+        Log.i("BdhkeTrace") { " unblind: parseAffinePointInto cTick" }
         val cTick = parseAffinePointInto(blindSignature, "blind signature", scratch.fe4A, scratch.fe4B, scratch.pointA)
+        Log.i("BdhkeTrace") { " unblind: parseAffinePointInto k" }
         val k = parseAffinePointInto(mintPubKey, "mint public key", scratch.fe4C, scratch.fe4D, scratch.pointB)
+        Log.i("BdhkeTrace") { " unblind: computeNegRkInto" }
         val negRk = computeNegRkInto(k, r, scratch.fe4E, scratch.pointC, scratch.fe4F, scratch.fe4G, scratch.pointD)
+        Log.i("BdhkeTrace") { " unblind: ECPoint.addPoints" }
         ECPoint.addPoints(scratch.outPoint, cTick, negRk)
-        return toCompressed(scratch.outPoint)
+        Log.i("BdhkeTrace") { " unblind: toCompressedScratch" }
+        val out = toCompressedScratch(scratch.outPoint, scratch)
+        Log.i("BdhkeTrace") { " unblind exit" }
+        return out
     }
 
     /** Parse a 33-byte compressed pubkey into [outPoint], using [xHolder]/[yHolder] as scratch. */
@@ -525,7 +543,7 @@ object Bdhke {
         ECPoint.mul(scratch.pointC, scratch.pointB, scratch.fe4E)
 
         ECPoint.addPoints(scratch.outPoint, scratch.pointA, scratch.pointC)
-        return toCompressed(scratch.outPoint)
+        return toCompressedScratch(scratch.outPoint, scratch)
     }
 
     /**
@@ -608,6 +626,24 @@ object Bdhke {
         val y = Fe4()
         require(ECPoint.toAffine(p, x, y)) { "Point is at infinity" }
         return KeyCodec.serializeCompressed(x, y)
+    }
+
+    /**
+     * Allocation-free [toCompressed] — reuses [scratch.toCompressedFe4X] /
+     * [scratch.toCompressedFe4Y] as scratch holders. The returned
+     * ByteArray comes from [KeyCodec.serializeCompressed] which always
+     * allocates fresh, so the result is independent of the scratchpad.
+     *
+     * Used at the tail of every hot crypto op (blind / unblind /
+     * addRTimesA) so the final point-serialization step doesn't
+     * sneak 2 Fe4 allocations back into the inlined body.
+     */
+    private fun toCompressedScratch(
+        p: MutablePoint,
+        scratch: BdhkeScratchpad,
+    ): ByteArray {
+        require(ECPoint.toAffine(p, scratch.toCompressedFe4X, scratch.toCompressedFe4Y)) { "Point is at infinity" }
+        return KeyCodec.serializeCompressed(scratch.toCompressedFe4X, scratch.toCompressedFe4Y)
     }
 
     /**

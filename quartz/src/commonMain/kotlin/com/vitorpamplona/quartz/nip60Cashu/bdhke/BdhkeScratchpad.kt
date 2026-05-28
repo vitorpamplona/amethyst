@@ -109,4 +109,14 @@ class BdhkeScratchpad {
     internal val verifyPointNegEc: MutablePoint = MutablePoint()
     internal val verifyPointR2: MutablePoint = MutablePoint()
     internal val verifyPointTmp: MutablePoint = MutablePoint()
+
+    // Holders used by [Bdhke.toCompressed] (and its OrNull variant).
+    // These are reused at the END of every blind / unblind / addRTimesA
+    // call to convert the result MutablePoint back into a 33-byte
+    // compressed ByteArray. Hot loops (NUT-09 restore, NUT-07 scrub)
+    // call this hundreds of times, so the per-call 2-Fe4 allocation
+    // adds up to the JIT-bug threshold once ART inlines it into the
+    // outer crypto bodies.
+    internal val toCompressedFe4X: Fe4 = Fe4()
+    internal val toCompressedFe4Y: Fe4 = Fe4()
 }
