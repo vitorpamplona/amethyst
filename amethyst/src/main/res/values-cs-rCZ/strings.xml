@@ -2823,22 +2823,4 @@
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Umění</string>
     <string name="nowhere_link_card_forum">Nowhere Fórum</string>
-    <plurals name="music_playlist_track_count_short">
-        <item quantity="one">%1$d stopa</item>
-        <item quantity="few">%1$d stopy</item>
-        <item quantity="many">%1$d stopy</item>
-        <item quantity="other">%1$d stop</item>
-    </plurals>
-    <plurals name="music_playlist_track_count">
-        <item quantity="one">%1$d stopa</item>
-        <item quantity="few">%1$d stopy</item>
-        <item quantity="many">%1$d stopy</item>
-        <item quantity="other">%1$d stop</item>
-    </plurals>
-    <plurals name="music_playlist_more_tracks">
-        <item quantity="one">+%1$d další stopa</item>
-        <item quantity="few">+%1$d další stopy</item>
-        <item quantity="many">+%1$d další stopy</item>
-        <item quantity="other">+%1$d dalších stop</item>
-    </plurals>
 </resources>

@@ -2786,16 +2786,4 @@
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Konst</string>
     <string name="nowhere_link_card_forum">Nowhere Forum</string>
-    <plurals name="music_playlist_track_count_short">
-        <item quantity="one">%1$d spår</item>
-        <item quantity="other">%1$d spår</item>
-    </plurals>
-    <plurals name="music_playlist_track_count">
-        <item quantity="one">%1$d spår</item>
-        <item quantity="other">%1$d spår</item>
-    </plurals>
-    <plurals name="music_playlist_more_tracks">
-        <item quantity="one">+%1$d spår till</item>
-        <item quantity="other">+%1$d spår till</item>
-    </plurals>
 </resources>
