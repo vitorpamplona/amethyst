@@ -252,14 +252,14 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
             NavBarItemDef(
                 id = NavBarItem.PODCAST_EPISODES,
                 labelRes = R.string.route_podcast_episodes,
-                icon = MaterialSymbols.PlayCircle,
+                icon = MaterialSymbols.Headphones,
                 resolveRoute = { Route.PodcastEpisodes },
             ),
         NavBarItem.PODCASTS to
             NavBarItemDef(
                 id = NavBarItem.PODCASTS,
                 labelRes = R.string.route_podcasts,
-                icon = MaterialSymbols.AudioFile,
+                icon = MaterialSymbols.Podcasts,
                 resolveRoute = { Route.Podcasts },
             ),
         NavBarItem.PUBLIC_CHATS to
