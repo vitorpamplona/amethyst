@@ -453,23 +453,25 @@ class Account(
             geohashCache = geohashListDecryptionCache,
         )
 
-    fun topNavFilterFlow(listName: MutableStateFlow<TopFilter>) =
-        FeedTopNavFilterState(
-            feedFilterListName = listName,
-            kind3Follows = kind3FollowList.flow,
-            allFollows = allFollows.flow,
-            locationFlow = geolocationFlow,
-            followsRelays = defaultGlobalRelays.flow,
-            blockedRelays = blockedRelayList.flow,
-            proxyRelays = proxyRelayList.flow,
-            relayFeeds = relayFeedsList.flow,
-            caches = feedDecryptionCaches,
-            signer = signer,
-            scope = scope,
-            favoriteAlgoFeedsOrchestrator = favoriteAlgoFeedsOrchestrator,
-            favoriteAlgoFeedAddresses = favoriteAlgoFeedsList.flow,
-            interestSetHashtags = interestSets.hashtagsByIdentifier,
-        ).flow
+    fun topNavFilterFlow(
+        listName: MutableStateFlow<TopFilter>,
+        scope: CoroutineScope = this.scope,
+    ) = FeedTopNavFilterState(
+        feedFilterListName = listName,
+        kind3Follows = kind3FollowList.flow,
+        allFollows = allFollows.flow,
+        locationFlow = geolocationFlow,
+        followsRelays = defaultGlobalRelays.flow,
+        blockedRelays = blockedRelayList.flow,
+        proxyRelays = proxyRelayList.flow,
+        relayFeeds = relayFeedsList.flow,
+        caches = feedDecryptionCaches,
+        signer = signer,
+        scope = scope,
+        favoriteAlgoFeedsOrchestrator = favoriteAlgoFeedsOrchestrator,
+        favoriteAlgoFeedAddresses = favoriteAlgoFeedsList.flow,
+        interestSetHashtags = interestSets.hashtagsByIdentifier,
+    ).flow
 
     // App-ready Feeds
     val liveHomeFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultHomeFollowList)
