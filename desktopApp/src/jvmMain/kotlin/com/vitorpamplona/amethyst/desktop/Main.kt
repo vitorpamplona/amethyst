@@ -1380,56 +1380,68 @@ fun MainContent(
                                 }
                             }
 
-                        MainSidebar(
-                            activeNpub = accountManager.currentAccount()?.npub,
-                            allAccounts = allAccountsState,
-                            localCache = localCache,
-                            onSwitchAccount = { npub ->
-                                scope.launch(Dispatchers.IO) {
-                                    accountManager.switchAccount(npub)
-                                }
-                            },
-                            onAddAccount = { showAddAccountDialog = true },
-                            onRemoveAccount = { npub ->
-                                scope.launch(Dispatchers.IO) {
-                                    accountManager.removeAccountFromStorage(npub)
-                                }
-                            },
-                            onAddColumn = onShowAppDrawer,
-                            onOpenSettings = {
-                                when (layoutMode) {
-                                    LayoutMode.DECK -> {
-                                        if (deckState.hasColumnOfType(DeckColumnType.Settings)) {
-                                            deckState.focusExistingColumn(DeckColumnType.Settings)
-                                        } else {
-                                            deckState.addColumn(DeckColumnType.Settings)
+                        Box {
+                            MainSidebar(
+                                activeNpub = accountManager.currentAccount()?.npub,
+                                allAccounts = allAccountsState,
+                                localCache = localCache,
+                                onSwitchAccount = { npub ->
+                                    scope.launch(Dispatchers.IO) {
+                                        accountManager.switchAccount(npub)
+                                    }
+                                },
+                                onAddAccount = { showAddAccountDialog = true },
+                                onRemoveAccount = { npub ->
+                                    scope.launch(Dispatchers.IO) {
+                                        accountManager.removeAccountFromStorage(npub)
+                                    }
+                                },
+                                onAddColumn = onShowAppDrawer,
+                                onOpenSettings = {
+                                    when (layoutMode) {
+                                        LayoutMode.DECK -> {
+                                            if (deckState.hasColumnOfType(DeckColumnType.Settings)) {
+                                                deckState.focusExistingColumn(DeckColumnType.Settings)
+                                            } else {
+                                                deckState.addColumn(DeckColumnType.Settings)
+                                            }
+                                        }
+                                        LayoutMode.SINGLE_PANE -> {
+                                            singlePaneState.navigate(DeckColumnType.Settings)
                                         }
                                     }
-                                    LayoutMode.SINGLE_PANE -> {
-                                        singlePaneState.navigate(DeckColumnType.Settings)
-                                    }
-                                }
-                            },
-                            onNavigate = { type ->
-                                when (layoutMode) {
-                                    LayoutMode.DECK -> {
-                                        if (deckState.hasColumnOfType(type)) {
-                                            deckState.focusExistingColumn(type)
-                                        } else {
-                                            deckState.addColumn(type)
+                                },
+                                onNavigate = { type ->
+                                    when (layoutMode) {
+                                        LayoutMode.DECK -> {
+                                            if (deckState.hasColumnOfType(type)) {
+                                                deckState.focusExistingColumn(type)
+                                            } else {
+                                                deckState.addColumn(type)
+                                            }
+                                        }
+                                        LayoutMode.SINGLE_PANE -> {
+                                            singlePaneState.navigate(type)
                                         }
                                     }
-                                    LayoutMode.SINGLE_PANE -> {
-                                        singlePaneState.navigate(type)
-                                    }
-                                }
-                            },
-                            activeColumnType = activeColumnType,
-                            onShowImportFollowListDialog = onShowImportFollowListDialog,
-                            signerConnectionState = signerConnectionState,
-                            lastPingTimeSec = lastPingTimeSec,
-                            torStatus = torStatus,
-                        )
+                                },
+                                activeColumnType = activeColumnType,
+                                onShowImportFollowListDialog = onShowImportFollowListDialog,
+                                signerConnectionState = signerConnectionState,
+                                lastPingTimeSec = lastPingTimeSec,
+                                torStatus = torStatus,
+                            )
+
+                            // Dim sidebar when feed search is active
+                            if (com.vitorpamplona.amethyst.desktop.ui.theme.LocalFeedSearchActive.current.value) {
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .matchParentSize()
+                                            .background(Color.Black.copy(alpha = 0.3f)),
+                                )
+                            }
+                        }
 
                         VerticalDivider()
 

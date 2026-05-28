@@ -581,35 +581,10 @@ fun FeedScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
+        // Layer 1: Feed content (scrollable, behind scrim)
         ReadingColumn {
-            // Header: pinned feed tabs + search pill (or expanded search card)
-            FeedTabsHeader(
-                feedMode = feedMode,
-                activeFeedId = activeFeedId,
-                searchExpanded = searchActive,
-                onSearchExpandedChange = onSearchActiveChange,
-                onFeedModeChange = { mode ->
-                    feedMode = mode
-                    activeFeedId = null
-                    activeFeedSource = null
-                    if (mode != FeedMode.CUSTOM) {
-                        DesktopPreferences.feedMode = mode
-                    }
-                },
-                onNavigateToFeed = { feed ->
-                    val source = feed.source
-                    if (source is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Filter) {
-                        activeFeedId = feed.id
-                        activeFeedSource = source
-                        feedMode = FeedMode.CUSTOM
-                    }
-                },
-                onOpenFeedsDrawer = onOpenFeedsDrawer,
-                onCompose = onCompose,
-                onSearchClick = onSearchClick,
-            )
-
-            Spacer(Modifier.height(8.dp))
+            // Reserve space for the header card that floats above
+            Spacer(Modifier.height(60.dp))
 
             // Feed content based on FeedState
             when (val state = feedState) {
@@ -748,7 +723,7 @@ fun FeedScreen(
             )
         }
 
-        // Search scrim — dims feed content when search is expanded
+        // Layer 2: Search scrim — dims feed content when search is expanded
         if (searchActive) {
             Box(
                 modifier =
@@ -763,6 +738,33 @@ fun FeedScreen(
                         },
             )
         }
+
+        // Layer 3: Header card — rendered AFTER scrim so it floats above it
+        FeedTabsHeader(
+            feedMode = feedMode,
+            activeFeedId = activeFeedId,
+            searchExpanded = searchActive,
+            onSearchExpandedChange = onSearchActiveChange,
+            onFeedModeChange = { mode ->
+                feedMode = mode
+                activeFeedId = null
+                activeFeedSource = null
+                if (mode != FeedMode.CUSTOM) {
+                    DesktopPreferences.feedMode = mode
+                }
+            },
+            onNavigateToFeed = { feed ->
+                val source = feed.source
+                if (source is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Filter) {
+                    activeFeedId = feed.id
+                    activeFeedSource = source
+                    feedMode = FeedMode.CUSTOM
+                }
+            },
+            onOpenFeedsDrawer = onOpenFeedsDrawer,
+            onCompose = onCompose,
+            onSearchClick = onSearchClick,
+        )
 
         // Lightbox overlay
         lightboxState?.let { state ->
