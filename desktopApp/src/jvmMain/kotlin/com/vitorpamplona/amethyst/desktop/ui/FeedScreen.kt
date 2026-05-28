@@ -228,6 +228,7 @@ fun FeedNoteCard(
             val displayData = remember(originalEvent, metadataState) { originalEvent.toNoteDisplayData(localCache) }
             NoteCard(
                 note = displayData,
+                modifier = Modifier.fillMaxWidth(),
                 localCache = localCache,
                 onClick = { onNavigateToThread(originalEvent.id) },
                 onAuthorClick = onNavigateToProfile,
@@ -281,6 +282,7 @@ fun FeedNoteCard(
             val displayData = remember(event, metadataState) { event.toNoteDisplayData(localCache) }
             NoteCard(
                 note = displayData,
+                modifier = Modifier.fillMaxWidth(),
                 localCache = localCache,
                 onClick = { onNavigateToThread(event.id) },
                 onAuthorClick = onNavigateToProfile,

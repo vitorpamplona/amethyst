@@ -41,7 +41,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -416,7 +415,7 @@ private fun SidebarNavItem(
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 2.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(MaterialTheme.shapes.small)
                 .clickable(onClick = onClick)
                 .background(backgroundColor)
                 .onPointerEvent(PointerEventType.Enter) { isHovered = true }
@@ -488,7 +487,7 @@ private fun SidebarFeedItem(
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 2.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(MaterialTheme.shapes.small)
                 .clickable(onClick = onClick)
                 .background(backgroundColor)
                 .onPointerEvent(PointerEventType.Enter) { isHovered = true }

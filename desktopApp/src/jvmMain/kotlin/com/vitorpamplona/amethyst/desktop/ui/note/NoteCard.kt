@@ -237,7 +237,7 @@ fun NoteCard(
                             Modifier
                                 .fillMaxWidth()
                                 .heightIn(max = maxMediaHeight)
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(MaterialTheme.shapes.small)
                                 .then(
                                     if (onImageClick != null) {
                                         Modifier.clickable { onImageClick(imageUrls, index) }
@@ -311,7 +311,7 @@ fun NoteCard(
     if (onClick != null) {
         OutlinedCard(
             onClick = onClick,
-            modifier = modifier.fillMaxWidth(),
+            modifier = modifier,
             colors = cardColors,
             border = cardBorder,
             shape = cardShape,
@@ -319,7 +319,7 @@ fun NoteCard(
         )
     } else {
         OutlinedCard(
-            modifier = modifier.fillMaxWidth(),
+            modifier = modifier,
             colors = cardColors,
             border = cardBorder,
             shape = cardShape,
