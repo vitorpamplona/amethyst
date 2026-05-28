@@ -544,6 +544,12 @@ class CashuMintOperations(
         // Fetch all keysets the mint exposes so cross-keyset tokens
         // verify against the right amount key. Cheap — one round-trip.
         val allKeysets = client.activeKeysets().keysets.associateBy { it.id }
+        // One scratchpad reused across every per-proof Carol verification.
+        // Carol is the heaviest BDHKE pipeline (blind + addRTimesA +
+        // verifyDleq); without sharing this scratch the inbound-nutzap
+        // loop allocates dozens of short-lived holders per proof and
+        // trips the Android 15+ ART JIT crash.
+        val scratch = BdhkeScratchpad()
         for (proof in proofs) {
             val dleq = proof.dleq ?: continue
             val r = dleq.r ?: continue
@@ -562,6 +568,7 @@ class CashuMintOperations(
                     s = dleq.s.hexToByteArray(),
                     unblindedC = proof.c.hexToByteArray(),
                     mintPubKey = mintPubKeyHex.hexToByteArray(),
+                    scratch = scratch,
                 )
             if (!ok) return false
         }
@@ -578,11 +585,15 @@ class CashuMintOperations(
     suspend fun checkStates(proofs: List<CashuProof>): Map<String, ProofState> {
         if (proofs.isEmpty()) return emptyMap()
         // NUT-07 keys check requests by `Y` (hash-to-curve of the secret).
-        val ys = proofs.map { Bdhke.hashToCurveCompressed(it.secret.encodeToByteArray()).toHexKey() }
+        // One scratchpad reused across the per-proof hashToCurve calls so
+        // the pre-send scrub doesn't allocate per-proof on wallets with
+        // many entries (and doesn't trip the ART JIT crash).
+        val scratch = BdhkeScratchpad()
+        val ys = proofs.map { Bdhke.hashToCurveCompressed(it.secret.encodeToByteArray(), scratch).toHexKey() }
         val response = client.checkState(CheckStateRequestDto(ys = ys))
         val secretByY =
             proofs.associateBy {
-                Bdhke.hashToCurveCompressed(it.secret.encodeToByteArray()).toHexKey()
+                Bdhke.hashToCurveCompressed(it.secret.encodeToByteArray(), scratch).toHexKey()
             }
         val out = mutableMapOf<String, ProofState>()
         for (row in response.states) {

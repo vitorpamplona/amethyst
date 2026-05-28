@@ -105,7 +105,18 @@ object Bdhke {
     /**
      * Public form of [hashToCurve] that returns a 33-byte compressed point.
      */
-    fun hashToCurveCompressed(x: ByteArray): ByteArray = toCompressed(hashToCurve(x))
+    fun hashToCurveCompressed(x: ByteArray): ByteArray = hashToCurveCompressed(x, BdhkeScratchpad())
+
+    /**
+     * Allocation-free [hashToCurveCompressed] variant. NUT-07
+     * checkstate hashes every proof's secret once per scrub sweep —
+     * a hot loop where the per-call allocations would otherwise
+     * stack up.
+     */
+    fun hashToCurveCompressed(
+        x: ByteArray,
+        scratch: BdhkeScratchpad,
+    ): ByteArray = toCompressed(hashToCurveInto(x, scratch))
 
     /**
      * Step 1 of BDHKE — Alice creates a blinded message.
@@ -305,79 +316,104 @@ object Bdhke {
         blindedMessage: ByteArray,
         blindSignature: ByteArray,
         mintPubKey: ByteArray,
+    ): Boolean = verifyDleq(e, s, blindedMessage, blindSignature, mintPubKey, BdhkeScratchpad())
+
+    /**
+     * Allocation-free [verifyDleq] variant — same ART JIT escape-analysis
+     * mitigation as [unblind] / [blind]. Carol-side verification runs once
+     * per inbound nutzap proof during auto-redeem, so it's on the hot
+     * path of every nutzap receive.
+     */
+    fun verifyDleq(
+        e: ByteArray,
+        s: ByteArray,
+        blindedMessage: ByteArray,
+        blindSignature: ByteArray,
+        mintPubKey: ByteArray,
+        scratch: BdhkeScratchpad,
     ): Boolean {
         if (e.size != 32 || s.size != 32) return false
         if (blindedMessage.size != 33 || blindSignature.size != 33 || mintPubKey.size != 33) return false
 
-        val eScalar = Fe4()
-        U256.fromBytesInto(eScalar, e, 0)
-        val sScalar = Fe4()
-        U256.fromBytesInto(sScalar, s, 0)
+        U256.fromBytesInto(scratch.verifyFe4E, e, 0)
+        U256.fromBytesInto(scratch.verifyFe4S, s, 0)
         // `s` is `r' + e*k mod n` by construction (NUT-12 §2), so it must
         // be a canonical scalar < n; reject if not.
-        if (!ScalarN.isValid(sScalar)) return false
+        if (!ScalarN.isValid(scratch.verifyFe4S)) return false
         // `e` is a SHA-256 hash output that NUT-12 treats as raw bytes,
         // NOT a scalar mod n — there's no requirement that `e < n`. With
         // probability ~2^-128 a valid proof has `e >= n`; rejecting on
         // `isValid` here would spuriously fail those. We only check that
         // `e` isn't zero (a zero `e` would let any junk signature pass
         // because R1_check / R2_check would collapse to `sG` / `sB'`,
-        // independent of the mint's keyset key). Downstream point
-        // multiplications (`ECPoint.mul(_, A, eScalar)`) handle e >= n
-        // correctly via internal GLV reduction.
-        if (eScalar.isZero()) return false
+        // independent of the mint's keyset key).
+        if (scratch.verifyFe4E.isZero()) return false
 
-        val aX = Fe4()
-        val aY = Fe4()
-        if (!KeyCodec.parsePublicKey(mintPubKey, aX, aY)) return false
-        val aPoint = MutablePoint().also { it.setAffine(aX, aY) }
+        if (!KeyCodec.parsePublicKey(mintPubKey, scratch.verifyFe4Ax, scratch.verifyFe4Ay)) return false
+        scratch.verifyPointA.setAffine(scratch.verifyFe4Ax, scratch.verifyFe4Ay)
 
-        val bX = Fe4()
-        val bY = Fe4()
-        if (!KeyCodec.parsePublicKey(blindedMessage, bX, bY)) return false
-        val bPoint = MutablePoint().also { it.setAffine(bX, bY) }
+        if (!KeyCodec.parsePublicKey(blindedMessage, scratch.verifyFe4Bx, scratch.verifyFe4By)) return false
+        scratch.verifyPointB.setAffine(scratch.verifyFe4Bx, scratch.verifyFe4By)
 
-        val cX = Fe4()
-        val cY = Fe4()
-        if (!KeyCodec.parsePublicKey(blindSignature, cX, cY)) return false
-        val cPoint = MutablePoint().also { it.setAffine(cX, cY) }
+        if (!KeyCodec.parsePublicKey(blindSignature, scratch.verifyFe4Cx, scratch.verifyFe4Cy)) return false
+        scratch.verifyPointC.setAffine(scratch.verifyFe4Cx, scratch.verifyFe4Cy)
 
-        // R1 = sG - eA, R2 = sB' - eC'. We use the unblind() pattern for
-        // point negation: compute the positive multiple, take affine, flip
-        // the Y coordinate. Cheaper than computing (n-e) and re-multiplying.
-        val sG = MutablePoint().also { ECPoint.mulG(it, sScalar) }
-        val eA = MutablePoint().also { ECPoint.mul(it, aPoint, eScalar) }
-        val negEa = negate(eA) ?: return false
-        val r1 = MutablePoint().also { ECPoint.addPoints(it, sG, negEa) }
+        // R1 = sG - eA, R2 = sB' - eC'. Same affine-Y-flip negation
+        // pattern as [unblind]. Uses scratchpad holders throughout.
+        ECPoint.mulG(scratch.verifyPointSg, scratch.verifyFe4S)
+        ECPoint.mul(scratch.verifyPointEa, scratch.verifyPointA, scratch.verifyFe4E)
+        if (!negateInto(scratch.verifyPointEa, scratch.verifyPointNegEa, scratch.verifyFe4Ser, scratch.verifyFe4Ser2)) return false
+        ECPoint.addPoints(scratch.verifyPointR1, scratch.verifyPointSg, scratch.verifyPointNegEa)
 
-        val sB = MutablePoint().also { ECPoint.mul(it, bPoint, sScalar) }
-        val eC = MutablePoint().also { ECPoint.mul(it, cPoint, eScalar) }
-        val negEc = negate(eC) ?: return false
-        val r2 = MutablePoint().also { ECPoint.addPoints(it, sB, negEc) }
+        ECPoint.mul(scratch.verifyPointSb, scratch.verifyPointB, scratch.verifyFe4S)
+        ECPoint.mul(scratch.verifyPointEc, scratch.verifyPointC, scratch.verifyFe4E)
+        if (!negateInto(scratch.verifyPointEc, scratch.verifyPointNegEc, scratch.verifyFe4Ser, scratch.verifyFe4Ser2)) return false
+        ECPoint.addPoints(scratch.verifyPointR2, scratch.verifyPointSb, scratch.verifyPointNegEc)
 
-        val r1Uncompressed = toUncompressedOrNull(r1) ?: return false
-        val r2Uncompressed = toUncompressedOrNull(r2) ?: return false
-        val aUncompressed = compressedToUncompressed(mintPubKey) ?: return false
-        val cUncompressed = compressedToUncompressed(blindSignature) ?: return false
+        // NUT-12 §2 hash input: sha256(utf8(hex(R1) || hex(R2) || hex(A) || hex(C')))
+        // where each hex is the 65-byte uncompressed form (04 || X || Y).
+        // See the original verifyDleq comment for the spec / reference-impl details.
+        val r1Uncompressed = toUncompressedOrNullScratch(scratch.verifyPointR1, scratch.verifyFe4Ser, scratch.verifyFe4Ser2) ?: return false
+        val r2Uncompressed = toUncompressedOrNullScratch(scratch.verifyPointR2, scratch.verifyFe4Ser, scratch.verifyFe4Ser2) ?: return false
+        val aUncompressed = compressedToUncompressedScratch(mintPubKey, scratch.verifyFe4Ser, scratch.verifyFe4Ser2) ?: return false
+        val cUncompressed = compressedToUncompressedScratch(blindSignature, scratch.verifyFe4Ser, scratch.verifyFe4Ser2) ?: return false
 
-        // NUT-12 §2 hash input. The spec text says `sha256(R1 || R2 || A || C')`
-        // but the normative behaviour established by every reference impl
-        // (cashu-ts, nutshell, CDK) is:
-        //   1. Serialize each point as 65-byte UNCOMPRESSED form (04 || X || Y)
-        //   2. Hex-encode each (130 chars per point)
-        //   3. Concatenate the four hex strings (520 chars)
-        //   4. Hash the UTF-8 bytes of that concatenation
-        // Real mints emit `e` computed this way. Earlier versions of this
-        // code used raw 33-byte compressed bytes — round-tripping our own
-        // [signFull] hid the mismatch but every real mint rejected the
-        // proof. CDK's `hash_e` in crates/cashu/src/dhke.rs is the
-        // authoritative reference.
         val hashInput =
             (r1Uncompressed.toHexKey() + r2Uncompressed.toHexKey() + aUncompressed.toHexKey() + cUncompressed.toHexKey())
                 .encodeToByteArray()
 
         val computed = sha256(hashInput)
         return computed.contentEquals(e)
+    }
+
+    /** Allocation-free [negate] — writes into [out], using xHolder / yHolder as scratch. */
+    private fun negateInto(
+        p: MutablePoint,
+        out: MutablePoint,
+        xHolder: Fe4,
+        yHolder: Fe4,
+    ): Boolean {
+        if (!ECPoint.toAffine(p, xHolder, yHolder)) return false
+        FieldP.neg(yHolder, yHolder)
+        out.setAffine(xHolder, yHolder)
+        return true
+    }
+
+    /** Allocation-free [toUncompressedOrNull] — returns the fresh ByteArray, scratch holders reused. */
+    private fun toUncompressedOrNullScratch(
+        p: MutablePoint,
+        xHolder: Fe4,
+        yHolder: Fe4,
+    ): ByteArray? = if (ECPoint.toAffine(p, xHolder, yHolder)) KeyCodec.serializeUncompressed(xHolder, yHolder) else null
+
+    /** Allocation-free [compressedToUncompressed] — returns the fresh ByteArray, scratch holders reused. */
+    private fun compressedToUncompressedScratch(
+        compressed: ByteArray,
+        xHolder: Fe4,
+        yHolder: Fe4,
+    ): ByteArray? {
+        if (!KeyCodec.parsePublicKey(compressed, xHolder, yHolder)) return null
+        return KeyCodec.serializeUncompressed(xHolder, yHolder)
     }
 
     /**
@@ -427,22 +463,40 @@ object Bdhke {
         s: ByteArray,
         unblindedC: ByteArray,
         mintPubKey: ByteArray,
+    ): Boolean = verifyDleqCarol(secret, r, e, s, unblindedC, mintPubKey, BdhkeScratchpad())
+
+    /**
+     * Allocation-free [verifyDleqCarol] variant. The Carol verification
+     * pipeline is the heaviest in BDHKE (one blind + one addRTimesA +
+     * one verifyDleq per call) so a hot loop here without a shared
+     * scratchpad would burn ~40 short-lived holders per proof — exactly
+     * the shape that triggers the Android 15+ ART JIT crash.
+     */
+    fun verifyDleqCarol(
+        secret: ByteArray,
+        r: ByteArray,
+        e: ByteArray,
+        s: ByteArray,
+        unblindedC: ByteArray,
+        mintPubKey: ByteArray,
+        scratch: BdhkeScratchpad,
     ): Boolean {
         if (r.size != 32) return false
         if (unblindedC.size != 33) return false
         if (mintPubKey.size != 33) return false
         // Reconstruct B' the way Alice did at mint time.
-        val bTick = runCatching { blind(secret, r) }.getOrNull() ?: return false
+        val bTick = runCatching { blind(secret, r, scratch) }.getOrNull() ?: return false
         // Reconstruct C' = C + r·A. Without this, verifyDleq is computing
         // the DLEQ check against the wrong point and always returns false
         // — this was a real production bug.
-        val cTick = runCatching { addRTimesA(unblindedC, r, mintPubKey) }.getOrNull() ?: return false
+        val cTick = runCatching { addRTimesA(unblindedC, r, mintPubKey, scratch) }.getOrNull() ?: return false
         return verifyDleq(
             e = e,
             s = s,
             blindedMessage = bTick,
             blindSignature = cTick,
             mintPubKey = mintPubKey,
+            scratch = scratch,
         )
     }
 
@@ -456,25 +510,22 @@ object Bdhke {
         c: ByteArray,
         r: ByteArray,
         mintPubKey: ByteArray,
+        scratch: BdhkeScratchpad,
     ): ByteArray {
-        val cX = Fe4()
-        val cY = Fe4()
-        require(KeyCodec.parsePublicKey(c, cX, cY)) { "Invalid C" }
-        val cPoint = MutablePoint().also { it.setAffine(cX, cY) }
+        // Reuses unblind's holder set — addRTimesA is only called from
+        // verifyDleqCarol, which calls verifyDleq AFTER this one. The
+        // unblind holders are free for the duration of this call.
+        require(KeyCodec.parsePublicKey(c, scratch.fe4A, scratch.fe4B)) { "Invalid C" }
+        scratch.pointA.setAffine(scratch.fe4A, scratch.fe4B)
 
-        val kx = Fe4()
-        val ky = Fe4()
-        require(KeyCodec.parsePublicKey(mintPubKey, kx, ky)) { "Invalid mint public key" }
-        val k = MutablePoint().also { it.setAffine(kx, ky) }
+        require(KeyCodec.parsePublicKey(mintPubKey, scratch.fe4C, scratch.fe4D)) { "Invalid mint public key" }
+        scratch.pointB.setAffine(scratch.fe4C, scratch.fe4D)
 
-        val rScalar = Fe4()
-        U256.fromBytesInto(rScalar, r, 0)
-        val rk = MutablePoint()
-        ECPoint.mul(rk, k, rScalar)
+        U256.fromBytesInto(scratch.fe4E, r, 0)
+        ECPoint.mul(scratch.pointC, scratch.pointB, scratch.fe4E)
 
-        val out = MutablePoint()
-        ECPoint.addPoints(out, cPoint, rk)
-        return toCompressed(out)
+        ECPoint.addPoints(scratch.outPoint, scratch.pointA, scratch.pointC)
+        return toCompressed(scratch.outPoint)
     }
 
     /**

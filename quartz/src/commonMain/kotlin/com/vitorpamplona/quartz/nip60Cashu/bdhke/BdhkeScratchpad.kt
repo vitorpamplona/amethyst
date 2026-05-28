@@ -82,4 +82,31 @@ class BdhkeScratchpad {
     internal val blindPointY: MutablePoint = MutablePoint()
     internal val blindPointRg: MutablePoint = MutablePoint()
     internal val blindPointOut: MutablePoint = MutablePoint()
+
+    // Holders used by [Bdhke.verifyDleq] + [Bdhke.verifyDleqCarol] +
+    // [Bdhke.addRTimesA]. The Carol path runs once per inbound nutzap
+    // or cashu-token proof during redeem, so it lives on the hot
+    // path of receive flows.
+    internal val verifyFe4E: Fe4 = Fe4()
+    internal val verifyFe4S: Fe4 = Fe4()
+    internal val verifyFe4Ax: Fe4 = Fe4()
+    internal val verifyFe4Ay: Fe4 = Fe4()
+    internal val verifyFe4Bx: Fe4 = Fe4()
+    internal val verifyFe4By: Fe4 = Fe4()
+    internal val verifyFe4Cx: Fe4 = Fe4()
+    internal val verifyFe4Cy: Fe4 = Fe4()
+    internal val verifyFe4Ser: Fe4 = Fe4()
+    internal val verifyFe4Ser2: Fe4 = Fe4()
+    internal val verifyPointA: MutablePoint = MutablePoint()
+    internal val verifyPointB: MutablePoint = MutablePoint()
+    internal val verifyPointC: MutablePoint = MutablePoint()
+    internal val verifyPointSg: MutablePoint = MutablePoint()
+    internal val verifyPointEa: MutablePoint = MutablePoint()
+    internal val verifyPointNegEa: MutablePoint = MutablePoint()
+    internal val verifyPointR1: MutablePoint = MutablePoint()
+    internal val verifyPointSb: MutablePoint = MutablePoint()
+    internal val verifyPointEc: MutablePoint = MutablePoint()
+    internal val verifyPointNegEc: MutablePoint = MutablePoint()
+    internal val verifyPointR2: MutablePoint = MutablePoint()
+    internal val verifyPointTmp: MutablePoint = MutablePoint()
 }
