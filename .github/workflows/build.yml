@@ -24,7 +24,7 @@ jobs:
       - name: Set up JDK 21
         uses: actions/setup-java@v5
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: 21
 
       # Remote Gradle build cache: writes on push to main, reads on PRs and
@@ -71,7 +71,7 @@ jobs:
       - name: Set up JDK 21
         uses: actions/setup-java@v5
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: 21
 
       - name: Set up Gradle
@@ -203,7 +203,7 @@ jobs:
       - name: Set up JDK 21
         uses: actions/setup-java@v5
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: 21
 
       - name: Set up Gradle
@@ -256,7 +256,7 @@ jobs:
       - name: Set up JDK 21
         uses: actions/setup-java@v5
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: 21
 
       - name: Set up Gradle
