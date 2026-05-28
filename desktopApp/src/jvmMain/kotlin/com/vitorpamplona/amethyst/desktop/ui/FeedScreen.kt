@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.layout.Arrangement
@@ -33,7 +34,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
@@ -760,69 +760,60 @@ private fun FeedTabsHeader(
     val pinnedFeeds by feedRepo.pinnedFeeds.collectAsState()
     val sidePadding = LocalReadingSidePadding.current
 
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = sidePadding + 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+    Surface(
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = sidePadding + 8.dp, vertical = 8.dp),
     ) {
-        // Pinned feed tabs
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            // Compact feed tabs
             pinnedFeeds.forEach { feed ->
                 val isSelected =
                     when (feed.source) {
-                        is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Following -> {
+                        is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Following ->
                             feedMode == FeedMode.FOLLOWING
-                        }
-
-                        is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Global -> {
+                        is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Global ->
                             feedMode == FeedMode.GLOBAL
-                        }
-
-                        else -> {
-                            activeFeedId == feed.id
-                        }
+                        else -> activeFeedId == feed.id
                     }
                 FilterChip(
                     selected = isSelected,
                     onClick = {
                         when (feed.source) {
-                            is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Following -> {
+                            is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Following ->
                                 onFeedModeChange(FeedMode.FOLLOWING)
-                            }
-
-                            is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Global -> {
+                            is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Global ->
                                 onFeedModeChange(FeedMode.GLOBAL)
-                            }
-
-                            else -> {
-                                onNavigateToFeed(feed)
-                            }
+                            else -> onNavigateToFeed(feed)
                         }
                     },
-                    label = { Text("${feed.emoji} ${feed.name}") },
+                    label = {
+                        Text(
+                            "${feed.emoji} ${feed.name}",
+                            maxLines = 1,
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                    },
                 )
             }
-            // "Show More +" button
-            FilterChip(
-                selected = false,
-                onClick = onOpenFeedsDrawer,
-                label = { Text("+ More") },
-            )
-        }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Search pill — takes remaining center space
             com.vitorpamplona.amethyst.desktop.ui.search.SearchPill(
                 onClick = onSearchClick,
-                modifier = Modifier.width(180.dp),
+                modifier = Modifier.weight(1f),
             )
-            IconButton(onClick = onCompose) {
+
+            // Compose button
+            IconButton(onClick = onCompose, modifier = Modifier.size(32.dp)) {
                 Icon(
                     MaterialSymbols.Edit,
                     contentDescription = "Compose",
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(18.dp),
                 )
             }
         }
