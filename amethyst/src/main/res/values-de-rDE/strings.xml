@@ -131,6 +131,7 @@
     <string name="write_a_message">Eine Nachricht schreiben…</string>
     <string name="post">Beitrag</string>
     <string name="save">Speichern</string>
+    <string name="send">Senden</string>
     <string name="create">Erstellen</string>
     <string name="rename">Umbenennen</string>
     <string name="cancel">Abbrechen</string>
@@ -565,6 +566,14 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nip82_repository_label">Quelle: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Herunterladen</string>
+    <string name="nip82_section_about">Über</string>
+    <string name="nip82_section_platforms">Plattformen</string>
+    <string name="nip82_section_topics">Themen</string>
+    <string name="nip82_section_latest_release">Neueste Version</string>
+    <string name="nip82_section_comments">Kommentare</string>
+    <string name="nip82_no_comments">Sei der Erste, der kommentiert.</string>
+    <string name="nip82_older_releases_show">Ältere Versionen anzeigen</string>
+    <string name="nip82_older_releases_hide">Ältere Versionen ausblenden</string>
     <string name="calendars">Kalender</string>
     <string name="shorts">Kurzvideos</string>
     <string name="public_chats">Öffentliche Chats</string>
@@ -1360,6 +1369,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="external_url_scope">Eine Webseite kommentieren</string>
     <string name="external_id_scope">Eine externe Ressource kommentieren</string>
     <string name="long_form_reading_minutes">%1$d Min. Lesezeit</string>
+    <string name="music_track_uploading_banner">Cover und Audio werden hochgeladen und veröffentlicht. Der Vorgang läuft weiter, auch wenn du den Bildschirm verlässt.</string>
     <string name="loading_location">Standort wird geladen</string>
     <string name="lack_location_permissions">Keine Standortberechtigungen</string>
     <string name="add_sensitive_content_explainer">Fügt eine Warnung für sensiblen Inhalt hinzu, bevor Ihr Inhalt angezeigt wird. Dies ist ideal für NSFW-Inhalte (nicht sicher für die Arbeit) oder Inhalte, die manche Menschen als anstößig oder verstörend empfinden könnten</string>
