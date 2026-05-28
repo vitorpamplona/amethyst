@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.relayClient.searchCommand.subassembli
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.filterMissingEvents
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.filterMissingQuotedAuthorNip65
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.potentialRelaysToFindEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -53,5 +54,8 @@ fun filterByEvent(
             }
         }
 
-    return filterMissingEvents(list)
+    return filterMissingEvents(list) +
+        filterMissingQuotedAuthorNip65(
+            sequenceOf(note) + (note.replyTo?.asSequence() ?: emptySequence()),
+        )
 }

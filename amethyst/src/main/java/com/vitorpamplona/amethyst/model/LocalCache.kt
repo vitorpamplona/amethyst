@@ -117,6 +117,7 @@ import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QuotedEventAuthorHints
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.decodeEventIdAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
@@ -333,6 +334,33 @@ object LocalCache : ILocalCache, ICacheProvider {
     var lnurlEndpointResolver: LnurlEndpointResolver? = null
 
     val relayHints = HintIndexer()
+
+    // Strong-ref hint map: quoted-event id -> author pubkey, extracted from
+    // host-event tag sets via QuotedEventAuthorHints. We can't store this on
+    // the Note placeholder itself because Notes live in a WeakReference-backed
+    // cache (LargeSoftCache); a hint written there can be GC'd before the
+    // missing-event loader consults it. The map gives outbox routing a
+    // survivable backref to the quoted author's NIP-65, without surfacing the
+    // hinted (unverified) author to UI components that read note.author.
+    // Entries are evicted in [justConsumeAndUpdateIndexes] once the real event
+    // arrives, which both contains map growth and naturally invalidates any
+    // attacker-forged hint when the verified author signature lands.
+    val quotedAuthorHints = LargeCache<HexKey, HexKey>()
+
+    // Strong-ref pin for the NIP-65 [AddressableNote] of hinted authors.
+    // [LocalCache.addressables] is a WeakReference-backed cache; an unpinned
+    // AddressableNote (and the [AdvertisedRelayListEvent] it carries) is
+    // reclaimed once the User reference is GC'd. Pinning just the NIP-65
+    // AddressableNote keeps the relay list alive for outbox routing without
+    // dragging the full User object graph (metadata/reports/cards/etc.) along.
+    val quotedAuthorPins = LargeCache<HexKey, Note>()
+
+    // Per-hinted-author last-attempt timestamp (epoch seconds) for the
+    // kind-10002 backfill in [filterMissingQuotedAuthorNip65]. Without this,
+    // NoteEventLoaderSubAssembler's invalidateAfterEose=true re-issues the
+    // same kind-10002 fan-out every loader tick for authors whose NIP-65
+    // simply isn't on the default indexer/search relays.
+    val quotedAuthorNip65Attempts = LruCache<HexKey, Long>(500)
 
     val deletionIndex = DeletionIndex()
 
@@ -2918,6 +2946,14 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         if (wasNew) {
             updateHintIndexes(event)
+            populateCitationAuthorHints(event)
+            // Evict any hint that pointed at this event id: the actual
+            // signed event has now arrived, so [event.pubKey] is the
+            // verified author and the hint (which may have been forged or
+            // wrong about positional pairing) is no longer needed. Bounds
+            // map growth and invalidates attacker-poisoned routing entries
+            // as soon as the legitimate copy lands.
+            quotedAuthorHints.remove(event.id)
         }
 
         if (relay != null) {
@@ -2977,6 +3013,34 @@ object LocalCache : ILocalCache, ICacheProvider {
         if (event is PubKeyHintProvider) {
             event.pubKeyHints().forEach {
                 relayHints.addKey(it.pubkey, it.relay)
+            }
+        }
+    }
+
+    // Records quoted-event author hints in the strong-ref [quotedAuthorHints]
+    // map so the missing-event loader can route the fetch through the quoted
+    // author's NIP-65 outbox even when the Note placeholder has been GC'd.
+    //
+    // Does NOT write to `note.author` — that would (a) be lost the moment GC
+    // clears the WeakReference-backed Note, and (b) surface an unverified
+    // attacker-claimed identity to UI components.
+    //
+    // Gated to BaseNoteEvent. NIP-17 DMs were originally included, but
+    // [quotedAuthorHints] is a process-global singleton — hints written from
+    // account A's DMs would seed routing for account B in the same process.
+    // Replaceable list events, labels, raids etc. also carry `mention`-marked
+    // tags but with different meanings, so they're excluded too.
+    private fun populateCitationAuthorHints(event: Event) {
+        if (event !is BaseNoteEvent) return
+        QuotedEventAuthorHints.collect(event.tags).forEach { hint ->
+            quotedAuthorHints.getOrCreate(hint.eventId) { hint.authorPubKey }
+            // Pin the NIP-65 AddressableNote so the chain
+            // AddressableNote → AdvertisedRelayListEvent survives GC. The
+            // surrounding User WeakRef can be reclaimed safely — the next
+            // [getOrCreateUser] call will re-attach to this same pinned
+            // AddressableNote because [addressables] is keyed by Address.
+            checkGetOrCreateUser(hint.authorPubKey)?.let { user ->
+                quotedAuthorPins.getOrCreate(hint.authorPubKey) { user.nip65RelayListNote }
             }
         }
     }

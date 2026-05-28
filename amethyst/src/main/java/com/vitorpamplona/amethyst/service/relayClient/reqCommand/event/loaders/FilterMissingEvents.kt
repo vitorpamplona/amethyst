@@ -20,13 +20,18 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders
 
+import com.vitorpamplona.amethyst.commons.defaults.DefaultIndexerRelayList
+import com.vitorpamplona.amethyst.commons.defaults.DefaultSearchRelayList
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.mapOfSet
 
 fun potentialRelaysToFindEvent(note: Note): Set<NormalizedRelayUrl> {
@@ -34,7 +39,15 @@ fun potentialRelaysToFindEvent(note: Note): Set<NormalizedRelayUrl> {
 
     set.addAll(LocalCache.relayHints.hintsForEvent(note.idHex))
 
-    note.author?.outboxRelays()?.let { set.addAll(it) }
+    val outboxFromNote = note.author?.outboxRelays()
+    if (outboxFromNote != null) {
+        set.addAll(outboxFromNote)
+    } else {
+        val hintAuthor = LocalCache.quotedAuthorHints.get(note.idHex)
+        if (hintAuthor != null) {
+            LocalCache.checkGetOrCreateUser(hintAuthor)?.outboxRelays()?.let { set.addAll(it) }
+        }
+    }
 
     LocalCache.getAnyChannel(note)?.relays()?.let { set.addAll(it) }
 
@@ -96,7 +109,62 @@ fun filterMissingEvents(keys: List<EventFinderQueryState>): List<RelayBasedFilte
             }
         }
 
-    return filterMissingEvents(eventsPerRelay)
+    return filterMissingEvents(eventsPerRelay) + filterMissingQuotedAuthorNip65(keys.asSequence().map { it.note })
+}
+
+// When a missing-event note has a quoted-author hint but the hinted author's
+// NIP-65 hasn't resolved to a usable outbox yet, emit a parallel kind-10002
+// filter against the default indexer + search relays. The hint alone is
+// useless until outboxRelays() can resolve — this is what closes the loop
+// for Momostr-bridged quoted notes whose author writes only to
+// relay.momostr.pink.
+//
+// The gate matches the consumer ([potentialRelaysToFindEvent] reads
+// [outboxRelays] not [authorRelayList]): a read-only NIP-65 satisfies
+// `authorRelayList() != null` but yields no write relays, so the gate has
+// to track the same null-or-empty outbox condition the consumer sees.
+//
+// Retry suppression: NoteEventLoaderSubAssembler uses invalidateAfterEose,
+// so updateFilter runs on every EOSE — without backoff the same kind-10002
+// fan-out fires forever for bridged authors whose NIP-65 isn't on the
+// default indexer/search relays. We record per-author last-attempt time
+// and skip authors attempted within [NIP65_RETRY_BACKOFF_SECONDS].
+private const val NIP65_RETRY_BACKOFF_SECONDS = 300L
+
+fun filterMissingQuotedAuthorNip65(notes: Sequence<Note>): List<RelayBasedFilter> {
+    val now = TimeUtils.now()
+    val needed = mutableSetOf<HexKey>()
+    notes.forEach { note ->
+        if (note !is AddressableNote && note.event == null) {
+            val hintAuthor = LocalCache.quotedAuthorHints.get(note.idHex)
+            if (hintAuthor != null &&
+                LocalCache.getUserIfExists(hintAuthor)?.outboxRelays().isNullOrEmpty() &&
+                shouldRetryNip65Fetch(hintAuthor, now)
+            ) {
+                needed.add(hintAuthor)
+            }
+        }
+    }
+    if (needed.isEmpty()) return emptyList()
+
+    needed.forEach { LocalCache.quotedAuthorNip65Attempts.put(it, now) }
+
+    val sorted = needed.sorted()
+    val relays = (DefaultIndexerRelayList + DefaultSearchRelayList)
+    return relays.map { relay ->
+        RelayBasedFilter(
+            relay = relay,
+            filter = Filter(kinds = listOf(AdvertisedRelayListEvent.KIND), authors = sorted),
+        )
+    }
+}
+
+private fun shouldRetryNip65Fetch(
+    author: HexKey,
+    nowSec: Long,
+): Boolean {
+    val last = LocalCache.quotedAuthorNip65Attempts.get(author) ?: return true
+    return nowSec - last >= NIP65_RETRY_BACKOFF_SECONDS
 }
 
 fun filterMissingEvents(missingEventIds: Map<NormalizedRelayUrl, Set<String>>): List<RelayBasedFilter> {

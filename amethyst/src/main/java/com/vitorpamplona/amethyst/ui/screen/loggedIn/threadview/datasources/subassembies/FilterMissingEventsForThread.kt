@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.ThreadAssembler
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.filterMissingAddressables
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.filterMissingEvents
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.filterMissingQuotedAuthorNip65
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.potentialRelaysToFindAddress
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders.potentialRelaysToFindEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -71,6 +72,10 @@ fun filterMissingEventsForThread(
 
     val missingEventsFilter = filterMissingEvents(missingEvents)
     val missingAddressFilter = filterMissingAddressables(missingAddresses)
+    val missingQuotedAuthorNip65 =
+        filterMissingQuotedAuthorNip65(
+            sequenceOf(threadInfo.root) + threadInfo.allNotes.asSequence(),
+        )
 
-    return missingEventsFilter + missingAddressFilter
+    return missingEventsFilter + missingAddressFilter + missingQuotedAuthorNip65
 }
