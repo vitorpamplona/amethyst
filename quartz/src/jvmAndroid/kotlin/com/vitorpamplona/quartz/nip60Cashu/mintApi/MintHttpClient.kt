@@ -23,6 +23,12 @@ package com.vitorpamplona.quartz.nip60Cashu.mintApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.long
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -114,7 +120,22 @@ class MintHttpClient(
 
     suspend fun checkState(request: CheckStateRequestDto): CheckStateResponseDto = post("/v1/checkstate", request, CheckStateRequestDto.serializer())
 
-    suspend fun restore(request: RestoreRequestDto): RestoreResponseDto = post("/v1/restore", request, RestoreRequestDto.serializer())
+    /**
+     * NUT-09 restore. Encodes the request through the generated
+     * serializer (small payload — fine for the JIT), but decodes the
+     * response via [Json.parseToJsonElement] (tree API) instead of the
+     * generated `RestoreResponseDto.serializer().deserialize`.
+     *
+     * Why bypass the generated path: on Android 15+ ART crashes the
+     * JIT optimizer (SIGSEGV at offset 0x48 in Jit thread pool) when
+     * it reaches tier-1 compilation of the kotlinx.serialization
+     * generated decode body for `BlindSignatureDto` after ~3-4 batches
+     * of ~300-400 elements each. The tree API uses a different,
+     * smaller, simpler code path that avoids the offending pattern —
+     * the parser is hand-walked here, no generated serializers
+     * involved in the hot loop.
+     */
+    suspend fun restore(request: RestoreRequestDto): RestoreResponseDto = postWithManualResponseDecode("/v1/restore", request, RestoreRequestDto.serializer(), ::parseRestoreResponse)
 
     private suspend inline fun <reified R> get(path: String): R =
         withContext(Dispatchers.IO) {
@@ -154,6 +175,119 @@ class MintHttpClient(
                 json.decodeFromString<R>(text)
             }
         }
+
+    /**
+     * POST + decode-via-callback variant. The encode side still goes
+     * through the generated serializer (request payloads are small),
+     * but the response body is handed to the caller as a JSON string
+     * so the caller can pick a decode path that avoids
+     * kotlinx.serialization's generated deserializers — see [restore]
+     * for the rationale.
+     */
+    private suspend fun <T> postWithManualResponseDecode(
+        path: String,
+        body: T,
+        bodySerializer: kotlinx.serialization.KSerializer<T>,
+        decode: (String) -> RestoreResponseDto,
+    ): RestoreResponseDto =
+        withContext(Dispatchers.IO) {
+            val url = baseUrl + path
+            val client = okHttpClient(url)
+            val bodyJson = json.encodeToString(bodySerializer, body)
+            val req =
+                Request
+                    .Builder()
+                    .url(url)
+                    .post(bodyJson.toRequestBody(jsonMediaType))
+                    .build()
+            client.newCall(req).executeAsync().use { resp ->
+                val text = resp.body.string()
+                if (!resp.isSuccessful) throw decodeError(resp.code, text)
+                decode(text)
+            }
+        }
+
+    /**
+     * Hand-rolled [RestoreResponseDto] decoder.
+     *
+     * Uses [Json.parseToJsonElement] (the JSON-tree API) plus manual
+     * field extraction instead of the generated
+     * `RestoreResponseDto.serializer().deserialize(...)`. The tree API
+     * is a single Json parser routine — much smaller bytecode than
+     * the per-class generated deserializers, and crucially NOT the
+     * code path that ART JIT crashes on at tier-1 compilation on
+     * Android 15+.
+     *
+     * Defensive: missing / wrong-shape fields fall back to safe
+     * defaults (empty lists, null dleq) so a misbehaving mint can't
+     * trip the decoder.
+     */
+    private fun parseRestoreResponse(text: String): RestoreResponseDto {
+        val root =
+            runCatching { json.parseToJsonElement(text).jsonObject }
+                .getOrNull()
+                ?: return RestoreResponseDto(outputs = emptyList(), signatures = emptyList())
+
+        val outputsArr = root["outputs"]?.jsonArray
+        val signaturesArr = root["signatures"]?.jsonArray
+
+        val outputs =
+            outputsArr
+                ?.map { el ->
+                    val o = el.jsonObject
+                    BlindedMessageDto(
+                        amount = o.getValue("amount").jsonPrimitive.long,
+                        id =
+                            o
+                                .getValue("id")
+                                .jsonPrimitive.contentOrNull
+                                .orEmpty(),
+                        bTick =
+                            o
+                                .getValue("B_")
+                                .jsonPrimitive.contentOrNull
+                                .orEmpty(),
+                    )
+                }.orEmpty()
+
+        val signatures =
+            signaturesArr
+                ?.map { el ->
+                    val o = el.jsonObject
+                    val dleq =
+                        (o["dleq"] as? JsonObject)?.let { d ->
+                            DleqProofDto(
+                                e =
+                                    d
+                                        .getValue("e")
+                                        .jsonPrimitive.contentOrNull
+                                        .orEmpty(),
+                                s =
+                                    d
+                                        .getValue("s")
+                                        .jsonPrimitive.contentOrNull
+                                        .orEmpty(),
+                                r = (d["r"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull,
+                            )
+                        }
+                    BlindSignatureDto(
+                        amount = o.getValue("amount").jsonPrimitive.long,
+                        id =
+                            o
+                                .getValue("id")
+                                .jsonPrimitive.contentOrNull
+                                .orEmpty(),
+                        cTick =
+                            o
+                                .getValue("C_")
+                                .jsonPrimitive.contentOrNull
+                                .orEmpty(),
+                        dleq = dleq,
+                    )
+                }.orEmpty()
+
+        return RestoreResponseDto(outputs = outputs, signatures = signatures)
+    }
 
     private fun decodeError(
         status: Int,
