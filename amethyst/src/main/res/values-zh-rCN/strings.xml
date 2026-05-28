@@ -129,6 +129,7 @@
     <string name="write_a_message">写一条消息…</string>
     <string name="post">帖子</string>
     <string name="save">保存</string>
+    <string name="send">发送</string>
     <string name="create">创建</string>
     <string name="rename">重命名</string>
     <string name="cancel">取消</string>
@@ -554,6 +555,15 @@
     <string name="nip82_repository_label">来源： %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">下载</string>
+    <string name="nip82_section_about">关于</string>
+    <string name="nip82_section_platforms">平台</string>
+    <string name="nip82_section_topics">主题</string>
+    <string name="nip82_section_links">链接</string>
+    <string name="nip82_section_latest_release">最新发布</string>
+    <string name="nip82_section_comments">评论</string>
+    <string name="nip82_no_comments">成为第一个评论者。</string>
+    <string name="nip82_older_releases_show">显示旧版本</string>
+    <string name="nip82_older_releases_hide">隐藏旧版本</string>
     <string name="calendars">日历</string>
     <string name="shorts">短视频</string>
     <string name="public_chats">公共聊天</string>
@@ -713,6 +723,33 @@
     <string name="nests_servers_empty">暂无语音聊天服务器。在下方添加一个或选择推荐服务器。</string>
     <string name="longs">视频</string>
     <string name="articles">文章</string>
+    <string name="route_music_tracks">音乐</string>
+    <string name="route_music_playlists">播放列表</string>
+    <string name="new_music_track">新音乐曲目</string>
+    <string name="new_music_playlist">新建播放列表</string>
+    <string name="music_track_title_label">标题</string>
+    <string name="music_track_title_placeholder">歌曲名</string>
+    <string name="music_track_artist_label">艺人</string>
+    <string name="music_track_artist_placeholder">艺人姓名</string>
+    <string name="music_track_audio_url_label">音频URL</string>
+    <string name="music_track_audio_url_placeholder">https://… .mp3</string>
+    <string name="music_track_image_url_label">封面图片URL (可选)</string>
+    <string name="music_track_album_label">专辑（可选）</string>
+    <string name="music_track_duration_label">持续时间以秒为单位 (可选)</string>
+    <string name="music_track_description_label">歌词或作词人 (可选)</string>
+    <string name="music_track_delete">删除此曲目</string>
+    <string name="music_track_delete_confirm">发布此音乐曲目的NIP-09删除？</string>
+    <string name="add_to_music_playlist">添加到播放列表</string>
+    <string name="add_to_music_playlist_title">添加到播放列表</string>
+    <string name="add_to_music_playlist_empty">您尚未有任何播放列表。使用上面的字段创建一个播放列表。</string>
+    <string name="add_to_music_playlist_manage_all">管理所有播放列表</string>
+    <string name="music_playlist_new_dialog_title">新建播放列表</string>
+    <string name="music_playlist_new_title_placeholder">播放列表名称</string>
+    <string name="music_playlist_create_action">创建</string>
+    <string name="music_playlist_untitled">(无标题播放列表)</string>
+    <plurals name="music_playlist_track_count_short">
+        <item quantity="other">%1$d 首曲目</item>
+    </plurals>
     <string name="private_bookmarks">私人书签</string>
     <string name="public_bookmarks">公开书签</string>
     <string name="add_to_private_bookmarks">添加到私人书签</string>
@@ -880,6 +917,7 @@
     <string name="payment_target_authority">地址</string>
     <string name="delete_payment_target">删除付款目标</string>
     <string name="no_payment_app_found">没有找到处理此付款的应用。请安装兼容的钱包。</string>
+    <string name="no_payment_app_found_for_type">没有安装应用程序来处理 %1$s 付款。请安装一个兼容的钱包。</string>
     <string name="error_dialog_payment_error">无法打开付款</string>
     <string name="uploading_state_ready">尚未开始</string>
     <string name="uploading_state_compressing">正在压缩</string>
@@ -1351,6 +1389,24 @@
     <string name="external_url_scope">评论网站</string>
     <string name="external_id_scope">评论外部资源</string>
     <string name="long_form_reading_minutes">需 %1$d 分钟读完</string>
+    <plurals name="music_playlist_track_count">
+        <item quantity="other">%1$d 首曲目</item>
+    </plurals>
+    <plurals name="music_playlist_more_tracks">
+        <item quantity="other">另外 %1$d 首曲目</item>
+    </plurals>
+    <string name="music_playlist_collaborative">协作</string>
+    <string name="music_playlist_private">私密</string>
+    <string name="music_playlist_unknown_track">未知曲目</string>
+    <string name="music_playlist_loading_track">正在载入曲目…</string>
+    <string name="music_track_cover_upload_cta">上传封面图片</string>
+    <string name="music_track_cover_upload_hint">选择一个正方形图像作为这个曲目的艺术作品。</string>
+    <string name="music_track_audio_upload_cta">上传音频文件</string>
+    <string name="music_track_audio_upload_hint">选择 MP3, WAV 或 FLAC。保存时它将被上传到媒体服务器。</string>
+    <string name="music_track_audio_picked">已准备好上传音频文件</string>
+    <string name="music_track_uploading">上传中…</string>
+    <string name="music_track_uploading_banner">正砸上传封面 + 音频和发布。即使您离开屏幕，这也会继续进行。</string>
+    <string name="music_track_upload_failed">上传失败: %1$s</string>
     <string name="loading_location">加载位置中</string>
     <string name="lack_location_permissions">没有位置信息权限</string>
     <string name="add_sensitive_content_explainer">在显示你的内容之前添加敏感的内容警告。针对任何 NSFW 内容或一些人可能觉得有冒犯性或令人不安的内容。</string>
@@ -1446,6 +1502,9 @@
     <string name="wallet_number">钱包 %1$s</string>
     <string name="error_opening_external_signer">打开签名应用时出错</string>
     <string name="error_opening_external_signer_description">找不到签名应用。检查应用是否已被卸载</string>
+    <string name="error_video_playback_failed">无法播放此视频。</string>
+    <string name="error_video_playback_failed_description">此设备不支持该编解码器或格式(%1$s)。请尝试在您的浏览器中打开它。</string>
+    <string name="error_video_open_in_browser">在浏览器中打开</string>
     <string name="sign_request_rejected2">签名请求已被拒绝</string>
     <string name="sign_request_rejected">签名请求被拒绝了</string>
     <string name="sign_request_rejected_description">请确保签名应用程序已授权此交易</string>
@@ -1594,6 +1653,7 @@
     <string name="metadata_strip_failed_upload">仍然上传</string>
     <string name="metadata_strip_failed_upload_cancelled">从媒体删除私密元数据失败。上传取消。</string>
     <string name="upload_cancelled">上传已取消</string>
+    <string name="avif_metadata_strip_failed">无法从 AVIF 删除元数据: %1$s</string>
     <string name="edit_draft">编辑草稿</string>
     <string name="login_with_qr_code">使用二维码登录</string>
     <string name="route">路径</string>
@@ -2243,6 +2303,8 @@
     <string name="kind_user_settings">用户设置</string>
     <string name="kind_audio_header">音频标题</string>
     <string name="kind_audio_track">音轨</string>
+    <string name="kind_music_track">音乐曲目</string>
+    <string name="kind_music_playlist">音乐播放列表</string>
     <string name="kind_badge_awards">徽章奖励</string>
     <string name="kind_badge_definitions">徽章定义</string>
     <string name="kind_accepted_badge_set">接受的徽章集</string>
