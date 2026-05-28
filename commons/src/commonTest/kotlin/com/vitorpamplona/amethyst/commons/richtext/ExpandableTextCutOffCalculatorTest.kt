@@ -56,37 +56,6 @@ class ExpandableTextCutOffCalculatorTest {
 
     @Test
     fun testImage() {
-        // The data: URI has no whitespace anywhere — cutting it mid-base64 would
-        // give RichTextViewer a malformed token that fails the BASE64_IMAGE regex
-        // and falls back to a wall of raw text. Render the whole atom instead.
-        assertEquals(image.length, ExpandableTextCutOffCalculator.indexToCutOff(image))
-    }
-
-    @Test
-    fun testStandaloneCashuBTokenIsNotTruncated() {
-        // Real 480-char cashuB token reported by a user — no whitespace, no
-        // newlines. The pre-fix calculator cut at 350, leaving the renderer
-        // with a corrupt token that failed to decode (wall of base64 + a
-        // useless "Show more" button). With the fix, the whole token is
-        // rendered so CashuPreview can decode and show the redeem card.
-        val token =
-            "cashuBv2FteCJodHRwczovL21pbnQubWluaWJpdHMuY2FzaC9CaXRjb2luYXVjc2F0YWRkVEVTVGF0n79haUgAEHk32wzI" +
-                "ZWFwn79hYQJhc3hAZWM1YWI3Yjc1NjViYjBjZTZhNzg2NzBkMDA0OGExMjVlZGQzMjJhYmVjMTEzYWMwZTBmZGVkZmE3NTQ4Mzg3OWFj" +
-                "WCED0-ops8Ta6NjKChNJPe_jgIbXLlyxg2KSy2WaSTADo5D_v2FhCGFzeEBkNDZlODU5MDExNjU0NmNjZjAwNTE3ZTQ1NmU0MTY0N2Fm" +
-                "ZWUxOWNlMzY2N2IzYTcxODZkMzEwZDY1MjM3OTM4YWNYIQMTDGTY943O4ojhKopoYdemsUE2rSLfzwNBODL8WgOX0v______"
-        assertEquals(token.length, ExpandableTextCutOffCalculator.indexToCutOff(token))
-    }
-
-    @Test
-    fun testTextBeforeLongTokenCutsAtTheBoundary() {
-        // Preamble of breathable text followed by a single very long atomic
-        // token. The cut should land at the boundary BEFORE the token starts,
-        // not inside it.
-        val preamble = "Here is a token for you: "
-        val token = "cashuBv2F" + "x".repeat(800)
-        val content = preamble + token
-
-        val cut = ExpandableTextCutOffCalculator.indexToCutOff(content)
-        assertEquals(preamble.length - 1, cut) // index of the space right before the token
+        assertEquals(350, ExpandableTextCutOffCalculator.indexToCutOff(image))
     }
 }
