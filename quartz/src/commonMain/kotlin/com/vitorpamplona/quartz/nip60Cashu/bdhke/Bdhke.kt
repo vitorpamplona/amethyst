@@ -722,9 +722,19 @@ object Bdhke {
     private const val MAX_HASH_TO_CURVE_ITERATIONS = 65536
 
     /**
-     * How many times [warmup] exercises [blind] / [unblind]. Set high
-     * enough that ART's tier-1 (optimizing) compile threshold is
-     * crossed during init, not during a user-triggered restore.
+     * How many times [warmup] exercises [blind] / [unblind].
+     *
+     * 32 iterations was enough for ART tier-0 (baseline) but NOT
+     * tier-1 (optimizing). The diagnostic logs showed batches 1-3
+     * completing fine, then batch 4 crashing — exactly when tier-1
+     * compile triggers on [Bdhke.unblind] (~21 production unblinds
+     * crossed the optimizer threshold). Bump to 2048 so tier-1
+     * fires during the background warmup coroutine where a crash
+     * would be visible but not user-facing.
+     *
+     * ~1ms per blind+unblind cycle on a mid-range Android 15 device
+     * → ~4 seconds of background warmup at app start. Acceptable for
+     * the protection it provides.
      */
-    private const val JIT_WARMUP_ITERATIONS = 32
+    private const val JIT_WARMUP_ITERATIONS = 2048
 }

@@ -56,7 +56,17 @@ import kotlin.concurrent.Volatile
  * (visible at app start) instead of mid-recovery.
  */
 object MintApiSerializerWarmup {
-    private const val WARMUP_ELEMENT_COUNT = 32
+    /**
+     * Per-payload element count. The serializer warmup decodes one
+     * synthetic [RestoreResponseDto] with [WARMUP_ELEMENT_COUNT] entries
+     * and one synthetic [SwapResponseDto] with [WARMUP_ELEMENT_COUNT] entries.
+     * Beyond the restore endpoint (which now uses a hand-rolled
+     * tree-API decode and doesn't reach kotlinx.serialization at all),
+     * the swap / mint / melt decoders still go through generated code.
+     * 128 elements gives them tier-0 baseline coverage without the
+     * tier-1 escape-analysis crash we hit on /v1/restore.
+     */
+    private const val WARMUP_ELEMENT_COUNT = 128
 
     private val json =
         Json {
