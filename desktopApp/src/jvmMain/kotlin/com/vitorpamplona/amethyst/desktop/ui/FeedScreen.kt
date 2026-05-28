@@ -20,6 +20,12 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.TooltipArea
@@ -35,6 +41,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -56,6 +63,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -71,13 +79,13 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import com.vitorpamplona.amethyst.commons.compose.elements.BoostedMark
 import com.vitorpamplona.amethyst.commons.compose.layouts.GenericRepostLayout
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
+import com.vitorpamplona.amethyst.commons.search.AdvancedSearchBarState
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
@@ -105,6 +113,7 @@ import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
 import com.vitorpamplona.amethyst.desktop.ui.note.NoteCard
 import com.vitorpamplona.amethyst.desktop.ui.relay.LocalRelayCategories
 import com.vitorpamplona.amethyst.desktop.ui.relay.Nip65RelayEditor
+import com.vitorpamplona.amethyst.desktop.ui.search.SearchResultsList
 import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -764,6 +773,9 @@ fun FeedScreen(
             onOpenFeedsDrawer = onOpenFeedsDrawer,
             onCompose = onCompose,
             onSearchClick = onSearchClick,
+            localCache = localCache,
+            onNavigateToProfile = onNavigateToProfile,
+            onNavigateToThread = onNavigateToThread,
         )
 
         // Lightbox overlay
@@ -799,10 +811,38 @@ private fun FeedTabsHeader(
     onOpenFeedsDrawer: () -> Unit,
     onCompose: () -> Unit,
     onSearchClick: () -> Unit = {},
+    localCache: DesktopLocalCache? = null,
+    onNavigateToProfile: (String) -> Unit = {},
+    onNavigateToThread: (String) -> Unit = {},
 ) {
     val feedRepo = com.vitorpamplona.amethyst.desktop.ui.deck.LocalFeedRepository.current
     val pinnedFeeds by feedRepo.pinnedFeeds.collectAsState()
     val sidePadding = LocalReadingSidePadding.current
+    val scope = rememberCoroutineScope()
+    val searchState = remember { AdvancedSearchBarState(scope) }
+    var searchText by remember { mutableStateOf(TextFieldValue("")) }
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+
+    // Sync search text to AdvancedSearchBarState
+    LaunchedEffect(searchText.text) {
+        searchState.updateFromText(searchText.text)
+    }
+
+    // Clear on collapse
+    LaunchedEffect(searchExpanded) {
+        if (!searchExpanded) {
+            searchText = TextFieldValue("")
+            searchState.clearSearch()
+        }
+    }
+
+    // Auto-focus when expanded
+    LaunchedEffect(searchExpanded) {
+        if (searchExpanded) {
+            focusRequester.requestFocus()
+        }
+    }
 
     Surface(
         shape = MaterialTheme.shapes.medium,
@@ -811,8 +851,7 @@ private fun FeedTabsHeader(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = sidePadding + 8.dp, vertical = 8.dp)
-                .zIndex(if (searchExpanded) 10f else 0f),
+                .padding(horizontal = sidePadding + 8.dp, vertical = 8.dp),
     ) {
         Column {
             // Always-visible header row: tabs + search + compose
@@ -821,7 +860,7 @@ private fun FeedTabsHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                // Feed tabs — always visible
+                // Feed tabs — always visible. Clicking collapses search.
                 pinnedFeeds.forEach { feed ->
                     val isSelected =
                         when (feed.source) {
@@ -834,6 +873,7 @@ private fun FeedTabsHeader(
                     FilterChip(
                         selected = isSelected,
                         onClick = {
+                            onSearchExpandedChange(false)
                             when (feed.source) {
                                 is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Following ->
                                     onFeedModeChange(FeedMode.FOLLOWING)
@@ -854,11 +894,58 @@ private fun FeedTabsHeader(
 
                 // Search: pill when collapsed, active input when expanded
                 if (searchExpanded) {
-                    SearchInput(
-                        onDismiss = { onSearchExpandedChange(false) },
-                        onOpenFullSearch = onSearchClick,
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.weight(1f),
-                    )
+                    ) {
+                        Icon(
+                            MaterialSymbols.Search,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        BasicTextField(
+                            value = searchText,
+                            onValueChange = { searchText = it },
+                            modifier =
+                                Modifier
+                                    .weight(1f)
+                                    .focusRequester(focusRequester)
+                                    .onPreviewKeyEvent { event ->
+                                        if (event.type == KeyEventType.KeyDown && event.key == Key.Escape) {
+                                            onSearchExpandedChange(false)
+                                            focusManager.clearFocus()
+                                            true
+                                        } else {
+                                            false
+                                        }
+                                    },
+                            textStyle =
+                                MaterialTheme.typography.bodyMedium.copy(
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                ),
+                            singleLine = true,
+                            decorationBox = { innerTextField ->
+                                Box(contentAlignment = Alignment.CenterStart) {
+                                    if (searchText.text.isEmpty()) {
+                                        Text(
+                                            "Search notes, profiles, hashtags...",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            },
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            if (PlatformInfo.isMacOS) "\u2318F" else "Ctrl+F",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        )
+                    }
                 } else {
                     com.vitorpamplona.amethyst.desktop.ui.search.SearchPill(
                         onClick = { onSearchExpandedChange(true) },
@@ -876,94 +963,68 @@ private fun FeedTabsHeader(
                 }
             }
 
-            // Card extends downward with history when search is focused
-            if (searchExpanded) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                SearchHistorySection(
-                    onOpenFullSearch = {
-                        onSearchExpandedChange(false)
-                        onSearchClick()
-                    },
-                )
-            }
-        }
-    }
-}
+            // Animated expanding section: history or search results
+            AnimatedVisibility(
+                visible = searchExpanded,
+                enter = expandVertically(animationSpec = tween(200)) + fadeIn(tween(200)),
+                exit = shrinkVertically(animationSpec = tween(150)) + fadeOut(tween(100)),
+            ) {
+                Column {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-@Composable
-private fun SearchInput(
-    onDismiss: () -> Unit,
-    onOpenFullSearch: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val focusRequester = remember { FocusRequester() }
-    val focusManager = LocalFocusManager.current
-    var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
+                    val hasQuery = searchText.text.isNotBlank()
+                    if (hasQuery) {
+                        // Show search results (reuses SearchResultsList)
+                        SearchResultsList(
+                            state = searchState,
+                            onNavigateToProfile = { pubkey ->
+                                onSearchExpandedChange(false)
+                                onNavigateToProfile(pubkey)
+                            },
+                            onNavigateToThread = { noteId ->
+                                onSearchExpandedChange(false)
+                                onNavigateToThread(noteId)
+                            },
+                            localCache = localCache,
+                            modifier = Modifier.heightIn(max = 400.dp).fillMaxWidth(),
+                        )
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier,
-    ) {
-        Icon(
-            MaterialSymbols.Search,
-            contentDescription = null,
-            modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.width(8.dp))
-        BasicTextField(
-            value = textFieldValue,
-            onValueChange = { textFieldValue = it },
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .focusRequester(focusRequester)
-                    .onPreviewKeyEvent { event ->
-                        if (event.type == KeyEventType.KeyDown) {
-                            when (event.key) {
-                                Key.Escape -> {
-                                    onDismiss()
-                                    focusManager.clearFocus()
-                                    true
-                                }
-                                Key.Enter -> {
-                                    onOpenFullSearch()
-                                    true
-                                }
-                                else -> false
-                            }
-                        } else {
-                            false
+                        // "Open full search" link
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onSearchExpandedChange(false)
+                                        onSearchClick()
+                                    }.padding(horizontal = 16.dp, vertical = 8.dp),
+                        ) {
+                            Icon(
+                                MaterialSymbols.AutoMirrored.OpenInNew,
+                                null,
+                                Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text("Open full search", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                         }
-                    },
-            textStyle =
-                MaterialTheme.typography.bodyMedium.copy(
-                    color = MaterialTheme.colorScheme.onSurface,
-                ),
-            singleLine = true,
-            decorationBox = { innerTextField ->
-                Box(contentAlignment = Alignment.CenterStart) {
-                    if (textFieldValue.text.isEmpty()) {
-                        Text(
-                            "Search notes, profiles, hashtags...",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    } else {
+                        // Show search history when empty
+                        SearchHistorySection(
+                            onOpenFullSearch = {
+                                onSearchExpandedChange(false)
+                                onSearchClick()
+                            },
                         )
                     }
-                    innerTextField()
                 }
-            },
-        )
-        Spacer(Modifier.width(8.dp))
-        Text(
-            if (PlatformInfo.isMacOS) "\u2318F" else "Ctrl+F",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-        )
-    }
-
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+            }
+        }
     }
 }
 
@@ -994,12 +1055,7 @@ private fun SearchHistorySection(onOpenFullSearch: () -> Unit) {
                             .clickable { onOpenFullSearch() }
                             .padding(horizontal = 16.dp, vertical = 8.dp),
                 ) {
-                    Icon(
-                        MaterialSymbols.History,
-                        null,
-                        Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Icon(MaterialSymbols.History, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.width(10.dp))
                     Text(text, style = MaterialTheme.typography.bodySmall, maxLines = 1)
                 }
@@ -1008,62 +1064,29 @@ private fun SearchHistorySection(onOpenFullSearch: () -> Unit) {
 
         if (savedSearches.isNotEmpty()) {
             if (history.isNotEmpty()) {
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
             }
-            Text(
-                "Saved",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-            )
+            Text("Saved", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
             savedSearches.take(5).forEach { saved ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable { onOpenFullSearch() }
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().clickable { onOpenFullSearch() }.padding(horizontal = 16.dp, vertical = 8.dp),
                 ) {
-                    Icon(
-                        MaterialSymbols.Bookmark,
-                        null,
-                        Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
+                    Icon(MaterialSymbols.Bookmark, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(10.dp))
                     Text(saved.label, style = MaterialTheme.typography.bodySmall, maxLines = 1)
                 }
             }
         }
 
-        HorizontalDivider(
-            color = MaterialTheme.colorScheme.outlineVariant,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        )
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .clickable { onOpenFullSearch() }
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().clickable { onOpenFullSearch() }.padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
-            Icon(
-                MaterialSymbols.AutoMirrored.OpenInNew,
-                null,
-                Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
+            Icon(MaterialSymbols.AutoMirrored.OpenInNew, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.width(10.dp))
-            Text(
-                "Open full search",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            Text("Open full search", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
         }
     }
 }
