@@ -39,8 +39,10 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.MaxWidthPaddingTop5dp
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.coroutineContext
 
 @Composable
@@ -101,7 +103,13 @@ fun TranslatableRichTextViewer(
 
     LaunchedEffect(content, translateTo, dontTranslateFrom) {
         try {
-            translatedTextState.value = translateAndCache(content, translateTo, dontTranslateFrom)
+            // ML Kit's first-touch class init reads a Properties file out of the play-services AAR
+            // via ZipFile/RandomAccessFile, which trips StrictMode if it runs on the UI dispatcher
+            // that LaunchedEffect uses by default.
+            translatedTextState.value =
+                withContext(Dispatchers.IO) {
+                    translateAndCache(content, translateTo, dontTranslateFrom)
+                }
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
