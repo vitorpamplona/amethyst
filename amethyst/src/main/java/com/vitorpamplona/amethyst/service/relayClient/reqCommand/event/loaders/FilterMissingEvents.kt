@@ -132,19 +132,41 @@ fun filterMissingEvents(keys: List<EventFinderQueryState>): List<RelayBasedFilte
 private const val NIP65_RETRY_BACKOFF_SECONDS = 300L
 
 fun filterMissingQuotedAuthorNip65(notes: Sequence<Note>): List<RelayBasedFilter> {
-    val now = TimeUtils.now()
-    val needed = mutableSetOf<HexKey>()
+    val authors = mutableSetOf<HexKey>()
     notes.forEach { note ->
         if (note !is AddressableNote && note.event == null) {
-            val hintAuthor = LocalCache.quotedAuthorHints.get(note.idHex)
-            if (hintAuthor != null &&
-                LocalCache.getUserIfExists(hintAuthor)?.outboxRelays().isNullOrEmpty() &&
-                shouldRetryNip65Fetch(hintAuthor, now)
-            ) {
-                needed.add(hintAuthor)
-            }
+            LocalCache.quotedAuthorHints.get(note.idHex)?.let { authors.add(it) }
         }
     }
+    return emitNip65BackfillForUnresolvedAuthors(authors)
+}
+
+// The addressable counterpart: an unresolved AddressableNote already carries
+// its author in the address (kind:pubkey:d), but the outbox lookup in
+// [potentialRelaysToFindAddress] still depends on the author's NIP-65 being
+// cached. When it isn't, the fetch falls back to the user's own write
+// relays and misses bridged / long-tail authors. This emits the same
+// kind-10002 backfill we use for event-id quotes, sharing the throttle
+// (LocalCache.quotedAuthorNip65Attempts) so a single session can't fan out
+// indefinitely against indexer/search relays.
+fun filterMissingAddressableAuthorNip65(notes: Sequence<Note>): List<RelayBasedFilter> {
+    val authors = mutableSetOf<HexKey>()
+    notes.forEach { note ->
+        if (note is AddressableNote && note.event == null) {
+            authors.add(note.address.pubKeyHex)
+        }
+    }
+    return emitNip65BackfillForUnresolvedAuthors(authors)
+}
+
+private fun emitNip65BackfillForUnresolvedAuthors(authors: Set<HexKey>): List<RelayBasedFilter> {
+    if (authors.isEmpty()) return emptyList()
+    val now = TimeUtils.now()
+    val needed =
+        authors.filterTo(mutableSetOf()) {
+            LocalCache.getUserIfExists(it)?.outboxRelays().isNullOrEmpty() &&
+                shouldRetryNip65Fetch(it, now)
+        }
     if (needed.isEmpty()) return emptyList()
 
     needed.forEach { LocalCache.quotedAuthorNip65Attempts.put(it, now) }

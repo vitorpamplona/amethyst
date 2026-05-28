@@ -93,7 +93,8 @@ fun filterMissingAddressables(keys: List<EventFinderQueryState>): List<RelayBase
             }
         }
 
-    return filterMissingAddressables(addressesPerRelay)
+    return filterMissingAddressables(addressesPerRelay) +
+        filterMissingAddressableAuthorNip65(keys.asSequence().map { it.note })
 }
 
 fun filterMissingAddressables(missingAddressables: Map<NormalizedRelayUrl, Set<Address>>): List<RelayBasedFilter> {
