@@ -82,15 +82,6 @@ object CachedRichTextParser {
     }
 
     private fun computeIsMarkdown(content: String): Boolean {
-        // Safety net for the mixed-content case: a chat that has BOTH
-        // a cashu token AND real markdown (e.g. "**enjoy** cashuB...")
-        // would otherwise be routed to RenderContentAsMarkdown, which
-        // has no CashuSegment support, and the cashu card disappears.
-        // The intraword-underscore rule below already handles
-        // cashu-only messages correctly; this short-circuit only
-        // matters when markdown chars also appear.
-        if (content.contains("cashuA", true) || content.contains("cashuB", true)) return false
-
         val len = content.length
         if (len == 0) return false
 
