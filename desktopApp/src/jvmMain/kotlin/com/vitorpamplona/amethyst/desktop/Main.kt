@@ -263,6 +263,7 @@ fun main() {
         var showAppDrawer by remember { mutableStateOf(false) }
         var showAddColumnDialog by remember { mutableStateOf(false) }
         var showImportFollowListDialog by remember { mutableStateOf(false) }
+        var showSearchSpotlight by remember { mutableStateOf(false) }
 
         // Tor state at Window level — survives key() app rebuild
         var torSettings by remember {
@@ -444,6 +445,16 @@ fun main() {
                 }
                 Menu("View") {
                     Item(
+                        "Search",
+                        shortcut =
+                            if (isMacOS) {
+                                KeyShortcut(Key.F, meta = true)
+                            } else {
+                                KeyShortcut(Key.F, ctrl = true)
+                            },
+                        onClick = { showSearchSpotlight = true },
+                    )
+                    Item(
                         "App Drawer",
                         shortcut =
                             if (isMacOS) {
@@ -618,6 +629,9 @@ fun main() {
                         accountManager = accountManager,
                         showComposeDialog = showComposeDialog,
                         showAppDrawer = showAppDrawer,
+                        showSearchSpotlight = showSearchSpotlight,
+                        onShowSearchSpotlight = { showSearchSpotlight = true },
+                        onDismissSearchSpotlight = { showSearchSpotlight = false },
                         onShowComposeDialog = { showComposeDialog = true },
                         onShowReplyDialog = { event ->
                             replyToNote = event
@@ -655,6 +669,9 @@ fun App(
     accountManager: AccountManager,
     showComposeDialog: Boolean,
     showAppDrawer: Boolean,
+    showSearchSpotlight: Boolean,
+    onShowSearchSpotlight: () -> Unit,
+    onDismissSearchSpotlight: () -> Unit,
     onShowComposeDialog: () -> Unit,
     onShowReplyDialog: (com.vitorpamplona.quartz.nip01Core.core.Event) -> Unit,
     onDismissComposeDialog: () -> Unit,
@@ -1056,6 +1073,61 @@ fun App(
                                     account = account,
                                     localCache = localCache,
                                     replyTo = replyToNote,
+                                )
+                            }
+
+                            // Search Spotlight overlay
+                            if (showSearchSpotlight) {
+                                com.vitorpamplona.amethyst.desktop.ui.search.SearchSpotlight(
+                                    onSelectProfile = { pubkey ->
+                                        onDismissSearchSpotlight()
+                                        when (layoutMode) {
+                                            LayoutMode.DECK -> {
+                                                deckState.addColumn(DeckColumnType.Profile(pubkey))
+                                            }
+                                            LayoutMode.SINGLE_PANE -> {
+                                                singlePaneState.navigate(DeckColumnType.MyProfile)
+                                            }
+                                        }
+                                    },
+                                    onSelectNote = { noteId ->
+                                        onDismissSearchSpotlight()
+                                        when (layoutMode) {
+                                            LayoutMode.DECK -> {
+                                                deckState.addColumn(DeckColumnType.Thread(noteId))
+                                            }
+                                            LayoutMode.SINGLE_PANE -> {
+                                                singlePaneState.navigate(DeckColumnType.HomeFeed)
+                                            }
+                                        }
+                                    },
+                                    onSelectHashtag = { tag ->
+                                        onDismissSearchSpotlight()
+                                        when (layoutMode) {
+                                            LayoutMode.DECK -> {
+                                                deckState.addColumn(DeckColumnType.Hashtag(tag))
+                                            }
+                                            LayoutMode.SINGLE_PANE -> {
+                                                singlePaneState.navigate(DeckColumnType.Search)
+                                            }
+                                        }
+                                    },
+                                    onOpenFullSearch = { queryText ->
+                                        onDismissSearchSpotlight()
+                                        when (layoutMode) {
+                                            LayoutMode.DECK -> {
+                                                if (deckState.hasColumnOfType(DeckColumnType.Search)) {
+                                                    deckState.focusExistingColumn(DeckColumnType.Search)
+                                                } else {
+                                                    deckState.addColumn(DeckColumnType.Search)
+                                                }
+                                            }
+                                            LayoutMode.SINGLE_PANE -> {
+                                                singlePaneState.navigate(DeckColumnType.Search)
+                                            }
+                                        }
+                                    },
+                                    onDismiss = { onDismissSearchSpotlight() },
                                 )
                             }
 

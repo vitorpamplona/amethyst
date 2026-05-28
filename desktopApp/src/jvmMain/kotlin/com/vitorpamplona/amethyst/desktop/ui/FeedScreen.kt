@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
@@ -297,6 +298,7 @@ fun FeedScreen(
     onNavigateToThread: (String) -> Unit = {},
     onZapFeedback: (ZapFeedback) -> Unit = {},
     onNavigateToRelays: () -> Unit = {},
+    onSearchClick: () -> Unit = {},
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val connectedRelays by relayManager.connectedRelays.collectAsState()
@@ -580,6 +582,7 @@ fun FeedScreen(
                 },
                 onOpenFeedsDrawer = onOpenFeedsDrawer,
                 onCompose = onCompose,
+                onSearchClick = onSearchClick,
             )
 
             Spacer(Modifier.height(8.dp))
@@ -751,6 +754,7 @@ private fun FeedTabsHeader(
     onNavigateToFeed: (com.vitorpamplona.amethyst.commons.feeds.custom.FeedDefinition) -> Unit = {},
     onOpenFeedsDrawer: () -> Unit,
     onCompose: () -> Unit,
+    onSearchClick: () -> Unit = {},
 ) {
     val feedRepo = com.vitorpamplona.amethyst.desktop.ui.deck.LocalFeedRepository.current
     val pinnedFeeds by feedRepo.pinnedFeeds.collectAsState()
@@ -809,13 +813,18 @@ private fun FeedTabsHeader(
             )
         }
 
-        // Compose button
-        IconButton(onClick = onCompose) {
-            Icon(
-                MaterialSymbols.Edit,
-                contentDescription = "Compose",
-                modifier = Modifier.size(20.dp),
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            com.vitorpamplona.amethyst.desktop.ui.search.SearchPill(
+                onClick = onSearchClick,
+                modifier = Modifier.width(180.dp),
             )
+            IconButton(onClick = onCompose) {
+                Icon(
+                    MaterialSymbols.Edit,
+                    contentDescription = "Compose",
+                    modifier = Modifier.size(20.dp),
+                )
+            }
         }
     }
 }
