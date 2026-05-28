@@ -229,7 +229,7 @@ object CashuDeterministic {
             chars[i * 2] = HEX_CHARS[v ushr 4]
             chars[i * 2 + 1] = HEX_CHARS[v and 0xF]
         }
-        return String(chars)
+        return chars.concatToString()
     }
 
     private val HEX_CHARS = charArrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f')
