@@ -58,11 +58,12 @@ fun ColumnHeader(
                 .fillMaxWidth()
                 .height(48.dp)
                 .background(MaterialTheme.colorScheme.surfaceContainer)
+                .padding(horizontal = 12.dp)
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onDoubleTap = { onDoubleClick() },
                     )
-                }.padding(horizontal = 12.dp),
+                },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (hasBackStack) {

@@ -417,8 +417,8 @@ private fun SidebarNavItem(
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 2.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(backgroundColor)
                 .clickable(onClick = onClick)
+                .background(backgroundColor)
                 .onPointerEvent(PointerEventType.Enter) { isHovered = true }
                 .onPointerEvent(PointerEventType.Exit) { isHovered = false }
                 .padding(horizontal = 8.dp, vertical = 8.dp),
@@ -489,8 +489,8 @@ private fun SidebarFeedItem(
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 2.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(backgroundColor)
                 .clickable(onClick = onClick)
+                .background(backgroundColor)
                 .onPointerEvent(PointerEventType.Enter) { isHovered = true }
                 .onPointerEvent(PointerEventType.Exit) { isHovered = false }
                 .padding(horizontal = 8.dp, vertical = 8.dp),
