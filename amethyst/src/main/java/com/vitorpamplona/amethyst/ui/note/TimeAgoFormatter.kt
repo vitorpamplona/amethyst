@@ -38,20 +38,34 @@ private const val YEAR_SKELETON = "yMMMd"
 private const val MONTH_SKELETON = "MMMd"
 private const val YEAR_NO_DAY_SKELETON = "yMMM"
 
-private var locale: Locale = Locale.getDefault()
-private var yearFormatter = SimpleDateFormat(DateFormat.getBestDateTimePattern(locale, YEAR_SKELETON), locale)
-private var monthFormatter = SimpleDateFormat(DateFormat.getBestDateTimePattern(locale, MONTH_SKELETON), locale)
-private var yearNoDayFormatter = SimpleDateFormat(DateFormat.getBestDateTimePattern(locale, YEAR_NO_DAY_SKELETON), locale)
+/**
+ * Per-thread cached [SimpleDateFormat] keyed off the current default [Locale].
+ *
+ * `SimpleDateFormat` is mutable and not thread-safe, and these formatters are
+ * read from both the UI thread (composition) and background coroutines
+ * (e.g. `LocalCache.justVerify` logging failed event verifications). A bare
+ * `var` shared across threads would race on the formatter's internal Calendar.
+ * Using `ThreadLocal` gives each thread its own instance — no locks, no
+ * allocation per call, and we rebuild lazily on locale change.
+ */
+private class LocaleAwareFormatter(
+    private val skeleton: String,
+) {
+    private val cache = ThreadLocal<Pair<Locale, SimpleDateFormat>>()
 
-private fun updateFormattersIfNeeded() {
-    val current = Locale.getDefault()
-    if (locale != current) {
-        locale = current
-        yearFormatter = SimpleDateFormat(DateFormat.getBestDateTimePattern(locale, YEAR_SKELETON), locale)
-        monthFormatter = SimpleDateFormat(DateFormat.getBestDateTimePattern(locale, MONTH_SKELETON), locale)
-        yearNoDayFormatter = SimpleDateFormat(DateFormat.getBestDateTimePattern(locale, YEAR_NO_DAY_SKELETON), locale)
+    fun get(): SimpleDateFormat {
+        val current = Locale.getDefault()
+        val cached = cache.get()
+        if (cached != null && cached.first == current) return cached.second
+        val fresh = SimpleDateFormat(DateFormat.getBestDateTimePattern(current, skeleton), current)
+        cache.set(current to fresh)
+        return fresh
     }
 }
+
+private val yearFormatter = LocaleAwareFormatter(YEAR_SKELETON)
+private val monthFormatter = LocaleAwareFormatter(MONTH_SKELETON)
+private val yearNoDayFormatter = LocaleAwareFormatter(YEAR_NO_DAY_SKELETON)
 
 /**
  * Formats a Unix timestamp (seconds) as an absolute date/time string, picking the
@@ -71,8 +85,6 @@ fun timeAbsolute(
     if (time == null) return " "
     if (time == 0L) return prefix + stringRes(context, R.string.never)
 
-    updateFormattersIfNeeded()
-
     val timeMs = time * 1000
     val now = Calendar.getInstance()
     val then = Calendar.getInstance().apply { timeInMillis = timeMs }
@@ -84,8 +96,8 @@ fun timeAbsolute(
 
     return when {
         sameDay -> prefix + timeOfDay
-        sameYear -> prefix + monthFormatter.format(timeMs) + ", " + timeOfDay
-        else -> prefix + yearFormatter.format(timeMs)
+        sameYear -> prefix + monthFormatter.get().format(timeMs) + ", " + timeOfDay
+        else -> prefix + yearFormatter.get().format(timeMs)
     }
 }
 
@@ -110,13 +122,11 @@ fun timeAgo(
 
     return when {
         timeDifference > TimeUtils.ONE_YEAR -> {
-            updateFormattersIfNeeded()
-            prefix + yearFormatter.format(time * 1000)
+            prefix + yearFormatter.get().format(time * 1000)
         }
 
         timeDifference > TimeUtils.ONE_MONTH -> {
-            updateFormattersIfNeeded()
-            prefix + monthFormatter.format(time * 1000)
+            prefix + monthFormatter.get().format(time * 1000)
         }
 
         timeDifference > TimeUtils.ONE_DAY -> {
@@ -148,13 +158,11 @@ fun timeAgoNoDot(
 
     return when {
         timeDifference > TimeUtils.ONE_YEAR -> {
-            updateFormattersIfNeeded()
-            yearFormatter.format(time * 1000)
+            yearFormatter.get().format(time * 1000)
         }
 
         timeDifference > TimeUtils.ONE_MONTH -> {
-            updateFormattersIfNeeded()
-            monthFormatter.format(time * 1000)
+            monthFormatter.get().format(time * 1000)
         }
 
         timeDifference > TimeUtils.ONE_DAY -> {
@@ -186,13 +194,11 @@ fun timeAgoNoDotNoDay(
 
     return when {
         timeDifference > TimeUtils.ONE_YEAR -> {
-            updateFormattersIfNeeded()
-            yearNoDayFormatter.format(time * 1000)
+            yearNoDayFormatter.get().format(time * 1000)
         }
 
         timeDifference > TimeUtils.ONE_MONTH -> {
-            updateFormattersIfNeeded()
-            monthFormatter.format(time * 1000)
+            monthFormatter.get().format(time * 1000)
         }
 
         timeDifference > TimeUtils.ONE_DAY -> {
@@ -224,13 +230,11 @@ fun timeAheadNoDot(
 
     return when {
         timeDifference > TimeUtils.ONE_YEAR -> {
-            updateFormattersIfNeeded()
-            yearFormatter.format(time * 1000)
+            yearFormatter.get().format(time * 1000)
         }
 
         timeDifference > TimeUtils.ONE_MONTH -> {
-            updateFormattersIfNeeded()
-            monthFormatter.format(time * 1000)
+            monthFormatter.get().format(time * 1000)
         }
 
         timeDifference > TimeUtils.ONE_DAY -> {
@@ -262,11 +266,9 @@ fun dateFormatter(
     val timeDifference = TimeUtils.now() - time
 
     return if (timeDifference > TimeUtils.ONE_YEAR) {
-        updateFormattersIfNeeded()
-        yearFormatter.format(time * 1000)
+        yearFormatter.get().format(time * 1000)
     } else if (timeDifference > TimeUtils.ONE_DAY) {
-        updateFormattersIfNeeded()
-        monthFormatter.format(time * 1000)
+        monthFormatter.get().format(time * 1000)
     } else {
         today
     }
@@ -348,8 +350,7 @@ fun lastSeenSentence(
             }
         }
 
-    updateFormattersIfNeeded()
-    val dateText = yearFormatter.format(time * 1000)
+    val dateText = yearFormatter.get().format(time * 1000)
 
     return stringRes(context, R.string.last_seen_on_date, dateText, durationText)
 }

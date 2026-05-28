@@ -30,23 +30,35 @@ import java.util.Locale
 // Month + day without year — month name is textual so order is unambiguous across locales.
 private const val MONTH_DATE_FORMAT = "MMM d"
 
-private var locale = Locale.getDefault()
+/**
+ * Per-thread cached [DateFormat] keyed off the current default [Locale].
+ *
+ * `DateFormat`/`SimpleDateFormat` are mutable and not thread-safe. These
+ * formatters can be read from UI threads (composition) and from background
+ * coroutines. `ThreadLocal` gives each thread its own instance — no locks,
+ * no allocation per call, and we rebuild lazily on locale change.
+ */
+private class LocaleAwareFormatter(
+    private val build: (Locale) -> DateFormat,
+) {
+    private val cache = ThreadLocal<Pair<Locale, DateFormat>>()
 
-// Locale-aware: en-US "May 28, 2026" · en-GB "28 May 2026" · de-DE "28.05.2026" · ja-JP "2026/05/28"
-private var yearFormatter = DateFormat.getDateInstance(DateFormat.MEDIUM, locale)
-private var monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
-
-// Locale-aware: en-US "2:32 PM" · en-GB "14:32" · de-DE "14:32"
-private var timeOnlyFormatter = DateFormat.getTimeInstance(DateFormat.SHORT, locale)
-
-private fun updateFormattersIfNeeded() {
-    if (locale != Locale.getDefault()) {
-        locale = Locale.getDefault()
-        yearFormatter = DateFormat.getDateInstance(DateFormat.MEDIUM, locale)
-        monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
-        timeOnlyFormatter = DateFormat.getTimeInstance(DateFormat.SHORT, locale)
+    fun get(): DateFormat {
+        val current = Locale.getDefault()
+        val cached = cache.get()
+        if (cached != null && cached.first == current) return cached.second
+        val fresh = build(current)
+        cache.set(current to fresh)
+        return fresh
     }
 }
+
+// Locale-aware: en-US "May 28, 2026" · en-GB "28 May 2026" · de-DE "28.05.2026" · ja-JP "2026/05/28"
+private val yearFormatter = LocaleAwareFormatter { DateFormat.getDateInstance(DateFormat.MEDIUM, it) }
+private val monthFormatter = LocaleAwareFormatter { SimpleDateFormat(MONTH_DATE_FORMAT, it) }
+
+// Locale-aware: en-US "2:32 PM" · en-GB "14:32" · de-DE "14:32"
+private val timeOnlyFormatter = LocaleAwareFormatter { DateFormat.getTimeInstance(DateFormat.SHORT, it) }
 
 /**
  * Formats a Unix timestamp (seconds) as a human-readable time ago string.
@@ -68,13 +80,11 @@ fun timeAgo(
 
     return when {
         timeDifference > TimeUtils.ONE_YEAR -> {
-            updateFormattersIfNeeded()
-            prefix + yearFormatter.format(time * 1000)
+            prefix + yearFormatter.get().format(time * 1000)
         }
 
         timeDifference > TimeUtils.ONE_MONTH -> {
-            updateFormattersIfNeeded()
-            prefix + monthFormatter.format(time * 1000)
+            prefix + monthFormatter.get().format(time * 1000)
         }
 
         timeDifference > TimeUtils.ONE_DAY -> {
@@ -135,13 +145,11 @@ fun dateFormatter(
 
     return when {
         timeDifference > TimeUtils.ONE_YEAR -> {
-            updateFormattersIfNeeded()
-            yearFormatter.format(time * 1000)
+            yearFormatter.get().format(time * 1000)
         }
 
         timeDifference > TimeUtils.ONE_DAY -> {
-            updateFormattersIfNeeded()
-            monthFormatter.format(time * 1000)
+            monthFormatter.get().format(time * 1000)
         }
 
         else -> {
@@ -171,8 +179,6 @@ fun timeAbsolute(
     val prefix = if (withDot) " • " else ""
     if (time == 0L) return prefix + never
 
-    updateFormattersIfNeeded()
-
     val timeMs = time * 1000
     val now = Calendar.getInstance()
     val then = Calendar.getInstance().apply { timeInMillis = timeMs }
@@ -180,12 +186,12 @@ fun timeAbsolute(
     val sameYear = now.get(Calendar.YEAR) == then.get(Calendar.YEAR)
     val sameDay = sameYear && now.get(Calendar.DAY_OF_YEAR) == then.get(Calendar.DAY_OF_YEAR)
 
-    val timeOfDay = timeOnlyFormatter.format(Date(timeMs))
+    val timeOfDay = timeOnlyFormatter.get().format(Date(timeMs))
 
     return when {
         sameDay -> prefix + timeOfDay
-        sameYear -> prefix + monthFormatter.format(timeMs) + ", " + timeOfDay
-        else -> prefix + yearFormatter.format(timeMs)
+        sameYear -> prefix + monthFormatter.get().format(timeMs) + ", " + timeOfDay
+        else -> prefix + yearFormatter.get().format(timeMs)
     }
 }
 
