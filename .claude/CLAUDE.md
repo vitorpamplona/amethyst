@@ -20,6 +20,9 @@ nostrnests reference relay. The IETF code is kept as a reference + unit-test
 implementation for any future IETF target; see
 `nestsClient/plans/2026-04-26-moq-lite-gap.md`.
 
+Canonical NIP specs live at <https://github.com/nostr-protocol/nips> — use
+`/nip <number>` to pull a specific one (it fetches the spec file directly).
+
 ## Verify, Don't Guess (standing instruction)
 
 A plausible-sounding explanation is cheap; being right is not. Before
