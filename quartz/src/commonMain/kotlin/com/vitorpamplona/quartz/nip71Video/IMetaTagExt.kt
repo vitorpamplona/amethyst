@@ -22,6 +22,9 @@ package com.vitorpamplona.quartz.nip71Video
 
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningTag
+import com.vitorpamplona.quartz.nip71Video.tags.BitrateTag
+import com.vitorpamplona.quartz.nip71Video.tags.DurationTag
+import com.vitorpamplona.quartz.nip71Video.tags.LanguageImetaTag
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -37,6 +40,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.SummaryTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.TorrentInfoHash
+import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.WaveformTag
 
 /**
  * Contains the IMeta tags that are used by Video events.
@@ -72,3 +76,18 @@ fun IMetaTag.summary() = properties.get(SummaryTag.TAG_NAME)
 fun IMetaTag.fallback() = properties.get(FallbackTag.TAG_NAME)
 
 fun IMetaTag.service() = properties.get(ServiceTag.TAG_NAME)
+
+fun IMetaTag.bitrate(): Int? = properties.get(BitrateTag.TAG_NAME)?.firstOrNull()?.toIntOrNull()
+
+fun IMetaTag.duration(): Double? = properties.get(DurationTag.TAG_NAME)?.firstOrNull()?.toDoubleOrNull()
+
+fun IMetaTag.waveform(): List<Float>? = properties.get(WaveformTag.TAG_NAME)?.firstOrNull()?.let { WaveformTag.parseWave(it) }
+
+fun IMetaTag.language(): LanguageImetaTag? = properties.get(LanguageImetaTag.TAG_NAME)?.firstNotNullOfOrNull { LanguageImetaTag.parseValue(it) }
+
+// NIP-71 PR #2255: audio-only variants are advertised as `imeta` entries
+// with an `m audio/...` property so clients can prefer them over in-video
+// audio while switching video resolution.
+fun IMetaTag.isAudioTrack(): Boolean = mimeType()?.firstOrNull()?.startsWith("audio/") == true
+
+fun IMetaTag.isVideoTrack(): Boolean = mimeType()?.firstOrNull()?.startsWith("video/") == true

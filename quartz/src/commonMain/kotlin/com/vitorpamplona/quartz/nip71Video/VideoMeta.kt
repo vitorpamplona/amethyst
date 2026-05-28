@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip71Video
 
+import com.vitorpamplona.quartz.nip71Video.tags.LanguageImetaTag
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -36,7 +37,18 @@ data class VideoMeta(
     val fallback: List<String> = emptyList(),
     val image: List<String> = emptyList(),
     val thumbhash: String? = null,
+    // NIP-71 PR #2255 — audio-track imeta properties
+    val bitrate: Int? = null,
+    val duration: Double? = null,
+    val waveform: List<Float>? = null,
+    val language: LanguageImetaTag? = null,
 ) {
+    val isAudio: Boolean
+        get() = mimeType?.startsWith("audio/") == true
+
+    val isVideo: Boolean
+        get() = mimeType?.startsWith("video/") == true
+
     fun toIMetaArray(): Array<String> =
         IMetaTagBuilder(url)
             .apply {
@@ -50,6 +62,10 @@ data class VideoMeta(
                 service?.let { service(it) }
                 fallback.forEach { fallback(it) }
                 image.forEach { image(it) }
+                bitrate?.let { bitrate(it) }
+                duration?.let { duration(it) }
+                waveform?.let { waveform(it) }
+                language?.let { language(it) }
             }.build()
             .toTagArray()
 
@@ -67,6 +83,10 @@ data class VideoMeta(
                 fallback = iMeta.fallback() ?: emptyList(),
                 image = iMeta.image() ?: emptyList(),
                 thumbhash = iMeta.thumbhash()?.firstOrNull(),
+                bitrate = iMeta.bitrate(),
+                duration = iMeta.duration(),
+                waveform = iMeta.waveform(),
+                language = iMeta.language(),
             )
     }
 }
