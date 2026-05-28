@@ -44,10 +44,10 @@ import com.vitorpamplona.amethyst.Amethyst
  *
  * The default settings save path debounces writes by 1000 ms, which is
  * exactly the race window between "we asked the mint to sign" and "the
- * mint replied". A crash inside that window (ART JIT crash on Android
- * 15+, signer dialog dismiss, OOM, etc.) loses the counter advance and
- * makes the wallet unusable. This store writes via `commit = true` so
- * each reservation is durable before the function returns.
+ * mint replied". A crash inside that window (OOM, signer dialog dismiss,
+ * unexpected process death) loses the counter advance and makes the
+ * wallet unusable. This store writes via `commit = true` so each
+ * reservation is durable before the function returns.
  *
  * # Layout
  *

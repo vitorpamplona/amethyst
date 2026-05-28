@@ -27,7 +27,6 @@ import com.vitorpamplona.quartz.nip60Cashu.p2pk.P2PK
 import com.vitorpamplona.quartz.nip60Cashu.seed.CashuDeterministic
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuProof
 import com.vitorpamplona.quartz.nip60Cashu.token.TokenContent
-import com.vitorpamplona.quartz.utils.Log
 
 /**
  * High-level mint operations: mint-from-LN, swap, melt-to-LN, send-as-token,
@@ -431,8 +430,7 @@ class CashuMintOperations(
                 // wallet would have minted at this counter slot. We
                 // try each amount denomination — the mint will only
                 // return the signature(s) it actually issued at this
-                // slot, if any. Bdhke uses a thread-local scratchpad
-                // internally so no per-call allocation pressure.
+                // slot, if any.
                 val secretBytes = CashuDeterministic.secretBytes(seed, keysetId, c)
                 val r = CashuDeterministic.blindingFactor(seed, keysetId, c)
                 val secretHex = secretBytes.toHexKey()
@@ -444,9 +442,7 @@ class CashuMintOperations(
                 }
             }
 
-            Log.i("CashuTrace") { "restore: POST /v1/restore (req=${outputDtos.size} outputs)" }
             val response = client.restore(RestoreRequestDto(outputs = outputDtos))
-            Log.i("CashuTrace") { "restore: decoded sigs=${response.signatures.size} echoes=${response.outputs.size}" }
             if (response.signatures.isEmpty()) {
                 emptyStreak++
             } else {
@@ -458,10 +454,8 @@ class CashuMintOperations(
                 // 63× per counter (once per denomination we probed).
                 //
                 // Dedupe to one (counter → signature) pair BEFORE the
-                // unblind loop. This trims a ~378-iteration mostly-no-op
-                // loop down to ~6 real unblinds per batch — both faster
-                // and easier on the ART JIT, which kept trying to compile
-                // the wide hot loop and crashing on Android 15+.
+                // unblind loop so a typical restore batch shrinks from
+                // ~378 iterations to ~6 real unblinds.
                 val uniqueByCounter = LinkedHashMap<Long, Pair<CounterMaterials, BlindSignatureDto>>()
                 for (i in response.signatures.indices) {
                     val echo = response.outputs.getOrNull(i) ?: continue
@@ -469,7 +463,6 @@ class CashuMintOperations(
                     if (mat.counter in uniqueByCounter) continue
                     uniqueByCounter[mat.counter] = mat to response.signatures[i]
                 }
-                Log.i("CashuTrace") { "restore: deduped to ${uniqueByCounter.size} unique counter(s)" }
                 for ((c, pair) in uniqueByCounter) {
                     val (mat, sig) = pair
                     val output = BlindOutput(sig.amount, keysetId, mat.r, mat.secretHex, mat.bTick)
@@ -477,7 +470,6 @@ class CashuMintOperations(
                     recovered += RecoveredProof(proof, c)
                     if (c > highestSeenCounter) highestSeenCounter = c
                 }
-                Log.i("CashuTrace") { "restore: batch unblinded" }
             }
 
             counter += effectiveBatchSize
@@ -533,8 +525,6 @@ class CashuMintOperations(
         if (proofs.isEmpty()) return true
         // Fetch all keysets the mint exposes so cross-keyset tokens
         // verify against the right amount key. Cheap — one round-trip.
-        // Bdhke.verifyDleqCarol uses a thread-local scratchpad
-        // internally so the loop is allocation-free.
         val allKeysets = client.activeKeysets().keysets.associateBy { it.id }
         for (proof in proofs) {
             val dleq = proof.dleq ?: continue
@@ -570,8 +560,6 @@ class CashuMintOperations(
     suspend fun checkStates(proofs: List<CashuProof>): Map<String, ProofState> {
         if (proofs.isEmpty()) return emptyMap()
         // NUT-07 keys check requests by `Y` (hash-to-curve of the secret).
-        // Bdhke.hashToCurveCompressed uses a thread-local scratchpad
-        // internally so the per-proof loop is allocation-free.
         val ys = proofs.map { Bdhke.hashToCurveCompressed(it.secret.encodeToByteArray()).toHexKey() }
         val response = client.checkState(CheckStateRequestDto(ys = ys))
         val secretByY =
@@ -614,7 +602,6 @@ class CashuMintOperations(
         // [secretFactory] decides whether those bytes are pure-random or
         // NUT-13-derived from a wallet seed; either way the on-wire shape
         // is identical so the mint can't tell which scheme we're using.
-        // Bdhke.blind uses a thread-local scratchpad internally.
         val derived = secretFactory.nextSecrets(keyset.id, amounts.size)
         return amounts.mapIndexed { i, amount ->
             val pair = derived[i]
@@ -649,9 +636,6 @@ class CashuMintOperations(
                 "Got ${signatures.size} signatures for ${outputs.size} outputs",
             )
         }
-        // Bdhke.unblind uses a thread-local scratchpad internally so
-        // each call on this thread reuses the same Fe4 / MutablePoint
-        // holders — no per-iteration allocation pressure on the JIT.
         val out = ArrayList<CashuProof>(outputs.size)
         for (i in outputs.indices) {
             out += unblindOne(outputs[i], signatures[i], keyset)
