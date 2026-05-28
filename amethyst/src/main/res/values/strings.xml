@@ -764,6 +764,8 @@
     <string name="articles">Articles</string>
     <string name="route_music_tracks">Music</string>
     <string name="route_music_playlists">Playlists</string>
+    <string name="route_podcast_episodes">Episodes</string>
+    <string name="route_podcasts">Podcasts</string>
     <string name="new_music_track">New music track</string>
     <string name="new_music_playlist">New playlist</string>
     <string name="music_track_title_label">Title</string>
