@@ -342,6 +342,7 @@ fun FeedScreen(
     val feedSearchActiveState = com.vitorpamplona.amethyst.desktop.ui.theme.LocalFeedSearchActive.current
     var searchActive by feedSearchActiveState
     val onSearchActiveChange: (Boolean) -> Unit = { searchActive = it }
+    val openFullSearch = com.vitorpamplona.amethyst.desktop.ui.theme.LocalOpenFullSearch.current
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val connectedRelays by relayManager.connectedRelays.collectAsState()
     val followedUsers by localCache.followedUsers.collectAsState()
@@ -789,7 +790,7 @@ fun FeedScreen(
             },
             onOpenFeedsDrawer = onOpenFeedsDrawer,
             onCompose = onCompose,
-            onSearchClick = onSearchClick,
+            onSearchClick = openFullSearch,
             relayManager = relayManager,
             localCache = localCache,
             onNavigateToProfile = onNavigateToProfile,

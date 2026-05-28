@@ -452,7 +452,9 @@ fun main() {
                             } else {
                                 KeyShortcut(Key.F, ctrl = true)
                             },
-                        onClick = { feedSearchActiveState.value = !feedSearchActiveState.value },
+                        onClick = {
+                            feedSearchActiveState.value = !feedSearchActiveState.value
+                        },
                     )
                     Item(
                         "App Drawer",
@@ -620,6 +622,9 @@ fun main() {
                 key(appRestartKey) {
                     CompositionLocalProvider(
                         com.vitorpamplona.amethyst.desktop.ui.theme.LocalFeedSearchActive provides feedSearchActiveState,
+                        com.vitorpamplona.amethyst.desktop.ui.theme.LocalOpenFullSearch provides {
+                            navigateToScreen?.invoke(DeckColumnType.Search)
+                        },
                     ) {
                         App(
                             layoutMode = layoutMode,

@@ -53,6 +53,9 @@ val LocalIsDarkTheme = staticCompositionLocalOf { false }
 /** Mutable state for Cmd+F feed search. Provided at Main.kt level. */
 val LocalFeedSearchActive = compositionLocalOf { mutableStateOf(false) }
 
+/** Callback to open the full Search column/screen. Provided at Main.kt level. */
+val LocalOpenFullSearch = compositionLocalOf<() -> Unit> { {} }
+
 val MaterialTheme.spacing: AmethystSpacing
     @Composable @ReadOnlyComposable
     get() = LocalSpacing.current
