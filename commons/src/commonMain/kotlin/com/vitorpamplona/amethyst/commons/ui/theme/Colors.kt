@@ -23,6 +23,10 @@ package com.vitorpamplona.amethyst.commons.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // Primary brand colors
+val AmethystBlue = Color(0xFF0096FF)
+val AmethystBlueDark = Color(0xFF4DB8FF)
+val AmethystPurple = Color(0xFF9A82DB)
+
 val Primary50 = Color(red = 127, green = 103, blue = 190)
 val Primary60 = Color(red = 154, green = 130, blue = 219)
 val Primary70 = Color(red = 182, green = 157, blue = 248)

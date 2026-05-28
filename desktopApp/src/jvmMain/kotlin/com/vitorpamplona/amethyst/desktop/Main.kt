@@ -1381,6 +1381,10 @@ fun MainContent(
                                 val allAccountsState by accountManager.allAccounts.collectAsState()
                                 var showAddAccountDialog by remember { mutableStateOf(false) }
 
+                                val deckColumns by deckState.columns.collectAsState()
+                                val focusedIdx by deckState.focusedColumnIndex.collectAsState()
+                                val activeColumnType = deckColumns.getOrNull(focusedIdx)?.type
+
                                 DeckSidebar(
                                     activeNpub = accountManager.currentAccount()?.npub,
                                     allAccounts = allAccountsState,
@@ -1404,6 +1408,14 @@ fun MainContent(
                                             deckState.addColumn(DeckColumnType.Settings)
                                         }
                                     },
+                                    onNavigate = { type ->
+                                        if (deckState.hasColumnOfType(type)) {
+                                            deckState.focusExistingColumn(type)
+                                        } else {
+                                            deckState.addColumn(type)
+                                        }
+                                    },
+                                    activeColumnType = activeColumnType,
                                     onShowImportFollowListDialog = onShowImportFollowListDialog,
                                     signerConnectionState = signerConnectionState,
                                     lastPingTimeSec = lastPingTimeSec,

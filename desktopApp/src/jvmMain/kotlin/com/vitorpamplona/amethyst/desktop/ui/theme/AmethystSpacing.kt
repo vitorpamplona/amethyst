@@ -18,22 +18,36 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.platform
+package com.vitorpamplona.amethyst.desktop.ui.theme
 
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Shapes
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/**
- * Unified Amethyst brand [Shapes] — consistent rounding across all platforms.
- */
-object PlatformShapes {
-    val current: Shapes =
-        Shapes(
-            extraSmall = RoundedCornerShape(6.dp),
-            small = RoundedCornerShape(8.dp),
-            medium = RoundedCornerShape(12.dp),
-            large = RoundedCornerShape(16.dp),
-            extraLarge = RoundedCornerShape(24.dp),
-        )
-}
+@Immutable
+data class AmethystSpacing(
+    val xxs: Dp = 2.dp,
+    val xs: Dp = 4.dp,
+    val sm: Dp = 8.dp,
+    val md: Dp = 12.dp,
+    val lg: Dp = 16.dp,
+    val xl: Dp = 24.dp,
+    val xxl: Dp = 32.dp,
+    val cardPadding: Dp = 16.dp,
+    val cardGap: Dp = 8.dp,
+    val sidebarExpandedWidth: Dp = 240.dp,
+    val sidebarCollapsedWidth: Dp = 56.dp,
+    val columnHeaderHeight: Dp = 48.dp,
+)
+
+val LocalSpacing = staticCompositionLocalOf { AmethystSpacing() }
+
+val LocalIsDarkTheme = staticCompositionLocalOf { false }
+
+val MaterialTheme.spacing: AmethystSpacing
+    @Composable @ReadOnlyComposable
+    get() = LocalSpacing.current

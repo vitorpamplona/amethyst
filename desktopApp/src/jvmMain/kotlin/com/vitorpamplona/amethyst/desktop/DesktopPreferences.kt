@@ -105,4 +105,12 @@ object DesktopPreferences {
 
     val preferredBlossomServer: String
         get() = blossomServers.firstOrNull() ?: DEFAULT_BLOSSOM_SERVER
+
+    private const val KEY_SIDEBAR_COLLAPSED = "sidebar_collapsed"
+
+    var sidebarCollapsed: Boolean
+        get() = prefs.getBoolean(KEY_SIDEBAR_COLLAPSED, false)
+        set(value) {
+            prefs.putBoolean(KEY_SIDEBAR_COLLAPSED, value)
+        }
 }

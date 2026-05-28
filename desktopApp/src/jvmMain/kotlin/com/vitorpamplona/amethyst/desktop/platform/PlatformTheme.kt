@@ -22,10 +22,14 @@ package com.vitorpamplona.amethyst.desktop.platform
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.FrameWindowScope
+import com.vitorpamplona.amethyst.desktop.ui.theme.AmethystSpacing
+import com.vitorpamplona.amethyst.desktop.ui.theme.LocalIsDarkTheme
+import com.vitorpamplona.amethyst.desktop.ui.theme.LocalSpacing
 
 /**
  * Wraps content in a [MaterialTheme] tuned for the host OS: native fonts, accent
@@ -41,14 +45,18 @@ fun PlatformMaterialTheme(
     isDark: Boolean,
     content: @Composable () -> Unit,
 ) {
-    val accent = remember { PlatformAccent.systemAccent() }
-    val colorScheme = remember(isDark, accent) { PlatformColorScheme.resolve(isDark, accent) }
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = PlatformTypography.current,
-        shapes = PlatformShapes.current,
-        content = content,
-    )
+    val colorScheme = remember(isDark) { PlatformColorScheme.resolve(isDark) }
+    CompositionLocalProvider(
+        LocalSpacing provides AmethystSpacing(),
+        LocalIsDarkTheme provides isDark,
+    ) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = PlatformTypography.current,
+            shapes = PlatformShapes.current,
+            content = content,
+        )
+    }
 }
 
 /**
