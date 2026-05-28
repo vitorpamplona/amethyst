@@ -45,12 +45,28 @@ class ExpandableTextCutOffCalculator {
                     // if it is still too big, finds the first space or new line BEFORE the cut off.
                     val newString = content.take(SHORT_TEXT_LENGTH)
 
-                    val firstSpaceBeforeCut =
-                        newString.lastIndexOf(' ').let { if (it < 0) newString.length else it }
-                    val firstNewLineBeforeCut =
-                        newString.lastIndexOf('\n').let { if (it < 0) newString.length else it }
+                    val firstSpaceBeforeCut = newString.lastIndexOf(' ')
+                    val firstNewLineBeforeCut = newString.lastIndexOf('\n')
 
-                    maxOf(firstSpaceBeforeCut, firstNewLineBeforeCut)
+                    if (firstSpaceBeforeCut < 0 && firstNewLineBeforeCut < 0) {
+                        // No whitespace boundary anywhere in the first
+                        // SHORT_TEXT_LENGTH characters either. The
+                        // entire content is one indivisible atom — a
+                        // long cashuA/cashuB token, a base64 data: URI,
+                        // a Lightning invoice, a single huge URL. Cutting
+                        // mid-atom corrupts the segment so the inline
+                        // renderer can't decode it (the cashuB prefix
+                        // survives so it gets matched, but the truncated
+                        // body fails to base64-decode and falls back to
+                        // rendering the raw text + a useless Show More
+                        // button). Render the whole atom.
+                        return content.length
+                    }
+
+                    maxOf(
+                        firstSpaceBeforeCut.coerceAtLeast(0),
+                        firstNewLineBeforeCut.coerceAtLeast(0),
+                    )
                 } else {
                     min
                 }
