@@ -984,14 +984,24 @@ class CashuWalletOps(
      * Returns the number of unspent sats recovered. The caller's UI
      * surfaces this to the user.
      *
+     * [existingSecrets] is the set of NUT-00 `secret` strings the wallet
+     * already holds locally (across all kind:7375 events). Recovered
+     * proofs whose secret is already in this set are skipped — they're
+     * not "newly recovered", just re-derived copies of proofs we already
+     * accounted for. Without this filter every Resync click would
+     * publish a fresh kind:7375 with the same proofs and inflate the
+     * balance, since the balance sums proofs across every kind:7375.
+     *
      * Idempotent — re-running after a successful restore returns 0
      * (every counter still produces the same proofs the mint already
-     * marked spent in the previous round of publishing + redemption).
+     * marked spent in the previous round of publishing + redemption,
+     * AND every UNSPENT slot is now in [existingSecrets]).
      */
     suspend fun restoreFromMint(
         mintUrl: String,
         seed: ByteArray,
         startCounter: Long = 0L,
+        existingSecrets: Set<String> = emptySet(),
     ): RestoreOutcome {
         seedWarmer()
         val mintOps = ops(mintUrl)
@@ -1018,7 +1028,8 @@ class CashuWalletOps(
         val stateMap = mintOps.checkStates(result.proofs.map { it.proof })
         val unspent =
             result.proofs.filter { recovered ->
-                stateMap[recovered.proof.secret] == ProofState.UNSPENT
+                stateMap[recovered.proof.secret] == ProofState.UNSPENT &&
+                    recovered.proof.secret !in existingSecrets
             }
         if (unspent.isEmpty()) {
             return RestoreOutcome(

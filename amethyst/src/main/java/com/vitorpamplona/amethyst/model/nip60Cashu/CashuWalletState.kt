@@ -798,12 +798,39 @@ class CashuWalletState(
     suspend fun restoreFromMint(mintUrl: String): RestoreOutcome? {
         check(started) { "CashuWalletState.start() not called" }
         val seed = ensureSeed() ?: return null
+        // Heal any prior-Resync duplicates BEFORE running the new
+        // restore. Without this the existingSecrets set below would
+        // be inflated by the duplicates and the dedup logic would
+        // still be correct, but the user's balance would stay
+        // double-counted until the cleanup eventually fires somewhere
+        // else. Running it here means every Resync click is also a
+        // best-effort heal of past Resync mistakes.
+        cleanupDuplicateProofs()
+
+        // Collect every NUT-00 `secret` already present in our local
+        // kind:7375 events. The restore path re-derives the same
+        // secrets deterministically from the seed; without this set
+        // every Resync click would publish a fresh kind:7375 with
+        // the same proofs (the balance computation sums proofs across
+        // every kind:7375, so duplicates inflate the displayed
+        // balance even though the mint won't honor them twice).
+        val existingSecrets =
+            _tokenEntries.value
+                .flatMap { it.content.proofs }
+                .mapTo(HashSet()) { it.secret }
+
         // Always scan from counter 0 — a fresh-device recovery doesn't
         // know which slots were used. The internal gap-limit heuristic
         // in CashuMintOperations.restore (3 consecutive empty batches)
         // bounds the work for wallets that minted only a handful of
         // proofs.
-        val outcome = ops.restoreFromMint(mintUrl = mintUrl, seed = seed, startCounter = 0L)
+        val outcome =
+            ops.restoreFromMint(
+                mintUrl = mintUrl,
+                seed = seed,
+                startCounter = 0L,
+                existingSecrets = existingSecrets,
+            )
         // Bump persisted counter past every slot we just confirmed in
         // use. reserveCashuCounters atomically increments + persists,
         // so two restores running concurrently can't collide either.
@@ -811,6 +838,76 @@ class CashuWalletState(
         val delta = (outcome.nextCounterAfterScan - current).coerceAtLeast(0L)
         if (delta > 0) settings.reserveCashuCounters(outcome.keysetId, delta.toInt())
         return outcome
+    }
+
+    /**
+     * Scan held kind:7375 events for accidental duplicates and NIP-09
+     * delete the redundant ones. An event B is redundant when there
+     * exists another event A such that A's NUT-00 secret set is a
+     * (non-strict) superset of B's AND either A has strictly more
+     * secrets than B, or A was created earlier than B with the same
+     * secret set. The proofs in B aren't lost — they're still held
+     * inside A — but the local balance computation, which sums
+     * proofs across every kind:7375, no longer double-counts them.
+     *
+     * Triggered automatically before every Resync to heal damage
+     * from previous Resync clicks that ran without the
+     * `existingSecrets` dedup in [restoreFromMint]. Safe to call any
+     * other time too — no mint round-trip, just NIP-09 publish + a
+     * local [removeEvents] so the very next [_tokenEntries] read
+     * excludes the ghosts.
+     */
+    suspend fun cleanupDuplicateProofs() {
+        check(started) { "CashuWalletState.start() not called" }
+        val entries = _tokenEntries.value
+        if (entries.size < 2) return
+
+        // Pre-compute each entry's secret set once.
+        val withSecrets =
+            entries.map { entry ->
+                entry to entry.content.proofs.mapTo(HashSet()) { it.secret }
+            }
+
+        val redundant = mutableListOf<TokenEntry>()
+        for ((entry, secrets) in withSecrets) {
+            if (secrets.isEmpty()) continue
+            val isRedundant =
+                withSecrets.any { (other, otherSecrets) ->
+                    other.event.id != entry.event.id &&
+                        otherSecrets.containsAll(secrets) &&
+                        (
+                            otherSecrets.size > secrets.size ||
+                                (
+                                    otherSecrets.size == secrets.size &&
+                                        (
+                                            other.event.createdAt < entry.event.createdAt ||
+                                                (
+                                                    other.event.createdAt == entry.event.createdAt &&
+                                                        other.event.id < entry.event.id
+                                                )
+                                        )
+                                )
+                        )
+                }
+            if (isRedundant) redundant += entry
+        }
+
+        if (redundant.isEmpty()) return
+        Log.i("CashuWallet") {
+            "Cleanup: NIP-09 deleting ${redundant.size} duplicate kind:7375 event(s)"
+        }
+        val redundantIds = redundant.map { it.event.id }.toSet()
+        runCatching {
+            val template = DeletionEvent.build(redundant.map { it.event })
+            val signed = signer.sign(template)
+            publishEvent(signed)
+        }.onFailure {
+            Log.w("CashuWallet", "Failed to NIP-09 delete duplicate kind:7375 entries", it)
+        }
+        // Drop from internal indexes regardless of publish success — the
+        // proofs they reference are still held in the surviving entry,
+        // so the balance immediately reflects the de-duplicated state.
+        removeEvents(redundantIds)
     }
 
     /**
