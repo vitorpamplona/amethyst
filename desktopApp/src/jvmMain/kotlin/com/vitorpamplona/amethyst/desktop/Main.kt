@@ -104,8 +104,8 @@ import com.vitorpamplona.amethyst.desktop.ui.chats.DmSendTracker
 import com.vitorpamplona.amethyst.desktop.ui.deck.AppDrawer
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckColumnType
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckLayout
-import com.vitorpamplona.amethyst.desktop.ui.deck.DeckSidebar
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckState
+import com.vitorpamplona.amethyst.desktop.ui.deck.MainSidebar
 import com.vitorpamplona.amethyst.desktop.ui.deck.PinnedNavBarState
 import com.vitorpamplona.amethyst.desktop.ui.deck.SinglePaneLayout
 import com.vitorpamplona.amethyst.desktop.ui.deck.SinglePaneState
@@ -1346,6 +1346,92 @@ fun MainContent(
         Box(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {
                 Row(Modifier.fillMaxSize().weight(1f)) {
+                    // Shared sidebar for both layout modes
+                    if (!isImmersive) {
+                        val allAccountsState by accountManager.allAccounts.collectAsState()
+                        var showAddAccountDialog by remember { mutableStateOf(false) }
+
+                        // Derive active column type based on layout mode
+                        val activeColumnType =
+                            when (layoutMode) {
+                                LayoutMode.DECK -> {
+                                    val deckColumns by deckState.columns.collectAsState()
+                                    val focusedIdx by deckState.focusedColumnIndex.collectAsState()
+                                    deckColumns.getOrNull(focusedIdx)?.type
+                                }
+                                LayoutMode.SINGLE_PANE -> {
+                                    val currentScreen by singlePaneState.currentScreen.collectAsState()
+                                    currentScreen
+                                }
+                            }
+
+                        MainSidebar(
+                            activeNpub = accountManager.currentAccount()?.npub,
+                            allAccounts = allAccountsState,
+                            localCache = localCache,
+                            onSwitchAccount = { npub ->
+                                scope.launch(Dispatchers.IO) {
+                                    accountManager.switchAccount(npub)
+                                }
+                            },
+                            onAddAccount = { showAddAccountDialog = true },
+                            onRemoveAccount = { npub ->
+                                scope.launch(Dispatchers.IO) {
+                                    accountManager.removeAccountFromStorage(npub)
+                                }
+                            },
+                            onAddColumn = onShowAppDrawer,
+                            onOpenSettings = {
+                                when (layoutMode) {
+                                    LayoutMode.DECK -> {
+                                        if (deckState.hasColumnOfType(DeckColumnType.Settings)) {
+                                            deckState.focusExistingColumn(DeckColumnType.Settings)
+                                        } else {
+                                            deckState.addColumn(DeckColumnType.Settings)
+                                        }
+                                    }
+                                    LayoutMode.SINGLE_PANE -> {
+                                        singlePaneState.navigate(DeckColumnType.Settings)
+                                    }
+                                }
+                            },
+                            onNavigate = { type ->
+                                when (layoutMode) {
+                                    LayoutMode.DECK -> {
+                                        if (deckState.hasColumnOfType(type)) {
+                                            deckState.focusExistingColumn(type)
+                                        } else {
+                                            deckState.addColumn(type)
+                                        }
+                                    }
+                                    LayoutMode.SINGLE_PANE -> {
+                                        singlePaneState.navigate(type)
+                                    }
+                                }
+                            },
+                            activeColumnType = activeColumnType,
+                            onShowImportFollowListDialog = onShowImportFollowListDialog,
+                            signerConnectionState = signerConnectionState,
+                            lastPingTimeSec = lastPingTimeSec,
+                            torStatus = torStatus,
+                        )
+
+                        VerticalDivider()
+
+                        if (showAddAccountDialog) {
+                            com.vitorpamplona.amethyst.desktop.ui.account.AddAccountDialog(
+                                accountManager = accountManager,
+                                onDismiss = { showAddAccountDialog = false },
+                                onAccountAdded = {
+                                    showAddAccountDialog = false
+                                    scope.launch(Dispatchers.IO) {
+                                        accountManager.refreshAccountList()
+                                    }
+                                },
+                            )
+                        }
+                    }
+
                     when (layoutMode) {
                         LayoutMode.SINGLE_PANE -> {
                             val lastRelayEvent by subscriptionsCoordinator.lastEventAt.collectAsState()
@@ -1377,67 +1463,6 @@ fun MainContent(
                         }
 
                         LayoutMode.DECK -> {
-                            if (!isImmersive) {
-                                val allAccountsState by accountManager.allAccounts.collectAsState()
-                                var showAddAccountDialog by remember { mutableStateOf(false) }
-
-                                val deckColumns by deckState.columns.collectAsState()
-                                val focusedIdx by deckState.focusedColumnIndex.collectAsState()
-                                val activeColumnType = deckColumns.getOrNull(focusedIdx)?.type
-
-                                DeckSidebar(
-                                    activeNpub = accountManager.currentAccount()?.npub,
-                                    allAccounts = allAccountsState,
-                                    localCache = localCache,
-                                    onSwitchAccount = { npub ->
-                                        scope.launch(Dispatchers.IO) {
-                                            accountManager.switchAccount(npub)
-                                        }
-                                    },
-                                    onAddAccount = { showAddAccountDialog = true },
-                                    onRemoveAccount = { npub ->
-                                        scope.launch(Dispatchers.IO) {
-                                            accountManager.removeAccountFromStorage(npub)
-                                        }
-                                    },
-                                    onAddColumn = onShowAppDrawer,
-                                    onOpenSettings = {
-                                        if (deckState.hasColumnOfType(DeckColumnType.Settings)) {
-                                            deckState.focusExistingColumn(DeckColumnType.Settings)
-                                        } else {
-                                            deckState.addColumn(DeckColumnType.Settings)
-                                        }
-                                    },
-                                    onNavigate = { type ->
-                                        if (deckState.hasColumnOfType(type)) {
-                                            deckState.focusExistingColumn(type)
-                                        } else {
-                                            deckState.addColumn(type)
-                                        }
-                                    },
-                                    activeColumnType = activeColumnType,
-                                    onShowImportFollowListDialog = onShowImportFollowListDialog,
-                                    signerConnectionState = signerConnectionState,
-                                    lastPingTimeSec = lastPingTimeSec,
-                                    torStatus = torStatus,
-                                )
-
-                                VerticalDivider()
-
-                                if (showAddAccountDialog) {
-                                    com.vitorpamplona.amethyst.desktop.ui.account.AddAccountDialog(
-                                        accountManager = accountManager,
-                                        onDismiss = { showAddAccountDialog = false },
-                                        onAccountAdded = {
-                                            showAddAccountDialog = false
-                                            scope.launch(Dispatchers.IO) {
-                                                accountManager.refreshAccountList()
-                                            }
-                                        },
-                                    )
-                                }
-                            }
-
                             DeckLayout(
                                 deckState = deckState,
                                 relayManager = relayManager,

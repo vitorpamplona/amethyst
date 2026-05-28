@@ -103,7 +103,7 @@ private val NAV_ITEMS =
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun DeckSidebar(
+fun MainSidebar(
     activeNpub: String?,
     allAccounts: ImmutableList<AccountInfo>,
     localCache: DesktopLocalCache?,

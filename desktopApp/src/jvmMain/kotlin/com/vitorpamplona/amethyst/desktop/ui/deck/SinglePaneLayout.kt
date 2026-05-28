@@ -21,60 +21,30 @@
 package com.vitorpamplona.amethyst.desktop.ui.deck
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationRailItem
-import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.domain.nip46.SignerConnectionState
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.ui.components.BunkerHeartbeatIndicator
 import com.vitorpamplona.amethyst.desktop.DesktopScreen
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.network.Nip11Fetcher
-import com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
-import com.vitorpamplona.amethyst.desktop.ui.account.AccountSwitcherDropdown
-import com.vitorpamplona.amethyst.desktop.ui.account.AddAccountDialog
-import com.vitorpamplona.amethyst.desktop.ui.components.RelayHealthIndicator
-import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
-import com.vitorpamplona.amethyst.desktop.ui.tor.LocalTorState
-import com.vitorpamplona.amethyst.desktop.ui.tor.TorStatusIndicator
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @Composable
 fun SinglePaneLayout(
@@ -107,185 +77,10 @@ fun SinglePaneLayout(
     val navStack by navState.stack.collectAsState()
     val currentOverlay = navStack.lastOrNull()
 
-    val isImmersive by LocalIsImmersiveFullscreen.current
-
-    Row(modifier = modifier.fillMaxSize()) {
-        if (!isImmersive) {
-            // Custom navigation rail with a scrollable items area so all pinned
-            // screens (Home, Reads, Notifications, ...) remain reachable when
-            // the window is short. Bottom status indicators stay anchored.
-            //
-            // We don't use Material3 `NavigationRail` directly here because its
-            // internal `Column` is not scrollable — when there are more pinned
-            // items than fit vertically, items at the bottom of the list (and
-            // the "More" button) get clipped on small windows. We replicate the
-            // rail's container styling via NavigationRailItemDefaults so item
-            // visuals are unchanged.
-            val railScrollState = rememberScrollState()
-            val pinnedScreens by pinnedNavBarState.pinnedScreens.collectAsState()
-            val torState = LocalTorState.current
-            val allAccountsState by accountManager.allAccounts.collectAsState()
-            val singlePaneScope = rememberCoroutineScope()
-            var showAddAccountDialog by remember { mutableStateOf(false) }
-
-            Column(
-                modifier =
-                    Modifier
-                        .width(80.dp)
-                        .fillMaxHeight()
-                        .background(MaterialTheme.colorScheme.surfaceContainer),
-                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
-            ) {
-                // macOS: push rail items below the traffic lights.
-                Spacer(Modifier.height(titleBarInsetTop))
-
-                // Scrollable region for pinned screens + "More" launcher.
-                // Takes all remaining space above the fixed bottom controls
-                // (weight(1f)) and scrolls vertically when items overflow.
-                Column(
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .verticalScroll(railScrollState),
-                    horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Top,
-                ) {
-                    pinnedScreens.forEach { screenType ->
-                        // Rename "Home" to "Feeds" in the nav rail
-                        val label = if (screenType == DeckColumnType.HomeFeed) "Feeds" else screenType.title()
-                        NavigationRailItem(
-                            selected = currentColumnType == screenType && navStack.isEmpty(),
-                            onClick = {
-                                singlePaneState.navigate(screenType)
-                                navState.clear()
-                            },
-                            icon = {
-                                Icon(
-                                    screenType.icon(),
-                                    contentDescription = label,
-                                    modifier = Modifier.size(22.dp),
-                                )
-                            },
-                            label = {
-                                Text(
-                                    label,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            },
-                            colors = NavigationRailItemDefaults.colors(),
-                        )
-                    }
-
-                    NavigationRailItem(
-                        selected = false,
-                        onClick = onShowImportFollowListDialog,
-                        icon = {
-                            Icon(
-                                MaterialSymbols.PersonAdd,
-                                contentDescription = "Import Follow List",
-                                modifier = Modifier.size(22.dp),
-                            )
-                        },
-                        label = {
-                            Text(
-                                "Import",
-                                style = MaterialTheme.typography.labelSmall,
-                                maxLines = 1,
-                            )
-                        },
-                        colors = NavigationRailItemDefaults.colors(),
-                    )
-
-                    NavigationRailItem(
-                        selected = false,
-                        onClick = onOpenAppDrawer,
-                        icon = {
-                            Icon(
-                                MaterialSymbols.Apps,
-                                contentDescription = "App Drawer",
-                                modifier = Modifier.size(22.dp),
-                            )
-                        },
-                        label = {
-                            Text(
-                                "More",
-                                style = MaterialTheme.typography.labelSmall,
-                                maxLines = 1,
-                            )
-                        },
-                        colors = NavigationRailItemDefaults.colors(),
-                    )
-                }
-
-                // Fixed bottom controls — always visible regardless of how
-                // many items are in the scrollable region above.
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
-                ) {
-                    // Relay health — shows elapsed time since last event (hidden when <30s)
-                    RelayHealthIndicator(
-                        lastEventReceivedAt = lastRelayEventAt,
-                        modifier = Modifier.padding(bottom = 4.dp),
-                    )
-
-                    BunkerHeartbeatIndicator(
-                        signerConnectionState = signerConnectionState,
-                        lastPingTimeSec = lastPingTimeSec,
-                        modifier = Modifier.padding(bottom = 4.dp),
-                    )
-
-                    TorStatusIndicator(
-                        status = torState.status,
-                        onClick = {
-                            singlePaneState.navigate(DeckColumnType.Settings)
-                            navState.clear()
-                        },
-                        modifier = Modifier.padding(bottom = 4.dp),
-                    )
-
-                    AccountSwitcherDropdown(
-                        activeNpub = accountManager.currentAccount()?.npub,
-                        allAccounts = allAccountsState,
-                        localCache = localCache,
-                        onSwitchAccount = { npub ->
-                            singlePaneScope.launch(Dispatchers.IO) {
-                                accountManager.switchAccount(npub)
-                            }
-                        },
-                        onAddAccount = { showAddAccountDialog = true },
-                        onRemoveAccount = { npub ->
-                            singlePaneScope.launch(Dispatchers.IO) {
-                                accountManager.removeAccountFromStorage(npub)
-                            }
-                        },
-                        modifier = Modifier.padding(bottom = 8.dp),
-                    )
-                }
-            }
-
-            if (showAddAccountDialog) {
-                AddAccountDialog(
-                    accountManager = accountManager,
-                    onDismiss = { showAddAccountDialog = false },
-                    onAccountAdded = {
-                        showAddAccountDialog = false
-                        singlePaneScope.launch(Dispatchers.IO) {
-                            accountManager.refreshAccountList()
-                        }
-                    },
-                )
-            }
-        }
-
-        if (!isImmersive) {
-            VerticalDivider()
-        }
-
-        Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+    // Sidebar is now provided by Main.kt (shared MainSidebar for both layout modes).
+    // SinglePaneLayout only renders the content pane.
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
             // Offline banner — shows when no remote relays connected
             val connectedRelays by relayManager.connectedRelays.collectAsState()
             val localRelay = LocalLocalRelayStore.current
