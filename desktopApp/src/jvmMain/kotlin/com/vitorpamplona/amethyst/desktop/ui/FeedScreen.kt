@@ -1061,7 +1061,32 @@ private fun FeedTabsHeader(
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                     val hasQuery = searchText.text.isNotBlank()
+                    val isSearching by searchState.isSearching.collectAsState()
+                    val people by searchState.peopleResults.collectAsState()
+                    val notes by searchState.noteResults.collectAsState()
+                    val hasResults = people.isNotEmpty() || notes.isNotEmpty()
+
                     if (hasQuery) {
+                        if (isSearching && !hasResults) {
+                            // Loading state while waiting for relay results
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                androidx.compose.material3.CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    "Searching ${searchRelays.size} relays...",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+
                         // Show search results (reuses SearchResultsList)
                         SearchResultsList(
                             state = searchState,
@@ -1076,6 +1101,15 @@ private fun FeedTabsHeader(
                             localCache = localCache,
                             modifier = Modifier.heightIn(max = 400.dp).fillMaxWidth(),
                         )
+
+                        if (!isSearching && !hasResults && searchRelays.isEmpty()) {
+                            Text(
+                                "No search relays configured",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(16.dp),
+                            )
+                        }
 
                         // "Open full search" link
                         HorizontalDivider(
