@@ -28,7 +28,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -72,12 +71,10 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.account.AccountInfo
 import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
-import com.vitorpamplona.amethyst.commons.ui.components.BunkerHeartbeatIndicator
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.desktop.DesktopPreferences
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop
-import com.vitorpamplona.amethyst.desktop.ui.tor.TorStatusIndicator
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import kotlinx.collections.immutable.ImmutableList
 
@@ -245,21 +242,35 @@ fun MainSidebar(
             }
         }
 
-        // -- Bottom section: indicators + collapse toggle --
+        // -- Bottom section: status indicators + collapse toggle --
         HorizontalDivider(modifier = Modifier.padding(horizontal = 12.dp))
         Spacer(Modifier.height(4.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            BunkerHeartbeatIndicator(
-                signerConnectionState = signerConnectionState,
-                lastPingTimeSec = lastPingTimeSec,
+        // Tor status — same style as nav items
+        val torLabel =
+            when (torStatus) {
+                is TorServiceStatus.Off -> "Tor: Off"
+                is TorServiceStatus.Connecting -> "Tor: Connecting"
+                is TorServiceStatus.Active -> "Tor: Connected"
+                is TorServiceStatus.Error -> "Tor: Error"
+            }
+        SidebarNavItem(
+            icon = MaterialSymbols.Shield,
+            label = torLabel,
+            isActive = false,
+            expanded = expanded,
+            onClick = onOpenSettings,
+        )
+
+        // Bunker heartbeat — same style as nav items (only show when connected)
+        if (signerConnectionState is SignerConnectionState.Connected) {
+            SidebarNavItem(
+                icon = MaterialSymbols.Favorite,
+                label = "Bunker: OK",
+                isActive = false,
+                expanded = expanded,
+                onClick = onOpenSettings,
             )
-            Spacer(Modifier.width(4.dp))
-            TorStatusIndicator(status = torStatus, onClick = onOpenSettings)
         }
 
         Spacer(Modifier.height(4.dp))
