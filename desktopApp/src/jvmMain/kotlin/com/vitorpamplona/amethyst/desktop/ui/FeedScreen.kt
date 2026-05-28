@@ -23,6 +23,9 @@ package com.vitorpamplona.amethyst.desktop.ui
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.TooltipArea
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,10 +37,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -54,7 +60,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.vitorpamplona.amethyst.commons.compose.elements.BoostedMark
 import com.vitorpamplona.amethyst.commons.compose.layouts.GenericRepostLayout
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -66,12 +83,14 @@ import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.desktop.DesktopPreferences
+import com.vitorpamplona.amethyst.desktop.SearchHistoryStore
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.feeds.DesktopCustomFeedFilter
 import com.vitorpamplona.amethyst.desktop.feeds.DesktopFollowingFeedFilter
 import com.vitorpamplona.amethyst.desktop.feeds.DesktopGlobalFeedFilter
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.subscriptions.FeedMode
 import com.vitorpamplona.amethyst.desktop.subscriptions.FilterBuilders
@@ -300,6 +319,9 @@ fun FeedScreen(
     onNavigateToRelays: () -> Unit = {},
     onSearchClick: () -> Unit = {},
 ) {
+    val feedSearchActiveState = com.vitorpamplona.amethyst.desktop.ui.theme.LocalFeedSearchActive.current
+    var searchActive by feedSearchActiveState
+    val onSearchActiveChange: (Boolean) -> Unit = { searchActive = it }
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val connectedRelays by relayManager.connectedRelays.collectAsState()
     val followedUsers by localCache.followedUsers.collectAsState()
@@ -560,10 +582,12 @@ fun FeedScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         ReadingColumn {
-            // Header: pinned feed tabs + "Show More +"
+            // Header: pinned feed tabs + search pill (or expanded search card)
             FeedTabsHeader(
                 feedMode = feedMode,
                 activeFeedId = activeFeedId,
+                searchExpanded = searchActive,
+                onSearchExpandedChange = onSearchActiveChange,
                 onFeedModeChange = { mode ->
                     feedMode = mode
                     activeFeedId = null
@@ -724,6 +748,22 @@ fun FeedScreen(
             )
         }
 
+        // Search scrim — dims feed content when search is expanded
+        if (searchActive) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.3f))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) {
+                            onSearchActiveChange(false)
+                        },
+            )
+        }
+
         // Lightbox overlay
         lightboxState?.let { state ->
             LightboxOverlay(
@@ -750,6 +790,8 @@ fun FeedScreen(
 private fun FeedTabsHeader(
     feedMode: FeedMode,
     activeFeedId: String? = null,
+    searchExpanded: Boolean = false,
+    onSearchExpandedChange: (Boolean) -> Unit = {},
     onFeedModeChange: (FeedMode) -> Unit,
     onNavigateToFeed: (com.vitorpamplona.amethyst.commons.feeds.custom.FeedDefinition) -> Unit = {},
     onOpenFeedsDrawer: () -> Unit,
@@ -764,58 +806,265 @@ private fun FeedTabsHeader(
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = sidePadding + 8.dp, vertical = 8.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = sidePadding + 8.dp, vertical = 8.dp)
+                .zIndex(if (searchExpanded) 10f else 0f),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            // Compact feed tabs
-            pinnedFeeds.forEach { feed ->
-                val isSelected =
-                    when (feed.source) {
-                        is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Following ->
-                            feedMode == FeedMode.FOLLOWING
-                        is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Global ->
-                            feedMode == FeedMode.GLOBAL
-                        else -> activeFeedId == feed.id
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                if (!searchExpanded) {
+                    // Compact feed tabs
+                    pinnedFeeds.forEach { feed ->
+                        val isSelected =
+                            when (feed.source) {
+                                is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Following ->
+                                    feedMode == FeedMode.FOLLOWING
+                                is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Global ->
+                                    feedMode == FeedMode.GLOBAL
+                                else -> activeFeedId == feed.id
+                            }
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = {
+                                when (feed.source) {
+                                    is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Following ->
+                                        onFeedModeChange(FeedMode.FOLLOWING)
+                                    is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Global ->
+                                        onFeedModeChange(FeedMode.GLOBAL)
+                                    else -> onNavigateToFeed(feed)
+                                }
+                            },
+                            label = {
+                                Text(
+                                    "${feed.emoji} ${feed.name}",
+                                    maxLines = 1,
+                                    style = MaterialTheme.typography.labelMedium,
+                                )
+                            },
+                        )
                     }
-                FilterChip(
-                    selected = isSelected,
-                    onClick = {
-                        when (feed.source) {
-                            is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Following ->
-                                onFeedModeChange(FeedMode.FOLLOWING)
-                            is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Global ->
-                                onFeedModeChange(FeedMode.GLOBAL)
-                            else -> onNavigateToFeed(feed)
+                }
+
+                // Search pill / expanded input — takes remaining center space
+                if (searchExpanded) {
+                    SearchInput(
+                        onDismiss = { onSearchExpandedChange(false) },
+                        onOpenFullSearch = onSearchClick,
+                        modifier = Modifier.weight(1f),
+                    )
+                } else {
+                    com.vitorpamplona.amethyst.desktop.ui.search.SearchPill(
+                        onClick = { onSearchExpandedChange(true) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+
+                if (!searchExpanded) {
+                    // Compose button
+                    IconButton(onClick = onCompose, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            MaterialSymbols.Edit,
+                            contentDescription = "Compose",
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+            }
+
+            // Expanded search: history section below the input
+            if (searchExpanded) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                SearchHistorySection(
+                    onOpenFullSearch = {
+                        onSearchExpandedChange(false)
+                        onSearchClick()
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchInput(
+    onDismiss: () -> Unit,
+    onOpenFullSearch: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier,
+    ) {
+        Icon(
+            MaterialSymbols.Search,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.width(8.dp))
+        BasicTextField(
+            value = textFieldValue,
+            onValueChange = { textFieldValue = it },
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .focusRequester(focusRequester)
+                    .onPreviewKeyEvent { event ->
+                        if (event.type == KeyEventType.KeyDown) {
+                            when (event.key) {
+                                Key.Escape -> {
+                                    onDismiss()
+                                    focusManager.clearFocus()
+                                    true
+                                }
+                                Key.Enter -> {
+                                    onOpenFullSearch()
+                                    true
+                                }
+                                else -> false
+                            }
+                        } else {
+                            false
                         }
                     },
-                    label = {
+            textStyle =
+                MaterialTheme.typography.bodyMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurface,
+                ),
+            singleLine = true,
+            decorationBox = { innerTextField ->
+                Box(contentAlignment = Alignment.CenterStart) {
+                    if (textFieldValue.text.isEmpty()) {
                         Text(
-                            "${feed.emoji} ${feed.name}",
-                            maxLines = 1,
-                            style = MaterialTheme.typography.labelMedium,
+                            "Search notes, profiles, hashtags...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                         )
-                    },
-                )
-            }
+                    }
+                    innerTextField()
+                }
+            },
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            if (PlatformInfo.isMacOS) "\u2318F" else "Ctrl+F",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+        )
+    }
 
-            // Search pill — takes remaining center space
-            com.vitorpamplona.amethyst.desktop.ui.search.SearchPill(
-                onClick = onSearchClick,
-                modifier = Modifier.weight(1f),
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+}
+
+@Composable
+private fun SearchHistorySection(onOpenFullSearch: () -> Unit) {
+    val history by SearchHistoryStore.history.collectAsState()
+    val savedSearches by SearchHistoryStore.savedSearches.collectAsState()
+
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+    ) {
+        if (history.isNotEmpty()) {
+            Text(
+                "Recent",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
             )
+            history.take(5).forEach { query ->
+                val text =
+                    com.vitorpamplona.amethyst.commons.search.QuerySerializer
+                        .serialize(query)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { onOpenFullSearch() }
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    Icon(
+                        MaterialSymbols.History,
+                        null,
+                        Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text(text, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                }
+            }
+        }
 
-            // Compose button
-            IconButton(onClick = onCompose, modifier = Modifier.size(32.dp)) {
-                Icon(
-                    MaterialSymbols.Edit,
-                    contentDescription = "Compose",
-                    modifier = Modifier.size(18.dp),
+        if (savedSearches.isNotEmpty()) {
+            if (history.isNotEmpty()) {
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 )
             }
+            Text(
+                "Saved",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+            )
+            savedSearches.take(5).forEach { saved ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { onOpenFullSearch() }
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    Icon(
+                        MaterialSymbols.Bookmark,
+                        null,
+                        Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text(saved.label, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                }
+            }
+        }
+
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.outlineVariant,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { onOpenFullSearch() }
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+        ) {
+            Icon(
+                MaterialSymbols.AutoMirrored.OpenInNew,
+                null,
+                Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.width(10.dp))
+            Text(
+                "Open full search",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
         }
     }
 }

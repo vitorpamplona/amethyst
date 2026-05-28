@@ -263,6 +263,7 @@ fun main() {
         var showAppDrawer by remember { mutableStateOf(false) }
         var showAddColumnDialog by remember { mutableStateOf(false) }
         var showImportFollowListDialog by remember { mutableStateOf(false) }
+        val feedSearchActiveState = remember { mutableStateOf(false) }
 
         // Tor state at Window level — survives key() app rebuild
         var torSettings by remember {
@@ -451,7 +452,7 @@ fun main() {
                             } else {
                                 KeyShortcut(Key.F, ctrl = true)
                             },
-                        onClick = { navigateToScreen?.invoke(DeckColumnType.Search) },
+                        onClick = { feedSearchActiveState.value = !feedSearchActiveState.value },
                     )
                     Item(
                         "App Drawer",
@@ -617,39 +618,43 @@ fun main() {
                 LocalIsImmersiveFullscreen provides immersiveFullscreenState,
             ) {
                 key(appRestartKey) {
-                    App(
-                        layoutMode = layoutMode,
-                        onLayoutModeChange = { newMode ->
-                            layoutMode = newMode
-                            DesktopPreferences.layoutMode = newMode.name
-                        },
-                        deckState = deckState,
-                        workspaceManager = workspaceManager,
-                        accountManager = accountManager,
-                        showComposeDialog = showComposeDialog,
-                        showAppDrawer = showAppDrawer,
-                        onShowComposeDialog = { showComposeDialog = true },
-                        onShowReplyDialog = { event ->
-                            replyToNote = event
-                            showComposeDialog = true
-                        },
-                        onDismissComposeDialog = {
-                            showComposeDialog = false
-                            replyToNote = null
-                        },
-                        onDismissAppDrawer = { showAppDrawer = false },
-                        onShowAppDrawer = { showAppDrawer = true },
-                        replyToNote = replyToNote,
-                        showImportFollowListDialog = showImportFollowListDialog,
-                        onShowImportFollowListDialog = { showImportFollowListDialog = true },
-                        onDismissImportFollowListDialog = { showImportFollowListDialog = false },
-                        onRestartApp = { appRestartKey++ },
-                        torManager = torManager,
-                        torTypeFlow = torTypeFlow,
-                        externalPortFlow = externalPortFlow,
-                        initialTorSettings = torSettings,
-                        onNavigateToScreen = { navigateToScreen = it },
-                    )
+                    CompositionLocalProvider(
+                        com.vitorpamplona.amethyst.desktop.ui.theme.LocalFeedSearchActive provides feedSearchActiveState,
+                    ) {
+                        App(
+                            layoutMode = layoutMode,
+                            onLayoutModeChange = { newMode ->
+                                layoutMode = newMode
+                                DesktopPreferences.layoutMode = newMode.name
+                            },
+                            deckState = deckState,
+                            workspaceManager = workspaceManager,
+                            accountManager = accountManager,
+                            showComposeDialog = showComposeDialog,
+                            showAppDrawer = showAppDrawer,
+                            onShowComposeDialog = { showComposeDialog = true },
+                            onShowReplyDialog = { event ->
+                                replyToNote = event
+                                showComposeDialog = true
+                            },
+                            onDismissComposeDialog = {
+                                showComposeDialog = false
+                                replyToNote = null
+                            },
+                            onDismissAppDrawer = { showAppDrawer = false },
+                            onShowAppDrawer = { showAppDrawer = true },
+                            replyToNote = replyToNote,
+                            showImportFollowListDialog = showImportFollowListDialog,
+                            onShowImportFollowListDialog = { showImportFollowListDialog = true },
+                            onDismissImportFollowListDialog = { showImportFollowListDialog = false },
+                            onRestartApp = { appRestartKey++ },
+                            torManager = torManager,
+                            torTypeFlow = torTypeFlow,
+                            externalPortFlow = externalPortFlow,
+                            initialTorSettings = torSettings,
+                            onNavigateToScreen = { navigateToScreen = it },
+                        )
+                    }
                 }
             }
         }
