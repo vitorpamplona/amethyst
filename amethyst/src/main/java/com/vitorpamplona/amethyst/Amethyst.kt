@@ -21,10 +21,16 @@
 package com.vitorpamplona.amethyst
 
 import android.app.Application
+import com.vitorpamplona.amethyst.debug.BootTrace
 import com.vitorpamplona.amethyst.service.logging.Logging
 import com.vitorpamplona.amethyst.service.nests.AppForegroundRecycleHook
+import com.vitorpamplona.amethyst.ui.screen.AccountState
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 class Amethyst : Application() {
     init {
@@ -40,7 +46,14 @@ class Amethyst : Application() {
     override fun onCreate() {
         super.onCreate()
         Log.d("AmethystApp") { "onCreate $this" }
-        instance = AppModules(this)
+        BootTrace.section("Boot:AppModulesCtor") {
+            instance = AppModules(this)
+        }
+
+        // Arm boot-tail observers BEFORE initiate() launches IO work, so the
+        // SharedFlow (replay=0) for new event bundles can't fire before we
+        // subscribe. See `:macrobenchmark` for what these markers measure.
+        armBootTraceObservers()
 
         // After-background foreground recycle: when the app returns to
         // the foreground after spending more than ~5 s in the
@@ -63,7 +76,59 @@ class Amethyst : Application() {
                 .setRecording(true)
         }
 
-        instance.initiate(this)
+        BootTrace.section("Boot:Initiate") {
+            instance.initiate(this)
+        }
+    }
+
+    private fun armBootTraceObservers() {
+        val scope = instance.applicationIOScope
+        val sessionManager = instance.sessionManager
+        val client = instance.client
+        val live = instance.cache.live
+
+        scope.launch {
+            sessionManager.accountContent.first { it is AccountState.LoggedIn }
+            BootTrace.mark("Boot:FirstAccountLoaded")
+        }
+
+        scope.launch {
+            client.connectedRelaysFlow().first { it.isNotEmpty() }
+            BootTrace.mark("Boot:RelaysConnected")
+        }
+
+        scope.launch {
+            // Single collector funnels every bundle through a CONFLATED channel
+            // (capacity 1, latest wins). Removes the re-subscribe gap that the
+            // naive `first()`-in-a-loop pattern had against a SharedFlow with
+            // replay=0 + DROP_OLDEST.
+            val ticks = Channel<Unit>(Channel.CONFLATED)
+            val collector =
+                launch {
+                    live.newEventBundles.collect { ticks.trySend(Unit) }
+                }
+            try {
+                // First bundle = at least one new event reached LocalCache.
+                // Proxy for "the home feed has data to render"; the true
+                // first-frame signal would require instrumenting commons'
+                // FeedContentState.
+                ticks.receive()
+                BootTrace.mark("Boot:FirstHomeFeedFrame")
+
+                // Steady = no new bundle for 3 s. Signals end of the cold-start
+                // event flood (typically 10–60 s after first frame on a
+                // populated account).
+                while (true) {
+                    val next = withTimeoutOrNull(3_000) { ticks.receive() }
+                    if (next == null) {
+                        BootTrace.mark("Boot:HomeFeedSteady")
+                        break
+                    }
+                }
+            } finally {
+                collector.cancel()
+            }
+        }
     }
 
     override fun onTerminate() {

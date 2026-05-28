@@ -33,6 +33,7 @@ dependencyResolutionManagement {
 rootProject.name = "Amethyst"
 include(":amethyst")
 include(":benchmark")
+include(":macrobenchmark")
 include(":quartz")
 include(":geode")
 include(":commons")
