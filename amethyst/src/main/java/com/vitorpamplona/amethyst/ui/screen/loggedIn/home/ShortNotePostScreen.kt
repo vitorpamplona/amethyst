@@ -58,7 +58,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -67,11 +69,15 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.IntentCompat
 import androidx.core.net.toUri
 import androidx.core.util.Consumer
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.ui.actions.StrippingFailureDialog
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.FileServerSelectionRow
 import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
@@ -130,6 +136,7 @@ import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -157,6 +164,12 @@ fun ShortNotePostScreen(
     val activity = context.getActivity()
     val scope = rememberCoroutineScope()
 
+    // Persist the active draft tag across activity recreation and process
+    // death so the screen can re-attach to the in-progress NIP-37 draft on
+    // return. The route's draftId only reflects the entry point — the user
+    // may have rotated to a new draft via Cancel after the screen opened.
+    var savedDraftTag by rememberSaveable { mutableStateOf<String?>(null) }
+
     LaunchedEffect(Unit) {
         postViewModel.initWritingAssistant(context)
     }
@@ -166,7 +179,12 @@ fun ShortNotePostScreen(
         val quote = quoteId?.let { accountViewModel.getNoteIfExists(it) }
         val fork = forkId?.let { accountViewModel.getNoteIfExists(it) }
         val version = versionId?.let { accountViewModel.getNoteIfExists(it) }
-        val draft = draftId?.let { accountViewModel.getNoteIfExists(it) }
+        val draft =
+            savedDraftTag?.let { tag ->
+                LocalCache.getAddressableNoteIfExists(
+                    DraftWrapEvent.createAddressTag(accountViewModel.account.userProfile().pubkeyHex, tag),
+                )
+            } ?: draftId?.let { accountViewModel.getNoteIfExists(it) }
         postViewModel.load(baseReplyTo, quote, fork, version, draft)
         message?.ifBlank { null }?.let {
             postViewModel.message.setTextAndPlaceCursorAtEnd(it)
@@ -178,6 +196,25 @@ fun ShortNotePostScreen(
                 postViewModel.selectImage(persistentListOf(SelectedMedia(it, mediaType)))
             }
         }
+    }
+
+    LaunchedEffect(postViewModel) {
+        snapshotFlow { postViewModel.draftTag.current }
+            .collect { savedDraftTag = it }
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, postViewModel) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_PAUSE) {
+                    accountViewModel.launchSigner {
+                        postViewModel.sendDraftSync()
+                    }
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     DisposableEffect(nav, activity) {
