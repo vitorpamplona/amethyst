@@ -769,12 +769,14 @@ open class Note(
         afterTimeInSeconds: Long,
         account: IAccount,
     ): Boolean {
-        // NIP-61 nutzaps: the sender is the source event's pubkey, so
-        // the check is direct — no private-zap decryption needed (cashu
-        // doesn't have a private-recipient variant the way NIP-57 does).
-        // Run this first; it's an in-memory scan and a hit short-circuits
-        // the more expensive lightning path.
+        // NIP-61 nutzaps and NIP-BC onchain zaps: the sender is the
+        // source event's pubkey, so the check is direct — no
+        // private-zap decryption needed. Run these first; they're
+        // in-memory scans and a hit short-circuits the more expensive
+        // lightning path (which may have to decrypt NIP-44-private
+        // zap requests).
         if (isNutzappedBy(user, afterTimeInSeconds)) return true
+        if (isOnchainZappedBy(user, afterTimeInSeconds)) return true
 
         val first = isZappedByCalculation(null, user, afterTimeInSeconds, account, zaps)
         if (first) return true
@@ -792,6 +794,40 @@ open class Note(
             val sourceEvent = entry.source.event ?: return@any false
             entry.source.author == user && sourceEvent.createdAt > afterTimeInSeconds
         }
+
+    private fun isOnchainZappedBy(
+        user: User,
+        afterTimeInSeconds: Long,
+    ): Boolean =
+        onchainZaps.values.any { entry ->
+            val sourceEvent = entry.source.event ?: return@any false
+            entry.source.author == user && sourceEvent.createdAt > afterTimeInSeconds
+        }
+
+    /**
+     * Extra sats to add on top of [zapsAmount] for the reaction-row
+     * counter when the signed-in user has outgoing onchain zaps on
+     * this note that aren't yet CONFIRMED. [updateZapTotal] only
+     * counts CONFIRMED onchain entries (verifiedSats) because incoming
+     * sender-claimed amounts are spoofable. The signed-in user's OWN
+     * outgoing zap is trusted at face value though — they know what
+     * they sent — so the counter should reflect it immediately, the
+     * same way the gallery shows their own UNVERIFIED entry with the
+     * claimed amount. Other senders' non-confirmed entries still
+     * contribute 0 here.
+     */
+    fun extraOwnPendingOnchainSats(loggedInPubKey: HexKey?): Long {
+        if (loggedInPubKey == null) return 0L
+        var sum = 0L
+        onchainZaps.values.forEach { entry ->
+            if (entry.status != OnchainZapStatus.CONFIRMED &&
+                entry.source.author?.pubkeyHex == loggedInPubKey
+            ) {
+                sum += entry.claimedSats
+            }
+        }
+        return sum
+    }
 
     suspend fun isZappedBy(
         option: Int?,

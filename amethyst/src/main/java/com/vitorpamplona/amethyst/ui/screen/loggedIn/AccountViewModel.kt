@@ -623,15 +623,21 @@ class AccountViewModel(
             account.calculateIfNoteWasZappedByAccount(zappedNote, afterTimeInSeconds)
         }
 
-    suspend fun calculateZapAmount(zappedNote: Note): String =
-        if (zappedNote.zapPayments.isNotEmpty()) {
+    suspend fun calculateZapAmount(zappedNote: Note): String {
+        // The signed-in user's own outgoing onchain zaps that aren't
+        // yet CONFIRMED still need to show in the counter — the user
+        // knows what they sent, so make the counter reflect reality
+        // immediately instead of waiting for chain confirmation.
+        val ownPendingOnchain = zappedNote.extraOwnPendingOnchainSats(account.userProfile().pubkeyHex)
+        return if (zappedNote.zapPayments.isNotEmpty()) {
             withContext(Dispatchers.IO) {
-                val it = account.calculateZappedAmount(zappedNote)
-                showAmount(it)
+                val nwc = account.calculateZappedAmount(zappedNote)
+                showAmount(nwc + java.math.BigDecimal(ownPendingOnchain))
             }
         } else {
-            showAmount(zappedNote.zapsAmount)
+            showAmount(zappedNote.zapsAmount + java.math.BigDecimal(ownPendingOnchain))
         }
+    }
 
     suspend fun calculateZapraiser(zappedNote: Note): ZapraiserStatus {
         val zapraiserAmount = zappedNote.event?.zapraiserAmount() ?: 0

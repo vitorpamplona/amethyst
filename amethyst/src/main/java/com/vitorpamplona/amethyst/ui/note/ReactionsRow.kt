@@ -1458,7 +1458,8 @@ fun ObserveZapIconState(
             val hasZapData =
                 zapsState?.note?.zapPayments?.isNotEmpty() == true ||
                     zapsState?.note?.zaps?.isNotEmpty() == true ||
-                    zapsState?.note?.nutzaps?.isNotEmpty() == true
+                    zapsState?.note?.nutzaps?.isNotEmpty() == true ||
+                    zapsState?.note?.onchainZaps?.isNotEmpty() == true
             val wasZapped =
                 if (hasZapData) {
                     accountViewModel.calculateIfNoteWasZappedByAccount(baseNote, afterTimeInSeconds)
@@ -1538,7 +1539,14 @@ fun ObserveZapAmountText(
 
         inner(zapAmountTxt)
     } else {
-        inner(showAmount(zapsState?.note?.zapsAmount))
+        // Include the signed-in user's own pending onchain zaps so
+        // the counter reflects the optimistic value the gallery shows.
+        val ownPubKey = accountViewModel.account.userProfile().pubkeyHex
+        val note = zapsState?.note
+        val total =
+            (note?.zapsAmount ?: java.math.BigDecimal(0)) +
+                java.math.BigDecimal(note?.extraOwnPendingOnchainSats(ownPubKey) ?: 0L)
+        inner(showAmount(total))
     }
 }
 
