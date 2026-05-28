@@ -52,6 +52,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -1058,60 +1059,84 @@ private fun FeedTabsHeader(
                 exit = shrinkVertically(animationSpec = tween(150)) + fadeOut(tween(100)),
             ) {
                 Column {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
                     val hasQuery = searchText.text.isNotBlank()
                     val isSearching by searchState.isSearching.collectAsState()
                     val people by searchState.peopleResults.collectAsState()
                     val notes by searchState.noteResults.collectAsState()
                     val hasResults = people.isNotEmpty() || notes.isNotEmpty()
 
+                    // Linear progress bar at the top — visible while searching
+                    AnimatedVisibility(
+                        visible = isSearching || (hasQuery && !hasResults),
+                        enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+                        exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
+                    ) {
+                        LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        )
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
                     if (hasQuery) {
-                        if (isSearching && !hasResults) {
-                            // Loading state while waiting for relay results
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically,
+                        // Results stream in as they arrive
+                        if (hasResults) {
+                            SearchResultsList(
+                                state = searchState,
+                                onNavigateToProfile = { pubkey ->
+                                    onSearchExpandedChange(false)
+                                    onNavigateToProfile(pubkey)
+                                },
+                                onNavigateToThread = { noteId ->
+                                    onSearchExpandedChange(false)
+                                    onNavigateToThread(noteId)
+                                },
+                                localCache = localCache,
+                                modifier = Modifier.heightIn(max = 400.dp).fillMaxWidth(),
+                            )
+                        } else if (isSearching) {
+                            // Loading — centered in results area
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
-                                androidx.compose.material3.CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 2.dp,
+                                Icon(
+                                    MaterialSymbols.Search,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(32.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                                 )
-                                Spacer(Modifier.width(8.dp))
+                                Spacer(Modifier.height(8.dp))
                                 Text(
                                     "Searching ${searchRelays.size} relays...",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
+                        } else {
+                            // Search complete, no results
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Icon(
+                                    MaterialSymbols.Search,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(32.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    if (searchRelays.isEmpty()) "No search relays configured" else "No results found",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
 
-                        // Show search results (reuses SearchResultsList)
-                        SearchResultsList(
-                            state = searchState,
-                            onNavigateToProfile = { pubkey ->
-                                onSearchExpandedChange(false)
-                                onNavigateToProfile(pubkey)
-                            },
-                            onNavigateToThread = { noteId ->
-                                onSearchExpandedChange(false)
-                                onNavigateToThread(noteId)
-                            },
-                            localCache = localCache,
-                            modifier = Modifier.heightIn(max = 400.dp).fillMaxWidth(),
-                        )
-
-                        if (!isSearching && !hasResults && searchRelays.isEmpty()) {
-                            Text(
-                                "No search relays configured",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(16.dp),
-                            )
-                        }
-
-                        // "Open full search" link
+                        // "Open full search" — always visible when there's a query
                         HorizontalDivider(
                             color = MaterialTheme.colorScheme.outlineVariant,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
