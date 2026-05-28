@@ -1457,7 +1457,8 @@ fun ObserveZapIconState(
         LaunchedEffect(key1 = zapsState, key2 = hasPendingPaymentRequest) {
             val hasZapData =
                 zapsState?.note?.zapPayments?.isNotEmpty() == true ||
-                    zapsState?.note?.zaps?.isNotEmpty() == true
+                    zapsState?.note?.zaps?.isNotEmpty() == true ||
+                    zapsState?.note?.nutzaps?.isNotEmpty() == true
             val wasZapped =
                 if (hasZapData) {
                     accountViewModel.calculateIfNoteWasZappedByAccount(baseNote, afterTimeInSeconds)
