@@ -20,6 +20,28 @@ nostrnests reference relay. The IETF code is kept as a reference + unit-test
 implementation for any future IETF target; see
 `nestsClient/plans/2026-04-26-moq-lite-gap.md`.
 
+## Verify, Don't Guess (standing instruction)
+
+A plausible-sounding explanation is cheap; being right is not. Before
+asserting what a problem is or how something behaves:
+
+1. **State hypotheses as hypotheses.** If you haven't run it, say "I'm
+   guessing" or "haven't verified" — never dress an untested guess up as a
+   diagnosis. Use "I verified X by running Y" only when you actually did.
+2. **Reproduce before diagnosing.** If a claim is checkable in under a
+   minute, check it before stating it. This repo gives you the means:
+   `./gradlew test`, the per-module tests, and `amy` (the CLI exists partly
+   to drive `quartz`/`commons` for interop checks). Write the failing case
+   first, watch it fail, *then* explain. For non-trivial bugs use `/bugfix`
+   (reproduce-first) or `/investigate` (competing hypotheses + refutation).
+3. **Predict, then run.** Before running a command, state the output you
+   expect. A mismatch is the cheapest signal that your model is wrong.
+4. **Don't commit to one cause.** A single immediate explanation stops you
+   from looking. Hold 2–3 candidates and a discriminating test for each.
+
+If you find yourself writing paragraphs to defend a theory, that effort
+almost always should have been one test.
+
 ## Architecture
 
 ```
