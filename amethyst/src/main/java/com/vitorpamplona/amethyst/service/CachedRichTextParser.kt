@@ -81,14 +81,28 @@ object CachedRichTextParser {
         return result
     }
 
-    private fun computeIsMarkdown(content: String): Boolean =
-        content.startsWith("> ") ||
+    private fun computeIsMarkdown(content: String): Boolean {
+        // Cashu v2/cashuB tokens are base64url payloads that routinely
+        // contain '__' (the base64url alphabet uses '_'; a token whose
+        // CBOR ends with a fixed-bytes break easily produces a tail
+        // like `______`). Without this exemption, the markdown detector
+        // tags any chat message carrying a cashuB token as markdown,
+        // the content is routed through RenderContentAsMarkdown, which
+        // has no knowledge of CashuSegment, and the user sees the raw
+        // base64 instead of the redeem card. cashuA (v3 JSON+base64url)
+        // shares the same alphabet and the same risk. Force the
+        // rich-text path whenever a cashu token is present so the
+        // inline CashuPreview renders.
+        if (content.contains("cashuA", true) || content.contains("cashuB", true)) return false
+
+        return content.startsWith("> ") ||
             content.startsWith("# ") ||
             content.contains("##") ||
             content.contains("__") ||
             content.contains("**") ||
             content.contains("```") ||
             content.contains("](")
+    }
 }
 
 object CachedUrlParser {
