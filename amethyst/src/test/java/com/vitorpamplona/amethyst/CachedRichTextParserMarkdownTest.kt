@@ -118,6 +118,52 @@ class CachedRichTextParserMarkdownTest {
 
     @Test fun underscoreAcrossNewlineIsNotMarkdown() = assertFalse(CachedRichTextParser.isMarkdown("first line _\nsecond line _"))
 
+    // CommonMark §6.2 forbids `_` from opening/closing emphasis intraword.
+    // These cases pin down the snake_case carve-out that also protects
+    // base64url cashu tokens from false-firing the markdown route.
+    @Test fun snakeCaseIsNotMarkdown() = assertFalse(CachedRichTextParser.isMarkdown("call snake_case_identifier here"))
+
+    @Test fun pythonDunderSurroundedByWhitespaceIsMarkdown() {
+        // CommonMark §6.2: `__text__` flanked by whitespace is strong
+        // emphasis. Python identifiers like `__init__` collide with
+        // this — there is no language-specific carve-out. Users who
+        // want literal dunders should wrap them in backticks.
+        assertTrue(CachedRichTextParser.isMarkdown("typedef __init__ method"))
+    }
+
+    @Test fun intrawordDoubleUnderscoreIsNotMarkdown() {
+        // But `foo__init__bar` (intraword) is not strong emphasis
+        // and must stay rich-text — same rule that protects cashuB.
+        assertFalse(CachedRichTextParser.isMarkdown("foo__init__bar literal"))
+    }
+
+    @Test fun intrawordTripleUnderscoreIsNotMarkdown() = assertFalse(CachedRichTextParser.isMarkdown("var foo___bar end"))
+
+    @Test fun underscoreRunAtEndOfWordIsNotMarkdown() = assertFalse(CachedRichTextParser.isMarkdown("hash 0v______ end"))
+
+    @Test fun intrawordAsteriskIsMarkdown() {
+        // CommonMark allows intraword `*` emphasis — keep behaving
+        // the same as a reference renderer so `foo*bar*baz` lights up.
+        assertTrue(CachedRichTextParser.isMarkdown("call foo*bar*baz here"))
+    }
+
+    @Test fun mathSpacedTripleStarIsNotMarkdown() = assertFalse(CachedRichTextParser.isMarkdown("5 * 3 * 7 = 105"))
+
+    @Test fun emailWithUnderscoreIsNotMarkdown() = assertFalse(CachedRichTextParser.isMarkdown("ping me at user_name@example.com"))
+
+    @Test fun arbitraryBase64UrlBlobIsNotMarkdown() {
+        // Same shape as the cashuB payload but without the `cashuB`
+        // prefix, so the upfront shortcut can't help — proves the
+        // intraword rule alone keeps base64url blobs out of the
+        // markdown route.
+        val blob =
+            "v2FteCJodHRwczovL21pbnQubWluaWJpdHMuY2FzaC9CaXRjb2luYXVjc2F0YWRkVEVTVGF0n79haUgAEHk32wzI" +
+                "ZWFwn79hYQJhc3hAZWM1YWI3Yjc1NjViYjBjZTZhNzg2NzBkMDA0OGExMjVlZGQzMjJhYmVjMTEzYWMwZTBmZGVkZmE3NTQ4Mzg3OWFj" +
+                "WCED0-ops8Ta6NjKChNJPe_jgIbXLlyxg2KSy2WaSTADo5D_v2FhCGFzeEBkNDZlODU5MDExNjU0NmNjZjAwNTE3ZTQ1NmU0MTY0N2Fm" +
+                "ZWUxOWNlMzY2N2IzYTcxODZkMzEwZDY1MjM3OTM4YWNYIQMTDGTY943O4ojhKopoYdemsUE2rSLfzwNBODL8WgOX0v______"
+        assertFalse(CachedRichTextParser.isMarkdown(blob))
+    }
+
     // ---- Code -----------------------------------------------------------
 
     @Test fun backtickCodeSpanIsMarkdown() = assertTrue(CachedRichTextParser.isMarkdown("run `ls -la` here"))

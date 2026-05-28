@@ -82,15 +82,13 @@ object CachedRichTextParser {
     }
 
     private fun computeIsMarkdown(content: String): Boolean {
-        // Cashu v2/cashuB tokens are base64url payloads that routinely
-        // contain '__' and lone '_' pairs (the base64url alphabet uses
-        // '_'; a token whose CBOR ends with a fixed-bytes break easily
-        // produces a tail like `______`). The detector below treats
-        // those as markdown bold/italic and routes the chat through
-        // RenderContentAsMarkdown, which has no CashuSegment support,
-        // so the user sees raw base64 instead of the redeem card.
-        // cashuA shares the same alphabet and the same risk. Force the
-        // rich-text path whenever a cashu token is present.
+        // Safety net for the mixed-content case: a chat that has BOTH
+        // a cashu token AND real markdown (e.g. "**enjoy** cashuB...")
+        // would otherwise be routed to RenderContentAsMarkdown, which
+        // has no CashuSegment support, and the cashu card disappears.
+        // The intraword-underscore rule below already handles
+        // cashu-only messages correctly; this short-circuit only
+        // matters when markdown chars also appear.
         if (content.contains("cashuA", true) || content.contains("cashuB", true)) return false
 
         val len = content.length
@@ -126,13 +124,61 @@ object CachedRichTextParser {
                     if ((c == '-' || c == '*' || c == '+') && i + 1 < len && content[i + 1] == ' ') return true
                 }
 
-                if (c == '*' || c == '_') {
-                    if (i + 1 < len && content[i + 1] == c) return true
-                    var j = i + 1
-                    while (j < len) {
-                        if (content[j] == c) return true
-                        if (content[j] == '\n') break
-                        j++
+                if (c == '*') {
+                    // CommonMark allows intraword `*` emphasis
+                    // (`foo*bar*baz` → `foo<em>bar</em>baz`), so no
+                    // word-boundary carve-out here. We still need a
+                    // flanking check though: a `*` followed by
+                    // whitespace can't open emphasis, and a closing
+                    // `*` can't be preceded by whitespace. Without
+                    // these, `5 * 3 = 15` and `5 * 3 * 7` would
+                    // false-fire.
+                    if (i + 1 < len && content[i + 1] == '*') return true
+                    val nextChar = if (i + 1 < len) content[i + 1] else ' '
+                    if (!nextChar.isMdSpaceOrNewline()) {
+                        var j = i + 1
+                        while (j < len && content[j] != '\n') {
+                            if (content[j] == '*' && !content[j - 1].isMdSpaceOrNewline()) return true
+                            j++
+                        }
+                    }
+                }
+                if (c == '_') {
+                    // CommonMark §6.2 forbids `_` from opening or
+                    // closing emphasis intraword — the rule that
+                    // makes `snake_case` and `foo_bar_baz` render
+                    // literally. Same rule keeps cashuB/cashuA
+                    // base64url payloads from false-firing, since
+                    // every `_` inside such a token is surrounded
+                    // by word chars.
+                    //
+                    // Practical heuristic: skip when the char before
+                    // this `_` is a word char (letter, digit, or
+                    // another `_` — the latter folds runs of `_` so
+                    // we only evaluate the run's first position).
+                    if (i == 0 || !content[i - 1].isMdWordChar()) {
+                        if (i + 1 < len && content[i + 1] == '_') {
+                            // `__` (or longer) at a non-word
+                            // boundary. Walk to the end of the run
+                            // and confirm it's followed by
+                            // non-whitespace (left-flanking).
+                            var runEnd = i + 1
+                            while (runEnd < len && content[runEnd] == '_') runEnd++
+                            if (runEnd < len && !content[runEnd].isMdSpaceOrNewline()) return true
+                        } else {
+                            // Single `_` at a non-word boundary.
+                            // Find a matching `_` on the same line
+                            // that itself is a valid closer (not
+                            // followed by a word char).
+                            var j = i + 1
+                            while (j < len && content[j] != '\n') {
+                                if (content[j] == '_') {
+                                    val nextIsWord = j + 1 < len && content[j + 1].isMdWordChar()
+                                    if (!nextIsWord) return true
+                                }
+                                j++
+                            }
+                        }
                     }
                 }
                 if (c == '[') {
@@ -207,6 +253,14 @@ object CachedRichTextParser {
 
         return false
     }
+
+    // CommonMark "word" character for the intraword-emphasis rule:
+    // ASCII letters, ASCII digits, and `_` itself. Used to fold runs of
+    // `_` (so we only evaluate the start of a run) and to detect
+    // `snake_case`-style intraword underscores.
+    private fun Char.isMdWordChar(): Boolean = this.isLetterOrDigit() || this == '_'
+
+    private fun Char.isMdSpaceOrNewline(): Boolean = this == ' ' || this == '\t' || this == '\n' || this == '\r'
 
     // Allocated once at object init; every isMarkdown call does an
     // O(1) lookup against this table instead of branching through ten
