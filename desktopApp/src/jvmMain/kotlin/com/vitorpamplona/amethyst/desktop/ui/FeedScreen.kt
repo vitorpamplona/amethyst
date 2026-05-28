@@ -813,45 +813,44 @@ private fun FeedTabsHeader(
                 .zIndex(if (searchExpanded) 10f else 0f),
     ) {
         Column {
+            // Always-visible header row: tabs + search + compose
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                if (!searchExpanded) {
-                    // Compact feed tabs
-                    pinnedFeeds.forEach { feed ->
-                        val isSelected =
+                // Feed tabs — always visible
+                pinnedFeeds.forEach { feed ->
+                    val isSelected =
+                        when (feed.source) {
+                            is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Following ->
+                                feedMode == FeedMode.FOLLOWING
+                            is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Global ->
+                                feedMode == FeedMode.GLOBAL
+                            else -> activeFeedId == feed.id
+                        }
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = {
                             when (feed.source) {
                                 is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Following ->
-                                    feedMode == FeedMode.FOLLOWING
+                                    onFeedModeChange(FeedMode.FOLLOWING)
                                 is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Global ->
-                                    feedMode == FeedMode.GLOBAL
-                                else -> activeFeedId == feed.id
+                                    onFeedModeChange(FeedMode.GLOBAL)
+                                else -> onNavigateToFeed(feed)
                             }
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = {
-                                when (feed.source) {
-                                    is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Following ->
-                                        onFeedModeChange(FeedMode.FOLLOWING)
-                                    is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Global ->
-                                        onFeedModeChange(FeedMode.GLOBAL)
-                                    else -> onNavigateToFeed(feed)
-                                }
-                            },
-                            label = {
-                                Text(
-                                    "${feed.emoji} ${feed.name}",
-                                    maxLines = 1,
-                                    style = MaterialTheme.typography.labelMedium,
-                                )
-                            },
-                        )
-                    }
+                        },
+                        label = {
+                            Text(
+                                "${feed.emoji} ${feed.name}",
+                                maxLines = 1,
+                                style = MaterialTheme.typography.labelMedium,
+                            )
+                        },
+                    )
                 }
 
-                // Search pill / expanded input — takes remaining center space
+                // Search: pill when collapsed, active input when expanded
                 if (searchExpanded) {
                     SearchInput(
                         onDismiss = { onSearchExpandedChange(false) },
@@ -865,19 +864,17 @@ private fun FeedTabsHeader(
                     )
                 }
 
-                if (!searchExpanded) {
-                    // Compose button
-                    IconButton(onClick = onCompose, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                            MaterialSymbols.Edit,
-                            contentDescription = "Compose",
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
+                // Compose button — always visible
+                IconButton(onClick = onCompose, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        MaterialSymbols.Edit,
+                        contentDescription = "Compose",
+                        modifier = Modifier.size(18.dp),
+                    )
                 }
             }
 
-            // Expanded search: history section below the input
+            // Card extends downward with history when search is focused
             if (searchExpanded) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 SearchHistorySection(
