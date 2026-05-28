@@ -26,11 +26,16 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedContentState
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 
 @Composable
 fun WatchScrollToTop(
@@ -107,37 +112,40 @@ fun WatchScrollToTop(
  *
  * The trick: track "was at top" continuously via [snapshotFlow], but
  * only flip it from true → false when [LazyListState.isScrollInProgress]
- * is true (i.e. the user is actively scrolling). Data-driven index
- * shifts happen with `isScrollInProgress == false`, so they never poison
- * the cached value. When [firstItemKey] changes (head of the list moved),
- * if the cached value is still true, snap back to 0 with an instant
- * (non-animated) scroll so the prepend appears as in-place growth rather
- * than a visible jump-then-scroll.
+ * is true (i.e. the user is actively scrolling). Compose's keyed-item
+ * shift after a data update does not set that flag — only real touch
+ * gestures and `animate*` calls do — so data-driven index shifts can
+ * never poison the cached value. When [firstItemKey] changes (head of
+ * the list moved), if the cached value is still true, snap back to 0
+ * with an instant (non-animated) scroll so the prepend appears as
+ * in-place growth rather than a visible jump-then-scroll.
+ *
+ * Most callers should not invoke this directly: [SaveableFeedContentState],
+ * [SaveableGridFeedContentState], and the analogous wrappers in
+ * `ui/screen/FeedView.kt` already apply auto-stick to every feed they
+ * own. Invoke the explicit overload only when the listState is
+ * constructed outside one of those wrappers, or when the key that
+ * should trigger the snap is not the default `items.list[0].idHex`
+ * (e.g. notifications, chats, or feeds keyed on something other than a
+ * Note's hex id).
  */
 @Composable
 fun StickToTopOnPrepend(
     listState: LazyListState,
     firstItemKey: Any?,
 ) {
-    val wasAtTop = remember { mutableStateOf(true) }
-
-    LaunchedEffect(listState) {
-        snapshotFlow {
-            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-        }.collect { atTop ->
-            if (atTop) {
-                wasAtTop.value = true
-            } else if (listState.isScrollInProgress) {
-                wasAtTop.value = false
+    stickToTopOnPrepend(
+        stateKey = listState,
+        firstItemKey = firstItemKey,
+        sampler = {
+            snapshotFlow {
+                listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
             }
-        }
-    }
-
-    LaunchedEffect(firstItemKey) {
-        if (firstItemKey != null && wasAtTop.value && listState.firstVisibleItemIndex > 0) {
-            listState.scrollToItem(0)
-        }
-    }
+        },
+        isScrollInProgress = { listState.isScrollInProgress },
+        firstVisibleItemIndex = { listState.firstVisibleItemIndex },
+        scrollToTop = { listState.scrollToItem(0) },
+    )
 }
 
 @Composable
@@ -145,23 +153,84 @@ fun StickToTopOnPrepend(
     gridState: LazyGridState,
     firstItemKey: Any?,
 ) {
-    val wasAtTop = remember { mutableStateOf(true) }
+    stickToTopOnPrepend(
+        stateKey = gridState,
+        firstItemKey = firstItemKey,
+        sampler = {
+            snapshotFlow {
+                gridState.firstVisibleItemIndex == 0 && gridState.firstVisibleItemScrollOffset == 0
+            }
+        },
+        isScrollInProgress = { gridState.isScrollInProgress },
+        firstVisibleItemIndex = { gridState.firstVisibleItemIndex },
+        scrollToTop = { gridState.scrollToItem(0) },
+    )
+}
 
-    LaunchedEffect(gridState) {
-        snapshotFlow {
-            gridState.firstVisibleItemIndex == 0 && gridState.firstVisibleItemScrollOffset == 0
-        }.collect { atTop ->
+/**
+ * Auto-stick wired straight to a [FeedContentState]: derives the head
+ * key from `feedContent → Loaded.feed → list.firstOrNull()?.idHex` so
+ * callers don't have to collect the inner feed flow themselves. Used
+ * by the Saveable* wrappers; suitable for any Note-keyed feed.
+ */
+@Composable
+fun StickToTopOnPrepend(
+    feedContentState: FeedContentState,
+    listState: LazyListState,
+) {
+    StickToTopOnPrepend(listState, rememberFirstItemIdHex(feedContentState))
+}
+
+@Composable
+fun StickToTopOnPrepend(
+    feedContentState: FeedContentState,
+    gridState: LazyGridState,
+) {
+    StickToTopOnPrepend(gridState, rememberFirstItemIdHex(feedContentState))
+}
+
+@OptIn(ExperimentalCoroutinesApi::class)
+@Composable
+private fun rememberFirstItemIdHex(feedContentState: FeedContentState): String? {
+    val flow =
+        remember(feedContentState) {
+            feedContentState.feedContent.flatMapLatest { state ->
+                when (state) {
+                    is FeedState.Loaded -> state.feed.map { it.list.firstOrNull()?.idHex }
+                    else -> flowOf(null)
+                }
+            }
+        }
+    val key by flow.collectAsStateWithLifecycle(initialValue = null)
+    return key
+}
+
+@Composable
+private fun stickToTopOnPrepend(
+    stateKey: Any,
+    firstItemKey: Any?,
+    sampler: () -> Flow<Boolean>,
+    isScrollInProgress: () -> Boolean,
+    firstVisibleItemIndex: () -> Int,
+    scrollToTop: suspend () -> Unit,
+) {
+    // Plain holder instead of mutableStateOf — we only read this inside
+    // effects, never in composition, so we don't need snapshot tracking.
+    val wasAtTop = remember { booleanArrayOf(true) }
+
+    LaunchedEffect(stateKey) {
+        sampler().collect { atTop ->
             if (atTop) {
-                wasAtTop.value = true
-            } else if (gridState.isScrollInProgress) {
-                wasAtTop.value = false
+                wasAtTop[0] = true
+            } else if (isScrollInProgress()) {
+                wasAtTop[0] = false
             }
         }
     }
 
     LaunchedEffect(firstItemKey) {
-        if (firstItemKey != null && wasAtTop.value && gridState.firstVisibleItemIndex > 0) {
-            gridState.scrollToItem(0)
+        if (firstItemKey != null && wasAtTop[0] && firstVisibleItemIndex() > 0) {
+            scrollToTop()
         }
     }
 }

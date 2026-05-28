@@ -41,7 +41,6 @@ import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
-import com.vitorpamplona.amethyst.ui.feeds.StickToTopOnPrepend
 import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -114,8 +113,6 @@ private fun FeedLoaded(
     val items by loaded.feed.collectAsStateWithLifecycle()
 
     val myPubKey = accountViewModel.userProfile().pubkeyHex
-
-    StickToTopOnPrepend(listState, items.list.firstOrNull()?.let { chatroomLazyKey(it, myPubKey) })
 
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),

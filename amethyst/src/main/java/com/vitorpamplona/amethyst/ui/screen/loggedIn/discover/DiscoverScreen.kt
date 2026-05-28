@@ -65,7 +65,6 @@ import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.SaveableGridFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
-import com.vitorpamplona.amethyst.ui.feeds.StickToTopOnPrepend
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverPagerState
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
@@ -477,8 +476,6 @@ private fun DiscoverFeedLoaded(
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
-    StickToTopOnPrepend(listState, items.list.firstOrNull()?.idHex)
-
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
@@ -513,8 +510,6 @@ private fun DiscoverFeedColumnsLoaded(
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
-
-    StickToTopOnPrepend(listState, items.list.firstOrNull()?.idHex)
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
