@@ -20,6 +20,31 @@ nostrnests reference relay. The IETF code is kept as a reference + unit-test
 implementation for any future IETF target; see
 `nestsClient/plans/2026-04-26-moq-lite-gap.md`.
 
+Canonical NIP specs live at <https://github.com/nostr-protocol/nips> — use
+`/nip <number>` to pull a specific one (it fetches the spec file directly).
+
+## Verify, Don't Guess (standing instruction)
+
+A plausible-sounding explanation is cheap; being right is not. Before
+asserting what a problem is or how something behaves:
+
+1. **State hypotheses as hypotheses.** If you haven't run it, say "I'm
+   guessing" or "haven't verified" — never dress an untested guess up as a
+   diagnosis. Use "I verified X by running Y" only when you actually did.
+2. **Reproduce before diagnosing.** If a claim is checkable in under a
+   minute, check it before stating it. This repo gives you the means:
+   `./gradlew test`, the per-module tests, and `amy` (the CLI exists partly
+   to drive `quartz`/`commons` for interop checks). Write the failing case
+   first, watch it fail, *then* explain. For non-trivial bugs use `/bugfix`
+   (reproduce-first) or `/investigate` (competing hypotheses + refutation).
+3. **Predict, then run.** Before running a command, state the output you
+   expect. A mismatch is the cheapest signal that your model is wrong.
+4. **Don't commit to one cause.** A single immediate explanation stops you
+   from looking. Hold 2–3 candidates and a discriminating test for each.
+
+If you find yourself writing paragraphs to defend a theory, that effort
+almost always should have been one test.
+
 ## Architecture
 
 ```
@@ -40,7 +65,7 @@ amethyst/
 │       ├── commonMain/    # Protocol, frame/packet codecs, TLS state machine
 │       ├── jvmAndroid/    # JCA-backed AEAD + UDP socket actuals
 │       └── commonTest/    # RFC vector + adversarial tests
-├── nestsClient/    # Audio-room client (IETF MoQ-transport today; moq-lite phase pending)
+├── nestsClient/    # Audio-room client (production runs on moq-lite; IETF MoQ kept as reference)
 │   └── src/
 │       ├── commonMain/    # MoQ session, NestsListener, audio glue
 │       └── jvmAndroid/    # Opus encode/decode, AudioRecord/AudioTrack
@@ -65,60 +90,33 @@ The global `docs/plans/` folder is frozen — don't add new plans there.
 
 ## Tech Stack
 
+Exact versions live in `gradle/libs.versions.toml` (the source of truth — check
+there rather than trusting a number copied here).
+
 | Layer | Technology |
 |-------|------------|
 | **Core** | Quartz (Nostr KMP) |
-| **UI** | Compose Multiplatform 1.10.3 |
+| **UI** | Compose Multiplatform |
 | **Async** | kotlinx.coroutines + Flow |
 | **Network** | OkHttp (JVM) |
 | **Serialization** | Jackson |
 | **DI** | Manual / Koin |
-| **Build** | Gradle 8.x, Kotlin 2.3.20 |
+| **Build** | Gradle + Kotlin Multiplatform |
 
 ## Skills
 
-Specialized skills provide domain expertise with bundled resources and patterns:
+The full list of available skills (with descriptions and triggers) is injected
+into every session, so it isn't duplicated here. Two kinds exist and are meant
+to be used together:
 
-| Skill | Expertise | When to Use |
-|-------|-----------|-------------|
-| `nostr-expert` | Nostr protocol (Quartz library) | Event types, NIPs, tags, signing, Bech32, NIP-44, LargeCache |
-| `kotlin-expert` | Advanced Kotlin patterns | StateFlow, sealed classes, @Immutable, DSLs, common utilities |
-| `kotlin-coroutines` | Advanced async patterns | supervisorScope, callbackFlow, relay pools, testing |
-| `kotlin-multiplatform` | Platform abstraction | expect/actual, source sets, sharing decisions |
-| `compose-expert` | Shared UI components | Material3, state hoisting, recomposition, rich-text parsing |
-| `android-expert` | Android platform | Navigation, permissions, lifecycle, Material3, Coil image loading |
-| `desktop-expert` | Desktop platform | Window, MenuBar, keyboard shortcuts, DeckLayout |
-| `gradle-expert` | Build system | Dependencies, versioning, packaging, optimization |
-| `account-state` | `Account` + `LocalCache` | Per-user StateFlows, event store, adding account-scoped settings |
-| `relay-client` | Subscriptions & filter assembly | `ComposeSubscriptionManager`, assemblers, preloaders, EOSE |
-| `feed-patterns` | Feeds & DAL | `FeedFilter`, `AdditiveComplexFeedFilter`, `FeedViewModel` family |
-| `auth-signers` | `NostrSigner` implementations | Local, NIP-46 bunker, NIP-55 Android external signer |
-| `quartz-integration` | Quartz as an external library | Gradle setup, `NostrClient`, `KeyPair`, for external projects |
-| `amy-expert` | Amy CLI (`cli/` module) | Adding `amy <verb>` commands, JSON output contract, extracting logic from `amethyst/` into `commons/` so CLI can call it |
-| `find-missing-translations` | Utility | Extract untranslated Android strings |
-| `find-non-lambda-logs` | Utility | Audit Log calls for lambda overloads |
-
-### Technique-layer skills (Compose / Kotlin best practices)
-
-These are general Compose/Kotlin decision-framework skills (vendored from
-`chrisbanes/skills`). The skills above are **codebase-oriented** ("where is X in
-Amethyst, what pattern do we use"); these are **technique-oriented** ("what is
-the correct Compose/Kotlin design here"). They complement — not replace — the
-codebase skills: e.g. `compose-expert` tells you where shared composables live,
-`compose-slot-api-pattern` tells you how to shape their public API.
-
-| Skill | Expertise | Complements |
-|-------|-----------|-------------|
-| `compose-recomposition-performance` | Router: which recomposition axis is the problem | `compose-expert` |
-| `compose-stability-diagnostics` | Compiler reports, strong skipping, `ImmutableList` at UI boundaries | `compose-expert`, `kotlin-expert` |
-| `compose-state-deferred-reads` | Phase-aware state reads, block-form modifiers, provider lambdas | `compose-expert` |
-| `compose-slot-api-pattern` | `@Composable` slot design for reusable components | `compose-expert` |
-| `compose-modifier-and-layout-style` | `modifier` parameter conventions, chain construction, conditional hoisting | `compose-expert` |
-| `compose-side-effects` | `LaunchedEffect`/`DisposableEffect`/`SideEffect`, keys, `rememberUpdatedState` | `compose-expert` |
-| `compose-state-holder-ui-split` | State-holder vs plain-UI composable split | `compose-expert`, `feed-patterns` |
-| `kotlin-flow-state-event-modeling` | StateFlow/SharedFlow/Channel choice, sentinels, `stateIn`, `update {}` | `kotlin-expert` |
-| `kotlin-coroutines-structured-concurrency` | Stored-scope anti-pattern, `suspend` boundaries, `runBlocking`, cancellation | `kotlin-coroutines` |
-| `kotlin-types-value-class` | `@JvmInline value class` vs `data class`, Compose stability | `kotlin-expert` |
+- **Codebase-oriented** skills (`nostr-expert`, `compose-expert`, `feed-patterns`,
+  `account-state`, `amy-expert`, …) answer "where is X in Amethyst, what pattern
+  do we use here."
+- **Technique-oriented** skills (vendored from `chrisbanes/skills`, e.g.
+  `compose-slot-api-pattern`, `kotlin-flow-state-event-modeling`) answer "what is
+  the correct Compose/Kotlin design." They complement, not replace, the codebase
+  skills: `compose-expert` tells you where shared composables live;
+  `compose-slot-api-pattern` tells you how to shape their public API.
 
 ## Workflow
 
@@ -130,126 +128,42 @@ codebase skills: e.g. `compose-expert` tells you where shared composables live,
 4. **Review plan using approved skills** - I invoke the approved skills to create detailed implementation plan
 5. **Execute with skills** - Skills collaborate to implement the feature
 
-**Example:**
-```
-You: "Add video support to notes"
-Me: "I'll use:
-     - /nostr-expert (NIP-71 video events)
-     - /compose-expert (video player UI)
-     - /android-expert (platform video APIs)
-     Proceed?"
-You: "yes"
-Me: [invokes skills to create plan]
-     "Plan from skills:
-      1. nostr-expert: Use NIP-71 kind 34235 for video events...
-      2. compose-expert: Create VideoPlayer composable in commons...
-      3. android-expert: Use ExoPlayer for Android...
-      Proceed with implementation?"
-You: "yes"
-Me: [implements using skill guidance]
-```
-
-## Commands
-
-- `/desktop-run` - Build and run desktop app
-- `/nip <number>` - Get NIP implementation guidance
-
 ## Feature Workflow
 
-**CRITICAL: Always check existing implementations first before creating new code!**
+**CRITICAL: Check existing implementations first — most logic already exists.**
+Before writing code, survey all modules (use Grep/Explore) for managers, caches,
+state systems, filters, ViewModels, and composables that already do the job. Your
+job is usually to **reuse** (`quartz` protocol/business logic), **extract**
+(Android UI/ViewModels → `commons`), and add **platform-specific** layouts/nav —
+not to duplicate existing managers, caches, or state.
 
-When picking up a new task or feature, follow this process:
+Capture the survey as a matrix in your plan:
 
-### Step 0: Survey Existing Implementation (MANDATORY)
+| File/Component | Status | Location | Action |
+|----------------|--------|----------|--------|
+| FilterBuilders | ✅ Reuse | quartz/relay/filters/ | Use as-is |
+| NoteCard | 📦 Extract | amethyst/ui/note/ → commons/ | Extract to commons |
+| ProfileCache | ⚠️ Avoid | N/A | Already in User/Account pattern |
 
-**Before writing ANY code, thoroughly audit ALL modules:**
+**Legend:** ✅ Reuse (exists, use directly) · 📦 Extract (exists in Android, move
+to `commons`) · 🆕 New (doesn't exist — platform-specific only) · ⚠️ Avoid
+(duplicate; use existing pattern).
 
-1. **Search for existing implementations across all modules:**
-   ```bash
-   # Search in quartz for protocol/business logic
-   grep -r "class.*Manager\|object.*Cache\|class.*Filter" quartz/src/commonMain/
+**Share vs keep platform-native:**
 
-   # Search in commons for UI components
-   grep -r "@Composable.*Card\|@Composable.*View\|@Composable.*Dialog" commons/src/
+- **Share** → `quartz/commonMain/` (business logic, data models, protocol) and
+  `commons/commonMain/` (major UI components, **ViewModels** under
+  `viewmodels/`, icons). ViewModels are platform-agnostic state + logic
+  (StateFlow/SharedFlow), so they belong in `commons`.
+- **Keep native** → screen composables/scaffolding (Desktop `Window` vs Android
+  `Activity`), navigation (sidebar vs bottom nav), platform interactions
+  (gestures, keyboard shortcuts), system integrations (notifications, file
+  pickers).
 
-   # Search in amethyst for Android patterns
-   grep -r "class.*ViewModel\|class.*Account\|class.*State" amethyst/src/main/java/
-
-   # Search for specific functionality
-   grep -r "fun isFollowing\|fun subscribe\|fun getMetadata" {quartz,commons,amethyst}/src/
-   ```
-
-2. **Understand existing architecture patterns:**
-   - Event stores and caching systems
-   - State management patterns (StateFlow, mutable states)
-   - ViewModel patterns and lifecycle handling
-   - Filter builders and relay subscription patterns
-   - UI component hierarchies
-
-3. **Key principle:** Most logic already exists! Your job is to:
-   - **Reuse** existing protocol/business logic from quartz
-   - **Extract** shareable UI components AND ViewModels from amethyst to commons
-   - Create **platform-specific** layouts/navigation for Desktop
-   - **NOT** duplicate existing managers, caches, or state systems
-
-4. **Document findings in implementation plan as a matrix:**
-
-   | File/Component | Status | Location | Action |
-   |----------------|--------|----------|--------|
-   | FilterBuilders | ✅ Exists | quartz/relay/filters/ | Reuse as-is |
-   | NoteCard | 📦 Extract | amethyst/ui/note/ → commons/ | Extract to commons |
-   | HomeFeedViewModel | 📦 Extract | amethyst/ → commons/commonMain/viewmodels/ | Extract to commons |
-   | ProfileCache | ⚠️ Avoid | N/A | Already in User/Account pattern |
-
-   **Legend:**
-   - ✅ **Reuse** - Exists and can be used directly
-   - 📦 **Extract** - Exists in Android, needs extraction to commons
-   - 🆕 **New** - Doesn't exist, needs creation (platform-specific only)
-   - ⚠️ **Avoid** - Duplicate functionality, use existing pattern instead
-
-### Step 1: Analyze Android Implementation
-
-After surveying (Step 0), deeply examine the Android implementation:
-1. Find the relevant feature/component in `amethyst/` module
-2. Understand the current implementation patterns
-3. Identify dependencies and integrations
-4. Map out what code can be shared vs platform-specific
-
-### Step 2: Create Implementation Plan
-
-Before coding, create a plan that categorizes work into three buckets:
-
-| Category | Description | Location |
-|----------|-------------|----------|
-| **Android-Specific** | Platform-native layouts, navigation patterns | `amethyst/`, `androidMain/` |
-| **Reusable (Shared)** | Business logic, UI components, **ViewModels**, state management | `quartz/commonMain/`, `commons/commonMain/` |
-| **Desktop-Specific** | Desktop-native layouts, navigation patterns, platform APIs | `desktopApp/`, `jvmMain/` |
-
-### Step 3: Code Sharing Strategy
-
-**Share:**
-- Business logic and data models → `quartz/commonMain/`
-- Major UI components (cards, lists, dialogs) → `commons/commonMain/`
-- **ViewModels** (state, business logic) → `commons/commonMain/viewmodels/`
-- Icons and visual assets → `commons/commonMain/`
-
-**Keep Platform-Native:**
-- **Screen composables** (layout, scaffolding) - Desktop uses `Window`, Android uses `Activity`
-- Navigation patterns (sidebar vs bottom nav)
-- Platform-specific interactions (gestures, keyboard shortcuts)
-- System integrations (notifications, file pickers)
-
-**Rationale:** ViewModels contain platform-agnostic state management (StateFlow/SharedFlow) and business logic. Screens consume ViewModels but render differently (Desktop sidebar + content area vs Android bottom nav).
-
-### Step 4: Extract Shared Components
-
-When extracting UI components:
-1. Identify reusable composables in Android code
-2. Move to `commons/commonMain/` (consult `/compose-expert` for patterns)
-3. Create expect/actual declarations for platform-specific behavior (consult `/kotlin-multiplatform`)
-4. Update both Android and Desktop to use shared component
-
-**Note:** `quartz/` is protocol-only (no composables). Shared UI goes in `commons/` after converting it to KMP.
+When extracting a composable: move it to `commons/commonMain/` (see
+`/compose-expert`), add expect/actual for any platform behavior (see
+`/kotlin-multiplatform`), then point both Android and Desktop at the shared
+version. `quartz/` is protocol-only — no composables.
 
 ## Build Commands
 
@@ -272,39 +186,9 @@ When extracting UI components:
 
 ## Quartz KMP Structure
 
-The Quartz library uses expect/actual for platform-specific implementations:
-
-```kotlin
-// commonMain - shared protocol logic
-expect class CryptoProvider {
-    fun sign(message: ByteArray, privateKey: ByteArray): ByteArray
-    fun verify(message: ByteArray, signature: ByteArray, publicKey: ByteArray): Boolean
-}
-
-// androidMain - uses secp256k1-kmp-jni-android
-actual class CryptoProvider { /* Android implementation */ }
-
-// jvmMain - uses secp256k1-kmp-jni-jvm
-actual class CryptoProvider { /* JVM implementation */ }
-```
-
-## Key Patterns
-
-### Platform Abstraction
-```kotlin
-// commonMain
-expect fun openExternalUrl(url: String)
-
-// androidMain
-actual fun openExternalUrl(url: String) {
-    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-}
-
-// jvmMain (Desktop)
-actual fun openExternalUrl(url: String) {
-    Desktop.getDesktop().browse(URI(url))
-}
-```
+Quartz uses expect/actual for platform-specific implementations (e.g. crypto
+backed by `secp256k1-kmp-jni-android` on Android and `secp256k1-kmp-jni-jvm` on
+JVM). See `/kotlin-multiplatform` for the expect/actual and source-set patterns.
 
 ## Icons
 
@@ -352,12 +236,5 @@ Do this before considering the task complete.
 
 ## Git Workflow
 
-- Branch: `feat/desktop-<feature>` or `fix/desktop-<issue>`
 - Commits: Conventional commits (`feat:`, `fix:`, etc.)
 - Never use `--no-verify`
-
-## Resources
-
-- [Nostr NIPs](https://github.com/nostr-protocol/nips)
-- [Compose Multiplatform](https://www.jetbrains.com/compose-multiplatform/)
-- [KMP Documentation](https://kotlinlang.org/docs/multiplatform.html)
