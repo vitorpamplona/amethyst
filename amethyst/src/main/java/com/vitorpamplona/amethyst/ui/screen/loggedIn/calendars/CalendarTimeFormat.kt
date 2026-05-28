@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.calendars
 
+import android.content.Context
+import android.text.format.DateFormat
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.appointmentView
 import com.vitorpamplona.amethyst.model.Note
 import java.text.SimpleDateFormat
@@ -27,34 +29,56 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-private val DayMonthFormat = SimpleDateFormat("EEE, MMM d", Locale.getDefault())
-private val FullDateFormat = SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault())
-private val MonthYearFormat = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
-private val TimeFormat = SimpleDateFormat("h:mm a", Locale.getDefault())
-private val WeekdayShortFormat = SimpleDateFormat("EEE", Locale.getDefault())
+// Skeletons follow Unicode LDML — getBestDateTimePattern picks locale ordering.
+private const val DAY_MONTH_SKELETON = "EEEMMMd" // "Mon, May 28" / "Mon 28 May"
+private const val FULL_DATE_SKELETON = "EEEEMMMMdy" // "Monday, May 28, 2026" / "Monday, 28 May 2026"
+private const val MONTH_YEAR_SKELETON = "MMMMy" // "May 2026" / "Mai 2026"
+private const val WEEKDAY_SHORT_SKELETON = "EEE" // "Mon" — order doesn't matter
 
-fun formatCalendarRange(note: Note): String? {
+private fun bestPattern(skeleton: String): SimpleDateFormat {
+    val locale = Locale.getDefault()
+    return SimpleDateFormat(DateFormat.getBestDateTimePattern(locale, skeleton), locale)
+}
+
+private fun dayMonthFormat() = bestPattern(DAY_MONTH_SKELETON)
+
+private fun fullDateFormat() = bestPattern(FULL_DATE_SKELETON)
+
+private fun monthYearFormat() = bestPattern(MONTH_YEAR_SKELETON)
+
+private fun weekdayShortFormat() = bestPattern(WEEKDAY_SHORT_SKELETON)
+
+// Time format respects the user's Android 12/24-hour system setting.
+private fun timeFormat(context: Context): java.text.DateFormat = DateFormat.getTimeFormat(context)
+
+fun formatCalendarRange(
+    note: Note,
+    context: Context,
+): String? {
     val view = note.appointmentView() ?: return null
     val start = view.startSeconds ?: return null
     return if (view.isAllDay) {
         formatDateRange(start, view.endSeconds)
     } else {
-        formatTimeRange(start, view.endSeconds)
+        formatTimeRange(start, view.endSeconds, context)
     }
 }
 
 private fun formatTimeRange(
     start: Long,
     end: Long?,
+    context: Context,
 ): String {
+    val dayMonth = dayMonthFormat()
+    val time = timeFormat(context)
     val startMs = start * 1000
-    val startStr = "${DayMonthFormat.format(Date(startMs))} · ${TimeFormat.format(Date(startMs))}"
+    val startStr = "${dayMonth.format(Date(startMs))} · ${time.format(Date(startMs))}"
     if (end == null || end == start) return startStr
     val endMs = end * 1000
     return if (isSameDay(startMs, endMs)) {
-        "$startStr – ${TimeFormat.format(Date(endMs))}"
+        "$startStr – ${time.format(Date(endMs))}"
     } else {
-        "$startStr – ${DayMonthFormat.format(Date(endMs))} · ${TimeFormat.format(Date(endMs))}"
+        "$startStr – ${dayMonth.format(Date(endMs))} · ${time.format(Date(endMs))}"
     }
 }
 
@@ -62,12 +86,13 @@ private fun formatDateRange(
     start: Long,
     end: Long?,
 ): String {
-    val startStr = DayMonthFormat.format(Date(start * 1000))
+    val dayMonth = dayMonthFormat()
+    val startStr = dayMonth.format(Date(start * 1000))
     if (end == null || end == start) return startStr
-    return "$startStr – ${DayMonthFormat.format(Date(end * 1000))}"
+    return "$startStr – ${dayMonth.format(Date(end * 1000))}"
 }
 
-fun formatLongDate(unixSeconds: Long): String = FullDateFormat.format(Date(unixSeconds * 1000))
+fun formatLongDate(unixSeconds: Long): String = fullDateFormat().format(Date(unixSeconds * 1000))
 
 fun formatMonthYear(
     year: Int,
@@ -76,10 +101,13 @@ fun formatMonthYear(
     val cal = Calendar.getInstance()
     cal.clear()
     cal.set(year, monthZeroBased, 1)
-    return MonthYearFormat.format(cal.time)
+    return monthYearFormat().format(cal.time)
 }
 
-fun formatTimeOfDay(unixSeconds: Long): String = TimeFormat.format(Date(unixSeconds * 1000))
+fun formatTimeOfDay(
+    unixSeconds: Long,
+    context: Context,
+): String = timeFormat(context).format(Date(unixSeconds * 1000))
 
 fun formatShortWeekday(weekdayZeroBased: Int): String {
     val cal = Calendar.getInstance()
@@ -87,7 +115,7 @@ fun formatShortWeekday(weekdayZeroBased: Int): String {
     cal.firstDayOfWeek = Calendar.SUNDAY
     cal.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
     cal.add(Calendar.DAY_OF_YEAR, weekdayZeroBased)
-    return WeekdayShortFormat.format(cal.time)
+    return weekdayShortFormat().format(cal.time)
 }
 
 private fun isSameDay(

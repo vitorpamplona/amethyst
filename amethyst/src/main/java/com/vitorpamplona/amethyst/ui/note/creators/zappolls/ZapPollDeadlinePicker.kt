@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.note.creators.zappolls
 
 import android.annotation.SuppressLint
+import android.text.format.DateFormat
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -81,14 +82,13 @@ fun ZapPollDeadlinePicker(model: ShortNotePostViewModel) {
                     }
                 },
         )
+    val context = LocalContext.current
     val timePickerState =
         rememberTimePickerState(
             initialHour = currentTime.hour,
             initialMinute = currentTime.minute,
-            is24Hour = false, // Set to true if you prefer military time
+            is24Hour = DateFormat.is24HourFormat(context),
         )
-
-    val context = LocalContext.current
 
     OutlinedCard(
         onClick = { showDatePicker = true },

@@ -50,6 +50,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -60,15 +61,13 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.formatMonthDayTime
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransactionType
 import java.text.NumberFormat
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -238,12 +237,10 @@ private fun TransactionItem(
             (if (isIncoming) "+" else "-") + fmt.format(amountSats)
         }
 
+    val context = LocalContext.current
     val dateText =
-        remember(tx.created_at) {
-            tx.created_at?.let {
-                val sdf = SimpleDateFormat("MMM d, HH:mm", Locale.getDefault())
-                sdf.format(Date(it * 1000L))
-            } ?: ""
+        remember(tx.created_at, context) {
+            tx.created_at?.let { formatMonthDayTime(it, context) } ?: ""
         }
 
     val parsed = remember(tx.metadata) { tx.parsedMetadata() }

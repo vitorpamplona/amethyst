@@ -27,18 +27,22 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-private const val YEAR_DATE_FORMAT = "MMM dd, yyyy"
-private const val MONTH_DATE_FORMAT = "MMM dd"
+// Month + day without year — month name is textual so order is unambiguous across locales.
+private const val MONTH_DATE_FORMAT = "MMM d"
 
 private var locale = Locale.getDefault()
-private var yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
+
+// Locale-aware: en-US "May 28, 2026" · en-GB "28 May 2026" · de-DE "28.05.2026" · ja-JP "2026/05/28"
+private var yearFormatter = DateFormat.getDateInstance(DateFormat.MEDIUM, locale)
 private var monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
+
+// Locale-aware: en-US "2:32 PM" · en-GB "14:32" · de-DE "14:32"
 private var timeOnlyFormatter = DateFormat.getTimeInstance(DateFormat.SHORT, locale)
 
 private fun updateFormattersIfNeeded() {
     if (locale != Locale.getDefault()) {
         locale = Locale.getDefault()
-        yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
+        yearFormatter = DateFormat.getDateInstance(DateFormat.MEDIUM, locale)
         monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
         timeOnlyFormatter = DateFormat.getTimeInstance(DateFormat.SHORT, locale)
     }
@@ -154,9 +158,9 @@ fun Long.toTimeAgo(withDot: Boolean = true): String = timeAgo(this, withDot)
 /**
  * Formats a Unix timestamp (seconds) as an absolute date/time string. Granularity
  * depends on how far in the past the timestamp is:
- *   - same day → time only (e.g. "14:32"), locale-aware
- *   - same year → "MMM dd, HH:mm"
- *   - older    → "MMM dd, yyyy"
+ *   - same day → locale-aware short time (e.g. "14:32" / "2:32 PM")
+ *   - same year → month + day + short time (e.g. "May 28, 2:32 PM")
+ *   - older    → locale-aware medium date (e.g. "May 28, 2026" / "28 May 2026" / "28.05.2026")
  */
 fun timeAbsolute(
     time: Long?,

@@ -46,6 +46,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -164,6 +165,7 @@ private fun DayRow(
         }
 
     val startSeconds = view.startSeconds
+    val context = LocalContext.current
     val timeLabel =
         when {
             view.isAllDay -> stringRes(R.string.calendar_all_day)
@@ -172,7 +174,7 @@ private fun DayRow(
                 // misleading on day 2 since the event has been ongoing overnight. Show a
                 // continuation marker so the user reads it as "still happening".
                 stringRes(R.string.calendar_continues)
-            startSeconds != null -> formatTimeOfDay(startSeconds)
+            startSeconds != null -> formatTimeOfDay(startSeconds, context)
             else -> "—"
         }
 

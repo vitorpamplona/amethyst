@@ -58,9 +58,9 @@ import com.vitorpamplona.amethyst.commons.model.highlights.HighlightData
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import java.text.DateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun MyHighlightsScreen(
@@ -236,8 +236,8 @@ private fun HighlightCard(
     }
 }
 
-private fun formatTimestamp(epochSeconds: Long): String =
-    Instant
-        .ofEpochSecond(epochSeconds)
-        .atZone(ZoneId.systemDefault())
-        .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+// Locale-aware date+time, e.g. en-US "May 28, 2026 2:32 PM" · de-DE "28.05.2026 14:32".
+private val dateTimeFormat =
+    DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, Locale.getDefault())
+
+private fun formatTimestamp(epochSeconds: Long): String = dateTimeFormat.format(Date(epochSeconds * 1000L))

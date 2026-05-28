@@ -318,14 +318,14 @@ private fun EventBody(
                 fontWeight = FontWeight.Bold,
             )
         }
-        formatCalendarRange(note)?.let { range ->
+        val context = LocalContext.current
+        formatCalendarRange(note, context)?.let { range ->
             Text(
                 text = range,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
         }
-        val context = LocalContext.current
         val relative =
             remember(note.idHex, view.startSeconds) {
                 relativeTimeLabel(context, view, TimeUtils.now())
