@@ -622,6 +622,27 @@ object Bdhke {
     fun randomSecret(): ByteArray = randomScalar()
 
     /**
+     * Tracks whether [warmup] has already been invoked this process.
+     * At-most-once: the FIRST caller does the JIT-warming work; every
+     * subsequent caller (including parallel ones from different
+     * accounts' [com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState.start])
+     * sees the flag and returns immediately.
+     *
+     * Multiple warmups running concurrently was itself a crash trigger
+     * — two accounts each doing 32 blind+unblind cycles on
+     * Dispatchers.Default at startup put ~128 concurrent BDHKE calls
+     * in flight, contending for the JIT compiler and reproducing the
+     * Android 15+ ART optimizer bug we were trying to dodge.
+     *
+     * Plain @Volatile + check is sufficient — the harm from a tiny
+     * race window (two callers both seeing `false` before either
+     * flips the flag) is one extra 32-cycle warmup, not a correctness
+     * issue. We avoid `synchronized` to stay commonMain-portable.
+     */
+    @Volatile
+    private var warmupDone: Boolean = false
+
+    /**
      * Pre-warm the JIT for [blind] / [unblind] by running them N times
      * with synthetic data. Forces ART's optimizing compiler to do its
      * work during app init (low contention, no user waiting) instead
@@ -630,13 +651,14 @@ object Bdhke {
      * the whole process down.
      *
      * Called from `CashuWalletState.start()` on a background coroutine.
-     * Safe to call multiple times — the JIT will deduplicate. Cheap if
-     * the methods are already compiled.
+     * At-most-once per process — see [warmupDone].
      *
      * The synthetic data uses a fixed mint pubkey / random blinding
      * factors. It does NOT touch any wallet state or network.
      */
     fun warmup() {
+        if (warmupDone) return
+        warmupDone = true
         val scratch = BdhkeScratchpad()
         // Fixed public key for warmup — generator point G's compressed form.
         // G is always on the curve and parses cleanly; nothing we do

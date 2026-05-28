@@ -64,7 +64,19 @@ object MintApiSerializerWarmup {
             explicitNulls = false
         }
 
+    /**
+     * At-most-once flag, mirrors [com.vitorpamplona.quartz.nip60Cashu.bdhke.Bdhke.warmup]'s
+     * gate. Multiple accounts' `CashuWalletState.start()` racing to
+     * warm the serializer simultaneously defeats the purpose — it
+     * stacks N parallel decodes into the JIT's queue at exactly the
+     * moment we wanted things calm.
+     */
+    @Volatile
+    private var warmupDone: Boolean = false
+
     fun warmup() {
+        if (warmupDone) return
+        warmupDone = true
         val payload = buildSyntheticRestorePayload(WARMUP_ELEMENT_COUNT)
         // Decode + re-encode. The encode path is also hot (every mint
         // request body serializes a List<BlindedMessageDto>), so warm
