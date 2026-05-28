@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -147,6 +148,10 @@ fun routeForInner(
 
         is GitRepositoryEvent -> {
             Route.GitRepository(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag())
+        }
+
+        is SoftwareApplicationEvent -> {
+            Route.SoftwareAppDetail(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag())
         }
 
         // Calendar appointments route to their dedicated detail screen rather than the generic

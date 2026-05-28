@@ -969,13 +969,21 @@ fun App(
                             val account = accountState as AccountState.LoggedIn
                             val nwcConnection by accountManager.nwcConnection.collectAsState()
 
-                            // Lazy-load Namecoin services
+                            // Lazy-load Namecoin services. The Core RPC HTTP
+                            // client is sourced from the Tor-aware DesktopHttpClient
+                            // singleton so .onion RPC URLs route through the
+                            // user's Tor settings without extra plumbing.
                             val namecoinPreferences = remember { DesktopNamecoinPreferences() }
                             val namecoinService =
                                 remember {
                                     DesktopNamecoinNameService(
                                         preferencesProvider = { namecoinPreferences.current },
                                         pinnedCertsProvider = { namecoinPreferences.loadPinnedCerts() },
+                                        coreRpcHttpClientProvider = { _ ->
+                                            com.vitorpamplona.amethyst.desktop.network
+                                                .DesktopHttpClient
+                                                .currentClient()
+                                        },
                                     )
                                 }
 
@@ -1682,15 +1690,51 @@ fun RelaySettingsScreen(
                             { pem ->
                                 namecoinPrefsHere.addPinnedCert(pem)
                                 // Apply immediately so the next lookup uses the new pin.
+                                // The same list is shared with the Namecoin Core RPC
+                                // client when present, mirroring Android's behaviour
+                                // where both backends consume one trust store.
                                 namecoinScope.launch {
                                     try {
-                                        svc.client.setDynamicCerts(
-                                            namecoinPrefsHere.loadPinnedCerts(),
-                                        )
+                                        val pins = namecoinPrefsHere.loadPinnedCerts()
+                                        svc.client.setDynamicCerts(pins)
+                                        svc.rpcClient?.setDynamicCerts(pins)
                                     } catch (_: Exception) {
                                         // Best-effort — persisted, will apply on next restart.
                                     }
                                 }
+                            }
+                        },
+                    onSetBackend = { backend ->
+                        namecoinScope.launch { namecoinPrefsHere.setBackend(backend) }
+                    },
+                    onSetCoreRpcConfig = { cfg ->
+                        namecoinScope.launch {
+                            namecoinPrefsHere.setCoreRpcConfig(cfg)
+                            // Push the new config into the live client so the
+                            // next lookup uses it without restarting the app.
+                            namecoinServiceHere?.rpcClient?.setConfig(cfg)
+                        }
+                    },
+                    onSetFallbackToCustomElectrumx = { enabled ->
+                        namecoinScope.launch {
+                            namecoinPrefsHere.setFallbackToCustomElectrumx(enabled)
+                        }
+                    },
+                    onSetFallbackToDefaultElectrumx = { enabled ->
+                        namecoinScope.launch {
+                            namecoinPrefsHere.setFallbackToDefaultElectrumx(enabled)
+                        }
+                    },
+                    onTestCoreRpc =
+                        namecoinServiceHere?.let { svc ->
+                            { cfg ->
+                                svc.probeCoreRpc(cfg)
+                                    ?: com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin
+                                        .RpcProbeResult(
+                                            success = false,
+                                            elapsedMs = 0,
+                                            error = "Namecoin Core RPC client not available",
+                                        )
                             }
                         },
                 )

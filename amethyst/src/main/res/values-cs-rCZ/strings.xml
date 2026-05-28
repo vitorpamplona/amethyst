@@ -135,6 +135,7 @@
     <string name="write_a_message">Napište zprávu…</string>
     <string name="post">Publikovat</string>
     <string name="save">Uložit</string>
+    <string name="send">Odeslat</string>
     <string name="create">Vytvořit</string>
     <string name="rename">Přejmenovat</string>
     <string name="cancel">Zrušit</string>
@@ -573,6 +574,15 @@
     <string name="nip82_repository_label">Zdroj: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Stáhnout</string>
+    <string name="nip82_section_about">O aplikaci</string>
+    <string name="nip82_section_platforms">Platformy</string>
+    <string name="nip82_section_topics">Témata</string>
+    <string name="nip82_section_links">Odkazy</string>
+    <string name="nip82_section_latest_release">Nejnovější verze</string>
+    <string name="nip82_section_comments">Komentáře</string>
+    <string name="nip82_no_comments">Buďte první, kdo přidá komentář.</string>
+    <string name="nip82_older_releases_show">Zobrazit starší verze</string>
+    <string name="nip82_older_releases_hide">Skrýt starší verze</string>
     <string name="calendars">Kalendáře</string>
     <string name="shorts">Krátká videa</string>
     <string name="public_chats">Veřejné chaty</string>
@@ -1371,6 +1381,7 @@
     <string name="external_url_scope">Komentář k webové stránce</string>
     <string name="external_id_scope">Komentář k externímu zdroji</string>
     <string name="long_form_reading_minutes">%1$d min čtení</string>
+    <string name="music_track_uploading_banner">Nahrávání obalu a zvuku a publikování. Bude pokračovat, i když opustíte obrazovku.</string>
     <string name="loading_location">Načítání umístění</string>
     <string name="lack_location_permissions">Žádná lokace oprávnění</string>
     <string name="add_sensitive_content_explainer">Přidat varování o citlivém obsahu před zobrazením vašeho obsahu. Toto je ideální pro obsah NSFW (nebezpečné pro práci) nebo obsah, který někteří lidé mohou považovat za urážlivý nebo znepokojující</string>

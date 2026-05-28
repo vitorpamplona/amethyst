@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
+import com.vitorpamplona.amethyst.ui.feeds.StickToTopOnPrepend
 import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.BadgeCompose
@@ -150,6 +151,8 @@ private fun FeedLoaded(
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
     val openPolls by polls.flow.collectAsStateWithLifecycle()
+
+    StickToTopOnPrepend(listState, items.list.firstOrNull()?.id())
 
     // Track which card is highlighted (will auto-clear after animation)
     var highlightedCardId by remember { mutableStateOf<String?>(null) }
