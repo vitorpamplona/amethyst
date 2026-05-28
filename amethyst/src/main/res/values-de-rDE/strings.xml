@@ -2791,16 +2791,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Kunst</string>
     <string name="nowhere_link_card_forum">Nowhere Forum</string>
-    <plurals name="music_playlist_track_count_short">
-        <item quantity="one">%1$d Titel</item>
-        <item quantity="other">%1$d Titel</item>
-    </plurals>
-    <plurals name="music_playlist_track_count">
-        <item quantity="one">%1$d Titel</item>
-        <item quantity="other">%1$d Titel</item>
-    </plurals>
-    <plurals name="music_playlist_more_tracks">
-        <item quantity="one">+%1$d weiterer Titel</item>
-        <item quantity="other">+%1$d weitere Titel</item>
-    </plurals>
 </resources>
