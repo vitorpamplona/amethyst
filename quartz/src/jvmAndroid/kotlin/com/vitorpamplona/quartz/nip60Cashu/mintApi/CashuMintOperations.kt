@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip60Cashu.mintApi
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip60Cashu.bdhke.Bdhke
+import com.vitorpamplona.quartz.nip60Cashu.bdhke.BdhkeScratchpad
 import com.vitorpamplona.quartz.nip60Cashu.p2pk.P2PK
 import com.vitorpamplona.quartz.nip60Cashu.seed.CashuDeterministic
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuProof
@@ -332,11 +333,12 @@ class CashuMintOperations(
             response.change?.let { sigs ->
                 val byAmount = changeOutputs.associateBy { it.amount }.toMutableMap()
                 val out = mutableListOf<CashuProof>()
+                val scratch = BdhkeScratchpad()
                 for (sig in sigs) {
                     val src =
                         byAmount.remove(sig.amount)
                             ?: throw IllegalStateException("Mint returned change for amount ${sig.amount} we didn't request")
-                    out += unblindOne(src, sig, keyset)
+                    out += unblindOne(src, sig, keyset, scratch)
                 }
                 out
             } ?: emptyList()
@@ -465,6 +467,7 @@ class CashuMintOperations(
                 // the echoed output's amount field is one we passed
                 // for a different denomination. The signed (amount, C_)
                 // is the source of truth, the echoed amount is not.
+                val restoreScratch = BdhkeScratchpad()
                 for (i in response.signatures.indices) {
                     val echo = response.outputs.getOrNull(i) ?: continue
                     val sig = response.signatures[i]
@@ -474,7 +477,7 @@ class CashuMintOperations(
                     // though only one of them carries the real signature.
                     if (!recoveredCounters.add(mat.counter)) continue
                     val output = BlindOutput(sig.amount, keysetId, mat.r, mat.secretHex, mat.bTick)
-                    val proof = unblindOne(output, sig, keyset)
+                    val proof = unblindOne(output, sig, keyset, restoreScratch)
                     recovered += RecoveredProof(proof, mat.counter)
                     if (mat.counter > highestSeenCounter) highestSeenCounter = mat.counter
                 }
@@ -646,11 +649,15 @@ class CashuMintOperations(
                 "Got ${signatures.size} signatures for ${outputs.size} outputs",
             )
         }
+        // One scratchpad per loop, reused across every unblind call —
+        // makes the bdhke crypto allocation-free on the hot path and
+        // dodges the Android 15+ ART JIT escape-analysis crash that
+        // hit on tight per-iteration Fe4 / MutablePoint allocation.
+        // See [BdhkeScratchpad] for the full rationale.
+        val scratch = BdhkeScratchpad()
         val out = ArrayList<CashuProof>(outputs.size)
         for (i in outputs.indices) {
-            Log.i("CashuTrace") { "unblindOne[$i/${outputs.size}] begin amount=${outputs[i].amount}" }
-            out += unblindOne(outputs[i], signatures[i], keyset)
-            Log.i("CashuTrace") { "unblindOne[$i/${outputs.size}] end" }
+            out += unblindOne(outputs[i], signatures[i], keyset, scratch)
         }
         return out
     }
@@ -659,6 +666,7 @@ class CashuMintOperations(
         output: BlindOutput,
         signature: BlindSignatureDto,
         keyset: KeysetDto,
+        scratch: BdhkeScratchpad = BdhkeScratchpad(),
     ): CashuProof {
         if (signature.amount != output.amount) {
             throw IllegalStateException(
@@ -676,24 +684,18 @@ class CashuMintOperations(
         // mint to sign (swap, mint-from-LN, swap-to-locked) — a
         // malicious mint could just refuse the request, so the DLEQ
         // check on our own outputs offers little marginal security
-        // beyond "fail fast vs. fail-at-next-spend". The cost is real:
-        // running Bdhke.verifyDleq once per signed denomination in
-        // tight sequence right after the swap response (typically 4–10
-        // pure-Kotlin elliptic-curve verifications in one batch) trips
-        // an ART JIT compiler crash on Android 15+ (SIGSEGV at 0x48 in
-        // "Jit thread pool"). CDK / nutshell wallets also skip this.
-        // Third-party proofs (incoming cashu tokens, nutzap redeems)
-        // continue to be Carol-verified via [verifyTokenDleq] — that's
-        // where the untrust boundary actually lives.
+        // beyond "fail fast vs. fail-at-next-spend". Third-party proofs
+        // (incoming cashu tokens, nutzap redeems) continue to be
+        // Carol-verified via [verifyTokenDleq] — that's where the
+        // untrust boundary actually lives.
 
-        Log.i("CashuTrace") { "  unblindOne: Bdhke.unblind begin" }
         val c =
             Bdhke.unblind(
                 blindSignature = cTickBytes,
                 r = output.r,
                 mintPubKey = mintPubKey,
+                scratch = scratch,
             )
-        Log.i("CashuTrace") { "  unblindOne: Bdhke.unblind end" }
         // Retain (e, s, r) on the resulting proof per NUT-12 §3 so
         // anything that later forwards this proof to another wallet —
         // a cashuB token, a kind:9321 nutzap — gives the recipient the

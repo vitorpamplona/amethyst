@@ -141,49 +141,79 @@ object Bdhke {
         blindSignature: ByteArray,
         r: ByteArray,
         mintPubKey: ByteArray,
+    ): ByteArray = unblind(blindSignature, r, mintPubKey, BdhkeScratchpad())
+
+    /**
+     * Allocation-free [unblind] variant that re-uses pre-allocated
+     * [Fe4] / [MutablePoint] holders from the caller-owned [scratch].
+     *
+     * # Why the scratch parameter exists
+     *
+     * Android 15+ ART crashes the JIT compiler thread (SIGSEGV at
+     * field offset 0x48 in "Jit thread pool") when it tries to
+     * escape-analyze the original inlined unblind body — about 10
+     * short-lived holder objects in one ~30-line method body. We
+     * tried splitting into three smaller helpers; the JIT's
+     * inlining pass put them back together at compile time and the
+     * crash persisted.
+     *
+     * Passing the holders as parameters fixes it: the JIT sees the
+     * objects clearly escape (came from outside, stored across the
+     * call), so the scalarization pass that's actually buggy in ART
+     * 15+ never runs. Side benefit: a hot loop like NUT-09 restore
+     * (hundreds of unblinds per pass) now does one [BdhkeScratchpad]
+     * allocation total instead of ~10 per iteration.
+     *
+     * The holders are fully overwritten on each call —
+     * [KeyCodec.parsePublicKey], [U256.fromBytesInto], [ECPoint.mul],
+     * [ECPoint.toAffine], [FieldP.neg], [MutablePoint.setAffine] all
+     * write through every field they use — so re-use across calls is
+     * safe even if previous content was different.
+     */
+    fun unblind(
+        blindSignature: ByteArray,
+        r: ByteArray,
+        mintPubKey: ByteArray,
+        scratch: BdhkeScratchpad,
     ): ByteArray {
         require(r.size == 32) { "Blinding factor must be 32 bytes" }
 
-        // The body was previously inlined here as one ~30-line method
-        // with ~10 short-lived Fe4 / MutablePoint allocations. Android
-        // 15+ ART crashes (SIGSEGV at 0x48 in "Jit thread pool") when
-        // it tries to escape-analyze that exact allocation density.
-        // Splitting into three smaller methods gives the JIT three
-        // small bodies it can compile cleanly instead of one big one
-        // that triggers the optimizer bug.
-        val cTick = parseAffinePoint(blindSignature, "blind signature")
-        val k = parseAffinePoint(mintPubKey, "mint public key")
-        val negRk = computeNegRk(k, r)
-        val out = MutablePoint()
-        ECPoint.addPoints(out, cTick, negRk)
-        return toCompressed(out)
+        val cTick = parseAffinePointInto(blindSignature, "blind signature", scratch.fe4A, scratch.fe4B, scratch.pointA)
+        val k = parseAffinePointInto(mintPubKey, "mint public key", scratch.fe4C, scratch.fe4D, scratch.pointB)
+        val negRk = computeNegRkInto(k, r, scratch.fe4E, scratch.pointC, scratch.fe4F, scratch.fe4G, scratch.pointD)
+        ECPoint.addPoints(scratch.outPoint, cTick, negRk)
+        return toCompressed(scratch.outPoint)
     }
 
-    /** Parse a 33-byte compressed pubkey into an affine [MutablePoint]. */
-    private fun parseAffinePoint(
+    /** Parse a 33-byte compressed pubkey into [outPoint], using [xHolder]/[yHolder] as scratch. */
+    private fun parseAffinePointInto(
         compressed: ByteArray,
         label: String,
+        xHolder: Fe4,
+        yHolder: Fe4,
+        outPoint: MutablePoint,
     ): MutablePoint {
-        val px = Fe4()
-        val py = Fe4()
-        require(KeyCodec.parsePublicKey(compressed, px, py)) { "Invalid $label" }
-        return MutablePoint().also { it.setAffine(px, py) }
+        require(KeyCodec.parsePublicKey(compressed, xHolder, yHolder)) { "Invalid $label" }
+        outPoint.setAffine(xHolder, yHolder)
+        return outPoint
     }
 
-    /** Compute `-r·K` as an affine [MutablePoint]. */
-    private fun computeNegRk(
+    /** Compute `-r·K` into [outPoint], using the remaining holders as scratch. */
+    private fun computeNegRkInto(
         k: MutablePoint,
         r: ByteArray,
+        rScalar: Fe4,
+        rkPoint: MutablePoint,
+        rkX: Fe4,
+        rkY: Fe4,
+        outPoint: MutablePoint,
     ): MutablePoint {
-        val rScalar = Fe4()
         U256.fromBytesInto(rScalar, r, 0)
-        val rk = MutablePoint()
-        ECPoint.mul(rk, k, rScalar)
-        val rkX = Fe4()
-        val rkY = Fe4()
-        require(ECPoint.toAffine(rk, rkX, rkY)) { "rK is point at infinity" }
+        ECPoint.mul(rkPoint, k, rScalar)
+        require(ECPoint.toAffine(rkPoint, rkX, rkY)) { "rK is point at infinity" }
         FieldP.neg(rkY, rkY)
-        return MutablePoint().also { it.setAffine(rkX, rkY) }
+        outPoint.setAffine(rkX, rkY)
+        return outPoint
     }
 
     /**
