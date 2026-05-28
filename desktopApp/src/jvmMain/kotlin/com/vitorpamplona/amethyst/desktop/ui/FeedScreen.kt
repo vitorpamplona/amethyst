@@ -828,7 +828,7 @@ private fun FeedTabsHeader(
     val pinnedFeeds by feedRepo.pinnedFeeds.collectAsState()
     val sidePadding = LocalReadingSidePadding.current
     val scope = rememberCoroutineScope()
-    val searchState = remember { AdvancedSearchBarState(scope) }
+    val searchState = remember { AdvancedSearchBarState(scope, debounceMs = 1000L) }
     var searchText by remember { mutableStateOf(TextFieldValue("")) }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
@@ -841,9 +841,13 @@ private fun FeedTabsHeader(
         searchState.updateFromText(searchText.text)
     }
 
-    // Clear on collapse
+    // Save to history + clear on collapse
     LaunchedEffect(searchExpanded) {
         if (!searchExpanded) {
+            val query = searchState.query.value
+            if (!query.isEmpty) {
+                SearchHistoryStore.addToHistory(query)
+            }
             searchText = TextFieldValue("")
             searchState.clearSearch()
         }
