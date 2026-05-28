@@ -943,6 +943,19 @@ class AccountViewModel(
                 zappedEvent = zappedEvent,
                 message = message,
             )
+            // Success surface — without it, the popup closes the
+            // instant the user taps the chip and there's no visible
+            // change for ~1-2 seconds while the swap and publish
+            // round-trip. Users perceive that gap as "nothing
+            // happened" and re-tap (which then gets the success
+            // toast for the second swap…). A direct toast scoped to
+            // the wallet path (not lightning's `onProgress` bar,
+            // which doesn't fit a 1-tick async op) closes the loop.
+            val appContext = com.vitorpamplona.amethyst.Amethyst.instance.appContext
+            toastManager.toast(
+                stringRes(appContext, R.string.nutzap_sent_title),
+                appContext.resources.getQuantityString(R.plurals.nutzap_sent_amount, amountSats.toInt(), amountSats.toInt()),
+            )
         } catch (e: Exception) {
             onError(
                 stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_title),

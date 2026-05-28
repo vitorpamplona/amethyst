@@ -2004,6 +2004,11 @@
     <string name="nutzap_failed_title">Nutzap failed</string>
     <string name="nutzap_failed_no_recipient">No recipient pubkey on the note</string>
     <string name="nutzap_failed_no_event">Cannot build event reference</string>
+    <string name="nutzap_sent_title">Cashu zap sent</string>
+    <plurals name="nutzap_sent_amount">
+        <item quantity="one">Sent %1$d sat via cashu</item>
+        <item quantity="other">Sent %1$d sats via cashu</item>
+    </plurals>
     <string name="cashu_create_token">Create token</string>
     <string name="cashu_redeem_button">Redeem</string>
     <string name="cashu_done">Done</string>

@@ -216,6 +216,7 @@ import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
 import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.claimedSatsTotal
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
@@ -1010,6 +1011,14 @@ object LocalCache : ILocalCache, ICacheProvider {
                         Address.parse(coord)?.let { add(getOrCreateAddressableNote(it)) }
                     }
                 }
+            }
+
+            is NutzapEvent -> {
+                // The zapped event is carried in the kind:9321's `e` tags
+                // (and optionally an `a` tag for addressables). Whichever
+                // notes those resolve to receive the nutzap entry —
+                // analogous to how LnZapEvent flows into `addZap`.
+                event.linkedEventIds().mapNotNull { checkGetOrCreateNote(it) }
             }
 
             is LnZapRequestEvent -> {
@@ -1963,6 +1972,40 @@ object LocalCache : ILocalCache, ICacheProvider {
         onchainZapResolver.launchVerification(event, note, repliesTo ?: computeReplyTo(event))
 
         return !alreadyLoaded
+    }
+
+    /**
+     * Consume a NIP-61 nutzap (kind 9321). Resolves the e-tagged target
+     * note(s), parses the proof amounts once, and attaches a `NutzapEntry`
+     * so the reaction-row counter, the "you-already-zapped" icon highlight,
+     * and the dedicated cashu gallery row all light up the same way they
+     * do for lightning zaps.
+     *
+     * Unlike `consume(OnchainZapEvent)`, there's no async verification
+     * step today — the sender-claimed proof amounts are trusted up to
+     * redeem time, when the recipient's wallet verifies them against the
+     * mint. Adding a wallet-side verification gate that downgrades
+     * unverifiable entries would be a follow-up.
+     */
+    fun consume(
+        event: NutzapEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val note = getOrCreateNote(event.id)
+        if (note.event != null) return false
+
+        if (!(wasVerified || justVerify(event))) return false
+
+        val author = getOrCreateUser(event.pubKey)
+        val repliesTo = computeReplyTo(event)
+        note.loadEvent(event, author, repliesTo)
+
+        val claimedSats = event.claimedSatsTotal()
+        repliesTo.forEach { it.addNutzap(note, claimedSats) }
+
+        refreshNewNoteObservers(note)
+        return true
     }
 
     private fun attachZapToLiveActivityChannel(
@@ -3203,7 +3246,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 is NutzapEvent -> {
-                    consumeRegularEvent(event, relay, wasVerified)
+                    consume(event, relay, wasVerified)
                 }
 
                 // ============================================================
