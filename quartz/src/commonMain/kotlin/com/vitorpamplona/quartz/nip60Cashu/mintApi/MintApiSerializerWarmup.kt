@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip60Cashu.mintApi
 
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.serialization.json.Json
 import kotlin.concurrent.Volatile
 
@@ -78,6 +79,7 @@ object MintApiSerializerWarmup {
     fun warmup() {
         if (warmupDone) return
         warmupDone = true
+        Log.i("CashuTrace") { "MintApiSerializerWarmup: begin" }
         val payload = buildSyntheticRestorePayload(WARMUP_ELEMENT_COUNT)
         // Decode + re-encode. The encode path is also hot (every mint
         // request body serializes a List<BlindedMessageDto>), so warm
@@ -89,6 +91,7 @@ object MintApiSerializerWarmup {
         // since they go through the same BlindSignatureDto inner code.
         val swap = buildSyntheticSwapPayload(WARMUP_ELEMENT_COUNT)
         json.decodeFromString(SwapResponseDto.serializer(), swap)
+        Log.i("CashuTrace") { "MintApiSerializerWarmup: end" }
     }
 
     private fun buildSyntheticRestorePayload(count: Int): String {

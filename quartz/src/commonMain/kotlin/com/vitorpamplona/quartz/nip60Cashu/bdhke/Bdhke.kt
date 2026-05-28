@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip60Cashu.bdhke
 
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.secp256k1.ECPoint
 import com.vitorpamplona.quartz.utils.secp256k1.Fe4
@@ -595,6 +596,7 @@ object Bdhke {
     fun warmup() {
         if (warmupDone) return
         warmupDone = true
+        Log.i("CashuTrace") { "Bdhke.warmup: begin" }
         // Fixed public key for warmup — generator point G's compressed form.
         // G is always on the curve and parses cleanly; nothing we do
         // here leaks into wallet state.
@@ -647,6 +649,7 @@ object Bdhke {
             // allocations) — the math result is meaningless and discarded.
             unblind(bTick, r, mintPubKey)
         }
+        Log.i("CashuTrace") { "Bdhke.warmup: end" }
     }
 
     private fun toCompressed(p: MutablePoint): ByteArray {

@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip60Cashu.p2pk.P2PK
 import com.vitorpamplona.quartz.nip60Cashu.seed.CashuDeterministic
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuProof
 import com.vitorpamplona.quartz.nip60Cashu.token.TokenContent
+import com.vitorpamplona.quartz.utils.Log
 
 /**
  * High-level mint operations: mint-from-LN, swap, melt-to-LN, send-as-token,
@@ -443,7 +444,9 @@ class CashuMintOperations(
                 }
             }
 
+            Log.i("CashuTrace") { "restore: POST /v1/restore (req=${outputDtos.size} outputs)" }
             val response = client.restore(RestoreRequestDto(outputs = outputDtos))
+            Log.i("CashuTrace") { "restore: decoded sigs=${response.signatures.size} echoes=${response.outputs.size}" }
             if (response.signatures.isEmpty()) {
                 emptyStreak++
             } else {
@@ -466,6 +469,7 @@ class CashuMintOperations(
                     if (mat.counter in uniqueByCounter) continue
                     uniqueByCounter[mat.counter] = mat to response.signatures[i]
                 }
+                Log.i("CashuTrace") { "restore: deduped to ${uniqueByCounter.size} unique counter(s)" }
                 for ((c, pair) in uniqueByCounter) {
                     val (mat, sig) = pair
                     val output = BlindOutput(sig.amount, keysetId, mat.r, mat.secretHex, mat.bTick)
@@ -473,6 +477,7 @@ class CashuMintOperations(
                     recovered += RecoveredProof(proof, c)
                     if (c > highestSeenCounter) highestSeenCounter = c
                 }
+                Log.i("CashuTrace") { "restore: batch unblinded" }
             }
 
             counter += effectiveBatchSize
