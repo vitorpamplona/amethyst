@@ -79,6 +79,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.chess.RelaySyncStatus
 import com.vitorpamplona.amethyst.commons.compose.elements.BoostedMark
 import com.vitorpamplona.amethyst.commons.compose.layouts.GenericRepostLayout
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -86,6 +87,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.search.AdvancedSearchBarState
+import com.vitorpamplona.amethyst.commons.search.QuerySerializer
+import com.vitorpamplona.amethyst.commons.search.SearchResultFilter
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
@@ -102,11 +105,13 @@ import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.subscriptions.FeedMode
 import com.vitorpamplona.amethyst.desktop.subscriptions.FilterBuilders
+import com.vitorpamplona.amethyst.desktop.subscriptions.SearchFilterFactory
 import com.vitorpamplona.amethyst.desktop.subscriptions.SubscriptionConfig
 import com.vitorpamplona.amethyst.desktop.subscriptions.createContactListSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createCustomFeedSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createFollowingFeedSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createGlobalFeedSubscription
+import com.vitorpamplona.amethyst.desktop.subscriptions.createSearchPeopleSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
@@ -116,6 +121,7 @@ import com.vitorpamplona.amethyst.desktop.ui.relay.Nip65RelayEditor
 import com.vitorpamplona.amethyst.desktop.ui.search.SearchResultsList
 import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -773,6 +779,7 @@ fun FeedScreen(
             onOpenFeedsDrawer = onOpenFeedsDrawer,
             onCompose = onCompose,
             onSearchClick = onSearchClick,
+            relayManager = relayManager,
             localCache = localCache,
             onNavigateToProfile = onNavigateToProfile,
             onNavigateToThread = onNavigateToThread,
@@ -811,6 +818,7 @@ private fun FeedTabsHeader(
     onOpenFeedsDrawer: () -> Unit,
     onCompose: () -> Unit,
     onSearchClick: () -> Unit = {},
+    relayManager: DesktopRelayConnectionManager? = null,
     localCache: DesktopLocalCache? = null,
     onNavigateToProfile: (String) -> Unit = {},
     onNavigateToThread: (String) -> Unit = {},
@@ -823,6 +831,9 @@ private fun FeedTabsHeader(
     var searchText by remember { mutableStateOf(TextFieldValue("")) }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
+    val debouncedQuery by searchState.debouncedQuery.collectAsState()
+    val relayCategories = LocalRelayCategories.current
+    val searchRelays by relayCategories.searchRelays.collectAsState()
 
     // Sync search text to AdvancedSearchBarState
     LaunchedEffect(searchText.text) {
@@ -841,6 +852,83 @@ private fun FeedTabsHeader(
     LaunchedEffect(searchExpanded) {
         if (searchExpanded) {
             focusRequester.requestFocus()
+        }
+    }
+
+    // Start/stop relay search when debounced query changes
+    LaunchedEffect(debouncedQuery) {
+        if (!debouncedQuery.isEmpty) {
+            searchState.clearResults()
+            searchState.initRelayStates(searchRelays)
+            searchState.startSearching("people-search")
+            searchState.startSearching("adv-search")
+            kotlinx.coroutines.delay(10_000L)
+            searchState.timeoutWaitingRelays()
+        }
+    }
+
+    // NIP-50 people search subscription
+    if (relayManager != null) {
+        rememberSubscription(searchRelays, debouncedQuery, relayManager = relayManager) {
+            if (searchRelays.isEmpty() || debouncedQuery.isEmpty) {
+                return@rememberSubscription null
+            }
+            createSearchPeopleSubscription(
+                relays = searchRelays,
+                searchQuery = debouncedQuery.text.ifBlank { QuerySerializer.serialize(debouncedQuery) },
+                limit = 10,
+                onEvent = { event, _, relay, _ ->
+                    if (searchState.trackRelayEvent(relay.url, event.id)) {
+                        if (event is MetadataEvent) {
+                            localCache?.consumeMetadata(event)
+                            val user = localCache?.getUserIfExists(event.pubKey)
+                            if (user != null) {
+                                searchState.addPeopleResult(user)
+                            }
+                        }
+                    }
+                },
+                onEose = { relay, _ ->
+                    searchState.updateRelayState(relay.url, RelaySyncStatus.EOSE_RECEIVED)
+                    searchState.stopSearching("people-search")
+                },
+                onClosed = { relay, _, _ ->
+                    searchState.updateRelayState(relay.url, RelaySyncStatus.FAILED)
+                    searchState.stopSearching("people-search")
+                },
+            )
+        }
+
+        // NIP-50 note search subscription
+        rememberSubscription(searchRelays, debouncedQuery, relayManager = relayManager) {
+            if (searchRelays.isEmpty() || debouncedQuery.isEmpty) {
+                return@rememberSubscription null
+            }
+            val filters = SearchFilterFactory.createFilters(debouncedQuery)
+            if (filters.isEmpty()) return@rememberSubscription null
+
+            SubscriptionConfig(
+                subId = generateSubId("inline-search"),
+                filters = filters,
+                relays = searchRelays,
+                onEvent = { event, _, relay, _ ->
+                    if (event.kind == MetadataEvent.KIND) return@SubscriptionConfig
+                    if (searchState.trackRelayEvent(relay.url, event.id)) {
+                        val filtered = SearchResultFilter.filter(listOf(event), debouncedQuery)
+                        if (filtered.isNotEmpty()) {
+                            searchState.addNoteResults(filtered)
+                        }
+                    }
+                },
+                onEose = { relay, _ ->
+                    searchState.updateRelayState(relay.url, RelaySyncStatus.EOSE_RECEIVED)
+                    searchState.stopSearching("adv-search")
+                },
+                onClosed = { relay, _, _ ->
+                    searchState.updateRelayState(relay.url, RelaySyncStatus.FAILED)
+                    searchState.stopSearching("adv-search")
+                },
+            )
         }
     }
 
