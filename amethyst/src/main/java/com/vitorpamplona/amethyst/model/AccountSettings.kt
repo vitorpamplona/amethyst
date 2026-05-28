@@ -173,6 +173,8 @@ class AccountSettings(
     val defaultArticlesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
     val defaultMusicTracksFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultMusicPlaylistsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultPodcastEpisodesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultPodcastsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultSoftwareAppsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultBadgesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Mine),
     val defaultBrowseEmojiSetsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
@@ -648,6 +650,28 @@ class AccountSettings(
     fun changeDefaultMusicPlaylistsFollowList(name: TopFilter) {
         if (defaultMusicPlaylistsFollowList.value != name) {
             defaultMusicPlaylistsFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultPodcastEpisodesFollowList(name: FeedDefinition) {
+        changeDefaultPodcastEpisodesFollowList(name.code)
+    }
+
+    fun changeDefaultPodcastEpisodesFollowList(name: TopFilter) {
+        if (defaultPodcastEpisodesFollowList.value != name) {
+            defaultPodcastEpisodesFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultPodcastsFollowList(name: FeedDefinition) {
+        changeDefaultPodcastsFollowList(name.code)
+    }
+
+    fun changeDefaultPodcastsFollowList(name: TopFilter) {
+        if (defaultPodcastsFollowList.value != name) {
+            defaultPodcastsFollowList.tryEmit(name)
             saveAccountSettings()
         }
     }

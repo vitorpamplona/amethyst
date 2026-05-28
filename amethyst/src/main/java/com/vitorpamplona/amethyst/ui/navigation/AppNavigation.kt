@@ -147,6 +147,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationS
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.publicMessages.NewPublicMessageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.PicturesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pinnednotes.PinnedNotesScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.PodcastEpisodesScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.PodcastsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.PollPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.PollsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.privacy.PrivacyOptionsScreen
@@ -289,6 +291,8 @@ fun BuildNavigation(
         composableFromEnd<Route.Articles> { ArticlesScreen(accountViewModel, nav) }
         composableFromEnd<Route.MusicTracks> { MusicTracksScreen(accountViewModel, nav) }
         composableFromEnd<Route.MusicPlaylists> { MusicPlaylistsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.PodcastEpisodes> { PodcastEpisodesScreen(accountViewModel, nav) }
+        composableFromEnd<Route.Podcasts> { PodcastsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.NewMusicTrack> { NewMusicTrackScreen(editDTag = it.dTag, accountViewModel = accountViewModel, nav = nav) }
         composableFromEndArgs<Route.AddToMusicPlaylist> { AddToMusicPlaylistSheet(trackAddress = it.trackAddress, accountViewModel = accountViewModel, nav = nav) }
         composableFromEnd<Route.NewHlsVideo> { NewHlsVideoScreen(accountViewModel, nav) }

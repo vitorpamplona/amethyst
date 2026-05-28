@@ -59,6 +59,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationS
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.OpenPollsState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.dal.PictureFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.dal.PodcastEpisodesFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.dal.PodcastsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.dal.ClosedPollsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.dal.OpenPollsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.dal.PollsFeedFilter
@@ -116,6 +118,8 @@ class AccountFeedContentStates(
     val articlesFeed = FeedContentState(ArticlesFeedFilter(account), scope, LocalCache)
     val musicTracksFeed = FeedContentState(MusicTracksFeedFilter(account), scope, LocalCache)
     val musicPlaylistsFeed = FeedContentState(MusicPlaylistsFeedFilter(account), scope, LocalCache)
+    val podcastEpisodesFeed = FeedContentState(PodcastEpisodesFeedFilter(account), scope, LocalCache)
+    val podcastsFeed = FeedContentState(PodcastsFeedFilter(account), scope, LocalCache)
     val softwareAppsFeed = FeedContentState(SoftwareAppsFeedFilter(account), scope, LocalCache)
 
     val notifications = CardFeedContentState(NotificationFeedFilter(account), scope)
@@ -207,6 +211,8 @@ class AccountFeedContentStates(
         articlesFeed.updateFeedWith(newNotes)
         musicTracksFeed.updateFeedWith(newNotes)
         musicPlaylistsFeed.updateFeedWith(newNotes)
+        podcastEpisodesFeed.updateFeedWith(newNotes)
+        podcastsFeed.updateFeedWith(newNotes)
         softwareAppsFeed.updateFeedWith(newNotes)
 
         calendarAppointmentsFeed.updateFeedWith(newNotes)
@@ -265,6 +271,8 @@ class AccountFeedContentStates(
         articlesFeed.deleteFromFeed(newNotes)
         musicTracksFeed.deleteFromFeed(newNotes)
         musicPlaylistsFeed.deleteFromFeed(newNotes)
+        podcastEpisodesFeed.deleteFromFeed(newNotes)
+        podcastsFeed.deleteFromFeed(newNotes)
         softwareAppsFeed.deleteFromFeed(newNotes)
 
         calendarAppointmentsFeed.deleteFromFeed(newNotes)

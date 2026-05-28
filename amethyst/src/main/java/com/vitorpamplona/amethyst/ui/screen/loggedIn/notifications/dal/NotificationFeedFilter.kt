@@ -78,6 +78,8 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -98,6 +100,8 @@ class NotificationFeedFilter(
                 AudioTrackEvent.KIND,
                 MusicTrackEvent.KIND,
                 MusicPlaylistEvent.KIND,
+                PodcastEpisodeEvent.KIND,
+                PodcastMetadataEvent.KIND,
                 CalendarTimeSlotEvent.KIND,
                 CalendarDateSlotEvent.KIND,
                 CalendarRSVPEvent.KIND,

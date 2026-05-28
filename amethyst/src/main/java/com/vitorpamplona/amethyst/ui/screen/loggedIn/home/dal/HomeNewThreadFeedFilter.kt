@@ -51,6 +51,8 @@ import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 
 class HomeNewThreadFeedFilter(
     val account: Account,
@@ -61,6 +63,7 @@ class HomeNewThreadFeedFilter(
                 AudioTrackEvent.KIND,
                 MusicTrackEvent.KIND,
                 MusicPlaylistEvent.KIND,
+                PodcastMetadataEvent.KIND,
                 InteractiveStoryPrologueEvent.KIND,
                 WikiNoteEvent.KIND,
                 ClassifiedsEvent.KIND,
@@ -131,6 +134,8 @@ class HomeNewThreadFeedFilter(
                 noteEvent is AudioTrackEvent ||
                 noteEvent is MusicTrackEvent ||
                 noteEvent is MusicPlaylistEvent ||
+                noteEvent is PodcastEpisodeEvent ||
+                noteEvent is PodcastMetadataEvent ||
                 noteEvent is VoiceEvent ||
                 noteEvent is AudioHeaderEvent ||
                 noteEvent is ChessGameEvent ||
