@@ -1364,6 +1364,7 @@ fun MainContent(
                     // Shared sidebar for both layout modes
                     if (!isImmersive) {
                         val allAccountsState by accountManager.allAccounts.collectAsState()
+                        val searchActiveState = com.vitorpamplona.amethyst.desktop.ui.theme.LocalFeedSearchActive.current
                         var showAddAccountDialog by remember { mutableStateOf(false) }
 
                         // Derive active column type based on layout mode
@@ -1412,6 +1413,7 @@ fun MainContent(
                                     }
                                 },
                                 onNavigate = { type ->
+                                    searchActiveState.value = false
                                     when (layoutMode) {
                                         LayoutMode.DECK -> {
                                             if (deckState.hasColumnOfType(type)) {
