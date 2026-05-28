@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -78,6 +79,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.chess.RelaySyncStatus
@@ -602,7 +604,13 @@ fun FeedScreen(
         // Layer 1: Feed content (scrollable, behind scrim)
         ReadingColumn {
             // Reserve space for the header card that floats above
-            Spacer(Modifier.height(60.dp))
+            // Reserve space for the header card that floats above.
+            // When search is expanded, the card grows — add more margin.
+            val headerSpacerHeight by animateDpAsState(
+                targetValue = if (searchActive) 300.dp else 60.dp,
+                animationSpec = tween(200),
+            )
+            Spacer(Modifier.height(headerSpacerHeight))
 
             // Feed content based on FeedState
             when (val state = feedState) {
@@ -1180,6 +1188,9 @@ private fun FeedTabsHeader(
                                 onSearchExpandedChange(false)
                                 onSearchClick()
                             },
+                            onHistoryItemClick = { text ->
+                                searchText = TextFieldValue(text, TextRange(text.length))
+                            },
                         )
                     }
                 }
@@ -1189,7 +1200,10 @@ private fun FeedTabsHeader(
 }
 
 @Composable
-private fun SearchHistorySection(onOpenFullSearch: () -> Unit) {
+private fun SearchHistorySection(
+    onOpenFullSearch: () -> Unit,
+    onHistoryItemClick: (String) -> Unit = { },
+) {
     val history by SearchHistoryStore.history.collectAsState()
     val savedSearches by SearchHistoryStore.savedSearches.collectAsState()
 
@@ -1212,7 +1226,7 @@ private fun SearchHistorySection(onOpenFullSearch: () -> Unit) {
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .clickable { onOpenFullSearch() }
+                            .clickable { onHistoryItemClick(text) }
                             .padding(horizontal = 16.dp, vertical = 8.dp),
                 ) {
                     Icon(MaterialSymbols.History, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
