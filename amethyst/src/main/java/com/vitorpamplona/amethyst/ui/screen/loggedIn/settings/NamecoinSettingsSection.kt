@@ -1028,7 +1028,7 @@ private fun NamecoinCoreRpcSection(
             trailingIcon = {
                 IconButton(onClick = { passVisible = !passVisible }) {
                     Icon(
-                        if (passVisible) MaterialSymbols.Lock else MaterialSymbols.Lock,
+                        if (passVisible) MaterialSymbols.VisibilityOff else MaterialSymbols.Visibility,
                         contentDescription = null,
                     )
                 }
