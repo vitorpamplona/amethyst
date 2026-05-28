@@ -45,7 +45,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size25dp
+import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.ui.theme.StdStartPadding
 import com.vitorpamplona.amethyst.ui.theme.WidthAuthorPictureModifier
@@ -98,7 +98,7 @@ private fun RenderNutzapGalleryRow(
             Icon(
                 imageVector = CustomHashTagIcons.Cashu,
                 contentDescription = stringRes(R.string.nutzap),
-                modifier = Modifier.size(Size25dp).align(Alignment.TopEnd),
+                modifier = Modifier.size(Size20dp).align(Alignment.TopEnd),
                 tint = Color.Unspecified,
             )
         }
