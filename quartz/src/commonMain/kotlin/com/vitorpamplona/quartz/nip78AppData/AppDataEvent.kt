@@ -20,48 +20,48 @@
  */
 package com.vitorpamplona.quartz.nip78AppData
 
-import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.DTag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
-class AppSpecificDataEvent(
+/**
+ * NIP-78 — Arbitrary custom app data, normal-event flavor.
+ *
+ * Kind 78 is the non-replaceable counterpart to [AppSpecificDataEvent] (kind
+ * 30078). Use it when an app needs to store and query multiple events of the
+ * same type. The spec recommends using unique tags (including `d` tags) for
+ * grouping related events; the `d` tag here does NOT make the event
+ * addressable, it is just a free-form grouping key.
+ */
+@Immutable
+class AppDataEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
-    override fun isContentEncoded() = true
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+    fun dTag(): String = tags.dTag()
 
     companion object {
-        const val KIND = 30078
+        const val KIND = 78
         const val ALT = "Arbitrary app data"
 
-        fun createAddress(
-            pubKey: HexKey,
-            dTag: String,
-        ) = Address(KIND, pubKey, dTag)
-
-        fun createTag(
-            pubkey: HexKey,
-            dTag: String,
-        ): ATag = ATag(KIND, pubkey, dTag, null)
-
         fun build(
-            dTag: String,
-            description: String,
+            content: String,
+            dTag: String? = null,
             createdAt: Long = TimeUtils.now(),
-            initializer: TagArrayBuilder<AppSpecificDataEvent>.() -> Unit = {},
-        ) = eventTemplate<AppSpecificDataEvent>(KIND, description, createdAt) {
+            initializer: TagArrayBuilder<AppDataEvent>.() -> Unit = {},
+        ) = eventTemplate<AppDataEvent>(KIND, content, createdAt) {
             alt(ALT)
-            dTag(dTag)
+            dTag?.let { addUnique(DTag.assemble(it)) }
             initializer()
         }
     }
