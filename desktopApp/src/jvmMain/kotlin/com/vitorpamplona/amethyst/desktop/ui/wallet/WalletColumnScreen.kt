@@ -33,7 +33,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -631,7 +630,7 @@ private fun SendDialog(
     Dialog(onDismissRequest = { if (!isLoading) onDismiss() }) {
         Card(
             modifier = Modifier.width(480.dp),
-            shape = RoundedCornerShape(16.dp),
+            shape = MaterialTheme.shapes.large,
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 // Header
@@ -849,7 +848,7 @@ private fun ReceiveDialog(
     Dialog(onDismissRequest = { if (!isGenerating) onDismiss() }) {
         Card(
             modifier = Modifier.width(400.dp),
-            shape = RoundedCornerShape(16.dp),
+            shape = MaterialTheme.shapes.large,
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 // Header: title + close X

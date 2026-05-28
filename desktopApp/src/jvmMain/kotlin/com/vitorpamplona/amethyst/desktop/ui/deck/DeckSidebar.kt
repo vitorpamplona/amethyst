@@ -42,6 +42,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -56,10 +58,12 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.domain.nip46.SignerConnectionState
 import com.vitorpamplona.amethyst.commons.feeds.custom.FeedDefinition
@@ -73,7 +77,6 @@ import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.desktop.DesktopPreferences
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop
-import com.vitorpamplona.amethyst.desktop.ui.account.AccountSwitcherDropdown
 import com.vitorpamplona.amethyst.desktop.ui.tor.TorStatusIndicator
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import kotlinx.collections.immutable.ImmutableList
@@ -275,6 +278,7 @@ fun MainSidebar(
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun SidebarAccountHeader(
     activeNpub: String?,
@@ -288,59 +292,58 @@ private fun SidebarAccountHeader(
     onAddAccount: () -> Unit,
     onRemoveAccount: (String) -> Unit,
 ) {
-    if (!expanded) {
-        // Collapsed: just the account switcher dropdown (icon-only)
-        Box(
-            modifier = Modifier.fillMaxWidth(),
-            contentAlignment = Alignment.Center,
-        ) {
-            AccountSwitcherDropdown(
-                activeNpub = activeNpub,
-                allAccounts = allAccounts,
-                localCache = localCache,
-                onSwitchAccount = onSwitchAccount,
-                onAddAccount = onAddAccount,
-                onRemoveAccount = onRemoveAccount,
-            )
+    var showDropdown by remember { mutableStateOf(false) }
+    var isHovered by remember { mutableStateOf(false) }
+
+    val hoverBg =
+        if (isHovered) {
+            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+        } else {
+            Color.Transparent
         }
-    } else {
-        // Expanded: avatar + name + npub, tappable to open account switcher
-        Box(modifier = Modifier.fillMaxWidth()) {
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // Avatar
-                if (pubkeyHex != null) {
-                    UserAvatar(
-                        userHex = pubkeyHex,
-                        pictureUrl = avatarUrl,
-                        size = 40.dp,
-                        contentDescription = "Account avatar",
+
+    Box {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable { showDropdown = true }
+                    .background(hoverBg)
+                    .onPointerEvent(PointerEventType.Enter) { isHovered = true }
+                    .onPointerEvent(PointerEventType.Exit) { isHovered = false }
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Avatar
+            if (pubkeyHex != null) {
+                UserAvatar(
+                    userHex = pubkeyHex,
+                    pictureUrl = avatarUrl,
+                    size = if (expanded) 32.dp else 28.dp,
+                    contentDescription = "Account avatar",
+                )
+            } else {
+                Box(
+                    modifier =
+                        Modifier
+                            .size(if (expanded) 32.dp else 28.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        MaterialSymbols.Person,
+                        contentDescription = "Account",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp),
                     )
-                } else {
-                    Box(
-                        modifier =
-                            Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            MaterialSymbols.Person,
-                            contentDescription = "Account",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(24.dp),
-                        )
-                    }
                 }
+            }
 
+            if (expanded) {
                 Spacer(Modifier.width(10.dp))
-
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = displayName ?: "Account",
@@ -360,16 +363,42 @@ private fun SidebarAccountHeader(
                     }
                 }
             }
+        }
 
-            // Overlay the dropdown so clicking opens it
-            AccountSwitcherDropdown(
-                activeNpub = activeNpub,
-                allAccounts = allAccounts,
-                localCache = localCache,
-                onSwitchAccount = onSwitchAccount,
-                onAddAccount = onAddAccount,
-                onRemoveAccount = onRemoveAccount,
-                modifier = Modifier.matchParentSize(),
+        // Account switcher dropdown menu
+        DropdownMenu(
+            expanded = showDropdown,
+            onDismissRequest = { showDropdown = false },
+            offset = DpOffset(x = if (expanded) 240.dp else 56.dp, y = 0.dp),
+        ) {
+            allAccounts.forEach { account ->
+                val isActive = account.npub == activeNpub
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = resolveDisplayNameForSidebar(account.npub, localCache) ?: npubShortForSidebar(account.npub),
+                            fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
+                        )
+                    },
+                    onClick = {
+                        showDropdown = false
+                        onSwitchAccount(account.npub)
+                    },
+                    trailingIcon = {
+                        if (isActive) {
+                            Icon(MaterialSymbols.Check, contentDescription = "Active", modifier = Modifier.size(16.dp))
+                        }
+                    },
+                )
+            }
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text("Add Account") },
+                onClick = {
+                    showDropdown = false
+                    onAddAccount()
+                },
+                leadingIcon = { Icon(MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(16.dp)) },
             )
         }
     }
@@ -531,4 +560,17 @@ private fun SidebarFeedItem(
 private fun npubShortForSidebar(npub: String): String {
     if (npub.length <= 20) return npub
     return "${npub.take(10)}...${npub.takeLast(6)}"
+}
+
+private fun resolveDisplayNameForSidebar(
+    npub: String,
+    localCache: DesktopLocalCache?,
+): String? {
+    if (localCache == null) return null
+    val pubkeyHex =
+        com.vitorpamplona.quartz.nip19Bech32
+            .decodePublicKeyAsHexOrNull(npub) ?: return null
+    val user = localCache.getUserIfExists(pubkeyHex) ?: return null
+    val name = user.toBestDisplayName()
+    return name.takeIf { it != user.pubkeyDisplayHex() }
 }

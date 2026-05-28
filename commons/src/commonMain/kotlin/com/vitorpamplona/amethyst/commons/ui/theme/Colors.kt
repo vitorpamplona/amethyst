@@ -75,6 +75,15 @@ val DarkWarningColorOnSecondSurface = Color(0xFFE1C419)
 val LightAllGoodColor = Color(0xFF339900)
 val DarkAllGoodColor = Color(0xFF99cc33)
 
+// Semantic status colors for desktop
+val StatusGreen = Color(0xFF4CAF50)
+val StatusGreenDark = Color(0xFF81C784)
+val StatusRed = Color(0xFFF44336)
+val StatusRedDark = Color(0xFFEF9A9A)
+val StatusAmber = Color(0xFFFFB300)
+val StatusAmberDark = Color(0xFFFFD54F)
+val StatusBlue = Color(0xFF2196F3)
+
 // Fundraiser colors
 val LightFundraiserProgressColor = Color(0xFF3DB601)
 val DarkFundraiserProgressColor = Color(0xFF61A229)

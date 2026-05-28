@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -107,7 +106,7 @@ fun LoginCard(
                 @Suppress("DEPRECATION")
                 PrimaryTabRow(
                     selectedTabIndex = selectedTab,
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)),
+                    modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small),
                 ) {
                     tabs.forEachIndexed { index, title ->
                         Tab(

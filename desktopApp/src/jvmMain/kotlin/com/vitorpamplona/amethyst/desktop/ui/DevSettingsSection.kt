@@ -43,12 +43,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.ui.theme.StatusAmber
+import com.vitorpamplona.amethyst.commons.ui.theme.StatusGreen
+import com.vitorpamplona.amethyst.commons.ui.theme.StatusRed
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
@@ -70,11 +72,11 @@ fun DevSettingsSection(
                 .fillMaxWidth()
                 .border(
                     width = 2.dp,
-                    color = Color(0xFFFF9800), // Orange warning color
-                    shape = RoundedCornerShape(8.dp),
+                    color = StatusAmber,
+                    shape = MaterialTheme.shapes.small,
                 ).background(
-                    color = Color(0xFF332200), // Dark orange tint
-                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = MaterialTheme.shapes.small,
                 ).padding(16.dp),
     ) {
         // Warning header
@@ -85,13 +87,13 @@ fun DevSettingsSection(
             Icon(
                 MaterialSymbols.Warning,
                 contentDescription = "Warning",
-                tint = Color(0xFFFF9800),
+                tint = StatusAmber,
             )
             Text(
                 "Developer Settings",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFFFF9800),
+                color = StatusAmber,
             )
         }
 
@@ -105,7 +107,7 @@ fun DevSettingsSection(
 
         Spacer(Modifier.height(16.dp))
 
-        HorizontalDivider(color = Color(0xFFFF9800).copy(alpha = 0.3f))
+        HorizontalDivider(color = StatusAmber.copy(alpha = 0.3f))
 
         Spacer(Modifier.height(16.dp))
 
@@ -114,7 +116,7 @@ fun DevSettingsSection(
             onClick = { showKeys = !showKeys },
             colors =
                 ButtonDefaults.outlinedButtonColors(
-                    contentColor = Color(0xFFFF9800),
+                    contentColor = StatusAmber,
                 ),
         ) {
             Text(if (showKeys) "Hide Keys" else "Show Keys")
@@ -180,7 +182,7 @@ private fun KeyRow(
                 style = MaterialTheme.typography.labelMedium,
                 color =
                     if (isSensitive) {
-                        Color(0xFFFF5252)
+                        StatusRed
                     } else {
                         MaterialTheme.colorScheme.onSurface
                     },
@@ -196,7 +198,7 @@ private fun KeyRow(
                     ButtonDefaults.buttonColors(
                         containerColor =
                             if (copiedRecently) {
-                                Color(0xFF4CAF50)
+                                StatusGreen
                             } else {
                                 MaterialTheme.colorScheme.primaryContainer
                             },
@@ -222,7 +224,7 @@ private fun KeyRow(
                 ),
             color =
                 if (isSensitive) {
-                    Color(0xFFFF5252)
+                    StatusRed
                 } else {
                     MaterialTheme.colorScheme.onSurfaceVariant
                 },
@@ -230,7 +232,7 @@ private fun KeyRow(
                 Modifier
                     .fillMaxWidth()
                     .background(
-                        color = Color(0xFF1A1A1A),
+                        color = MaterialTheme.colorScheme.onBackground,
                         shape = RoundedCornerShape(4.dp),
                     ).padding(8.dp),
         )

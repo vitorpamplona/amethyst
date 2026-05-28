@@ -37,7 +37,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -528,7 +527,7 @@ fun EditProfileContent(
                         Modifier
                             .fillMaxWidth()
                             .height(120.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(MaterialTheme.shapes.small)
                             .border(
                                 width = if (isBannerDragOver) 2.dp else 1.dp,
                                 color =
@@ -537,7 +536,7 @@ fun EditProfileContent(
                                     } else {
                                         MaterialTheme.colorScheme.outline
                                     },
-                                shape = RoundedCornerShape(8.dp),
+                                shape = MaterialTheme.shapes.small,
                             ).clickable { onPickBanner() }
                             .dragAndDropTarget(
                                 shouldStartDragAndDrop = { true },
