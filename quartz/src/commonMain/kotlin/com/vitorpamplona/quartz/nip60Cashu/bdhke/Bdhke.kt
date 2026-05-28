@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.utils.secp256k1.ScalarN
 import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
 import com.vitorpamplona.quartz.utils.secp256k1.U256
 import com.vitorpamplona.quartz.utils.sha256.sha256
+import kotlin.concurrent.Volatile
 
 /**
  * Blind Diffie-Hellman Key Exchange (BDHKE) — the cryptographic primitive

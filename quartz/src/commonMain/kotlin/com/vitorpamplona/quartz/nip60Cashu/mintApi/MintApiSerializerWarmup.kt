@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip60Cashu.mintApi
 
 import kotlinx.serialization.json.Json
+import kotlin.concurrent.Volatile
 
 /**
  * Pre-warms kotlinx.serialization for the hot mint-API DTOs.
