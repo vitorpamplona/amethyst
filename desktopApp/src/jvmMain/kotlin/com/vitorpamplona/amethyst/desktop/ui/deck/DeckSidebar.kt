@@ -231,6 +231,15 @@ fun MainSidebar(
                         },
                     )
                 }
+
+                // "+ Add Feed" button
+                SidebarNavItem(
+                    icon = MaterialSymbols.Add,
+                    label = "Add Feed",
+                    isActive = false,
+                    expanded = expanded,
+                    onClick = onAddColumn,
+                )
             }
         }
 
