@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.FeedLoaded
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.feeds.StickToTopOnPrepend
 import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyGridState
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyListState
@@ -72,6 +73,7 @@ fun SaveableFeedState(
         }
 
     WatchScrollToTop(feedContentState, listState)
+    StickToTopOnPrepend(feedContentState, listState)
 
     content(listState)
 }
@@ -90,6 +92,7 @@ fun SaveableGridFeedState(
         }
 
     WatchScrollToTop(viewModel.feedState, gridState)
+    StickToTopOnPrepend(viewModel.feedState, gridState)
 
     content(gridState)
 }

@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
+import com.vitorpamplona.amethyst.ui.feeds.StickToTopOnPrepend
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.ui.feeds.rememberForeverLazyGridState
@@ -156,6 +157,8 @@ private fun BrowseEmojiSetsGridLoaded(
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
+
+    StickToTopOnPrepend(gridState, items.list.firstOrNull()?.idHex)
 
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 160.dp),

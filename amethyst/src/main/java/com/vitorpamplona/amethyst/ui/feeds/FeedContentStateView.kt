@@ -63,6 +63,7 @@ fun SaveableFeedContentState(
         }
 
     WatchScrollToTop(feedContentState, listState)
+    StickToTopOnPrepend(feedContentState, listState)
 
     content(listState)
 }
@@ -81,6 +82,7 @@ fun SaveableGridFeedContentState(
         }
 
     WatchScrollToTop(feedContentState, gridState)
+    StickToTopOnPrepend(feedContentState, gridState)
 
     content(gridState)
 }

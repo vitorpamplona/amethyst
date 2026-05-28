@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
 import com.vitorpamplona.amethyst.ui.feeds.LoadingFeed
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
+import com.vitorpamplona.amethyst.ui.feeds.StickToTopOnPrepend
 import com.vitorpamplona.amethyst.ui.feeds.WatchScrollToTop
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -132,6 +133,11 @@ private fun FeedLoadedWithPinnedNotes(
             val state by it.feed.collectAsStateWithLifecycle()
             state
         }
+
+    StickToTopOnPrepend(
+        listState,
+        pinnedItems?.list?.firstOrNull()?.idHex ?: feedItems?.list?.firstOrNull()?.idHex,
+    )
 
     LazyColumn(
         contentPadding = FeedPadding,
