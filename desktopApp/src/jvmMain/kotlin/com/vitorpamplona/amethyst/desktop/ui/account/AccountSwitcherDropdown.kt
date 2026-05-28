@@ -99,7 +99,7 @@ fun AccountSwitcherDropdown(
     Box(modifier = modifier) {
         IconButton(
             onClick = { expanded = true },
-            modifier = Modifier.size(48.dp),
+            modifier = Modifier.size(40.dp),
         ) {
             Icon(
                 MaterialSymbols.Person,

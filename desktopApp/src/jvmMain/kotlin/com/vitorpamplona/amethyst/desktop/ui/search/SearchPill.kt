@@ -33,7 +33,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -50,11 +49,11 @@ fun SearchPill(
         onClick = onClick,
         shape = RoundedCornerShape(999.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        modifier = modifier.height(36.dp).clip(RoundedCornerShape(999.dp)).hoverHighlight(),
+        modifier = modifier.height(36.dp),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 12.dp),
+            modifier = Modifier.hoverHighlight().padding(horizontal = 12.dp),
         ) {
             Icon(
                 MaterialSymbols.Search,
