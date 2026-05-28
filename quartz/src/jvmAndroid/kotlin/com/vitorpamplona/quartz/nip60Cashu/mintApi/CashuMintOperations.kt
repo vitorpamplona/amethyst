@@ -435,7 +435,6 @@ class CashuMintOperations(
             // one denomination per counter under NUT-13.
             Log.i("CashuTrace") { "restore: batch counter=$counter size=$effectiveBatchSize denoms=${denominations.size}" }
             val matsByBTick = HashMap<String, CounterMaterials>(effectiveBatchSize)
-            val recoveredCounters = HashSet<Long>(effectiveBatchSize)
             val outputDtos = ArrayList<BlindedMessageDto>(perBatchSize)
             // One scratchpad reused across all per-counter Bdhke.blind
             // calls in this batch — see [BdhkeScratchpad]. Critical for
@@ -472,28 +471,35 @@ class CashuMintOperations(
                 emptyStreak++
             } else {
                 emptyStreak = 0
-                // Mint echoes the original outputs alongside signatures
-                // (NUT-09 §2). Match by bTick alone — some mints match
-                // their internal table by blind point only and return
-                // the signed denomination in the signature even when
-                // the echoed output's amount field is one we passed
-                // for a different denomination. The signed (amount, C_)
-                // is the source of truth, the echoed amount is not.
-                val restoreScratch = BdhkeScratchpad()
+                // NUT-09 §2 echoes one signature per output we sent — but a
+                // mint that matches its internal table by bTick alone (the
+                // signed denomination is the source of truth, not the
+                // echoed amount we asked about) returns the SAME signature
+                // 63× per counter (once per denomination we probed).
+                //
+                // Dedupe to one (counter → signature) pair BEFORE the
+                // unblind loop. This trims a ~378-iteration mostly-no-op
+                // loop down to ~6 real unblinds per batch — both faster
+                // and easier on the ART JIT, which kept trying to compile
+                // the wide hot loop and crashing on Android 15+.
+                val uniqueByCounter = LinkedHashMap<Long, Pair<CounterMaterials, BlindSignatureDto>>()
                 for (i in response.signatures.indices) {
-                    Log.i("CashuTrace") { "restore.unblind[$i/${response.signatures.size}] begin" }
                     val echo = response.outputs.getOrNull(i) ?: continue
-                    val sig = response.signatures[i]
                     val mat = matsByBTick[echo.bTick] ?: continue
-                    // Skip duplicates — a spec-tolerant mint may return
-                    // one entry per (amount, bTick) we asked about even
-                    // though only one of them carries the real signature.
-                    if (!recoveredCounters.add(mat.counter)) continue
+                    if (mat.counter in uniqueByCounter) continue
+                    uniqueByCounter[mat.counter] = mat to response.signatures[i]
+                }
+                Log.i("CashuTrace") { "restore: dedup sigs=${response.signatures.size} -> unique=${uniqueByCounter.size}" }
+
+                val restoreScratch = BdhkeScratchpad()
+                for ((c, pair) in uniqueByCounter) {
+                    val (mat, sig) = pair
+                    Log.i("CashuTrace") { "restore.unblind counter=$c amt=${sig.amount} begin" }
                     val output = BlindOutput(sig.amount, keysetId, mat.r, mat.secretHex, mat.bTick)
                     val proof = unblindOne(output, sig, keyset, restoreScratch)
-                    Log.i("CashuTrace") { "restore.unblind[$i/${response.signatures.size}] end (counter=${mat.counter} amt=${sig.amount})" }
-                    recovered += RecoveredProof(proof, mat.counter)
-                    if (mat.counter > highestSeenCounter) highestSeenCounter = mat.counter
+                    Log.i("CashuTrace") { "restore.unblind counter=$c amt=${sig.amount} end" }
+                    recovered += RecoveredProof(proof, c)
+                    if (c > highestSeenCounter) highestSeenCounter = c
                 }
             }
 

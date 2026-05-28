@@ -621,6 +621,77 @@ object Bdhke {
      */
     fun randomSecret(): ByteArray = randomScalar()
 
+    /**
+     * Pre-warm the JIT for [blind] / [unblind] by running them N times
+     * with synthetic data. Forces ART's optimizing compiler to do its
+     * work during app init (low contention, no user waiting) instead
+     * of mid-restore where the synchronous compile pause is visible
+     * (~13 ms gap inside the loop) and a crash in the JIT thread tears
+     * the whole process down.
+     *
+     * Called from `CashuWalletState.start()` on a background coroutine.
+     * Safe to call multiple times — the JIT will deduplicate. Cheap if
+     * the methods are already compiled.
+     *
+     * The synthetic data uses a fixed mint pubkey / random blinding
+     * factors. It does NOT touch any wallet state or network.
+     */
+    fun warmup() {
+        val scratch = BdhkeScratchpad()
+        // Fixed public key for warmup — generator point G's compressed form.
+        // G is always on the curve and parses cleanly; nothing we do
+        // here leaks into wallet state.
+        val mintPubKey =
+            byteArrayOf(
+                0x02.toByte(),
+                0x79.toByte(),
+                0xBE.toByte(),
+                0x66.toByte(),
+                0x7E.toByte(),
+                0xF9.toByte(),
+                0xDC.toByte(),
+                0xBB.toByte(),
+                0xAC.toByte(),
+                0x55.toByte(),
+                0xA0.toByte(),
+                0x62.toByte(),
+                0x95.toByte(),
+                0xCE.toByte(),
+                0x87.toByte(),
+                0x0B.toByte(),
+                0x07.toByte(),
+                0x02.toByte(),
+                0x9B.toByte(),
+                0xFC.toByte(),
+                0xDB.toByte(),
+                0x2D.toByte(),
+                0xCE.toByte(),
+                0x28.toByte(),
+                0xD9.toByte(),
+                0x59.toByte(),
+                0xF2.toByte(),
+                0x81.toByte(),
+                0x5B.toByte(),
+                0x16.toByte(),
+                0xF8.toByte(),
+                0x17.toByte(),
+                0x98.toByte(),
+            )
+        // ART JIT typically tier-1 compiles after ~10 invocations on
+        // Android 15+. 32 iterations is enough headroom that both blind
+        // and unblind reach the optimized tier before user-facing calls.
+        repeat(JIT_WARMUP_ITERATIONS) {
+            val secret = randomScalar()
+            val r = randomScalar()
+            val bTick = blind(secret, r, scratch)
+            // We don't have a real mint signature to unblind, but `blind`'s
+            // own output is a valid curve point that unblind will process
+            // identically from the JIT's perspective (same code paths, same
+            // allocations) — the math result is meaningless and discarded.
+            unblind(bTick, r, mintPubKey, scratch)
+        }
+    }
+
     private fun toCompressed(p: MutablePoint): ByteArray {
         val x = Fe4()
         val y = Fe4()
@@ -689,4 +760,11 @@ object Bdhke {
     // Spec doesn't bound this; in practice the first iteration succeeds with
     // probability ~1/2. We cap at 2^16 — astronomically unlikely to hit.
     private const val MAX_HASH_TO_CURVE_ITERATIONS = 65536
+
+    /**
+     * How many times [warmup] exercises [blind] / [unblind]. Set high
+     * enough that ART's tier-1 (optimizing) compile threshold is
+     * crossed during init, not during a user-triggered restore.
+     */
+    private const val JIT_WARMUP_ITERATIONS = 32
 }

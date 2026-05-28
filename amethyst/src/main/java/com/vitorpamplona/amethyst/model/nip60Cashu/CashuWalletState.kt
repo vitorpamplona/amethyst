@@ -32,9 +32,11 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip60Cashu.bdhke.Bdhke
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.DeterministicSecretFactory
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MeltQuoteBolt11ResponseDto
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintApiSerializerWarmup
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.ProofState
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
 import com.vitorpamplona.quartz.nip60Cashu.seed.CashuDeterministic
@@ -383,6 +385,21 @@ class CashuWalletState(
             applyEvents(initial)
             recomputePending()
             triggerAutoRedeem()
+        }
+
+        // JIT-warmup the BDHKE primitives + kotlinx.serialization
+        // decoders that the cashu flows hit hardest. On Android 15+
+        // these hot paths trigger an ART JIT optimizer crash (SIGSEGV
+        // in Jit thread pool) when compiled mid-restore with hundreds
+        // of allocations queued. Running them once during init forces
+        // the synchronous compile to happen here, where the user isn't
+        // waiting and a crash blast-radius is just a warmup failure
+        // logged once instead of a mid-recovery process death.
+        scope.launch(Dispatchers.Default) {
+            runCatching { Bdhke.warmup() }
+                .onFailure { Log.w("CashuWallet", "Bdhke warmup failed", it) }
+            runCatching { MintApiSerializerWarmup.warmup() }
+                .onFailure { Log.w("CashuWallet", "MintApi serializer warmup failed", it) }
         }
 
         // Keep the relay subscription in sync with the outbox set.
