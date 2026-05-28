@@ -120,3 +120,19 @@ class BdhkeScratchpad {
     internal val toCompressedFe4X: Fe4 = Fe4()
     internal val toCompressedFe4Y: Fe4 = Fe4()
 }
+
+/**
+ * Returns the scratchpad this thread should use for Bdhke crypto ops.
+ *
+ * On JVM/Android, backed by `ThreadLocal` — each thread that ever
+ * touches Bdhke gets its own scratchpad allocated lazily on first
+ * use, then reused across every subsequent call on that thread.
+ * Means every `Bdhke.blind`/`unblind`/`verifyDleq` etc. is
+ * allocation-free regardless of how the caller is structured.
+ *
+ * On other targets (iOS, native), allocates a fresh scratchpad per
+ * call. Those targets don't run the Cashu hot paths in production,
+ * but the function must exist for `quartz` to compile across the
+ * KMP target set.
+ */
+internal expect fun bdhkeScratchpad(): BdhkeScratchpad

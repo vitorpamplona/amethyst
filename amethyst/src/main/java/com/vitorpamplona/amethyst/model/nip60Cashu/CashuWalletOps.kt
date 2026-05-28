@@ -617,23 +617,17 @@ class CashuWalletOps(
         message: String,
         available: List<TokenEntry>,
     ): NutzapSent {
-        Log.i("CashuTrace") { "sendNutzap enter: amount=$amountSats mint=$mintUrl" }
         if (amountSats <= 0) throw IllegalArgumentException("Amount must be positive")
-        Log.i("CashuTrace") { "sendNutzap: seedWarmer begin" }
         seedWarmer()
-        Log.i("CashuTrace") { "sendNutzap: seedWarmer end" }
         val (selected, totalSelected) = selectProofsCovering(available, amountSats)
         if (totalSelected < amountSats) throw IllegalStateException("Insufficient balance for $mintUrl")
-        Log.i("CashuTrace") { "sendNutzap: selected=${selected.size} entries, total=$totalSelected sat" }
 
-        Log.i("CashuTrace") { "sendNutzap: swapToLocked begin (${selected.flatMap { it.content.proofs }.size} input proofs)" }
         val swap =
             ops(mintUrl).swapToLocked(
                 proofs = selected.flatMap { it.content.proofs },
                 recipientP2pkPubkeyHex = recipientP2pkPubkeyHex,
                 targetSplit = amountSats,
             )
-        Log.i("CashuTrace") { "sendNutzap: swapToLocked end (send=${swap.send.size}, keep=${swap.keep.size})" }
 
         // Build the kind:9321 first so we have its id to reference from history.
         val proofJsons = swap.send.map { nutzapProofJson.encodeToString(NutzapProofJson.serializer(), it.toNutzapJson()) }
@@ -646,20 +640,15 @@ class CashuWalletOps(
                 zappedEvent = zappedEvent,
                 recipientPubKey = recipientPubKey,
             )
-        Log.i("CashuTrace") { "sendNutzap: signing nutzapEvent" }
         val nutzapEvent = signer.sign(nutzapTemplate)
-        Log.i("CashuTrace") { "sendNutzap: publishing nutzapEvent id=${nutzapEvent.id.take(8)}" }
         publish(nutzapEvent)
-        Log.i("CashuTrace") { "sendNutzap: nutzapEvent published" }
 
         // Roll over change locally if any.
         val keepEvent =
             if (swap.keep.isNotEmpty()) {
                 val content = TokenContent(mint = mintUrl, proofs = swap.keep, del = selected.map { it.event.id })
-                Log.i("CashuTrace") { "sendNutzap: building+signing keep kind:7375 (${swap.keep.size} proofs, NIP-44 encrypt)" }
                 val template = CashuTokenEvent.build(content, signer)
                 val signed = signer.sign(template)
-                Log.i("CashuTrace") { "sendNutzap: publishing keep event id=${signed.id.take(8)}" }
                 publish(signed)
                 signed
             } else {
@@ -667,12 +656,10 @@ class CashuWalletOps(
             }
 
         // NIP-09 delete the source token events.
-        Log.i("CashuTrace") { "sendNutzap: signing delete event" }
         val deleteEvent =
             run {
                 val template = DeletionEvent.build(selected.map { it.event })
                 signer.sign(template).also {
-                    Log.i("CashuTrace") { "sendNutzap: publishing delete event id=${it.id.take(8)}" }
                     publish(it)
                 }
             }
@@ -688,11 +675,8 @@ class CashuWalletOps(
                     },
                 signer = signer,
             )
-        Log.i("CashuTrace") { "sendNutzap: signing history (NIP-44 encrypt)" }
         val historyEvent = signer.sign(historyTemplate)
-        Log.i("CashuTrace") { "sendNutzap: publishing history id=${historyEvent.id.take(8)}" }
         publish(historyEvent)
-        Log.i("CashuTrace") { "sendNutzap: done — nutzap=${nutzapEvent.id.take(8)}" }
 
         return NutzapSent(
             nutzapEvent = nutzapEvent,

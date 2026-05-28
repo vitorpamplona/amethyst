@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip60Cashu.bdhke
 
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.secp256k1.ECPoint
 import com.vitorpamplona.quartz.utils.secp256k1.Fe4
@@ -67,7 +66,7 @@ object Bdhke {
      * Internal because [MutablePoint] is internal to the Quartz crypto package.
      * External callers should use [hashToCurveCompressed] to get a 33-byte point.
      */
-    internal fun hashToCurve(x: ByteArray): MutablePoint = hashToCurveInto(x, BdhkeScratchpad())
+    internal fun hashToCurve(x: ByteArray): MutablePoint = hashToCurveInto(x, bdhkeScratchpad())
 
     /**
      * Allocation-free [hashToCurve] variant — writes the resulting
@@ -105,22 +104,23 @@ object Bdhke {
 
     /**
      * Public form of [hashToCurve] that returns a 33-byte compressed point.
+     * Uses the per-thread scratchpad from [bdhkeScratchpad] so the call
+     * is allocation-free regardless of how the caller is structured.
      */
-    fun hashToCurveCompressed(x: ByteArray): ByteArray = hashToCurveCompressed(x, BdhkeScratchpad())
-
-    /**
-     * Allocation-free [hashToCurveCompressed] variant. NUT-07
-     * checkstate hashes every proof's secret once per scrub sweep —
-     * a hot loop where the per-call allocations would otherwise
-     * stack up.
-     */
-    fun hashToCurveCompressed(
-        x: ByteArray,
-        scratch: BdhkeScratchpad,
-    ): ByteArray = toCompressedScratch(hashToCurveInto(x, scratch), scratch)
+    fun hashToCurveCompressed(x: ByteArray): ByteArray {
+        val scratch = bdhkeScratchpad()
+        return toCompressedScratch(hashToCurveInto(x, scratch), scratch)
+    }
 
     /**
      * Step 1 of BDHKE — Alice creates a blinded message.
+     *
+     * Allocation-free hot path: pulls a per-thread scratchpad from
+     * [bdhkeScratchpad] and reuses it across every call on that
+     * thread. Important for NUT-09 restore which runs [blind]
+     * hundreds of times in sequence — without scratchpad reuse the
+     * ~10 short-lived Fe4 / MutablePoint allocations per call would
+     * trigger the Android 15+ ART JIT escape-analysis crash.
      *
      * @param secret 32-byte (or arbitrary length) message to be later unblinded.
      * @param r 32-byte blinding factor (must be a valid scalar < n).
@@ -129,39 +129,16 @@ object Bdhke {
     fun blind(
         secret: ByteArray,
         r: ByteArray,
-    ): ByteArray = blind(secret, r, BdhkeScratchpad())
-
-    /**
-     * Allocation-free [blind] variant — same ART JIT escape-analysis
-     * mitigation as [unblind]. A hot loop like NUT-09 restore runs
-     * [blind] hundreds of times in sequence; the scratchpad shaves
-     * ~5 allocations off each iteration AND keeps the JIT from
-     * crashing on the (Android 15+ ART) bug.
-     */
-    fun blind(
-        secret: ByteArray,
-        r: ByteArray,
-        scratch: BdhkeScratchpad,
     ): ByteArray {
-        Log.i("BdhkeTrace") { " blind enter (secret=${secret.size}b r=${r.size}b)" }
+        val scratch = bdhkeScratchpad()
         require(r.size == 32) { "Blinding factor must be 32 bytes" }
-        Log.i("BdhkeTrace") { " blind: Secp256k1.secKeyVerify" }
         require(Secp256k1.secKeyVerify(r)) { "Invalid blinding factor" }
 
-        Log.i("BdhkeTrace") { " blind: hashToCurveInto" }
         val y = hashToCurveInto(secret, scratch)
-        Log.i("BdhkeTrace") { " blind: U256.fromBytesInto" }
         U256.fromBytesInto(scratch.blindFe4Scalar, r, 0)
-        Log.i("BdhkeTrace") { " blind: ECPoint.mulG" }
         ECPoint.mulG(scratch.blindPointRg, scratch.blindFe4Scalar)
-
-        Log.i("BdhkeTrace") { " blind: ECPoint.addPoints" }
         ECPoint.addPoints(scratch.blindPointOut, y, scratch.blindPointRg)
-
-        Log.i("BdhkeTrace") { " blind: toCompressedScratch" }
-        val out = toCompressedScratch(scratch.blindPointOut, scratch)
-        Log.i("BdhkeTrace") { " blind exit" }
-        return out
+        return toCompressedScratch(scratch.blindPointOut, scratch)
     }
 
     /**
@@ -171,6 +148,21 @@ object Bdhke {
      *
      * Implemented as `C_ + (-r·K)` since we don't expose point subtraction
      * directly. `-r·K` is computed by negating the scalar: `(n - r)·K`.
+     *
+     * Allocation-free hot path: pulls a per-thread scratchpad from
+     * [bdhkeScratchpad] and reuses its pre-allocated [Fe4] /
+     * [MutablePoint] holders across every call on that thread. The
+     * holders are fully overwritten on each call so re-use is safe.
+     *
+     * Why thread-local pooling instead of fresh allocations: Android
+     * 15+ ART crashes the JIT compiler (SIGSEGV at offset 0x48 in
+     * "Jit thread pool") when it tries to escape-analyze the original
+     * inlined unblind body — about 10 short-lived holders in one
+     * ~30-line method body. Pre-allocating them and storing the
+     * reference on a thread-local lets the JIT see the objects clearly
+     * escape (came from outside, returned from a function it can't
+     * inline through), so the scalarization pass that's actually
+     * buggy never runs.
      *
      * @param blindSignature 33-byte compressed `C_` returned by the mint.
      * @param r 32-byte blinding factor used in [blind].
@@ -182,56 +174,15 @@ object Bdhke {
         blindSignature: ByteArray,
         r: ByteArray,
         mintPubKey: ByteArray,
-    ): ByteArray = unblind(blindSignature, r, mintPubKey, BdhkeScratchpad())
-
-    /**
-     * Allocation-free [unblind] variant that re-uses pre-allocated
-     * [Fe4] / [MutablePoint] holders from the caller-owned [scratch].
-     *
-     * # Why the scratch parameter exists
-     *
-     * Android 15+ ART crashes the JIT compiler thread (SIGSEGV at
-     * field offset 0x48 in "Jit thread pool") when it tries to
-     * escape-analyze the original inlined unblind body — about 10
-     * short-lived holder objects in one ~30-line method body. We
-     * tried splitting into three smaller helpers; the JIT's
-     * inlining pass put them back together at compile time and the
-     * crash persisted.
-     *
-     * Passing the holders as parameters fixes it: the JIT sees the
-     * objects clearly escape (came from outside, stored across the
-     * call), so the scalarization pass that's actually buggy in ART
-     * 15+ never runs. Side benefit: a hot loop like NUT-09 restore
-     * (hundreds of unblinds per pass) now does one [BdhkeScratchpad]
-     * allocation total instead of ~10 per iteration.
-     *
-     * The holders are fully overwritten on each call —
-     * [KeyCodec.parsePublicKey], [U256.fromBytesInto], [ECPoint.mul],
-     * [ECPoint.toAffine], [FieldP.neg], [MutablePoint.setAffine] all
-     * write through every field they use — so re-use across calls is
-     * safe even if previous content was different.
-     */
-    fun unblind(
-        blindSignature: ByteArray,
-        r: ByteArray,
-        mintPubKey: ByteArray,
-        scratch: BdhkeScratchpad,
     ): ByteArray {
-        Log.i("BdhkeTrace") { " unblind enter" }
+        val scratch = bdhkeScratchpad()
         require(r.size == 32) { "Blinding factor must be 32 bytes" }
 
-        Log.i("BdhkeTrace") { " unblind: parseAffinePointInto cTick" }
         val cTick = parseAffinePointInto(blindSignature, "blind signature", scratch.fe4A, scratch.fe4B, scratch.pointA)
-        Log.i("BdhkeTrace") { " unblind: parseAffinePointInto k" }
         val k = parseAffinePointInto(mintPubKey, "mint public key", scratch.fe4C, scratch.fe4D, scratch.pointB)
-        Log.i("BdhkeTrace") { " unblind: computeNegRkInto" }
         val negRk = computeNegRkInto(k, r, scratch.fe4E, scratch.pointC, scratch.fe4F, scratch.fe4G, scratch.pointD)
-        Log.i("BdhkeTrace") { " unblind: ECPoint.addPoints" }
         ECPoint.addPoints(scratch.outPoint, cTick, negRk)
-        Log.i("BdhkeTrace") { " unblind: toCompressedScratch" }
-        val out = toCompressedScratch(scratch.outPoint, scratch)
-        Log.i("BdhkeTrace") { " unblind exit" }
-        return out
+        return toCompressedScratch(scratch.outPoint, scratch)
     }
 
     /** Parse a 33-byte compressed pubkey into [outPoint], using [xHolder]/[yHolder] as scratch. */
@@ -322,6 +273,12 @@ object Bdhke {
      * outside [1, n), points not on curve) or DLEQ mismatch. Callers
      * should treat false as a protocol violation and abort the swap/mint.
      *
+     * Allocation-free hot path: pulls a per-thread scratchpad from
+     * [bdhkeScratchpad]. Carol-side verification runs once per
+     * inbound nutzap proof during auto-redeem, so this is on the hot
+     * path of every nutzap receive — same JIT-crash mitigation as
+     * [blind] and [unblind].
+     *
      * @param e 32-byte challenge scalar from the mint.
      * @param s 32-byte response scalar from the mint.
      * @param blindedMessage 33-byte compressed `B_` we sent.
@@ -334,22 +291,8 @@ object Bdhke {
         blindedMessage: ByteArray,
         blindSignature: ByteArray,
         mintPubKey: ByteArray,
-    ): Boolean = verifyDleq(e, s, blindedMessage, blindSignature, mintPubKey, BdhkeScratchpad())
-
-    /**
-     * Allocation-free [verifyDleq] variant — same ART JIT escape-analysis
-     * mitigation as [unblind] / [blind]. Carol-side verification runs once
-     * per inbound nutzap proof during auto-redeem, so it's on the hot
-     * path of every nutzap receive.
-     */
-    fun verifyDleq(
-        e: ByteArray,
-        s: ByteArray,
-        blindedMessage: ByteArray,
-        blindSignature: ByteArray,
-        mintPubKey: ByteArray,
-        scratch: BdhkeScratchpad,
     ): Boolean {
+        val scratch = bdhkeScratchpad()
         if (e.size != 32 || s.size != 32) return false
         if (blindedMessage.size != 33 || blindSignature.size != 33 || mintPubKey.size != 33) return false
 
@@ -471,6 +414,16 @@ object Bdhke {
      * @param unblindedC 33-byte `C` from the proof — the unblinded
      *                   signature the wallet stores after Alice's
      *                   [unblind].
+     * Allocation-free hot path: pulls a per-thread scratchpad from
+     * [bdhkeScratchpad]. The Carol pipeline is the heaviest in BDHKE
+     * (one blind + one addRTimesA + one verifyDleq per call) so a
+     * hot loop here without sharing would burn ~40 short-lived
+     * holders per proof — exactly the shape that triggers the
+     * Android 15+ ART JIT crash. Each nested call grabs the same
+     * thread-local scratchpad; the holder sets used by [blind],
+     * [addRTimesA], and [verifyDleq] are disjoint so nested-on-same-
+     * scratchpad is safe.
+     *
      * @param mintPubKey 33-byte compressed `A = k·G` for this amount,
      *                   looked up from the mint's keyset.
      */
@@ -481,40 +434,22 @@ object Bdhke {
         s: ByteArray,
         unblindedC: ByteArray,
         mintPubKey: ByteArray,
-    ): Boolean = verifyDleqCarol(secret, r, e, s, unblindedC, mintPubKey, BdhkeScratchpad())
-
-    /**
-     * Allocation-free [verifyDleqCarol] variant. The Carol verification
-     * pipeline is the heaviest in BDHKE (one blind + one addRTimesA +
-     * one verifyDleq per call) so a hot loop here without a shared
-     * scratchpad would burn ~40 short-lived holders per proof — exactly
-     * the shape that triggers the Android 15+ ART JIT crash.
-     */
-    fun verifyDleqCarol(
-        secret: ByteArray,
-        r: ByteArray,
-        e: ByteArray,
-        s: ByteArray,
-        unblindedC: ByteArray,
-        mintPubKey: ByteArray,
-        scratch: BdhkeScratchpad,
     ): Boolean {
         if (r.size != 32) return false
         if (unblindedC.size != 33) return false
         if (mintPubKey.size != 33) return false
         // Reconstruct B' the way Alice did at mint time.
-        val bTick = runCatching { blind(secret, r, scratch) }.getOrNull() ?: return false
+        val bTick = runCatching { blind(secret, r) }.getOrNull() ?: return false
         // Reconstruct C' = C + r·A. Without this, verifyDleq is computing
         // the DLEQ check against the wrong point and always returns false
         // — this was a real production bug.
-        val cTick = runCatching { addRTimesA(unblindedC, r, mintPubKey, scratch) }.getOrNull() ?: return false
+        val cTick = runCatching { addRTimesA(unblindedC, r, mintPubKey) }.getOrNull() ?: return false
         return verifyDleq(
             e = e,
             s = s,
             blindedMessage = bTick,
             blindSignature = cTick,
             mintPubKey = mintPubKey,
-            scratch = scratch,
         )
     }
 
@@ -528,8 +463,8 @@ object Bdhke {
         c: ByteArray,
         r: ByteArray,
         mintPubKey: ByteArray,
-        scratch: BdhkeScratchpad,
     ): ByteArray {
+        val scratch = bdhkeScratchpad()
         // Reuses unblind's holder set — addRTimesA is only called from
         // verifyDleqCarol, which calls verifyDleq AFTER this one. The
         // unblind holders are free for the duration of this call.
@@ -659,7 +594,6 @@ object Bdhke {
     fun warmup() {
         if (warmupDone) return
         warmupDone = true
-        val scratch = BdhkeScratchpad()
         // Fixed public key for warmup — generator point G's compressed form.
         // G is always on the curve and parses cleanly; nothing we do
         // here leaks into wallet state.
@@ -705,12 +639,12 @@ object Bdhke {
         repeat(JIT_WARMUP_ITERATIONS) {
             val secret = randomScalar()
             val r = randomScalar()
-            val bTick = blind(secret, r, scratch)
+            val bTick = blind(secret, r)
             // We don't have a real mint signature to unblind, but `blind`'s
             // own output is a valid curve point that unblind will process
             // identically from the JIT's perspective (same code paths, same
             // allocations) — the math result is meaningless and discarded.
-            unblind(bTick, r, mintPubKey, scratch)
+            unblind(bTick, r, mintPubKey)
         }
     }
 

@@ -23,12 +23,10 @@ package com.vitorpamplona.quartz.nip60Cashu.mintApi
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip60Cashu.bdhke.Bdhke
-import com.vitorpamplona.quartz.nip60Cashu.bdhke.BdhkeScratchpad
 import com.vitorpamplona.quartz.nip60Cashu.p2pk.P2PK
 import com.vitorpamplona.quartz.nip60Cashu.seed.CashuDeterministic
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuProof
 import com.vitorpamplona.quartz.nip60Cashu.token.TokenContent
-import com.vitorpamplona.quartz.utils.Log
 
 /**
  * High-level mint operations: mint-from-LN, swap, melt-to-LN, send-as-token,
@@ -224,15 +222,12 @@ class CashuMintOperations(
         recipientP2pkPubkeyHex: String,
         targetSplit: Long,
     ): SwapResult {
-        Log.i("CashuTrace") { "swapToLocked enter: inputs=${proofs.size}, target=$targetSplit" }
         if (proofs.isEmpty()) throw IllegalArgumentException("Nothing to swap")
         if (targetSplit <= 0) throw IllegalArgumentException("Target split must be > 0")
         val total = proofs.sumOf { it.amount }
         if (targetSplit > total) throw IllegalArgumentException("Target split exceeds available proofs")
 
-        Log.i("CashuTrace") { "swapToLocked: fetchKeyset begin" }
         val keyset = fetchKeyset()
-        Log.i("CashuTrace") { "swapToLocked: fetchKeyset end id=${keyset.id}" }
         // NUT-02: reserve per-input fees; change shrinks by the fee, send
         // amount stays whole (the recipient gets exactly targetSplit sats).
         val feeAtoms = computeInputFee(proofs.size, keyset.inputFeePpk)
@@ -244,13 +239,10 @@ class CashuMintOperations(
         // proof, so NUT-13 recovery doesn't apply to those bytes), but
         // our change outputs go through the deterministic factory in one
         // batch — see [secretOutputsFor].
-        Log.i("CashuTrace") { "swapToLocked: building ${splitAmounts(targetSplit).size} locked outputs (P2PK blinds)" }
         val sendOutputs = splitAmounts(targetSplit).map { lockedOutputFor(it, keyset, recipientP2pkPubkeyHex) }
-        Log.i("CashuTrace") { "swapToLocked: building ${if (keepAmount > 0L) splitAmounts(keepAmount).size else 0} keep outputs (NUT-13 deterministic blinds)" }
         val keepOutputs =
             if (keepAmount > 0L) secretOutputsFor(splitAmounts(keepAmount), keyset) else emptyList()
         val allOutputs = sendOutputs + keepOutputs
-        Log.i("CashuTrace") { "swapToLocked: POST /v1/swap with ${allOutputs.size} outputs" }
 
         val response =
             client.swap(
@@ -259,7 +251,6 @@ class CashuMintOperations(
                     outputs = allOutputs.map { it.toDto() },
                 ),
             )
-        Log.i("CashuTrace") { "swapToLocked: swap response sigs=${response.signatures.size}" }
 
         if (response.signatures.size != allOutputs.size) {
             throw MintProtocolException(
@@ -267,9 +258,7 @@ class CashuMintOperations(
             )
         }
 
-        Log.i("CashuTrace") { "swapToLocked: unblindAll begin (${allOutputs.size})" }
         val unblinded = unblindAll(allOutputs, response.signatures, keyset)
-        Log.i("CashuTrace") { "swapToLocked: unblindAll end" }
         val sendProofs = unblinded.subList(0, sendOutputs.size)
         val keepProofs = unblinded.subList(sendOutputs.size, unblinded.size)
         return SwapResult(send = sendProofs, keep = keepProofs, keysetId = keyset.id)
@@ -333,12 +322,11 @@ class CashuMintOperations(
             response.change?.let { sigs ->
                 val byAmount = changeOutputs.associateBy { it.amount }.toMutableMap()
                 val out = mutableListOf<CashuProof>()
-                val scratch = BdhkeScratchpad()
                 for (sig in sigs) {
                     val src =
                         byAmount.remove(sig.amount)
                             ?: throw IllegalStateException("Mint returned change for amount ${sig.amount} we didn't request")
-                    out += unblindOne(src, sig, keyset, scratch)
+                    out += unblindOne(src, sig, keyset)
                 }
                 out
             } ?: emptyList()
@@ -433,30 +421,21 @@ class CashuMintOperations(
             // deterministic (secret, r) pair derived from the counter),
             // not per (counter, amount) — the wallet only ever minted
             // one denomination per counter under NUT-13.
-            Log.i("CashuTrace") { "restore: batch counter=$counter size=$effectiveBatchSize denoms=${denominations.size}" }
             val matsByBTick = HashMap<String, CounterMaterials>(effectiveBatchSize)
             val outputDtos = ArrayList<BlindedMessageDto>(perBatchSize)
-            // One scratchpad reused across all per-counter Bdhke.blind
-            // calls in this batch — see [BdhkeScratchpad]. Critical for
-            // restore: without it we'd allocate ~6 short-lived holders
-            // per counter × batchSize counters per batch and trip the
-            // Android 15+ ART JIT escape-analysis crash.
-            val batchScratch = BdhkeScratchpad()
 
             for (offset in 0 until effectiveBatchSize) {
                 val c = counter + offset
-                Log.i("CashuTrace") { "restore.derive c=$c: CashuDeterministic" }
                 // Per-counter derivation: same (secret, r) pair the
                 // wallet would have minted at this counter slot. We
                 // try each amount denomination — the mint will only
                 // return the signature(s) it actually issued at this
-                // slot, if any.
+                // slot, if any. Bdhke uses a thread-local scratchpad
+                // internally so no per-call allocation pressure.
                 val secretBytes = CashuDeterministic.secretBytes(seed, keysetId, c)
                 val r = CashuDeterministic.blindingFactor(seed, keysetId, c)
                 val secretHex = secretBytes.toHexKey()
-                Log.i("CashuTrace") { "restore.derive c=$c: Bdhke.blind" }
-                val bTick = Bdhke.blind(secretHex.encodeToByteArray(), r, batchScratch)
-                Log.i("CashuTrace") { "restore.derive c=$c: build dtos for ${denominations.size} denoms" }
+                val bTick = Bdhke.blind(secretHex.encodeToByteArray(), r)
                 val bTickHex = bTick.toHexKey()
                 matsByBTick[bTickHex] = CounterMaterials(c, secretHex, r, bTick)
                 for (amount in denominations) {
@@ -464,9 +443,7 @@ class CashuMintOperations(
                 }
             }
 
-            Log.i("CashuTrace") { "restore: HTTP /v1/restore (request ${outputDtos.size} outputs)" }
             val response = client.restore(RestoreRequestDto(outputs = outputDtos))
-            Log.i("CashuTrace") { "restore: HTTP response sigs=${response.signatures.size} echoes=${response.outputs.size}" }
             if (response.signatures.isEmpty()) {
                 emptyStreak++
             } else {
@@ -489,15 +466,10 @@ class CashuMintOperations(
                     if (mat.counter in uniqueByCounter) continue
                     uniqueByCounter[mat.counter] = mat to response.signatures[i]
                 }
-                Log.i("CashuTrace") { "restore: dedup sigs=${response.signatures.size} -> unique=${uniqueByCounter.size}" }
-
-                val restoreScratch = BdhkeScratchpad()
                 for ((c, pair) in uniqueByCounter) {
                     val (mat, sig) = pair
-                    Log.i("CashuTrace") { "restore.unblind counter=$c amt=${sig.amount} begin" }
                     val output = BlindOutput(sig.amount, keysetId, mat.r, mat.secretHex, mat.bTick)
-                    val proof = unblindOne(output, sig, keyset, restoreScratch)
-                    Log.i("CashuTrace") { "restore.unblind counter=$c amt=${sig.amount} end" }
+                    val proof = unblindOne(output, sig, keyset)
                     recovered += RecoveredProof(proof, c)
                     if (c > highestSeenCounter) highestSeenCounter = c
                 }
@@ -556,13 +528,9 @@ class CashuMintOperations(
         if (proofs.isEmpty()) return true
         // Fetch all keysets the mint exposes so cross-keyset tokens
         // verify against the right amount key. Cheap — one round-trip.
+        // Bdhke.verifyDleqCarol uses a thread-local scratchpad
+        // internally so the loop is allocation-free.
         val allKeysets = client.activeKeysets().keysets.associateBy { it.id }
-        // One scratchpad reused across every per-proof Carol verification.
-        // Carol is the heaviest BDHKE pipeline (blind + addRTimesA +
-        // verifyDleq); without sharing this scratch the inbound-nutzap
-        // loop allocates dozens of short-lived holders per proof and
-        // trips the Android 15+ ART JIT crash.
-        val scratch = BdhkeScratchpad()
         for (proof in proofs) {
             val dleq = proof.dleq ?: continue
             val r = dleq.r ?: continue
@@ -581,7 +549,6 @@ class CashuMintOperations(
                     s = dleq.s.hexToByteArray(),
                     unblindedC = proof.c.hexToByteArray(),
                     mintPubKey = mintPubKeyHex.hexToByteArray(),
-                    scratch = scratch,
                 )
             if (!ok) return false
         }
@@ -598,15 +565,13 @@ class CashuMintOperations(
     suspend fun checkStates(proofs: List<CashuProof>): Map<String, ProofState> {
         if (proofs.isEmpty()) return emptyMap()
         // NUT-07 keys check requests by `Y` (hash-to-curve of the secret).
-        // One scratchpad reused across the per-proof hashToCurve calls so
-        // the pre-send scrub doesn't allocate per-proof on wallets with
-        // many entries (and doesn't trip the ART JIT crash).
-        val scratch = BdhkeScratchpad()
-        val ys = proofs.map { Bdhke.hashToCurveCompressed(it.secret.encodeToByteArray(), scratch).toHexKey() }
+        // Bdhke.hashToCurveCompressed uses a thread-local scratchpad
+        // internally so the per-proof loop is allocation-free.
+        val ys = proofs.map { Bdhke.hashToCurveCompressed(it.secret.encodeToByteArray()).toHexKey() }
         val response = client.checkState(CheckStateRequestDto(ys = ys))
         val secretByY =
             proofs.associateBy {
-                Bdhke.hashToCurveCompressed(it.secret.encodeToByteArray(), scratch).toHexKey()
+                Bdhke.hashToCurveCompressed(it.secret.encodeToByteArray()).toHexKey()
             }
         val out = mutableMapOf<String, ProofState>()
         for (row in response.states) {
@@ -640,16 +605,15 @@ class CashuMintOperations(
         keyset: KeysetDto,
     ): List<BlindOutput> {
         if (amounts.isEmpty()) return emptyList()
-        Log.i("CashuTrace") { "secretOutputsFor: nextSecrets(${amounts.size})" }
         // NUT-00: secret is a UTF-8 hex string of 32 secret bytes.
         // [secretFactory] decides whether those bytes are pure-random or
         // NUT-13-derived from a wallet seed; either way the on-wire shape
         // is identical so the mint can't tell which scheme we're using.
+        // Bdhke.blind uses a thread-local scratchpad internally.
         val derived = secretFactory.nextSecrets(keyset.id, amounts.size)
-        val scratch = BdhkeScratchpad()
         return amounts.mapIndexed { i, amount ->
             val pair = derived[i]
-            val bTick = Bdhke.blind(pair.secretHex.encodeToByteArray(), pair.blindingFactor, scratch)
+            val bTick = Bdhke.blind(pair.secretHex.encodeToByteArray(), pair.blindingFactor)
             BlindOutput(amount, keyset.id, pair.blindingFactor, pair.secretHex, bTick)
         }
     }
@@ -680,15 +644,12 @@ class CashuMintOperations(
                 "Got ${signatures.size} signatures for ${outputs.size} outputs",
             )
         }
-        // One scratchpad per loop, reused across every unblind call —
-        // makes the bdhke crypto allocation-free on the hot path and
-        // dodges the Android 15+ ART JIT escape-analysis crash that
-        // hit on tight per-iteration Fe4 / MutablePoint allocation.
-        // See [BdhkeScratchpad] for the full rationale.
-        val scratch = BdhkeScratchpad()
+        // Bdhke.unblind uses a thread-local scratchpad internally so
+        // each call on this thread reuses the same Fe4 / MutablePoint
+        // holders — no per-iteration allocation pressure on the JIT.
         val out = ArrayList<CashuProof>(outputs.size)
         for (i in outputs.indices) {
-            out += unblindOne(outputs[i], signatures[i], keyset, scratch)
+            out += unblindOne(outputs[i], signatures[i], keyset)
         }
         return out
     }
@@ -697,7 +658,6 @@ class CashuMintOperations(
         output: BlindOutput,
         signature: BlindSignatureDto,
         keyset: KeysetDto,
-        scratch: BdhkeScratchpad = BdhkeScratchpad(),
     ): CashuProof {
         if (signature.amount != output.amount) {
             throw IllegalStateException(
@@ -725,7 +685,6 @@ class CashuMintOperations(
                 blindSignature = cTickBytes,
                 r = output.r,
                 mintPubKey = mintPubKey,
-                scratch = scratch,
             )
         // Retain (e, s, r) on the resulting proof per NUT-12 §3 so
         // anything that later forwards this proof to another wallet —
