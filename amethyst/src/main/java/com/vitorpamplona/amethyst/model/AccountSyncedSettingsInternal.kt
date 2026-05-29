@@ -51,6 +51,13 @@ val DefaultReportWarningThreshold = 5
  */
 const val MIN_ONCHAIN_ZAP_SATS = 1_000L
 
+/**
+ * Default on-chain quick-pick amount, used when the user's unified zap-amount
+ * list contains nothing at or above [MIN_ONCHAIN_ZAP_SATS]. Matches the legacy
+ * dedicated on-chain default so the send dialog always offers one preset.
+ */
+const val DEFAULT_ONCHAIN_ZAP_SATS = 5_000L
+
 @Serializable
 enum class ReactionRowAction {
     Reply,

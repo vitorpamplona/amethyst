@@ -189,7 +189,7 @@ class AccountZapPreferences(
  * legacy `onchainZapAmountChoices`. Idempotent: [AccountSyncedSettings.toInternal]
  * re-derives the on-chain field as a subset of this list.
  */
-internal fun mergeZapAmounts(zaps: AccountZapPreferencesInternal): List<Long> = (zaps.zapAmountChoices + zaps.onchainZapAmountChoices).distinct().sorted()
+internal fun mergeZapAmounts(zaps: AccountZapPreferencesInternal): List<Long> = (zaps.zapAmountChoices + zaps.onchainZapAmountChoices).distinct()
 
 @Stable
 class AccountLanguagePreferences(

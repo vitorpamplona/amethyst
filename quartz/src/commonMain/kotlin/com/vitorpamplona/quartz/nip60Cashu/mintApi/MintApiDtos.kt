@@ -192,7 +192,15 @@ data class MintQuoteBolt11ResponseDto(
     val state: String,
     val expiry: Long? = null,
     val paid: Boolean? = null,
-)
+) {
+    /**
+     * True once the mint considers the quote's invoice settled — either the
+     * legacy `paid` boolean (NUT-04 v0) or the `state` machine reaching PAID
+     * (invoice settled, proofs not yet issued) or ISSUED (proofs minted).
+     * Centralized so every poll loop agrees on what "paid" means.
+     */
+    fun isSettled(): Boolean = paid == true || state == "PAID" || state == "ISSUED"
+}
 
 @Serializable
 data class MintBolt11RequestDto(

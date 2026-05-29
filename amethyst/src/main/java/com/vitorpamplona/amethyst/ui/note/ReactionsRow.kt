@@ -1387,17 +1387,26 @@ fun zapClick(
         }
 
         choices.size == 1 -> {
-            onZapStarts()
-            accountViewModel.zap(
-                baseNote,
-                choices.first() * 1000,
-                null,
-                "",
-                context,
-                onError = onError,
-                onProgress = { onZappingProgress(it) },
-                onPayViaIntent = onPayViaIntent,
-            )
+            // One-tap fast path is Lightning-only. If the recipient can't
+            // receive Lightning (no lud16/lud06), firing a zap here would just
+            // fail — open the picker instead so the rail-aware chip can route to
+            // cashu / on-chain / reload.
+            val caps = RailCapabilityResolver.peek(baseNote, accountViewModel.account.cashuWalletState)
+            if (caps.hasLightning) {
+                onZapStarts()
+                accountViewModel.zap(
+                    baseNote,
+                    choices.first() * 1000,
+                    null,
+                    "",
+                    context,
+                    onError = onError,
+                    onProgress = { onZappingProgress(it) },
+                    onPayViaIntent = onPayViaIntent,
+                )
+            } else {
+                onMultipleChoices()
+            }
         }
 
         choices.size > 1 -> {
@@ -1948,7 +1957,9 @@ fun ZapAmountChoicePopup(
         }
     val amountChoices =
         remember(zapAmountChoices) {
-            zapAmountChoices.distinct().sorted().toImmutableList()
+            // Keep the user's saved order (already de-duped at the settings
+            // layer); don't re-sort, that would override a deliberate ordering.
+            zapAmountChoices.distinct().toImmutableList()
         }
     val visibilityState = rememberVisibilityState(onDismiss)
     ZapAmountChoicePopup(

@@ -26,10 +26,13 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState
 import com.vitorpamplona.amethyst.model.nip60Cashu.describeMintError
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -105,6 +108,11 @@ class ReloadMintViewModel : ViewModel() {
     private var baseNote: Note? = null
     private val state: CashuWalletState? get() = accountViewModel?.account?.cashuWalletState
 
+    /** The in-flight reload pipeline, so a second tap can be rejected and the
+     *  whole flow cancelled when the screen leaves (it runs on the long-lived
+     *  AccountViewModel scope, not this VM's). */
+    private var job: Job? = null
+
     private val _uiState = MutableStateFlow(ReloadUiState())
     val uiState: StateFlow<ReloadUiState> = _uiState.asStateFlow()
 
@@ -146,14 +154,20 @@ class ReloadMintViewModel : ViewModel() {
         val balances = base.balances.associate { it.mintUrl to it.balanceSats }
         val targetBalance = balances[target] ?: 0L
         val shortfall = (base.amountSats - targetBalance).coerceAtLeast(0L)
-        // Rough fee cushion for enabling a source; the melt quote sets the real
-        // fee at execution time. 1% (min 1 sat).
-        val estFee = (shortfall / 100L).coerceAtLeast(1L)
+        // Rough fee cushion for *enabling* a source — the real Lightning
+        // feeReserve is only known once rebalance() fetches the melt quote, so
+        // this is a heuristic (1%, min 2 sat). A source that clears the estimate
+        // but not the real quote fails recoverably (Failed → pick another), it
+        // doesn't move funds.
+        val estFee = (shortfall / 100L).coerceAtLeast(2L)
+        // A source must cover what we actually mint (shortfall + headroom buffer)
+        // plus that melt fee.
+        val needFromSource = shortfall + RELOAD_FEE_BUFFER_SATS + estFee
 
         val mintSources =
             base.balances
                 .filter { it.mintUrl != target }
-                .map { ReloadSource.Mint(it.mintUrl, it.balanceSats, canCover = it.balanceSats >= shortfall + estFee) }
+                .map { ReloadSource.Mint(it.mintUrl, it.balanceSats, canCover = it.balanceSats >= needFromSource) }
 
         val sources: List<ReloadSource> = mintSources + ReloadSource.Lightning
         // Prefer the richest mint that can cover (no new sats); else Lightning.
@@ -183,28 +197,43 @@ class ReloadMintViewModel : ViewModel() {
         val s = _uiState.value
         val source = s.selectedSource ?: return
 
-        vm.launchSigner {
-            try {
-                when (source) {
-                    is ReloadSource.Mint -> rebalanceThenZap(source.mintUrl, s.selectedTarget, s.shortfallSats, note, s.amountSats)
-                    ReloadSource.Lightning -> reloadFromLightningThenZap(s.selectedTarget, s.shortfallSats, note, s.amountSats)
+        // In-flight guard: only start from a resting state. Without it a double
+        // tap (or the Failed-state Retry) launches a second pipeline — two mint
+        // quotes at the target and two melts at the source, double-spending /
+        // double-minting. Flip to Working synchronously so the second call bails.
+        if (s.status !is ReloadStatus.Configuring && s.status !is ReloadStatus.Failed) return
+        setStatus(ReloadStatus.Working("Starting", 0.05f))
+
+        // Mint a hair more than the bare shortfall so the follow-up nutzap's own
+        // swap fee doesn't leave the target a sat short (see #RELOAD_FEE_BUFFER).
+        val moveSats = s.shortfallSats + RELOAD_FEE_BUFFER_SATS
+
+        job?.cancel()
+        job =
+            vm.launchSigner {
+                try {
+                    when (source) {
+                        is ReloadSource.Mint -> rebalanceThenZap(source.mintUrl, s.selectedTarget, moveSats, note, s.amountSats)
+                        ReloadSource.Lightning -> reloadFromLightningThenZap(s.selectedTarget, moveSats, note, s.amountSats)
+                    }
+                } catch (e: CancellationException) {
+                    throw e // screen left mid-flow — don't mask as a Failed state
+                } catch (e: Exception) {
+                    setStatus(ReloadStatus.Failed(describeMintError(e)))
                 }
-            } catch (e: Exception) {
-                setStatus(ReloadStatus.Failed(describeMintError(e)))
             }
-        }
     }
 
     private suspend fun rebalanceThenZap(
         sourceMint: String,
         targetMint: String,
-        shortfall: Long,
+        moveSats: Long,
         note: Note,
         amount: Long,
     ) {
         val st = state ?: return
         setStatus(ReloadStatus.Working("Moving funds", 0.1f))
-        st.rebalance(sourceMint, targetMint, shortfall) { p ->
+        st.rebalance(sourceMint, targetMint, moveSats) { p ->
             setStatus(ReloadStatus.Working("Moving funds", p.coerceIn(0.1f, 0.9f)))
         }
         sendNutzapAndFinish(note, amount)
@@ -212,7 +241,7 @@ class ReloadMintViewModel : ViewModel() {
 
     private suspend fun reloadFromLightningThenZap(
         targetMint: String,
-        shortfall: Long,
+        moveSats: Long,
         note: Note,
         amount: Long,
     ) {
@@ -221,7 +250,7 @@ class ReloadMintViewModel : ViewModel() {
         val ops = st.ops
 
         setStatus(ReloadStatus.Working("Requesting invoice", 0.1f))
-        val flow = ops.startMintFromLightning(targetMint, shortfall)
+        val flow = ops.startMintFromLightning(targetMint, moveSats)
 
         val walletUri = vm.account.settings.defaultZapPaymentRequest()
         if (walletUri != null) {
@@ -233,16 +262,18 @@ class ReloadMintViewModel : ViewModel() {
             }
         } else {
             // No NWC — surface the invoice for an external wallet and keep polling.
-            setStatus(ReloadStatus.AwaitingInvoice(flow.invoice, shortfall))
+            setStatus(ReloadStatus.AwaitingInvoice(flow.invoice, moveSats))
         }
 
+        // External payment can take a while; the poll runs on a job tied to the
+        // screen (cancelled in onCleared), so leaving stops it instead of
+        // hammering the mint for 3 minutes with nobody watching.
         val attempts = 90
         val delayMs = 2_000L
         var paid = false
         var attempt = 0
         while (!paid && attempt < attempts) {
-            val status = ops.checkMintQuote(targetMint, flow.mintQuote.quote)
-            paid = status.paid == true || status.state == "PAID" || status.state == "ISSUED"
+            paid = ops.checkMintQuote(targetMint, flow.mintQuote.quote).isSettled()
             if (!paid) {
                 delay(delayMs)
                 attempt++
@@ -253,28 +284,52 @@ class ReloadMintViewModel : ViewModel() {
             return
         }
         setStatus(ReloadStatus.Working("Issuing ecash", 0.85f))
-        ops.completeMintFromLightning(targetMint, flow.quoteEvent, shortfall)
+        ops.completeMintFromLightning(targetMint, flow.quoteEvent, moveSats)
         sendNutzapAndFinish(note, amount)
     }
 
-    private fun sendNutzapAndFinish(
+    /**
+     * Send the nutzap and only report [ReloadStatus.Done] once it actually
+     * succeeds. Suspends on the real send (throwing on failure) instead of the
+     * fire-and-forget AccountViewModel.sendNutzap, so a send that fails after a
+     * successful reload surfaces as Failed here rather than silently stranding
+     * the just-moved funds while the screen pops on a premature "done".
+     */
+    private suspend fun sendNutzapAndFinish(
         note: Note,
         amount: Long,
     ) {
-        val vm = accountViewModel ?: return
+        val st = state ?: return
+        val recipient = note.author?.pubkeyHex ?: throw IllegalStateException("Recipient has no pubkey")
+        val zappedEvent = note.toEventHint<Event>() ?: throw IllegalStateException("Nothing to zap")
         setStatus(ReloadStatus.Working("Sending zap", 0.95f))
-        // The destination is now funded; fire the nutzap (its own error path
-        // toasts) and report Done so the screen can pop.
-        vm.sendNutzap(
-            baseNote = note,
+        st.sendNutzap(
             amountSats = amount,
+            recipientPubKey = recipient,
+            zappedEvent = zappedEvent,
             message = "",
-            onError = { _, msg, _ -> setStatus(ReloadStatus.Failed(msg)) },
         )
         setStatus(ReloadStatus.Done)
     }
 
     private fun setStatus(status: ReloadStatus) {
         _uiState.update { it.copy(status = status) }
+    }
+
+    override fun onCleared() {
+        // The pipeline runs on the AccountViewModel scope, not this VM's, so it
+        // would outlive the screen — cancel it when the screen goes away.
+        job?.cancel()
+        super.onCleared()
+    }
+
+    companion object {
+        /**
+         * Extra sats minted at the target beyond the bare shortfall, so the
+         * follow-up nutzap's own swap fee doesn't leave the mint a hair short.
+         * Most mints charge no input fee; this small cushion covers the ones
+         * that do without meaningfully over-minting.
+         */
+        private const val RELOAD_FEE_BUFFER_SATS = 2L
     }
 }

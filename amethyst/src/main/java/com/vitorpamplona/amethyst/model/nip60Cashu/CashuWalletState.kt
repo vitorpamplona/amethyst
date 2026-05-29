@@ -1209,16 +1209,19 @@ class CashuWalletState(
         meltToLightning(sourceMintUrl, meltQuote)
 
         // 4. The melt paid the invoice; confirm + issue proofs at the target.
+        //    The melt settled synchronously, but a healthy mint can still lag a
+        //    while before flipping the quote to PAID, so give it a generous
+        //    ~60s steady budget rather than a tight escalating one — a merely
+        //    slow mint shouldn't strand funds that have already left the source.
         onProgress?.invoke(0.75f)
-        val pollAttempts = 8
-        val pollDelayMs = 1_000L
+        val pollAttempts = 30
+        val pollDelayMs = 2_000L
         var paid = false
         var attempt = 0
         while (!paid && attempt < pollAttempts) {
-            val status = ops.checkMintQuote(targetMintUrl, mintFlow.mintQuote.quote)
-            paid = status.paid == true || status.state == "PAID" || status.state == "ISSUED"
+            paid = ops.checkMintQuote(targetMintUrl, mintFlow.mintQuote.quote).isSettled()
             if (!paid) {
-                delay(pollDelayMs * (attempt + 1))
+                delay(pollDelayMs)
                 attempt++
             }
         }
