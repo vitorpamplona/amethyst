@@ -608,7 +608,7 @@ fun FeedScreen(
             // Reserve space for the header card that floats above.
             // When search is expanded, the card grows — add more margin.
             val headerSpacerHeight by animateDpAsState(
-                targetValue = if (searchActive) 300.dp else 76.dp,
+                targetValue = if (searchActive) 300.dp else 60.dp,
                 animationSpec = tween(200),
             )
             Spacer(Modifier.height(headerSpacerHeight))
@@ -682,7 +682,7 @@ fun FeedScreen(
                     val sidePadding = LocalReadingSidePadding.current
                     LazyColumn(
                         state = lazyListState,
-                        contentPadding = PaddingValues(horizontal = sidePadding + 12.dp),
+                        contentPadding = PaddingValues(start = sidePadding + 12.dp, end = sidePadding + 12.dp, top = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         items(loadedState.list, key = { it.idHex }) { note ->
