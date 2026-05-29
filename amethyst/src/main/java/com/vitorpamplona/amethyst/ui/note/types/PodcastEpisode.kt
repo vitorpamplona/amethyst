@@ -104,12 +104,18 @@ fun RenderPodcastEpisode(
             }
 
             description?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
+                val descriptionTags = remember(noteEvent) { noteEvent.tags.toImmutableListOfLists() }
+
+                TranslatableRichTextViewer(
+                    content = it,
+                    canPreview = canPreview,
+                    quotesLeft = 1,
                     modifier = Modifier.fillMaxWidth(),
+                    tags = descriptionTags,
+                    backgroundColor = backgroundColor,
+                    id = note.idHex + "-description",
+                    accountViewModel = accountViewModel,
+                    nav = nav,
                 )
             }
 

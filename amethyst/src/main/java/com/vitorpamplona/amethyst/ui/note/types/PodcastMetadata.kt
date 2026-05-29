@@ -43,7 +43,9 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -58,8 +60,8 @@ import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 fun RenderPodcastMetadata(
     note: Note,
     makeItShort: Boolean,
-    @Suppress("UNUSED_PARAMETER") canPreview: Boolean,
-    @Suppress("UNUSED_PARAMETER") backgroundColor: MutableState<Color>,
+    canPreview: Boolean,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -99,12 +101,18 @@ fun RenderPodcastMetadata(
             }
 
             description?.takeIf { !makeItShort }?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 5,
-                    overflow = TextOverflow.Ellipsis,
+                val tags = remember(noteEvent) { noteEvent.tags.toImmutableListOfLists() }
+
+                TranslatableRichTextViewer(
+                    content = it,
+                    canPreview = canPreview,
+                    quotesLeft = 1,
                     modifier = Modifier.fillMaxWidth(),
+                    tags = tags,
+                    backgroundColor = backgroundColor,
+                    id = note.idHex,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
                 )
             }
 
