@@ -725,6 +725,8 @@
     <string name="articles">文章</string>
     <string name="route_music_tracks">音乐</string>
     <string name="route_music_playlists">播放列表</string>
+    <string name="route_podcast_episodes">节目</string>
+    <string name="route_podcasts">播客</string>
     <string name="new_music_track">新音乐曲目</string>
     <string name="new_music_playlist">新建播放列表</string>
     <string name="music_track_title_label">标题</string>
@@ -2305,6 +2307,10 @@
     <string name="kind_audio_track">音轨</string>
     <string name="kind_music_track">音乐曲目</string>
     <string name="kind_music_playlist">音乐播放列表</string>
+    <string name="kind_podcast_episode">播客节目</string>
+    <string name="kind_podcast_metadata">播客秀</string>
+    <string name="kind_authored_podcasts">创作的播客</string>
+    <string name="kind_favorite_podcasts">收藏的播客</string>
     <string name="kind_badge_awards">徽章奖励</string>
     <string name="kind_badge_definitions">徽章定义</string>
     <string name="kind_accepted_badge_set">接受的徽章集</string>
