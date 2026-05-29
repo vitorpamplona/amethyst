@@ -339,7 +339,6 @@ private fun ZapAmountPresetChip(
     modifier: Modifier = Modifier,
 ) {
     val rails = remember(amountInSats) { previewRailsFor(amountInSats) }
-    val accent = zapRailAccent(rails.first(), MaterialTheme.colorScheme.onSurface, MaterialTheme.colorScheme.primary)
     Surface(
         shape = ButtonBorder,
         color = MaterialTheme.colorScheme.surface,
@@ -354,12 +353,12 @@ private fun ZapAmountPresetChip(
             Spacer(Modifier.width(5.dp))
             Text(
                 text = showAmount(amountInSats.toBigDecimal().setScale(1)),
-                color = accent,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.SemiBold,
             )
             rails.drop(1).forEach { rail ->
                 Spacer(Modifier.width(4.dp))
-                ZapRailIcon(rail, colored = false)
+                ZapRailIcon(rail, colored = false, size = 14.dp)
             }
             IconButton(onClick = onRemove, modifier = Modifier.size(30.dp)) {
                 Icon(

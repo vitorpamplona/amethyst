@@ -2190,24 +2190,27 @@ private fun UnifiedZapAmountChip(
             modifier =
                 Modifier
                     .combinedClickable(onClick = defaultAction, onLongClick = onChangeAmount)
-                    .padding(start = 10.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+                    // With no alternative buttons on the right, match the left inset
+                    // so the icon+amount pill stays symmetric; the trailing buttons
+                    // supply their own right-side mass when present.
+                    .padding(start = 10.dp, end = if (others.isEmpty()) 10.dp else 6.dp, top = 6.dp, bottom = 6.dp),
             verticalAlignment = CenterVertically,
         ) {
             // The default is ONE tap target: the preferred rail's logo hugs the
             // amount (no separate button), and a plain tap anywhere here fires
-            // that rail; long-press edits the presets. The amount takes the
-            // preferred rail's accent colour.
-            val accent = zapRailAccent(preferred, MaterialTheme.colorScheme.onSurface, MaterialTheme.colorScheme.primary)
+            // that rail; long-press edits the presets. Only the leading logo
+            // carries colour — the amount itself stays neutral so it doesn't
+            // shout across the feed.
             ZapRailIcon(preferred, colored = true)
             Spacer(Modifier.width(5.dp))
             Text(
                 text = showAmount(amountInSats.toBigDecimal().setScale(1)),
-                color = accent,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
             )
-            // Alternatives as distinct circular buttons so they read as
-            // separately tappable, to the right of the amount.
+            // Alternatives as small, quiet circular buttons (icon smaller than the
+            // preferred logo) to the right of the amount.
             others.forEach { rail ->
                 Spacer(Modifier.width(6.dp))
                 RailButton(
@@ -2220,7 +2223,7 @@ private fun UnifiedZapAmountChip(
                         }
                     },
                 ) {
-                    ZapRailIcon(rail, colored = false)
+                    ZapRailIcon(rail, colored = false, size = 14.dp)
                 }
             }
         }
@@ -2261,36 +2264,26 @@ internal fun previewRailsFor(amountInSats: Long): List<ZapRail> {
     return listOf(preferred) + all.filter { it != preferred }
 }
 
-/** Brand accent for a rail (for the amount text); cashu's multi-tone logo has none. */
-internal fun zapRailAccent(
-    rail: ZapRail,
-    onSurface: Color,
-    primary: Color,
-): Color =
-    when (rail) {
-        ZapRail.RELOAD -> primary
-        ZapRail.LIGHTNING, ZapRail.ONCHAIN -> BitcoinOrange
-        ZapRail.CASHU -> onSurface
-    }
-
 /**
- * Just the rail's logo (no click target). [colored] renders it in its brand
- * colour (the preferred rail); otherwise it's flattened to the on-surface
- * monochrome tint. The cashu logo is drawn a touch smaller than the Material
- * symbols, which it otherwise dwarfs.
+ * Just the rail's logo (no click target), drawn at [size]. [colored] renders it
+ * in its brand colour (the preferred rail); otherwise it's flattened to the
+ * on-surface monochrome tint. The cashu logo is drawn ~0.72× so its multi-tone
+ * mark reads at the same optical size as the Material symbols.
  */
 @Composable
 internal fun ZapRailIcon(
     rail: ZapRail,
     colored: Boolean,
+    size: Dp = 18.dp,
 ) {
     val mono = MaterialTheme.colorScheme.onSurface
+    val cashuSize = size * 0.72f
     when (rail) {
         ZapRail.CASHU ->
             Material3Icon(
                 imageVector = CustomHashTagIcons.Cashu,
                 contentDescription = stringRes(R.string.nutzap),
-                modifier = Modifier.size(13.dp),
+                modifier = Modifier.size(cashuSize),
                 tint = if (colored) Color.Unspecified else mono,
             )
         ZapRail.RELOAD ->
@@ -2300,13 +2293,13 @@ internal fun ZapRailIcon(
                 Material3Icon(
                     imageVector = CustomHashTagIcons.Cashu,
                     contentDescription = stringRes(R.string.reload_mint_title),
-                    modifier = Modifier.size(13.dp).alpha(0.5f),
+                    modifier = Modifier.size(cashuSize).alpha(0.5f),
                     tint = if (colored) Color.Unspecified else mono,
                 )
                 Icon(
                     symbol = MaterialSymbols.AddCircle,
                     contentDescription = null,
-                    modifier = Modifier.size(9.dp),
+                    modifier = Modifier.size(size * 0.5f),
                     tint = if (colored) MaterialTheme.colorScheme.primary else mono,
                 )
             }
@@ -2314,20 +2307,24 @@ internal fun ZapRailIcon(
             Icon(
                 symbol = MaterialSymbols.Bolt,
                 contentDescription = null,
-                modifier = Size18Modifier,
+                modifier = Modifier.size(size),
                 tint = if (colored) BitcoinOrange else mono,
             )
         ZapRail.ONCHAIN ->
             Icon(
                 symbol = MaterialSymbols.CurrencyBitcoin,
                 contentDescription = null,
-                modifier = Size18Modifier,
+                modifier = Modifier.size(size),
                 tint = if (colored) BitcoinOrange else mono,
             )
     }
 }
 
-/** A circular, visibly-tappable button wrapping an alternative rail's logo. */
+/**
+ * A circular, tappable button wrapping an alternative rail's logo. Sized close
+ * to the amount's font height with a smaller icon inside, so the alternatives
+ * stay quiet next to the bigger, coloured preferred rail.
+ */
 @Composable
 private fun RailButton(
     onClick: () -> Unit,
@@ -2336,7 +2333,7 @@ private fun RailButton(
     Box(
         modifier =
             Modifier
-                .size(28.dp)
+                .size(22.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.surfaceVariant)
                 .clickable(onClick = onClick),
