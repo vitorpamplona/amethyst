@@ -57,10 +57,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.ui.theme.StatusGreen
+import com.vitorpamplona.amethyst.commons.ui.theme.StatusRed
 import com.vitorpamplona.amethyst.desktop.service.media.ServerHealthCheck
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -263,9 +264,9 @@ private fun ServerRow(
                     shape = CircleShape,
                     color =
                         when (status) {
-                            ServerHealthCheck.ServerStatus.ONLINE -> Color(0xFF4CAF50)
-                            ServerHealthCheck.ServerStatus.OFFLINE -> Color(0xFFF44336)
-                            ServerHealthCheck.ServerStatus.UNKNOWN -> Color(0xFF9E9E9E)
+                            ServerHealthCheck.ServerStatus.ONLINE -> StatusGreen
+                            ServerHealthCheck.ServerStatus.OFFLINE -> StatusRed
+                            ServerHealthCheck.ServerStatus.UNKNOWN -> MaterialTheme.colorScheme.onSurfaceVariant
                         },
                 ) {}
             }

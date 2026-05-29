@@ -203,7 +203,7 @@ fun ChatPane(
                         target = dropTarget,
                     ).then(
                         if (isDragOver) {
-                            Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+                            Modifier.border(2.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.small)
                         } else {
                             Modifier
                         },
@@ -657,7 +657,7 @@ private suspend fun sendWrappedReaction(
 @Composable
 private fun ReactionBar(onReaction: (String) -> Unit) {
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceVariant,
         shadowElevation = 2.dp,
         tonalElevation = 2.dp,

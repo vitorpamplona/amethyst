@@ -18,72 +18,61 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.ui.profile
+package com.vitorpamplona.amethyst.desktop.ui.search
 
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.ui.theme.StatusAmber
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
+import com.vitorpamplona.amethyst.desktop.ui.theme.hoverHighlight
 
-/**
- * Card displaying Nostr account key information.
- * Shows public key (npub), hex format, and optional read-only indicator.
- */
 @Composable
-fun ProfileInfoCard(
-    npub: String,
-    pubKeyHex: String,
-    isReadOnly: Boolean,
+fun SearchPill(
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            ),
+    val shortcutHint = if (PlatformInfo.isMacOS) "\u2318F" else "Ctrl+F"
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(999.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = modifier.height(36.dp),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            if (isReadOnly) {
-                Text(
-                    "Read-only mode",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = StatusAmber,
-                )
-                Spacer(Modifier.height(8.dp))
-            }
-
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.hoverHighlight().padding(horizontal = 12.dp),
+        ) {
+            Icon(
+                MaterialSymbols.Search,
+                contentDescription = "Search",
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.width(8.dp))
             Text(
-                "Public Key",
+                "Search...",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
             )
+            Spacer(Modifier.width(8.dp))
             Text(
-                npub,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            Text(
-                "Hex",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                pubKeyHex,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface,
+                shortcutHint,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
             )
         }
     }

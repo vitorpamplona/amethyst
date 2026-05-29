@@ -23,6 +23,10 @@ package com.vitorpamplona.amethyst.commons.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // Primary brand colors
+val AmethystBlue = Color(0xFF0096FF)
+val AmethystBlueDark = Color(0xFF4DB8FF)
+val AmethystPurple = Color(0xFF9A82DB)
+
 val Primary50 = Color(red = 127, green = 103, blue = 190)
 val Primary60 = Color(red = 154, green = 130, blue = 219)
 val Primary70 = Color(red = 182, green = 157, blue = 248)
@@ -70,6 +74,15 @@ val DarkWarningColorOnSecondSurface = Color(0xFFE1C419)
 // Success colors
 val LightAllGoodColor = Color(0xFF339900)
 val DarkAllGoodColor = Color(0xFF99cc33)
+
+// Semantic status colors for desktop
+val StatusGreen = Color(0xFF4CAF50)
+val StatusGreenDark = Color(0xFF81C784)
+val StatusRed = Color(0xFFF44336)
+val StatusRedDark = Color(0xFFEF9A9A)
+val StatusAmber = Color(0xFFFFB300)
+val StatusAmberDark = Color(0xFFFFD54F)
+val StatusBlue = Color(0xFF2196F3)
 
 // Fundraiser colors
 val LightFundraiserProgressColor = Color(0xFF3DB601)

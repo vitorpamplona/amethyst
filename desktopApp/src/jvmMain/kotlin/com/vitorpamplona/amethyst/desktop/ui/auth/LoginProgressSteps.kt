@@ -34,10 +34,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.ui.theme.StatusGreen
 import com.vitorpamplona.amethyst.desktop.account.LoginProgress
 import com.vitorpamplona.amethyst.desktop.account.RelayLoginStatus
 
@@ -111,7 +111,7 @@ private fun StepRow(step: StepInfo) {
                 Icon(
                     MaterialSymbols.Check,
                     contentDescription = null,
-                    tint = Color(0xFF4CAF50),
+                    tint = StatusGreen,
                     modifier = Modifier.size(16.dp),
                 )
             }
@@ -133,7 +133,7 @@ private fun StepRow(step: StepInfo) {
             style = MaterialTheme.typography.bodySmall,
             color =
                 when (step.state) {
-                    StepState.DONE -> Color(0xFF4CAF50)
+                    StepState.DONE -> StatusGreen
                     StepState.ACTIVE -> MaterialTheme.colorScheme.onSurface
                     StepState.PENDING -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                 },
@@ -155,7 +155,7 @@ private fun RelayRow(
                 Icon(
                     MaterialSymbols.Check,
                     contentDescription = null,
-                    tint = Color(0xFF2196F3),
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(12.dp),
                 )
             }
@@ -164,7 +164,7 @@ private fun RelayRow(
                 Icon(
                     MaterialSymbols.Check,
                     contentDescription = null,
-                    tint = Color(0xFF4CAF50),
+                    tint = StatusGreen,
                     modifier = Modifier.size(12.dp),
                 )
             }
@@ -206,7 +206,7 @@ private fun RelayRow(
                     }
 
                     RelayLoginStatus.EVENT_SENT -> {
-                        Color(0xFF2196F3)
+                        MaterialTheme.colorScheme.primary
                     }
 
                     else -> {

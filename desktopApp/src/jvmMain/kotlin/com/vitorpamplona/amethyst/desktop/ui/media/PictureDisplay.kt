@@ -72,7 +72,7 @@ fun PictureDisplay(
                         .heightIn(max = 500.dp)
                         .clip(
                             if (index == 0 && title == null && description.isBlank()) {
-                                RoundedCornerShape(8.dp)
+                                MaterialTheme.shapes.small
                             } else if (index == 0) {
                                 RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
                             } else {
