@@ -872,12 +872,10 @@
     <string name="quick_zap_amounts_explainer">Shown when pressing the zap button. Each amount can be paid by any rail the recipient supports — Lightning, Cashu, or on-chain (on-chain only for larger amounts). Tap an amount to remove it. If you leave it empty, it will open the dialog to insert an amount every time.</string>
     <string name="send_onchain_instead">Send on-chain instead</string>
     <string name="reload_mint_title">Top up mint</string>
-    <string name="reload_mint_subtitle">Top up the recipient\'s mint so you can send this nutzap in ecash.</string>
-    <string name="reload_mint_amount_label">Amount to send</string>
+    <string name="reload_mint_topup_label">Top up amount</string>
     <string name="reload_mint_section_to">Mint to top up</string>
     <string name="reload_mint_section_from">Funds from</string>
     <string name="reload_mint_pay_lightning">Pay with Lightning</string>
-    <string name="reload_mint_source_lightning">Lightning</string>
     <string name="reload_mint_lightning_desc">Mint new ecash from your Lightning wallet</string>
     <string name="reload_mint_not_enough">Not enough here</string>
     <string name="reload_mint_available">%1$s sats available</string>
@@ -885,8 +883,9 @@
     <string name="reload_mint_send_confirm">Send zap</string>
     <string name="reload_mint_awaiting_payment">Waiting for payment…</string>
     <string name="reload_mint_retry">Try again</string>
-    <string name="reload_mint_move_summary">Send %1$s sats from %2$s to %3$s, fee %4$s sats</string>
-    <string name="reload_mint_send_summary">Send %1$s sats to %2$s</string>
+    <string name="reload_mint_summary">Top up %1$s sats to %2$s and zap %3$s %4$s sats · fee ≈ %5$s sats</string>
+    <string name="reload_mint_summary_funded">Zap %1$s %2$s sats from %3$s</string>
+    <string name="reload_mint_recipient_fallback">the recipient</string>
     <string name="reload_mint_needs_more">needs %1$s sat more</string>
     <string name="reload_mint_funded">funded</string>
     <string name="reload_mint_copy_invoice">Copy invoice</string>

@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -60,6 +61,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -68,16 +70,20 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.hashtags.Cashu
+import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import java.util.UUID
+import androidx.compose.material3.Icon as Material3Icon
 
 /**
  * Stash the pending nutzap and open the Reload Mint screen. Called from the zap
@@ -119,9 +125,17 @@ fun ReloadMintScreen(
     val ui by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    // Local source-of-truth for the editable amount, seeded from the tapped
-    // preset; pushes every edit into the VM which recomputes shortfall/sources.
-    var amountText by remember(requestId) { mutableStateOf(request.amountSats.toString()) }
+    // Local source-of-truth for the editable top-up field. The send amount is
+    // fixed; the top-up defaults to the shortfall the VM computes once the wallet
+    // has loaded, and every edit is pushed back so the VM recomputes sources/fees.
+    var topUpText by remember(requestId) { mutableStateOf("") }
+    var topUpSeeded by remember(requestId) { mutableStateOf(false) }
+    LaunchedEffect(ui.topUpSats) {
+        if (!topUpSeeded && ui.topUpSats > 0L) {
+            topUpText = ui.topUpSats.toString()
+            topUpSeeded = true
+        }
+    }
 
     if (ui.status is ReloadStatus.Done) {
         LaunchedEffect(Unit) { nav.popBack() }
@@ -151,26 +165,57 @@ fun ReloadMintScreen(
                     .padding(horizontal = 20.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text(
-                text = stringRes(R.string.reload_mint_subtitle),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.placeholderText,
-            )
+            // ── Header: you → cashu zap → recipient ────────────────────────
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                UserPicture(
+                    userHex = accountViewModel.account.userProfile().pubkeyHex,
+                    size = 54.dp,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+                Spacer(Modifier.width(14.dp))
+                Material3Icon(
+                    imageVector = CustomHashTagIcons.Cashu,
+                    contentDescription = null,
+                    modifier = Modifier.size(26.dp),
+                    tint = Color.Unspecified,
+                )
+                Spacer(Modifier.width(6.dp))
+                Icon(
+                    symbol = MaterialSymbols.AutoMirrored.ArrowForward,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.width(14.dp))
+                UserPicture(
+                    userHex = ui.recipient,
+                    size = 54.dp,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
 
-            // ── Amount ────────────────────────────────────────────────────
-            SectionHeader(stringRes(R.string.reload_mint_amount_label))
-            OutlinedTextField(
-                value = amountText,
-                onValueChange = { input ->
-                    val digits = input.filter { it.isDigit() }.take(12)
-                    amountText = digits
-                    viewModel.setAmount(digits.toLongOrNull() ?: 0L)
-                },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                suffix = { Text(stringRes(R.string.sats)) },
-                modifier = Modifier.fillMaxWidth(),
-            )
+            // ── Top-up amount (editable; only when the target is short) ────
+            if (ui.shortfallSats > 0L) {
+                SectionHeader(stringRes(R.string.reload_mint_topup_label))
+                OutlinedTextField(
+                    value = topUpText,
+                    onValueChange = { input ->
+                        val digits = input.filter { it.isDigit() }.take(12)
+                        topUpText = digits
+                        viewModel.setTopUp(digits.toLongOrNull() ?: 0L)
+                    },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    suffix = { Text(stringRes(R.string.sats)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
 
             // ── Destination ───────────────────────────────────────────────
             SectionHeader(stringRes(R.string.reload_mint_section_to))
@@ -237,25 +282,21 @@ fun ReloadMintScreen(
 
             Spacer(Modifier.height(4.dp))
 
-            // ── Summary ────────────────────────────────────────────────────
-            val sourceLabel =
-                when (val src = ui.selectedSource) {
-                    is ReloadSource.Mint -> shortMint(src.mintUrl)
-                    ReloadSource.Lightning -> stringRes(R.string.reload_mint_source_lightning)
-                    null -> ""
-                }
+            // ── Summary: what we top up and who we zap ─────────────────────
+            val recipientName = ui.recipientName.ifBlank { stringRes(R.string.reload_mint_recipient_fallback) }
             Text(
                 text =
                     if (ui.shortfallSats > 0) {
                         stringRes(
-                            R.string.reload_mint_move_summary,
-                            sats(ui.shortfallSats),
-                            sourceLabel,
+                            R.string.reload_mint_summary,
+                            sats(maxOf(ui.topUpSats, ui.shortfallSats)),
                             shortMint(ui.selectedTarget),
+                            recipientName,
+                            sats(ui.sendSats),
                             sats(ui.estFeeSats),
                         )
                     } else {
-                        stringRes(R.string.reload_mint_send_summary, sats(ui.amountSats), shortMint(ui.selectedTarget))
+                        stringRes(R.string.reload_mint_summary_funded, recipientName, sats(ui.sendSats), shortMint(ui.selectedTarget))
                     },
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -289,8 +330,13 @@ fun ReloadMintScreen(
                 else -> {
                     val source = ui.selectedSource
                     val enabled =
-                        ui.amountSats > 0 &&
-                            (ui.shortfallSats == 0L || source is ReloadSource.Lightning || (source is ReloadSource.Mint && source.canCover))
+                        ui.sendSats > 0 &&
+                            (
+                                ui.shortfallSats == 0L ||
+                                    source is ReloadSource.LightningWallet ||
+                                    source is ReloadSource.LightningExternal ||
+                                    (source is ReloadSource.Mint && source.canCover)
+                            )
                     Button(
                         onClick = { viewModel.confirm() },
                         enabled = enabled,
@@ -319,11 +365,17 @@ private fun SourceRow(
     selected: Boolean,
     onSelect: () -> Unit,
 ) {
-    val enabled = source is ReloadSource.Lightning || (source is ReloadSource.Mint && source.canCover)
+    val enabled =
+        when (source) {
+            is ReloadSource.Mint -> source.canCover
+            is ReloadSource.LightningWallet -> true
+            ReloadSource.LightningExternal -> true
+        }
     val title =
         when (source) {
             is ReloadSource.Mint -> shortMint(source.mintUrl)
-            ReloadSource.Lightning -> stringRes(R.string.reload_mint_pay_lightning)
+            is ReloadSource.LightningWallet -> source.name
+            ReloadSource.LightningExternal -> stringRes(R.string.reload_mint_pay_lightning)
         }
     // Description / balance lives on its own row under the title so longer text
     // (e.g. the Lightning explanation) wraps instead of clipping.
@@ -335,20 +387,23 @@ private fun SourceRow(
                 } else {
                     stringRes(R.string.reload_mint_not_enough)
                 }
-            ReloadSource.Lightning -> stringRes(R.string.reload_mint_lightning_desc)
+            is ReloadSource.LightningWallet -> stringRes(R.string.reload_mint_lightning_desc)
+            ReloadSource.LightningExternal -> stringRes(R.string.reload_mint_lightning_desc)
         }
 
     Card(
+        // Muted selection: the radio carries the signal, so the fill/border stay
+        // subtle (a faint primary wash + a thin, low-opacity outline).
         colors =
             CardDefaults.cardColors(
                 containerColor =
                     if (selected) {
-                        MaterialTheme.colorScheme.primaryContainer
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
                     } else {
                         MaterialTheme.colorScheme.surfaceVariant
                     },
             ),
-        border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+        border = if (selected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)) else null,
         modifier =
             Modifier
                 .fillMaxWidth()
@@ -364,22 +419,14 @@ private fun SourceRow(
                 Text(
                     text = title,
                     fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                    color =
-                        when {
-                            !enabled -> MaterialTheme.colorScheme.placeholderText
-                            selected -> MaterialTheme.colorScheme.onPrimaryContainer
-                            else -> MaterialTheme.colorScheme.onSurface
-                        },
+                    color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.placeholderText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color =
-                        if (selected) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.placeholderText
-                        },
+                    color = MaterialTheme.colorScheme.placeholderText,
                 )
             }
         }
