@@ -2258,7 +2258,7 @@ private fun ZapRailIcon(
             Material3Icon(
                 imageVector = CustomHashTagIcons.Cashu,
                 contentDescription = stringRes(R.string.nutzap),
-                modifier = Modifier.size(15.dp),
+                modifier = Modifier.size(13.dp),
                 tint = if (colored) Color.Unspecified else mono,
             )
         ZapRail.RELOAD ->
@@ -2268,13 +2268,13 @@ private fun ZapRailIcon(
                 Material3Icon(
                     imageVector = CustomHashTagIcons.Cashu,
                     contentDescription = stringRes(R.string.reload_mint_title),
-                    modifier = Modifier.size(15.dp).alpha(0.5f),
+                    modifier = Modifier.size(13.dp).alpha(0.5f),
                     tint = if (colored) Color.Unspecified else mono,
                 )
                 Icon(
                     symbol = MaterialSymbols.AddCircle,
                     contentDescription = null,
-                    modifier = Modifier.size(10.dp),
+                    modifier = Modifier.size(9.dp),
                     tint = if (colored) MaterialTheme.colorScheme.primary else mono,
                 )
             }
