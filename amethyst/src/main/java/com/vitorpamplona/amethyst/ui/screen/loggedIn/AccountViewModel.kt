@@ -1297,10 +1297,9 @@ class AccountViewModel(
 
     fun updateZapAmounts(
         amountSet: List<Long>,
-        onchainAmountSet: List<Long>,
         selectedZapType: LnZapEvent.ZapType,
         nip47Update: Nip47WalletConnect.Nip47URINorm?,
-    ) = launchSigner { account.updateZapAmounts(amountSet, onchainAmountSet, selectedZapType, nip47Update) }
+    ) = launchSigner { account.updateZapAmounts(amountSet, selectedZapType, nip47Update) }
 
     fun toggleDontTranslateFrom(languageCode: String) = launchSigner { account.toggleDontTranslateFrom(languageCode) }
 

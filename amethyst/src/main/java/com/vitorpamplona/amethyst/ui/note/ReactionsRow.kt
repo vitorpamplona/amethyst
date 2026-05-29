@@ -110,6 +110,7 @@ import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.MIN_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ReactionRowAction
 import com.vitorpamplona.amethyst.model.ReactionRowItem
@@ -1888,9 +1889,6 @@ fun ZapAmountChoicePopup(
     val zapAmountChoices by
         accountViewModel.account.settings.syncedSettings.zaps.zapAmountChoices
             .collectAsStateWithLifecycle()
-    val onchainZapAmountChoices by
-        accountViewModel.account.settings.syncedSettings.zaps.onchainZapAmountChoices
-            .collectAsStateWithLifecycle()
 
     ZapAmountChoicePopup(
         baseNote = baseNote,
@@ -1903,7 +1901,6 @@ fun ZapAmountChoicePopup(
         onError = onError,
         onProgress = onProgress,
         onPayViaIntent = onPayViaIntent,
-        onchainZapAmountChoices = onchainZapAmountChoices,
         onOnchainAmount = onOnchainAmount ?: {},
         onchainSupported = onOnchainAmount != null,
     )
@@ -1921,15 +1918,14 @@ fun ZapAmountChoicePopup(
     onError: (title: String, text: String, user: User?) -> Unit,
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
-    onchainZapAmountChoices: ImmutableList<Long> = persistentListOf(),
     onOnchainAmount: (Long?) -> Unit = {},
     onchainSupported: Boolean = true,
 ) {
-    // One chip per amount; the chip itself shows which rails can pay it. Merge
-    // the (historically separate) Lightning and on-chain amount presets into a
-    // single sorted set of choices. Rail availability per amount is decided in
-    // [UnifiedZapAmountChip] from [railCapability], so the lists no longer need
-    // to be pre-emptied per rail.
+    // One chip per amount; the chip itself shows which rails can pay it.
+    // [zapAmountChoices] is already the single merged+sorted preset list (the
+    // on-chain amounts were folded in at the settings layer), so rail
+    // availability per amount is decided in [UnifiedZapAmountChip] from
+    // [railCapability] rather than by keeping separate per-rail lists.
     //
     // [railCapability] gates which rails the recipient can receive on (plus the
     // sender's cashu balance, which is free to read). It's recomputed only when
@@ -1942,8 +1938,8 @@ fun ZapAmountChoicePopup(
             if (onchainSupported) rc else rc.copy(hasOnchain = false)
         }
     val amountChoices =
-        remember(zapAmountChoices, onchainZapAmountChoices) {
-            (zapAmountChoices + onchainZapAmountChoices).distinct().sorted().toImmutableList()
+        remember(zapAmountChoices) {
+            zapAmountChoices.distinct().sorted().toImmutableList()
         }
     val visibilityState = rememberVisibilityState(onDismiss)
     ZapAmountChoicePopup(
@@ -2086,14 +2082,6 @@ fun ZapAmountChoicePopupContent(
         }
     }
 }
-
-/**
- * Floor for the on-chain rail. Mirrors `MIN_ONCHAIN_ZAP_SATS` in
- * `OnchainZapSendDialog` (stricter than the protocol dust threshold); kept in
- * sync by hand because that one is private to the dialog. Below this the
- * on-chain logo is not offered for an amount.
- */
-private const val MIN_ONCHAIN_ZAP_SATS = 1_000L
 
 /**
  * One pill per amount, showing a tappable logo for every rail that can pay it:

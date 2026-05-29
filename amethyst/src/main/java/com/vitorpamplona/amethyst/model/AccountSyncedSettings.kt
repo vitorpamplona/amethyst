@@ -39,8 +39,7 @@ class AccountSyncedSettings(
         )
     val zaps =
         AccountZapPreferences(
-            MutableStateFlow(internalSettings.zaps.zapAmountChoices.toImmutableList()),
-            MutableStateFlow(internalSettings.zaps.onchainZapAmountChoices.toImmutableList()),
+            MutableStateFlow(mergeZapAmounts(internalSettings.zaps).toImmutableList()),
             MutableStateFlow(internalSettings.zaps.defaultZapType),
         )
     val languages =
@@ -70,7 +69,10 @@ class AccountSyncedSettings(
             zaps =
                 AccountZapPreferencesInternal(
                     zaps.zapAmountChoices.value,
-                    zaps.onchainZapAmountChoices.value,
+                    // Write the on-chain-eligible subset into the legacy field so
+                    // older clients still get sensible on-chain presets. Unioning
+                    // it back on load is idempotent (subset ⊆ full list).
+                    zaps.zapAmountChoices.value.filter { it >= MIN_ONCHAIN_ZAP_SATS },
                     zaps.defaultZapType.value,
                 ),
             languages =
@@ -104,14 +106,9 @@ class AccountSyncedSettings(
             reactions.reactionRowItems.tryEmit(newReactionRowItems)
         }
 
-        val newZapChoices = syncedSettingsInternal.zaps.zapAmountChoices.toImmutableList()
+        val newZapChoices = mergeZapAmounts(syncedSettingsInternal.zaps).toImmutableList()
         if (!equalImmutableLists(zaps.zapAmountChoices.value, newZapChoices)) {
             zaps.zapAmountChoices.tryEmit(newZapChoices)
-        }
-
-        val newOnchainZapChoices = syncedSettingsInternal.zaps.onchainZapAmountChoices.toImmutableList()
-        if (!equalImmutableLists(zaps.onchainZapAmountChoices.value, newOnchainZapChoices)) {
-            zaps.onchainZapAmountChoices.tryEmit(newOnchainZapChoices)
         }
 
         if (zaps.defaultZapType.value != syncedSettingsInternal.zaps.defaultZapType) {
@@ -182,9 +179,17 @@ class AccountVideoPlayerPreferences(
 @Stable
 class AccountZapPreferences(
     var zapAmountChoices: MutableStateFlow<ImmutableList<Long>>,
-    var onchainZapAmountChoices: MutableStateFlow<ImmutableList<Long>>,
     val defaultZapType: MutableStateFlow<LnZapEvent.ZapType>,
 )
+
+/**
+ * Union the (historically separate) zap and on-chain preset lists into the
+ * single sorted set the app now uses everywhere. Preserves amounts customized
+ * on either side and amounts synced from an older client that still writes the
+ * legacy `onchainZapAmountChoices`. Idempotent: [AccountSyncedSettings.toInternal]
+ * re-derives the on-chain field as a subset of this list.
+ */
+internal fun mergeZapAmounts(zaps: AccountZapPreferencesInternal): List<Long> = (zaps.zapAmountChoices + zaps.onchainZapAmountChoices).distinct().sorted()
 
 @Stable
 class AccountLanguagePreferences(

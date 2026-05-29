@@ -99,8 +99,8 @@ object RailCapabilityResolver {
      *    derives the Taproot address from the recipient pubkey, so any nostr
      *    pubkey is payable; lnAddress-only recipients are not (they have no
      *    pubkey to tweak). The sender's onchain wallet availability is a
-     *    *sender* concern — handled elsewhere by the popup gating the chip
-     *    on `onchainZapAmountChoices` and the dialog on `LocalCache.onchainBackend`.
+     *    *sender* concern — handled elsewhere by the chip gating on-chain by
+     *    `MIN_ONCHAIN_ZAP_SATS` and the dialog on `LocalCache.onchainBackend`.
      */
     fun peek(
         baseNote: Note,
