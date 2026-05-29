@@ -192,11 +192,22 @@ fun MainSidebar(
                 )
             }
 
+            // -- All Screens --
+            Spacer(Modifier.height(8.dp))
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 12.dp))
+            Spacer(Modifier.height(8.dp))
+
+            SidebarNavItem(
+                icon = MaterialSymbols.Apps,
+                label = "All Screens",
+                isActive = false,
+                expanded = expanded,
+                onClick = onAddColumn,
+            )
+
             // -- Custom feeds section --
             if (allFeeds.isNotEmpty()) {
-                Spacer(Modifier.height(8.dp))
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 12.dp))
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(4.dp))
 
                 AnimatedVisibility(
                     visible = expanded,
