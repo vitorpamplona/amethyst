@@ -25,6 +25,14 @@ import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManager
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 // This allows multiple screen to be listening to tags, even the same tag.
 // The subscription filter carries `#e: [request id]` plus `#p: [client pubkey]`.
@@ -48,6 +56,20 @@ class NWCPaymentFilterAssembler(
             NWCPaymentWatcherSubAssembler(client, ::allKeys),
         )
 
+    // Trailing-edge debounce: after a response arrives we wait this long
+    // before actually removing the request id from the subscription filter.
+    // If more responses (or a fresh subscribe of any query) arrive within
+    // the window they coalesce into ONE relay-side filter update. This
+    // matters because some NWC relays (e.g. relay-nwc.rizful.com) replay
+    // cached kind-23195 events every time the REQ filter changes — so each
+    // unbatched filter mutation triggers a fresh replay storm.
+    private val unsubDelayMs = 1500L
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val pendingLock = Any()
+    private val pendingUnsubs = mutableSetOf<NWCPaymentQueryState>()
+
+    @Volatile private var pendingJob: Job? = null
+
     override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
 
     override fun invalidateKeys() = invalidateFilters()
@@ -58,11 +80,69 @@ class NWCPaymentFilterAssembler(
      * ephemeral event (kind 23195) and the subscription must be active on the
      * relay before we publish the request event — otherwise the relay drops
      * the response with no replay.
+     *
+     * Also drains any pending unsubscribes synchronously so the relay sees
+     * a direct {old} → {new} transition instead of {old} → {old, new} → {new}.
+     * The intermediate `{old, new}` state is the trigger that makes Rizful's
+     * relay replay cached responses for `old`.
      */
     fun subscribeAndFlush(query: NWCPaymentQueryState) {
+        drainPendingUnsubs()
         subscribe(query)
         group.forEach { it.forceInvalidate() }
     }
 
-    override fun destroy() = group.forEach { it.destroy() }
+    /**
+     * Removes [query] from the active subscription after a short debounce.
+     * Repeated calls within the window coalesce into a single batch
+     * unsubscribe. Idempotent: calling with a query that's already been
+     * unsubscribed is a no-op.
+     */
+    fun unsubscribeSoon(query: NWCPaymentQueryState) {
+        val oldJob: Job?
+        synchronized(pendingLock) {
+            pendingUnsubs.add(query)
+            oldJob = pendingJob
+            pendingJob =
+                scope.launch {
+                    try {
+                        delay(unsubDelayMs)
+                        val batch =
+                            synchronized(pendingLock) {
+                                val copy = pendingUnsubs.toList()
+                                pendingUnsubs.clear()
+                                pendingJob = null
+                                copy
+                            }
+                        if (batch.isNotEmpty()) {
+                            unsubscribe(batch)
+                        }
+                    } catch (_: CancellationException) {
+                        // Superseded by a newer schedule; the replacement
+                        // job owns the pending set from here.
+                    }
+                }
+        }
+        oldJob?.cancel()
+    }
+
+    private fun drainPendingUnsubs() {
+        val batch: List<NWCPaymentQueryState>
+        val cancelled: Job?
+        synchronized(pendingLock) {
+            batch = pendingUnsubs.toList()
+            pendingUnsubs.clear()
+            cancelled = pendingJob
+            pendingJob = null
+        }
+        cancelled?.cancel()
+        if (batch.isNotEmpty()) {
+            unsubscribe(batch)
+        }
+    }
+
+    override fun destroy() {
+        scope.cancel()
+        group.forEach { it.destroy() }
+    }
 }

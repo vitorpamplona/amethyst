@@ -31,8 +31,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.ui.theme.StatusAmber
 
 /**
  * Card displaying Nostr account key information.
@@ -57,7 +57,7 @@ fun ProfileInfoCard(
                 Text(
                     "Read-only mode",
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color.Yellow,
+                    color = StatusAmber,
                 )
                 Spacer(Modifier.height(8.dp))
             }

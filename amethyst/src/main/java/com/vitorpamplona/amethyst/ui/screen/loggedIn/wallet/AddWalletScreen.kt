@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -29,66 +31,44 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Button
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.ui.components.util.getText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.painterRes
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
-import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
-import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.launch
 
+/**
+ * Wallet-type chooser. Each card routes to a dedicated setup screen for the
+ * selected wallet kind.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddWalletScreen(
-    accountViewModel: AccountViewModel,
+    @Suppress("UNUSED_PARAMETER") accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val walletViewModel: WalletViewModel = viewModel()
-    walletViewModel.init(accountViewModel)
-
-    var walletName by remember { mutableStateOf("") }
-    var nwcUri by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
-    var qrScanning by remember { mutableStateOf(false) }
-
-    val uri = LocalUriHandler.current
-    val clipboardManager = LocalClipboard.current
-    val scope = rememberCoroutineScope()
-
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringRes(R.string.wallet_add_connection)) },
+                title = { Text(stringRes(R.string.wallet_add_choose_type)) },
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(
@@ -105,136 +85,80 @@ fun AddWalletScreen(
                 Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(horizontal = 16.dp),
+                    .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            OutlinedTextField(
-                value = walletName,
-                onValueChange = { walletName = it },
-                label = { Text(stringRes(R.string.wallet_name)) },
-                placeholder = { Text(stringRes(R.string.wallet_name_hint)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
+            WalletTypeCard(
+                icon = MaterialSymbols.Bolt,
+                title = stringRes(R.string.wallet_add_nwc_title),
+                description = stringRes(R.string.wallet_add_nwc_description),
+                // Replace the chooser in the back stack rather than stacking
+                // the form on top: once the user picks a wallet type, the
+                // chooser has done its job. Without this, completing the
+                // add-wallet form pops back to the chooser, which is a
+                // pointless dead end.
+                onClick = { nav.popUpTo(Route.WalletAddNwc, Route.WalletAdd::class) },
             )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Connect action buttons: Connect Wallet app, Paste, QR scan
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                OutlinedButton(
-                    modifier = Modifier.weight(1f),
-                    shape = ButtonBorder,
-                    onClick = {
-                        try {
-                            uri.openUri(
-                                "nostrnwc://connect?appname=Amethyst&appicon=https%3A%2F%2Fraw.githubusercontent.com%2Fvitorpamplona%2Famethyst%2Frefs%2Fheads%2Fmain%2Ficon.png&callback=amethyst%2Bwalletconnect%3A%2F%2Fdlnwc",
-                            )
-                        } catch (_: IllegalArgumentException) {
-                            accountViewModel.toastManager.toast(
-                                R.string.couldnt_find_nwc_wallets,
-                                R.string.couldnt_find_nwc_wallets_description,
-                            )
-                        }
-                    },
-                ) {
-                    Icon(
-                        symbol = MaterialSymbols.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = stringRes(R.string.wallet_connect_connect_app))
-                }
-
-                Spacer(DoubleHorzSpacer)
-
-                // Paste from clipboard
-                IconButton(
-                    onClick = {
-                        scope.launch {
-                            val clipText = clipboardManager.getText()
-                            if (clipText != null) {
-                                nwcUri = clipText
-                                error = null
-                            }
-                        }
-                    },
-                ) {
-                    Icon(
-                        symbol = MaterialSymbols.ContentPaste,
-                        contentDescription = stringRes(id = R.string.paste_from_clipboard),
-                        modifier = Size24Modifier,
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                }
-
-                // QR code scanner
-                IconButton(onClick = { qrScanning = true }) {
-                    Icon(
-                        painter = painterRes(R.drawable.ic_qrcode, 3),
-                        contentDescription = stringRes(id = R.string.accessibility_scan_qr_code),
-                        modifier = Modifier.size(24.dp),
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
-
-            if (qrScanning) {
-                SimpleQrCodeScanner {
-                    qrScanning = false
-                    if (!it.isNullOrEmpty()) {
-                        nwcUri = it
-                        error = null
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            OutlinedTextField(
-                value = nwcUri,
-                onValueChange = {
-                    nwcUri = it
-                    error = null
-                },
-                label = { Text(stringRes(R.string.wallet_paste_uri)) },
-                placeholder = { Text("nostr+walletconnect://...") },
-                minLines = 3,
-                maxLines = 5,
-                modifier = Modifier.fillMaxWidth(),
+            WalletTypeCard(
+                icon = MaterialSymbols.AccountBalanceWallet,
+                title = stringRes(R.string.wallet_add_cashu_title),
+                description = stringRes(R.string.wallet_add_cashu_description),
+                onClick = { nav.popUpTo(Route.WalletAddCashu, Route.WalletAdd::class) },
             )
+        }
+    }
+}
 
-            if (error != null) {
-                Spacer(modifier = Modifier.height(8.dp))
+@Composable
+private fun WalletTypeCard(
+    icon: MaterialSymbol,
+    title: String,
+    description: String,
+    onClick: () -> Unit,
+) {
+    Card(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                symbol = icon,
+                contentDescription = null,
+                modifier = Modifier.size(32.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = error!!,
-                    color = MaterialTheme.colorScheme.error,
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = description,
                     style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(
-                onClick = {
-                    try {
-                        val parsed = Nip47WalletConnect.parse(nwcUri.trim())
-                        walletViewModel.addWallet(walletName.trim(), parsed)
-                        nav.popBack()
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        error = e.message ?: "Invalid NWC connection URI"
-                    }
-                },
-                enabled = nwcUri.isNotBlank(),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringRes(R.string.wallet_save))
-            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Icon(
+                symbol = MaterialSymbols.AutoMirrored.ArrowForward,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
+        Spacer(modifier = Modifier.height(4.dp))
     }
 }

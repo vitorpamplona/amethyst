@@ -291,6 +291,9 @@ class Account(
     override val signer: NostrSigner,
     val geolocationFlow: () -> StateFlow<LocationState.LocationResult>,
     val nwcFilterAssembler: () -> NWCPaymentFilterAssembler,
+    val cashuWalletFilterAssembler: () -> com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuWalletFilterAssembler,
+    val cashuMintDirectoryFilterAssembler: () -> com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler,
+    val okHttpClientForMoney: (String) -> okhttp3.OkHttpClient,
     val otsResolverBuilder: () -> OtsResolver,
     val cache: LocalCache,
     val client: INostrClient,
@@ -404,6 +407,36 @@ class Account(
     val outboxRelays = AccountOutboxRelayState(nip65RelayList, privateStorageRelayList, localRelayList, broadcastRelayList, scope)
     val dmRelays = DmInboxRelayState(dmRelayList, nip65RelayList, privateStorageRelayList, localRelayList, scope)
     val notificationRelays = NotificationInboxRelayState(nip65RelayList, localRelayList, scope)
+
+    val cashuWalletState =
+        com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState(
+            pubKey = signer.pubKey,
+            signer = signer,
+            cache = cache,
+            scope = scope,
+            assembler = cashuWalletFilterAssembler(),
+            outboxRelaysFlow = outboxRelays.flow,
+            settings = settings,
+            okHttpClient = okHttpClientForMoney,
+        )
+
+    /**
+     * NIP-87 cashu mint directory — populated on-demand while the mint
+     * picker is on screen. ViewModels call open()/close() ref-counted, the
+     * relay subscription only runs while at least one opener is active.
+     */
+    val cashuMintDirectoryState =
+        com.vitorpamplona.amethyst.model.nip60Cashu.CashuMintDirectoryState(
+            cache = cache,
+            scope = scope,
+            assembler = cashuMintDirectoryFilterAssembler(),
+            followsFlow =
+                kotlinx.coroutines.flow.MutableStateFlow(kind3FollowList.flow.value.authors).also { authorSet ->
+                    scope.launch {
+                        kind3FollowList.flow.collect { authorSet.value = it.authors }
+                    }
+                },
+        )
 
     val trustedRelays = TrustedRelayListsState(nip65RelayList, privateStorageRelayList, localRelayList, dmRelayList, searchRelayList, indexerRelayList, proxyRelayList, trustedRelayList, broadcastRelayList, scope)
 
@@ -519,6 +552,12 @@ class Account(
 
     val liveMusicPlaylistsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultMusicPlaylistsFollowList)
     val liveMusicPlaylistsFollowListsPerRelay = OutboxLoaderState(liveMusicPlaylistsFollowLists, cache, scope).flow
+
+    val livePodcastEpisodesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPodcastEpisodesFollowList)
+    val livePodcastEpisodesFollowListsPerRelay = OutboxLoaderState(livePodcastEpisodesFollowLists, cache, scope).flow
+
+    val livePodcastsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPodcastsFollowList)
+    val livePodcastsFollowListsPerRelay = OutboxLoaderState(livePodcastsFollowLists, cache, scope).flow
 
     val liveSoftwareAppsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultSoftwareAppsFollowList)
     val liveSoftwareAppsFollowListsPerRelay = OutboxLoaderState(liveSoftwareAppsFollowLists, cache, scope).flow
@@ -3396,6 +3435,14 @@ class Account(
 
     init {
         Log.d("AccountRegisterObservers", "Init")
+
+        // Start the Cashu wallet state observers AFTER all field initializers
+        // complete — auto-redeem can fire as soon as start() returns, and it
+        // calls back into sendLiterallyEverywhere which depends on
+        // followPlusAllMineWithIndex (initialized after cashuWalletState).
+        // Doing this in start() rather than in the state's own init { } closes
+        // the race where a publish would land on a half-built Account.
+        cashuWalletState.start { event -> sendLiterallyEverywhere(event) }
 
         // Restore Marmot MLS group state on startup
         if (marmotManager != null) {

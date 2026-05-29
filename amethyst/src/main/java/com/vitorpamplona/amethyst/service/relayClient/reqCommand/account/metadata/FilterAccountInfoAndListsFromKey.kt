@@ -43,6 +43,8 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent
+import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
@@ -77,6 +79,13 @@ val AccountInfoAndListsFromKeyKinds2 =
         PaymentTargetsEvent.KIND,
         RelayFeedsListEvent.KIND,
         InterestSetEvent.KIND,
+        // NIP-60 Cashu wallet + NIP-61 nutzap info. Replaceables, always
+        // useful to have available — wallet event holds the user's P2PK key
+        // + mint list, nutzap info tells other clients which mints to lock
+        // proofs to when sending us nutzaps. Cross-loaded here so a fresh
+        // sign-in resolves the wallet before the wallet screen is opened.
+        CashuWalletEvent.KIND,
+        NutzapInfoEvent.KIND,
     )
 
 val AmethystMetadataKinds = listOf(AppSpecificDataEvent.KIND)

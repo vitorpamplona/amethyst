@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.desktop.ui
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -48,6 +49,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -1139,13 +1141,14 @@ private fun PublishedHighlightCard(
     val articleAddress = highlight.inPostAddress()
     val articleTitle = articleAddress?.let { "Article" } ?: "Unknown source"
 
-    Card(
+    OutlinedCard(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
         colors =
-            CardDefaults.cardColors(
+            CardDefaults.outlinedCardColors(
                 containerColor = MaterialTheme.colorScheme.surface,
             ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        shape = MaterialTheme.shapes.medium,
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // Quoted highlight text

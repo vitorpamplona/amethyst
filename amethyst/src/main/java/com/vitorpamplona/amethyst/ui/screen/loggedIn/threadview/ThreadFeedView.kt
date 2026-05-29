@@ -173,6 +173,8 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderMusicTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderOnchainZap
 import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderPodcastEpisode
+import com.vitorpamplona.amethyst.ui.note.types.RenderPodcastMetadata
 import com.vitorpamplona.amethyst.ui.note.types.RenderPoll
 import com.vitorpamplona.amethyst.ui.note.types.RenderPostApproval
 import com.vitorpamplona.amethyst.ui.note.types.RenderPrivateMessage
@@ -308,6 +310,8 @@ import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -646,6 +650,10 @@ private fun FullBleedNoteCompose(
                     RenderMusicTrack(baseNote, makeItShort = false, canPreview = true, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is MusicPlaylistEvent) {
                     RenderMusicPlaylist(baseNote, makeItShort = false, canPreview = true, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is PodcastEpisodeEvent) {
+                    RenderPodcastEpisode(baseNote, makeItShort = false, canPreview = true, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is PodcastMetadataEvent) {
+                    RenderPodcastMetadata(baseNote, makeItShort = false, canPreview = true, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is CommunityPostApprovalEvent) {
                     RenderPostApproval(
                         baseNote,

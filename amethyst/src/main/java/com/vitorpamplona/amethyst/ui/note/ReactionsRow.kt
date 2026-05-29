@@ -103,12 +103,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
+import com.vitorpamplona.amethyst.commons.hashtags.Cashu
+import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ReactionRowAction
 import com.vitorpamplona.amethyst.model.ReactionRowItem
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.zap.RailCapabilityResolver
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
@@ -194,6 +197,7 @@ import kotlinx.serialization.json.Json
 import kotlin.math.roundToInt
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
+import androidx.compose.material3.Icon as Material3Icon
 
 @Composable
 fun ReactionsRow(
@@ -553,6 +557,7 @@ private fun ReactionDetailGallery(
         ) {
             Column {
                 WatchZapAndRenderGallery(baseNote, backgroundColor, nav, accountViewModel)
+                WatchNutzapsAndRenderGallery(baseNote, nav, accountViewModel)
                 WatchOnchainZapsAndRenderGallery(baseNote, nav, accountViewModel)
                 WatchBoostsAndRenderGallery(baseNote, nav, accountViewModel)
                 WatchReactionsAndRenderGallery(baseNote, nav, accountViewModel)
@@ -1452,7 +1457,9 @@ fun ObserveZapIconState(
         LaunchedEffect(key1 = zapsState, key2 = hasPendingPaymentRequest) {
             val hasZapData =
                 zapsState?.note?.zapPayments?.isNotEmpty() == true ||
-                    zapsState?.note?.zaps?.isNotEmpty() == true
+                    zapsState?.note?.zaps?.isNotEmpty() == true ||
+                    zapsState?.note?.nutzaps?.isNotEmpty() == true ||
+                    zapsState?.note?.onchainZaps?.isNotEmpty() == true
             val wasZapped =
                 if (hasZapData) {
                     accountViewModel.calculateIfNoteWasZappedByAccount(baseNote, afterTimeInSeconds)
@@ -1532,7 +1539,14 @@ fun ObserveZapAmountText(
 
         inner(zapAmountTxt)
     } else {
-        inner(showAmount(zapsState?.note?.zapsAmount))
+        // Include the signed-in user's own pending onchain zaps so
+        // the counter reflects the optimistic value the gallery shows.
+        val ownPubKey = accountViewModel.account.userProfile().pubkeyHex
+        val note = zapsState?.note
+        val total =
+            (note?.zapsAmount ?: java.math.BigDecimal(0)) +
+                java.math.BigDecimal(note?.extraOwnPendingOnchainSats(ownPubKey) ?: 0L)
+        inner(showAmount(total))
     }
 }
 
@@ -1873,9 +1887,21 @@ fun ZapAmountChoicePopup(
         accountViewModel.account.settings.syncedSettings.zaps.onchainZapAmountChoices
             .collectAsStateWithLifecycle()
 
+    // Hide chips for rails the recipient(s) can't actually receive on. For a
+    // single-author note this gates against the author's kind:0 / kind:10019;
+    // for a note with `zap` split tags it considers every split recipient so
+    // splits where (e.g.) only one of three has a lud16 still surface the LN
+    // chips. Recomputed only when the note id changes — the underlying flows
+    // (CashuWalletState, LocalCache user metadata) are stable for the life of
+    // the popup, which is usually open for under a second.
+    val railCapability =
+        remember(baseNote) {
+            RailCapabilityResolver.peek(baseNote, accountViewModel.account.cashuWalletState)
+        }
+
     ZapAmountChoicePopup(
         baseNote = baseNote,
-        zapAmountChoices = zapAmountChoices,
+        zapAmountChoices = if (railCapability.hasLightning) zapAmountChoices else persistentListOf(),
         accountViewModel = accountViewModel,
         popupYOffset = popupYOffset,
         onZapStarts = onZapStarts,
@@ -1884,8 +1910,14 @@ fun ZapAmountChoicePopup(
         onError = onError,
         onProgress = onProgress,
         onPayViaIntent = onPayViaIntent,
-        onchainZapAmountChoices = if (onOnchainAmount != null) onchainZapAmountChoices else persistentListOf(),
+        onchainZapAmountChoices =
+            if (onOnchainAmount != null && railCapability.hasOnchain) {
+                onchainZapAmountChoices
+            } else {
+                persistentListOf()
+            },
         onOnchainAmount = onOnchainAmount ?: {},
+        nutzapEnabled = railCapability.hasCashu,
     )
 }
 
@@ -1903,9 +1935,24 @@ fun ZapAmountChoicePopup(
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
     onchainZapAmountChoices: ImmutableList<Long> = persistentListOf(),
     onOnchainAmount: (Long?) -> Unit = {},
+    nutzapEnabled: Boolean = false,
 ) {
     val visibilityState = rememberVisibilityState(onDismiss)
-    ZapAmountChoicePopup(baseNote, zapAmountChoices, onchainZapAmountChoices, accountViewModel, popupYOffset, visibilityState, onZapStarts, onChangeAmount, onOnchainAmount, onError, onProgress, onPayViaIntent)
+    ZapAmountChoicePopup(
+        baseNote,
+        zapAmountChoices,
+        onchainZapAmountChoices,
+        accountViewModel,
+        popupYOffset,
+        visibilityState,
+        onZapStarts,
+        onChangeAmount,
+        onOnchainAmount,
+        onError,
+        onProgress,
+        onPayViaIntent,
+        nutzapEnabled,
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
@@ -1923,6 +1970,7 @@ fun ZapAmountChoicePopup(
     onError: (title: String, text: String, user: User?) -> Unit,
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
+    nutzapEnabled: Boolean = false,
 ) {
     val context = LocalContext.current
     val yOffset = with(LocalDensity.current) { -popupYOffset.toPx().toInt() }
@@ -1961,6 +2009,22 @@ fun ZapAmountChoicePopup(
                     onOnchainAmount(amount)
                     visibilityState.targetState = false
                 },
+                nutzapAmountChoices = if (nutzapEnabled) zapAmountChoices else persistentListOf(),
+                onNutzap = { amountInSats ->
+                    onZapStarts()
+                    // Instant click feedback. Without this initial nudge
+                    // the bar stays flat for ~1s until scrubLocallyStale-
+                    // Proofs returns; the user thinks the tap was lost.
+                    onProgress(0.05f)
+                    accountViewModel.sendNutzap(
+                        baseNote = baseNote,
+                        amountSats = amountInSats,
+                        message = "",
+                        onError = onError,
+                        onProgress = onProgress,
+                    )
+                    visibilityState.targetState = false
+                },
             )
         }
     }
@@ -1974,6 +2038,8 @@ fun ZapAmountChoicePopupContent(
     onChangeAmount: () -> Unit,
     onchainZapAmountChoices: ImmutableList<Long> = persistentListOf(),
     onOnchainAmount: (Long?) -> Unit = {},
+    nutzapAmountChoices: ImmutableList<Long> = persistentListOf(),
+    onNutzap: (Long) -> Unit = {},
 ) {
     Box(HalfPadding, contentAlignment = Center) {
         ElevatedCard(
@@ -1987,6 +2053,17 @@ fun ZapAmountChoicePopupContent(
                 verticalArrangement = Arrangement.Center,
                 itemVerticalAlignment = CenterVertically,
             ) {
+                // Order: Cashu first (instant, no fees), then Lightning,
+                // then on-chain — matches the recipient-capability fallback
+                // order used elsewhere (RailCapabilityResolver) so the
+                // "happiest path" rail surfaces first for the eye.
+                nutzapAmountChoices.forEach { amountInSats ->
+                    NutzapAmountChip(
+                        amountInSats = amountInSats,
+                        onClick = { onNutzap(amountInSats) },
+                        onLongClick = onChangeAmount,
+                    )
+                }
                 zapAmountChoices.forEach { amountInSats ->
                     ZapAmountChip(
                         amountInSats = amountInSats,
@@ -2017,6 +2094,46 @@ fun ZapAmountChoicePopupContent(
                     )
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun NutzapAmountChip(
+    amountInSats: Long,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
+    Surface(
+        shape = ButtonBorder,
+        color = MaterialTheme.colorScheme.tertiary,
+        modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = CenterVertically,
+        ) {
+            // CustomHashTagIcons.Cashu ships a multi-tone Cashu logo; using
+            // tint=Unspecified preserves it instead of flattening to onTertiary
+            // (which would lose the cashu-orange brand cue that distinguishes
+            // this chip from the orange Lightning bolt next to it).
+            Material3Icon(
+                imageVector = CustomHashTagIcons.Cashu,
+                contentDescription = stringRes(R.string.nutzap),
+                modifier = Size18Modifier,
+                tint = Color.Unspecified,
+            )
+            Spacer(Modifier.width(2.dp))
+            Text(
+                text = showAmount(amountInSats.toBigDecimal().setScale(1)),
+                color = MaterialTheme.colorScheme.onTertiary,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }

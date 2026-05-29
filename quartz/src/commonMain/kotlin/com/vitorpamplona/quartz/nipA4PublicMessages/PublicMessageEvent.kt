@@ -24,10 +24,18 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.any
+import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag.Companion.parseAsHint
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
+import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag.Companion.parseAsHint
+import com.vitorpamplona.quartz.nip19Bech32.addressHints
+import com.vitorpamplona.quartz.nip19Bech32.addressIds
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
+import com.vitorpamplona.quartz.nip19Bech32.eventHints
+import com.vitorpamplona.quartz.nip19Bech32.eventIds
 import com.vitorpamplona.quartz.nip19Bech32.pubKeyHints
 import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip31Alts.alt
@@ -45,12 +53,22 @@ class PublicMessageEvent(
     sig: HexKey,
 ) : BaseNoteEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     PubKeyHintProvider,
+    EventHintProvider,
+    AddressHintProvider,
     SearchableEvent {
     override fun indexableContent() = content
 
     override fun pubKeyHints() = tags.mapNotNull(ReceiverTag::parseAsHint) + citedNIP19().pubKeyHints()
 
     override fun linkedPubKeys() = tags.mapNotNull(ReceiverTag::parseKey) + citedNIP19().pubKeys()
+
+    override fun eventHints() = citedNIP19().eventHints()
+
+    override fun linkedEventIds() = citedNIP19().eventIds()
+
+    override fun addressHints() = citedNIP19().addressHints()
+
+    override fun linkedAddressIds() = citedNIP19().addressIds()
 
     fun isIncluded(pubKey: HexKey) = tags.any(ReceiverTag::match, pubKey) || this.pubKey == pubKey
 

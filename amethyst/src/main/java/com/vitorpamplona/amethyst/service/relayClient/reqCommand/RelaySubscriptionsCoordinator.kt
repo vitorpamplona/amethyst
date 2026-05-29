@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand
 
+import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuWalletFilterAssembler
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountForegroundFilterAssembler
@@ -54,6 +56,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomFi
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomLivenessAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.PicturesFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.PodcastEpisodesFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.PodcastsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.PollsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.products.datasource.ProductsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.datasource.UserProfileFilterAssembler
@@ -127,6 +131,8 @@ class RelaySubscriptionsCoordinator(
     val articles = ArticlesFilterAssembler(client)
     val musicTracks = MusicTracksFilterAssembler(client)
     val musicPlaylists = MusicPlaylistsFilterAssembler(client)
+    val podcastEpisodes = PodcastEpisodesFilterAssembler(client)
+    val podcasts = PodcastsFilterAssembler(client)
     val softwareApps = SoftwareAppsFilterAssembler(client)
     val badges = BadgesFilterAssembler(client)
     val profileBadges = ProfileBadgesFilterAssembler(client)
@@ -138,6 +144,15 @@ class RelaySubscriptionsCoordinator(
 
     // active when the wallet's on-chain transactions screen is on top.
     val onchainZaps = OnchainZapsFilterAssembler(client)
+
+    // active when a NIP-60 Cashu wallet exists for the account.
+    // Subscribes to kinds 17375/7375/7376/7374/10019 by author + inbound 9321 #p=self.
+    val cashuWallet = CashuWalletFilterAssembler(client)
+
+    // active while the user is browsing the NIP-87 mint picker. Subscribes to
+    // kind:38172 cashu mint announcements + kind:38000 cashu-scoped
+    // recommendations on the configured relay set.
+    val cashuMintDirectory = CashuMintDirectoryFilterAssembler(client)
 
     val all =
         listOf(
@@ -162,6 +177,8 @@ class RelaySubscriptionsCoordinator(
             articles,
             musicTracks,
             musicPlaylists,
+            podcastEpisodes,
+            podcasts,
             softwareApps,
             badges,
             profileBadges,
@@ -184,6 +201,8 @@ class RelaySubscriptionsCoordinator(
             chess,
             nwc,
             onchainZaps,
+            cashuWallet,
+            cashuMintDirectory,
         )
 
     fun destroy() = all.forEach { it.destroy() }

@@ -114,6 +114,8 @@ private object PrefKeys {
     const val DEFAULT_ARTICLES_FOLLOW_LIST = "defaultArticlesFollowList"
     const val DEFAULT_MUSIC_TRACKS_FOLLOW_LIST = "defaultMusicTracksFollowList"
     const val DEFAULT_MUSIC_PLAYLISTS_FOLLOW_LIST = "defaultMusicPlaylistsFollowList"
+    const val DEFAULT_PODCAST_EPISODES_FOLLOW_LIST = "defaultPodcastEpisodesFollowList"
+    const val DEFAULT_PODCASTS_FOLLOW_LIST = "defaultPodcastsFollowList"
     const val DEFAULT_SOFTWARE_APPS_FOLLOW_LIST = "defaultSoftwareAppsFollowList"
     const val DEFAULT_BADGES_FOLLOW_LIST = "defaultBadgesFollowList"
     const val DEFAULT_BROWSE_EMOJI_SETS_FOLLOW_LIST = "defaultBrowseEmojiSetsFollowList"
@@ -160,6 +162,8 @@ private object PrefKeys {
     const val ALL_ACCOUNT_INFO = "all_saved_accounts_info"
     const val SHARED_SETTINGS = "shared_settings"
     const val LATEST_PAYMENT_TARGETS = "latestPaymentTargets"
+    const val LATEST_CASHU_WALLET = "latestCashuWallet"
+    const val LATEST_NUTZAP_INFO = "latestNutzapInfo"
 }
 
 object LocalPreferences {
@@ -383,6 +387,8 @@ object LocalPreferences {
                     putString(PrefKeys.DEFAULT_ARTICLES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultArticlesFollowList.value))
                     putString(PrefKeys.DEFAULT_MUSIC_TRACKS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultMusicTracksFollowList.value))
                     putString(PrefKeys.DEFAULT_MUSIC_PLAYLISTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultMusicPlaylistsFollowList.value))
+                    putString(PrefKeys.DEFAULT_PODCAST_EPISODES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPodcastEpisodesFollowList.value))
+                    putString(PrefKeys.DEFAULT_PODCASTS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultPodcastsFollowList.value))
                     putString(PrefKeys.DEFAULT_SOFTWARE_APPS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultSoftwareAppsFollowList.value))
                     putString(PrefKeys.DEFAULT_BADGES_FOLLOW_LIST, JsonMapper.toJson(settings.defaultBadgesFollowList.value))
                     putString(PrefKeys.DEFAULT_BROWSE_EMOJI_SETS_FOLLOW_LIST, JsonMapper.toJson(settings.defaultBrowseEmojiSetsFollowList.value))
@@ -430,6 +436,8 @@ object LocalPreferences {
                     putOrRemove(PrefKeys.LATEST_EPHEMERAL_LIST, settings.backupEphemeralChatList)
                     putOrRemove(PrefKeys.LATEST_TRUST_PROVIDER_LIST, settings.backupTrustProviderList)
                     putOrRemove(PrefKeys.LATEST_PAYMENT_TARGETS, settings.backupNipA3PaymentTargets)
+                    putOrRemove(PrefKeys.LATEST_CASHU_WALLET, settings.backupCashuWallet)
+                    putOrRemove(PrefKeys.LATEST_NUTZAP_INFO, settings.backupNutzapInfo)
 
                     putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, settings.hideDeleteRequestDialog)
                     putBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, settings.hideNIP17WarningDialog)
@@ -579,6 +587,8 @@ object LocalPreferences {
                     val latestEphemeralListStr = getString(PrefKeys.LATEST_EPHEMERAL_LIST, null)
                     val latestTrustProviderListStr = getString(PrefKeys.LATEST_TRUST_PROVIDER_LIST, null)
                     val latestPaymentTargetsStr = getString(PrefKeys.LATEST_PAYMENT_TARGETS, null)
+                    val latestCashuWalletStr = getString(PrefKeys.LATEST_CASHU_WALLET, null)
+                    val latestNutzapInfoStr = getString(PrefKeys.LATEST_NUTZAP_INFO, null)
                     val lastReadPerRouteStr = getString(PrefKeys.LAST_READ_PER_ROUTE, null)
 
                     Log.d("LocalPreferences") { "Load account from file $npub - before parsing events" }
@@ -632,6 +642,14 @@ object LocalPreferences {
                     val latestEphemeralList = async { parseEventOrNull<EphemeralChatListEvent>(latestEphemeralListStr) }
                     val latestTrustProviderList = async { parseEventOrNull<TrustProviderListEvent>(latestTrustProviderListStr) }
                     val latestPaymentTargets = async { parseEventOrNull<PaymentTargetsEvent>(latestPaymentTargetsStr) }
+                    val latestCashuWallet =
+                        async {
+                            parseEventOrNull<com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent>(latestCashuWalletStr)
+                        }
+                    val latestNutzapInfo =
+                        async {
+                            parseEventOrNull<com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent>(latestNutzapInfoStr)
+                        }
 
                     val lastReadPerRoute =
                         async {
@@ -667,6 +685,8 @@ object LocalPreferences {
                         defaultLongsFollowList = MutableStateFlow(followListPrefs.longs),
                         defaultMusicTracksFollowList = MutableStateFlow(followListPrefs.musicTracks),
                         defaultMusicPlaylistsFollowList = MutableStateFlow(followListPrefs.musicPlaylists),
+                        defaultPodcastEpisodesFollowList = MutableStateFlow(followListPrefs.podcastEpisodes),
+                        defaultPodcastsFollowList = MutableStateFlow(followListPrefs.podcasts),
                         defaultArticlesFollowList = MutableStateFlow(followListPrefs.articles),
                         defaultSoftwareAppsFollowList = MutableStateFlow(followListPrefs.softwareApps),
                         defaultBadgesFollowList = MutableStateFlow(followListPrefs.badges),
@@ -704,6 +724,8 @@ object LocalPreferences {
                         viewedPollResultNoteIds = MutableStateFlow(viewedPollResultNoteIds.await()),
                         pendingAttestations = MutableStateFlow(pendingAttestations.await()),
                         backupNipA3PaymentTargets = latestPaymentTargets.await(),
+                        backupCashuWallet = latestCashuWallet.await(),
+                        backupNutzapInfo = latestNutzapInfo.await(),
                         callsEnabled = MutableStateFlow(callsEnabled),
                     )
                 }
@@ -743,6 +765,8 @@ object LocalPreferences {
         val articles: TopFilter,
         val musicTracks: TopFilter,
         val musicPlaylists: TopFilter,
+        val podcastEpisodes: TopFilter,
+        val podcasts: TopFilter,
         val softwareApps: TopFilter,
         val badges: TopFilter,
         val browseEmojiSets: TopFilter,
@@ -768,6 +792,8 @@ object LocalPreferences {
             articles = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_ARTICLES_FOLLOW_LIST, null), TopFilter.AllFollows),
             musicTracks = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_MUSIC_TRACKS_FOLLOW_LIST, null), TopFilter.Global),
             musicPlaylists = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_MUSIC_PLAYLISTS_FOLLOW_LIST, null), TopFilter.Global),
+            podcastEpisodes = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PODCAST_EPISODES_FOLLOW_LIST, null), TopFilter.Global),
+            podcasts = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PODCASTS_FOLLOW_LIST, null), TopFilter.Global),
             softwareApps = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_SOFTWARE_APPS_FOLLOW_LIST, null), TopFilter.Global),
             badges = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_BADGES_FOLLOW_LIST, null), TopFilter.Mine),
             browseEmojiSets = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_BROWSE_EMOJI_SETS_FOLLOW_LIST, null), TopFilter.Global),

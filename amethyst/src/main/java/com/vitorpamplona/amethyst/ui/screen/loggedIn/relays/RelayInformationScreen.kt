@@ -261,6 +261,10 @@ import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -540,6 +544,10 @@ fun kindDisplayName(kind: Int): Int =
         AudioTrackEvent.KIND -> R.string.kind_audio_track
         MusicTrackEvent.KIND -> R.string.kind_music_track
         MusicPlaylistEvent.KIND -> R.string.kind_music_playlist
+        PodcastEpisodeEvent.KIND -> R.string.kind_podcast_episode
+        PodcastMetadataEvent.KIND -> R.string.kind_podcast_metadata
+        AuthoredPodcastsEvent.KIND -> R.string.kind_authored_podcasts
+        FavoritePodcastsListEvent.KIND -> R.string.kind_favorite_podcasts
         AttestationEvent.KIND -> R.string.attestation
         AttestationRequestEvent.KIND -> R.string.attestation_request
         AttestorRecommendationEvent.KIND -> R.string.attestor_recommendation

@@ -147,6 +147,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationS
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.publicMessages.NewPublicMessageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.PicturesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pinnednotes.PinnedNotesScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.PodcastEpisodesScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.PodcastsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.PollPostScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.PollsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.privacy.PrivacyOptionsScreen
@@ -191,7 +193,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.SoftwareAppsSc
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.ThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.NewHlsVideoScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.AddCashuWalletScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.AddNwcWalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.AddWalletScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.CashuWalletScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.CashuWalletSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.OnchainTransactionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletDetailScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletReceiveScreen
@@ -289,6 +295,8 @@ fun BuildNavigation(
         composableFromEnd<Route.Articles> { ArticlesScreen(accountViewModel, nav) }
         composableFromEnd<Route.MusicTracks> { MusicTracksScreen(accountViewModel, nav) }
         composableFromEnd<Route.MusicPlaylists> { MusicPlaylistsScreen(accountViewModel, nav) }
+        composableFromEnd<Route.PodcastEpisodes> { PodcastEpisodesScreen(accountViewModel, nav) }
+        composableFromEnd<Route.Podcasts> { PodcastsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.NewMusicTrack> { NewMusicTrackScreen(editDTag = it.dTag, accountViewModel = accountViewModel, nav = nav) }
         composableFromEndArgs<Route.AddToMusicPlaylist> { AddToMusicPlaylistSheet(trackAddress = it.trackAddress, accountViewModel = accountViewModel, nav = nav) }
         composableFromEnd<Route.NewHlsVideo> { NewHlsVideoScreen(accountViewModel, nav) }
@@ -301,6 +309,10 @@ fun BuildNavigation(
         composableFromEnd<Route.OnchainTransactions> { OnchainTransactionsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.WalletDetail> { WalletDetailScreen(it.walletId, accountViewModel, nav) }
         composableFromEnd<Route.WalletAdd> { AddWalletScreen(accountViewModel, nav) }
+        composableFromEnd<Route.WalletAddNwc> { AddNwcWalletScreen(accountViewModel, nav) }
+        composableFromEnd<Route.WalletAddCashu> { AddCashuWalletScreen(accountViewModel, nav) }
+        composableFromEnd<Route.CashuWallet> { CashuWalletScreen(accountViewModel, nav) }
+        composableFromEnd<Route.CashuWalletSettings> { CashuWalletSettingsScreen(accountViewModel, nav) }
 
         composableFromEnd<Route.Lists> { ListOfPeopleListsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.MyPeopleListView> { PeopleListScreen(it.dTag, accountViewModel, nav) }

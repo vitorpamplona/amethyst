@@ -158,6 +158,10 @@ sealed class Route {
 
     @Serializable object MusicPlaylists : Route()
 
+    @Serializable object PodcastEpisodes : Route()
+
+    @Serializable object Podcasts : Route()
+
     @Serializable
     data class NewMusicTrack(
         val dTag: String? = null,
@@ -195,6 +199,14 @@ sealed class Route {
     ) : Route()
 
     @Serializable object WalletAdd : Route()
+
+    @Serializable object WalletAddNwc : Route()
+
+    @Serializable object WalletAddCashu : Route()
+
+    @Serializable object CashuWallet : Route()
+
+    @Serializable object CashuWalletSettings : Route()
 
     @Serializable object Search : Route()
 

@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.ui.note.CloseIcon
 import com.vitorpamplona.amethyst.ui.note.MessageSetCompose
 import com.vitorpamplona.amethyst.ui.note.MultiSetCompose
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.note.NutzapUserSetCompose
 import com.vitorpamplona.amethyst.ui.note.ZapUserSetCompose
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -282,6 +283,16 @@ private fun RenderCardItem(
 
         is ZapUserSetCard -> {
             ZapUserSetCompose(
+                item,
+                isInnerNote = false,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                routeForLastRead = routeForLastRead,
+            )
+        }
+
+        is NutzapUserSetCard -> {
+            NutzapUserSetCompose(
                 item,
                 isInnerNote = false,
                 accountViewModel = accountViewModel,

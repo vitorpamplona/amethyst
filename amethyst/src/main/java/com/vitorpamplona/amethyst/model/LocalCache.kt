@@ -25,6 +25,7 @@ package com.vitorpamplona.amethyst.model
 import android.util.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.cashu.MintDirectoryIndex
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.OnchainZapStatus
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
@@ -209,6 +210,13 @@ import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
+import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
+import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
+import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.claimedSatsTotal
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
@@ -233,6 +241,9 @@ import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
+import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
+import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
+import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
@@ -260,6 +271,10 @@ import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.OnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
@@ -333,6 +348,45 @@ object LocalCache : ILocalCache, ICacheProvider {
     var lnurlEndpointResolver: LnurlEndpointResolver? = null
 
     val relayHints = HintIndexer()
+
+    /**
+     * Cashu mint URL directory, populated passively as
+     * `NutzapInfoEvent` / `MintRecommendationEvent` / `CashuMintEvent`
+     * flow through `updateMintIndex`. Backs the autocomplete in any text
+     * field where the user types a mint URL.
+     *
+     * Use [mintDirectoryBackfilled] semantics via [ensureMintDirectoryBackfilled]
+     * when reading from the UI — the first call sweeps already-cached
+     * events so suggestions are useful before the next relay round-trip.
+     */
+    val mintDirectory = MintDirectoryIndex()
+
+    @Volatile private var mintDirectoryBackfilled = false
+    private val mintDirectoryBackfillLock = Any()
+
+    /**
+     * Sweeps `notes` + `addressables` for any NIP-87 / NIP-61 event the
+     * cache already holds and feeds them into [mintDirectory]. The wallet
+     * directory + every other user's kind:10019 we've ever loaded may
+     * have arrived BEFORE [updateMintIndex] existed (or before any
+     * caller cared), so without this backfill the autocomplete is empty
+     * until new events arrive.
+     *
+     * Idempotent — subsequent calls return immediately. Best-effort: a
+     * scan failure is swallowed so the index stays usable even if the
+     * cache is in an unexpected state.
+     */
+    fun ensureMintDirectoryBackfilled() {
+        if (mintDirectoryBackfilled) return
+        synchronized(mintDirectoryBackfillLock) {
+            if (mintDirectoryBackfilled) return
+            runCatching {
+                notes.forEach { _, note -> note.event?.let(::updateMintIndex) }
+                addressables.forEach { _, note -> note.event?.let(::updateMintIndex) }
+            }
+            mintDirectoryBackfilled = true
+        }
+    }
 
     val deletionIndex = DeletionIndex()
 
@@ -492,13 +546,14 @@ object LocalCache : ILocalCache, ICacheProvider {
 
     override fun getOrCreateUser(pubkey: HexKey): User {
         require(isValidHex(key = pubkey)) { "$pubkey is not a valid hex" }
-
-        return users.getOrCreate(pubkey) {
-            val nip65RelayListNote = getOrCreateAddressableNoteInternal(AdvertisedRelayListEvent.createAddress(pubkey))
-            val dmRelayListNote = getOrCreateAddressableNoteInternal(ChatMessageRelayListEvent.createAddress(pubkey))
-            User(it, nip65RelayListNote, dmRelayListNote)
-        }
+        // Pass `this` as the UserContext — User now resolves each pinned
+        // addressable note (kind:10002 / 10050 / 10019) lazily on first
+        // read, instead of all-or-nothing at construction time.
+        return users.getOrCreate(pubkey) { User(it, userContext) }
     }
+
+    /** [UserContext] bridge to this cache's addressable lookup. */
+    private val userContext = UserContext(::getOrCreateAddressableNoteInternal)
 
     override fun getUserIfExists(pubkey: String): User? {
         if (pubkey.isEmpty()) return null
@@ -960,6 +1015,14 @@ object LocalCache : ILocalCache, ICacheProvider {
                         Address.parse(coord)?.let { add(getOrCreateAddressableNote(it)) }
                     }
                 }
+            }
+
+            is NutzapEvent -> {
+                // The zapped event is carried in the kind:9321's `e` tags
+                // (and optionally an `a` tag for addressables). Whichever
+                // notes those resolve to receive the nutzap entry —
+                // analogous to how LnZapEvent flows into `addZap`.
+                event.linkedEventIds().mapNotNull { checkGetOrCreateNote(it) }
             }
 
             is LnZapRequestEvent -> {
@@ -1915,6 +1978,40 @@ object LocalCache : ILocalCache, ICacheProvider {
         return !alreadyLoaded
     }
 
+    /**
+     * Consume a NIP-61 nutzap (kind 9321). Resolves the e-tagged target
+     * note(s), parses the proof amounts once, and attaches a `NutzapEntry`
+     * so the reaction-row counter, the "you-already-zapped" icon highlight,
+     * and the dedicated cashu gallery row all light up the same way they
+     * do for lightning zaps.
+     *
+     * Unlike `consume(OnchainZapEvent)`, there's no async verification
+     * step today — the sender-claimed proof amounts are trusted up to
+     * redeem time, when the recipient's wallet verifies them against the
+     * mint. Adding a wallet-side verification gate that downgrades
+     * unverifiable entries would be a follow-up.
+     */
+    fun consume(
+        event: NutzapEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val note = getOrCreateNote(event.id)
+        if (note.event != null) return false
+
+        if (!(wasVerified || justVerify(event))) return false
+
+        val author = getOrCreateUser(event.pubKey)
+        val repliesTo = computeReplyTo(event)
+        note.loadEvent(event, author, repliesTo)
+
+        val claimedSats = event.claimedSatsTotal()
+        repliesTo.forEach { it.addNutzap(note, claimedSats) }
+
+        refreshNewNoteObservers(note)
+        return true
+    }
+
     private fun attachZapToLiveActivityChannel(
         event: LnZapEvent,
         note: Note,
@@ -2126,7 +2223,10 @@ object LocalCache : ILocalCache, ICacheProvider {
         val requestId = event.requestId()
         val pending =
             when (val match = paymentTracker.onResponseReceived(requestId, event.pubKey)) {
-                is NwcPaymentTracker.MatchResult.Matched -> match.pending
+                is NwcPaymentTracker.MatchResult.Matched -> {
+                    match.pending
+                }
+
                 is NwcPaymentTracker.MatchResult.WrongAuthor -> {
                     // Possible spoof: a kind-23195 event from someone other than
                     // the wallet service we sent the request to. The pending
@@ -2139,6 +2239,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                     )
                     return false
                 }
+
                 NwcPaymentTracker.MatchResult.NoMatch -> {
                     Log.w(
                         "LocalCache",
@@ -2914,22 +3015,24 @@ object LocalCache : ILocalCache, ICacheProvider {
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
+        // uses the internal event to avoid reprocessing cached items.
+        val note =
+            if (event is AddressableEvent) {
+                getOrCreateAddressableNote(event.address())
+            } else {
+                getOrCreateNote(event.id)
+            }
+
         val wasNew = justConsumeInnerInner(event, relay, wasVerified)
 
         if (wasNew) {
             updateHintIndexes(event)
+            updateMintIndex(event)
+            updateInGatherer(event, note)
         }
 
         if (relay != null) {
-            // uses the internal event to avoid reprocessing cached items.
-            val note =
-                if (event is AddressableEvent) {
-                    getAddressableNoteIfExists(event.address())
-                } else {
-                    getNoteIfExists(event.id)
-                }
-
-            note?.event?.let { consumedEvent ->
+            note.event?.let { consumedEvent ->
                 addIncomingRelayAsHintToAllRelatedEvents(consumedEvent, relay)
             }
         }
@@ -2977,6 +3080,45 @@ object LocalCache : ILocalCache, ICacheProvider {
         if (event is PubKeyHintProvider) {
             event.pubKeyHints().forEach {
                 relayHints.addKey(it.pubkey, it.relay)
+            }
+        }
+    }
+
+    /**
+     * Feeds the Cashu mint URL directory from every event that names a
+     * mint, regardless of which user authored it. Three sources today:
+     *
+     *  - NutzapInfoEvent (kind:10019) — every nostr user with a Cashu
+     *    wallet publishes their accepted mints here, so a typical inbox
+     *    of cached profiles seeds a useful starter directory.
+     *  - MintRecommendationEvent (kind:38000) — explicit public vouches.
+     *  - CashuMintEvent (kind:38172) — formal mint announcements.
+     *
+     * Called only when the event is newly consumed (mirrors
+     * updateHintIndexes) so a re-emission of a cached event doesn't
+     * inflate the popularity counter.
+     */
+    fun updateMintIndex(event: Event) {
+        when (event) {
+            is NutzapInfoEvent -> mintDirectory.addAll(event.mints().map { it.mintUrl })
+            is MintRecommendationEvent -> mintDirectory.addAll(event.mintUrls())
+            is CashuMintEvent -> event.mintUrl()?.let { mintDirectory.add(it) }
+            else -> Unit
+        }
+    }
+
+    fun updateInGatherer(
+        event: Event,
+        note: Note,
+    ) {
+        if (event is EventHintProvider) {
+            event.linkedEventIds().forEach {
+                checkGetOrCreateNote(it)?.addGatherer(note)
+            }
+        }
+        if (event is AddressHintProvider) {
+            event.linkedAddressIds().forEach {
+                checkGetOrCreateAddressableNote(it)?.addGatherer(note)
             }
         }
     }
@@ -3102,6 +3244,59 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 is CallRenegotiateEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                // ============================================================
+                // NIP-60 Cashu wallet + NIP-61 nutzaps
+                // ============================================================
+                is CashuWalletEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is CashuTokenEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is CashuSpendingHistoryEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is CashuMintQuoteEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is NutzapInfoEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is NutzapEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                // ============================================================
+                // NIP-87 Cashu mint discovery + recommendations
+                // ============================================================
+                // All three are kind 3xxxx (parameterized-replaceable per the
+                // spec) but neither CashuMintEvent / FedimintEvent /
+                // MintRecommendationEvent extends AddressableEvent in Quartz
+                // today, so consumeBaseReplaceable's `check(event is
+                // AddressableEvent)` would crash. Route through
+                // consumeRegularEvent — downstream consumers
+                // (CashuMintDirectoryState, CashuWalletState) already dedupe
+                // by (pubKey, dTag) and keep the newest. Without these
+                // entries the dispatch falls into the "Event Not Supported"
+                // else branch and silently drops the event, so our own
+                // kind:38000 thumbs-up never lands in the cache.
+                is CashuMintEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is FedimintEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is MintRecommendationEvent -> {
                     consumeRegularEvent(event, relay, wasVerified)
                 }
 
@@ -3394,6 +3589,22 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 is MusicPlaylistEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is PodcastEpisodeEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is PodcastMetadataEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is AuthoredPodcastsEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is FavoritePodcastsListEvent -> {
                     consumeBaseReplaceable(event, relay, wasVerified)
                 }
 

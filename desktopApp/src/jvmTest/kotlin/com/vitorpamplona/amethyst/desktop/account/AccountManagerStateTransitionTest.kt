@@ -94,12 +94,12 @@ class AccountManagerStateTransitionTest {
 
             advanceUntilIdle()
 
-            // Should see: LoggedOut → ConnectingRelays → LoggedIn
+            // Should see: Loading → ConnectingRelays → LoggedIn
             assertTrue(
                 states.size >= 3,
                 "Expected at least 3 state transitions, got ${states.size}: $states",
             )
-            assertIs<AccountState.LoggedOut>(states[0])
+            assertIs<AccountState.Loading>(states[0])
             assertIs<AccountState.ConnectingRelays>(states[1])
             assertIs<AccountState.LoggedIn>(states[2])
 
@@ -125,12 +125,12 @@ class AccountManagerStateTransitionTest {
 
             advanceUntilIdle()
 
-            // Should see: LoggedOut → ConnectingRelays → LoggedOut
+            // Should see: Loading → ConnectingRelays → LoggedOut
             assertTrue(
                 states.size >= 3,
                 "Expected at least 3 state transitions, got ${states.size}: $states",
             )
-            assertIs<AccountState.LoggedOut>(states[0])
+            assertIs<AccountState.Loading>(states[0])
             assertIs<AccountState.ConnectingRelays>(states[1])
             assertIs<AccountState.LoggedOut>(states[2])
 

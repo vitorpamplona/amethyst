@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteHasEvent
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderByParentFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -51,6 +52,7 @@ fun WatchNoteEvent(
                 accountViewModel = accountViewModel,
                 nav = nav,
             ) { showPopup ->
+                UserFinderByParentFilterAssemblerSubscription(baseNote, accountViewModel)
                 BlankNote(
                     remember {
                         modifier.combinedClickable(

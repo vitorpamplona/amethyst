@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -32,12 +33,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -68,19 +69,14 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import java.text.DateFormat
+import java.util.Date
 import java.util.Locale
 
-private val dateFormat = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.getDefault())
+// Locale-aware: en-US "May 28, 2026" · en-GB "28 May 2026" · de-DE "28.05.2026" · ja-JP "2026/05/28"
+private val dateFormat = DateFormat.getDateInstance(DateFormat.MEDIUM, Locale.getDefault())
 
-private fun formatDate(timestamp: Long): String =
-    Instant
-        .ofEpochSecond(timestamp)
-        .atZone(ZoneId.systemDefault())
-        .toLocalDate()
-        .format(dateFormat)
+private fun formatDate(timestamp: Long): String = dateFormat.format(Date(timestamp * 1000L))
 
 /**
  * Card displaying long-form content (NIP-23) with title, summary, and image.
@@ -96,14 +92,15 @@ fun LongFormCard(
     val authorName = author.toBestDisplayName()
     val publishedAt = event.publishedAt() ?: event.createdAt
 
-    Card(
+    OutlinedCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         colors =
-            CardDefaults.cardColors(
+            CardDefaults.outlinedCardColors(
                 containerColor = MaterialTheme.colorScheme.surface,
             ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        shape = MaterialTheme.shapes.medium,
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // Title

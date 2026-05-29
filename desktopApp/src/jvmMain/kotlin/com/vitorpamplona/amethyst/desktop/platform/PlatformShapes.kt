@@ -25,67 +25,15 @@ import androidx.compose.material3.Shapes
 import androidx.compose.ui.unit.dp
 
 /**
- * Per-OS Material3 [Shapes] tuned to match each platform's native rounding language.
- * Material's defaults (4 / 4 / 0 dp) read as Android — these values match what users
- * see in their OS's first-party apps.
- *
- * - macOS (Sonoma+): ~10 / 12 / 16 dp continuous-style corners.
- * - GNOME (libadwaita): 9 / 12 / 16 dp — adw_dialog / adw_card baseline.
- * - KDE (Breeze): 6 / 8 / 12 dp — Breeze prefers tighter rounding than libadwaita.
- * - Windows (WinUI 3): 4 / 8 / 8 dp — WinUI's mica surfaces use modest rounding.
+ * Unified Amethyst brand [Shapes] — consistent rounding across all platforms.
  */
 object PlatformShapes {
-    val current: Shapes by lazy {
-        when (PlatformInfo.current) {
-            Platform.MACOS -> {
-                Shapes(
-                    extraSmall = RoundedCornerShape(6.dp),
-                    small = RoundedCornerShape(8.dp),
-                    medium = RoundedCornerShape(10.dp),
-                    large = RoundedCornerShape(14.dp),
-                    extraLarge = RoundedCornerShape(20.dp),
-                )
-            }
-
-            Platform.GNOME -> {
-                Shapes(
-                    extraSmall = RoundedCornerShape(6.dp),
-                    small = RoundedCornerShape(9.dp),
-                    medium = RoundedCornerShape(12.dp),
-                    large = RoundedCornerShape(16.dp),
-                    extraLarge = RoundedCornerShape(24.dp),
-                )
-            }
-
-            Platform.KDE -> {
-                Shapes(
-                    extraSmall = RoundedCornerShape(4.dp),
-                    small = RoundedCornerShape(6.dp),
-                    medium = RoundedCornerShape(8.dp),
-                    large = RoundedCornerShape(12.dp),
-                    extraLarge = RoundedCornerShape(16.dp),
-                )
-            }
-
-            Platform.WINDOWS -> {
-                Shapes(
-                    extraSmall = RoundedCornerShape(4.dp),
-                    small = RoundedCornerShape(4.dp),
-                    medium = RoundedCornerShape(8.dp),
-                    large = RoundedCornerShape(8.dp),
-                    extraLarge = RoundedCornerShape(12.dp),
-                )
-            }
-
-            Platform.LINUX_OTHER, Platform.UNKNOWN -> {
-                Shapes(
-                    extraSmall = RoundedCornerShape(6.dp),
-                    small = RoundedCornerShape(8.dp),
-                    medium = RoundedCornerShape(10.dp),
-                    large = RoundedCornerShape(14.dp),
-                    extraLarge = RoundedCornerShape(20.dp),
-                )
-            }
-        }
-    }
+    val current: Shapes =
+        Shapes(
+            extraSmall = RoundedCornerShape(6.dp),
+            small = RoundedCornerShape(8.dp),
+            medium = RoundedCornerShape(12.dp),
+            large = RoundedCornerShape(16.dp),
+            extraLarge = RoundedCornerShape(24.dp),
+        )
 }

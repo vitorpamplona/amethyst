@@ -51,6 +51,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.flattenToSet
 import kotlinx.collections.immutable.ImmutableList
@@ -237,17 +238,46 @@ class CardFeedContentState(
                 }
             }
 
+        // NIP-61 nutzaps — parallel to the lightning-zap grouping above.
+        // For nutzaps targeting a specific note, accumulate into
+        // [nutzapsPerEvent] so the MultiSetCard can show a cashu rail
+        // alongside the lightning rail. For nutzaps with no e-tagged
+        // target (just the recipient's p-tag), accumulate into
+        // [nutzapsPerUser] so they surface as a NutzapUserSetCard,
+        // mirroring how user-targeted lightning zaps become a
+        // ZapUserSetCard.
+        val nutzapsPerUser = mutableMapOf<User, MutableList<Note>>()
+        val nutzapsPerEvent = mutableMapOf<Note, MutableList<Note>>()
+        notes
+            .filter { it.event is NutzapEvent }
+            .forEach { nutzapNote ->
+                val zappedPost = nutzapNote.replyTo?.lastOrNull()
+                if (zappedPost != null) {
+                    nutzapsPerEvent
+                        .getOrPut(zappedPost) { mutableListOf() }
+                        .add(nutzapNote)
+                } else {
+                    val sender = nutzapNote.author
+                    if (sender != null) {
+                        nutzapsPerUser
+                            .getOrPut(sender) { mutableListOf() }
+                            .add(nutzapNote)
+                    }
+                }
+            }
+
         val sdf = DateTimeFormatter.ofPattern("yyyy-MM-dd") // SimpleDateFormat()
 
-        val allBaseNotes = zapsPerEvent.keys + boostsPerEvent.keys + reactionsPerEvent.keys
+        val allBaseNotes = zapsPerEvent.keys + boostsPerEvent.keys + reactionsPerEvent.keys + nutzapsPerEvent.keys
         val multiCards =
             allBaseNotes.flatMap { baseNote ->
                 val boostsInCard = boostsPerEvent[baseNote] ?: emptyList()
                 val reactionsInCard = reactionsPerEvent[baseNote] ?: emptyList()
                 val zapsInCard = zapsPerEvent[baseNote] ?: emptyList()
+                val nutzapsInCard = nutzapsPerEvent[baseNote] ?: emptyList()
 
                 val singleList =
-                    (boostsInCard + zapsInCard.map { it.response } + reactionsInCard).groupBy {
+                    (boostsInCard + zapsInCard.map { it.response } + reactionsInCard + nutzapsInCard).groupBy {
                         sdf.format(
                             Instant
                                 .ofEpochSecond(it.createdAt() ?: 0L)
@@ -271,6 +301,7 @@ class CardFeedContentState(
                                 boostsInCard.filter { it in chunk }.toImmutableList(),
                                 reactionsInCard.filter { it in chunk }.toImmutableList(),
                                 zapsInCard.filter { it.response in chunk }.toImmutableList(),
+                                nutzapsInCard.filter { it in chunk }.toImmutableList(),
                             )
                         }
                     }.flatten()
@@ -299,6 +330,32 @@ class CardFeedContentState(
                     }
                 }.flatten()
 
+        // Per-sender nutzap aggregate cards — mirror userZaps but render
+        // with a cashu icon so the user sees the rail at a glance. Cards
+        // are bucketed by yyyy-MM-dd so a sender's daily run rolls up.
+        val userNutzaps =
+            nutzapsPerUser
+                .map { user ->
+                    val byDay =
+                        user.value.groupBy {
+                            sdf.format(
+                                Instant
+                                    .ofEpochSecond(it.createdAt() ?: 0L)
+                                    .atZone(ZoneId.systemDefault())
+                                    .toLocalDateTime(),
+                            )
+                        }
+
+                    byDay.values.map { nutzaps ->
+                        NutzapUserSetCard(
+                            user.key,
+                            nutzaps
+                                .sortedWith(compareByDescending<Note> { it.createdAt() }.thenBy { it.idHex })
+                                .toImmutableList(),
+                        )
+                    }
+                }.flatten()
+
         val textNoteCards =
             notes
                 .filter {
@@ -316,7 +373,7 @@ class CardFeedContentState(
                     }
                 }
 
-        return (multiCards + textNoteCards + userZaps)
+        return (multiCards + textNoteCards + userZaps + userNutzaps)
             .sortedWith(compareByDescending<Card> { it.createdAt() }.thenBy { it.id() })
     }
 

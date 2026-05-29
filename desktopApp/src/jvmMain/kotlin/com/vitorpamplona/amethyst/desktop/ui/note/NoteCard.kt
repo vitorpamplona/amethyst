@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.note
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,6 +37,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -147,10 +149,15 @@ fun NoteCard(
     // the NoteActionsRow have their own clickables that consume the click before
     // it reaches the Card's handler, so tapping an action still fires only that
     // action.
-    val cardColors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    val cardElevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    val outlineVariant = MaterialTheme.colorScheme.outlineVariant
+    val cardBorder =
+        remember(outlineVariant) {
+            BorderStroke(1.dp, outlineVariant)
+        }
+    val cardColors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+    val cardShape = MaterialTheme.shapes.medium
     val cardBody: @Composable ColumnScope.() -> Unit = {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Column {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -230,7 +237,7 @@ fun NoteCard(
                             Modifier
                                 .fillMaxWidth()
                                 .heightIn(max = maxMediaHeight)
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(MaterialTheme.shapes.small)
                                 .then(
                                     if (onImageClick != null) {
                                         Modifier.clickable { onImageClick(imageUrls, index) }
@@ -302,18 +309,20 @@ fun NoteCard(
     }
 
     if (onClick != null) {
-        Card(
+        OutlinedCard(
             onClick = onClick,
-            modifier = modifier.fillMaxWidth(),
+            modifier = modifier,
             colors = cardColors,
-            elevation = cardElevation,
+            border = cardBorder,
+            shape = cardShape,
             content = cardBody,
         )
     } else {
-        Card(
-            modifier = modifier.fillMaxWidth(),
+        OutlinedCard(
+            modifier = modifier,
             colors = cardColors,
-            elevation = cardElevation,
+            border = cardBorder,
+            shape = cardShape,
             content = cardBody,
         )
     }

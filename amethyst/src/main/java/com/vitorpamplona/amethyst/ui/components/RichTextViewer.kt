@@ -492,7 +492,14 @@ private fun RenderWordWithoutPreview(
         // Don't offer to withdraw
         is WithdrawSegment -> Text(word.segmentText)
 
-        is CashuSegment -> Text(word.segmentText)
+        // Cashu parsing is purely local + cached (CachedCashuParser),
+        // so the preview is safe to render even in the no-preview path
+        // — `canPreview = false` is meant to suppress network previews
+        // (images, link unfurls, lightning invoice lookups), not local
+        // decoding. Suppressing it here was the reason cashuB tokens
+        // pasted into DMs and other no-preview contexts only showed
+        // as a wall of base64.
+        is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
 
         is EmailSegment -> ClickableEmail(word.segmentText)
 

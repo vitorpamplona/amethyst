@@ -59,7 +59,6 @@ fun BlankNotePreview() {
 @Composable
 fun BlankNote(
     modifier: Modifier = Modifier,
-    idHex: String? = null,
     shortPreview: Boolean = false,
 ) {
     Column(modifier = modifier) {
@@ -81,7 +80,7 @@ fun BlankNote(
                             if (shortPreview) {
                                 stringRes(R.string.post_not_found_short)
                             } else {
-                                stringRes(R.string.post_not_found) + if (idHex != null) ": $idHex" else ""
+                                stringRes(R.string.post_not_found)
                             },
                         modifier = Modifier.padding(30.dp),
                         color = Color.Gray,

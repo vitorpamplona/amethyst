@@ -62,6 +62,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEven
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
@@ -78,6 +79,8 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -98,6 +101,8 @@ class NotificationFeedFilter(
                 AudioTrackEvent.KIND,
                 MusicTrackEvent.KIND,
                 MusicPlaylistEvent.KIND,
+                PodcastEpisodeEvent.KIND,
+                PodcastMetadataEvent.KIND,
                 CalendarTimeSlotEvent.KIND,
                 CalendarDateSlotEvent.KIND,
                 CalendarRSVPEvent.KIND,
@@ -128,6 +133,7 @@ class NotificationFeedFilter(
                 ReactionEvent.KIND,
                 RepostEvent.KIND,
                 LnZapEvent.KIND,
+                NutzapEvent.KIND,
                 OnchainZapEvent.KIND,
                 LiveActivitiesChatMessageEvent.KIND,
                 PictureEvent.KIND,

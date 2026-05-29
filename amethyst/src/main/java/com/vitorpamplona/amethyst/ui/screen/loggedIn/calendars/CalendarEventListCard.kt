@@ -72,8 +72,8 @@ fun CalendarEventListCard(
     modifier: Modifier = Modifier,
 ) {
     val view = note.appointmentView() ?: return
-    val range = remember(note.idHex) { formatCalendarRange(note) }
     val context = LocalContext.current
+    val range = remember(note.idHex) { formatCalendarRange(note, context) }
     val relative = remember(note.idHex, view.startSeconds) { relativeTimeLabel(context, view, TimeUtils.now()) }
     val event = note.event ?: return
     val detailRoute =

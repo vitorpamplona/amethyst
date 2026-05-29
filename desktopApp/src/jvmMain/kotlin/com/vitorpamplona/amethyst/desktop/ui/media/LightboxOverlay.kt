@@ -37,7 +37,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
@@ -421,7 +420,7 @@ fun LightboxOverlay(
                     Modifier
                         .align(Alignment.BottomCenter)
                         .padding(16.dp)
-                        .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                        .background(Color.Black.copy(alpha = 0.5f), MaterialTheme.shapes.large)
                         .padding(horizontal = 16.dp, vertical = 6.dp),
             )
         }

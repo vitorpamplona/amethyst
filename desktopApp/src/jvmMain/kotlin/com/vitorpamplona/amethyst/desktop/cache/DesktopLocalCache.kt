@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.UserContext
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheEventStream
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
@@ -109,12 +110,15 @@ class DesktopLocalCache : ICacheProvider {
 
     override fun getUserIfExists(pubkey: HexKey): User? = users.get(pubkey)
 
-    override fun getOrCreateUser(pubkey: HexKey): User =
-        users.getOrCreate(pubkey) {
-            val nip65Note = getOrCreateNote("nip65:$pubkey")
-            val dmNote = getOrCreateNote("dm:$pubkey")
-            User(pubkey, nip65Note, dmNote)
-        }
+    override fun getOrCreateUser(pubkey: HexKey): User = users.getOrCreate(pubkey) { User(pubkey, userContext) }
+
+    /**
+     * [UserContext] bridge — desktop's note store is keyed on string ids
+     * rather than full addressable maps, so we synthesise a stable id
+     * from the Address. User's lazy fields hold the resulting Note for
+     * its lifetime, same pinning guarantee as on Android.
+     */
+    private val userContext = UserContext { addr -> getOrCreateNote(addr.toValue()) }
 
     override fun countUsers(predicate: (String, User) -> Boolean): Int = users.count { key, user -> predicate(key, user) }
 

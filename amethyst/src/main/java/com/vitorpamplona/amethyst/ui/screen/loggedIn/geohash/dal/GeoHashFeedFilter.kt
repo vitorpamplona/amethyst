@@ -39,6 +39,8 @@ import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
+import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 
 class GeoHashFeedFilter(
     val tag: String,
@@ -82,7 +84,9 @@ class GeoHashFeedFilter(
                 event is ZapPollEvent ||
                 event is AudioHeaderEvent ||
                 event is MusicTrackEvent ||
-                event is MusicPlaylistEvent
+                event is MusicPlaylistEvent ||
+                event is PodcastEpisodeEvent ||
+                event is PodcastMetadataEvent
         ) &&
             event.isTaggedGeoHash(geohash)
 

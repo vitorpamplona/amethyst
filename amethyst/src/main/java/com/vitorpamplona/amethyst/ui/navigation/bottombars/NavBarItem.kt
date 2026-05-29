@@ -56,6 +56,8 @@ enum class NavBarItem {
     SHORTS,
     MUSIC_TRACKS,
     MUSIC_PLAYLISTS,
+    PODCAST_EPISODES,
+    PODCASTS,
     PUBLIC_CHATS,
     FOLLOW_PACKS,
     LIVE_STREAMS,
@@ -246,6 +248,20 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 icon = MaterialSymbols.AutoMirrored.PlaylistAdd,
                 resolveRoute = { Route.MusicPlaylists },
             ),
+        NavBarItem.PODCAST_EPISODES to
+            NavBarItemDef(
+                id = NavBarItem.PODCAST_EPISODES,
+                labelRes = R.string.route_podcast_episodes,
+                icon = MaterialSymbols.Headphones,
+                resolveRoute = { Route.PodcastEpisodes },
+            ),
+        NavBarItem.PODCASTS to
+            NavBarItemDef(
+                id = NavBarItem.PODCASTS,
+                labelRes = R.string.route_podcasts,
+                icon = MaterialSymbols.Podcasts,
+                resolveRoute = { Route.Podcasts },
+            ),
         NavBarItem.PUBLIC_CHATS to
             NavBarItemDef(
                 id = NavBarItem.PUBLIC_CHATS,
@@ -364,6 +380,8 @@ val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.SHORTS,
         NavBarItem.MUSIC_TRACKS,
         NavBarItem.MUSIC_PLAYLISTS,
+        NavBarItem.PODCAST_EPISODES,
+        NavBarItem.PODCASTS,
         NavBarItem.PUBLIC_CHATS,
         NavBarItem.FOLLOW_PACKS,
         NavBarItem.LIVE_STREAMS,

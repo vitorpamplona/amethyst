@@ -77,6 +77,8 @@ object ScrollStateKeys {
     const val ARTICLES_SCREEN = "ArticlesFeed"
     const val MUSIC_TRACKS_SCREEN = "MusicTracksFeed"
     const val MUSIC_PLAYLISTS_SCREEN = "MusicPlaylistsFeed"
+    const val PODCAST_EPISODES_SCREEN = "PodcastEpisodesFeed"
+    const val PODCASTS_SCREEN = "PodcastsFeed"
 
     const val SEARCH_SCREEN = "SearchFeed"
 

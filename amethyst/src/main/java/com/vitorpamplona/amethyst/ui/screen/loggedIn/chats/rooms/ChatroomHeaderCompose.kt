@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteHasEvent
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderByParentFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserName
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.layouts.ChatHeaderLayout
@@ -96,6 +97,7 @@ fun ChatroomHeaderCompose(
         if (hasEvent) {
             ChatroomComposeChannelOrUser(baseNote, accountViewModel, nav)
         } else {
+            UserFinderByParentFilterAssemblerSubscription(baseNote, accountViewModel)
             BlankNote()
         }
     }
@@ -167,6 +169,7 @@ private fun ChatroomEntry(
         }
 
         else -> {
+            UserFinderByParentFilterAssemblerSubscription(lastMessage, accountViewModel)
             BlankNote()
         }
     }

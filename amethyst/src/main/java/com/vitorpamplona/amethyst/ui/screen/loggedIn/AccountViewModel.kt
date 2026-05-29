@@ -623,15 +623,21 @@ class AccountViewModel(
             account.calculateIfNoteWasZappedByAccount(zappedNote, afterTimeInSeconds)
         }
 
-    suspend fun calculateZapAmount(zappedNote: Note): String =
-        if (zappedNote.zapPayments.isNotEmpty()) {
+    suspend fun calculateZapAmount(zappedNote: Note): String {
+        // The signed-in user's own outgoing onchain zaps that aren't
+        // yet CONFIRMED still need to show in the counter — the user
+        // knows what they sent, so make the counter reflect reality
+        // immediately instead of waiting for chain confirmation.
+        val ownPendingOnchain = zappedNote.extraOwnPendingOnchainSats(account.userProfile().pubkeyHex)
+        return if (zappedNote.zapPayments.isNotEmpty()) {
             withContext(Dispatchers.IO) {
-                val it = account.calculateZappedAmount(zappedNote)
-                showAmount(it)
+                val nwc = account.calculateZappedAmount(zappedNote)
+                showAmount(nwc + java.math.BigDecimal(ownPendingOnchain))
             }
         } else {
-            showAmount(zappedNote.zapsAmount)
+            showAmount(zappedNote.zapsAmount + java.math.BigDecimal(ownPendingOnchain))
         }
+    }
 
     suspend fun calculateZapraiser(zappedNote: Note): ZapraiserStatus {
         val zapraiserAmount = zappedNote.event?.zapraiserAmount() ?: 0
@@ -903,6 +909,61 @@ class AccountViewModel(
             onPayViaIntent = onPayViaIntent,
             zapType = zapType ?: defaultZapType(),
         )
+    }
+
+    /**
+     * Fire-and-forget NIP-61 nutzap from the zap picker. Picks a mint the
+     * recipient accepts (via their kind:10019) that we also have proofs at,
+     * swaps proofs to P2PK-locked outputs, and publishes a kind:9321
+     * referencing [note]. Errors are surfaced to [onError]; success is
+     * indicated by the resulting kind:9321 landing in the cache.
+     */
+    fun sendNutzap(
+        baseNote: Note,
+        amountSats: Long,
+        message: String,
+        onError: (String, String, User?) -> Unit,
+        onProgress: (Float) -> Unit = {},
+    ) = launchSigner {
+        val recipient = baseNote.author?.pubkeyHex
+        if (recipient == null) {
+            onError(
+                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_title),
+                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_no_recipient),
+                null,
+            )
+            return@launchSigner
+        }
+        val zappedEvent = baseNote.toEventHint<com.vitorpamplona.quartz.nip01Core.core.Event>()
+        if (zappedEvent == null) {
+            onError(
+                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_title),
+                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_no_event),
+                baseNote.author,
+            )
+            return@launchSigner
+        }
+        try {
+            account.cashuWalletState.sendNutzap(
+                amountSats = amountSats,
+                recipientPubKey = recipient,
+                zappedEvent = zappedEvent,
+                message = message,
+                onProgress = onProgress,
+            )
+            // No success toast — the kind:9321 round-trips through the
+            // cache, attaches to the target Note via addNutzap, and the
+            // reaction row's zap counter + the icon-highlight state both
+            // light up automatically. A toast on top would be redundant
+            // noise.
+        } catch (e: Exception) {
+            onError(
+                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_title),
+                com.vitorpamplona.amethyst.model.nip60Cashu
+                    .describeMintError(e),
+                baseNote.author,
+            )
+        }
     }
 
     fun report(
@@ -2177,6 +2238,15 @@ fun mockAccountViewModel(): AccountViewModel {
             signer = NostrSignerInternal(keyPair),
             geolocationFlow = { MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading) },
             nwcFilterAssembler = { nwcFilters },
+            cashuWalletFilterAssembler = {
+                com.vitorpamplona.amethyst.commons.relayClient.assemblers
+                    .CashuWalletFilterAssembler(client)
+            },
+            cashuMintDirectoryFilterAssembler = {
+                com.vitorpamplona.amethyst.commons.relayClient.assemblers
+                    .CashuMintDirectoryFilterAssembler(client)
+            },
+            okHttpClientForMoney = { okhttp3.OkHttpClient() },
             otsResolverBuilder = { EmptyOtsResolverBuilder.build() },
             cache = LocalCache,
             client = client,
@@ -2228,6 +2298,15 @@ fun mockVitorAccountViewModel(): AccountViewModel {
             signer = NostrSignerInternal(keyPair),
             geolocationFlow = { MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading) },
             nwcFilterAssembler = { nwcFilters },
+            cashuWalletFilterAssembler = {
+                com.vitorpamplona.amethyst.commons.relayClient.assemblers
+                    .CashuWalletFilterAssembler(client)
+            },
+            cashuMintDirectoryFilterAssembler = {
+                com.vitorpamplona.amethyst.commons.relayClient.assemblers
+                    .CashuMintDirectoryFilterAssembler(client)
+            },
+            okHttpClientForMoney = { okhttp3.OkHttpClient() },
             otsResolverBuilder = { EmptyOtsResolverBuilder.build() },
             cache = LocalCache,
             client = EmptyNostrClient(),
