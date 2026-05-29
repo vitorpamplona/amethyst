@@ -79,7 +79,7 @@ import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import kotlinx.collections.immutable.ImmutableList
 
 private val EXPANDED_WIDTH = 240.dp
-private val COLLAPSED_WIDTH = 56.dp
+private val COLLAPSED_WIDTH = 64.dp
 
 /**
  * Data class for a sidebar navigation item.
@@ -254,8 +254,10 @@ fun MainSidebar(
                 is TorServiceStatus.Active -> "Tor: Connected"
                 is TorServiceStatus.Error -> "Tor: Error"
             }
+        val torIcon =
+            if (torStatus is TorServiceStatus.Active) MaterialSymbols.Security else MaterialSymbols.Shield
         SidebarNavItem(
-            icon = MaterialSymbols.Shield,
+            icon = torIcon,
             label = torLabel,
             isActive = false,
             expanded = expanded,
