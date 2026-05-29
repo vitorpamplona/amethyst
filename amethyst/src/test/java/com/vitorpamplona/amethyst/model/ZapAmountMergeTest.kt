@@ -26,8 +26,10 @@ import org.junit.Test
 /**
  * The on-chain rail's separate amount-preset list was folded into the single
  * [AccountZapPreferencesInternal.zapAmountChoices]. These lock in that the
- * migration union preserves amounts from both the legacy lists and round-trips
- * idempotently (write the on-chain subset back, union it again → same set).
+ * migration union preserves amounts from both the legacy lists, keeps the
+ * user's saved ordering (Lightning list first, then on-chain extras — NOT
+ * re-sorted), and round-trips idempotently (write the on-chain subset back,
+ * union it again → same list).
  */
 class ZapAmountMergeTest {
     private fun zaps(
@@ -36,7 +38,7 @@ class ZapAmountMergeTest {
     ) = AccountZapPreferencesInternal(zapAmountChoices = zap, onchainZapAmountChoices = onchain)
 
     @Test
-    fun unionsDefaultsSortedAndDeduped() {
+    fun unionsDefaultsPreservingOrderAndDeduped() {
         assertEquals(
             listOf(21L, 50L, 100L, 5_000L),
             mergeZapAmounts(zaps(DefaultZapAmounts, DefaultOnchainZapAmounts)),
@@ -44,10 +46,12 @@ class ZapAmountMergeTest {
     }
 
     @Test
-    fun preservesCustomAmountsFromBothLists() {
+    fun preservesCustomOrderAndAmountsFromBothLists() {
         // Simulates a sync from an older client that still split the two lists.
+        // First-seen order is kept (the Lightning list as-is, then on-chain
+        // extras), so a user's deliberate ordering isn't silently re-sorted.
         assertEquals(
-            listOf(10L, 21L, 100L, 1_000L, 7_777L),
+            listOf(21L, 100L, 10L, 7_777L, 1_000L),
             mergeZapAmounts(zaps(zap = listOf(21L, 100L, 10L), onchain = listOf(7_777L, 1_000L))),
         )
     }
