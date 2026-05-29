@@ -83,6 +83,18 @@ class UpdateZapAmountViewModel : ViewModel() {
         amountSet = amountSet - amount
     }
 
+    /** Move the preset at [fromIndex] to [toIndex] (drag-and-drop reorder). */
+    fun moveAmount(
+        fromIndex: Int,
+        toIndex: Int,
+    ) {
+        if (fromIndex == toIndex) return
+        val list = amountSet.toMutableList()
+        if (fromIndex !in list.indices || toIndex !in list.indices) return
+        list.add(toIndex, list.removeAt(fromIndex))
+        amountSet = list
+    }
+
     fun sendPost() {
         accountViewModel.launchSigner {
             sendPostSuspend()

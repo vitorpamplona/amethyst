@@ -32,6 +32,7 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -56,15 +57,25 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInParent
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -162,8 +173,14 @@ fun UpdateZapAmountContent(
             modifier = Modifier.padding(bottom = 6.dp),
         )
 
-        // Amount chips — animateContentSize gives a smooth expand/collapse when
-        // chips are added or removed
+        // Amount chips — long-press a chip to drag it to a new position; the X
+        // removes it. animateContentSize smooths add/remove. Identity (and the
+        // bounds map + drag target) is keyed by the amount value, not the slot
+        // index, so reordering doesn't restart the in-flight drag gesture.
+        var draggingAmount by remember { mutableStateOf<Long?>(null) }
+        var dragOffset by remember { mutableStateOf(Offset.Zero) }
+        val itemBounds = remember { mutableStateMapOf<Long, Rect>() }
+
         FlowRow(
             modifier =
                 Modifier
@@ -173,10 +190,58 @@ fun UpdateZapAmountContent(
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             postViewModel.amountSet.forEach { amountInSats ->
-                ZapAmountPresetChip(
-                    amountInSats = amountInSats,
-                    onRemove = { postViewModel.removeAmount(amountInSats) },
-                )
+                key(amountInSats) {
+                    val dragging = draggingAmount == amountInSats
+                    ZapAmountPresetChip(
+                        amountInSats = amountInSats,
+                        onRemove = { postViewModel.removeAmount(amountInSats) },
+                        modifier =
+                            Modifier
+                                .onGloballyPositioned { itemBounds[amountInSats] = it.boundsInParent() }
+                                .zIndex(if (dragging) 1f else 0f)
+                                .graphicsLayer {
+                                    if (dragging) {
+                                        translationX = dragOffset.x
+                                        translationY = dragOffset.y
+                                    }
+                                }.pointerInput(amountInSats) {
+                                    detectDragGesturesAfterLongPress(
+                                        onDragStart = {
+                                            draggingAmount = amountInSats
+                                            dragOffset = Offset.Zero
+                                        },
+                                        onDragEnd = {
+                                            draggingAmount = null
+                                            dragOffset = Offset.Zero
+                                        },
+                                        onDragCancel = {
+                                            draggingAmount = null
+                                            dragOffset = Offset.Zero
+                                        },
+                                        onDrag = { change, amount ->
+                                            change.consume()
+                                            dragOffset += amount
+                                            val from = draggingAmount ?: return@detectDragGesturesAfterLongPress
+                                            val fromBounds = itemBounds[from] ?: return@detectDragGesturesAfterLongPress
+                                            val pointer = fromBounds.center + dragOffset
+                                            val targetAmount =
+                                                itemBounds.entries
+                                                    .firstOrNull { (amt, rect) -> amt != from && rect.contains(pointer) }
+                                                    ?.key
+                                            if (targetAmount != null) {
+                                                val targetBounds = itemBounds[targetAmount]
+                                                postViewModel.moveAmount(
+                                                    postViewModel.amountSet.indexOf(from),
+                                                    postViewModel.amountSet.indexOf(targetAmount),
+                                                )
+                                                // Keep the chip under the finger across the slot swap.
+                                                if (targetBounds != null) dragOffset = pointer - targetBounds.center
+                                            }
+                                        },
+                                    )
+                                },
+                    )
+                }
             }
         }
 
@@ -271,6 +336,7 @@ fun UpdateZapAmountContent(
 private fun ZapAmountPresetChip(
     amountInSats: Long,
     onRemove: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val rails = remember(amountInSats) { previewRailsFor(amountInSats) }
     val accent = zapRailAccent(rails.first(), MaterialTheme.colorScheme.onSurface, MaterialTheme.colorScheme.primary)
@@ -278,6 +344,7 @@ private fun ZapAmountPresetChip(
         shape = ButtonBorder,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = modifier,
     ) {
         Row(
             modifier = Modifier.padding(start = 10.dp, end = 2.dp, top = 2.dp, bottom = 2.dp),
