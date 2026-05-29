@@ -92,6 +92,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.ProfileHeade
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.ProfileTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.UserAppRecommendationsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.identity.UserExternalIdentitiesViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.lists.ProfileListsTabHeader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.lists.TabProfileLists
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.lists.dal.UserProfileListsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.mutual.TabMutualConversations
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.mutual.dal.UserProfileMutualFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.newthreads.TabNotesNewThreads
@@ -193,6 +196,16 @@ fun PrepareViewModels(
                 UserProfileZapsViewModel.Factory(baseUser, accountViewModel.account),
         )
 
+    val listsFeedViewModel: UserProfileListsFeedViewModel =
+        viewModel(
+            key = baseUser.pubkeyHex + "UserProfileListsFeedViewModel",
+            factory =
+                UserProfileListsFeedViewModel.Factory(
+                    baseUser,
+                    accountViewModel.account,
+                ),
+        )
+
     val threadsViewModel: UserProfileNewThreadsFeedViewModel =
         viewModel(
             key = baseUser.pubkeyHex + "UserProfileNewThreadsFeedViewModel",
@@ -263,6 +276,7 @@ fun PrepareViewModels(
         appRecommendations,
         externalIdentities,
         zapFeedViewModel,
+        listsFeedViewModel,
         bookmarksFeedViewModel,
         pinnedNotesFeedViewModel,
         galleryFeedViewModel,
@@ -283,6 +297,7 @@ fun ProfileScreen(
     appRecommendations: UserAppRecommendationsFeedViewModel,
     externalIdentities: UserExternalIdentitiesViewModel,
     zapFeedViewModel: UserProfileZapsViewModel,
+    listsFeedViewModel: UserProfileListsFeedViewModel,
     bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
     pinnedNotesFeedViewModel: UserProfilePinnedNotesFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
@@ -302,6 +317,7 @@ fun ProfileScreen(
         WatchLifecycleAndUpdateModel(appRecommendations)
     }
     WatchLifecycleAndUpdateModel(bookmarksFeedViewModel)
+    WatchLifecycleAndUpdateModel(listsFeedViewModel)
     WatchLifecycleAndUpdateModel(pinnedNotesFeedViewModel)
     WatchLifecycleAndUpdateModel(galleryFeedViewModel)
 
@@ -348,6 +364,7 @@ fun ProfileScreen(
                     followsFeedViewModel,
                     followersFeedViewModel,
                     zapFeedViewModel,
+                    listsFeedViewModel,
                     bookmarksFeedViewModel,
                     pinnedNotesFeedViewModel,
                     galleryFeedViewModel,
@@ -447,6 +464,7 @@ private fun RenderScreen(
     followsFeedViewModel: UserProfileFollowsUserFeedViewModel,
     followersFeedViewModel: UserProfileFollowersUserFeedViewModel,
     zapFeedViewModel: UserProfileZapsViewModel,
+    listsFeedViewModel: UserProfileListsFeedViewModel,
     bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
     pinnedNotesFeedViewModel: UserProfilePinnedNotesFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
@@ -468,6 +486,7 @@ private fun RenderScreen(
                 add(ProfileTab.Follows)
                 if (showFollowersTab) add(ProfileTab.Followers)
                 if (showZapsTab) add(ProfileTab.Zaps)
+                add(ProfileTab.Lists)
                 add(ProfileTab.Bookmarks)
                 add(ProfileTab.FollowedTags)
                 add(ProfileTab.Reports)
@@ -515,6 +534,7 @@ private fun RenderScreen(
                     followsFeedViewModel,
                     followersFeedViewModel,
                     zapFeedViewModel,
+                    listsFeedViewModel,
                     bookmarksFeedViewModel,
                     galleryFeedViewModel,
                     reportsFeedViewModel,
@@ -534,6 +554,7 @@ private fun RenderScreen(
                     followsFeedViewModel,
                     followersFeedViewModel,
                     zapFeedViewModel,
+                    listsFeedViewModel,
                     bookmarksFeedViewModel,
                     pinnedNotesFeedViewModel,
                     galleryFeedViewModel,
@@ -554,6 +575,7 @@ private enum class ProfileTab {
     Follows,
     Followers,
     Zaps,
+    Lists,
     Bookmarks,
     FollowedTags,
     Reports,
@@ -574,6 +596,7 @@ private fun CreateAndRenderPages(
     followsFeedViewModel: UserProfileFollowsUserFeedViewModel,
     followersFeedViewModel: UserProfileFollowersUserFeedViewModel,
     zapFeedViewModel: UserProfileZapsViewModel,
+    listsFeedViewModel: UserProfileListsFeedViewModel,
     bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
     pinnedNotesFeedViewModel: UserProfilePinnedNotesFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
@@ -596,6 +619,7 @@ private fun CreateAndRenderPages(
         ProfileTab.Follows -> TabFollows(followsFeedViewModel, accountViewModel, nav)
         ProfileTab.Followers -> TabFollowers(followersFeedViewModel, accountViewModel, nav)
         ProfileTab.Zaps -> TabReceivedZaps(baseUser, zapFeedViewModel, accountViewModel, nav)
+        ProfileTab.Lists -> TabProfileLists(listsFeedViewModel, accountViewModel, nav)
         ProfileTab.Bookmarks -> TabBookmarks(bookmarksFeedViewModel, accountViewModel, nav)
         ProfileTab.FollowedTags -> TabFollowedTags(baseUser, accountViewModel, nav)
         ProfileTab.Reports -> TabReports(baseUser, reportsFeedViewModel, accountViewModel, nav)
@@ -629,6 +653,7 @@ private fun CreateAndRenderTabs(
     followsFeedViewModel: UserProfileFollowsUserFeedViewModel,
     followersFeedViewModel: UserProfileFollowersUserFeedViewModel,
     zapFeedViewModel: UserProfileZapsViewModel,
+    listsFeedViewModel: UserProfileListsFeedViewModel,
     bookmarksFeedViewModel: UserProfileBookmarksFeedViewModel,
     galleryFeedViewModel: UserProfileGalleryFeedViewModel,
     reportsFeedViewModel: UserProfileReportFeedViewModel,
@@ -649,6 +674,7 @@ private fun CreateAndRenderTabs(
                     ProfileTab.Follows -> FollowTabHeader(followsFeedViewModel, accountViewModel)
                     ProfileTab.Followers -> FollowersTabHeader(baseUser, followersFeedViewModel, accountViewModel)
                     ProfileTab.Zaps -> ZapTabHeader(zapFeedViewModel, accountViewModel)
+                    ProfileTab.Lists -> ProfileListsTabHeader()
                     ProfileTab.Bookmarks -> BookmarkTabHeader(baseUser, accountViewModel)
                     ProfileTab.FollowedTags -> FollowedTagsTabHeader(baseUser, accountViewModel)
                     ProfileTab.Reports -> ReportsTabHeader(baseUser, reportsFeedViewModel, accountViewModel)
