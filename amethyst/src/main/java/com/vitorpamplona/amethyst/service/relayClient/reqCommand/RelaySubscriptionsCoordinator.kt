@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomFi
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestRoomLivenessAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.PicturesFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.OnePodcastFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.PodcastEpisodesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.PodcastsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.PollsFilterAssembler
@@ -133,6 +134,7 @@ class RelaySubscriptionsCoordinator(
     val musicPlaylists = MusicPlaylistsFilterAssembler(client)
     val podcastEpisodes = PodcastEpisodesFilterAssembler(client)
     val podcasts = PodcastsFilterAssembler(client)
+    val onePodcast = OnePodcastFilterAssembler(client)
     val softwareApps = SoftwareAppsFilterAssembler(client)
     val badges = BadgesFilterAssembler(client)
     val profileBadges = ProfileBadgesFilterAssembler(client)
@@ -179,6 +181,7 @@ class RelaySubscriptionsCoordinator(
             musicPlaylists,
             podcastEpisodes,
             podcasts,
+            onePodcast,
             softwareApps,
             badges,
             profileBadges,

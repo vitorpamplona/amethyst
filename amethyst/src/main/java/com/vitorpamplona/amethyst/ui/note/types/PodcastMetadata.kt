@@ -20,25 +20,34 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
@@ -52,7 +61,7 @@ fun RenderPodcastMetadata(
     @Suppress("UNUSED_PARAMETER") canPreview: Boolean,
     @Suppress("UNUSED_PARAMETER") backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    @Suppress("UNUSED_PARAMETER") nav: INav,
+    nav: INav,
 ) {
     val noteEvent = note.event as? PodcastMetadataEvent ?: return
 
@@ -60,8 +69,15 @@ fun RenderPodcastMetadata(
     val image = remember(noteEvent) { noteEvent.image() }
     val description = remember(noteEvent) { noteEvent.description() }
     val websites = remember(noteEvent) { noteEvent.websites() }
+    // Each podcast is its own keypair, so the author pubkey IS the podcast id used to open
+    // its dedicated screen with the full episode list.
+    val podcastPubkey = remember(noteEvent) { noteEvent.pubKey }
 
-    Column(MaterialTheme.colorScheme.replyModifier) {
+    Column(
+        MaterialTheme.colorScheme.replyModifier.clickable {
+            nav.nav(Route.Podcast(podcastPubkey))
+        },
+    ) {
         PodcastCoverCard(image, note, accountViewModel)
 
         Column(
@@ -107,6 +123,32 @@ fun RenderPodcastMetadata(
                         )
                     }
                 }
+            }
+
+            // Affordance that this card opens a full show page with every episode.
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = Size5dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.Podcasts,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = stringRes(R.string.podcast_view_episodes),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    symbol = MaterialSymbols.ChevronRight,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
             }
         }
     }
