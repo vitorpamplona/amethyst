@@ -64,7 +64,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -541,7 +540,6 @@ private fun MintRow(
                 imageVector = CustomHashTagIcons.Cashu,
                 contentDescription = null,
                 modifier = Modifier.size(20.dp),
-                tint = Color.Unspecified,
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(text = mint, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))

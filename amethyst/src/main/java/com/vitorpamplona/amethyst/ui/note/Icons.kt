@@ -244,7 +244,6 @@ fun CashuIcon(modifier: Modifier) {
     Icon(
         imageVector = CustomHashTagIcons.Cashu,
         stringRes(R.string.cashu),
-        tint = Color.Unspecified,
         modifier = modifier,
     )
 }
