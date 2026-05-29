@@ -1,0 +1,97 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.ui.note.types
+
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
+import com.vitorpamplona.amethyst.service.playback.composable.PauseControllerWhenInBackground
+import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
+import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nipF4Podcasts.episode.tags.AudioTag
+
+// NIP-F4 episodes carry no waveform tag, so every episode renders with the same flat baseline.
+// Hoisted to a top-level constant so we share one List<Float> + WaveformData across the whole
+// feed instead of allocating a fresh 96-element list per visible card.
+private const val WAVEFORM_SAMPLES = 96
+private val FLAT_WAVEFORM = WaveformData(List(WAVEFORM_SAMPLES) { 0.4f })
+
+// The voice player's internal controls are laid out for 100.dp; 80.dp is the tightest height
+// that still fits the play button without clipping it. Shared so the feed card and the
+// per-podcast list row stay pixel-identical.
+private val PLAYER_HEIGHT_MODIFIER = Modifier.fillMaxWidth().height(80.dp)
+
+/**
+ * The inline audio strip for a NIP-F4 episode (kind 54): one [AudioTag] played through the
+ * shared media-controller stack. [borderModifier] shapes the strip — bottom-rounded when it
+ * butts up under a cover image, fully rounded when it stands alone in a list.
+ */
+@Composable
+fun PodcastEpisodeAudioPlayer(
+    audio: AudioTag,
+    note: Note,
+    title: String?,
+    image: String?,
+    borderModifier: Modifier,
+    accountViewModel: AccountViewModel,
+) {
+    val callbackUri = remember(note) { note.toNostrUri() }
+
+    Row(
+        PLAYER_HEIGHT_MODIFIER,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        GetMediaItem(
+            videoUri = audio.url,
+            title = title,
+            artworkUri = image,
+            authorName = note.author?.toBestDisplayName(),
+            callbackUri = callbackUri,
+            mimeType = audio.mediaType,
+            aspectRatio = null,
+            proxyPort = accountViewModel.httpClientBuilder.proxyPortForVideo(audio.url),
+            keepPlaying = false,
+            waveformData = FLAT_WAVEFORM,
+        ) { mediaItem ->
+            GetVideoController(
+                mediaItem = mediaItem,
+                muted = false,
+            ) { controller ->
+                PauseControllerWhenInBackground(controller)
+                RenderVoicePlayer(
+                    mediaItem = mediaItem,
+                    controllerState = controller,
+                    waveform = FLAT_WAVEFORM,
+                    borderModifier = borderModifier,
+                    accountViewModel = accountViewModel,
+                )
+            }
+        }
+    }
+}

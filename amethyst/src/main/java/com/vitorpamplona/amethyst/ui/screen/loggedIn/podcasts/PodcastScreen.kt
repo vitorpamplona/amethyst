@@ -211,7 +211,7 @@ private fun PodcastHeaderWithStatus(
         contentPadding = rememberFeedContentPadding(FeedPadding),
     ) {
         item("header") {
-            PodcastHeader(metadataNote, metadataEvent, 0, accountViewModel)
+            PodcastHeader(metadataNote, metadataEvent, null, accountViewModel)
         }
         item("status") { status() }
     }

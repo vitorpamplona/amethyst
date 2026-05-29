@@ -59,7 +59,7 @@ import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 fun PodcastHeader(
     metadataNote: Note,
     metadataEvent: PodcastMetadataEvent?,
-    episodeCount: Int,
+    episodeCount: Int?,
     accountViewModel: AccountViewModel,
 ) {
     val title = remember(metadataEvent) { metadataEvent?.title() }
@@ -106,17 +106,21 @@ fun PodcastHeader(
             description?.let { ExpandableDescription(it) }
         }
 
-        Text(
-            text = pluralStringResource(R.plurals.podcast_episode_count, episodeCount, episodeCount),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
-        )
+        // Only render once episodes have actually loaded — avoids flashing "0 episodes"
+        // under the cover while the relay request is still in flight.
+        episodeCount?.let { count ->
+            Text(
+                text = pluralStringResource(R.plurals.podcast_episode_count, count, count),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+            )
 
-        HorizontalDivider(thickness = DividerThickness)
+            HorizontalDivider(thickness = DividerThickness)
+        }
     }
 }
 
