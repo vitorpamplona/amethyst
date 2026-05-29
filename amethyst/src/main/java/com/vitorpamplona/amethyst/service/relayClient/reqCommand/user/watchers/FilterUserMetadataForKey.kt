@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip38UserStatus.StatusEvent
 import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.mapOfSet
 
@@ -45,6 +46,13 @@ val UserMetadataForKeyKinds =
         ChatMessageRelayListEvent.KIND,
         KeyPackageRelayListEvent.KIND,
         PaymentTargetsEvent.KIND,
+        // NIP-61 nutzap-info. Telegraphs which mints + P2PK pubkey this
+        // user accepts nutzaps at. Co-loaded with kind:0 so the zap-picker
+        // can decide whether to show the Nutzap chip the moment a note's
+        // author renders, with no extra round-trip. We do NOT co-load
+        // kind:17375 — that's the user's private wallet (NIP-44 encrypted
+        // to them); only the kind:10019 nutzap announcement is public.
+        NutzapInfoEvent.KIND,
     )
 
 fun filterUserMetadataForKey(

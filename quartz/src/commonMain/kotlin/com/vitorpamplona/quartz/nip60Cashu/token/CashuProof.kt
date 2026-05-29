@@ -21,9 +21,24 @@
 package com.vitorpamplona.quartz.nip60Cashu.token
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.DleqProofDto
 
 /**
  * Represents an unencoded cashu proof.
+ *
+ * [witness] is the NUT-11 unlock witness (a JSON string `{"signatures":[…]}`)
+ * required when spending a P2PK-locked proof. Always null on freshly minted
+ * unlocked proofs; populated by the wallet right before submitting a swap that
+ * spends locked proofs.
+ *
+ * [dleq] is the NUT-12 DLEQ proof + blinding factor `(e, s, r)` we retain
+ * after verifying the mint's signature. Populated by [CashuMintOperations]
+ * on every freshly-minted / freshly-swapped proof when the mint emits the
+ * dleq field. Forwarded onward when this proof gets serialised into a
+ * cashuB token or kind:9321 nutzap so the recipient ("Carol") can verify
+ * the proof against the mint's keyset key BEFORE attempting to spend it.
+ * Null on legacy mints that don't emit NUT-12 or on imported proofs that
+ * were stripped of their DLEQ in transit.
  */
 @Immutable
 data class CashuProof(
@@ -31,4 +46,6 @@ data class CashuProof(
     val amount: Long,
     val secret: String,
     val c: String,
+    val witness: String? = null,
+    val dleq: DleqProofDto? = null,
 )

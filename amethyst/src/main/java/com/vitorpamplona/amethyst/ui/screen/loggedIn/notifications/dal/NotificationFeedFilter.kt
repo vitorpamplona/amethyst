@@ -62,6 +62,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEven
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
@@ -132,6 +133,7 @@ class NotificationFeedFilter(
                 ReactionEvent.KIND,
                 RepostEvent.KIND,
                 LnZapEvent.KIND,
+                NutzapEvent.KIND,
                 OnchainZapEvent.KIND,
                 LiveActivitiesChatMessageEvent.KIND,
                 PictureEvent.KIND,

@@ -157,14 +157,20 @@ class NwcSignerState(
         // be missed.
         assembler.subscribeAndFlush(filter)
 
-        scope.launch(Dispatchers.IO) {
-            delay(60000)
-            assembler.unsubscribe(filter)
-        }
+        // Safety net: drop the filter after 60s if the wallet never replies.
+        // The happy path (response arrives) cancels this job and unsubscribes
+        // through assembler.unsubscribeSoon, which debounces.
+        val timeoutJob =
+            scope.launch(Dispatchers.IO) {
+                delay(60000)
+                assembler.unsubscribe(filter)
+            }
 
         val responseCache = NostrWalletConnectResponseCache(walletSigner)
         cache.consume(event, null, true, walletService.relayUri) {
+            timeoutJob.cancel()
             onResponse(responseCache.decryptResponse(it))
+            assembler.unsubscribeSoon(filter)
         }
 
         return Pair(event, walletService.relayUri)
@@ -195,13 +201,19 @@ class NwcSignerState(
         // See sendNwcRequestToWallet above for the rationale.
         assembler.subscribeAndFlush(filter)
 
-        scope.launch(Dispatchers.IO) {
-            delay(60000) // waits 1 minute to complete payment.
-            assembler.unsubscribe(filter)
-        }
+        // Safety net: drop the filter after 60s if the wallet never replies.
+        // The happy path (response arrives) cancels this job and instead
+        // hands off to assembler.unsubscribeSoon, which debounces.
+        val timeoutJob =
+            scope.launch(Dispatchers.IO) {
+                delay(60000) // waits 1 minute to complete payment.
+                assembler.unsubscribe(filter)
+            }
 
         cache.consume(event, zappedNote, true, walletService.relayUri) {
+            timeoutJob.cancel()
             onResponse(decryptResponse(it))
+            assembler.unsubscribeSoon(filter)
         }
 
         return Pair(event, walletService.relayUri)

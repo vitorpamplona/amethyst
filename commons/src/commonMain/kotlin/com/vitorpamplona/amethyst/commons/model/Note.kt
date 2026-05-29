@@ -199,6 +199,22 @@ open class Note(
     @Volatile
     var onchainZapResolved: Boolean = false
 
+    /**
+     * NIP-61 nutzaps (kind 9321) targeting this note.
+     * Key: nutzap event id (the kind:9321 event itself). Value: source note +
+     * the sender-claimed sat total parsed once from the proof tags at attach
+     * time so the UI hot path doesn't re-parse JSON on every recomposition.
+     *
+     * The amount is the SENDER-claimed sum. Verifying it requires talking to
+     * the mint (signature check on every proof + state lookup), which is the
+     * recipient's wallet flow (`CashuWalletState.redeemNutzap`) — for the
+     * reaction row / notifications we trust the claim, same as we trust the
+     * `amount` tag on an OnchainZapEvent before its on-chain verifier runs.
+     */
+    @Volatile
+    var nutzaps = mapOf<HexKey, NutzapEntry>()
+        private set
+
     var zapPayments = mapOf<Note, Note?>()
         private set
 
@@ -310,7 +326,12 @@ open class Note(
         }
     }
 
-    fun hasZapsBoostsOrReactions(): Boolean = reactions.isNotEmpty() || zaps.isNotEmpty() || boosts.isNotEmpty() || onchainZaps.isNotEmpty()
+    fun hasZapsBoostsOrReactions(): Boolean =
+        reactions.isNotEmpty() ||
+            zaps.isNotEmpty() ||
+            boosts.isNotEmpty() ||
+            onchainZaps.isNotEmpty() ||
+            nutzaps.isNotEmpty()
 
     fun countReactions(): Int {
         var total = 0
@@ -342,7 +363,7 @@ open class Note(
     fun removeAllChildNotes(): List<Note> {
         val repliesChanged = replies.isNotEmpty()
         val reactionsChanged = reactions.isNotEmpty()
-        val zapsChanged = zaps.isNotEmpty() || zapPayments.isNotEmpty() || onchainZaps.isNotEmpty()
+        val zapsChanged = zaps.isNotEmpty() || zapPayments.isNotEmpty() || onchainZaps.isNotEmpty() || nutzaps.isNotEmpty()
         val boostsChanged = boosts.isNotEmpty()
         val reportsChanged = reports.isNotEmpty()
 
@@ -354,7 +375,8 @@ open class Note(
                 zaps.keys +
                 zaps.values.filterNotNull() +
                 zapPayments.keys +
-                zapPayments.values.filterNotNull()
+                zapPayments.values.filterNotNull() +
+                nutzaps.values.map { it.source }
 
         replies = listOf()
         reactions = mapOf()
@@ -363,6 +385,7 @@ open class Note(
         zaps = mapOf()
         onchainZaps = mapOf()
         onchainZapResolved = false
+        nutzaps = mapOf()
         zapPayments = mapOf()
         zapsAmount = BigDecimal(0)
         relays = listOf()
@@ -549,6 +572,49 @@ open class Note(
         }
     }
 
+    private fun innerAddNutzap(
+        eventId: HexKey,
+        entry: NutzapEntry,
+    ): Boolean =
+        syncLock.withLock {
+            if (nutzaps[eventId] != null) return@withLock false
+            nutzaps = nutzaps + Pair(eventId, entry)
+            return@withLock true
+        }
+
+    private fun innerRemoveNutzap(eventId: HexKey): Boolean =
+        syncLock.withLock {
+            if (nutzaps[eventId] == null) return@withLock false
+            nutzaps = nutzaps - eventId
+            return@withLock true
+        }
+
+    /**
+     * Register a NIP-61 nutzap targeting this note. [source] is the kind:9321
+     * event's own note — `source.author` is the sender shown in the reactions
+     * gallery and the notifications card. [claimedSats] is the sum of `amount`
+     * fields across the kind:9321's proof tags, computed once at consumption
+     * time so this hot path stays JSON-parse-free.
+     */
+    fun addNutzap(
+        source: Note,
+        claimedSats: Long,
+    ) {
+        val eventId = source.event?.id ?: return
+        if (innerAddNutzap(eventId, NutzapEntry(source, claimedSats))) {
+            updateZapTotal()
+            flowSet?.zaps?.invalidateData()
+        }
+    }
+
+    fun removeNutzap(source: Note) {
+        val eventId = source.event?.id ?: return
+        if (innerRemoveNutzap(eventId)) {
+            updateZapTotal()
+            flowSet?.zaps?.invalidateData()
+        }
+    }
+
     private fun innerAddZapPayment(
         zapPaymentRequest: Note,
         zapPayment: Note?,
@@ -709,12 +775,64 @@ open class Note(
         afterTimeInSeconds: Long,
         account: IAccount,
     ): Boolean {
+        // NIP-61 nutzaps and NIP-BC onchain zaps: the sender is the
+        // source event's pubkey, so the check is direct — no
+        // private-zap decryption needed. Run these first; they're
+        // in-memory scans and a hit short-circuits the more expensive
+        // lightning path (which may have to decrypt NIP-44-private
+        // zap requests).
+        if (isNutzappedBy(user, afterTimeInSeconds)) return true
+        if (isOnchainZappedBy(user, afterTimeInSeconds)) return true
+
         val first = isZappedByCalculation(null, user, afterTimeInSeconds, account, zaps)
         if (first) return true
         if (account.userProfile() == user) {
             return isPaidByCalculation(zapPayments.toList(), afterTimeInSeconds, account)
         }
         return false
+    }
+
+    private fun isNutzappedBy(
+        user: User,
+        afterTimeInSeconds: Long,
+    ): Boolean =
+        nutzaps.values.any { entry ->
+            val sourceEvent = entry.source.event ?: return@any false
+            entry.source.author == user && sourceEvent.createdAt > afterTimeInSeconds
+        }
+
+    private fun isOnchainZappedBy(
+        user: User,
+        afterTimeInSeconds: Long,
+    ): Boolean =
+        onchainZaps.values.any { entry ->
+            val sourceEvent = entry.source.event ?: return@any false
+            entry.source.author == user && sourceEvent.createdAt > afterTimeInSeconds
+        }
+
+    /**
+     * Extra sats to add on top of [zapsAmount] for the reaction-row
+     * counter when the signed-in user has outgoing onchain zaps on
+     * this note that aren't yet CONFIRMED. [updateZapTotal] only
+     * counts CONFIRMED onchain entries (verifiedSats) because incoming
+     * sender-claimed amounts are spoofable. The signed-in user's OWN
+     * outgoing zap is trusted at face value though — they know what
+     * they sent — so the counter should reflect it immediately, the
+     * same way the gallery shows their own UNVERIFIED entry with the
+     * claimed amount. Other senders' non-confirmed entries still
+     * contribute 0 here.
+     */
+    fun extraOwnPendingOnchainSats(loggedInPubKey: HexKey?): Long {
+        if (loggedInPubKey == null) return 0L
+        var sum = 0L
+        onchainZaps.values.forEach { entry ->
+            if (entry.status != OnchainZapStatus.CONFIRMED &&
+                entry.source.author?.pubkeyHex == loggedInPubKey
+            ) {
+                sum += entry.claimedSats
+            }
+        }
+        return sum
     }
 
     suspend fun isZappedBy(
@@ -766,6 +884,16 @@ open class Note(
             if (entry.status == OnchainZapStatus.CONFIRMED) {
                 sumOfAmounts += BigDecimal(entry.verifiedSats)
             }
+        }
+
+        // NIP-61 nutzaps — claimed amounts. Cashu proofs are verifiable
+        // against the mint, but the verification is the recipient's
+        // wallet's job at redeem time, not the cache. Until we have a
+        // wallet-side gate (analogous to OnchainZapStatus), trust the
+        // sender's claim so the reaction-row total reflects what the
+        // sender intended to send.
+        nutzaps.values.forEach { entry ->
+            sumOfAmounts += BigDecimal(entry.claimedSats)
         }
 
         zapsAmount = sumOfAmounts
@@ -933,7 +1061,9 @@ open class Note(
             event !is LiveActivitiesChatMessageEvent
     }
 
-    fun hasZapped(loggedIn: User): Boolean = zaps.any { it.key.author == loggedIn }
+    fun hasZapped(loggedIn: User): Boolean =
+        zaps.any { it.key.author == loggedIn } ||
+            nutzaps.values.any { it.source.author == loggedIn }
 
     fun hasReacted(
         loggedIn: User,
@@ -990,6 +1120,10 @@ open class Note(
             it.key.replyTo = it.key.replyTo?.replace(this, note)
             it.value?.replyTo = it.value?.replyTo?.replace(this, note)
         }
+        nutzaps.values.forEach {
+            note.addNutzap(it.source, it.claimedSats)
+            it.source.replyTo = it.source.replyTo?.replace(this, note)
+        }
 
         replyTo = null
         replies = emptyList()
@@ -997,6 +1131,7 @@ open class Note(
         boosts = emptyList()
         reports = emptyMap()
         zaps = emptyMap()
+        nutzaps = emptyMap()
         zapsAmount = BigDecimal(0)
     }
 
