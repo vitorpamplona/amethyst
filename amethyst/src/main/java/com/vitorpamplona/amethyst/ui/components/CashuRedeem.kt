@@ -161,7 +161,6 @@ fun CashuPreviewNew(
                     imageVector = CustomHashTagIcons.Cashu,
                     null,
                     modifier = Modifier.size(13.dp),
-                    tint = Color.Unspecified,
                 )
 
                 Text(

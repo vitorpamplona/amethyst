@@ -61,7 +61,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -182,7 +181,7 @@ fun ReloadMintScreen(
                     imageVector = CustomHashTagIcons.Cashu,
                     contentDescription = null,
                     modifier = Modifier.size(26.dp),
-                    tint = Color.Unspecified,
+                    tint = MaterialTheme.colorScheme.primary,
                 )
                 Spacer(Modifier.width(6.dp))
                 Icon(

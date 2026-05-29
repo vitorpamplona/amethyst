@@ -2266,9 +2266,9 @@ internal fun previewRailsFor(amountInSats: Long): List<ZapRail> {
 
 /**
  * Just the rail's logo (no click target), drawn at [size]. [colored] renders it
- * in its brand colour (the preferred rail); otherwise it's flattened to the
- * on-surface monochrome tint. The cashu logo is drawn ~0.72× so its multi-tone
- * mark reads at the same optical size as the Material symbols.
+ * in its accent colour (the preferred rail); otherwise it's flattened to the
+ * on-surface monochrome tint. The cashu mark is drawn ~0.72× so its (now
+ * monochrome, tintable) cashew reads at the same optical size as the symbols.
  */
 @Composable
 internal fun ZapRailIcon(
@@ -2284,7 +2284,9 @@ internal fun ZapRailIcon(
                 imageVector = CustomHashTagIcons.Cashu,
                 contentDescription = stringRes(R.string.nutzap),
                 modifier = Modifier.size(cashuSize),
-                tint = if (colored) Color.Unspecified else mono,
+                // The cashu mark is now a monochrome, tintable outline — colour it
+                // with the app accent when preferred, else the mono on-surface tint.
+                tint = if (colored) MaterialTheme.colorScheme.primary else mono,
             )
         ZapRail.RELOAD ->
             // Funds exist but in the wrong mint — a dimmed cashu logo with a
@@ -2294,7 +2296,7 @@ internal fun ZapRailIcon(
                     imageVector = CustomHashTagIcons.Cashu,
                     contentDescription = stringRes(R.string.reload_mint_title),
                     modifier = Modifier.size(cashuSize).alpha(0.5f),
-                    tint = if (colored) Color.Unspecified else mono,
+                    tint = if (colored) MaterialTheme.colorScheme.primary else mono,
                 )
                 Icon(
                     symbol = MaterialSymbols.AddCircle,

@@ -34,7 +34,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
@@ -109,13 +108,10 @@ fun NutzapUserSetCompose(
                 Box(
                     modifier = Size55Modifier,
                 ) {
-                    // tint=Unspecified so the multi-tone cashu glyph keeps its
-                    // brand colours, the same way it does in the zap chip popup.
                     Icon(
                         imageVector = CustomHashTagIcons.Cashu,
                         contentDescription = stringRes(R.string.nutzap),
                         modifier = Modifier.size(Size25dp).align(Alignment.TopEnd),
-                        tint = Color.Unspecified,
                     )
                 }
             }
