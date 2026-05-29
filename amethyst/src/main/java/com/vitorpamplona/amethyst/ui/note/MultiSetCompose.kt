@@ -380,16 +380,10 @@ fun RenderNutzapGallery(
         Box(
             modifier = WidthAuthorPictureModifier,
         ) {
-            // CustomHashTagIcons.Cashu is a multi-tone branded glyph;
-            // tint=Unspecified keeps the brand colours instead of
-            // flattening to onBackground (which would lose the cashu-
-            // orange distinguishing the row from the lightning-bolt
-            // row above it).
             Icon(
                 imageVector = CustomHashTagIcons.Cashu,
                 contentDescription = stringRes(R.string.nutzap),
                 modifier = Modifier.size(Size20dp).align(Alignment.TopEnd),
-                tint = Color.Unspecified,
             )
         }
 

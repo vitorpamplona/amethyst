@@ -23,16 +23,13 @@ package com.vitorpamplona.amethyst.commons.hashtags
 import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathFillType.Companion.NonZero
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.StrokeCap.Companion.Butt
-import androidx.compose.ui.graphics.StrokeJoin.Companion.Miter
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.ImageVector.Builder
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.materialIcon
+import com.vitorpamplona.amethyst.commons.icons.materialOutlinedPath
 
 @Preview
 @Composable
@@ -46,235 +43,136 @@ fun CustomHashTagIconsCashuPreview() {
     )
 }
 
+// Monochrome, tintable "deez nuts" cashew + pixel-shades mark. The body is a
+// hollow outline (matching the 1.2 stroke weight of the shared outline icons
+// such as Zap) so it tints with the surrounding content colour like a Material
+// Symbol; the sunglasses stay a solid fill so they read at small sizes.
 public val CustomHashTagIcons.Cashu: ImageVector
     get() {
         if (customHashTagIconsCashu != null) {
             return customHashTagIconsCashu!!
         }
         customHashTagIconsCashu =
-            Builder(
-                name = "Cashu",
-                defaultWidth = 400.0.dp,
-                defaultHeight = 400.0.dp,
-                viewportWidth = 400.0f,
-                viewportHeight = 400.0f,
-            ).apply {
-                path(
-                    fill = SolidColor(Color(0xFFd6c09a)),
-                    stroke = SolidColor(Color(0xFFd6c09a)),
-                    strokeLineWidth = 1.23101f,
-                    strokeLineCap = Butt,
-                    strokeLineJoin = Miter,
-                    strokeLineMiter = 4.0f,
-                    pathFillType = NonZero,
-                ) {
-                    moveTo(248.917f, 2.153f)
-                    verticalLineTo(25.235f)
-                    horizontalLineToRelative(25.236f)
-                    verticalLineToRelative(71.091f)
-                    horizontalLineToRelative(-25.236f)
-                    lineToRelative(0.227f, 24.772f)
-                    lineToRelative(-22.156f, 0.011f)
-                    lineToRelative(-0.135f, 69.22f)
-                    lineToRelative(22.065f, -0.532f)
-                    verticalLineToRelative(45.326f)
-                    horizontalLineToRelative(74.476f)
-                    verticalLineToRelative(24.313f)
-                    horizontalLineToRelative(24.928f)
-                    verticalLineToRelative(24.005f)
-                    horizontalLineToRelative(23.389f)
-                    verticalLineToRelative(69.245f)
-                    horizontalLineToRelative(-23.082f)
-                    verticalLineToRelative(23.082f)
-                    horizontalLineToRelative(-24.928f)
-                    verticalLineToRelative(23.005f)
-                    horizontalLineTo(126.2f)
-                    verticalLineToRelative(-23.005f)
-                    horizontalLineTo(100.503f)
-                    verticalLineTo(352.454f)
-                    horizontalLineTo(74.959f)
-                    verticalLineTo(329.68f)
-                    horizontalLineTo(51.801f)
-                    verticalLineTo(282.901f)
-                    horizontalLineTo(25.949f)
-                    verticalLineTo(49.239f)
-                    horizontalLineToRelative(26.082f)
-                    verticalLineTo(25.158f)
-                    horizontalLineTo(74.574f)
-                    verticalLineTo(2.153f)
+            materialIcon(name = "Cashu") {
+                materialOutlinedPath {
+                    moveTo(14.64f, 1.60f)
+                    lineTo(14.64f, 2.81f)
+                    lineTo(15.96f, 2.81f)
+                    lineTo(15.96f, 6.54f)
+                    lineTo(14.64f, 6.54f)
+                    lineTo(14.65f, 7.84f)
+                    lineTo(13.49f, 7.84f)
+                    lineTo(13.48f, 11.47f)
+                    lineTo(14.64f, 11.44f)
+                    lineTo(14.64f, 13.82f)
+                    lineTo(18.54f, 13.82f)
+                    lineTo(18.54f, 15.09f)
+                    lineTo(19.85f, 15.09f)
+                    lineTo(19.85f, 16.35f)
+                    lineTo(21.08f, 16.35f)
+                    lineTo(21.08f, 19.98f)
+                    lineTo(19.87f, 19.98f)
+                    lineTo(19.87f, 21.19f)
+                    lineTo(18.56f, 21.19f)
+                    lineTo(18.56f, 22.40f)
+                    lineTo(8.20f, 22.40f)
+                    lineTo(8.20f, 21.19f)
+                    lineTo(6.85f, 21.19f)
+                    lineTo(6.85f, 19.97f)
+                    lineTo(5.51f, 19.97f)
+                    lineTo(5.51f, 18.78f)
+                    lineTo(4.30f, 18.78f)
+                    lineTo(4.30f, 16.32f)
+                    lineTo(2.94f, 16.32f)
+                    lineTo(2.94f, 4.07f)
+                    lineTo(4.31f, 4.07f)
+                    lineTo(4.31f, 2.81f)
+                    lineTo(5.49f, 2.81f)
+                    lineTo(5.49f, 1.60f)
                     close()
                 }
-                path(
-                    fill = SolidColor(Color(0xFFbb9366)),
-                    stroke = SolidColor(Color(0xFFbb9366)),
-                    strokeLineWidth = 1.23101f,
-                    strokeLineCap = Butt,
-                    strokeLineJoin = Miter,
-                    strokeLineMiter = 4.0f,
-                    pathFillType = NonZero,
-                ) {
-                    moveTo(74.39f, 2.268f)
-                    lineTo(74.39f, 25.272f)
-                    lineTo(51.847f, 25.272f)
-                    lineTo(51.847f, 49.354f)
-                    lineTo(25.765f, 49.354f)
-                    lineToRelative(0.407f, 233.662f)
-                    lineTo(51.709f, 283.016f)
-                    curveTo(52.428f, 236.898f, 76.75f, 25.19f, 125.239f, 25.349f)
-                    lineTo(125.384f, 2.268f)
+                path(fill = SolidColor(Color.Black)) {
+                    moveTo(2.92f, 7.82f)
+                    lineTo(2.92f, 8.77f)
+                    lineTo(3.44f, 8.77f)
+                    lineTo(3.44f, 9.33f)
+                    lineTo(3.86f, 9.33f)
+                    lineTo(3.86f, 9.85f)
+                    lineTo(4.40f, 9.85f)
+                    lineTo(4.40f, 10.25f)
+                    lineTo(7.93f, 10.25f)
+                    lineTo(7.93f, 9.83f)
+                    lineTo(8.46f, 9.83f)
+                    lineTo(8.46f, 9.32f)
+                    lineTo(8.99f, 9.32f)
+                    lineTo(8.99f, 8.22f)
+                    lineTo(9.92f, 8.22f)
+                    lineTo(9.92f, 9.31f)
+                    lineTo(10.46f, 9.31f)
+                    lineTo(10.46f, 9.82f)
+                    lineTo(10.88f, 9.82f)
+                    lineTo(10.88f, 10.23f)
+                    lineTo(14.42f, 10.23f)
+                    lineTo(14.42f, 9.83f)
+                    lineTo(14.93f, 9.83f)
+                    lineTo(14.93f, 9.31f)
+                    lineTo(15.47f, 9.31f)
+                    lineTo(15.47f, 8.77f)
+                    lineTo(15.97f, 8.77f)
+                    lineTo(15.97f, 7.83f)
                     close()
-                    moveTo(51.616f, 283.0f)
-                    verticalLineToRelative(46.795f)
-                    horizontalLineToRelative(23.158f)
-                    verticalLineToRelative(22.774f)
-                    lineTo(99.936f, 352.568f)
-                    lineTo(99.936f, 331.112f)
-                    lineTo(75.162f, 331.112f)
-                    verticalLineToRelative(-47.893f)
+                    moveTo(10.95f, 8.21f)
+                    lineTo(11.45f, 8.21f)
+                    lineTo(11.45f, 8.74f)
+                    lineTo(12.00f, 8.74f)
+                    lineTo(12.00f, 9.27f)
+                    lineTo(12.49f, 9.27f)
+                    lineTo(12.49f, 8.74f)
+                    lineTo(12.00f, 8.74f)
+                    lineTo(12.00f, 8.21f)
+                    lineTo(12.51f, 8.21f)
+                    lineTo(12.51f, 8.74f)
+                    lineTo(12.97f, 8.74f)
+                    lineTo(12.97f, 9.28f)
+                    lineTo(13.46f, 9.28f)
+                    lineTo(13.46f, 9.78f)
+                    lineTo(12.97f, 9.78f)
+                    lineTo(12.97f, 9.28f)
+                    lineTo(12.51f, 9.28f)
+                    lineTo(12.51f, 9.76f)
+                    lineTo(12.00f, 9.76f)
+                    lineTo(12.00f, 9.28f)
+                    lineTo(11.45f, 9.28f)
+                    lineTo(11.45f, 8.74f)
+                    lineTo(10.95f, 8.74f)
                     close()
-                    moveTo(100.318f, 354.117f)
-                    verticalLineToRelative(21.764f)
-                    horizontalLineToRelative(25.469f)
-                    verticalLineToRelative(-21.764f)
-                    close()
-                    moveTo(323.596f, 354.501f)
-                    verticalLineToRelative(21.379f)
-                    horizontalLineToRelative(24.849f)
-                    verticalLineToRelative(-21.379f)
-                    close()
-                    moveTo(126.016f, 377.506f)
-                    verticalLineToRelative(21.379f)
-                    horizontalLineToRelative(197.501f)
-                    verticalLineToRelative(-21.379f)
-                    close()
-                }
-                path(
-                    fill = SolidColor(Color(0xFFc4a47b)),
-                    stroke = SolidColor(Color(0xFFc4a47b)),
-                    strokeLineWidth = 1.23101f,
-                    strokeLineCap = Butt,
-                    strokeLineJoin = Miter,
-                    strokeLineMiter = 4.0f,
-                    pathFillType = NonZero,
-                ) {
-                    moveTo(74.466f, 25.205f)
-                    lineTo(125.28f, 25.706f)
-                    verticalLineTo(49.249f)
-                    horizontalLineTo(100.505f)
-                    verticalLineTo(213.59f)
-                    horizontalLineToRelative(24.928f)
-                    verticalLineToRelative(47.394f)
-                    horizontalLineToRelative(48.625f)
-                    verticalLineToRelative(24.005f)
-                    horizontalLineToRelative(25.697f)
-                    verticalLineToRelative(22.928f)
-                    horizontalLineToRelative(22.928f)
-                    verticalLineToRelative(23.005f)
-                    horizontalLineToRelative(125.948f)
-                    verticalLineToRelative(23.466f)
-                    horizontalLineToRelative(-24.851f)
-                    verticalLineToRelative(23.005f)
-                    horizontalLineTo(125.972f)
-                    verticalLineToRelative(-23.389f)
-                    horizontalLineToRelative(-25.851f)
-                    verticalLineTo(330.998f)
-                    horizontalLineTo(75.346f)
-                    verticalLineTo(283.291f)
-                    lineTo(51.581f, 283.072f)
-                    lineTo(51.487f, 49.319f)
-                    horizontalLineToRelative(22.77f)
-                    close()
-                }
-                path(
-                    fill = SolidColor(Color(0xFF000000)),
-                    stroke = SolidColor(Color(0x00000000)),
-                    strokeLineWidth = 1.23101f,
-                    strokeLineCap = Butt,
-                    strokeLineJoin = Miter,
-                    strokeLineMiter = 4.0f,
-                    pathFillType = NonZero,
-                ) {
-                    moveToRelative(25.598f, 120.678f)
-                    verticalLineToRelative(18.254f)
-                    horizontalLineToRelative(9.75f)
-                    verticalLineToRelative(10.545f)
-                    horizontalLineToRelative(8.151f)
-                    verticalLineToRelative(9.925f)
-                    horizontalLineToRelative(10.192f)
-                    verticalLineToRelative(7.708f)
-                    horizontalLineToRelative(67.434f)
-                    verticalLineToRelative(-7.975f)
-                    horizontalLineToRelative(10.012f)
-                    verticalLineToRelative(-9.836f)
-                    horizontalLineToRelative(10.192f)
-                    verticalLineToRelative(-20.824f)
-                    horizontalLineToRelative(17.722f)
-                    verticalLineToRelative(20.648f)
-                    horizontalLineToRelative(10.278f)
-                    verticalLineToRelative(9.747f)
-                    horizontalLineToRelative(7.886f)
-                    verticalLineToRelative(7.797f)
-                    horizontalLineToRelative(67.523f)
-                    verticalLineToRelative(-7.619f)
-                    horizontalLineToRelative(9.747f)
-                    verticalLineToRelative(-9.836f)
-                    horizontalLineToRelative(10.367f)
-                    verticalLineToRelative(-10.37f)
-                    horizontalLineToRelative(9.572f)
-                    verticalLineToRelative(-17.809f)
-                    close()
-                    moveTo(178.698f, 128.19f)
-                    horizontalLineToRelative(9.394f)
-                    verticalLineToRelative(10.146f)
-                    lineToRelative(10.557f, 0.043f)
-                    verticalLineToRelative(10.012f)
-                    horizontalLineToRelative(9.399f)
-                    verticalLineToRelative(-10.151f)
-                    horizontalLineToRelative(-9.322f)
-                    lineTo(198.726f, 128.19f)
-                    lineToRelative(9.615f, 0.043f)
-                    verticalLineToRelative(10.103f)
-                    horizontalLineToRelative(8.807f)
-                    lineToRelative(0.053f, 10.233f)
-                    lineToRelative(9.216f, 0.046f)
-                    verticalLineToRelative(9.569f)
-                    lineToRelative(-9.259f, -0.043f)
-                    lineToRelative(0.043f, -9.572f)
-                    horizontalLineToRelative(-8.906f)
-                    verticalLineToRelative(9.216f)
-                    horizontalLineToRelative(-9.569f)
-                    verticalLineToRelative(-9.17f)
-                    lineToRelative(-10.634f, -0.089f)
-                    lineToRelative(0.046f, -10.146f)
-                    lineToRelative(-9.439f, -0.043f)
-                    close()
-                    moveTo(43.409f, 129.541f)
-                    horizontalLineToRelative(9.394f)
-                    verticalLineToRelative(10.146f)
-                    lineToRelative(10.557f, 0.043f)
-                    verticalLineToRelative(10.012f)
-                    horizontalLineToRelative(9.399f)
-                    lineTo(72.759f, 139.591f)
-                    horizontalLineToRelative(-9.322f)
-                    verticalLineToRelative(-10.05f)
-                    lineToRelative(9.615f, 0.043f)
-                    verticalLineToRelative(10.103f)
-                    horizontalLineToRelative(8.807f)
-                    lineToRelative(0.053f, 10.233f)
-                    lineToRelative(9.216f, 0.046f)
-                    verticalLineToRelative(9.569f)
-                    lineToRelative(-9.259f, -0.043f)
-                    lineToRelative(0.043f, -9.572f)
-                    horizontalLineToRelative(-8.906f)
-                    verticalLineToRelative(9.216f)
-                    horizontalLineToRelative(-9.569f)
-                    verticalLineToRelative(-9.17f)
-                    lineToRelative(-10.634f, -0.089f)
-                    lineToRelative(0.046f, -10.146f)
-                    lineToRelative(-9.439f, -0.043f)
+                    moveTo(3.86f, 8.28f)
+                    lineTo(4.35f, 8.28f)
+                    lineTo(4.35f, 8.81f)
+                    lineTo(4.90f, 8.82f)
+                    lineTo(4.90f, 9.34f)
+                    lineTo(5.40f, 9.34f)
+                    lineTo(5.40f, 8.81f)
+                    lineTo(4.91f, 8.81f)
+                    lineTo(4.91f, 8.28f)
+                    lineTo(5.41f, 8.28f)
+                    lineTo(5.41f, 8.81f)
+                    lineTo(5.87f, 8.81f)
+                    lineTo(5.88f, 9.35f)
+                    lineTo(6.36f, 9.35f)
+                    lineTo(6.36f, 9.85f)
+                    lineTo(5.88f, 9.85f)
+                    lineTo(5.88f, 9.35f)
+                    lineTo(5.41f, 9.35f)
+                    lineTo(5.41f, 9.83f)
+                    lineTo(4.91f, 9.83f)
+                    lineTo(4.91f, 9.35f)
+                    lineTo(4.35f, 9.35f)
+                    lineTo(4.35f, 8.82f)
+                    lineTo(3.86f, 8.81f)
                     close()
                 }
-            }.build()
+            }
         return customHashTagIconsCashu!!
     }
 

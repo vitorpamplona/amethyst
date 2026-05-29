@@ -34,7 +34,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
@@ -91,15 +90,10 @@ private fun RenderNutzapGalleryRow(
 ) {
     Row(Modifier.fillMaxWidth()) {
         Box(modifier = WidthAuthorPictureModifier) {
-            // tint=Unspecified preserves the multi-tone cashu glyph,
-            // same convention as the notifications and zap-picker
-            // surfaces. Keeping the rail visually distinct from the
-            // lightning bolt above it is the whole point of this row.
             Icon(
                 imageVector = CustomHashTagIcons.Cashu,
                 contentDescription = stringRes(R.string.nutzap),
                 modifier = Modifier.size(Size20dp).align(Alignment.TopEnd),
-                tint = Color.Unspecified,
             )
         }
 

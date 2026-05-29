@@ -2117,15 +2117,10 @@ private fun NutzapAmountChip(
                     .padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = CenterVertically,
         ) {
-            // CustomHashTagIcons.Cashu ships a multi-tone Cashu logo; using
-            // tint=Unspecified preserves it instead of flattening to onTertiary
-            // (which would lose the cashu-orange brand cue that distinguishes
-            // this chip from the orange Lightning bolt next to it).
             Material3Icon(
                 imageVector = CustomHashTagIcons.Cashu,
                 contentDescription = stringRes(R.string.nutzap),
                 modifier = Size18Modifier,
-                tint = Color.Unspecified,
             )
             Spacer(Modifier.width(2.dp))
             Text(
