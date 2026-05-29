@@ -55,7 +55,10 @@ class Nav(
     override fun nav(route: Route) {
         navigationScope.launch {
             if (getRouteWithArguments(route::class, controller) != route) {
-                controller.navigate(route)
+                controller.navigate(route) {
+                    launchSingleTop = true
+                    restoreState = route is Route.Search
+                }
             }
         }
     }
@@ -88,8 +91,10 @@ class Nav(
                 // Home and back-swipe from Home leaves the app.
                 popUpTo(Route.Home) {
                     inclusive = false
+                    saveState = true
                 }
                 launchSingleTop = true
+                restoreState = true
             }
             // Mark this entry as a tab root: hides the back arrow in canPop
             // and skips the horizontal slide in composableFromEnd.
