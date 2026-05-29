@@ -43,6 +43,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -63,11 +64,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.InputChip
-import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -82,6 +82,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -240,27 +241,9 @@ fun UpdateZapAmountContent(
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             postViewModel.amountSet.forEach { amountInSats ->
-                InputChip(
-                    selected = false,
-                    onClick = { postViewModel.removeAmount(amountInSats) },
-                    label = {
-                        Text(
-                            text = "⚡ ${showAmount(amountInSats.toBigDecimal().setScale(1))}",
-                        )
-                    },
-                    trailingIcon = {
-                        Icon(
-                            symbol = MaterialSymbols.Close,
-                            contentDescription = stringRes(R.string.remove),
-                            modifier = Modifier.size(InputChipDefaults.AvatarSize),
-                        )
-                    },
-                    colors =
-                        InputChipDefaults.inputChipColors(
-                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                            labelColor = MaterialTheme.colorScheme.primary,
-                            trailingIconColor = MaterialTheme.colorScheme.primary,
-                        ),
+                ZapAmountPresetChip(
+                    amountInSats = amountInSats,
+                    onRemove = { postViewModel.removeAmount(amountInSats) },
                 )
             }
         }
@@ -645,6 +628,52 @@ fun UpdateZapAmountContent(
         trailingContent()
 
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+/**
+ * A quick-zap preset chip that mirrors the live feed chip: the amount with the
+ * rails it could pay on — the amount-tier default rail in colour on the left,
+ * the alternatives in monochrome — plus an X to remove it. No recipient context
+ * here, so the rails are the ones a preset of this size could use (cashu,
+ * Lightning, and on-chain at/above the minimum).
+ */
+@Composable
+private fun ZapAmountPresetChip(
+    amountInSats: Long,
+    onRemove: () -> Unit,
+) {
+    val rails = remember(amountInSats) { previewRailsFor(amountInSats) }
+    val accent = zapRailAccent(rails.first(), MaterialTheme.colorScheme.onSurface, MaterialTheme.colorScheme.primary)
+    Surface(
+        shape = ButtonBorder,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 10.dp, end = 2.dp, top = 2.dp, bottom = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ZapRailIcon(rails.first(), colored = true)
+            Spacer(Modifier.width(5.dp))
+            Text(
+                text = showAmount(amountInSats.toBigDecimal().setScale(1)),
+                color = accent,
+                fontWeight = FontWeight.SemiBold,
+            )
+            rails.drop(1).forEach { rail ->
+                Spacer(Modifier.width(4.dp))
+                ZapRailIcon(rail, colored = false)
+            }
+            IconButton(onClick = onRemove, modifier = Modifier.size(30.dp)) {
+                Icon(
+                    symbol = MaterialSymbols.Close,
+                    contentDescription = stringRes(R.string.remove),
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.placeholderText,
+                )
+            }
+        }
     }
 }
 

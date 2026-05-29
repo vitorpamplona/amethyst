@@ -2197,12 +2197,7 @@ private fun UnifiedZapAmountChip(
             // amount (no separate button), and a plain tap anywhere here fires
             // that rail; long-press edits the presets. The amount takes the
             // preferred rail's accent colour.
-            val accent =
-                when (preferred) {
-                    ZapRail.RELOAD -> MaterialTheme.colorScheme.primary
-                    ZapRail.LIGHTNING, ZapRail.ONCHAIN -> BitcoinOrange
-                    ZapRail.CASHU -> MaterialTheme.colorScheme.onSurface // multi-tone logo, no single brand colour
-                }
+            val accent = zapRailAccent(preferred, MaterialTheme.colorScheme.onSurface, MaterialTheme.colorScheme.primary)
             ZapRailIcon(preferred, colored = true)
             Spacer(Modifier.width(5.dp))
             Text(
@@ -2233,13 +2228,50 @@ private fun UnifiedZapAmountChip(
 }
 
 /** Payment rails a zap-amount chip can offer, in canonical display order. */
-private enum class ZapRail { CASHU, RELOAD, LIGHTNING, ONCHAIN }
+internal enum class ZapRail { CASHU, RELOAD, LIGHTNING, ONCHAIN }
 
 /** Below this, the default rail is cashu (Lightning min/fees make tiny zaps awkward). */
-private const val CASHU_PREFERRED_BELOW_SATS = 10L
+internal const val CASHU_PREFERRED_BELOW_SATS = 10L
 
 /** Above this, the default rail is an on-chain transaction. */
-private const val ONCHAIN_PREFERRED_ABOVE_SATS = 10_000L
+internal const val ONCHAIN_PREFERRED_ABOVE_SATS = 10_000L
+
+/**
+ * Default rail for a preset amount with no recipient context (the settings
+ * preview): cashu under [CASHU_PREFERRED_BELOW_SATS], on-chain over
+ * [ONCHAIN_PREFERRED_ABOVE_SATS] (and at/above the on-chain minimum), else
+ * Lightning. Mirrors the live chip's tiering so the preview matches the feed.
+ */
+internal fun previewPreferredRail(amountInSats: Long): ZapRail =
+    when {
+        amountInSats < CASHU_PREFERRED_BELOW_SATS -> ZapRail.CASHU
+        amountInSats > ONCHAIN_PREFERRED_ABOVE_SATS && amountInSats >= MIN_ONCHAIN_ZAP_SATS -> ZapRail.ONCHAIN
+        else -> ZapRail.LIGHTNING
+    }
+
+/** Rails a preset of [amountInSats] could use, default first then the rest. */
+internal fun previewRailsFor(amountInSats: Long): List<ZapRail> {
+    val preferred = previewPreferredRail(amountInSats)
+    val all =
+        buildList {
+            add(ZapRail.CASHU)
+            add(ZapRail.LIGHTNING)
+            if (amountInSats >= MIN_ONCHAIN_ZAP_SATS) add(ZapRail.ONCHAIN)
+        }
+    return listOf(preferred) + all.filter { it != preferred }
+}
+
+/** Brand accent for a rail (for the amount text); cashu's multi-tone logo has none. */
+internal fun zapRailAccent(
+    rail: ZapRail,
+    onSurface: Color,
+    primary: Color,
+): Color =
+    when (rail) {
+        ZapRail.RELOAD -> primary
+        ZapRail.LIGHTNING, ZapRail.ONCHAIN -> BitcoinOrange
+        ZapRail.CASHU -> onSurface
+    }
 
 /**
  * Just the rail's logo (no click target). [colored] renders it in its brand
@@ -2248,7 +2280,7 @@ private const val ONCHAIN_PREFERRED_ABOVE_SATS = 10_000L
  * symbols, which it otherwise dwarfs.
  */
 @Composable
-private fun ZapRailIcon(
+internal fun ZapRailIcon(
     rail: ZapRail,
     colored: Boolean,
 ) {
