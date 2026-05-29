@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.OnchainZapSendDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.navigateToReloadMint
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ModifierWidth3dp
 import com.vitorpamplona.amethyst.ui.theme.Size14Modifier
@@ -200,6 +201,10 @@ fun ReusableZapButton(
                     wantsToZap = null
                     onchainZapAmount = amount
                     showOnchainDialog = true
+                },
+                onReloadNutzap = { amount ->
+                    wantsToZap = null
+                    navigateToReloadMint(accountViewModel, nav, baseNote, amount)
                 },
             )
         }

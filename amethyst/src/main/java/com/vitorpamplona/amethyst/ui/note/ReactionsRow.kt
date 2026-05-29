@@ -85,6 +85,7 @@ import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterStart
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -146,6 +147,7 @@ import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.PaymentTargetsDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.OnchainZapSendDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.navigateToReloadMint
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -1257,6 +1259,10 @@ fun ZapReaction(
                         nav.nav(Route.ManualZapSplitPayment(uid))
                     }
                 },
+                onReloadNutzap = { amount ->
+                    wantsToZap = false
+                    navigateToReloadMint(accountViewModel, nav, baseNote, amount)
+                },
             )
         }
 
@@ -1885,6 +1891,7 @@ fun ZapAmountChoicePopup(
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
     onOnchainAmount: ((Long?) -> Unit)? = null,
+    onReloadNutzap: (Long) -> Unit = {},
 ) {
     val zapAmountChoices by
         accountViewModel.account.settings.syncedSettings.zaps.zapAmountChoices
@@ -1903,6 +1910,7 @@ fun ZapAmountChoicePopup(
         onPayViaIntent = onPayViaIntent,
         onOnchainAmount = onOnchainAmount ?: {},
         onchainSupported = onOnchainAmount != null,
+        onReloadNutzap = onReloadNutzap,
     )
 }
 
@@ -1920,6 +1928,7 @@ fun ZapAmountChoicePopup(
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
     onOnchainAmount: (Long?) -> Unit = {},
     onchainSupported: Boolean = true,
+    onReloadNutzap: (Long) -> Unit = {},
 ) {
     // One chip per amount; the chip itself shows which rails can pay it.
     // [zapAmountChoices] is already the single merged+sorted preset list (the
@@ -1955,6 +1964,7 @@ fun ZapAmountChoicePopup(
         onError,
         onProgress,
         onPayViaIntent,
+        onReloadNutzap,
     )
 }
 
@@ -1973,6 +1983,7 @@ fun ZapAmountChoicePopup(
     onError: (title: String, text: String, user: User?) -> Unit,
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
+    onReloadNutzap: (Long) -> Unit = {},
 ) {
     val context = LocalContext.current
     val yOffset = with(LocalDensity.current) { -popupYOffset.toPx().toInt() }
@@ -2025,6 +2036,10 @@ fun ZapAmountChoicePopup(
                     onOnchainAmount(amount)
                     visibilityState.targetState = false
                 },
+                onReloadNutzap = { amount ->
+                    onReloadNutzap(amount)
+                    visibilityState.targetState = false
+                },
                 onChangeAmount = onChangeAmount,
             )
         }
@@ -2040,6 +2055,7 @@ fun ZapAmountChoicePopupContent(
     onNutzap: (Long) -> Unit,
     onOnchainAmount: (Long?) -> Unit,
     onChangeAmount: () -> Unit,
+    onReloadNutzap: (Long) -> Unit = {},
 ) {
     Box(HalfPadding, contentAlignment = Center) {
         ElevatedCard(
@@ -2060,6 +2076,7 @@ fun ZapAmountChoicePopupContent(
                         onLightningZap = onLightningZap,
                         onNutzap = onNutzap,
                         onOnchainAmount = onOnchainAmount,
+                        onReloadNutzap = onReloadNutzap,
                         onChangeAmount = onChangeAmount,
                     )
                 }
@@ -2085,17 +2102,19 @@ fun ZapAmountChoicePopupContent(
 
 /**
  * One pill per amount, showing a tappable logo for every rail that can pay it:
- *  - **Cashu** only when a single shared mint is already funded for the amount
- *    (the one rail whose balance is free to read). Underfunded/reload states
- *    are intentionally not offered yet.
+ *  - **Cashu** as a solid logo when a single shared mint already covers the
+ *    amount (FUNDED), or as a dimmed logo with a "+" badge when funds exist but
+ *    in the wrong mint (NEEDS_RELOAD) — tapping the latter opens the Reload Mint
+ *    screen. Cashu is the one rail whose balance is free to read.
  *  - **Lightning** optimistically whenever the recipient can receive — an
  *    external wallet can pay any invoice, so we don't gate on a sender balance.
  *  - **On-chain** when a backend is configured and the amount clears
  *    [MIN_ONCHAIN_ZAP_SATS]; UTXO sufficiency stays a send-time check.
  *
- * Tapping the amount fires the cheapest/fastest available rail (cashu →
- * Lightning → on-chain); tapping a specific logo forces that rail. Long-press
- * opens the amount-preset editor. A pill with no payable rail is not rendered.
+ * Tapping the amount fires the cheapest/fastest available rail (cashu funded →
+ * Lightning → cashu reload → on-chain); tapping a specific logo forces that
+ * rail. Long-press opens the amount-preset editor. A pill with no payable rail
+ * is not rendered.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -2105,13 +2124,16 @@ private fun UnifiedZapAmountChip(
     onLightningZap: (Long) -> Unit,
     onNutzap: (Long) -> Unit,
     onOnchainAmount: (Long?) -> Unit,
+    onReloadNutzap: (Long) -> Unit,
     onChangeAmount: () -> Unit,
 ) {
-    val cashuReady = railCapability.cashuStatus(amountInSats) == CashuRailStatus.FUNDED
+    val cashuStatus = railCapability.cashuStatus(amountInSats)
+    val cashuReady = cashuStatus == CashuRailStatus.FUNDED
+    val cashuReloadable = cashuStatus == CashuRailStatus.NEEDS_RELOAD
     val lightningReady = railCapability.hasLightning
     val onchainReady = railCapability.hasOnchain && amountInSats >= MIN_ONCHAIN_ZAP_SATS
 
-    if (!cashuReady && !lightningReady && !onchainReady) return
+    if (!cashuReady && !cashuReloadable && !lightningReady && !onchainReady) return
 
     val defaultAction: () -> Unit =
         when {
@@ -2120,6 +2142,9 @@ private fun UnifiedZapAmountChip(
             }
             lightningReady -> {
                 { onLightningZap(amountInSats) }
+            }
+            cashuReloadable -> {
+                { onReloadNutzap(amountInSats) }
             }
             else -> {
                 { onOnchainAmount(amountInSats) }
@@ -2155,6 +2180,26 @@ private fun UnifiedZapAmountChip(
                         modifier = Size18Modifier,
                         tint = Color.Unspecified,
                     )
+                }
+            }
+            if (cashuReloadable) {
+                // Funds exist but in the wrong mint — a dimmed cashu logo with a
+                // "+" badge; tap opens the Reload Mint screen to top it up first.
+                RailLogo(onClick = { onReloadNutzap(amountInSats) }) {
+                    Row(verticalAlignment = CenterVertically) {
+                        Material3Icon(
+                            imageVector = CustomHashTagIcons.Cashu,
+                            contentDescription = stringRes(R.string.reload_mint_title),
+                            modifier = Size18Modifier.alpha(0.5f),
+                            tint = Color.Unspecified,
+                        )
+                        Icon(
+                            symbol = MaterialSymbols.AddCircle,
+                            contentDescription = null,
+                            modifier = Size18Modifier,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
                 }
             }
             if (lightningReady) {

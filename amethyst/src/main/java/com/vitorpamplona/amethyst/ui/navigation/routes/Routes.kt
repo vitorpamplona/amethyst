@@ -639,6 +639,11 @@ sealed class Route {
     data class ManualZapSplitPayment(
         val paymentId: String,
     ) : Route()
+
+    @Serializable
+    data class ReloadMint(
+        val requestId: String,
+    ) : Route()
 }
 
 inline fun <reified T : Route> isBaseRoute(navController: NavHostController): Boolean = navController.currentBackStackEntry?.destination?.hasRoute<T>() == true
