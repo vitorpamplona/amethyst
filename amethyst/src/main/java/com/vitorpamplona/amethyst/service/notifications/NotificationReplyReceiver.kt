@@ -206,15 +206,9 @@ class NotificationReplyReceiver : BroadcastReceiver() {
                     )
                 }
 
-                is CommentEvent -> {
-                    CommentEvent.replyBuilder(
-                        msg = replyText,
-                        replyingTo = EventHintBundle(targetEvent),
-                    )
-                }
-
                 else -> {
-                    // Non-threaded events (e.g. long-form articles) use NIP-22 comments.
+                    // NIP-22 CommentEvent and other non-threaded events (e.g. long-form articles)
+                    // both reply via NIP-22 comments.
                     CommentEvent.replyBuilder(
                         msg = replyText,
                         replyingTo = EventHintBundle(targetEvent),

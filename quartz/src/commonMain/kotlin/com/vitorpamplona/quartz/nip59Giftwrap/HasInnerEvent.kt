@@ -18,24 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip19Bech32.entities
+package com.vitorpamplona.quartz.nip59Giftwrap
 
-import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip19Bech32.toNpub
 
-@Immutable
-data class NPub(
-    override val hex: HexKey,
-) : IPubKeyEntity {
-    companion object {
-        fun parse(bytes: ByteArray): NPub? {
-            if (bytes.isEmpty()) return null
-            return NPub(bytes.toHexKey())
-        }
-
-        fun create(authorPubKeyHex: HexKey): String = authorPubKeyHex.hexToByteArray().toNpub()
-    }
+/**
+ * Marker for NIP-59 wrappers that carry an inner-event id once decrypted —
+ * GiftWrapEvent (and its subclasses) and SealedRumorEvent. Lets callers walk
+ * to the wrapped event without branching on the concrete wrapper type.
+ */
+interface HasInnerEvent {
+    val innerEventId: HexKey?
 }

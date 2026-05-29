@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip19Bech32.entities
 import addHex
 import addStringIfNotNull
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip19Bech32.TlvTypes
@@ -34,9 +35,9 @@ import com.vitorpamplona.quartz.nip19Bech32.toNProfile
 
 @Immutable
 data class NProfile(
-    val hex: String,
+    override val hex: HexKey,
     val relay: List<NormalizedRelayUrl>,
-) : Entity {
+) : IPubKeyEntity {
     companion object {
         fun parse(bytes: ByteArray): NProfile? {
             if (bytes.isEmpty()) return null

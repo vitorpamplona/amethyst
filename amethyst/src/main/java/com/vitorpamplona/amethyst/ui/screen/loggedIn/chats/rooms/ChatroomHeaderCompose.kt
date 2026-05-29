@@ -133,15 +133,11 @@ private fun ChatroomEntry(
 
     val baseNoteEvent = lastMessage.event
     when (baseNoteEvent) {
-        is ChannelMessageEvent -> {
-            baseNoteEvent.channelId()?.let {
-                LoadPublicChatChannel(it, accountViewModel) { channel ->
-                    ChannelRoomCompose(lastMessage, channel, accountViewModel, nav)
-                }
-            }
-        }
-
-        is ChannelMetadataEvent -> {
+        // ChannelMessageEvent and ChannelMetadataEvent both expose channelId() via
+        // IsInPublicChatChannel and render identically here. Matched explicitly (rather
+        // than on the IsInPublicChatChannel interface) so the channel-admin events
+        // ChannelHideMessageEvent/ChannelMuteUserEvent keep falling through to `else`.
+        is ChannelMessageEvent, is ChannelMetadataEvent -> {
             baseNoteEvent.channelId()?.let {
                 LoadPublicChatChannel(it, accountViewModel) { channel ->
                     ChannelRoomCompose(lastMessage, channel, accountViewModel, nav)

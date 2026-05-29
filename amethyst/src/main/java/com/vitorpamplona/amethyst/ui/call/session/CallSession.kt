@@ -197,17 +197,10 @@ class CallSession(
                         ensureForegroundService()
                     }
 
-                    is CallState.Connecting -> {
-                        audioManager.stopRinging()
-                        audioManager.stopRingbackTone()
-                        withContext(Dispatchers.IO) { audioManager.switchToCallAudioMode() }
-                        audioManager.acquireProximityWakeLock()
-                        CallNotifier.cancelIncomingCall(context)
-                        updateForegroundServiceNotification()
-                        registerNetworkCallback()
-                    }
-
-                    is CallState.Connected -> {
+                    is CallState.Connecting, is CallState.Connected -> {
+                        // Same setup on both entry paths: Offering -> Connecting -> Connected,
+                        // and direct -> Connected (e.g. answered-elsewhere). All ops below are
+                        // idempotent so re-running on Connecting -> Connected is safe.
                         audioManager.stopRinging()
                         audioManager.stopRingbackTone()
                         withContext(Dispatchers.IO) { audioManager.switchToCallAudioMode() }

@@ -84,6 +84,10 @@ val DefaultSignerPermissions =
 sealed class TopFilter(
     val code: String,
 ) {
+    interface AddressableTopFilter {
+        val address: Address
+    }
+
     @Serializable
     object Global : TopFilter(" Global ")
 
@@ -104,18 +108,21 @@ sealed class TopFilter(
 
     @Serializable
     class PeopleList(
-        val address: Address,
-    ) : TopFilter(address.toValue())
+        override val address: Address,
+    ) : TopFilter(address.toValue()),
+        AddressableTopFilter
 
     @Serializable
     class MuteList(
-        val address: Address,
-    ) : TopFilter(address.toValue())
+        override val address: Address,
+    ) : TopFilter(address.toValue()),
+        AddressableTopFilter
 
     @Serializable
     class Community(
-        val address: Address,
-    ) : TopFilter("Community/${address.toValue()}")
+        override val address: Address,
+    ) : TopFilter("Community/${address.toValue()}"),
+        AddressableTopFilter
 
     @Serializable
     class Hashtag(

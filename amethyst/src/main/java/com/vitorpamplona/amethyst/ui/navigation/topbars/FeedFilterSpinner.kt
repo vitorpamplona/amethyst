@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.screen.GeoHashName
 import com.vitorpamplona.amethyst.ui.screen.HashtagName
 import com.vitorpamplona.amethyst.ui.screen.InterestSetName
 import com.vitorpamplona.amethyst.ui.screen.Name
+import com.vitorpamplona.amethyst.ui.screen.NoteBackedName
 import com.vitorpamplona.amethyst.ui.screen.PeopleListName
 import com.vitorpamplona.amethyst.ui.screen.RelayName
 import com.vitorpamplona.amethyst.ui.screen.ResourceName
@@ -297,20 +298,9 @@ fun RenderOption(
         // Note-backed names: subscribe to the note so the displayed title updates as
         // the corresponding event arrives from relays. The displayed string itself is
         // produced by Name.name(), which already has the right precedence rules.
-        is PeopleListName -> {
-            val noteState by observeNote(option.note, accountViewModel)
-            val name = remember(noteState) { option.name(context) }
-            Text(text = name, fontSize = Font14SP, color = MaterialTheme.colorScheme.onSurface)
-        }
-
-        is CommunityName -> {
-            val noteState by observeNote(option.note, accountViewModel)
-            val name = remember(noteState) { option.name(context) }
-            Text(text = name, fontSize = Font14SP, color = MaterialTheme.colorScheme.onSurface)
-        }
-
-        is FavoriteAlgoFeedName -> {
-            val noteState by observeNote(option.note, accountViewModel)
+        is PeopleListName, is CommunityName, is FavoriteAlgoFeedName -> {
+            val backed = option as NoteBackedName
+            val noteState by observeNote(backed.note, accountViewModel)
             val name = remember(noteState) { option.name(context) }
             Text(text = name, fontSize = Font14SP, color = MaterialTheme.colorScheme.onSurface)
         }

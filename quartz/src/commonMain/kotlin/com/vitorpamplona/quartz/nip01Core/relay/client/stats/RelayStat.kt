@@ -90,6 +90,11 @@ sealed interface IRelayDebugMessage {
     val time: Long
 }
 
+/** Debug messages that carry a single plain-text payload (notices, errors). */
+sealed interface IRelayDebugMessageText : IRelayDebugMessage {
+    val message: String
+}
+
 class SpamDebugMessage(
     val link1: String,
     val link2: String,
@@ -97,11 +102,11 @@ class SpamDebugMessage(
 ) : IRelayDebugMessage
 
 class NoticeDebugMessage(
-    val message: String,
+    override val message: String,
     override val time: Long = TimeUtils.now(),
-) : IRelayDebugMessage
+) : IRelayDebugMessageText
 
 class ErrorDebugMessage(
-    val message: String,
+    override val message: String,
     override val time: Long = TimeUtils.now(),
-) : IRelayDebugMessage
+) : IRelayDebugMessageText

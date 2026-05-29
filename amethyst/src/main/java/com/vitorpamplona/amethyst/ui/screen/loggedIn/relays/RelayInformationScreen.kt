@@ -136,6 +136,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.ErrorDebugMessage
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.IRelayDebugMessage
+import com.vitorpamplona.quartz.nip01Core.relay.client.stats.IRelayDebugMessageText
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.NoticeDebugMessage
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStat
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.SpamDebugMessage
@@ -1016,17 +1017,9 @@ private fun RenderDebugMessage(msg: IRelayDebugMessage) {
         }
 
         when (msg) {
-            is ErrorDebugMessage -> {
-                SelectionContainer {
-                    Text(
-                        text = msg.message,
-                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-            }
-
-            is NoticeDebugMessage -> {
+            is IRelayDebugMessageText -> {
+                // ErrorDebugMessage and NoticeDebugMessage both carry plain-text bodies and
+                // render identically here; the label/colour above already distinguishes them.
                 SelectionContainer {
                     Text(
                         text = msg.message,

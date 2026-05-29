@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip40Expiration.ExpirationTag
+import com.vitorpamplona.quartz.nip59Giftwrap.HasInnerEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.HostStub
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.utils.Log
@@ -44,10 +45,11 @@ open class GiftWrapEvent(
     content: String,
     sig: HexKey,
     kind: Int = KIND,
-) : Event(id, pubKey, createdAt, kind, tags, content, sig) {
+) : Event(id, pubKey, createdAt, kind, tags, content, sig),
+    HasInnerEvent {
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
-    var innerEventId: HexKey? = null
+    override var innerEventId: HexKey? = null
 
     open fun copyNoContent(): GiftWrapEvent {
         val copy =

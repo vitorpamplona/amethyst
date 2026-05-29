@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveStreamLike
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.CurrentParticipantsTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.EndsTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
@@ -60,7 +61,8 @@ class LiveActivitiesEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    LiveStreamLike {
     override fun eventHints(): List<EventIdHint> {
         val pinnedEvents = pinned()
         if (pinnedEvents.isEmpty()) return emptyList()
@@ -85,21 +87,21 @@ class LiveActivitiesEvent(
 
     override fun linkedPubKeys() = tags.mapNotNull(ParticipantTag::parseKey)
 
-    fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
+    override fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
-    fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
+    override fun summary() = tags.firstNotNullOfOrNull(SummaryTag::parse)
 
-    fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
+    override fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)
 
-    fun streaming() = tags.firstNotNullOfOrNull(StreamingTag::parse)
+    override fun streaming() = tags.firstNotNullOfOrNull(StreamingTag::parse)
 
     fun recording() = tags.firstNotNullOfOrNull(RecordingTag::parse)
 
-    fun starts() = tags.firstNotNullOfOrNull(StartsTag::parse)
+    override fun starts() = tags.firstNotNullOfOrNull(StartsTag::parse)
 
     fun ends() = tags.firstNotNullOfOrNull(EndsTag::parse)
 
-    fun status() = checkStatus(tags.firstNotNullOfOrNull(StatusTag::parseEnum))
+    override fun status() = checkStatus(tags.firstNotNullOfOrNull(StatusTag::parseEnum))
 
     fun isLive() = status() == StatusTag.STATUS.LIVE
 
@@ -109,7 +111,7 @@ class LiveActivitiesEvent(
 
     fun participantKeys(): List<HexKey> = tags.mapNotNull(ParticipantTag::parseKey)
 
-    fun participants() = tags.mapNotNull(ParticipantTag::parse)
+    override fun participants() = tags.mapNotNull(ParticipantTag::parse)
 
     fun relays() = tags.mapNotNull(RelayListTag::parse).flatten()
 

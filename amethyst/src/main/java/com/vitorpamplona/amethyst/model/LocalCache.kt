@@ -116,6 +116,7 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip18Reposts.BaseRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -1030,14 +1031,9 @@ object LocalCache : ILocalCache, ICacheProvider {
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) }
             }
 
-            is AcceptedBadgeSetEvent -> {
-                event.badgeAwardEvents().mapNotNull { checkGetOrCreateNote(it) } +
-                    event.badgeAwardDefinitions().map { getOrCreateAddressableNote(it) }
-            }
-
-            is ProfileBadgesEvent -> {
-                event.badgeAwardEvents().mapNotNull { checkGetOrCreateNote(it) } +
-                    event.badgeAwardDefinitions().map { getOrCreateAddressableNote(it) }
+            is AcceptedBadgeSetEvent, is ProfileBadgesEvent -> {
+                event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) } +
+                    event.taggedAddresses().map { getOrCreateAddressableNote(it) }
             }
 
             is BadgeAwardEvent -> {
@@ -1048,17 +1044,11 @@ object LocalCache : ILocalCache, ICacheProvider {
                 event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
             }
 
-            is RepostEvent -> {
+            is RepostEvent, is GenericRepostEvent -> {
+                val repost = event as BaseRepostEvent
                 listOfNotNull(
-                    event.boostedEventId()?.let { checkGetOrCreateNote(it) },
-                    event.boostedAddress()?.let { getOrCreateAddressableNote(it) },
-                )
-            }
-
-            is GenericRepostEvent -> {
-                listOfNotNull(
-                    event.boostedEventId()?.let { checkGetOrCreateNote(it) },
-                    event.boostedAddress()?.let { getOrCreateAddressableNote(it) },
+                    repost.boostedEventId()?.let { checkGetOrCreateNote(it) },
+                    repost.boostedAddress()?.let { getOrCreateAddressableNote(it) },
                 )
             }
 

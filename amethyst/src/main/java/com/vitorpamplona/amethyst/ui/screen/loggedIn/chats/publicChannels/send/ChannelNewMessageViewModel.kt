@@ -264,16 +264,14 @@ open class ChannelNewMessageViewModel :
             wantsForwardZapTo = true
         }
 
-        if (draftEvent as? ChannelMessageEvent != null) {
-            val replyId = draftEvent.reply()?.eventId
-            if (replyId != null) {
-                replyTo.value = accountViewModel.checkGetOrCreateNote(replyId)
-            }
-        } else if (draftEvent as? LiveActivitiesChatMessageEvent != null) {
-            val replyId = draftEvent.reply()?.eventId
-            if (replyId != null) {
-                replyTo.value = accountViewModel.checkGetOrCreateNote(replyId)
-            }
+        // Both event kinds extend BaseThreadedEvent and share `reply()`. Cast through
+        // both candidates so the elvis result lands on the common supertype, then
+        // load the addressed reply note in a single block.
+        val threadedDraft =
+            (draftEvent as? ChannelMessageEvent)
+                ?: (draftEvent as? LiveActivitiesChatMessageEvent)
+        threadedDraft?.reply()?.eventId?.let { replyId ->
+            replyTo.value = accountViewModel.checkGetOrCreateNote(replyId)
         }
 
         message.setTextAndPlaceCursorAtEnd(draftEvent.content)

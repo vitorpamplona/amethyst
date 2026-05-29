@@ -53,7 +53,8 @@ class RepostEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
     PubKeyHintProvider,
-    AddressHintProvider {
+    AddressHintProvider,
+    BaseRepostEvent {
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(PTag::parseKey)
@@ -70,9 +71,9 @@ class RepostEvent(
 
     fun boostedATag() = tags.lastNotNullOfOrNull(ATag::parse)
 
-    fun boostedAddress() = tags.lastNotNullOfOrNull(ATag::parseAddress)
+    override fun boostedAddress() = tags.lastNotNullOfOrNull(ATag::parseAddress)
 
-    fun boostedEventId() = tags.lastNotNullOfOrNull(ETag::parseId)
+    override fun boostedEventId() = tags.lastNotNullOfOrNull(ETag::parseId)
 
     fun boostedAddressIds() = tags.lastNotNullOfOrNull(ATag::parseAddressId)
 

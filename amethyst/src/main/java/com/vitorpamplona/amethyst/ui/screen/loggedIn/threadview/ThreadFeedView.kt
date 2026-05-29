@@ -248,7 +248,6 @@ import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEven
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
@@ -766,18 +765,6 @@ private fun FullBleedNoteCompose(
                     RenderCalendarDateSlotEvent(baseNote, accountViewModel, nav)
                 } else if (noteEvent is GoalEvent) {
                     RenderGoal(baseNote, accountViewModel, nav)
-                } else if (noteEvent is CommentEvent) {
-                    RenderTextEvent(
-                        baseNote,
-                        false,
-                        canPreview,
-                        quotesLeft = 3,
-                        unPackReply = ReplyRenderType.NONE,
-                        backgroundColor,
-                        editState,
-                        accountViewModel,
-                        nav,
-                    )
                 } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
                     RenderRepost(baseNote, quotesLeft = 3, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is RelayDiscoveryEvent) {

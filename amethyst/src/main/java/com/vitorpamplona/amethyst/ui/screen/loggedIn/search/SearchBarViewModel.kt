@@ -50,6 +50,7 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
+import com.vitorpamplona.quartz.nip19Bech32.entities.IPubKeyEntity
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
@@ -191,12 +192,9 @@ class SearchBarViewModel(
                         .getOrNull()
                         ?: return@mapLatest null
                 when (parsed) {
-                    is NPub -> {
-                        LocalCache.consume(parsed)
-                        Route.Profile(parsed.hex)
-                    }
-
-                    is NProfile -> {
+                    // Both NPub (npub1…) and NProfile (nprofile1…, npub + relay hints)
+                    // resolve to the same profile route by hex pubkey.
+                    is IPubKeyEntity -> {
                         LocalCache.consume(parsed)
                         Route.Profile(parsed.hex)
                     }

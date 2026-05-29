@@ -36,7 +36,6 @@ import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
@@ -50,6 +49,7 @@ import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.HasInnerEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
@@ -166,14 +166,9 @@ fun routeForInner(
             Route.CalendarEventDetail(noteEvent.kind, noteEvent.pubKey, noteEvent.dTag())
         }
 
-        is GiftWrapEvent -> {
-            noteEvent.innerEventId?.let {
-                routeFor(LocalCache.getOrCreateNote(it), loggedIn)
-            }
-        }
-
-        is SealedRumorEvent -> {
-            noteEvent.innerEventId?.let {
+        is GiftWrapEvent, is SealedRumorEvent -> {
+            val wrap = noteEvent as HasInnerEvent
+            wrap.innerEventId?.let {
                 routeFor(LocalCache.getOrCreateNote(it), loggedIn)
             }
         }
@@ -309,17 +304,9 @@ fun routeReplyTo(
             Route.NewShortNote(baseReplyTo = note.idHex)
         }
 
-        is PrivateDmEvent -> {
-            routeToMessage(
-                room = noteEvent.chatroomKey(account.userProfile().pubkeyHex),
-                draftMessage = null,
-                replyId = noteEvent.id,
-                draftId = null,
-                account = account,
-            )
-        }
-
         is ChatroomKeyable -> {
+            // Covers PrivateDmEvent (NIP-04) and BaseDMGroupEvent (NIP-17) — both
+            // implement ChatroomKeyable with identical routing semantics here.
             routeToMessage(
                 room = noteEvent.chatroomKey(account.userProfile().pubkeyHex),
                 draftMessage = null,

@@ -27,11 +27,23 @@ abstract class Response(
     val resultType: String,
 ) : OptimizedSerializable
 
+/**
+ * NIP-47 responses that carry a human-readable error message. Lets UI
+ * collapse generic NwcErrorResponse and method-specific *ErrorResponse
+ * handling into one branch.
+ */
+interface IErrorResponseLike {
+    fun errorMessage(): String?
+}
+
 // Generic error response for any method
 class NwcErrorResponse(
     resultType: String,
     val error: NwcError? = null,
-) : Response(resultType)
+) : Response(resultType),
+    IErrorResponseLike {
+    override fun errorMessage() = error?.message
+}
 
 // pay_invoice success response
 class PayInvoiceSuccessResponse(
@@ -46,11 +58,14 @@ class PayInvoiceSuccessResponse(
 // pay_invoice error response (kept for backward compatibility)
 class PayInvoiceErrorResponse(
     val error: PayInvoiceErrorParams? = null,
-) : Response(NwcMethod.PAY_INVOICE) {
+) : Response(NwcMethod.PAY_INVOICE),
+    IErrorResponseLike {
     class PayInvoiceErrorParams(
         val code: NwcErrorCode? = null,
         val message: String? = null,
     )
+
+    override fun errorMessage() = error?.message
 }
 
 // pay_keysend success response

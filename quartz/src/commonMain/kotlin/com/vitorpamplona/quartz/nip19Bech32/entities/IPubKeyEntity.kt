@@ -20,22 +20,13 @@
  */
 package com.vitorpamplona.quartz.nip19Bech32.entities
 
-import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip19Bech32.toNpub
 
-@Immutable
-data class NPub(
-    override val hex: HexKey,
-) : IPubKeyEntity {
-    companion object {
-        fun parse(bytes: ByteArray): NPub? {
-            if (bytes.isEmpty()) return null
-            return NPub(bytes.toHexKey())
-        }
-
-        fun create(authorPubKeyHex: HexKey): String = authorPubKeyHex.hexToByteArray().toNpub()
-    }
+/**
+ * NIP-19 bech32 entities that encode a single public key — NPub (npub1…)
+ * and NProfile (nprofile1…, npub + relay hints). Lets routing and lookup
+ * code resolve to a profile without branching on the concrete entity.
+ */
+interface IPubKeyEntity : Entity {
+    val hex: HexKey
 }

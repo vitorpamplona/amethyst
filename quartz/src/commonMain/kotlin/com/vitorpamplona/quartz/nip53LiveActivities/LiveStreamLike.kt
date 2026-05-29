@@ -18,24 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip19Bech32.entities
+package com.vitorpamplona.quartz.nip53LiveActivities
 
-import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
+import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
 
-@Immutable
-data class NPub(
-    override val hex: HexKey,
-) : IPubKeyEntity {
-    companion object {
-        fun parse(bytes: ByteArray): NPub? {
-            if (bytes.isEmpty()) return null
-            return NPub(bytes.toHexKey())
-        }
+/**
+ * Shared surface of the NIP-53 streaming + meeting-room events. Both
+ * LiveActivitiesEvent (kind 30311) and MeetingRoomEvent (kind 30312)
+ * expose the same title/summary/image/streaming/starts/status/participants
+ * tags so that callers — discovery feeds, cards, notifications — can
+ * render them uniformly without branching on the concrete subclass.
+ */
+interface LiveStreamLike {
+    fun title(): String?
 
-        fun create(authorPubKeyHex: HexKey): String = authorPubKeyHex.hexToByteArray().toNpub()
-    }
+    fun summary(): String?
+
+    fun image(): String?
+
+    fun streaming(): String?
+
+    fun starts(): Long?
+
+    fun status(): StatusTag.STATUS?
+
+    fun participants(): List<ParticipantTag>
 }
