@@ -2195,9 +2195,10 @@ private fun UnifiedZapAmountChip(
             }
             if (cashuReloadable) {
                 // Funds exist but in the wrong mint — a dimmed cashu logo with a
-                // "+" badge; tap opens the Reload Mint screen to top it up first.
+                // small "+" corner badge; tap opens the Reload Mint screen to top
+                // it up first. Kept to one logo's footprint like the other rails.
                 RailLogo(onClick = { onReloadNutzap(amountInSats) }) {
-                    Row(verticalAlignment = CenterVertically) {
+                    Box(contentAlignment = Alignment.BottomEnd) {
                         Material3Icon(
                             imageVector = CustomHashTagIcons.Cashu,
                             contentDescription = stringRes(R.string.reload_mint_title),
@@ -2207,7 +2208,7 @@ private fun UnifiedZapAmountChip(
                         Icon(
                             symbol = MaterialSymbols.AddCircle,
                             contentDescription = null,
-                            modifier = Size18Modifier,
+                            modifier = Modifier.size(11.dp),
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     }
