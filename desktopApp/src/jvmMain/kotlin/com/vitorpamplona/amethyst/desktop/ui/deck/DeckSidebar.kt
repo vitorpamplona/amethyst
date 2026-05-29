@@ -119,7 +119,7 @@ fun MainSidebar(
     torStatus: TorServiceStatus,
     modifier: Modifier = Modifier,
 ) {
-    var expanded by remember { mutableStateOf(!DesktopPreferences.sidebarCollapsed) }
+    var expanded by remember { mutableStateOf(true) }
 
     val animatedWidth by animateDpAsState(
         targetValue = if (expanded) EXPANDED_WIDTH else COLLAPSED_WIDTH,

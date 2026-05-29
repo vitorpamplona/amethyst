@@ -608,7 +608,7 @@ fun FeedScreen(
             // Reserve space for the header card that floats above.
             // When search is expanded, the card grows — add more margin.
             val headerSpacerHeight by animateDpAsState(
-                targetValue = if (searchActive) 300.dp else 60.dp,
+                targetValue = if (searchActive) 300.dp else 76.dp,
                 animationSpec = tween(200),
             )
             Spacer(Modifier.height(headerSpacerHeight))
