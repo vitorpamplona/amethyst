@@ -27,4 +27,20 @@ interface WebsocketBuilder {
         url: NormalizedRelayUrl,
         out: WebSocketListener,
     ): WebSocket
+
+    /**
+     * Returns an opaque, value-comparable token describing the transport
+     * configuration (proxy, timeouts, ...) this builder would currently use for
+     * [url]. [com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayClient]
+     * stores the token of its last connection attempt and, when a reconnect asks
+     * to ignore the backoff, only grants the bypass if this token changed since
+     * that attempt. That way a relay that keeps failing under the *same* config
+     * (e.g. a Tor relay while Tor is still bootstrapping and the SOCKS port is not
+     * yet listening) keeps honoring its exponential backoff instead of being
+     * hammered on every unrelated infrastructure event.
+     *
+     * The default returns `null`, which the client treats as "untracked" and
+     * therefore always honors the requested bypass (legacy behavior).
+     */
+    fun connectionConfig(url: NormalizedRelayUrl): Any? = null
 }

@@ -74,6 +74,11 @@ open class BasicRelayClient(
     private var lastConnectTentativeInSeconds: Long = 0L // the beginning of time.
     private var delayToConnectInSeconds = DELAY_TO_RECONNECT_IN_SECS
 
+    // The transport config (proxy, timeouts) used on the last connection attempt.
+    // Lets a forced reconnect tell whether the situation that caused the failures
+    // actually changed (e.g. Tor finally came up) before skipping the backoff.
+    private var lastAttemptConfig: Any? = null
+
     // Makes sure only one socket is open for each url
     private var connectingMutex = AtomicBoolean(false)
 
@@ -98,6 +103,7 @@ open class BasicRelayClient(
             listener.onConnecting(this)
 
             lastConnectTentativeInSeconds = TimeUtils.now()
+            lastAttemptConfig = socketBuilder.connectionConfig(url)
 
             socket = socketBuilder.build(url, MyWebsocketListener())
             socket?.connect()
@@ -213,12 +219,29 @@ open class BasicRelayClient(
 
     override fun connectAndSyncFiltersIfDisconnected(ignoreRetryDelays: Boolean) {
         if (!isConnectionStarted() && !connectingMutex.load()) {
-            // waits 60 seconds to reconnect after disconnected.
-            if (ignoreRetryDelays || TimeUtils.now() > lastConnectTentativeInSeconds + delayToConnectInSeconds) {
+            // A forced reconnect (ignoreRetryDelays) only skips the backoff when this
+            // relay's transport config actually changed since the last attempt.
+            // Otherwise we honor the exponential backoff, so a relay that keeps failing
+            // under the same config (e.g. a Tor relay while Tor is still booting and the
+            // SOCKS port is not yet listening) is not reconnected-failed-reconnected on
+            // every unrelated infrastructure event.
+            if ((ignoreRetryDelays && transportConfigChanged()) ||
+                TimeUtils.now() > lastConnectTentativeInSeconds + delayToConnectInSeconds
+            ) {
                 upRelayDelayToConnect()
                 connect()
             }
         }
+    }
+
+    /**
+     * True when the transport config this relay would use now differs from the one used
+     * on the last attempt — or when the socket builder doesn't track configs (returns
+     * null), in which case a requested bypass is always honored (legacy behavior).
+     */
+    private fun transportConfigChanged(): Boolean {
+        val current = socketBuilder.connectionConfig(url)
+        return current == null || current != lastAttemptConfig
     }
 
     fun upRelayDelayToConnect() {

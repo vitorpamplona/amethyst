@@ -34,6 +34,30 @@ import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
+import java.net.Proxy
+
+/**
+ * Value-comparable fingerprint of the relevant parts of an [OkHttpClient] for a relay
+ * connection: the proxy (Tor SOCKS or none) and the timeouts. Two clients with the same
+ * fingerprint connect the same way, so a relay does not need to reconnect — and a forced
+ * reconnect should not skip the backoff — when the fingerprint is unchanged.
+ */
+private data class RelayTransportConfig(
+    val proxy: Proxy?,
+    val connectTimeoutMillis: Int,
+    val readTimeoutMillis: Int,
+    val writeTimeoutMillis: Int,
+    val callTimeoutMillis: Int,
+)
+
+private fun OkHttpClient.relayTransportConfig() =
+    RelayTransportConfig(
+        proxy = proxy,
+        connectTimeoutMillis = connectTimeoutMillis,
+        readTimeoutMillis = readTimeoutMillis,
+        writeTimeoutMillis = writeTimeoutMillis,
+        callTimeoutMillis = callTimeoutMillis,
+    )
 
 class OkHttpWebSocket(
     val url: NormalizedRelayUrl,
@@ -50,21 +74,7 @@ class OkHttpWebSocket(
 
         val myUsingOkHttp = usingOkHttp ?: return true
 
-        val currentOkHttp = httpClient(url)
-
-        val usingProxy = myUsingOkHttp.proxy
-        val currentProxy = currentOkHttp.proxy
-
-        if (usingProxy != null && currentProxy != null && usingProxy != currentProxy) return true
-        if (usingProxy == null && currentProxy != null) return true
-        if (usingProxy != null && currentProxy == null) return true
-
-        if (currentOkHttp.readTimeoutMillis != myUsingOkHttp.readTimeoutMillis) return true
-        if (currentOkHttp.writeTimeoutMillis != myUsingOkHttp.writeTimeoutMillis) return true
-        if (currentOkHttp.connectTimeoutMillis != myUsingOkHttp.connectTimeoutMillis) return true
-        if (currentOkHttp.callTimeoutMillis != myUsingOkHttp.callTimeoutMillis) return true
-
-        return false
+        return myUsingOkHttp.relayTransportConfig() != httpClient(url).relayTransportConfig()
     }
 
     override fun connect() {
@@ -139,6 +149,11 @@ class OkHttpWebSocket(
             url: NormalizedRelayUrl,
             out: WebSocketListener,
         ) = OkHttpWebSocket(url, httpClient, out)
+
+        // Proxy + timeout fingerprint of the client this url would use right now.
+        // BasicRelayClient compares it against the last attempt to decide whether a
+        // forced reconnect may skip the exponential backoff.
+        override fun connectionConfig(url: NormalizedRelayUrl): Any = httpClient(url).relayTransportConfig()
     }
 
     override fun disconnect() {
