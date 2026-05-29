@@ -29,6 +29,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableQueryState
+import com.vitorpamplona.amethyst.commons.viewmodels.NestAudioFocusBus.state
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -116,6 +117,73 @@ fun <T> LifecycleAwareKeyDataSourceSubscription(
             pendingUnsubscribe = null
             if (isSubscribed) {
                 dataSource.unsubscribe(state)
+                isSubscribed = false
+            }
+        }
+    }
+}
+
+@Composable
+fun <T> LifecycleAwareKeyDataSourceSubscription(
+    states: List<T>,
+    dataSource: ComposeSubscriptionManager<T>,
+) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val scope = rememberCoroutineScope()
+
+    DisposableEffect(states, lifecycleOwner) {
+        var isSubscribed = false
+        var pendingUnsubscribe: Job? = null
+
+        fun subscribeNow() {
+            pendingUnsubscribe?.cancel()
+            pendingUnsubscribe = null
+            if (!isSubscribed) {
+                dataSource.subscribe(states)
+                isSubscribed = true
+            }
+        }
+
+        fun scheduleUnsubscribe() {
+            if (!isSubscribed || pendingUnsubscribe != null) return
+            pendingUnsubscribe =
+                scope.launch {
+                    delay(UNSUBSCRIBE_GRACE_MILLIS)
+                    if (isSubscribed) {
+                        dataSource.unsubscribe(states)
+                        isSubscribed = false
+                    }
+                    pendingUnsubscribe = null
+                }
+        }
+
+        val observer =
+            LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_START -> {
+                        subscribeNow()
+                    }
+
+                    Lifecycle.Event.ON_STOP -> {
+                        scheduleUnsubscribe()
+                    }
+
+                    else -> {}
+                }
+            }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            subscribeNow()
+        }
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            pendingUnsubscribe?.cancel()
+            pendingUnsubscribe = null
+            if (isSubscribed) {
+                dataSource.unsubscribe(states)
                 isSubscribed = false
             }
         }

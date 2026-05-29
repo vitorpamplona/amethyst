@@ -2121,7 +2121,10 @@ object LocalCache : ILocalCache, ICacheProvider {
         val requestId = event.requestId()
         val pending =
             when (val match = paymentTracker.onResponseReceived(requestId, event.pubKey)) {
-                is NwcPaymentTracker.MatchResult.Matched -> match.pending
+                is NwcPaymentTracker.MatchResult.Matched -> {
+                    match.pending
+                }
+
                 is NwcPaymentTracker.MatchResult.WrongAuthor -> {
                     // Possible spoof: a kind-23195 event from someone other than
                     // the wallet service we sent the request to. The pending
@@ -2134,6 +2137,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                     )
                     return false
                 }
+
                 NwcPaymentTracker.MatchResult.NoMatch -> {
                     Log.w(
                         "LocalCache",
@@ -2909,22 +2913,23 @@ object LocalCache : ILocalCache, ICacheProvider {
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
+        // uses the internal event to avoid reprocessing cached items.
+        val note =
+            if (event is AddressableEvent) {
+                getOrCreateAddressableNote(event.address())
+            } else {
+                getOrCreateNote(event.id)
+            }
+
         val wasNew = justConsumeInnerInner(event, relay, wasVerified)
 
         if (wasNew) {
             updateHintIndexes(event)
+            updateInGatherer(event, note)
         }
 
         if (relay != null) {
-            // uses the internal event to avoid reprocessing cached items.
-            val note =
-                if (event is AddressableEvent) {
-                    getAddressableNoteIfExists(event.address())
-                } else {
-                    getNoteIfExists(event.id)
-                }
-
-            note?.event?.let { consumedEvent ->
+            note.event?.let { consumedEvent ->
                 addIncomingRelayAsHintToAllRelatedEvents(consumedEvent, relay)
             }
         }
@@ -2972,6 +2977,22 @@ object LocalCache : ILocalCache, ICacheProvider {
         if (event is PubKeyHintProvider) {
             event.pubKeyHints().forEach {
                 relayHints.addKey(it.pubkey, it.relay)
+            }
+        }
+    }
+
+    fun updateInGatherer(
+        event: Event,
+        note: Note,
+    ) {
+        if (event is EventHintProvider) {
+            event.linkedEventIds().forEach {
+                checkGetOrCreateNote(it)?.addGatherer(note)
+            }
+        }
+        if (event is AddressHintProvider) {
+            event.linkedAddressIds().forEach {
+                checkGetOrCreateAddressableNote(it)?.addGatherer(note)
             }
         }
     }
