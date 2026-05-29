@@ -20,17 +20,33 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.observeAccountIsHiddenUser
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -42,10 +58,13 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.dal.Chatroo
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource.ChatroomFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.ChatNewMessageViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.PrivateMessageEditFieldRow
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportType
 import kotlinx.coroutines.launch
 
 @Composable
@@ -135,6 +154,7 @@ fun ChatroomViewUI(
 
     Column(Modifier.fillMaxHeight()) {
         ObserveRelayListForDMsAndDisplayIfNotFound(accountViewModel, nav)
+        ReportedImpersonatorDMWarning(room, accountViewModel)
 
         Column(
             modifier =
@@ -169,5 +189,63 @@ fun ChatroomViewUI(
             },
             nav,
         )
+    }
+}
+
+@Composable
+private fun ReportedImpersonatorDMWarning(
+    room: ChatroomKey,
+    accountViewModel: AccountViewModel,
+) {
+    room.users.forEach { userHex ->
+        LoadUser(baseUserHex = userHex, accountViewModel) { user ->
+            if (user != null) {
+                ReportedImpersonatorDMWarning(user, accountViewModel)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReportedImpersonatorDMWarning(
+    user: User,
+    accountViewModel: AccountViewModel,
+) {
+    val reports by user.reports().receivedReportsByAuthor.collectAsStateWithLifecycle()
+    val isHidden by observeAccountIsHiddenUser(accountViewModel.account, user)
+
+    val hasImpersonationReportByMe =
+        reports.isNotEmpty() &&
+            user.reports().hasReport(accountViewModel.account.userProfile(), ReportType.IMPERSONATION)
+
+    if (isHidden || !hasImpersonationReportByMe) {
+        return
+    }
+
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.errorContainer,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                symbol = MaterialSymbols.Warning,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.size(18.dp),
+            )
+            Text(
+                text = stringRes(R.string.dm_reported_impersonator_warning),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+        }
     }
 }
