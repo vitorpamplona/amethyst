@@ -147,17 +147,17 @@ private fun PodcastScreenBody(
             PodcastEpisodesList(metadataNote, metadataEvent, state, listState, accountViewModel, nav)
 
         is FeedState.Empty ->
-            PodcastHeaderWithStatus(metadataNote, metadataEvent, listState, accountViewModel) {
+            PodcastHeaderWithStatus(metadataNote, metadataEvent, listState, accountViewModel, nav) {
                 StatusText(stringRes(R.string.podcast_no_episodes))
             }
 
         is FeedState.FeedError ->
-            PodcastHeaderWithStatus(metadataNote, metadataEvent, listState, accountViewModel) {
+            PodcastHeaderWithStatus(metadataNote, metadataEvent, listState, accountViewModel, nav) {
                 FeedError(state.errorMessage) { feedViewModel.invalidateData() }
             }
 
         is FeedState.Loading ->
-            PodcastHeaderWithStatus(metadataNote, metadataEvent, listState, accountViewModel) {
+            PodcastHeaderWithStatus(metadataNote, metadataEvent, listState, accountViewModel, nav) {
                 Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
@@ -181,7 +181,7 @@ private fun PodcastEpisodesList(
         contentPadding = rememberFeedContentPadding(FeedPadding),
     ) {
         item("header") {
-            PodcastHeader(metadataNote, metadataEvent, items.list.size, accountViewModel)
+            PodcastHeader(metadataNote, metadataEvent, items.list.size, accountViewModel, nav)
         }
 
         itemsIndexed(
@@ -204,6 +204,7 @@ private fun PodcastHeaderWithStatus(
     metadataEvent: PodcastMetadataEvent?,
     listState: LazyListState,
     accountViewModel: AccountViewModel,
+    nav: INav,
     status: @Composable () -> Unit,
 ) {
     LazyColumn(
@@ -211,7 +212,7 @@ private fun PodcastHeaderWithStatus(
         contentPadding = rememberFeedContentPadding(FeedPadding),
     ) {
         item("header") {
-            PodcastHeader(metadataNote, metadataEvent, null, accountViewModel)
+            PodcastHeader(metadataNote, metadataEvent, null, accountViewModel, nav)
         }
         item("status") { status() }
     }

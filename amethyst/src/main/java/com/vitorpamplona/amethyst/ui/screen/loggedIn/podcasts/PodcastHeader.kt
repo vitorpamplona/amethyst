@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -31,17 +30,20 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.types.PodcastCoverCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -50,9 +52,9 @@ import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 
 /**
- * Hero header for a single podcast screen: large cover art, title, websites and a tappable
- * (collapse/expand) description, followed by the "Episodes (N)" section divider that the
- * episode rows hang under.
+ * Hero header for a single podcast screen: large cover art, title, websites and the show
+ * description (rich text + translation, same as a profile's About), followed by the
+ * "Episodes (N)" section divider that the episode rows hang under.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -61,11 +63,13 @@ fun PodcastHeader(
     metadataEvent: PodcastMetadataEvent?,
     episodeCount: Int?,
     accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     val title = remember(metadataEvent) { metadataEvent?.title() }
     val image = remember(metadataEvent) { metadataEvent?.image() }
     val description = remember(metadataEvent) { metadataEvent?.description() }
     val websites = remember(metadataEvent) { metadataEvent?.websites() ?: emptyList() }
+    val tags = remember(metadataEvent) { metadataEvent?.tags?.toImmutableListOfLists() ?: EmptyTagList }
 
     Column(Modifier.fillMaxWidth()) {
         PodcastCoverCard(image, metadataNote, accountViewModel)
@@ -103,7 +107,21 @@ fun PodcastHeader(
                 }
             }
 
-            description?.let { ExpandableDescription(it) }
+            description?.let {
+                val background = remember { mutableStateOf(Color.Transparent) }
+
+                TranslatableRichTextViewer(
+                    content = it,
+                    canPreview = false,
+                    quotesLeft = 1,
+                    modifier = Modifier.fillMaxWidth(),
+                    tags = tags,
+                    backgroundColor = background,
+                    id = metadataNote.idHex,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
         }
 
         // Only render once episodes have actually loaded — avoids flashing "0 episodes"
@@ -122,20 +140,4 @@ fun PodcastHeader(
             HorizontalDivider(thickness = DividerThickness)
         }
     }
-}
-
-@Composable
-private fun ExpandableDescription(description: String) {
-    var expanded by remember(description) { mutableStateOf(false) }
-
-    Text(
-        text = description,
-        style = MaterialTheme.typography.bodyMedium,
-        maxLines = if (expanded) Int.MAX_VALUE else 4,
-        overflow = TextOverflow.Ellipsis,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clickable { expanded = !expanded },
-    )
 }

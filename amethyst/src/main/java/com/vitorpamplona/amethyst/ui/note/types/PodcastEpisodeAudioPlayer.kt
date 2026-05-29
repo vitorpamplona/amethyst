@@ -33,14 +33,9 @@ import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
 import com.vitorpamplona.amethyst.service.playback.composable.PauseControllerWhenInBackground
 import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
+import com.vitorpamplona.amethyst.service.playback.composable.wavefront.syntheticWaveformFor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.tags.AudioTag
-
-// NIP-F4 episodes carry no waveform tag, so every episode renders with the same flat baseline.
-// Hoisted to a top-level constant so we share one List<Float> + WaveformData across the whole
-// feed instead of allocating a fresh 96-element list per visible card.
-private const val WAVEFORM_SAMPLES = 96
-private val FLAT_WAVEFORM = WaveformData(List(WAVEFORM_SAMPLES) { 0.4f })
 
 // The voice player's internal controls are laid out for 100.dp; 80.dp is the tightest height
 // that still fits the play button without clipping it. Shared so the feed card and the
@@ -62,6 +57,17 @@ fun PodcastEpisodeAudioPlayer(
     accountViewModel: AccountViewModel,
 ) {
     val callbackUri = remember(note) { note.toNostrUri() }
+    // Use a real waveform when the episode ships one in its IMeta; NIP-F4 usually doesn't, so
+    // fall back to a decorative waveform seeded by the note id — same approach as music tracks,
+    // a per-episode silhouette instead of a flat strip.
+    val waveform =
+        remember(note) {
+            note.event
+                ?.getAudioMetaWithWaveform()
+                ?.waveform
+                ?.let { WaveformData(it) }
+                ?: syntheticWaveformFor(note.idHex)
+        }
 
     Row(
         PLAYER_HEIGHT_MODIFIER,
@@ -77,7 +83,7 @@ fun PodcastEpisodeAudioPlayer(
             aspectRatio = null,
             proxyPort = accountViewModel.httpClientBuilder.proxyPortForVideo(audio.url),
             keepPlaying = false,
-            waveformData = FLAT_WAVEFORM,
+            waveformData = waveform,
         ) { mediaItem ->
             GetVideoController(
                 mediaItem = mediaItem,
@@ -87,7 +93,7 @@ fun PodcastEpisodeAudioPlayer(
                 RenderVoicePlayer(
                     mediaItem = mediaItem,
                     controllerState = controller,
-                    waveform = FLAT_WAVEFORM,
+                    waveform = waveform,
                     borderModifier = borderModifier,
                     accountViewModel = accountViewModel,
                 )
