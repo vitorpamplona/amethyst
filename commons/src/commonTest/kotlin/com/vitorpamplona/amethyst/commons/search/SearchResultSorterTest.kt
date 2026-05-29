@@ -72,7 +72,7 @@ class SearchResultSorterTest {
         hex: String,
         displayName: String,
     ): User {
-        val u = User(hex, Note("r1-$hex"), Note("r2-$hex"))
+        val u = User(hex) { addr -> Note(addr.toValue()) }
         val meta = UserMetadata().apply { this.displayName = displayName }
         val metaEvent =
             MetadataEvent(

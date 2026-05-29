@@ -24,6 +24,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatRepository
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListRepository
 import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcWalletEntryNorm
+import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.screen.FeedDefinition
@@ -36,6 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
@@ -53,6 +55,8 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.permission.Permission
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
@@ -207,6 +211,21 @@ class AccountSettings(
     var backupGeohashList: GeohashListEvent? = null,
     var backupEphemeralChatList: EphemeralChatListEvent? = null,
     var backupTrustProviderList: TrustProviderListEvent? = null,
+    var backupCashuWallet: CashuWalletEvent? = null,
+    var backupNutzapInfo: NutzapInfoEvent? = null,
+    /**
+     * NUT-13 deterministic-secret counter map, keyed by keyset id. The
+     * wallet derives every blind message from `(seed, keysetId, counter)`,
+     * incrementing the counter every time it consumes one; reusing a
+     * counter would expose the secret. Persisted here so the counter
+     * survives app restart even though the wallet's seed is also stored
+     * in kind:17375 (which would otherwise be the only persistence).
+     *
+     * Empty map = no NUT-13 usage yet (e.g. wallet created before this
+     * feature shipped). Per-keyset; the same counter under different
+     * keysets is fine because the derivation includes the keyset id.
+     */
+    var cashuKeysetCounters: MutableMap<String, Long> = mutableMapOf(),
     val lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
     val hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     val dismissedPollNoteIds: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
@@ -831,6 +850,67 @@ class AccountSettings(
             backupNIP65RelayList = newNIP65RelayList
             saveAccountSettings()
         }
+    }
+
+    fun updateCashuWallet(newWallet: CashuWalletEvent?) {
+        if (newWallet == null) return
+        // Replaceable: keep the latest by id (id changes on each re-sign).
+        if (backupCashuWallet?.id != newWallet.id) {
+            backupCashuWallet = newWallet
+            saveAccountSettings()
+        }
+    }
+
+    fun updateNutzapInfo(newNutzapInfo: NutzapInfoEvent?) {
+        if (newNutzapInfo == null || newNutzapInfo.tags.isEmpty()) return
+        if (backupNutzapInfo?.id != newNutzapInfo.id) {
+            backupNutzapInfo = newNutzapInfo
+            saveAccountSettings()
+        }
+    }
+
+    /**
+     * NUT-13 keyset counters live in [CashuPreferences], a dedicated
+     * SharedPreferences file with synchronous (`commit = true`) writes.
+     * AccountSettings goes through a 1-second debounce on its own save
+     * path; the cashu counter cannot tolerate that window because the
+     * mint persists signed (keyset, blind_message) pairs the moment it
+     * sees them, so any local lag → "outputs already signed" on retry.
+     * See [CashuPreferences] for the full rationale.
+     */
+    private val cashuPrefs: CashuPreferences by lazy {
+        CashuPreferences.forAccount(keyPair.pubKey.toNpub())
+    }
+
+    /**
+     * Reserve [count] consecutive NUT-13 counters for [keysetId],
+     * returning the first one. Caller derives `(secret, r)` from
+     * `(seed, keysetId, i)` for `i in [returned .. returned+count-1]`.
+     * Persisted synchronously before returning — see [CashuPreferences].
+     *
+     * One-time migration: when this keyset has a non-zero value in the
+     * legacy [cashuKeysetCounters] map (from a build that persisted
+     * counters inside AccountSettings) and the dedicated store is
+     * still at zero, the legacy value is copied over before we reserve
+     * so an upgrade doesn't reset the counter.
+     */
+    fun reserveCashuCounters(
+        keysetId: String,
+        count: Int,
+    ): Long {
+        migrateLegacyCashuCounter(keysetId)
+        return cashuPrefs.reserveCounters(keysetId, count)
+    }
+
+    /** Inspect the next counter for [keysetId] without consuming any. */
+    fun peekCashuCounter(keysetId: String): Long {
+        migrateLegacyCashuCounter(keysetId)
+        return cashuPrefs.peekCounter(keysetId)
+    }
+
+    private fun migrateLegacyCashuCounter(keysetId: String) {
+        val legacy = cashuKeysetCounters[keysetId] ?: return
+        cashuPrefs.seedCounterIfMissing(keysetId, legacy)
     }
 
     fun updateNIPA3PaymentTargets(newNIPA3PaymentTargets: PaymentTargetsEvent?) {

@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -64,6 +65,8 @@ import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
+import com.vitorpamplona.amethyst.commons.hashtags.Cashu
+import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.NoteState
@@ -101,8 +104,11 @@ import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.ui.theme.overPictureBackground
 import com.vitorpamplona.amethyst.ui.theme.profile35dpModifier
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.claimedSatsTotal
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.time.ExperimentalTime
@@ -180,6 +186,10 @@ private fun Galeries(
 ) {
     if (multiSetCard.zapEvents.isNotEmpty()) {
         DecryptAndRenderZapGallery(multiSetCard, backgroundColor, accountViewModel, nav)
+    }
+
+    if (multiSetCard.nutzapEvents.isNotEmpty()) {
+        RenderNutzapGallery(multiSetCard.nutzapEvents, backgroundColor, accountViewModel, nav)
     }
 
     if (multiSetCard.boostEvents.isNotEmpty()) {
@@ -337,6 +347,53 @@ fun RenderZapGallery(
         }
 
         AuthorGalleryZaps(zapEvents, backgroundColor, nav, accountViewModel)
+    }
+}
+
+@Composable
+fun RenderNutzapGallery(
+    nutzapEvents: ImmutableList<Note>,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    // Convert each kind:9321 Note into the same shape AuthorGalleryZaps
+    // already renders for lightning. Amount comes from the parsed proof
+    // total (lazy via NutzapEvent.claimedSatsTotal), comment from the
+    // event's content. No NIP-44 decryption needed — nutzap doesn't
+    // have a private variant the way NIP-57 does.
+    val nutzapAuthorComments: ImmutableList<ZapAmountCommentNotification> =
+        remember(nutzapEvents) {
+            nutzapEvents
+                .map { note ->
+                    val event = note.event as? NutzapEvent
+                    val sats = event?.claimedSatsTotal() ?: 0L
+                    ZapAmountCommentNotification(
+                        user = note.author,
+                        comment = event?.content?.ifBlank { null },
+                        amount = showAmount(java.math.BigDecimal(sats)),
+                    )
+                }.toImmutableList()
+        }
+
+    Row(Modifier.fillMaxWidth()) {
+        Box(
+            modifier = WidthAuthorPictureModifier,
+        ) {
+            // CustomHashTagIcons.Cashu is a multi-tone branded glyph;
+            // tint=Unspecified keeps the brand colours instead of
+            // flattening to onBackground (which would lose the cashu-
+            // orange distinguishing the row from the lightning-bolt
+            // row above it).
+            Icon(
+                imageVector = CustomHashTagIcons.Cashu,
+                contentDescription = stringRes(R.string.nutzap),
+                modifier = Modifier.size(Size20dp).align(Alignment.TopEnd),
+                tint = Color.Unspecified,
+            )
+        }
+
+        AuthorGalleryZaps(nutzapAuthorComments, backgroundColor, nav, accountViewModel)
     }
 }
 

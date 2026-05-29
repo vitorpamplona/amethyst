@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.firstFullCharOrEmoji
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 
@@ -60,18 +61,40 @@ class ZapUserSetCard(
     override fun id() = user.pubkeyHex + "U" + createdAt
 }
 
+/**
+ * Per-sender NIP-61 nutzap aggregate, parallel to [ZapUserSetCard].
+ * Carries raw kind:9321 [Note]s rather than [CombinedZap] pairs because
+ * a nutzap is a single event (no request/receipt split like lightning).
+ * Rendered with a cashu icon so the user can tell at a glance that it's
+ * a cashu rail, not a lightning rail.
+ */
+@Immutable
+class NutzapUserSetCard(
+    val user: User,
+    val nutzapEvents: ImmutableList<Note>,
+) : Card {
+    val createdAt = nutzapEvents.maxOfOrNull { it.createdAt() ?: 0L } ?: 0L
+
+    override fun createdAt(): Long = createdAt
+
+    // Suffix differs from ZapUserSetCard so the two never collide on id.
+    override fun id() = user.pubkeyHex + "N" + createdAt
+}
+
 @Immutable
 class MultiSetCard(
     val note: Note,
     val boostEvents: ImmutableList<Note>,
     val likeEvents: ImmutableList<Note>,
     val zapEvents: ImmutableList<CombinedZap>,
+    val nutzapEvents: ImmutableList<Note> = persistentListOf(),
 ) : Card {
     val maxCreatedAt =
         maxOf(
             zapEvents.maxOfOrNull { it.createdAt() ?: 0L } ?: 0L,
             likeEvents.maxOfOrNull { it.createdAt() ?: 0L } ?: 0L,
             boostEvents.maxOfOrNull { it.createdAt() ?: 0L } ?: 0L,
+            nutzapEvents.maxOfOrNull { it.createdAt() ?: 0L } ?: 0L,
         )
 
     val minCreatedAt =
@@ -79,6 +102,7 @@ class MultiSetCard(
             zapEvents.minOfOrNull { it.createdAt() ?: Long.MAX_VALUE } ?: Long.MAX_VALUE,
             likeEvents.minOfOrNull { it.createdAt() ?: Long.MAX_VALUE } ?: Long.MAX_VALUE,
             boostEvents.minOfOrNull { it.createdAt() ?: Long.MAX_VALUE } ?: Long.MAX_VALUE,
+            nutzapEvents.minOfOrNull { it.createdAt() ?: Long.MAX_VALUE } ?: Long.MAX_VALUE,
         )
 
     val likeEventsByType =
@@ -127,11 +151,16 @@ fun Card.containsEventId(eventId: String): Boolean =
             zapEvents.any { it.response.idHex == eventId || it.request.idHex == eventId }
         }
 
+        is NutzapUserSetCard -> {
+            nutzapEvents.any { it.idHex == eventId }
+        }
+
         is MultiSetCard -> {
             note.idHex == eventId ||
                 zapEvents.any { it.response.idHex == eventId || it.request.idHex == eventId } ||
                 likeEvents.any { it.idHex == eventId } ||
-                boostEvents.any { it.idHex == eventId }
+                boostEvents.any { it.idHex == eventId } ||
+                nutzapEvents.any { it.idHex == eventId }
         }
 
         else -> {

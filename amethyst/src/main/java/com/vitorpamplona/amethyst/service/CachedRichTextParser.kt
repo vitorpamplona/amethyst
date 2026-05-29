@@ -81,14 +81,194 @@ object CachedRichTextParser {
         return result
     }
 
-    private fun computeIsMarkdown(content: String): Boolean =
-        content.startsWith("> ") ||
-            content.startsWith("# ") ||
-            content.contains("##") ||
-            content.contains("__") ||
-            content.contains("**") ||
-            content.contains("```") ||
-            content.contains("](")
+    private fun computeIsMarkdown(content: String): Boolean {
+        val len = content.length
+        if (len == 0) return false
+
+        var isNewLine = true
+        var nonSpaceCharCountOnLine = 0
+        var lastNonSpaceChar = ' '
+        // True while every non-whitespace char on the current line has
+        // been the same '=' or '-' as the first. Required for the
+        // setext-heading check below — without it, an ordinary sentence
+        // ending in `-` would be promoted to a heading underline.
+        var lineIsHomogeneousSetextChar = false
+
+        for (i in 0 until len) {
+            val c = content[i]
+            val cCode = c.code
+
+            // O(1) trigger-char gate. Allocated once at object init.
+            if (cCode < 128 && IS_MARKDOWN_TRIGGER[cCode]) {
+                if (c == '`' || c == '|') return true
+                if (c == '~' && i + 1 < len && content[i + 1] == '~') return true
+
+                if (isNewLine) {
+                    if (c == '#') {
+                        var j = i + 1
+                        while (j < len && content[j] == '#') j++
+                        if (j < len && content[j] == ' ' && (j - i) <= 6) return true
+                    }
+                    if (c == '>') {
+                        if (i + 1 < len && content[i + 1] == ' ') return true
+                    }
+                    if ((c == '-' || c == '*' || c == '+') && i + 1 < len && content[i + 1] == ' ') return true
+                }
+
+                if (c == '*') {
+                    // CommonMark allows intraword `*` emphasis
+                    // (`foo*bar*baz` → `foo<em>bar</em>baz`), so no
+                    // word-boundary carve-out here. We still need a
+                    // flanking check though: a `*` followed by
+                    // whitespace can't open emphasis, and a closing
+                    // `*` can't be preceded by whitespace. Without
+                    // these, `5 * 3 = 15` and `5 * 3 * 7` would
+                    // false-fire.
+                    if (i + 1 < len && content[i + 1] == '*') return true
+                    val nextChar = if (i + 1 < len) content[i + 1] else ' '
+                    if (!nextChar.isMdSpaceOrNewline()) {
+                        var j = i + 1
+                        while (j < len && content[j] != '\n') {
+                            if (content[j] == '*' && !content[j - 1].isMdSpaceOrNewline()) return true
+                            j++
+                        }
+                    }
+                }
+                if (c == '_') {
+                    // CommonMark §6.2 forbids `_` from opening or
+                    // closing emphasis intraword — the rule that
+                    // makes `snake_case` and `foo_bar_baz` render
+                    // literally. Same rule keeps cashuB/cashuA
+                    // base64url payloads from false-firing, since
+                    // every `_` inside such a token is surrounded
+                    // by word chars.
+                    //
+                    // Practical heuristic: skip when the char before
+                    // this `_` is a word char (letter, digit, or
+                    // another `_` — the latter folds runs of `_` so
+                    // we only evaluate the run's first position).
+                    if (i == 0 || !content[i - 1].isMdWordChar()) {
+                        if (i + 1 < len && content[i + 1] == '_') {
+                            // `__` (or longer) at a non-word
+                            // boundary. Walk to the end of the run
+                            // and confirm it's followed by
+                            // non-whitespace (left-flanking).
+                            var runEnd = i + 1
+                            while (runEnd < len && content[runEnd] == '_') runEnd++
+                            if (runEnd < len && !content[runEnd].isMdSpaceOrNewline()) return true
+                        } else {
+                            // Single `_` at a non-word boundary.
+                            // Find a matching `_` on the same line
+                            // that itself is a valid closer (not
+                            // followed by a word char).
+                            var j = i + 1
+                            while (j < len && content[j] != '\n') {
+                                if (content[j] == '_') {
+                                    val nextIsWord = j + 1 < len && content[j + 1].isMdWordChar()
+                                    if (!nextIsWord) return true
+                                }
+                                j++
+                            }
+                        }
+                    }
+                }
+                if (c == '[') {
+                    var j = i + 1
+                    while (j < len && content[j] != ']') {
+                        if (content[j] == '\n') break
+                        j++
+                    }
+                    if (j + 1 < len && content[j] == ']' && content[j + 1] == '(') {
+                        // A markdown link's URL portion can't span a
+                        // newline — bail if we hit '\n' before ')'.
+                        var k = j + 2
+                        while (k < len && content[k] != ')') {
+                            if (content[k] == '\n') break
+                            k++
+                        }
+                        if (k < len && content[k] == ')') return true
+                    }
+                }
+            }
+
+            // Structural line tracking — drives isNewLine for the next
+            // iteration and powers the ordered-list + setext-heading
+            // checks that need to know "how much non-space text has
+            // appeared on the current line".
+            if (isNewLine) {
+                if (c != ' ' && c != '\t') {
+                    isNewLine = false
+                    nonSpaceCharCountOnLine = 1
+                    lastNonSpaceChar = c
+                    lineIsHomogeneousSetextChar = (c == '=' || c == '-')
+
+                    // Ordered list: digit+ followed by `. ` at line start.
+                    if (cCode in 48..57) {
+                        var j = i + 1
+                        while (j < len && content[j].code in 48..57) j++
+                        if (j + 1 < len && content[j] == '.' && content[j + 1] == ' ') return true
+                    }
+                }
+            } else {
+                if (c != ' ' && c != '\t' && c != '\n' && c != '\r') {
+                    nonSpaceCharCountOnLine++
+                    if (c != lastNonSpaceChar) lineIsHomogeneousSetextChar = false
+                    lastNonSpaceChar = c
+                }
+
+                if (c == '\n' || c == '\r') {
+                    // Setext heading: a line of 3+ '=' or '-' (and
+                    // nothing else) under non-empty text. Without the
+                    // homogeneity check, an ordinary sentence ending
+                    // in `-` would be promoted to a heading underline.
+                    if (lineIsHomogeneousSetextChar &&
+                        nonSpaceCharCountOnLine >= 3 &&
+                        (lastNonSpaceChar == '=' || lastNonSpaceChar == '-')
+                    ) {
+                        return true
+                    }
+                    isNewLine = true
+                    nonSpaceCharCountOnLine = 0
+                    lineIsHomogeneousSetextChar = false
+                }
+            }
+        }
+
+        // Trailing-line setext check for content not terminated by '\n'.
+        if (lineIsHomogeneousSetextChar &&
+            nonSpaceCharCountOnLine >= 3 &&
+            (lastNonSpaceChar == '=' || lastNonSpaceChar == '-')
+        ) {
+            return true
+        }
+
+        return false
+    }
+
+    // CommonMark "word" character for the intraword-emphasis rule:
+    // ASCII letters, ASCII digits, and `_` itself. Used to fold runs of
+    // `_` (so we only evaluate the start of a run) and to detect
+    // `snake_case`-style intraword underscores.
+    private fun Char.isMdWordChar(): Boolean = this.isLetterOrDigit() || this == '_'
+
+    private fun Char.isMdSpaceOrNewline(): Boolean = this == ' ' || this == '\t' || this == '\n' || this == '\r'
+
+    // Allocated once at object init; every isMarkdown call does an
+    // O(1) lookup against this table instead of branching through ten
+    // `contains(...)` calls.
+    private val IS_MARKDOWN_TRIGGER =
+        BooleanArray(128).apply {
+            this['#'.code] = true
+            this['*'.code] = true
+            this['_'.code] = true
+            this['['.code] = true
+            this['`'.code] = true
+            this['>'.code] = true
+            this['-'.code] = true
+            this['+'.code] = true
+            this['~'.code] = true
+            this['|'.code] = true
+        }
 }
 
 object CachedUrlParser {

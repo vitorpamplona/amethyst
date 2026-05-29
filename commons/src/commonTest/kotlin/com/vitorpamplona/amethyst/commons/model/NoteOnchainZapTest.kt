@@ -41,7 +41,7 @@ class NoteOnchainZapTest {
     // must be wired even in unit tests.
     private fun sourceNote(pubKey: HexKey): Note {
         val src = Note(pubKey)
-        src.author = User(pubKey, Note(pubKey + "n65"), Note(pubKey + "dm"))
+        src.author = User(pubKey) { addr -> Note(addr.toValue()) }
         return src
     }
 

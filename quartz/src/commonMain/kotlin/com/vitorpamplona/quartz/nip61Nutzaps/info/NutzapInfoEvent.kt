@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip61Nutzaps.info
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -48,6 +49,8 @@ class NutzapInfoEvent(
     companion object {
         const val KIND = 10019
         const val ALT_DESCRIPTION = "Nutzap receiving preferences"
+
+        fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, BaseReplaceableEvent.FIXED_D_TAG)
 
         fun build(
             mints: List<NutzapMintTag>,

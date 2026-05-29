@@ -200,6 +200,14 @@ sealed class Route {
 
     @Serializable object WalletAdd : Route()
 
+    @Serializable object WalletAddNwc : Route()
+
+    @Serializable object WalletAddCashu : Route()
+
+    @Serializable object CashuWallet : Route()
+
+    @Serializable object CashuWalletSettings : Route()
+
     @Serializable object Search : Route()
 
     @Serializable object SecurityFilters : Route()

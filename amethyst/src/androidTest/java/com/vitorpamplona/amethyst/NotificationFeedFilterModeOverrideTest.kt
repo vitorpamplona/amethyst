@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuWalletFilterAssembler
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -80,6 +82,9 @@ class NotificationFeedFilterModeOverrideTest {
                 signer = NostrSignerInternal(keyPair),
                 geolocationFlow = { MutableStateFlow<LocationState.LocationResult>(LocationState.LocationResult.Loading) },
                 nwcFilterAssembler = { NWCPaymentFilterAssembler(client) },
+                cashuWalletFilterAssembler = { CashuWalletFilterAssembler(client) },
+                cashuMintDirectoryFilterAssembler = { CashuMintDirectoryFilterAssembler(client) },
+                okHttpClientForMoney = { OkHttpClient() },
                 otsResolverBuilder = { EmptyOtsResolverBuilder.build() },
                 cache = LocalCache,
                 client = client,

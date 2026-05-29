@@ -21,9 +21,11 @@
 package com.vitorpamplona.quartz.nip60Cashu.wallet
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip31Alts.alt
@@ -46,7 +48,7 @@ class CashuWalletEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
     /**
      * Decrypts the content to get the wallet's private tags (mints and privkey).
      */
@@ -71,6 +73,9 @@ class CashuWalletEvent(
     companion object {
         const val KIND = 17375
         const val ALT_DESCRIPTION = "Cashu wallet"
+        const val FIXED_D_TAG = ""
+
+        fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, FIXED_D_TAG)
 
         suspend fun build(
             mints: List<String>,
@@ -90,7 +95,7 @@ class CashuWalletEvent(
 
             val encryptedContent = PrivateTagsInContent.encryptNip44(privateTags, signer)
 
-            com.vitorpamplona.quartz.nip01Core.signers.EventTemplate<CashuWalletEvent>(
+            EventTemplate<CashuWalletEvent>(
                 template.createdAt,
                 template.kind,
                 template.tags,

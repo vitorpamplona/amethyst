@@ -162,6 +162,8 @@ private object PrefKeys {
     const val ALL_ACCOUNT_INFO = "all_saved_accounts_info"
     const val SHARED_SETTINGS = "shared_settings"
     const val LATEST_PAYMENT_TARGETS = "latestPaymentTargets"
+    const val LATEST_CASHU_WALLET = "latestCashuWallet"
+    const val LATEST_NUTZAP_INFO = "latestNutzapInfo"
 }
 
 object LocalPreferences {
@@ -434,6 +436,8 @@ object LocalPreferences {
                     putOrRemove(PrefKeys.LATEST_EPHEMERAL_LIST, settings.backupEphemeralChatList)
                     putOrRemove(PrefKeys.LATEST_TRUST_PROVIDER_LIST, settings.backupTrustProviderList)
                     putOrRemove(PrefKeys.LATEST_PAYMENT_TARGETS, settings.backupNipA3PaymentTargets)
+                    putOrRemove(PrefKeys.LATEST_CASHU_WALLET, settings.backupCashuWallet)
+                    putOrRemove(PrefKeys.LATEST_NUTZAP_INFO, settings.backupNutzapInfo)
 
                     putBoolean(PrefKeys.HIDE_DELETE_REQUEST_DIALOG, settings.hideDeleteRequestDialog)
                     putBoolean(PrefKeys.HIDE_NIP_17_WARNING_DIALOG, settings.hideNIP17WarningDialog)
@@ -583,6 +587,8 @@ object LocalPreferences {
                     val latestEphemeralListStr = getString(PrefKeys.LATEST_EPHEMERAL_LIST, null)
                     val latestTrustProviderListStr = getString(PrefKeys.LATEST_TRUST_PROVIDER_LIST, null)
                     val latestPaymentTargetsStr = getString(PrefKeys.LATEST_PAYMENT_TARGETS, null)
+                    val latestCashuWalletStr = getString(PrefKeys.LATEST_CASHU_WALLET, null)
+                    val latestNutzapInfoStr = getString(PrefKeys.LATEST_NUTZAP_INFO, null)
                     val lastReadPerRouteStr = getString(PrefKeys.LAST_READ_PER_ROUTE, null)
 
                     Log.d("LocalPreferences") { "Load account from file $npub - before parsing events" }
@@ -636,6 +642,14 @@ object LocalPreferences {
                     val latestEphemeralList = async { parseEventOrNull<EphemeralChatListEvent>(latestEphemeralListStr) }
                     val latestTrustProviderList = async { parseEventOrNull<TrustProviderListEvent>(latestTrustProviderListStr) }
                     val latestPaymentTargets = async { parseEventOrNull<PaymentTargetsEvent>(latestPaymentTargetsStr) }
+                    val latestCashuWallet =
+                        async {
+                            parseEventOrNull<com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent>(latestCashuWalletStr)
+                        }
+                    val latestNutzapInfo =
+                        async {
+                            parseEventOrNull<com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent>(latestNutzapInfoStr)
+                        }
 
                     val lastReadPerRoute =
                         async {
@@ -710,6 +724,8 @@ object LocalPreferences {
                         viewedPollResultNoteIds = MutableStateFlow(viewedPollResultNoteIds.await()),
                         pendingAttestations = MutableStateFlow(pendingAttestations.await()),
                         backupNipA3PaymentTargets = latestPaymentTargets.await(),
+                        backupCashuWallet = latestCashuWallet.await(),
+                        backupNutzapInfo = latestNutzapInfo.await(),
                         callsEnabled = MutableStateFlow(callsEnabled),
                     )
                 }

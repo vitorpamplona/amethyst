@@ -89,7 +89,7 @@ class TorBootstrapInstrumentedTest {
      * a rustls CryptoProvider after an arti bump) the test catches it.
      */
     @Test
-    fun `bootstraps to Active within 120s`() =
+    fun bootstraps_to_Active_within_120s() =
         runBlocking(Dispatchers.IO) {
             val elapsed =
                 measureTimeMillis {
@@ -112,7 +112,7 @@ class TorBootstrapInstrumentedTest {
      * broken handler-spawn race, or a crypto provider mismatch on the TLS handshake).
      */
     @Test
-    fun `proxies HTTPS through Tor and reports IsTor true`() =
+    fun proxies_HTTPS_through_Tor_and_reports_IsTor_true() =
         runBlocking(Dispatchers.IO) {
             torService.start()
             val active =
@@ -152,7 +152,7 @@ class TorBootstrapInstrumentedTest {
      * the still-alive previous client.
      */
     @Test
-    fun `reset then re-start brings SOCKS back to Active`() =
+    fun reset_then_re_start_brings_SOCKS_back_to_Active() =
         runBlocking(Dispatchers.IO) {
             torService.start()
             withTimeout(BOOTSTRAP_TIMEOUT_MS) {

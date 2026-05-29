@@ -22,3 +22,5 @@ package com.vitorpamplona.amethyst.model
 
 // Re-export from commons for backwards compatibility
 typealias User = com.vitorpamplona.amethyst.commons.model.User
+
+typealias UserContext = com.vitorpamplona.amethyst.commons.model.UserContext
