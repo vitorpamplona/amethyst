@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -864,6 +865,7 @@ fun App(
             }
 
             is AccountState.ConnectingRelays -> {}
+            is AccountState.Loading -> {}
         }
     }
 
@@ -924,8 +926,10 @@ fun App(
                 if (current != null) {
                     accountManager.loadNwcConnection(current.npub)
                 }
+            } else {
+                // No saved account found → show login screen
+                accountManager.setLoggedOut()
             }
-            // If failure: state remains LoggedOut → login screen shows automatically
         }
 
         onDispose {
@@ -956,6 +960,28 @@ fun App(
                     com.vitorpamplona.amethyst.desktop.ui.deck.LocalLocalRelayStore provides localRelayStore,
                 ) {
                     when (accountState) {
+                        is AccountState.Loading -> {
+                            // Branded loading screen while accounts load from storage
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    androidx.compose.material3.CircularProgressIndicator(
+                                        modifier = Modifier.size(32.dp),
+                                        color = MaterialTheme.colorScheme.primary,
+                                        strokeWidth = 3.dp,
+                                    )
+                                    Spacer(Modifier.height(16.dp))
+                                    Text(
+                                        "Amethyst",
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        color = MaterialTheme.colorScheme.onBackground,
+                                    )
+                                }
+                            }
+                        }
+
                         is AccountState.LoggedOut -> {
                             LoginScreen(
                                 accountManager = accountManager,
