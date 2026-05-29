@@ -47,6 +47,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -58,15 +59,13 @@ import com.vitorpamplona.amethyst.model.nip62Vanish.ComplianceStatus
 import com.vitorpamplona.amethyst.model.nip62Vanish.VanishEventItem
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.note.formatMediumDateTime
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @Composable
 fun VanishEventsScreen(
@@ -170,6 +169,7 @@ private fun VanishEventCard(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             ),
     ) {
+        val context = LocalContext.current
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -182,7 +182,7 @@ private fun VanishEventCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = formatTimestamp(item.event.createdAt),
+                    text = formatMediumDateTime(item.event.createdAt, context),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -354,9 +354,4 @@ private fun RelayComplianceRow(
             }
         }
     }
-}
-
-private fun formatTimestamp(epochSeconds: Long): String {
-    val sdf = SimpleDateFormat("MMM dd, yyyy  hh:mm a", Locale.getDefault())
-    return sdf.format(Date(epochSeconds * 1000))
 }

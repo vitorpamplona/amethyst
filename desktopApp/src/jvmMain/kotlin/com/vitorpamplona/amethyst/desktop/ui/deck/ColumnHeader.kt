@@ -56,13 +56,14 @@ fun ColumnHeader(
         modifier =
             modifier
                 .fillMaxWidth()
-                .height(40.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                .height(48.dp)
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .padding(horizontal = 12.dp)
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onDoubleTap = { onDoubleClick() },
                     )
-                }.padding(horizontal = 8.dp),
+                },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (hasBackStack) {

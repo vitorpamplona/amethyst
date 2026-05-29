@@ -60,6 +60,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -72,6 +73,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinSettings
+import com.vitorpamplona.amethyst.ui.note.formatMediumDateTime
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinBackend
@@ -79,8 +81,6 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinCoreRpcConf
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.RpcProbeResult
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ServerTestResult
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 
 /**
@@ -497,10 +497,10 @@ private fun DiagnosticCard(
 
             // Last test timestamp
             if (lastTestTimestamp != null) {
+                val context = LocalContext.current
                 val formatted =
-                    remember(lastTestTimestamp) {
-                        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-                            .format(Date(lastTestTimestamp))
+                    remember(lastTestTimestamp, context) {
+                        formatMediumDateTime(lastTestTimestamp / 1000L, context)
                     }
                 val successCount = testResults.count { it.success }
                 val totalCount = testResults.size

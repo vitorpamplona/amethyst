@@ -137,6 +137,9 @@ fun StickToTopOnPrepend(
     stickToTopOnPrepend(
         stateKey = listState,
         firstItemKey = firstItemKey,
+        initialAtTop = {
+            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+        },
         sampler = {
             snapshotFlow {
                 listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
@@ -156,6 +159,9 @@ fun StickToTopOnPrepend(
     stickToTopOnPrepend(
         stateKey = gridState,
         firstItemKey = firstItemKey,
+        initialAtTop = {
+            gridState.firstVisibleItemIndex == 0 && gridState.firstVisibleItemScrollOffset == 0
+        },
         sampler = {
             snapshotFlow {
                 gridState.firstVisibleItemIndex == 0 && gridState.firstVisibleItemScrollOffset == 0
@@ -209,6 +215,7 @@ private fun rememberFirstItemIdHex(feedContentState: FeedContentState): String? 
 private fun stickToTopOnPrepend(
     stateKey: Any,
     firstItemKey: Any?,
+    initialAtTop: () -> Boolean,
     sampler: () -> Flow<Boolean>,
     isScrollInProgress: () -> Boolean,
     firstVisibleItemIndex: () -> Int,
@@ -216,7 +223,10 @@ private fun stickToTopOnPrepend(
 ) {
     // Plain holder instead of mutableStateOf — we only read this inside
     // effects, never in composition, so we don't need snapshot tracking.
-    val wasAtTop = remember { booleanArrayOf(true) }
+    // Seed from the actual restored scroll position: when the user returns
+    // to a feed via rememberForeverLazyListState, the saved offset is
+    // already in place, and a hardcoded `true` would mis-snap them to 0.
+    val wasAtTop = remember(stateKey) { booleanArrayOf(initialAtTop()) }
 
     LaunchedEffect(stateKey) {
         sampler().collect { atTop ->

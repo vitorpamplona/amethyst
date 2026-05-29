@@ -125,11 +125,17 @@ open class Note(
     fun inGatherers() = inGatherers ?: listOf<NotesGatherer>().also { inGatherers = it }
 
     fun addGatherer(gatherer: NotesGatherer) {
-        inGatherers = inGatherers() + gatherer
+        val list = inGatherers()
+        if (gatherer !in list) {
+            inGatherers = inGatherers() + gatherer
+        }
     }
 
     fun removeGatherer(gatherer: NotesGatherer) {
-        inGatherers = inGatherers() - gatherer
+        val list = inGatherers()
+        if (gatherer in list) {
+            inGatherers = inGatherers() - gatherer
+        }
     }
 
     override fun removeNote(note: Note) {

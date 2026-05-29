@@ -40,19 +40,7 @@ object PlatformTypography {
     val current: Typography by lazy { build(PlatformFonts.ui) }
 
     private fun build(family: FontFamily): Typography {
-        // Per-OS letter spacing offset applied to display/headline styles.
-        val tightening: TextUnit =
-            when (PlatformInfo.current) {
-                Platform.MACOS -> (-0.4).sp
-
-                // SF Pro is set tight at large sizes
-                Platform.GNOME -> (-0.2).sp
-
-                // Adwaita Sans is mildly tight
-                Platform.KDE, Platform.WINDOWS -> 0.sp
-
-                else -> 0.sp
-            }
+        val tightening: TextUnit = (-0.3).sp
 
         fun ts(
             size: Int,
@@ -68,9 +56,9 @@ object PlatformTypography {
         )
 
         return Typography(
-            displayLarge = ts(57, 64, FontWeight.Normal, tightening),
-            displayMedium = ts(45, 52, FontWeight.Normal, tightening),
-            displaySmall = ts(36, 44, FontWeight.Normal, tightening),
+            displayLarge = ts(57, 64, FontWeight.Light, tightening),
+            displayMedium = ts(45, 52, FontWeight.Light, tightening),
+            displaySmall = ts(36, 44, FontWeight.Light, tightening),
             headlineLarge = ts(32, 40, FontWeight.SemiBold, tightening),
             headlineMedium = ts(28, 36, FontWeight.SemiBold, tightening),
             headlineSmall = ts(24, 32, FontWeight.SemiBold, tightening),

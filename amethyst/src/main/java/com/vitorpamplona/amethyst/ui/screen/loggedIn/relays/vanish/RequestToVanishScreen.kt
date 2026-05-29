@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.vanish
 
+import android.text.format.DateFormat
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -58,6 +59,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -72,6 +74,7 @@ import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.note.formatMediumDateTime
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.BasicRelaySetupInfoDialog
@@ -85,12 +88,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.toImmutableList
-import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
-import java.util.Date
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -131,11 +131,12 @@ fun RequestToVanishScreen(
 
     val currentTime = Instant.ofEpochMilli(vanishDate * 1000).atZone(ZoneId.systemDefault()).toLocalDateTime()
 
+    val context = LocalContext.current
     val timePickerState =
         rememberTimePickerState(
             initialHour = currentTime.hour,
             initialMinute = currentTime.minute,
-            is24Hour = false,
+            is24Hour = DateFormat.is24HourFormat(context),
         )
 
     val relayOptions =
@@ -288,7 +289,7 @@ fun RequestToVanishScreen(
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
-                        text = formatTimestamp(vanishDate),
+                        text = formatMediumDateTime(vanishDate, context),
                         style = MaterialTheme.typography.bodyLarge,
                     )
                 }
@@ -459,11 +460,6 @@ private fun ConfirmVanishDialog(
             }
         },
     )
-}
-
-private fun formatTimestamp(epochSeconds: Long): String {
-    val sdf = SimpleDateFormat("MMM dd, yyyy  hh:mm a", Locale.getDefault())
-    return sdf.format(Date(epochSeconds * 1000))
 }
 
 @Preview

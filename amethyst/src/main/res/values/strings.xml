@@ -764,6 +764,8 @@
     <string name="articles">Articles</string>
     <string name="route_music_tracks">Music</string>
     <string name="route_music_playlists">Playlists</string>
+    <string name="route_podcast_episodes">Episodes</string>
+    <string name="route_podcasts">Podcasts</string>
     <string name="new_music_track">New music track</string>
     <string name="new_music_playlist">New playlist</string>
     <string name="music_track_title_label">Title</string>
@@ -2687,6 +2689,10 @@
     <string name="kind_audio_track">Audio Track</string>
     <string name="kind_music_track">Music Track</string>
     <string name="kind_music_playlist">Music Playlist</string>
+    <string name="kind_podcast_episode">Podcast Episode</string>
+    <string name="kind_podcast_metadata">Podcast Show</string>
+    <string name="kind_authored_podcasts">Authored Podcasts</string>
+    <string name="kind_favorite_podcasts">Favorite Podcasts</string>
     <string name="kind_badge_awards">Badge Awards</string>
     <string name="kind_badge_definitions">Badge Definitions</string>
     <string name="kind_accepted_badge_set">Accepted Badge Set</string>

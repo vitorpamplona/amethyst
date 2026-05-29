@@ -38,6 +38,8 @@ import com.vitorpamplona.quartz.nip73ExternalIds.location.GeohashId
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 
 val PostsByGeohashKinds =
     listOf(
@@ -52,6 +54,8 @@ val PostsByGeohashKinds =
         AudioHeaderEvent.KIND,
         MusicTrackEvent.KIND,
         MusicPlaylistEvent.KIND,
+        PodcastEpisodeEvent.KIND,
+        PodcastMetadataEvent.KIND,
         WikiNoteEvent.KIND,
     )
 

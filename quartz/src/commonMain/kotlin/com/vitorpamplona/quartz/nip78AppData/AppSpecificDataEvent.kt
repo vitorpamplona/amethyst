@@ -23,9 +23,11 @@ package com.vitorpamplona.quartz.nip78AppData
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
-import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 class AppSpecificDataEvent(
@@ -52,28 +54,15 @@ class AppSpecificDataEvent(
             dTag: String,
         ): ATag = ATag(KIND, pubkey, dTag, null)
 
-        suspend fun create(
+        fun build(
             dTag: String,
             description: String,
-            otherTags: Array<Array<String>>,
-            signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
-        ): AppSpecificDataEvent {
-            val withD =
-                if (otherTags.any { it.size > 1 && it[0] == "d" && it[1] == dTag }) {
-                    otherTags
-                } else {
-                    otherTags.filter { it.size > 0 && it[0] != "d" }.toTypedArray() + arrayOf("d", dTag)
-                }
-
-            val newTags =
-                if (withD.none { it.size > 0 && it[0] == "alt" }) {
-                    withD + AltTag.assemble(ALT)
-                } else {
-                    withD
-                }
-
-            return signer.sign(createdAt, KIND, newTags, description)
+            initializer: TagArrayBuilder<AppSpecificDataEvent>.() -> Unit = {},
+        ) = eventTemplate<AppSpecificDataEvent>(KIND, description, createdAt) {
+            alt(ALT)
+            dTag(dTag)
+            initializer()
         }
     }
 }

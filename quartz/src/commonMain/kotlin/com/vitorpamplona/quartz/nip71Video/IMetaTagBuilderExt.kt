@@ -23,6 +23,9 @@ package com.vitorpamplona.quartz.nip71Video
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningTag
+import com.vitorpamplona.quartz.nip71Video.tags.BitrateTag
+import com.vitorpamplona.quartz.nip71Video.tags.DurationTag
+import com.vitorpamplona.quartz.nip71Video.tags.LanguageImetaTag
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -38,6 +41,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.SummaryTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.TorrentInfoHash
+import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.WaveformTag
 
 /**
  * Contains the IMeta tags that are used by Video events.
@@ -73,3 +77,19 @@ fun IMetaTagBuilder.summary(summary: HexKey) = add(SummaryTag.TAG_NAME, summary)
 fun IMetaTagBuilder.fallback(fallback: HexKey) = add(FallbackTag.TAG_NAME, fallback)
 
 fun IMetaTagBuilder.service(service: HexKey) = add(ServiceTag.TAG_NAME, service)
+
+fun IMetaTagBuilder.bitrate(bitsPerSecond: Int) = add(BitrateTag.TAG_NAME, bitsPerSecond.toString())
+
+fun IMetaTagBuilder.duration(seconds: Double) = add(DurationTag.TAG_NAME, seconds.toString())
+
+fun IMetaTagBuilder.duration(seconds: Int) = add(DurationTag.TAG_NAME, seconds.toString())
+
+fun IMetaTagBuilder.waveform(wave: List<Float>) = add(WaveformTag.TAG_NAME, WaveformTag.assembleWaveFloat(wave))
+
+fun IMetaTagBuilder.language(language: LanguageImetaTag) = add(LanguageImetaTag.TAG_NAME, language.toPropertyValue())
+
+fun IMetaTagBuilder.language(
+    code: String,
+    standard: String = LanguageImetaTag.DEFAULT_STANDARD,
+    originalVersion: Boolean = false,
+) = language(LanguageImetaTag(code, standard, originalVersion))

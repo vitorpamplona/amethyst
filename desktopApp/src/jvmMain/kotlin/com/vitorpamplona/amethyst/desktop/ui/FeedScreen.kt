@@ -20,8 +20,19 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.TooltipArea
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,13 +42,18 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -49,44 +65,66 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.chess.RelaySyncStatus
 import com.vitorpamplona.amethyst.commons.compose.elements.BoostedMark
 import com.vitorpamplona.amethyst.commons.compose.layouts.GenericRepostLayout
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
+import com.vitorpamplona.amethyst.commons.search.AdvancedSearchBarState
+import com.vitorpamplona.amethyst.commons.search.QuerySerializer
+import com.vitorpamplona.amethyst.commons.search.SearchResultFilter
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.desktop.DesktopPreferences
+import com.vitorpamplona.amethyst.desktop.SearchHistoryStore
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.feeds.DesktopCustomFeedFilter
 import com.vitorpamplona.amethyst.desktop.feeds.DesktopFollowingFeedFilter
 import com.vitorpamplona.amethyst.desktop.feeds.DesktopGlobalFeedFilter
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.desktop.subscriptions.FeedMode
 import com.vitorpamplona.amethyst.desktop.subscriptions.FilterBuilders
+import com.vitorpamplona.amethyst.desktop.subscriptions.SearchFilterFactory
 import com.vitorpamplona.amethyst.desktop.subscriptions.SubscriptionConfig
 import com.vitorpamplona.amethyst.desktop.subscriptions.createContactListSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createCustomFeedSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createFollowingFeedSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createGlobalFeedSubscription
+import com.vitorpamplona.amethyst.desktop.subscriptions.createSearchPeopleSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
 import com.vitorpamplona.amethyst.desktop.ui.note.NoteCard
 import com.vitorpamplona.amethyst.desktop.ui.relay.LocalRelayCategories
 import com.vitorpamplona.amethyst.desktop.ui.relay.Nip65RelayEditor
+import com.vitorpamplona.amethyst.desktop.ui.search.SearchResultsList
 import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -192,6 +230,7 @@ fun FeedNoteCard(
             val displayData = remember(originalEvent, metadataState) { originalEvent.toNoteDisplayData(localCache) }
             NoteCard(
                 note = displayData,
+                modifier = Modifier.fillMaxWidth(),
                 localCache = localCache,
                 onClick = { onNavigateToThread(originalEvent.id) },
                 onAuthorClick = onNavigateToProfile,
@@ -245,6 +284,7 @@ fun FeedNoteCard(
             val displayData = remember(event, metadataState) { event.toNoteDisplayData(localCache) }
             NoteCard(
                 note = displayData,
+                modifier = Modifier.fillMaxWidth(),
                 localCache = localCache,
                 onClick = { onNavigateToThread(event.id) },
                 onAuthorClick = onNavigateToProfile,
@@ -297,7 +337,12 @@ fun FeedScreen(
     onNavigateToThread: (String) -> Unit = {},
     onZapFeedback: (ZapFeedback) -> Unit = {},
     onNavigateToRelays: () -> Unit = {},
+    onSearchClick: () -> Unit = {},
 ) {
+    val feedSearchActiveState = com.vitorpamplona.amethyst.desktop.ui.theme.LocalFeedSearchActive.current
+    var searchActive by feedSearchActiveState
+    val onSearchActiveChange: (Boolean) -> Unit = { searchActive = it }
+    val openFullSearch = com.vitorpamplona.amethyst.desktop.ui.theme.LocalOpenFullSearch.current
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val connectedRelays by relayManager.connectedRelays.collectAsState()
     val followedUsers by localCache.followedUsers.collectAsState()
@@ -557,32 +602,16 @@ fun FeedScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
+        // Layer 1: Feed content (scrollable, behind scrim)
         ReadingColumn {
-            // Header: pinned feed tabs + "Show More +"
-            FeedTabsHeader(
-                feedMode = feedMode,
-                activeFeedId = activeFeedId,
-                onFeedModeChange = { mode ->
-                    feedMode = mode
-                    activeFeedId = null
-                    activeFeedSource = null
-                    if (mode != FeedMode.CUSTOM) {
-                        DesktopPreferences.feedMode = mode
-                    }
-                },
-                onNavigateToFeed = { feed ->
-                    val source = feed.source
-                    if (source is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Filter) {
-                        activeFeedId = feed.id
-                        activeFeedSource = source
-                        feedMode = FeedMode.CUSTOM
-                    }
-                },
-                onOpenFeedsDrawer = onOpenFeedsDrawer,
-                onCompose = onCompose,
+            // Reserve space for the header card that floats above
+            // Reserve space for the header card that floats above.
+            // When search is expanded, the card grows — add more margin.
+            val headerSpacerHeight by animateDpAsState(
+                targetValue = if (searchActive) 300.dp else 60.dp,
+                animationSpec = tween(200),
             )
-
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(headerSpacerHeight))
 
             // Feed content based on FeedState
             when (val state = feedState) {
@@ -653,7 +682,7 @@ fun FeedScreen(
                     val sidePadding = LocalReadingSidePadding.current
                     LazyColumn(
                         state = lazyListState,
-                        contentPadding = PaddingValues(horizontal = sidePadding + 12.dp),
+                        contentPadding = PaddingValues(start = sidePadding + 12.dp, end = sidePadding + 12.dp, top = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         items(loadedState.list, key = { it.idHex }) { note ->
@@ -721,6 +750,53 @@ fun FeedScreen(
             )
         }
 
+        // Layer 2: Search scrim — dims feed content when search is expanded
+        if (searchActive) {
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.3f))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) {
+                            onSearchActiveChange(false)
+                        },
+            )
+        }
+
+        // Layer 3: Header card — rendered AFTER scrim so it floats above it
+        FeedTabsHeader(
+            feedMode = feedMode,
+            activeFeedId = activeFeedId,
+            searchExpanded = searchActive,
+            onSearchExpandedChange = onSearchActiveChange,
+            onFeedModeChange = { mode ->
+                feedMode = mode
+                activeFeedId = null
+                activeFeedSource = null
+                if (mode != FeedMode.CUSTOM) {
+                    DesktopPreferences.feedMode = mode
+                }
+            },
+            onNavigateToFeed = { feed ->
+                val source = feed.source
+                if (source is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Filter) {
+                    activeFeedId = feed.id
+                    activeFeedSource = source
+                    feedMode = FeedMode.CUSTOM
+                }
+            },
+            onOpenFeedsDrawer = onOpenFeedsDrawer,
+            onCompose = onCompose,
+            onSearchClick = openFullSearch,
+            relayManager = relayManager,
+            localCache = localCache,
+            onNavigateToProfile = onNavigateToProfile,
+            onNavigateToThread = onNavigateToThread,
+        )
+
         // Lightbox overlay
         lightboxState?.let { state ->
             LightboxOverlay(
@@ -747,75 +823,445 @@ fun FeedScreen(
 private fun FeedTabsHeader(
     feedMode: FeedMode,
     activeFeedId: String? = null,
+    searchExpanded: Boolean = false,
+    onSearchExpandedChange: (Boolean) -> Unit = {},
     onFeedModeChange: (FeedMode) -> Unit,
     onNavigateToFeed: (com.vitorpamplona.amethyst.commons.feeds.custom.FeedDefinition) -> Unit = {},
     onOpenFeedsDrawer: () -> Unit,
     onCompose: () -> Unit,
+    onSearchClick: () -> Unit = {},
+    relayManager: DesktopRelayConnectionManager? = null,
+    localCache: DesktopLocalCache? = null,
+    onNavigateToProfile: (String) -> Unit = {},
+    onNavigateToThread: (String) -> Unit = {},
 ) {
     val feedRepo = com.vitorpamplona.amethyst.desktop.ui.deck.LocalFeedRepository.current
     val pinnedFeeds by feedRepo.pinnedFeeds.collectAsState()
     val sidePadding = LocalReadingSidePadding.current
+    val scope = rememberCoroutineScope()
+    val searchState = remember { AdvancedSearchBarState(scope) }
+    var searchText by remember { mutableStateOf(TextFieldValue("")) }
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    val debouncedQuery by searchState.debouncedQuery.collectAsState()
+    val relayCategories = LocalRelayCategories.current
+    val searchRelays by relayCategories.searchRelays.collectAsState()
 
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = sidePadding + 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        // Pinned feed tabs
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            pinnedFeeds.forEach { feed ->
-                val isSelected =
-                    when (feed.source) {
-                        is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Following -> {
-                            feedMode == FeedMode.FOLLOWING
-                        }
+    // Sync search text to AdvancedSearchBarState
+    LaunchedEffect(searchText.text) {
+        searchState.updateFromText(searchText.text)
+    }
 
-                        is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Global -> {
-                            feedMode == FeedMode.GLOBAL
-                        }
+    // Auto-save to history after 1s of no typing (separate from relay debounce)
+    LaunchedEffect(searchText.text) {
+        if (searchText.text.isNotBlank()) {
+            kotlinx.coroutines.delay(1000L)
+            val query = searchState.query.value
+            if (!query.isEmpty) {
+                SearchHistoryStore.addToHistory(query)
+            }
+        }
+    }
 
-                        else -> {
-                            activeFeedId == feed.id
+    // Clear on collapse
+    LaunchedEffect(searchExpanded) {
+        if (!searchExpanded) {
+            searchText = TextFieldValue("")
+            searchState.clearSearch()
+        }
+    }
+
+    // Auto-focus when expanded
+    LaunchedEffect(searchExpanded) {
+        if (searchExpanded) {
+            focusRequester.requestFocus()
+        }
+    }
+
+    // Start/stop relay search when debounced query changes
+    LaunchedEffect(debouncedQuery) {
+        if (!debouncedQuery.isEmpty) {
+            searchState.clearResults()
+            searchState.initRelayStates(searchRelays)
+            searchState.startSearching("people-search")
+            searchState.startSearching("adv-search")
+            kotlinx.coroutines.delay(10_000L)
+            searchState.timeoutWaitingRelays()
+        }
+    }
+
+    // NIP-50 people search subscription
+    if (relayManager != null) {
+        rememberSubscription(searchRelays, debouncedQuery, relayManager = relayManager) {
+            if (searchRelays.isEmpty() || debouncedQuery.isEmpty) {
+                return@rememberSubscription null
+            }
+            createSearchPeopleSubscription(
+                relays = searchRelays,
+                searchQuery = debouncedQuery.text.ifBlank { QuerySerializer.serialize(debouncedQuery) },
+                limit = 10,
+                onEvent = { event, _, relay, _ ->
+                    if (searchState.trackRelayEvent(relay.url, event.id)) {
+                        if (event is MetadataEvent) {
+                            localCache?.consumeMetadata(event)
+                            val user = localCache?.getUserIfExists(event.pubKey)
+                            if (user != null) {
+                                searchState.addPeopleResult(user)
+                            }
                         }
                     }
-                FilterChip(
-                    selected = isSelected,
-                    onClick = {
-                        when (feed.source) {
-                            is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Following -> {
-                                onFeedModeChange(FeedMode.FOLLOWING)
-                            }
-
-                            is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Global -> {
-                                onFeedModeChange(FeedMode.GLOBAL)
-                            }
-
-                            else -> {
-                                onNavigateToFeed(feed)
-                            }
-                        }
-                    },
-                    label = { Text("${feed.emoji} ${feed.name}") },
-                )
-            }
-            // "Show More +" button
-            FilterChip(
-                selected = false,
-                onClick = onOpenFeedsDrawer,
-                label = { Text("+ More") },
+                },
+                onEose = { relay, _ ->
+                    searchState.updateRelayState(relay.url, RelaySyncStatus.EOSE_RECEIVED)
+                    searchState.stopSearching("people-search")
+                },
+                onClosed = { relay, _, _ ->
+                    searchState.updateRelayState(relay.url, RelaySyncStatus.FAILED)
+                    searchState.stopSearching("people-search")
+                },
             )
         }
 
-        // Compose button
-        IconButton(onClick = onCompose) {
-            Icon(
-                MaterialSymbols.Edit,
-                contentDescription = "Compose",
-                modifier = Modifier.size(20.dp),
+        // NIP-50 note search subscription
+        rememberSubscription(searchRelays, debouncedQuery, relayManager = relayManager) {
+            if (searchRelays.isEmpty() || debouncedQuery.isEmpty) {
+                return@rememberSubscription null
+            }
+            val filters = SearchFilterFactory.createFilters(debouncedQuery)
+            if (filters.isEmpty()) return@rememberSubscription null
+
+            SubscriptionConfig(
+                subId = generateSubId("inline-search"),
+                filters = filters,
+                relays = searchRelays,
+                onEvent = { event, _, relay, _ ->
+                    if (event.kind == MetadataEvent.KIND) return@SubscriptionConfig
+                    if (searchState.trackRelayEvent(relay.url, event.id)) {
+                        val filtered = SearchResultFilter.filter(listOf(event), debouncedQuery)
+                        if (filtered.isNotEmpty()) {
+                            searchState.addNoteResults(filtered)
+                        }
+                    }
+                },
+                onEose = { relay, _ ->
+                    searchState.updateRelayState(relay.url, RelaySyncStatus.EOSE_RECEIVED)
+                    searchState.stopSearching("adv-search")
+                },
+                onClosed = { relay, _, _ ->
+                    searchState.updateRelayState(relay.url, RelaySyncStatus.FAILED)
+                    searchState.stopSearching("adv-search")
+                },
             )
+        }
+    }
+
+    Surface(
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = sidePadding + 8.dp, vertical = 8.dp),
+    ) {
+        Column {
+            // Always-visible header row: tabs + search + compose
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                // Feed tabs — always visible. Clicking collapses search.
+                pinnedFeeds.forEach { feed ->
+                    val isSelected =
+                        when (feed.source) {
+                            is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Following ->
+                                feedMode == FeedMode.FOLLOWING
+                            is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Global ->
+                                feedMode == FeedMode.GLOBAL
+                            else -> activeFeedId == feed.id
+                        }
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = {
+                            onSearchExpandedChange(false)
+                            when (feed.source) {
+                                is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Following ->
+                                    onFeedModeChange(FeedMode.FOLLOWING)
+                                is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Global ->
+                                    onFeedModeChange(FeedMode.GLOBAL)
+                                else -> onNavigateToFeed(feed)
+                            }
+                        },
+                        label = {
+                            Text(
+                                "${feed.emoji} ${feed.name}",
+                                maxLines = 1,
+                                style = MaterialTheme.typography.labelMedium,
+                            )
+                        },
+                    )
+                }
+
+                // Search: pill when collapsed, active input when expanded
+                if (searchExpanded) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(
+                            MaterialSymbols.Search,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        BasicTextField(
+                            value = searchText,
+                            onValueChange = { searchText = it },
+                            modifier =
+                                Modifier
+                                    .weight(1f)
+                                    .focusRequester(focusRequester)
+                                    .onPreviewKeyEvent { event ->
+                                        if (event.type == KeyEventType.KeyDown && event.key == Key.Escape) {
+                                            onSearchExpandedChange(false)
+                                            focusManager.clearFocus()
+                                            true
+                                        } else {
+                                            false
+                                        }
+                                    },
+                            textStyle =
+                                MaterialTheme.typography.bodyMedium.copy(
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                ),
+                            singleLine = true,
+                            decorationBox = { innerTextField ->
+                                Box(contentAlignment = Alignment.CenterStart) {
+                                    if (searchText.text.isEmpty()) {
+                                        Text(
+                                            "Search notes, profiles, hashtags...",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            },
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            if (PlatformInfo.isMacOS) "\u2318F" else "Ctrl+F",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        )
+                    }
+                } else {
+                    com.vitorpamplona.amethyst.desktop.ui.search.SearchPill(
+                        onClick = { onSearchExpandedChange(true) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+
+                // Compose button — always visible
+                IconButton(onClick = onCompose, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        MaterialSymbols.Edit,
+                        contentDescription = "Compose",
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+
+            // Animated expanding section: history or search results
+            AnimatedVisibility(
+                visible = searchExpanded,
+                enter = expandVertically(animationSpec = tween(200)) + fadeIn(tween(200)),
+                exit = shrinkVertically(animationSpec = tween(150)) + fadeOut(tween(100)),
+            ) {
+                Column {
+                    val hasQuery = searchText.text.isNotBlank()
+                    val isSearching by searchState.isSearching.collectAsState()
+                    val people by searchState.peopleResults.collectAsState()
+                    val notes by searchState.noteResults.collectAsState()
+                    val hasResults = people.isNotEmpty() || notes.isNotEmpty()
+
+                    // Linear progress bar at the top — visible while searching
+                    AnimatedVisibility(
+                        visible = isSearching || (hasQuery && !hasResults),
+                        enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+                        exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
+                    ) {
+                        LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        )
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                    if (hasQuery) {
+                        // Results stream in as they arrive
+                        if (hasResults) {
+                            SearchResultsList(
+                                state = searchState,
+                                onNavigateToProfile = { pubkey ->
+                                    onSearchExpandedChange(false)
+                                    onNavigateToProfile(pubkey)
+                                },
+                                onNavigateToThread = { noteId ->
+                                    onSearchExpandedChange(false)
+                                    onNavigateToThread(noteId)
+                                },
+                                localCache = localCache,
+                                modifier = Modifier.heightIn(max = 400.dp).fillMaxWidth(),
+                            )
+                        } else if (isSearching) {
+                            // Loading — centered in results area
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Icon(
+                                    MaterialSymbols.Search,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(32.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    "Searching ${searchRelays.size} relays...",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        } else {
+                            // Search complete, no results
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Icon(
+                                    MaterialSymbols.Search,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(32.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    if (searchRelays.isEmpty()) "No search relays configured" else "No results found",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+
+                        // "Open full search" — always visible when there's a query
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onSearchExpandedChange(false)
+                                        onSearchClick()
+                                    }.padding(horizontal = 16.dp, vertical = 8.dp),
+                        ) {
+                            Icon(
+                                MaterialSymbols.AutoMirrored.OpenInNew,
+                                null,
+                                Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Text("Open full search", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                        }
+                    } else {
+                        // Show search history when empty
+                        SearchHistorySection(
+                            onOpenFullSearch = {
+                                onSearchExpandedChange(false)
+                                onSearchClick()
+                            },
+                            onHistoryItemClick = { text ->
+                                searchText = TextFieldValue(text, TextRange(text.length))
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchHistorySection(
+    onOpenFullSearch: () -> Unit,
+    onHistoryItemClick: (String) -> Unit = { },
+) {
+    val history by SearchHistoryStore.history.collectAsState()
+    val savedSearches by SearchHistoryStore.savedSearches.collectAsState()
+
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+    ) {
+        if (history.isNotEmpty()) {
+            Text(
+                "Recent",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+            )
+            history.take(5).forEach { query ->
+                val text =
+                    com.vitorpamplona.amethyst.commons.search.QuerySerializer
+                        .serialize(query)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { onHistoryItemClick(text) }
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    Icon(MaterialSymbols.History, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.width(10.dp))
+                    Text(text, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                }
+            }
+        }
+
+        if (savedSearches.isNotEmpty()) {
+            if (history.isNotEmpty()) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+            }
+            Text("Saved", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+            savedSearches.take(5).forEach { saved ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().clickable { onOpenFullSearch() }.padding(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    Icon(MaterialSymbols.Bookmark, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(10.dp))
+                    Text(saved.label, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                }
+            }
+        }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().clickable { onOpenFullSearch() }.padding(horizontal = 16.dp, vertical = 8.dp),
+        ) {
+            Icon(MaterialSymbols.AutoMirrored.OpenInNew, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(10.dp))
+            Text("Open full search", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
         }
     }
 }

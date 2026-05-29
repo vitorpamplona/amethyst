@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.highlights
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -34,10 +35,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -58,9 +59,9 @@ import com.vitorpamplona.amethyst.commons.model.highlights.HighlightData
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import java.text.DateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun MyHighlightsScreen(
@@ -175,13 +176,14 @@ private fun HighlightCard(
     highlight: HighlightData,
     onDelete: () -> Unit,
 ) {
-    Card(
+    OutlinedCard(
         modifier = Modifier.fillMaxWidth(),
         colors =
-            CardDefaults.cardColors(
+            CardDefaults.outlinedCardColors(
                 containerColor = MaterialTheme.colorScheme.surface,
             ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        shape = MaterialTheme.shapes.medium,
     ) {
         Row(
             modifier = Modifier.padding(16.dp).fillMaxWidth(),
@@ -236,8 +238,8 @@ private fun HighlightCard(
     }
 }
 
-private fun formatTimestamp(epochSeconds: Long): String =
-    Instant
-        .ofEpochSecond(epochSeconds)
-        .atZone(ZoneId.systemDefault())
-        .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+// Locale-aware date+time, e.g. en-US "May 28, 2026 2:32 PM" · de-DE "28.05.2026 14:32".
+private val dateTimeFormat =
+    DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, Locale.getDefault())
+
+private fun formatTimestamp(epochSeconds: Long): String = dateTimeFormat.format(Date(epochSeconds * 1000L))

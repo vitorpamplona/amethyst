@@ -271,6 +271,10 @@ import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.OnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
@@ -2219,7 +2223,10 @@ object LocalCache : ILocalCache, ICacheProvider {
         val requestId = event.requestId()
         val pending =
             when (val match = paymentTracker.onResponseReceived(requestId, event.pubKey)) {
-                is NwcPaymentTracker.MatchResult.Matched -> match.pending
+                is NwcPaymentTracker.MatchResult.Matched -> {
+                    match.pending
+                }
+
                 is NwcPaymentTracker.MatchResult.WrongAuthor -> {
                     // Possible spoof: a kind-23195 event from someone other than
                     // the wallet service we sent the request to. The pending
@@ -2232,6 +2239,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                     )
                     return false
                 }
+
                 NwcPaymentTracker.MatchResult.NoMatch -> {
                     Log.w(
                         "LocalCache",
@@ -3007,23 +3015,24 @@ object LocalCache : ILocalCache, ICacheProvider {
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
+        // uses the internal event to avoid reprocessing cached items.
+        val note =
+            if (event is AddressableEvent) {
+                getOrCreateAddressableNote(event.address())
+            } else {
+                getOrCreateNote(event.id)
+            }
+
         val wasNew = justConsumeInnerInner(event, relay, wasVerified)
 
         if (wasNew) {
             updateHintIndexes(event)
             updateMintIndex(event)
+            updateInGatherer(event, note)
         }
 
         if (relay != null) {
-            // uses the internal event to avoid reprocessing cached items.
-            val note =
-                if (event is AddressableEvent) {
-                    getAddressableNoteIfExists(event.address())
-                } else {
-                    getNoteIfExists(event.id)
-                }
-
-            note?.event?.let { consumedEvent ->
+            note.event?.let { consumedEvent ->
                 addIncomingRelayAsHintToAllRelatedEvents(consumedEvent, relay)
             }
         }
@@ -3095,6 +3104,22 @@ object LocalCache : ILocalCache, ICacheProvider {
             is MintRecommendationEvent -> mintDirectory.addAll(event.mintUrls())
             is CashuMintEvent -> event.mintUrl()?.let { mintDirectory.add(it) }
             else -> Unit
+        }
+    }
+
+    fun updateInGatherer(
+        event: Event,
+        note: Note,
+    ) {
+        if (event is EventHintProvider) {
+            event.linkedEventIds().forEach {
+                checkGetOrCreateNote(it)?.addGatherer(note)
+            }
+        }
+        if (event is AddressHintProvider) {
+            event.linkedAddressIds().forEach {
+                checkGetOrCreateAddressableNote(it)?.addGatherer(note)
+            }
         }
     }
 
@@ -3564,6 +3589,22 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 is MusicPlaylistEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is PodcastEpisodeEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is PodcastMetadataEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is AuthoredPodcastsEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is FavoritePodcastsListEvent -> {
                     consumeBaseReplaceable(event, relay, wasVerified)
                 }
 

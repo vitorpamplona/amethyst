@@ -398,7 +398,7 @@ fun AppDrawer(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                     ) { /* consume click — prevent propagation to scrim */ },
-            shape = RoundedCornerShape(16.dp),
+            shape = MaterialTheme.shapes.large,
             tonalElevation = 8.dp,
         ) {
             Column {
@@ -579,7 +579,7 @@ private fun DrawerScreenCard(
                             showMenu = true
                         }
                     },
-            shape = RoundedCornerShape(12.dp),
+            shape = MaterialTheme.shapes.medium,
             tonalElevation = if (isSelected) 8.dp else 2.dp,
             color =
                 if (isSelected) {
@@ -792,7 +792,7 @@ private fun WorkspaceCard(
                 .fillMaxWidth()
                 .padding(vertical = 4.dp)
                 .clickable(onClick = onSwitch),
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.medium,
         tonalElevation = if (isActive) 8.dp else 2.dp,
         color =
             if (isActive) {
@@ -869,7 +869,7 @@ private fun AddWorkspaceCard(
                 .fillMaxWidth()
                 .padding(vertical = 4.dp)
                 .clickable(enabled = enabled, onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.medium,
         tonalElevation = 1.dp,
     ) {
         Row(
@@ -935,7 +935,7 @@ private fun WorkspaceEditorDialog(
                     WorkspaceIcons.availableNames.forEach { iName ->
                         Surface(
                             modifier = Modifier.size(40.dp).clickable { iconName = iName },
-                            shape = RoundedCornerShape(8.dp),
+                            shape = MaterialTheme.shapes.small,
                             color =
                                 if (isSelected(iName)) {
                                     MaterialTheme.colorScheme.primaryContainer

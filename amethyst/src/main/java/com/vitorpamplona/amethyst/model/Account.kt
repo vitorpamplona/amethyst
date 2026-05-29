@@ -553,6 +553,12 @@ class Account(
     val liveMusicPlaylistsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultMusicPlaylistsFollowList)
     val liveMusicPlaylistsFollowListsPerRelay = OutboxLoaderState(liveMusicPlaylistsFollowLists, cache, scope).flow
 
+    val livePodcastEpisodesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPodcastEpisodesFollowList)
+    val livePodcastEpisodesFollowListsPerRelay = OutboxLoaderState(livePodcastEpisodesFollowLists, cache, scope).flow
+
+    val livePodcastsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPodcastsFollowList)
+    val livePodcastsFollowListsPerRelay = OutboxLoaderState(livePodcastsFollowLists, cache, scope).flow
+
     val liveSoftwareAppsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultSoftwareAppsFollowList)
     val liveSoftwareAppsFollowListsPerRelay = OutboxLoaderState(liveSoftwareAppsFollowLists, cache, scope).flow
 

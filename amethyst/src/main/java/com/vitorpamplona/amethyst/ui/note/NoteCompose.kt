@@ -156,6 +156,8 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderNipContent
 import com.vitorpamplona.amethyst.ui.note.types.RenderOnchainZap
 import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderPodcastEpisode
+import com.vitorpamplona.amethyst.ui.note.types.RenderPodcastMetadata
 import com.vitorpamplona.amethyst.ui.note.types.RenderPoll
 import com.vitorpamplona.amethyst.ui.note.types.RenderPostApproval
 import com.vitorpamplona.amethyst.ui.note.types.RenderPrivateMessage
@@ -315,6 +317,8 @@ import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -928,6 +932,14 @@ private fun RenderNoteRow(
 
         is MusicPlaylistEvent -> {
             RenderMusicPlaylist(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+        }
+
+        is PodcastEpisodeEvent -> {
+            RenderPodcastEpisode(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+        }
+
+        is PodcastMetadataEvent -> {
+            RenderPodcastMetadata(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
         }
 
         is DraftWrapEvent -> {

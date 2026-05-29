@@ -25,8 +25,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 
 @SuppressLint("StateFlowValueCalledInComposition")
 @Composable
@@ -53,4 +55,34 @@ fun UserFinderFilterAssemblerSubscription(
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)
+}
+
+/**
+ * Watches all the users that are cited in the parent post.
+ * So that we load their relay lists and find posts
+ * cited in this event.
+ */
+@SuppressLint("StateFlowValueCalledInComposition")
+@Composable
+fun UserFinderByParentFilterAssemblerSubscription(
+    note: Note,
+    accountViewModel: AccountViewModel,
+) {
+    note.inGatherers?.forEach { parent ->
+        when (parent) {
+            is Note -> {
+                val noteEvent = parent.event
+                if (noteEvent is PubKeyHintProvider) {
+                    val states =
+                        remember(parent) {
+                            accountViewModel.loadUsersSync(noteEvent.linkedPubKeys()).map {
+                                UserFinderQueryState(it, accountViewModel.account)
+                            }
+                        }
+
+                    LifecycleAwareKeyDataSourceSubscription(states, accountViewModel.dataSources().userFinder)
+                }
+            }
+        }
+    }
 }

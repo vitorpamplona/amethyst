@@ -35,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
@@ -51,6 +52,8 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscription
 import com.vitorpamplona.amethyst.desktop.ui.ZapFeedback
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
 import java.awt.Cursor
 
 @Composable
@@ -80,14 +83,23 @@ fun DeckLayout(
         val availableWidthDp = with(density) { constraints.maxWidth.toDp().value }
         deckState.setAvailableWidth(availableWidthDp)
 
-        // Auto-fit columns on first composition or when available width changes significantly
-        LaunchedEffect(availableWidthDp, columns.size) {
-            val dividers = (columns.size - 1) * DeckState.DIVIDER_WIDTH
-            val totalColumnWidth = columns.sumOf { it.width.toDouble() }.toFloat()
-            val diff = kotlin.math.abs(totalColumnWidth + dividers - availableWidthDp)
-            if (diff > 20f && columns.isNotEmpty()) {
-                deckState.fitColumnsToWidth(availableWidthDp)
-            }
+        // Auto-fit columns when available width changes (debounced to avoid per-frame
+        // recomposition during sidebar expand/collapse animation)
+        @OptIn(FlowPreview::class)
+        LaunchedEffect(Unit) {
+            snapshotFlow { availableWidthDp to columns.size }
+                .debounce(300)
+                .collect { (width, size) ->
+                    val dividers = (size - 1) * DeckState.DIVIDER_WIDTH
+                    val totalColumnWidth =
+                        deckState.columns.value
+                            .sumOf { it.width.toDouble() }
+                            .toFloat()
+                    val diff = kotlin.math.abs(totalColumnWidth + dividers - width)
+                    if (diff > 20f && size > 0) {
+                        deckState.fitColumnsToWidth(width)
+                    }
+                }
         }
 
         Row(

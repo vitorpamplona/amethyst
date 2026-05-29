@@ -20,10 +20,12 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.loaders
 
+import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
+import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -64,6 +66,32 @@ fun potentialRelaysToFindEvent(note: Note): Set<NormalizedRelayUrl> {
     note.boosts.forEach { childNote ->
         set.addAll(childNote.relays)
         childNote.author?.outboxRelays()?.let { set.addAll(it) }
+    }
+
+    note.inGatherers?.forEach { parent ->
+        // loads from parent's relays, parent's authors relays and cited authors in the parent note.
+        // as well as relays from the channel and other fixed places.
+        when (parent) {
+            is Note -> {
+                set.addAll(parent.relays)
+                parent.author?.outboxRelays()?.let { set.addAll(it) }
+                parent.author?.inboxRelays()?.let { set.addAll(it) }
+
+                val noteEvent = parent.event
+                if (noteEvent is PubKeyHintProvider) {
+                    noteEvent.linkedPubKeys().forEach { potentialAuthor ->
+                        LocalCache.checkGetOrCreateUser(potentialAuthor)?.let { potentialAuthor ->
+                            potentialAuthor.outboxRelays()?.let { set.addAll(it) }
+                            potentialAuthor.inboxRelays()?.let { set.addAll(it) }
+                        }
+                    }
+                }
+            }
+
+            is Channel -> {
+                set.addAll(parent.relays())
+            }
+        }
     }
 
     return set
