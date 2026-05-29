@@ -2181,62 +2181,84 @@ private fun UnifiedZapAmountChip(
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.width(6.dp))
-            if (cashuReady) {
-                RailLogo(onClick = { onNutzap(amountInSats) }) {
-                    // CustomHashTagIcons.Cashu is a multi-tone logo; tint
-                    // Unspecified preserves its cashu-orange brand cue.
-                    Material3Icon(
-                        imageVector = CustomHashTagIcons.Cashu,
-                        contentDescription = stringRes(R.string.nutzap),
-                        modifier = Size18Modifier,
-                        tint = Color.Unspecified,
-                    )
+            // The preferred rail (what a plain tap on the amount triggers) is
+            // rendered first and in full colour; the alternatives follow to its
+            // right in monochrome so the default choice reads at a glance.
+            val mono = MaterialTheme.colorScheme.onSurface
+            val present =
+                buildList {
+                    if (cashuReady) add(ZapRail.CASHU)
+                    if (cashuReloadable) add(ZapRail.RELOAD)
+                    if (lightningReady) add(ZapRail.LIGHTNING)
+                    if (onchainReady) add(ZapRail.ONCHAIN)
                 }
-            }
-            if (cashuReloadable) {
-                // Funds exist but in the wrong mint — a dimmed cashu logo with a
-                // small "+" corner badge; tap opens the Reload Mint screen to top
-                // it up first. Kept to one logo's footprint like the other rails.
-                RailLogo(onClick = { onReloadNutzap(amountInSats) }) {
-                    Box(contentAlignment = Alignment.BottomEnd) {
-                        Material3Icon(
-                            imageVector = CustomHashTagIcons.Cashu,
-                            contentDescription = stringRes(R.string.reload_mint_title),
-                            modifier = Size18Modifier.alpha(0.5f),
-                            tint = Color.Unspecified,
-                        )
-                        Icon(
-                            symbol = MaterialSymbols.AddCircle,
-                            contentDescription = null,
-                            modifier = Modifier.size(11.dp),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
+            val preferred =
+                when {
+                    cashuReady -> ZapRail.CASHU
+                    lightningReady -> ZapRail.LIGHTNING
+                    cashuReloadable -> ZapRail.RELOAD
+                    else -> ZapRail.ONCHAIN
                 }
-            }
-            if (lightningReady) {
-                RailLogo(onClick = { onLightningZap(amountInSats) }) {
-                    Icon(
-                        symbol = MaterialSymbols.Bolt,
-                        contentDescription = null,
-                        modifier = Size18Modifier,
-                        tint = BitcoinOrange,
-                    )
-                }
-            }
-            if (onchainReady) {
-                RailLogo(onClick = { onOnchainAmount(amountInSats) }) {
-                    Icon(
-                        symbol = MaterialSymbols.CurrencyBitcoin,
-                        contentDescription = null,
-                        modifier = Size18Modifier,
-                        tint = BitcoinOrange,
-                    )
+            (listOf(preferred) + present.filter { it != preferred }).forEachIndexed { index, rail ->
+                val colored = index == 0
+                when (rail) {
+                    ZapRail.CASHU ->
+                        RailLogo(onClick = { onNutzap(amountInSats) }) {
+                            // Cashu is a multi-tone logo; Unspecified keeps its
+                            // brand colour, mono flattens it when not preferred.
+                            Material3Icon(
+                                imageVector = CustomHashTagIcons.Cashu,
+                                contentDescription = stringRes(R.string.nutzap),
+                                modifier = Size18Modifier,
+                                tint = if (colored) Color.Unspecified else mono,
+                            )
+                        }
+                    ZapRail.RELOAD ->
+                        RailLogo(onClick = { onReloadNutzap(amountInSats) }) {
+                            // Funds exist but in the wrong mint — a dimmed cashu
+                            // logo with a small "+" badge; tap opens the top-up
+                            // screen. One logo's footprint like the other rails.
+                            Box(contentAlignment = Alignment.BottomEnd) {
+                                Material3Icon(
+                                    imageVector = CustomHashTagIcons.Cashu,
+                                    contentDescription = stringRes(R.string.reload_mint_title),
+                                    modifier = Size18Modifier.alpha(0.5f),
+                                    tint = if (colored) Color.Unspecified else mono,
+                                )
+                                Icon(
+                                    symbol = MaterialSymbols.AddCircle,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(11.dp),
+                                    tint = if (colored) MaterialTheme.colorScheme.primary else mono,
+                                )
+                            }
+                        }
+                    ZapRail.LIGHTNING ->
+                        RailLogo(onClick = { onLightningZap(amountInSats) }) {
+                            Icon(
+                                symbol = MaterialSymbols.Bolt,
+                                contentDescription = null,
+                                modifier = Size18Modifier,
+                                tint = if (colored) BitcoinOrange else mono,
+                            )
+                        }
+                    ZapRail.ONCHAIN ->
+                        RailLogo(onClick = { onOnchainAmount(amountInSats) }) {
+                            Icon(
+                                symbol = MaterialSymbols.CurrencyBitcoin,
+                                contentDescription = null,
+                                modifier = Size18Modifier,
+                                tint = if (colored) BitcoinOrange else mono,
+                            )
+                        }
                 }
             }
         }
     }
 }
+
+/** Payment rails a zap-amount chip can offer, in canonical display order. */
+private enum class ZapRail { CASHU, RELOAD, LIGHTNING, ONCHAIN }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

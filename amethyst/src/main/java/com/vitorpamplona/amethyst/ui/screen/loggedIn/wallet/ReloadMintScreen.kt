@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,8 +32,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -44,17 +47,22 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -111,6 +119,10 @@ fun ReloadMintScreen(
     val ui by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
+    // Local source-of-truth for the editable amount, seeded from the tapped
+    // preset; pushes every edit into the VM which recomputes shortfall/sources.
+    var amountText by remember(requestId) { mutableStateOf(request.amountSats.toString()) }
+
     if (ui.status is ReloadStatus.Done) {
         LaunchedEffect(Unit) { nav.popBack() }
     }
@@ -145,6 +157,21 @@ fun ReloadMintScreen(
                 color = MaterialTheme.colorScheme.placeholderText,
             )
 
+            // ── Amount ────────────────────────────────────────────────────
+            SectionHeader(stringRes(R.string.reload_mint_amount_label))
+            OutlinedTextField(
+                value = amountText,
+                onValueChange = { input ->
+                    val digits = input.filter { it.isDigit() }.take(12)
+                    amountText = digits
+                    viewModel.setAmount(digits.toLongOrNull() ?: 0L)
+                },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                suffix = { Text(stringRes(R.string.sats)) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+
             // ── Destination ───────────────────────────────────────────────
             SectionHeader(stringRes(R.string.reload_mint_section_to))
             if (ui.targetOptions.size > 1) {
@@ -158,65 +185,78 @@ fun ReloadMintScreen(
                     }
                 }
             }
+            val targetBalance = ui.balances.firstOrNull { it.mintUrl == ui.selectedTarget }?.balanceSats ?: 0L
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(14.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = shortMint(ui.selectedTarget),
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = stringRes(R.string.reload_mint_available, sats(targetBalance)),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    }
                     Text(
-                        text = shortMint(ui.selectedTarget),
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text(
-                        text = stringRes(R.string.reload_mint_needs_more, sats(ui.shortfallSats)),
-                        color = MaterialTheme.colorScheme.primary,
+                        text =
+                            if (ui.shortfallSats > 0) {
+                                stringRes(R.string.reload_mint_needs_more, sats(ui.shortfallSats))
+                            } else {
+                                stringRes(R.string.reload_mint_funded)
+                            },
+                        color =
+                            if (ui.shortfallSats > 0) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.placeholderText
+                            },
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
             }
 
-            // ── All balances ──────────────────────────────────────────────
-            SectionHeader(stringRes(R.string.reload_mint_section_balances))
-            ui.balances.forEach { bal ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        text = shortMint(bal.mintUrl),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color =
-                            if (bal.mintUrl == ui.selectedTarget) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
-                            },
-                        modifier = Modifier.weight(1f),
+            // ── Funds from (only when a top-up is actually needed) ─────────
+            if (ui.shortfallSats > 0) {
+                SectionHeader(stringRes(R.string.reload_mint_section_from))
+                ui.sources.forEach { source ->
+                    SourceRow(
+                        source = source,
+                        selected = source == ui.selectedSource,
+                        onSelect = { viewModel.selectSource(source) },
                     )
-                    Text(text = "${sats(bal.balanceSats)} sat", color = MaterialTheme.colorScheme.placeholderText)
                 }
-            }
-
-            // ── Source ────────────────────────────────────────────────────
-            SectionHeader(stringRes(R.string.reload_mint_section_from))
-            ui.sources.forEach { source ->
-                SourceRow(
-                    source = source,
-                    selected = source == ui.selectedSource,
-                    onSelect = { viewModel.selectSource(source) },
-                )
             }
 
             Spacer(Modifier.height(4.dp))
 
-            // ── Summary + action ──────────────────────────────────────────
+            // ── Summary ────────────────────────────────────────────────────
+            val sourceLabel =
+                when (val src = ui.selectedSource) {
+                    is ReloadSource.Mint -> shortMint(src.mintUrl)
+                    ReloadSource.Lightning -> stringRes(R.string.reload_mint_source_lightning)
+                    null -> ""
+                }
             Text(
-                text = stringRes(R.string.reload_mint_move_summary, sats(ui.shortfallSats), sats(ui.estFeeSats)),
+                text =
+                    if (ui.shortfallSats > 0) {
+                        stringRes(
+                            R.string.reload_mint_move_summary,
+                            sats(ui.shortfallSats),
+                            sourceLabel,
+                            shortMint(ui.selectedTarget),
+                            sats(ui.estFeeSats),
+                        )
+                    } else {
+                        stringRes(R.string.reload_mint_send_summary, sats(ui.amountSats), shortMint(ui.selectedTarget))
+                    },
                 style = MaterialTheme.typography.bodyMedium,
             )
 
@@ -248,13 +288,15 @@ fun ReloadMintScreen(
 
                 else -> {
                     val source = ui.selectedSource
-                    val enabled = source is ReloadSource.Lightning || (source is ReloadSource.Mint && source.canCover)
+                    val enabled =
+                        ui.amountSats > 0 &&
+                            (ui.shortfallSats == 0L || source is ReloadSource.Lightning || (source is ReloadSource.Mint && source.canCover))
                     Button(
                         onClick = { viewModel.confirm() },
                         enabled = enabled,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(stringRes(R.string.reload_mint_confirm))
+                        Text(stringRes(if (ui.shortfallSats > 0) R.string.reload_mint_confirm else R.string.reload_mint_send_confirm))
                     }
                 }
             }
@@ -283,10 +325,16 @@ private fun SourceRow(
             is ReloadSource.Mint -> shortMint(source.mintUrl)
             ReloadSource.Lightning -> stringRes(R.string.reload_mint_pay_lightning)
         }
-    val trailing =
+    // Description / balance lives on its own row under the title so longer text
+    // (e.g. the Lightning explanation) wraps instead of clipping.
+    val subtitle =
         when (source) {
             is ReloadSource.Mint ->
-                if (source.canCover) "${sats(source.balanceSats)} sat" else stringRes(R.string.reload_mint_not_enough)
+                if (source.canCover) {
+                    stringRes(R.string.reload_mint_available, sats(source.balanceSats))
+                } else {
+                    stringRes(R.string.reload_mint_not_enough)
+                }
             ReloadSource.Lightning -> stringRes(R.string.reload_mint_lightning_desc)
         }
 
@@ -295,34 +343,45 @@ private fun SourceRow(
             CardDefaults.cardColors(
                 containerColor =
                     if (selected) {
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                        MaterialTheme.colorScheme.primaryContainer
                     } else {
                         MaterialTheme.colorScheme.surfaceVariant
                     },
             ),
+        border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
         modifier =
             Modifier
                 .fillMaxWidth()
                 .selectable(selected = selected, enabled = enabled, onClick = onSelect),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 14.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = title,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.placeholderText,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
-            Text(
-                text = trailing,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.placeholderText,
-            )
+            RadioButton(selected = selected, onClick = null, enabled = enabled)
+            Spacer(Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                    color =
+                        when {
+                            !enabled -> MaterialTheme.colorScheme.placeholderText
+                            selected -> MaterialTheme.colorScheme.onPrimaryContainer
+                            else -> MaterialTheme.colorScheme.onSurface
+                        },
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color =
+                        if (selected) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.placeholderText
+                        },
+                )
+            }
         }
     }
 }

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState
 import com.vitorpamplona.amethyst.model.nip60Cashu.describeMintError
@@ -37,7 +38,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 /** Hand-off payload for the Reload Mint screen — the pending nutzap to fund. */
 data class ReloadMintRequest(
@@ -113,6 +116,8 @@ class ReloadMintViewModel : ViewModel() {
      *  AccountViewModel scope, not this VM's). */
     private var job: Job? = null
 
+    private var recipient: String? = null
+
     private val _uiState = MutableStateFlow(ReloadUiState())
     val uiState: StateFlow<ReloadUiState> = _uiState.asStateFlow()
 
@@ -120,30 +125,43 @@ class ReloadMintViewModel : ViewModel() {
         accountViewModel: AccountViewModel,
         request: ReloadMintRequest,
     ) {
+        if (this.accountViewModel != null) return // already initialized
         this.accountViewModel = accountViewModel
         this.baseNote = request.baseNote
         val st = state ?: return
         val recipient = request.baseNote.author?.pubkeyHex ?: return
+        this.recipient = recipient
+        _uiState.update { it.copy(recipient = recipient, amountSats = request.amountSats) }
 
+        // Wallet proofs/mints arrive from relays and can land *after* the screen
+        // opens — a one-time snapshot would show only the first-loaded mint. Keep
+        // balances/targets in sync as the wallet fills in.
+        viewModelScope.launch {
+            combine(st.tokenEntries, st.mints) { _, _ -> Unit }.collect { rebuild() }
+        }
+    }
+
+    /** Rebuild balances/targets/sources from the current wallet state, keeping
+     *  the user's amount, chosen target, source pick, and status intact. */
+    private fun rebuild() {
+        val st = state ?: return
+        val recipient = recipient ?: return
         val balances = st.peekMintBalances()
-        val targets =
-            st
-                .recipientSharedMints(recipient)
-                .sortedByDescending { balances[it] ?: 0L }
-        val defaultTarget = targets.firstOrNull() ?: return
-
-        _uiState.value =
-            ReloadUiState(
-                recipient = recipient,
-                amountSats = request.amountSats,
-                balances =
-                    balances.entries
-                        .sortedByDescending { it.value }
-                        .map { MintBalance(it.key, it.value) }
-                        .toImmutableList(),
-                targetOptions = targets.toImmutableList(),
-                selectedTarget = defaultTarget,
-            ).let { recomputeFor(it, defaultTarget) }
+        val targets = st.recipientSharedMints(recipient).sortedByDescending { balances[it] ?: 0L }
+        _uiState.update { cur ->
+            val target = cur.selectedTarget.takeIf { it in targets } ?: targets.firstOrNull().orEmpty()
+            recomputeFor(
+                cur.copy(
+                    balances =
+                        balances.entries
+                            .sortedByDescending { it.value }
+                            .map { MintBalance(it.key, it.value) }
+                            .toImmutableList(),
+                    targetOptions = targets.toImmutableList(),
+                ),
+                target,
+            )
+        }
     }
 
     /** Recompute shortfall, fee estimate, sources, and a default source. */
@@ -170,16 +188,24 @@ class ReloadMintViewModel : ViewModel() {
                 .map { ReloadSource.Mint(it.mintUrl, it.balanceSats, canCover = it.balanceSats >= needFromSource) }
 
         val sources: List<ReloadSource> = mintSources + ReloadSource.Lightning
-        // Prefer the richest mint that can cover (no new sats); else Lightning.
-        val defaultSource: ReloadSource =
-            mintSources.filter { it.canCover }.maxByOrNull { it.balanceSats } ?: ReloadSource.Lightning
+        val coverableMints = mintSources.filter { it.canCover }
+        // Keep the user's current pick if it's still valid across the recompute
+        // (target/amount edits), otherwise default to the richest mint that can
+        // cover (no new sats), else Lightning.
+        val keep =
+            when (val prev = base.selectedSource) {
+                is ReloadSource.Lightning -> ReloadSource.Lightning
+                is ReloadSource.Mint -> coverableMints.firstOrNull { it.mintUrl == prev.mintUrl }
+                null -> null
+            }
+        val selectedSource: ReloadSource = keep ?: coverableMints.maxByOrNull { it.balanceSats } ?: ReloadSource.Lightning
 
         return base.copy(
             selectedTarget = target,
             shortfallSats = shortfall,
             estFeeSats = estFee,
             sources = sources.toImmutableList(),
-            selectedSource = defaultSource,
+            selectedSource = selectedSource,
         )
     }
 
@@ -191,11 +217,17 @@ class ReloadMintViewModel : ViewModel() {
         _uiState.update { it.copy(selectedSource = source) }
     }
 
+    /** Re-target the reload to a custom amount (the picker amount is the default). */
+    fun setAmount(sats: Long) {
+        _uiState.update { recomputeFor(it.copy(amountSats = sats.coerceAtLeast(0L)), it.selectedTarget) }
+    }
+
     fun confirm() {
         val vm = accountViewModel ?: return
         val note = baseNote ?: return
         val s = _uiState.value
         val source = s.selectedSource ?: return
+        if (s.amountSats <= 0L) return
 
         // In-flight guard: only start from a resting state. Without it a double
         // tap (or the Failed-state Retry) launches a second pipeline — two mint
@@ -212,9 +244,12 @@ class ReloadMintViewModel : ViewModel() {
         job =
             vm.launchSigner {
                 try {
-                    when (source) {
-                        is ReloadSource.Mint -> rebalanceThenZap(source.mintUrl, s.selectedTarget, moveSats, note, s.amountSats)
-                        ReloadSource.Lightning -> reloadFromLightningThenZap(s.selectedTarget, moveSats, note, s.amountSats)
+                    when {
+                        // The chosen amount already fits in the target mint (e.g.
+                        // the user lowered it) — no top-up needed, just send.
+                        s.shortfallSats <= 0L -> sendNutzapAndFinish(note, s.amountSats)
+                        source is ReloadSource.Mint -> rebalanceThenZap(source.mintUrl, s.selectedTarget, moveSats, note, s.amountSats)
+                        source is ReloadSource.Lightning -> reloadFromLightningThenZap(s.selectedTarget, moveSats, note, s.amountSats)
                     }
                 } catch (e: CancellationException) {
                     throw e // screen left mid-flow — don't mask as a Failed state
