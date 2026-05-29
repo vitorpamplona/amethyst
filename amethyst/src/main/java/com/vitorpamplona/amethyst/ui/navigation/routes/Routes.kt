@@ -200,7 +200,9 @@ sealed class Route {
 
     @Serializable object WalletAdd : Route()
 
-    @Serializable object WalletAddNwc : Route()
+    @Serializable data class WalletAddNwc(
+        val nip47: String? = null,
+    ) : Route()
 
     @Serializable object WalletAddCashu : Route()
 
