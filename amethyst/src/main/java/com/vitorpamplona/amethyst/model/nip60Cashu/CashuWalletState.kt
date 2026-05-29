@@ -1021,6 +1021,7 @@ class CashuWalletState(
         recipientPubKey: HexKey,
         zappedEvent: EventHintBundle<out Event>,
         message: String = "",
+        onProgress: ((Float) -> Unit)? = null,
     ): NutzapSent {
         check(started) { "CashuWalletState.start() not called" }
         val target =
@@ -1033,6 +1034,10 @@ class CashuWalletState(
         // partial-failure persists until the user clicks send. Heal
         // first so the selection below works on a known-fresh view.
         scrubLocallyStaleProofs(target.mintUrl)
+        // First on-network step done. The caller already showed an
+        // instant 0.05 when the chip was tapped; lift to 0.20 here so
+        // the bar visibly moves even before the (slow) swap call.
+        onProgress?.invoke(0.20f)
 
         val available = _tokenEntries.value.filter { it.content.mint == target.mintUrl }
         if (available.isEmpty()) {
@@ -1047,6 +1052,7 @@ class CashuWalletState(
             zappedEvent = zappedEvent,
             message = message,
             available = available,
+            onProgress = onProgress,
         )
     }
 

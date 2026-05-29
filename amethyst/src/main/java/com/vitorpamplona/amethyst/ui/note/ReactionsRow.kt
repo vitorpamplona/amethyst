@@ -2012,11 +2012,16 @@ fun ZapAmountChoicePopup(
                 nutzapAmountChoices = if (nutzapEnabled) zapAmountChoices else persistentListOf(),
                 onNutzap = { amountInSats ->
                     onZapStarts()
+                    // Instant click feedback. Without this initial nudge
+                    // the bar stays flat for ~1s until scrubLocallyStale-
+                    // Proofs returns; the user thinks the tap was lost.
+                    onProgress(0.05f)
                     accountViewModel.sendNutzap(
                         baseNote = baseNote,
                         amountSats = amountInSats,
                         message = "",
                         onError = onError,
+                        onProgress = onProgress,
                     )
                     visibilityState.targetState = false
                 },

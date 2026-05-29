@@ -616,6 +616,7 @@ class CashuWalletOps(
         zappedEvent: EventHintBundle<out Event>,
         message: String,
         available: List<TokenEntry>,
+        onProgress: ((Float) -> Unit)? = null,
     ): NutzapSent {
         if (amountSats <= 0) throw IllegalArgumentException("Amount must be positive")
         seedWarmer()
@@ -628,6 +629,10 @@ class CashuWalletOps(
                 recipientP2pkPubkeyHex = recipientP2pkPubkeyHex,
                 targetSplit = amountSats,
             )
+        // Mint round-trip done — biggest chunk of the wall clock. Surface
+        // visible motion here so the user knows the click registered even
+        // before the recipient sees the kind:9321.
+        onProgress?.invoke(0.55f)
 
         // Build the kind:9321 first so we have its id to reference from history.
         val proofJsons = swap.send.map { nutzapProofJson.encodeToString(NutzapProofJson.serializer(), it.toNutzapJson()) }
@@ -642,6 +647,8 @@ class CashuWalletOps(
             )
         val nutzapEvent = signer.sign(nutzapTemplate)
         publish(nutzapEvent)
+        // kind:9321 is out — recipient's auto-redeem can fire from here.
+        onProgress?.invoke(0.80f)
 
         // Roll over change locally if any.
         val keepEvent =
@@ -663,6 +670,7 @@ class CashuWalletOps(
                     publish(it)
                 }
             }
+        onProgress?.invoke(0.95f)
 
         val historyTemplate =
             CashuSpendingHistoryEvent.build(
@@ -677,6 +685,7 @@ class CashuWalletOps(
             )
         val historyEvent = signer.sign(historyTemplate)
         publish(historyEvent)
+        onProgress?.invoke(1.0f)
 
         return NutzapSent(
             nutzapEvent = nutzapEvent,

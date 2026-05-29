@@ -923,6 +923,7 @@ class AccountViewModel(
         amountSats: Long,
         message: String,
         onError: (String, String, User?) -> Unit,
+        onProgress: (Float) -> Unit = {},
     ) = launchSigner {
         val recipient = baseNote.author?.pubkeyHex
         if (recipient == null) {
@@ -948,6 +949,7 @@ class AccountViewModel(
                 recipientPubKey = recipient,
                 zappedEvent = zappedEvent,
                 message = message,
+                onProgress = onProgress,
             )
             // No success toast — the kind:9321 round-trips through the
             // cache, attaches to the target Note via addNutzap, and the
