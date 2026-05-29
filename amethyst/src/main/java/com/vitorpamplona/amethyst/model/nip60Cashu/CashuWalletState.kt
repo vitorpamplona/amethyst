@@ -50,6 +50,7 @@ import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -813,6 +814,29 @@ class CashuWalletState(
     }
 
     /**
+     * Spendable cashu balance per mint URL, summed from in-memory proofs.
+     * Synchronous and local — feeds the Reload Mint screen's balances list and
+     * source-feasibility checks. May overstate by NUT-07 stale proofs; the
+     * actual move scrubs before melting.
+     */
+    fun peekMintBalances(): Map<String, Long> =
+        _tokenEntries.value
+            .groupBy { it.content.mint }
+            .mapValues { (_, entries) -> entries.sumOf { it.content.totalAmount() } }
+
+    /**
+     * Mints the recipient accepts (their kind:10019) that we also hold a wallet
+     * at — the candidate destinations for a reload. Empty when the recipient
+     * has no kind:10019 or shares no mint with us.
+     */
+    fun recipientSharedMints(recipientPubKey: HexKey): List<String> {
+        val ourMints = _mints.value.toSet()
+        if (ourMints.isEmpty()) return emptyList()
+        val info = cache.getOrCreateUser(recipientPubKey).nutzapInfo() ?: return emptyList()
+        return info.mints().map { it.mintUrl }.filter { it in ourMints }
+    }
+
+    /**
      * NUT-09 wallet restore — recover proofs minted at [mintUrl] whose
      * kind:7375 token events have been lost. Scans deterministic
      * secret/r derivations from the wallet's NUT-13 seed and asks the
@@ -1135,6 +1159,85 @@ class CashuWalletState(
         return ops.meltToLightning(mintUrl, quote, available)
     }
 
+    /**
+     * Move [sats] of cashu from [sourceMintUrl] into [targetMintUrl] by minting
+     * a fresh quote at the target and paying its invoice with a melt at the
+     * source — no new sats enter the wallet. Used by the Reload Mint screen to
+     * top up a recipient's mint from another mint the user already holds.
+     *
+     * The melt settles the Lightning payment synchronously, so the target quote
+     * should read PAID within moments; we poll briefly to absorb mint-side lag
+     * before issuing the proofs.
+     *
+     * Money is never lost on failure: a failed melt returns change to the
+     * source, and a paid-but-not-yet-issued target leaves a resumable kind:7374
+     * the pending-quote banner can finish later. Throws with a user-facing
+     * message on any failure; callers surface it via [describeMintError].
+     */
+    suspend fun rebalance(
+        sourceMintUrl: String,
+        targetMintUrl: String,
+        sats: Long,
+        onProgress: ((Float) -> Unit)? = null,
+    ): RebalanceCompleted {
+        check(started) { "CashuWalletState.start() not called" }
+        require(sats > 0) { "Amount must be positive" }
+        require(sourceMintUrl != targetMintUrl) { "Source and target mints must differ" }
+
+        // 1. Mint quote at the destination — publishes a resumable kind:7374.
+        onProgress?.invoke(0.1f)
+        val mintFlow = ops.startMintFromLightning(targetMintUrl, sats)
+
+        // 2. Quote the melt at the source and make sure it covers amount + fee
+        //    BEFORE spending. Abandon the unpaid mint quote otherwise so it
+        //    doesn't linger in the pending banner.
+        onProgress?.invoke(0.25f)
+        val meltQuote = ops.requestMeltQuote(sourceMintUrl, mintFlow.invoice)
+        scrubLocallyStaleProofs(sourceMintUrl)
+        val sourceBalance =
+            _tokenEntries.value
+                .filter { it.content.mint == sourceMintUrl }
+                .sumOf { it.content.totalAmount() }
+        val required = meltQuote.amount + meltQuote.feeReserve
+        if (sourceBalance < required) {
+            runCatching { ops.cancelMintQuote(mintFlow.quoteEvent) }
+            throw IllegalStateException("$sourceMintUrl has $sourceBalance sat — needs $required to move $sats")
+        }
+
+        // 3. Pay the destination invoice by melting at the source.
+        onProgress?.invoke(0.5f)
+        meltToLightning(sourceMintUrl, meltQuote)
+
+        // 4. The melt paid the invoice; confirm + issue proofs at the target.
+        onProgress?.invoke(0.75f)
+        val pollAttempts = 8
+        val pollDelayMs = 1_000L
+        var paid = false
+        var attempt = 0
+        while (!paid && attempt < pollAttempts) {
+            val status = ops.checkMintQuote(targetMintUrl, mintFlow.mintQuote.quote)
+            paid = status.paid == true || status.state == "PAID" || status.state == "ISSUED"
+            if (!paid) {
+                delay(pollDelayMs * (attempt + 1))
+                attempt++
+            }
+        }
+        if (!paid) {
+            // Funds already left the source; the destination invoice is paid or
+            // will be. Leave the kind:7374 so the pending banner can finish it.
+            throw IllegalStateException("Paid $targetMintUrl but it hasn't confirmed yet — finish from the pending quote banner")
+        }
+        ops.completeMintFromLightning(targetMintUrl, mintFlow.quoteEvent, sats)
+        onProgress?.invoke(1.0f)
+
+        return RebalanceCompleted(
+            sourceMintUrl = sourceMintUrl,
+            targetMintUrl = targetMintUrl,
+            movedSats = sats,
+            feeSats = meltQuote.feeReserve,
+        )
+    }
+
     // ============================================================
     // Publish bridge
     // ============================================================
@@ -1178,4 +1281,12 @@ data class NutzapFunding(
     val target: NutzapTarget,
     val bestSingleMintSats: Long,
     val totalWalletSats: Long,
+)
+
+/** Result of a [CashuWalletState.rebalance] mint-to-mint move. */
+data class RebalanceCompleted(
+    val sourceMintUrl: String,
+    val targetMintUrl: String,
+    val movedSats: Long,
+    val feeSats: Long,
 )
