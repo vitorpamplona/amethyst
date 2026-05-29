@@ -766,6 +766,13 @@
     <string name="route_music_playlists">Playlists</string>
     <string name="route_podcast_episodes">Episodes</string>
     <string name="route_podcasts">Podcasts</string>
+    <string name="podcast_view_episodes">View episodes</string>
+    <string name="podcast_episodes_section">Episodes</string>
+    <string name="podcast_no_episodes">No episodes found yet</string>
+    <plurals name="podcast_episode_count">
+        <item quantity="one">%1$d episode</item>
+        <item quantity="other">%1$d episodes</item>
+    </plurals>
     <string name="new_music_track">New music track</string>
     <string name="new_music_playlist">New playlist</string>
     <string name="music_track_title_label">Title</string>
