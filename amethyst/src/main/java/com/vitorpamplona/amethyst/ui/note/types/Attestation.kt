@@ -44,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -63,6 +64,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.UserCompose
+import com.vitorpamplona.amethyst.ui.note.formatMediumDate
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
@@ -76,9 +78,6 @@ import com.vitorpamplona.quartz.experimental.attestations.attestation.tags.Attes
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
 import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @Preview
 @Composable
@@ -188,18 +187,19 @@ fun RenderAttestation(
         }
 
         if (validFrom != null || validTo != null) {
+            val context = LocalContext.current
             Spacer(modifier = DoubleVertSpacer)
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 validFrom?.let {
                     Text(
-                        text = stringRes(R.string.attestation_valid_from, formatTimestamp(it)),
+                        text = stringRes(R.string.attestation_valid_from, formatMediumDate(it, context)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 validTo?.let {
                     Text(
-                        text = stringRes(R.string.attestation_valid_to, formatTimestamp(it)),
+                        text = stringRes(R.string.attestation_valid_to, formatMediumDate(it, context)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -601,8 +601,3 @@ private fun attestationStatusLabel(status: AttestationStatus?): String =
         status == AttestationStatus.VERIFYING -> stringRes(R.string.attestation_status_verifying)
         else -> stringRes(R.string.attestation)
     }
-
-private fun formatTimestamp(timestamp: Long): String {
-    val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-    return sdf.format(Date(timestamp * 1000))
-}

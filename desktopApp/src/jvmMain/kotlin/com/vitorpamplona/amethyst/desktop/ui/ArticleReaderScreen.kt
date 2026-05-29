@@ -97,12 +97,12 @@ import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import java.text.DateFormat
+import java.util.Date
 import java.util.Locale
 
-private val articleDateFormat = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.getDefault())
+// Locale-aware: en-US "May 28, 2026" · en-GB "28 May 2026" · de-DE "28.05.2026" · ja-JP "2026/05/28"
+private val articleDateFormat = DateFormat.getDateInstance(DateFormat.MEDIUM, Locale.getDefault())
 
 /**
  * Parses a NIP-23 address tag in the format "30023:pubkey:d-tag".
@@ -352,11 +352,7 @@ fun ArticleReaderScreen(
     val publishedAt =
         article?.let { art ->
             val ts = art.publishedAt() ?: art.createdAt
-            Instant
-                .ofEpochSecond(ts)
-                .atZone(ZoneId.systemDefault())
-                .toLocalDate()
-                .format(articleDateFormat)
+            articleDateFormat.format(Date(ts * 1000L))
         }
 
     // Author info from local cache

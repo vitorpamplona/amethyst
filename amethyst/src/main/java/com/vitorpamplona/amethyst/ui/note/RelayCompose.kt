@@ -50,9 +50,6 @@ import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdPadding
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 @Composable
 fun RelayCompose(
@@ -145,9 +142,3 @@ fun RemoveRelayButton(onClick: () -> Unit) {
         Text(text = stringRes(R.string.remove))
     }
 }
-
-fun formattedDateTime(timestamp: Long): String =
-    Instant
-        .ofEpochSecond(timestamp)
-        .atZone(ZoneId.systemDefault())
-        .format(DateTimeFormatter.ofPattern("MMM d, uuuu hh:mm a"))

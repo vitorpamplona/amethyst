@@ -69,19 +69,14 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import java.text.DateFormat
+import java.util.Date
 import java.util.Locale
 
-private val dateFormat = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.getDefault())
+// Locale-aware: en-US "May 28, 2026" · en-GB "28 May 2026" · de-DE "28.05.2026" · ja-JP "2026/05/28"
+private val dateFormat = DateFormat.getDateInstance(DateFormat.MEDIUM, Locale.getDefault())
 
-private fun formatDate(timestamp: Long): String =
-    Instant
-        .ofEpochSecond(timestamp)
-        .atZone(ZoneId.systemDefault())
-        .toLocalDate()
-        .format(dateFormat)
+private fun formatDate(timestamp: Long): String = dateFormat.format(Date(timestamp * 1000L))
 
 /**
  * Card displaying long-form content (NIP-23) with title, summary, and image.
