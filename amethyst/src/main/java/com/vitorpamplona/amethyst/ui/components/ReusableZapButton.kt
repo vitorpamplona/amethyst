@@ -207,10 +207,6 @@ fun ReusableZapButton(
                     onchainZapAmount = amount
                     showOnchainDialog = true
                 },
-                nutzapEnabled =
-                    baseNote.author?.pubkeyHex?.let { recipient ->
-                        accountViewModel.account.cashuWalletState.peekNutzapTarget(recipient) != null
-                    } ?: false,
             )
         }
 

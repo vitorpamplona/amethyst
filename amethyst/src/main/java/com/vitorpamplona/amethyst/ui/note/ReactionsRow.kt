@@ -38,6 +38,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -52,6 +53,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
@@ -83,6 +85,7 @@ import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterStart
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
@@ -111,6 +114,8 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ReactionRowAction
 import com.vitorpamplona.amethyst.model.ReactionRowItem
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.zap.CashuRailStatus
+import com.vitorpamplona.amethyst.model.zap.RailCapability
 import com.vitorpamplona.amethyst.model.zap.RailCapabilityResolver
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
@@ -1887,21 +1892,9 @@ fun ZapAmountChoicePopup(
         accountViewModel.account.settings.syncedSettings.zaps.onchainZapAmountChoices
             .collectAsStateWithLifecycle()
 
-    // Hide chips for rails the recipient(s) can't actually receive on. For a
-    // single-author note this gates against the author's kind:0 / kind:10019;
-    // for a note with `zap` split tags it considers every split recipient so
-    // splits where (e.g.) only one of three has a lud16 still surface the LN
-    // chips. Recomputed only when the note id changes — the underlying flows
-    // (CashuWalletState, LocalCache user metadata) are stable for the life of
-    // the popup, which is usually open for under a second.
-    val railCapability =
-        remember(baseNote) {
-            RailCapabilityResolver.peek(baseNote, accountViewModel.account.cashuWalletState)
-        }
-
     ZapAmountChoicePopup(
         baseNote = baseNote,
-        zapAmountChoices = if (railCapability.hasLightning) zapAmountChoices else persistentListOf(),
+        zapAmountChoices = zapAmountChoices,
         accountViewModel = accountViewModel,
         popupYOffset = popupYOffset,
         onZapStarts = onZapStarts,
@@ -1910,14 +1903,9 @@ fun ZapAmountChoicePopup(
         onError = onError,
         onProgress = onProgress,
         onPayViaIntent = onPayViaIntent,
-        onchainZapAmountChoices =
-            if (onOnchainAmount != null && railCapability.hasOnchain) {
-                onchainZapAmountChoices
-            } else {
-                persistentListOf()
-            },
+        onchainZapAmountChoices = onchainZapAmountChoices,
         onOnchainAmount = onOnchainAmount ?: {},
-        nutzapEnabled = railCapability.hasCashu,
+        onchainSupported = onOnchainAmount != null,
     )
 }
 
@@ -1935,13 +1923,33 @@ fun ZapAmountChoicePopup(
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
     onchainZapAmountChoices: ImmutableList<Long> = persistentListOf(),
     onOnchainAmount: (Long?) -> Unit = {},
-    nutzapEnabled: Boolean = false,
+    onchainSupported: Boolean = true,
 ) {
+    // One chip per amount; the chip itself shows which rails can pay it. Merge
+    // the (historically separate) Lightning and on-chain amount presets into a
+    // single sorted set of choices. Rail availability per amount is decided in
+    // [UnifiedZapAmountChip] from [railCapability], so the lists no longer need
+    // to be pre-emptied per rail.
+    //
+    // [railCapability] gates which rails the recipient can receive on (plus the
+    // sender's cashu balance, which is free to read). It's recomputed only when
+    // the note changes — the underlying cache/wallet flows are stable for the
+    // ~1s the popup is open. A caller that can't drive the on-chain dialog
+    // (onchainSupported == false) masks that rail off here.
+    val railCapability =
+        remember(baseNote, onchainSupported) {
+            val rc = RailCapabilityResolver.peek(baseNote, accountViewModel.account.cashuWalletState)
+            if (onchainSupported) rc else rc.copy(hasOnchain = false)
+        }
+    val amountChoices =
+        remember(zapAmountChoices, onchainZapAmountChoices) {
+            (zapAmountChoices + onchainZapAmountChoices).distinct().sorted().toImmutableList()
+        }
     val visibilityState = rememberVisibilityState(onDismiss)
     ZapAmountChoicePopup(
         baseNote,
-        zapAmountChoices,
-        onchainZapAmountChoices,
+        amountChoices,
+        railCapability,
         accountViewModel,
         popupYOffset,
         visibilityState,
@@ -1951,7 +1959,6 @@ fun ZapAmountChoicePopup(
         onError,
         onProgress,
         onPayViaIntent,
-        nutzapEnabled,
     )
 }
 
@@ -1959,8 +1966,8 @@ fun ZapAmountChoicePopup(
 @Composable
 fun ZapAmountChoicePopup(
     baseNote: Note,
-    zapAmountChoices: ImmutableList<Long>,
-    onchainZapAmountChoices: ImmutableList<Long>,
+    amountChoices: ImmutableList<Long>,
+    railCapability: RailCapability,
     accountViewModel: AccountViewModel,
     popupYOffset: Dp,
     visibilityState: MutableTransitionState<Boolean>,
@@ -1970,7 +1977,6 @@ fun ZapAmountChoicePopup(
     onError: (title: String, text: String, user: User?) -> Unit,
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
-    nutzapEnabled: Boolean = false,
 ) {
     val context = LocalContext.current
     val yOffset = with(LocalDensity.current) { -popupYOffset.toPx().toInt() }
@@ -1987,9 +1993,9 @@ fun ZapAmountChoicePopup(
             exit = popupAnimationExit,
         ) {
             ZapAmountChoicePopupContent(
-                zapAmountChoices = zapAmountChoices,
-                onchainZapAmountChoices = onchainZapAmountChoices,
-                onZap = { amountInSats ->
+                amountChoices = amountChoices,
+                railCapability = railCapability,
+                onLightningZap = { amountInSats ->
                     onZapStarts()
                     accountViewModel.zap(
                         baseNote,
@@ -2004,12 +2010,6 @@ fun ZapAmountChoicePopup(
                     )
                     visibilityState.targetState = false
                 },
-                onChangeAmount = onChangeAmount,
-                onOnchainAmount = { amount ->
-                    onOnchainAmount(amount)
-                    visibilityState.targetState = false
-                },
-                nutzapAmountChoices = if (nutzapEnabled) zapAmountChoices else persistentListOf(),
                 onNutzap = { amountInSats ->
                     onZapStarts()
                     // Instant click feedback. Without this initial nudge
@@ -2025,6 +2025,11 @@ fun ZapAmountChoicePopup(
                     )
                     visibilityState.targetState = false
                 },
+                onOnchainAmount = { amount ->
+                    onOnchainAmount(amount)
+                    visibilityState.targetState = false
+                },
+                onChangeAmount = onChangeAmount,
             )
         }
     }
@@ -2033,13 +2038,12 @@ fun ZapAmountChoicePopup(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ZapAmountChoicePopupContent(
-    zapAmountChoices: ImmutableList<Long>,
-    onZap: (Long) -> Unit,
+    amountChoices: ImmutableList<Long>,
+    railCapability: RailCapability,
+    onLightningZap: (Long) -> Unit,
+    onNutzap: (Long) -> Unit,
+    onOnchainAmount: (Long?) -> Unit,
     onChangeAmount: () -> Unit,
-    onchainZapAmountChoices: ImmutableList<Long> = persistentListOf(),
-    onOnchainAmount: (Long?) -> Unit = {},
-    nutzapAmountChoices: ImmutableList<Long> = persistentListOf(),
-    onNutzap: (Long) -> Unit = {},
 ) {
     Box(HalfPadding, contentAlignment = Center) {
         ElevatedCard(
@@ -2053,29 +2057,14 @@ fun ZapAmountChoicePopupContent(
                 verticalArrangement = Arrangement.Center,
                 itemVerticalAlignment = CenterVertically,
             ) {
-                // Order: Cashu first (instant, no fees), then Lightning,
-                // then on-chain — matches the recipient-capability fallback
-                // order used elsewhere (RailCapabilityResolver) so the
-                // "happiest path" rail surfaces first for the eye.
-                nutzapAmountChoices.forEach { amountInSats ->
-                    NutzapAmountChip(
+                amountChoices.forEach { amountInSats ->
+                    UnifiedZapAmountChip(
                         amountInSats = amountInSats,
-                        onClick = { onNutzap(amountInSats) },
-                        onLongClick = onChangeAmount,
-                    )
-                }
-                zapAmountChoices.forEach { amountInSats ->
-                    ZapAmountChip(
-                        amountInSats = amountInSats,
-                        onClick = { onZap(amountInSats) },
-                        onLongClick = onChangeAmount,
-                    )
-                }
-                onchainZapAmountChoices.forEach { amountInSats ->
-                    OnchainZapAmountChip(
-                        amountInSats = amountInSats,
-                        onClick = { onOnchainAmount(amountInSats) },
-                        onLongClick = onChangeAmount,
+                        railCapability = railCapability,
+                        onLightningZap = onLightningZap,
+                        onNutzap = onNutzap,
+                        onOnchainAmount = onOnchainAmount,
+                        onChangeAmount = onChangeAmount,
                     )
                 }
                 ClickableBox(
@@ -2098,115 +2087,128 @@ fun ZapAmountChoicePopupContent(
     }
 }
 
+/**
+ * Floor for the on-chain rail. Mirrors `MIN_ONCHAIN_ZAP_SATS` in
+ * `OnchainZapSendDialog` (stricter than the protocol dust threshold); kept in
+ * sync by hand because that one is private to the dialog. Below this the
+ * on-chain logo is not offered for an amount.
+ */
+private const val MIN_ONCHAIN_ZAP_SATS = 1_000L
+
+/**
+ * One pill per amount, showing a tappable logo for every rail that can pay it:
+ *  - **Cashu** only when a single shared mint is already funded for the amount
+ *    (the one rail whose balance is free to read). Underfunded/reload states
+ *    are intentionally not offered yet.
+ *  - **Lightning** optimistically whenever the recipient can receive — an
+ *    external wallet can pay any invoice, so we don't gate on a sender balance.
+ *  - **On-chain** when a backend is configured and the amount clears
+ *    [MIN_ONCHAIN_ZAP_SATS]; UTXO sufficiency stays a send-time check.
+ *
+ * Tapping the amount fires the cheapest/fastest available rail (cashu →
+ * Lightning → on-chain); tapping a specific logo forces that rail. Long-press
+ * opens the amount-preset editor. A pill with no payable rail is not rendered.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun NutzapAmountChip(
+private fun UnifiedZapAmountChip(
     amountInSats: Long,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
+    railCapability: RailCapability,
+    onLightningZap: (Long) -> Unit,
+    onNutzap: (Long) -> Unit,
+    onOnchainAmount: (Long?) -> Unit,
+    onChangeAmount: () -> Unit,
 ) {
+    val cashuReady = railCapability.cashuStatus(amountInSats) == CashuRailStatus.FUNDED
+    val lightningReady = railCapability.hasLightning
+    val onchainReady = railCapability.hasOnchain && amountInSats >= MIN_ONCHAIN_ZAP_SATS
+
+    if (!cashuReady && !lightningReady && !onchainReady) return
+
+    val defaultAction: () -> Unit =
+        when {
+            cashuReady -> {
+                { onNutzap(amountInSats) }
+            }
+            lightningReady -> {
+                { onLightningZap(amountInSats) }
+            }
+            else -> {
+                { onOnchainAmount(amountInSats) }
+            }
+        }
+
     Surface(
         shape = ButtonBorder,
-        color = MaterialTheme.colorScheme.tertiary,
+        color = MaterialTheme.colorScheme.surface,
         modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
     ) {
         Row(
             modifier =
                 Modifier
-                    .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                    .combinedClickable(onClick = defaultAction, onLongClick = onChangeAmount)
+                    .padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
             verticalAlignment = CenterVertically,
         ) {
-            // CustomHashTagIcons.Cashu ships a multi-tone Cashu logo; using
-            // tint=Unspecified preserves it instead of flattening to onTertiary
-            // (which would lose the cashu-orange brand cue that distinguishes
-            // this chip from the orange Lightning bolt next to it).
-            Material3Icon(
-                imageVector = CustomHashTagIcons.Cashu,
-                contentDescription = stringRes(R.string.nutzap),
-                modifier = Size18Modifier,
-                tint = Color.Unspecified,
-            )
-            Spacer(Modifier.width(2.dp))
             Text(
                 text = showAmount(amountInSats.toBigDecimal().setScale(1)),
-                color = MaterialTheme.colorScheme.onTertiary,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
             )
+            Spacer(Modifier.width(6.dp))
+            if (cashuReady) {
+                RailLogo(onClick = { onNutzap(amountInSats) }) {
+                    // CustomHashTagIcons.Cashu is a multi-tone logo; tint
+                    // Unspecified preserves its cashu-orange brand cue.
+                    Material3Icon(
+                        imageVector = CustomHashTagIcons.Cashu,
+                        contentDescription = stringRes(R.string.nutzap),
+                        modifier = Size18Modifier,
+                        tint = Color.Unspecified,
+                    )
+                }
+            }
+            if (lightningReady) {
+                RailLogo(onClick = { onLightningZap(amountInSats) }) {
+                    Icon(
+                        symbol = MaterialSymbols.Bolt,
+                        contentDescription = null,
+                        modifier = Size18Modifier,
+                        tint = BitcoinOrange,
+                    )
+                }
+            }
+            if (onchainReady) {
+                RailLogo(onClick = { onOnchainAmount(amountInSats) }) {
+                    Icon(
+                        symbol = MaterialSymbols.CurrencyBitcoin,
+                        contentDescription = null,
+                        modifier = Size18Modifier,
+                        tint = BitcoinOrange,
+                    )
+                }
+            }
         }
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ZapAmountChip(
-    amountInSats: Long,
+private fun RailLogo(
     onClick: () -> Unit,
-    onLongClick: () -> Unit,
+    content: @Composable () -> Unit,
 ) {
-    Surface(
-        shape = ButtonBorder,
-        color = BitcoinOrange,
-        modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
+    Box(
+        modifier =
+            Modifier
+                .padding(horizontal = 3.dp)
+                .clip(CircleShape)
+                .clickable(onClick = onClick)
+                .padding(2.dp),
+        contentAlignment = Center,
     ) {
-        Row(
-            modifier =
-                Modifier
-                    .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = CenterVertically,
-        ) {
-            Icon(
-                symbol = MaterialSymbols.Bolt,
-                contentDescription = null,
-                modifier = Size18Modifier,
-                tint = Color.White,
-            )
-            Spacer(Modifier.width(2.dp))
-            Text(
-                text = showAmount(amountInSats.toBigDecimal().setScale(1)),
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun OnchainZapAmountChip(
-    amountInSats: Long,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-) {
-    Surface(
-        shape = ButtonBorder,
-        color = BitcoinOrange,
-        modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
-    ) {
-        Row(
-            modifier =
-                Modifier
-                    .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = CenterVertically,
-        ) {
-            Icon(
-                symbol = MaterialSymbols.CurrencyBitcoin,
-                contentDescription = null,
-                modifier = Size18Modifier,
-                tint = Color.White,
-            )
-            Spacer(Modifier.width(2.dp))
-            Text(
-                text = showAmount(amountInSats.toBigDecimal().setScale(1)),
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
-            )
-        }
+        content()
     }
 }
 
@@ -2215,11 +2217,19 @@ private fun OnchainZapAmountChip(
 fun ZapAmountChoicePopupPreview() {
     ThemeComparisonColumn {
         ZapAmountChoicePopupContent(
-            zapAmountChoices = persistentListOf(50L, 100L, 500L, 1_000L, 5_000L, 10_000L, 100_000L),
-            onchainZapAmountChoices = persistentListOf(10_000L, 50_000L, 250_000L),
-            onZap = {},
-            onChangeAmount = {},
+            amountChoices = persistentListOf(50L, 100L, 500L, 1_000L, 5_000L, 10_000L, 100_000L),
+            railCapability =
+                RailCapability(
+                    hasCashu = true,
+                    hasLightning = true,
+                    hasOnchain = true,
+                    cashuBestSingleMintSats = 1_000L,
+                    cashuTotalWalletSats = 10_000L,
+                ),
+            onLightningZap = {},
+            onNutzap = {},
             onOnchainAmount = {},
+            onChangeAmount = {},
         )
     }
 }

@@ -760,22 +760,55 @@ class CashuWalletState(
      *  - we share no mint with them, or
      *  - their kind:10019 has no P2PK pubkey.
      */
-    fun peekNutzapTarget(recipientPubKey: HexKey): NutzapTarget? {
+    fun peekNutzapTarget(recipientPubKey: HexKey): NutzapTarget? = peekNutzapFunding(recipientPubKey)?.target
+
+    /**
+     * Resolve nutzap funding for [recipientPubKey]: the best shared mint to
+     * spend from plus the balance figures the zap picker needs to classify
+     * each amount as funded, reloadable, or out of reach.
+     *
+     * The chosen [NutzapFunding.target] is the shared mint where we hold the
+     * **most** balance — not merely the first one the recipient lists. The
+     * previous `firstOrNull` could pick an empty shared mint and make a zap
+     * fail with "No proofs available at <mint>" even though another shared
+     * mint was funded.
+     *
+     * All reads are synchronous from in-memory state (`_mints`,
+     * `_tokenEntries`, `LocalCache`), so this is safe to call from a
+     * composable `remember {}`. The User pins the recipient's kind:10019
+     * addressable note for its own lifetime, so the chip no longer races the
+     * notes.LargeSoftCache eviction.
+     *
+     * Returns null when a nutzap is structurally impossible: we have no mints,
+     * the recipient has no kind:10019, no P2PK pubkey, or shares no mint with
+     * us. A non-null result still does not guarantee a single mint can cover a
+     * given amount — compare against [NutzapFunding.bestSingleMintSats].
+     */
+    fun peekNutzapFunding(recipientPubKey: HexKey): NutzapFunding? {
         val ourMints = _mints.value.toSet()
         if (ourMints.isEmpty()) return null
 
-        // Read the recipient's kind:10019 via their User — User pins the
-        // addressable note for its own lifetime, so the previous race
-        // (notes.LargeSoftCache evicts the WeakReference even though the
-        // event was delivered) no longer drops the chip.
         val info = cache.getOrCreateUser(recipientPubKey).nutzapInfo() ?: return null
 
         val recipientPubkeyHex = info.p2pkPubkey() ?: return null
-        val shared = info.mints().firstOrNull { it.mintUrl in ourMints } ?: return null
+        val sharedMints = info.mints().map { it.mintUrl }.filter { it in ourMints }
+        if (sharedMints.isEmpty()) return null
 
-        return NutzapTarget(
-            mintUrl = shared.mintUrl,
-            recipientP2pkPubkeyHex = recipientPubkeyHex,
+        val entries = _tokenEntries.value
+        var bestMint = sharedMints.first()
+        var bestMintSats = 0L
+        for (mint in sharedMints) {
+            val balance = entries.filter { it.content.mint == mint }.sumOf { it.content.totalAmount() }
+            if (balance > bestMintSats) {
+                bestMintSats = balance
+                bestMint = mint
+            }
+        }
+
+        return NutzapFunding(
+            target = NutzapTarget(mintUrl = bestMint, recipientP2pkPubkeyHex = recipientPubkeyHex),
+            bestSingleMintSats = bestMintSats,
+            totalWalletSats = entries.sumOf { it.content.totalAmount() },
         )
     }
 
@@ -1132,4 +1165,17 @@ class CashuWalletState(
 data class NutzapTarget(
     val mintUrl: String,
     val recipientP2pkPubkeyHex: String,
+)
+
+/**
+ * Nutzap funding snapshot for a recipient — the [target] mint to spend from
+ * plus the balance figures the zap picker uses to classify a given amount:
+ *  - `amount <= bestSingleMintSats` → fundable instantly from one shared mint
+ *  - `amount <= totalWalletSats`    → fundable only after a mint reload/rebalance
+ *  - otherwise                      → out of reach with the current balance
+ */
+data class NutzapFunding(
+    val target: NutzapTarget,
+    val bestSingleMintSats: Long,
+    val totalWalletSats: Long,
 )
