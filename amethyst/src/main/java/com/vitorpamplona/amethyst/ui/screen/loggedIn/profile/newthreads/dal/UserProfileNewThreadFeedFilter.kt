@@ -34,6 +34,8 @@ import com.vitorpamplona.quartz.experimental.attestations.request.AttestationReq
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
+import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -48,6 +50,8 @@ import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 
 class UserProfileNewThreadFeedFilter(
     val user: User,
@@ -89,6 +93,10 @@ class UserProfileNewThreadFeedFilter(
                     it.event is HighlightEvent ||
                     it.event is InteractiveStoryPrologueEvent ||
                     it.event is AudioTrackEvent ||
+                    it.event is MusicTrackEvent ||
+                    it.event is MusicPlaylistEvent ||
+                    it.event is PodcastEpisodeEvent ||
+                    it.event is PodcastMetadataEvent ||
                     it.event is AudioHeaderEvent ||
                     it.event is VoiceEvent ||
                     it.event is TorrentEvent ||

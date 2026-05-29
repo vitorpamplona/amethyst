@@ -36,8 +36,11 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.list.datasource
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.datasource.HomeFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.livestreams.datasource.LiveStreamsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.datasource.LongsFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.MusicTracksFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.datasource.NestsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.datasource.PicturesFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.PodcastEpisodesFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.datasource.PodcastsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.datasource.PollsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.products.datasource.ProductsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats.datasource.PublicChatsFilterAssemblerSubscription
@@ -94,6 +97,16 @@ private fun PreloadFor(
         -> CalendarsFilterAssemblerSubscription(accountViewModel)
 
         NavBarItem.SHORTS -> ShortsFilterAssemblerSubscription(accountViewModel)
+
+        NavBarItem.MUSIC_TRACKS,
+        NavBarItem.MUSIC_PLAYLISTS,
+        // Same REQ fetches both kinds 36787 + 34139, so one subscription serves both
+        // tabs no matter which one the user pinned.
+        -> MusicTracksFilterAssemblerSubscription(accountViewModel)
+
+        NavBarItem.PODCAST_EPISODES -> PodcastEpisodesFilterAssemblerSubscription(accountViewModel)
+
+        NavBarItem.PODCASTS -> PodcastsFilterAssemblerSubscription(accountViewModel)
 
         NavBarItem.PUBLIC_CHATS -> PublicChatsFilterAssemblerSubscription(accountViewModel)
 

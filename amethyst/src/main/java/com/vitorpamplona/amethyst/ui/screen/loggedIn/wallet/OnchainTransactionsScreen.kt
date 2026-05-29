@@ -51,6 +51,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.text.font.FontFamily
@@ -65,15 +66,13 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.ui.note.formatMonthDayTime
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.datasource.OnchainZapsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import java.text.NumberFormat
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import kotlin.math.absoluteValue
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -299,14 +298,11 @@ private fun OnchainTransactionItem(
             (if (isIncoming) "+" else "-") + fmt.format(amountSats)
         }
 
+    val context = LocalContext.current
     val dateText =
-        remember(view.tx.blockTime, view.tx.confirmations) {
+        remember(view.tx.blockTime, view.tx.confirmations, context) {
             val ts = view.tx.blockTime
-            if (ts != null) {
-                SimpleDateFormat("MMM d, HH:mm", Locale.getDefault()).format(Date(ts * 1000L))
-            } else {
-                ""
-            }
+            if (ts != null) formatMonthDayTime(ts, context) else ""
         }
 
     val counterpartyPubkeyHex = view.counterpartyPubkeyHex()

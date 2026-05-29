@@ -47,4 +47,17 @@ interface VideoEvent : IEvent {
     fun hash(): String?
 
     fun imetaTags(): List<VideoMeta>
+
+    /**
+     * NIP-71 PR #2255: imeta entries whose mime type starts with `video/`
+     * (or entries without a mime type, treated as legacy video variants).
+     */
+    fun videoTracks(): List<VideoMeta> = imetaTags().filter { it.isVideo || it.mimeType == null }
+
+    /**
+     * NIP-71 PR #2255: imeta entries whose mime type starts with `audio/`.
+     * Clients should prefer these over in-video audio to enable smooth
+     * resolution switching without interrupting audio.
+     */
+    fun audioTracks(): List<VideoMeta> = imetaTags().filter { it.isAudio }
 }

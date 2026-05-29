@@ -41,7 +41,7 @@ fun SoftwareAppsFilterAssemblerSubscription(
 ) {
     val state =
         remember(accountViewModel.account) {
-            SoftwareAppsQueryState(accountViewModel.account, accountViewModel.viewModelScope)
+            SoftwareAppsQueryState(accountViewModel.account, accountViewModel.feedStates, accountViewModel.viewModelScope)
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, dataSource)

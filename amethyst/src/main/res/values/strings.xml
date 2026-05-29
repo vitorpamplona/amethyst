@@ -142,6 +142,7 @@
     <string name="write_a_message">Write a message…</string>
     <string name="post">Post</string>
     <string name="save">Save</string>
+    <string name="send">Send</string>
     <string name="create">Create</string>
     <string name="rename">Rename</string>
     <string name="cancel">Cancel</string>
@@ -592,6 +593,15 @@
     <string name="nip82_repository_label">Source: %1$s</string>
     <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Download</string>
+    <string name="nip82_section_about">About</string>
+    <string name="nip82_section_platforms">Platforms</string>
+    <string name="nip82_section_topics">Topics</string>
+    <string name="nip82_section_links">Links</string>
+    <string name="nip82_section_latest_release">Latest release</string>
+    <string name="nip82_section_comments">Comments</string>
+    <string name="nip82_no_comments">Be the first to comment.</string>
+    <string name="nip82_older_releases_show">Show older releases</string>
+    <string name="nip82_older_releases_hide">Hide older releases</string>
     <string name="calendars">Calendars</string>
     <string name="shorts">Shorts</string>
     <string name="public_chats">Public Chats</string>
@@ -752,6 +762,36 @@
     <string name="nests_servers_empty">No nest servers yet. Add one below or pick a recommended server.</string>
     <string name="longs">Videos</string>
     <string name="articles">Articles</string>
+    <string name="route_music_tracks">Music</string>
+    <string name="route_music_playlists">Playlists</string>
+    <string name="route_podcast_episodes">Episodes</string>
+    <string name="route_podcasts">Podcasts</string>
+    <string name="new_music_track">New music track</string>
+    <string name="new_music_playlist">New playlist</string>
+    <string name="music_track_title_label">Title</string>
+    <string name="music_track_title_placeholder">Track title</string>
+    <string name="music_track_artist_label">Artist</string>
+    <string name="music_track_artist_placeholder">Artist name</string>
+    <string name="music_track_audio_url_label">Audio URL</string>
+    <string name="music_track_audio_url_placeholder">https://… .mp3</string>
+    <string name="music_track_image_url_label">Cover image URL (optional)</string>
+    <string name="music_track_album_label">Album (optional)</string>
+    <string name="music_track_duration_label">Duration in seconds (optional)</string>
+    <string name="music_track_description_label">Lyrics or credits (optional)</string>
+    <string name="music_track_delete">Delete this track</string>
+    <string name="music_track_delete_confirm">Publish a NIP-09 deletion for this music track?</string>
+    <string name="add_to_music_playlist">Add to playlist</string>
+    <string name="add_to_music_playlist_title">Add to playlist</string>
+    <string name="add_to_music_playlist_empty">You don\'t own any playlists yet. Use the field above to create one.</string>
+    <string name="add_to_music_playlist_manage_all">Manage all playlists</string>
+    <string name="music_playlist_new_dialog_title">New playlist</string>
+    <string name="music_playlist_new_title_placeholder">Playlist name</string>
+    <string name="music_playlist_create_action">Create</string>
+    <string name="music_playlist_untitled">(untitled playlist)</string>
+    <plurals name="music_playlist_track_count_short">
+        <item quantity="one">%1$d track</item>
+        <item quantity="other">%1$d tracks</item>
+    </plurals>
     <string name="private_bookmarks">Private Bookmarks</string>
     <string name="public_bookmarks">Public Bookmarks</string>
     <string name="add_to_private_bookmarks">Add to Private Bookmarks</string>
@@ -950,6 +990,7 @@
     <string name="payment_target_authority">Address</string>
     <string name="delete_payment_target">Delete payment target</string>
     <string name="no_payment_app_found">No app found to handle this payment. Please install a compatible wallet.</string>
+    <string name="no_payment_app_found_for_type">No app installed to handle %1$s payments. Please install a compatible wallet.</string>
     <string name="error_dialog_payment_error">Unable to open payment</string>
 
     <string name="uploading_state_ready">Not Started</string>
@@ -1505,6 +1546,27 @@
 
     <string name="long_form_reading_minutes">%1$d min read</string>
 
+    <plurals name="music_playlist_track_count">
+        <item quantity="one">%1$d track</item>
+        <item quantity="other">%1$d tracks</item>
+    </plurals>
+    <plurals name="music_playlist_more_tracks">
+        <item quantity="one">+%1$d more track</item>
+        <item quantity="other">+%1$d more tracks</item>
+    </plurals>
+    <string name="music_playlist_collaborative">Collaborative</string>
+    <string name="music_playlist_private">Private</string>
+    <string name="music_playlist_unknown_track">Unknown track</string>
+    <string name="music_playlist_loading_track">Loading track…</string>
+    <string name="music_track_cover_upload_cta">Upload a cover image</string>
+    <string name="music_track_cover_upload_hint">Pick a square image to be the artwork for this track.</string>
+    <string name="music_track_audio_upload_cta">Upload an audio file</string>
+    <string name="music_track_audio_upload_hint">Pick an MP3, WAV, or FLAC. It will be uploaded to your media server on Save.</string>
+    <string name="music_track_audio_picked">Audio file ready to upload</string>
+    <string name="music_track_uploading">Uploading…</string>
+    <string name="music_track_uploading_banner">Uploading cover + audio and publishing. This will keep going even if you leave the screen.</string>
+    <string name="music_track_upload_failed">Upload failed: %1$s</string>
+
 
     <string name="loading_location">Loading location</string>
     <string name="lack_location_permissions">No Location Permissions</string>
@@ -1624,6 +1686,10 @@
     <string name="wallet_number">Wallet %1$s</string>
     <string name="error_opening_external_signer">Error opening signer app</string>
     <string name="error_opening_external_signer_description">The signer app could not be found. Check if the app hasn\'t been uninstalled</string>
+
+    <string name="error_video_playback_failed">Can\'t play this video</string>
+    <string name="error_video_playback_failed_description">The codec or format isn\'t supported on this device (%1$s). Try opening it in your browser.</string>
+    <string name="error_video_open_in_browser">Open in browser</string>
     <string name="sign_request_rejected2">Sign request rejected</string>
     <string name="sign_request_rejected">Signer Application Rejected</string>
     <string name="sign_request_rejected_description">Make sure the signer application has authorized this transaction</string>
@@ -1806,6 +1872,7 @@
     <string name="metadata_strip_failed_upload">Upload anyway</string>
     <string name="metadata_strip_failed_upload_cancelled">Failed to strip private metadata from media. Upload cancelled.</string>
     <string name="upload_cancelled">Upload cancelled</string>
+    <string name="avif_metadata_strip_failed">Cannot strip metadata from AVIF: %1$s</string>
 
     <string name="edit_draft">Edit draft</string>
 
@@ -1870,6 +1937,7 @@
     <string name="wallet_invalid_uri">Invalid NWC connection URI</string>
     <string name="wallet_move_up">Move Up</string>
     <string name="wallet_move_down">Move Down</string>
+    <string name="wallet_reorder">Reorder wallet</string>
     <string name="wallet_onchain_transactions">Onchain Transactions</string>
     <string name="wallet_onchain_no_address">No on-chain address available for this account.</string>
     <string name="wallet_onchain_no_backend">No chain backend is configured.</string>
@@ -2528,6 +2596,12 @@
     <string name="kind_user_settings">User Settings</string>
     <string name="kind_audio_header">Audio Header</string>
     <string name="kind_audio_track">Audio Track</string>
+    <string name="kind_music_track">Music Track</string>
+    <string name="kind_music_playlist">Music Playlist</string>
+    <string name="kind_podcast_episode">Podcast Episode</string>
+    <string name="kind_podcast_metadata">Podcast Show</string>
+    <string name="kind_authored_podcasts">Authored Podcasts</string>
+    <string name="kind_favorite_podcasts">Favorite Podcasts</string>
     <string name="kind_badge_awards">Badge Awards</string>
     <string name="kind_badge_definitions">Badge Definitions</string>
     <string name="kind_accepted_badge_set">Accepted Badge Set</string>

@@ -35,11 +35,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
+import com.vitorpamplona.amethyst.commons.ui.theme.StatusGreen
+import com.vitorpamplona.amethyst.commons.ui.theme.StatusRed
 import com.vitorpamplona.amethyst.desktop.network.RelayStatus
 import com.vitorpamplona.amethyst.desktop.ui.tor.LocalTorState
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isOnion
@@ -73,9 +74,9 @@ fun RelayStatusCard(
             ) {
                 val statusColor =
                     when {
-                        status.connected -> Color.Green
-                        status.error != null -> Color.Red
-                        else -> Color.Gray
+                        status.connected -> StatusGreen
+                        status.error != null -> StatusRed
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant
                     }
 
                 if (status.connected) {
@@ -114,9 +115,9 @@ fun RelayStatusCard(
                             val torState = LocalTorState.current
                             val badgeColor =
                                 if (torState.status is TorServiceStatus.Off) {
-                                    Color(0xFFF44336) // Red — Tor required but off
+                                    StatusRed // Tor required but off
                                 } else {
-                                    Color(0xFF4CAF50) // Green — routed via Tor
+                                    StatusGreen // routed via Tor
                                 }
                             val badgeText =
                                 if (torState.status is TorServiceStatus.Off) "Requires Tor" else "via Tor"
@@ -138,7 +139,7 @@ fun RelayStatusCard(
                         Text(
                             error,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color.Red.copy(alpha = 0.8f),
+                            color = MaterialTheme.colorScheme.error,
                         )
                     }
                 }

@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -104,8 +105,8 @@ import com.vitorpamplona.amethyst.desktop.ui.chats.DmSendTracker
 import com.vitorpamplona.amethyst.desktop.ui.deck.AppDrawer
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckColumnType
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckLayout
-import com.vitorpamplona.amethyst.desktop.ui.deck.DeckSidebar
 import com.vitorpamplona.amethyst.desktop.ui.deck.DeckState
+import com.vitorpamplona.amethyst.desktop.ui.deck.MainSidebar
 import com.vitorpamplona.amethyst.desktop.ui.deck.PinnedNavBarState
 import com.vitorpamplona.amethyst.desktop.ui.deck.SinglePaneLayout
 import com.vitorpamplona.amethyst.desktop.ui.deck.SinglePaneState
@@ -263,6 +264,7 @@ fun main() {
         var showAppDrawer by remember { mutableStateOf(false) }
         var showAddColumnDialog by remember { mutableStateOf(false) }
         var showImportFollowListDialog by remember { mutableStateOf(false) }
+        val feedSearchActiveState = remember { mutableStateOf(false) }
 
         // Tor state at Window level — survives key() app rebuild
         var torSettings by remember {
@@ -444,6 +446,18 @@ fun main() {
                 }
                 Menu("View") {
                     Item(
+                        "Search",
+                        shortcut =
+                            if (isMacOS) {
+                                KeyShortcut(Key.F, meta = true)
+                            } else {
+                                KeyShortcut(Key.F, ctrl = true)
+                            },
+                        onClick = {
+                            feedSearchActiveState.value = !feedSearchActiveState.value
+                        },
+                    )
+                    Item(
                         "App Drawer",
                         shortcut =
                             if (isMacOS) {
@@ -607,39 +621,46 @@ fun main() {
                 LocalIsImmersiveFullscreen provides immersiveFullscreenState,
             ) {
                 key(appRestartKey) {
-                    App(
-                        layoutMode = layoutMode,
-                        onLayoutModeChange = { newMode ->
-                            layoutMode = newMode
-                            DesktopPreferences.layoutMode = newMode.name
+                    CompositionLocalProvider(
+                        com.vitorpamplona.amethyst.desktop.ui.theme.LocalFeedSearchActive provides feedSearchActiveState,
+                        com.vitorpamplona.amethyst.desktop.ui.theme.LocalOpenFullSearch provides {
+                            navigateToScreen?.invoke(DeckColumnType.Search)
                         },
-                        deckState = deckState,
-                        workspaceManager = workspaceManager,
-                        accountManager = accountManager,
-                        showComposeDialog = showComposeDialog,
-                        showAppDrawer = showAppDrawer,
-                        onShowComposeDialog = { showComposeDialog = true },
-                        onShowReplyDialog = { event ->
-                            replyToNote = event
-                            showComposeDialog = true
-                        },
-                        onDismissComposeDialog = {
-                            showComposeDialog = false
-                            replyToNote = null
-                        },
-                        onDismissAppDrawer = { showAppDrawer = false },
-                        onShowAppDrawer = { showAppDrawer = true },
-                        replyToNote = replyToNote,
-                        showImportFollowListDialog = showImportFollowListDialog,
-                        onShowImportFollowListDialog = { showImportFollowListDialog = true },
-                        onDismissImportFollowListDialog = { showImportFollowListDialog = false },
-                        onRestartApp = { appRestartKey++ },
-                        torManager = torManager,
-                        torTypeFlow = torTypeFlow,
-                        externalPortFlow = externalPortFlow,
-                        initialTorSettings = torSettings,
-                        onNavigateToScreen = { navigateToScreen = it },
-                    )
+                    ) {
+                        App(
+                            layoutMode = layoutMode,
+                            onLayoutModeChange = { newMode ->
+                                layoutMode = newMode
+                                DesktopPreferences.layoutMode = newMode.name
+                            },
+                            deckState = deckState,
+                            workspaceManager = workspaceManager,
+                            accountManager = accountManager,
+                            showComposeDialog = showComposeDialog,
+                            showAppDrawer = showAppDrawer,
+                            onShowComposeDialog = { showComposeDialog = true },
+                            onShowReplyDialog = { event ->
+                                replyToNote = event
+                                showComposeDialog = true
+                            },
+                            onDismissComposeDialog = {
+                                showComposeDialog = false
+                                replyToNote = null
+                            },
+                            onDismissAppDrawer = { showAppDrawer = false },
+                            onShowAppDrawer = { showAppDrawer = true },
+                            replyToNote = replyToNote,
+                            showImportFollowListDialog = showImportFollowListDialog,
+                            onShowImportFollowListDialog = { showImportFollowListDialog = true },
+                            onDismissImportFollowListDialog = { showImportFollowListDialog = false },
+                            onRestartApp = { appRestartKey++ },
+                            torManager = torManager,
+                            torTypeFlow = torTypeFlow,
+                            externalPortFlow = externalPortFlow,
+                            initialTorSettings = torSettings,
+                            onNavigateToScreen = { navigateToScreen = it },
+                        )
+                    }
                 }
             }
         }
@@ -844,6 +865,7 @@ fun App(
             }
 
             is AccountState.ConnectingRelays -> {}
+            is AccountState.Loading -> {}
         }
     }
 
@@ -904,8 +926,10 @@ fun App(
                 if (current != null) {
                     accountManager.loadNwcConnection(current.npub)
                 }
+            } else {
+                // No saved account found → show login screen
+                accountManager.setLoggedOut()
             }
-            // If failure: state remains LoggedOut → login screen shows automatically
         }
 
         onDispose {
@@ -936,6 +960,28 @@ fun App(
                     com.vitorpamplona.amethyst.desktop.ui.deck.LocalLocalRelayStore provides localRelayStore,
                 ) {
                     when (accountState) {
+                        is AccountState.Loading -> {
+                            // Branded loading screen while accounts load from storage
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    androidx.compose.material3.CircularProgressIndicator(
+                                        modifier = Modifier.size(32.dp),
+                                        color = MaterialTheme.colorScheme.primary,
+                                        strokeWidth = 3.dp,
+                                    )
+                                    Spacer(Modifier.height(16.dp))
+                                    Text(
+                                        "Amethyst",
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        color = MaterialTheme.colorScheme.onBackground,
+                                    )
+                                }
+                            }
+                        }
+
                         is AccountState.LoggedOut -> {
                             LoginScreen(
                                 accountManager = accountManager,
@@ -969,11 +1015,22 @@ fun App(
                             val account = accountState as AccountState.LoggedIn
                             val nwcConnection by accountManager.nwcConnection.collectAsState()
 
-                            // Lazy-load Namecoin services
+                            // Lazy-load Namecoin services. The Core RPC HTTP
+                            // client is sourced from the Tor-aware DesktopHttpClient
+                            // singleton so .onion RPC URLs route through the
+                            // user's Tor settings without extra plumbing.
                             val namecoinPreferences = remember { DesktopNamecoinPreferences() }
                             val namecoinService =
                                 remember {
-                                    DesktopNamecoinNameService(preferencesProvider = { namecoinPreferences.current })
+                                    DesktopNamecoinNameService(
+                                        preferencesProvider = { namecoinPreferences.current },
+                                        pinnedCertsProvider = { namecoinPreferences.loadPinnedCerts() },
+                                        coreRpcHttpClientProvider = { _ ->
+                                            com.vitorpamplona.amethyst.desktop.network
+                                                .DesktopHttpClient
+                                                .currentClient()
+                                        },
+                                    )
                                 }
 
                             // NWC loaded during startup in loadSavedAccount flow
@@ -1335,6 +1392,106 @@ fun MainContent(
         Box(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {
                 Row(Modifier.fillMaxSize().weight(1f)) {
+                    // Shared sidebar for both layout modes
+                    if (!isImmersive) {
+                        val allAccountsState by accountManager.allAccounts.collectAsState()
+                        val searchActiveState = com.vitorpamplona.amethyst.desktop.ui.theme.LocalFeedSearchActive.current
+                        var showAddAccountDialog by remember { mutableStateOf(false) }
+
+                        // Derive active column type based on layout mode
+                        val activeColumnType =
+                            when (layoutMode) {
+                                LayoutMode.DECK -> {
+                                    val deckColumns by deckState.columns.collectAsState()
+                                    val focusedIdx by deckState.focusedColumnIndex.collectAsState()
+                                    deckColumns.getOrNull(focusedIdx)?.type
+                                }
+                                LayoutMode.SINGLE_PANE -> {
+                                    val currentScreen by singlePaneState.currentScreen.collectAsState()
+                                    currentScreen
+                                }
+                            }
+
+                        Box {
+                            MainSidebar(
+                                activeNpub = accountManager.currentAccount()?.npub,
+                                allAccounts = allAccountsState,
+                                localCache = localCache,
+                                onSwitchAccount = { npub ->
+                                    scope.launch(Dispatchers.IO) {
+                                        accountManager.switchAccount(npub)
+                                    }
+                                },
+                                onAddAccount = { showAddAccountDialog = true },
+                                onRemoveAccount = { npub ->
+                                    scope.launch(Dispatchers.IO) {
+                                        accountManager.removeAccountFromStorage(npub)
+                                    }
+                                },
+                                onAddColumn = onShowAppDrawer,
+                                onOpenSettings = {
+                                    when (layoutMode) {
+                                        LayoutMode.DECK -> {
+                                            if (deckState.hasColumnOfType(DeckColumnType.Settings)) {
+                                                deckState.focusExistingColumn(DeckColumnType.Settings)
+                                            } else {
+                                                deckState.addColumn(DeckColumnType.Settings)
+                                            }
+                                        }
+                                        LayoutMode.SINGLE_PANE -> {
+                                            singlePaneState.navigate(DeckColumnType.Settings)
+                                        }
+                                    }
+                                },
+                                onNavigate = { type ->
+                                    searchActiveState.value = false
+                                    when (layoutMode) {
+                                        LayoutMode.DECK -> {
+                                            if (deckState.hasColumnOfType(type)) {
+                                                deckState.focusExistingColumn(type)
+                                            } else {
+                                                deckState.addColumn(type)
+                                            }
+                                        }
+                                        LayoutMode.SINGLE_PANE -> {
+                                            singlePaneState.navigate(type)
+                                        }
+                                    }
+                                },
+                                activeColumnType = activeColumnType,
+                                onShowImportFollowListDialog = onShowImportFollowListDialog,
+                                signerConnectionState = signerConnectionState,
+                                lastPingTimeSec = lastPingTimeSec,
+                                torStatus = torStatus,
+                            )
+
+                            // Dim sidebar when feed search is active
+                            if (com.vitorpamplona.amethyst.desktop.ui.theme.LocalFeedSearchActive.current.value) {
+                                Box(
+                                    modifier =
+                                        Modifier
+                                            .matchParentSize()
+                                            .background(Color.Black.copy(alpha = 0.3f)),
+                                )
+                            }
+                        }
+
+                        VerticalDivider()
+
+                        if (showAddAccountDialog) {
+                            com.vitorpamplona.amethyst.desktop.ui.account.AddAccountDialog(
+                                accountManager = accountManager,
+                                onDismiss = { showAddAccountDialog = false },
+                                onAccountAdded = {
+                                    showAddAccountDialog = false
+                                    scope.launch(Dispatchers.IO) {
+                                        accountManager.refreshAccountList()
+                                    }
+                                },
+                            )
+                        }
+                    }
+
                     when (layoutMode) {
                         LayoutMode.SINGLE_PANE -> {
                             val lastRelayEvent by subscriptionsCoordinator.lastEventAt.collectAsState()
@@ -1366,55 +1523,6 @@ fun MainContent(
                         }
 
                         LayoutMode.DECK -> {
-                            if (!isImmersive) {
-                                val allAccountsState by accountManager.allAccounts.collectAsState()
-                                var showAddAccountDialog by remember { mutableStateOf(false) }
-
-                                DeckSidebar(
-                                    activeNpub = accountManager.currentAccount()?.npub,
-                                    allAccounts = allAccountsState,
-                                    localCache = localCache,
-                                    onSwitchAccount = { npub ->
-                                        scope.launch(Dispatchers.IO) {
-                                            accountManager.switchAccount(npub)
-                                        }
-                                    },
-                                    onAddAccount = { showAddAccountDialog = true },
-                                    onRemoveAccount = { npub ->
-                                        scope.launch(Dispatchers.IO) {
-                                            accountManager.removeAccountFromStorage(npub)
-                                        }
-                                    },
-                                    onAddColumn = onShowAppDrawer,
-                                    onOpenSettings = {
-                                        if (deckState.hasColumnOfType(DeckColumnType.Settings)) {
-                                            deckState.focusExistingColumn(DeckColumnType.Settings)
-                                        } else {
-                                            deckState.addColumn(DeckColumnType.Settings)
-                                        }
-                                    },
-                                    onShowImportFollowListDialog = onShowImportFollowListDialog,
-                                    signerConnectionState = signerConnectionState,
-                                    lastPingTimeSec = lastPingTimeSec,
-                                    torStatus = torStatus,
-                                )
-
-                                VerticalDivider()
-
-                                if (showAddAccountDialog) {
-                                    com.vitorpamplona.amethyst.desktop.ui.account.AddAccountDialog(
-                                        accountManager = accountManager,
-                                        onDismiss = { showAddAccountDialog = false },
-                                        onAccountAdded = {
-                                            showAddAccountDialog = false
-                                            scope.launch(Dispatchers.IO) {
-                                                accountManager.refreshAccountList()
-                                            }
-                                        },
-                                    )
-                                }
-                            }
-
                             DeckLayout(
                                 deckState = deckState,
                                 relayManager = relayManager,
@@ -1652,6 +1760,7 @@ fun RelaySettingsScreen(
 
             // Namecoin Settings (ElectrumX servers for .bit / d/ / id/ resolution)
             val namecoinPrefsHere = namecoinPreferences ?: LocalNamecoinPreferences.current
+            val namecoinServiceHere = LocalNamecoinService.current
             if (namecoinPrefsHere != null) {
                 val namecoinScope = rememberCoroutineScope()
                 val namecoinSettings by namecoinPrefsHere.settings.collectAsState()
@@ -1669,6 +1778,62 @@ fun RelaySettingsScreen(
                     onReset = {
                         namecoinScope.launch { namecoinPrefsHere.reset() }
                     },
+                    onTestServer =
+                        namecoinServiceHere?.let { svc ->
+                            { server -> svc.client.testServer(server) }
+                        },
+                    onPinCert =
+                        namecoinServiceHere?.let { svc ->
+                            { pem ->
+                                namecoinPrefsHere.addPinnedCert(pem)
+                                // Apply immediately so the next lookup uses the new pin.
+                                // The same list is shared with the Namecoin Core RPC
+                                // client when present, mirroring Android's behaviour
+                                // where both backends consume one trust store.
+                                namecoinScope.launch {
+                                    try {
+                                        val pins = namecoinPrefsHere.loadPinnedCerts()
+                                        svc.client.setDynamicCerts(pins)
+                                        svc.rpcClient?.setDynamicCerts(pins)
+                                    } catch (_: Exception) {
+                                        // Best-effort — persisted, will apply on next restart.
+                                    }
+                                }
+                            }
+                        },
+                    onSetBackend = { backend ->
+                        namecoinScope.launch { namecoinPrefsHere.setBackend(backend) }
+                    },
+                    onSetCoreRpcConfig = { cfg ->
+                        namecoinScope.launch {
+                            namecoinPrefsHere.setCoreRpcConfig(cfg)
+                            // Push the new config into the live client so the
+                            // next lookup uses it without restarting the app.
+                            namecoinServiceHere?.rpcClient?.setConfig(cfg)
+                        }
+                    },
+                    onSetFallbackToCustomElectrumx = { enabled ->
+                        namecoinScope.launch {
+                            namecoinPrefsHere.setFallbackToCustomElectrumx(enabled)
+                        }
+                    },
+                    onSetFallbackToDefaultElectrumx = { enabled ->
+                        namecoinScope.launch {
+                            namecoinPrefsHere.setFallbackToDefaultElectrumx(enabled)
+                        }
+                    },
+                    onTestCoreRpc =
+                        namecoinServiceHere?.let { svc ->
+                            { cfg ->
+                                svc.probeCoreRpc(cfg)
+                                    ?: com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin
+                                        .RpcProbeResult(
+                                            success = false,
+                                            elapsedMs = 0,
+                                            error = "Namecoin Core RPC client not available",
+                                        )
+                            }
+                        },
                 )
                 Spacer(Modifier.height(24.dp))
                 HorizontalDivider()

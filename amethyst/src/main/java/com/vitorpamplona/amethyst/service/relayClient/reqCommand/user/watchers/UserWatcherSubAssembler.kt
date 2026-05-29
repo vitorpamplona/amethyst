@@ -59,6 +59,9 @@ class UserWatcherSubAssembler(
                 }
             }
         }
+        // Re-evaluate filters: filterUserMetadataForKey may widen to indexer
+        // relays once a user's outbox is exhausted without yielding metadata.
+        invalidateFilters()
     }
 
     val sub =

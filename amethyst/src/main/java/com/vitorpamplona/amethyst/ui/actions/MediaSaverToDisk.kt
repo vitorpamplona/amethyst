@@ -213,6 +213,14 @@ object MediaSaverToDisk {
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI to Environment.DIRECTORY_PICTURES
                 }
 
+                cleanMimeType.startsWith("audio/", ignoreCase = true) -> {
+                    // Audio content goes into the Music MediaStore + folder. Routing it through
+                    // Video.EXTERNAL_CONTENT_URI (the previous fall-through behavior) crashes
+                    // with IllegalArgumentException because MediaProvider rejects audio/* into
+                    // the Video collection.
+                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI to Environment.DIRECTORY_MUSIC
+                }
+
                 cleanMimeType.equals(PDF_MIME_TYPE, ignoreCase = true) -> {
                     MediaStore.Downloads.EXTERNAL_CONTENT_URI to Environment.DIRECTORY_DOWNLOADS
                 }

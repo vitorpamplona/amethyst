@@ -69,15 +69,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.note.formatMediumDate
 import com.vitorpamplona.amethyst.ui.note.timeAgoNoDotNoDay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @Composable
 fun EventSyncScreen(
@@ -750,6 +748,8 @@ private fun DateRangeFilterCard(
     LaunchedEffect(effectiveSince) { onSinceChanged(effectiveSince) }
     LaunchedEffect(effectiveUntil) { onUntilChanged(effectiveUntil) }
 
+    val context = LocalContext.current
+
     Card(
         modifier =
             Modifier.fillMaxWidth(),
@@ -775,7 +775,7 @@ private fun DateRangeFilterCard(
                         if (effectiveSince == null) {
                             stringRes(R.string.event_sync_date_filter_all_time)
                         } else {
-                            stringRes(R.string.event_sync_date_filter_since) + " " + formatEpochDate(sinceEpoch)
+                            stringRes(R.string.event_sync_date_filter_since) + " " + formatMediumDate(sinceEpoch, context)
                         },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
@@ -785,7 +785,7 @@ private fun DateRangeFilterCard(
                         if (effectiveUntil == null) {
                             stringRes(R.string.event_sync_date_filter_now)
                         } else {
-                            stringRes(R.string.event_sync_date_filter_until) + " " + formatEpochDate(untilEpoch)
+                            stringRes(R.string.event_sync_date_filter_until) + " " + formatMediumDate(untilEpoch, context)
                         },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
@@ -808,11 +808,6 @@ private fun DateRangeFilterCard(
             }
         }
     }
-}
-
-private fun formatEpochDate(epochSecs: Long): String {
-    val sdf = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
-    return sdf.format(Date(epochSecs * 1000))
 }
 
 // -------------------------------------------------------------------------

@@ -22,9 +22,12 @@ package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -55,11 +58,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.LinkIcon
+import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
@@ -73,10 +80,16 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAss
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.SoftwareReleaseEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.asSoftwareRelease
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
+import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
- * NIP-82 kind 32267 — Software Application card. Renders icon, name, summary,
- * a horizontal screenshot strip, hashtag/platform chips, and quick links.
+ * NIP-82 kind 32267 — compact feed card. Renders icon, name, latest version
+ * chip, summary, description, and platforms/license. Tapping the card opens
+ * the dedicated [Route.SoftwareAppDetail] screen with screenshots, full
+ * description, links, releases, and comments. The bottom of the card hosts
+ * the standard [ReactionsRow] so zaps / likes / replies are visible inline.
  */
 @Composable
 fun RenderSoftwareApplication(
@@ -86,16 +99,14 @@ fun RenderSoftwareApplication(
 ) {
     val event = note.event as? SoftwareApplicationEvent ?: return
 
-    val uri = LocalUriHandler.current
     val icon = remember(event) { event.icon() }
     val name = remember(event) { event.name() ?: event.appId().orEmpty() }
     val summary = remember(event) { event.summary() }
-    val images = remember(event) { event.images() }
-    val topics = remember(event) { event.topics() }
+    val description = remember(event) { event.content.trim() }
     val platforms = remember(event) { event.platforms() }
-    val website = remember(event) { event.url() }
-    val repo = remember(event) { event.repository() }
     val license = remember(event) { event.license() }
+
+    val latestVersion by produceLatestReleaseVersion(event)
 
     Column(
         modifier =
@@ -104,24 +115,11 @@ fun RenderSoftwareApplication(
                 .padding(top = Size5dp)
                 .clip(QuoteBorder)
                 .border(1.dp, MaterialTheme.colorScheme.subtleBorder, QuoteBorder)
+                .clickable { nav.nav(Route.SoftwareAppDetail(event.kind, event.pubKey, event.dTag())) }
                 .padding(12.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .border(1.dp, MaterialTheme.colorScheme.subtleBorder, RoundedCornerShape(12.dp)),
-            ) {
-                icon?.let {
-                    AsyncImage(
-                        model = it,
-                        contentDescription = name,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.size(56.dp),
-                    )
-                }
-            }
+            AppIcon(icon = icon, name = name)
 
             Spacer(Modifier.width(12.dp))
 
@@ -135,7 +133,7 @@ fun RenderSoftwareApplication(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                summary?.let {
+                summary?.takeIf { it.isNotBlank() }?.let {
                     Text(
                         text = it,
                         style = MaterialTheme.typography.bodySmall,
@@ -145,83 +143,215 @@ fun RenderSoftwareApplication(
                     )
                 }
             }
-        }
 
-        if (images.isNotEmpty()) {
-            Spacer(StdVertSpacer)
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.height(180.dp),
-            ) {
-                items(images) { imageUrl ->
-                    AsyncImage(
-                        model = imageUrl,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier =
-                            Modifier
-                                .height(180.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .border(1.dp, MaterialTheme.colorScheme.subtleBorder, RoundedCornerShape(8.dp)),
-                    )
-                }
+            latestVersion?.let { version ->
+                Spacer(Modifier.width(8.dp))
+                VersionChip(version)
             }
         }
 
-        if (platforms.isNotEmpty() || topics.isNotEmpty() || license != null) {
+        if (description.isNotBlank()) {
             Spacer(StdVertSpacer)
-            ChipFlowRow(platforms = platforms, topics = topics, license = license)
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
 
-        if (website != null || repo != null) {
+        if (platforms.isNotEmpty() || license != null) {
             Spacer(StdVertSpacer)
-            Column {
-                website?.let {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        LinkIcon(Size16Modifier, MaterialTheme.colorScheme.placeholderText)
-                        ClickableTextPrimary(
-                            text = it.removePrefix("https://").removePrefix("http://"),
-                            onClick = { runCatching { uri.openUri(it) } },
-                            modifier = Modifier.padding(start = 5.dp),
-                        )
-                    }
-                }
-                repo?.let {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        LinkIcon(Size16Modifier, MaterialTheme.colorScheme.placeholderText)
-                        ClickableTextPrimary(
-                            text = stringRes(R.string.nip82_repository_label, it.removePrefix("https://").removePrefix("http://")),
-                            onClick = { runCatching { uri.openUri(it) } },
-                            modifier = Modifier.padding(start = 5.dp),
-                        )
-                    }
-                }
+            PlatformLicenseRow(platforms = platforms, license = license)
+        }
+    }
+
+    ReactionsRow(
+        baseNote = note,
+        showReactionDetail = true,
+        addPadding = true,
+        editState = null,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
+}
+
+/**
+ * Looks up the latest NIP-82 [SoftwareReleaseEvent] for [app] from
+ * [LocalCache] and exposes the version string. Recomputes on event identity
+ * change; relay-driven recompositions of the surrounding feed will pick up
+ * newer releases via re-keying.
+ */
+@Composable
+fun produceLatestReleaseVersion(app: SoftwareApplicationEvent) =
+    produceState<String?>(initialValue = null, key1 = app.id) {
+        value =
+            withContext(Dispatchers.Default) {
+                findLatestNip82Release(app)?.version()
             }
+    }
+
+fun findLatestNip82Release(app: SoftwareApplicationEvent): SoftwareReleaseEvent? {
+    val prefix = "${app.dTag()}@"
+    val notes =
+        LocalCache.addressables.filterIntoSet(SoftwareReleaseEvent.KIND, app.pubKey) { _, addr ->
+            val ev = addr.event ?: return@filterIntoSet false
+            ev.isNip82SoftwareRelease() && ev.dTag().startsWith(prefix)
         }
-    }
+    return notes
+        .mapNotNull {
+            when (val ev = it.event) {
+                is SoftwareReleaseEvent -> ev
+                null -> null
+                else -> if (ev.isNip82SoftwareRelease()) ev.asSoftwareRelease() else null
+            }
+        }.maxByOrNull { it.createdAt }
+}
+
+fun findAllNip82Releases(app: SoftwareApplicationEvent): List<SoftwareReleaseEvent> {
+    val prefix = "${app.dTag()}@"
+    val notes =
+        LocalCache.addressables.filterIntoSet(SoftwareReleaseEvent.KIND, app.pubKey) { _, addr ->
+            val ev = addr.event ?: return@filterIntoSet false
+            ev.isNip82SoftwareRelease() && ev.dTag().startsWith(prefix)
+        }
+    return notes
+        .mapNotNull {
+            when (val ev = it.event) {
+                is SoftwareReleaseEvent -> ev
+                null -> null
+                else -> if (ev.isNip82SoftwareRelease()) ev.asSoftwareRelease() else null
+            }
+        }.sortedByDescending { it.createdAt }
 }
 
 @Composable
-private fun ChipFlowRow(
-    platforms: List<String>,
-    topics: List<String>,
-    license: String?,
-) {
-    // FlowRow is in compose foundation but we use a simple LazyRow to keep this compatible.
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        items(platforms) { Chip(it) }
-        items(topics) { Chip("#$it") }
-        license?.let { item { Chip(it, tint = MaterialTheme.colorScheme.secondaryContainer) } }
-    }
-}
-
-@Composable
-private fun Chip(
-    text: String,
-    tint: Color = MaterialTheme.colorScheme.surfaceVariant,
+fun AppIcon(
+    icon: String?,
+    name: String,
+    sizeDp: Int = 56,
 ) {
     Box(
         Modifier
+            .size(sizeDp.dp)
+            .clip(RoundedCornerShape((sizeDp / 4).dp))
+            .border(1.dp, MaterialTheme.colorScheme.subtleBorder, RoundedCornerShape((sizeDp / 4).dp)),
+    ) {
+        icon?.let {
+            AsyncImage(
+                model = it,
+                contentDescription = name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.size(sizeDp.dp),
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun PlatformLicenseRow(
+    platforms: List<String>,
+    license: String?,
+) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        platforms.forEach { Chip(it) }
+        license?.let { Chip(it, tint = MaterialTheme.colorScheme.secondaryContainer) }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun TopicChipFlow(
+    topics: List<String>,
+    nav: INav,
+) {
+    if (topics.isEmpty()) return
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        topics.forEach { tag ->
+            Chip(
+                text = "#$tag",
+                modifier = Modifier.clickable { nav.nav(Route.Hashtag(tag.lowercase())) },
+            )
+        }
+    }
+}
+
+@Composable
+fun ScreenshotsStrip(images: List<String>) {
+    if (images.isEmpty()) return
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier.height(180.dp),
+    ) {
+        items(images) { imageUrl ->
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier =
+                    Modifier
+                        .height(180.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.subtleBorder, RoundedCornerShape(8.dp)),
+            )
+        }
+    }
+}
+
+@Composable
+fun AppLinksColumn(
+    website: String?,
+    repository: String?,
+) {
+    if (website == null && repository == null) return
+    val uri = LocalUriHandler.current
+    Column {
+        website?.let {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                LinkIcon(Size16Modifier, MaterialTheme.colorScheme.placeholderText)
+                ClickableTextPrimary(
+                    text = it.removePrefix("https://").removePrefix("http://"),
+                    onClick = { runCatching { uri.openUri(it) } },
+                    modifier = Modifier.padding(start = 5.dp),
+                )
+            }
+        }
+        repository?.let {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                LinkIcon(Size16Modifier, MaterialTheme.colorScheme.placeholderText)
+                ClickableTextPrimary(
+                    text = stringRes(R.string.nip82_repository_label, it.removePrefix("https://").removePrefix("http://")),
+                    onClick = { runCatching { uri.openUri(it) } },
+                    modifier = Modifier.padding(start = 5.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun VersionChip(version: String) {
+    Chip(
+        text = stringRes(R.string.nip82_version_label, version),
+        tint = MaterialTheme.colorScheme.primaryContainer,
+    )
+}
+
+@Composable
+fun Chip(
+    text: String,
+    tint: Color = MaterialTheme.colorScheme.surfaceVariant,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier
             .clip(RoundedCornerShape(12.dp))
             .background(tint)
             .padding(horizontal = 8.dp, vertical = 4.dp),
@@ -254,11 +384,21 @@ fun RenderSoftwareRelease(
             return
         }
 
+    RenderSoftwareReleaseBody(event = event, accountViewModel = accountViewModel, nav = nav)
+}
+
+@Composable
+fun RenderSoftwareReleaseBody(
+    event: SoftwareReleaseEvent,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    showAppId: Boolean = true,
+) {
     val appId = remember(event) { event.appId() }
     val version = remember(event) { event.version() }
     val channel = remember(event) { event.channel() }
     val assets = remember(event) { event.assets() }
-    val notes = remember(event) { event.content }
+    val notes = event.content
 
     Column(
         modifier =
@@ -271,14 +411,16 @@ fun RenderSoftwareRelease(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                appId?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                if (showAppId) {
+                    appId?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
                 version?.let {
                     Text(
@@ -354,6 +496,7 @@ private fun LoadAssetNote(
     content(note)
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SoftwareAssetRow(
     note: Note,
@@ -416,8 +559,11 @@ private fun SoftwareAssetRow(
             }
             if (platforms.isNotEmpty()) {
                 Spacer(Modifier.height(4.dp))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    items(platforms) { Chip(it) }
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    platforms.forEach { Chip(it) }
                 }
             }
         }
@@ -435,6 +581,7 @@ private fun SoftwareAssetRow(
  * NIP-82 kind 3063 — Software Asset card. A compact descriptor of a single
  * install artifact: MIME type, version, size, platforms, and a download link.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RenderSoftwareAsset(
     note: Note,
@@ -499,15 +646,18 @@ fun RenderSoftwareAsset(
 
         if (mimeType != null || platforms.isNotEmpty()) {
             Spacer(StdVertSpacer)
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                mimeType?.let { item { Chip(prettyMime(it)) } }
-                items(platforms) { Chip(it) }
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                mimeType?.let { Chip(prettyMime(it)) }
+                platforms.forEach { Chip(it) }
             }
         }
     }
 }
 
-private fun prettyMime(mime: String): String =
+internal fun prettyMime(mime: String): String =
     when (mime) {
         "application/vnd.android.package-archive" -> "APK"
         "application/vnd.apple.ipa" -> "IPA"
@@ -528,7 +678,7 @@ private fun prettyMime(mime: String): String =
         else -> mime
     }
 
-private fun formatBytes(bytes: Long): String {
+internal fun formatBytes(bytes: Long): String {
     if (bytes < 1024L) return "$bytes B"
     val kb = bytes / 1024.0
     if (kb < 1024) return "%.1f KB".format(kb)

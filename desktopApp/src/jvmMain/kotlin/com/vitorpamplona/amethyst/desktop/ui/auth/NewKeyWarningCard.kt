@@ -33,7 +33,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -76,7 +75,7 @@ fun NewKeyWarningCard(
             Text(
                 stringResource(Res.string.new_key_warning_title),
                 style = MaterialTheme.typography.titleMedium,
-                color = Color.Red,
+                color = MaterialTheme.colorScheme.error,
             )
 
             Spacer(Modifier.height(16.dp))
@@ -102,7 +101,7 @@ fun NewKeyWarningCard(
                 Text(
                     stringResource(Res.string.new_key_secret_label),
                     style = MaterialTheme.typography.labelMedium,
-                    color = Color.Red,
+                    color = MaterialTheme.colorScheme.error,
                 )
                 SelectableKeyText(secretKey)
             }

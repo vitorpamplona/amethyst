@@ -83,6 +83,18 @@ sealed class Route {
 
     @Serializable object SoftwareApps : Route()
 
+    @Serializable data class SoftwareAppDetail(
+        val kind: Int,
+        val pubKeyHex: HexKey,
+        val dTag: String,
+    ) : Route() {
+        constructor(address: Address) : this(
+            kind = address.kind,
+            pubKeyHex = address.pubKeyHex,
+            dTag = address.dTag,
+        )
+    }
+
     @Serializable object Calendars : Route()
 
     @Serializable object CalendarCollections : Route()
@@ -142,15 +154,42 @@ sealed class Route {
 
     @Serializable object Articles : Route()
 
+    @Serializable object MusicTracks : Route()
+
+    @Serializable object MusicPlaylists : Route()
+
+    @Serializable object PodcastEpisodes : Route()
+
+    @Serializable object Podcasts : Route()
+
+    @Serializable
+    data class NewMusicTrack(
+        val dTag: String? = null,
+    ) : Route()
+
+    @Serializable
+    data class AddToMusicPlaylist(
+        val trackAddress: String,
+    ) : Route()
+
     @Serializable object Chess : Route()
 
     @Serializable object Wallet : Route()
 
-    @Serializable object WalletSend : Route()
+    @Serializable
+    data class WalletSend(
+        val walletId: String,
+    ) : Route()
 
-    @Serializable object WalletReceive : Route()
+    @Serializable
+    data class WalletReceive(
+        val walletId: String,
+    ) : Route()
 
-    @Serializable object WalletTransactions : Route()
+    @Serializable
+    data class WalletTransactions(
+        val walletId: String,
+    ) : Route()
 
     @Serializable object OnchainTransactions : Route()
 

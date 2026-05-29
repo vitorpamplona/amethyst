@@ -69,6 +69,8 @@ import kotlinx.coroutines.withTimeout
 import java.io.File
 
 sealed class AccountState {
+    data object Loading : AccountState()
+
     data object LoggedOut : AccountState()
 
     data object ConnectingRelays : AccountState()
@@ -123,7 +125,7 @@ class AccountManager internal constructor(
     private val _allAccounts = MutableStateFlow<ImmutableList<AccountInfo>>(persistentListOf())
     val allAccounts: StateFlow<ImmutableList<AccountInfo>> = _allAccounts.asStateFlow()
 
-    private val _accountState = MutableStateFlow<AccountState>(AccountState.LoggedOut)
+    private val _accountState = MutableStateFlow<AccountState>(AccountState.Loading)
     val accountState: StateFlow<AccountState> = _accountState.asStateFlow()
 
     private val _nwcConnection = MutableStateFlow<Nip47WalletConnect.Nip47URINorm?>(null)
@@ -461,6 +463,10 @@ class AccountManager internal constructor(
         val info = AccountInfo(npub = npub, signerType = SignerType.Remote(bunkerUri))
         addAccountToStorage(info)
         accountStorage.setCurrentAccount(npub)
+    }
+
+    fun setLoggedOut() {
+        _accountState.value = AccountState.LoggedOut
     }
 
     fun setConnectingRelays() {

@@ -111,7 +111,7 @@ fun DesktopVideoPlayer(
                     .height(constrainedHeight)
                     .background(
                         MaterialTheme.colorScheme.surfaceContainerHigh,
-                        RoundedCornerShape(8.dp),
+                        MaterialTheme.shapes.small,
                     ),
             contentAlignment = Alignment.Center,
         ) {
@@ -123,7 +123,7 @@ fun DesktopVideoPlayer(
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .clip(RoundedCornerShape(8.dp)),
+                            .clip(MaterialTheme.shapes.small),
                     contentScale = ContentScale.Fit,
                 )
             }

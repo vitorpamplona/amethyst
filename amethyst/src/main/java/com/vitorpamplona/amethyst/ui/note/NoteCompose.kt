@@ -148,12 +148,16 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderLongFormContent
 import com.vitorpamplona.amethyst.ui.note.types.RenderMeetingRoomEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderMeetingSpaceEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderMintRecommendation
+import com.vitorpamplona.amethyst.ui.note.types.RenderMusicPlaylist
+import com.vitorpamplona.amethyst.ui.note.types.RenderMusicTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90ContentDiscoveryResponse
 import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90Status
 import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderNipContent
 import com.vitorpamplona.amethyst.ui.note.types.RenderOnchainZap
 import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderPodcastEpisode
+import com.vitorpamplona.amethyst.ui.note.types.RenderPodcastMetadata
 import com.vitorpamplona.amethyst.ui.note.types.RenderPoll
 import com.vitorpamplona.amethyst.ui.note.types.RenderPostApproval
 import com.vitorpamplona.amethyst.ui.note.types.RenderPrivateMessage
@@ -215,6 +219,8 @@ import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
+import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
+import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
@@ -275,7 +281,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEven
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
-import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
+import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetupBesidesAuthor
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
@@ -311,6 +317,8 @@ import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -727,7 +735,7 @@ fun InnerNoteWithReactions(
 
             if (!makeItShort) {
                 val noteEvent = baseNote.event
-                val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetup() ?: false }
+                val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetupBesidesAuthor() ?: false }
                 if (zapSplits && noteEvent != null) {
                     Spacer(modifier = HalfDoubleVertSpacer)
                     DisplayZapSplits(noteEvent, false, accountViewModel, nav)
@@ -851,7 +859,7 @@ fun NoteBody(
 
     if (!makeItShort) {
         val noteEvent = baseNote.event
-        val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetup() ?: false }
+        val zapSplits = remember(noteEvent) { noteEvent?.hasZapSplitSetupBesidesAuthor() ?: false }
         if (zapSplits && noteEvent != null) {
             Spacer(modifier = HalfDoubleVertSpacer)
             DisplayZapSplits(noteEvent, false, accountViewModel, nav)
@@ -916,6 +924,22 @@ private fun RenderNoteRow(
 
         is AudioHeaderEvent -> {
             RenderAudioHeader(baseNote, ContentScale.FillWidth, accountViewModel, nav)
+        }
+
+        is MusicTrackEvent -> {
+            RenderMusicTrack(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+        }
+
+        is MusicPlaylistEvent -> {
+            RenderMusicPlaylist(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+        }
+
+        is PodcastEpisodeEvent -> {
+            RenderPodcastEpisode(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+        }
+
+        is PodcastMetadataEvent -> {
+            RenderPodcastMetadata(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
         }
 
         is DraftWrapEvent -> {
@@ -1502,7 +1526,7 @@ fun RenderDraft(
             nav = nav,
         )
 
-        val zapSplits = remember(it.event) { it.event?.hasZapSplitSetup() }
+        val zapSplits = remember(it.event) { it.event?.hasZapSplitSetupBesidesAuthor() }
         if (zapSplits == true) {
             Spacer(modifier = HalfDoubleVertSpacer)
             DisplayZapSplits(it.event!!, false, accountViewModel, nav)

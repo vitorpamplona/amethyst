@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.expiration
 
+import android.text.format.DateFormat
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -83,14 +84,13 @@ fun ExpirationDatePicker(model: IExpiration) {
                 },
         )
 
+    val context = LocalContext.current
     val timePickerState =
         rememberTimePickerState(
             initialHour = currentTime.hour,
             initialMinute = currentTime.minute,
-            is24Hour = false,
+            is24Hour = DateFormat.is24HourFormat(context),
         )
-
-    val context = LocalContext.current
 
     Column(Modifier.fillMaxWidth()) {
         Row(

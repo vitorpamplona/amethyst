@@ -33,12 +33,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
+import com.vitorpamplona.amethyst.commons.ui.theme.StatusAmber
+import com.vitorpamplona.amethyst.commons.ui.theme.StatusGreen
+import com.vitorpamplona.amethyst.commons.ui.theme.StatusRed
 
 /**
  * Small shield icon showing Tor connection status in the sidebar footer.
@@ -54,19 +56,19 @@ fun TorStatusIndicator(
     val (icon, tint, tooltip) =
         when (status) {
             is TorServiceStatus.Off -> {
-                Triple(MaterialSymbols.Shield, Color.Gray, "Tor: Off")
+                Triple(MaterialSymbols.Shield, MaterialTheme.colorScheme.onSurfaceVariant, "Tor: Off")
             }
 
             is TorServiceStatus.Connecting -> {
-                Triple(MaterialSymbols.Shield, Color(0xFFFFB300), "Tor: Connecting...")
+                Triple(MaterialSymbols.Shield, StatusAmber, "Tor: Connecting...")
             }
 
             is TorServiceStatus.Active -> {
-                Triple(MaterialSymbols.Shield, Color(0xFF4CAF50), "Tor: Connected")
+                Triple(MaterialSymbols.Shield, StatusGreen, "Tor: Connected")
             }
 
             is TorServiceStatus.Error -> {
-                Triple(MaterialSymbols.Shield, Color(0xFFF44336), "Tor: ${status.message}")
+                Triple(MaterialSymbols.Shield, StatusRed, "Tor: ${status.message}")
             }
         }
 

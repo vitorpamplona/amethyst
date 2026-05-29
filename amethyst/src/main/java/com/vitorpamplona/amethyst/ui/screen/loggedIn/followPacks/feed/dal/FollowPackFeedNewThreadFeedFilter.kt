@@ -33,6 +33,8 @@ import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
+import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -45,6 +47,8 @@ import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 
 class FollowPackFeedNewThreadFeedFilter(
     val followPackNote: AddressableNote,
@@ -54,6 +58,9 @@ class FollowPackFeedNewThreadFeedFilter(
         val ADDRESSABLE_KINDS =
             listOf(
                 AudioTrackEvent.KIND,
+                MusicTrackEvent.KIND,
+                MusicPlaylistEvent.KIND,
+                PodcastMetadataEvent.KIND,
                 InteractiveStoryPrologueEvent.KIND,
                 WikiNoteEvent.KIND,
                 NipTextEvent.KIND,
@@ -135,6 +142,10 @@ class FollowPackFeedNewThreadFeedFilter(
                 noteEvent is InteractiveStoryPrologueEvent ||
                 noteEvent is CommentEvent ||
                 noteEvent is AudioTrackEvent ||
+                noteEvent is MusicTrackEvent ||
+                noteEvent is MusicPlaylistEvent ||
+                noteEvent is PodcastEpisodeEvent ||
+                noteEvent is PodcastMetadataEvent ||
                 noteEvent is VoiceEvent ||
                 noteEvent is AudioHeaderEvent
         ) &&

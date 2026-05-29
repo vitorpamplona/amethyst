@@ -24,6 +24,8 @@ import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
+import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
+import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -54,6 +56,8 @@ import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 
 val SearchPostsByTextKinds1 =
     listOf(
@@ -65,6 +69,10 @@ val SearchPostsByTextKinds1 =
         OldBookmarkListEvent.KIND,
         AudioHeaderEvent.KIND,
         AudioTrackEvent.KIND,
+        MusicTrackEvent.KIND,
+        MusicPlaylistEvent.KIND,
+        PodcastEpisodeEvent.KIND,
+        PodcastMetadataEvent.KIND,
         PinListEvent.KIND,
         ZapPollEvent.KIND,
         ChannelCreateEvent.KIND,

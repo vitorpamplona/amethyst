@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestBri
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import kotlinx.coroutines.launch
+import android.text.format.DateFormat as AndroidDateFormat
 
 /**
  * Bottom sheet that lets the logged-in user start a new NIP-53 kind 30312
@@ -248,6 +249,8 @@ private fun ScheduleStartPicker(
     var showDate by remember { mutableStateOf(false) }
     var showTime by remember { mutableStateOf(false) }
 
+    val context = LocalContext.current
+
     val pretty =
         if (unixSeconds <= 0L) {
             stringRes(R.string.nest_create_when)
@@ -277,7 +280,7 @@ private fun ScheduleStartPicker(
         androidx.compose.material3.rememberTimePickerState(
             initialHour = initialLocal.hour,
             initialMinute = initialLocal.minute,
-            is24Hour = false,
+            is24Hour = AndroidDateFormat.is24HourFormat(context),
         )
 
     // On dismiss (Cancel or back-press), restore the picker states

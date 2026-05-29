@@ -51,12 +51,16 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeLiveFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.livestreams.dal.LiveStreamsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.dal.LongsFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.dal.MusicPlaylistsFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.dal.MusicTracksFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.dal.NestsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CardFeedContentState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NotificationSummaryState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.OpenPollsState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.pictures.dal.PictureFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.dal.PodcastEpisodesFeedFilter
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.podcasts.dal.PodcastsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.dal.ClosedPollsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.dal.OpenPollsFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.dal.PollsFeedFilter
@@ -112,6 +116,10 @@ class AccountFeedContentStates(
     val nestsFeed = FeedContentState(NestsFeedFilter(account), scope, LocalCache)
     val longsFeed = FeedContentState(LongsFeedFilter(account), scope, LocalCache)
     val articlesFeed = FeedContentState(ArticlesFeedFilter(account), scope, LocalCache)
+    val musicTracksFeed = FeedContentState(MusicTracksFeedFilter(account), scope, LocalCache)
+    val musicPlaylistsFeed = FeedContentState(MusicPlaylistsFeedFilter(account), scope, LocalCache)
+    val podcastEpisodesFeed = FeedContentState(PodcastEpisodesFeedFilter(account), scope, LocalCache)
+    val podcastsFeed = FeedContentState(PodcastsFeedFilter(account), scope, LocalCache)
     val softwareAppsFeed = FeedContentState(SoftwareAppsFeedFilter(account), scope, LocalCache)
 
     val notifications = CardFeedContentState(NotificationFeedFilter(account), scope)
@@ -201,6 +209,10 @@ class AccountFeedContentStates(
         nestsFeed.updateFeedWith(newNotes)
         longsFeed.updateFeedWith(newNotes)
         articlesFeed.updateFeedWith(newNotes)
+        musicTracksFeed.updateFeedWith(newNotes)
+        musicPlaylistsFeed.updateFeedWith(newNotes)
+        podcastEpisodesFeed.updateFeedWith(newNotes)
+        podcastsFeed.updateFeedWith(newNotes)
         softwareAppsFeed.updateFeedWith(newNotes)
 
         calendarAppointmentsFeed.updateFeedWith(newNotes)
@@ -257,6 +269,10 @@ class AccountFeedContentStates(
         nestsFeed.deleteFromFeed(newNotes)
         longsFeed.deleteFromFeed(newNotes)
         articlesFeed.deleteFromFeed(newNotes)
+        musicTracksFeed.deleteFromFeed(newNotes)
+        musicPlaylistsFeed.deleteFromFeed(newNotes)
+        podcastEpisodesFeed.deleteFromFeed(newNotes)
+        podcastsFeed.deleteFromFeed(newNotes)
         softwareAppsFeed.deleteFromFeed(newNotes)
 
         calendarAppointmentsFeed.deleteFromFeed(newNotes)

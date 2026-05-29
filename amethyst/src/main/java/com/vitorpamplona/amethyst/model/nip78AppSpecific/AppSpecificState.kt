@@ -54,11 +54,11 @@ class AppSpecificState(
 
     suspend fun saveNewAppSpecificData(): AppSpecificDataEvent {
         val toInternal = settings.syncedSettings.toInternal()
-        return AppSpecificDataEvent.create(
-            dTag = APP_SPECIFIC_DATA_D_TAG,
-            description = signer.nip44Encrypt(JsonMapper.toJson(toInternal), signer.pubKey),
-            otherTags = emptyArray(),
-            signer = signer,
+        return signer.sign(
+            AppSpecificDataEvent.build(
+                dTag = APP_SPECIFIC_DATA_D_TAG,
+                description = signer.nip44Encrypt(JsonMapper.toJson(toInternal), signer.pubKey),
+            ),
         )
     }
 

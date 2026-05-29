@@ -888,6 +888,7 @@
     <string name="payment_target_authority">Cím</string>
     <string name="delete_payment_target">Fizetési cél törlése</string>
     <string name="no_payment_app_found">Nem található alkalmazás a fizetés kezeléséhez. Telepítsen egy kompatibilis pénztárcát.</string>
+    <string name="no_payment_app_found_for_type">Nem található alkalmazás a(z) %1$s fizetések kezeléséhez. Telepítsen egy kompatibilis pénztárcát.</string>
     <string name="error_dialog_payment_error">Nem sikerült megnyitni a fizetést</string>
     <string name="uploading_state_ready">Nem kezdődött el</string>
     <string name="uploading_state_compressing">Tömörítés…</string>
@@ -1454,6 +1455,9 @@
     <string name="wallet_number">Pénztárca: %1$s</string>
     <string name="error_opening_external_signer">Hiba az aláíró-alkalmazás megnyitásakor</string>
     <string name="error_opening_external_signer_description">Az aláíró alkalmazás nem található. Ellenőrizze, hogy az alkalmazás nincs-e eltávolítva</string>
+    <string name="error_video_playback_failed">Nem lehet lejátszani ezt a videót</string>
+    <string name="error_video_playback_failed_description">Az eszköz nem támogatja a kódolást vagy a formátumot (%1$s). Próbálja meg a böngészőben megnyitni.</string>
+    <string name="error_video_open_in_browser">Megnyitás böngészőben</string>
     <string name="sign_request_rejected2">Aláírási kérés elutasítva</string>
     <string name="sign_request_rejected">Aláíró-alkalmazás elutasítva</string>
     <string name="sign_request_rejected_description">Győződjön meg arról, hogy ezt a tranzakciót az aláíró-alkalmazás hitelesítette-e</string>
@@ -1602,6 +1606,7 @@
     <string name="metadata_strip_failed_upload">Feltöltés mindenképp</string>
     <string name="metadata_strip_failed_upload_cancelled">Nem sikerült eltávolítani a médiafájlokból a privát metaadatokat. Feltöltés megszakítva.</string>
     <string name="upload_cancelled">Feltölrés megszakítva</string>
+    <string name="avif_metadata_strip_failed">Nem sikerült eltávolítani az AVIF-fájl metaadatait: %1$s</string>
     <string name="edit_draft">Piszkozat szerkesztése</string>
     <string name="login_with_qr_code">Bejelentkezés QR-kóddal</string>
     <string name="route">Útvonal</string>
@@ -1664,6 +1669,7 @@
     <string name="wallet_invalid_uri">Érvénytelen NWC-kapcsolati cím</string>
     <string name="wallet_move_up">Mozgatás felfelé</string>
     <string name="wallet_move_down">Mozgatás lefelé</string>
+    <string name="wallet_reorder">Pénztárca újrarendezése</string>
     <string name="wallet_onchain_transactions">Láncon belüli tranzakciók</string>
     <string name="wallet_onchain_no_address">Ehhez a fiókhoz nincs elérhető láncon belüli cím.</string>
     <string name="wallet_onchain_no_backend">Nincs beállítva lánc-háttérprogram.</string>

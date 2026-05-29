@@ -32,25 +32,47 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.round
 
-private const val YEAR_DATE_FORMAT = "MMM dd, yyyy"
-private const val MONTH_DATE_FORMAT = "MMM dd"
+// Skeletons follow Unicode LDML — DateFormat.getBestDateTimePattern picks the
+// correct locale-specific ordering (e.g. "MMM d, y" in en-US vs "d MMM y" in en-GB).
+private const val YEAR_SKELETON = "yMMMd"
+private const val MONTH_SKELETON = "MMMd"
+private const val YEAR_NO_DAY_SKELETON = "yMMM"
 
-private const val YEAR_NO_DAY_DATE_FORMAT = "MMM yyyy"
-private const val MONTH_NO_DAY_DATE_FORMAT = "MMM dd"
+/**
+ * Per-thread cached [SimpleDateFormat] keyed off the current default [Locale].
+ *
+ * `SimpleDateFormat` is mutable and not thread-safe, and these formatters are
+ * read from both the UI thread (composition) and background coroutines
+ * (e.g. `LocalCache.justVerify` logging failed event verifications). A bare
+ * `var` shared across threads would race on the formatter's internal Calendar.
+ * Using `ThreadLocal` gives each thread its own instance — no locks, no
+ * allocation per call, and we rebuild lazily on locale change.
+ */
+private class LocaleAwareFormatter(
+    private val skeleton: String,
+) {
+    private val cache = ThreadLocal<Pair<Locale, SimpleDateFormat>>()
 
-var locale: Locale = Locale.getDefault()
-var yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
-var monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
+    fun get(): SimpleDateFormat {
+        val current = Locale.getDefault()
+        val cached = cache.get()
+        if (cached != null && cached.first == current) return cached.second
+        val fresh = SimpleDateFormat(DateFormat.getBestDateTimePattern(current, skeleton), current)
+        cache.set(current to fresh)
+        return fresh
+    }
+}
 
-var yearNoDayFormatter = SimpleDateFormat(YEAR_NO_DAY_DATE_FORMAT, locale)
-var monthNoDayFormatter = SimpleDateFormat(MONTH_NO_DAY_DATE_FORMAT, locale)
+private val yearFormatter = LocaleAwareFormatter(YEAR_SKELETON)
+private val monthFormatter = LocaleAwareFormatter(MONTH_SKELETON)
+private val yearNoDayFormatter = LocaleAwareFormatter(YEAR_NO_DAY_SKELETON)
 
 /**
  * Formats a Unix timestamp (seconds) as an absolute date/time string, picking the
  * granularity from how far away the timestamp is:
- *   - same day → time only (e.g. "14:32" / "2:32 PM", locale-aware)
- *   - same year → "MMM dd, HH:mm"
- *   - older    → "MMM dd, yyyy"
+ *   - same day → time only (locale + system 12/24-hr aware via [DateFormat.getTimeFormat])
+ *   - same year → "Jan 5, 14:32" / "5 Jan 14:32" / "Jan 5, 2:32 PM" (locale + system aware)
+ *   - older    → "Jan 5, 2024" / "5 Jan 2024" (locale aware)
  *
  * Used by [com.vitorpamplona.amethyst.ui.note.elements.TimeAgo] when the user
  * taps the relative timestamp to reveal the absolute one.
@@ -63,12 +85,6 @@ fun timeAbsolute(
     if (time == null) return " "
     if (time == 0L) return prefix + stringRes(context, R.string.never)
 
-    if (locale != Locale.getDefault()) {
-        locale = Locale.getDefault()
-        yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
-        monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
-    }
-
     val timeMs = time * 1000
     val now = Calendar.getInstance()
     val then = Calendar.getInstance().apply { timeInMillis = timeMs }
@@ -80,8 +96,8 @@ fun timeAbsolute(
 
     return when {
         sameDay -> prefix + timeOfDay
-        sameYear -> prefix + monthFormatter.format(timeMs) + ", " + timeOfDay
-        else -> prefix + yearFormatter.format(timeMs)
+        sameYear -> prefix + monthFormatter.get().format(timeMs) + ", " + timeOfDay
+        else -> prefix + yearFormatter.get().format(timeMs)
     }
 }
 
@@ -106,26 +122,11 @@ fun timeAgo(
 
     return when {
         timeDifference > TimeUtils.ONE_YEAR -> {
-            // Dec 12, 2022
-
-            if (locale != Locale.getDefault()) {
-                locale = Locale.getDefault()
-                yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
-                monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
-            }
-
-            prefix + yearFormatter.format(time * 1000)
+            prefix + yearFormatter.get().format(time * 1000)
         }
 
         timeDifference > TimeUtils.ONE_MONTH -> {
-            // Dec 12
-            if (locale != Locale.getDefault()) {
-                locale = Locale.getDefault()
-                yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
-                monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
-            }
-
-            prefix + monthFormatter.format(time * 1000)
+            prefix + monthFormatter.get().format(time * 1000)
         }
 
         timeDifference > TimeUtils.ONE_DAY -> {
@@ -157,26 +158,11 @@ fun timeAgoNoDot(
 
     return when {
         timeDifference > TimeUtils.ONE_YEAR -> {
-            // Dec 12, 2022
-
-            if (locale != Locale.getDefault()) {
-                locale = Locale.getDefault()
-                yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
-                monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
-            }
-
-            yearFormatter.format(time * 1000)
+            yearFormatter.get().format(time * 1000)
         }
 
         timeDifference > TimeUtils.ONE_MONTH -> {
-            // Dec 12
-            if (locale != Locale.getDefault()) {
-                locale = Locale.getDefault()
-                yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
-                monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
-            }
-
-            monthFormatter.format(time * 1000)
+            monthFormatter.get().format(time * 1000)
         }
 
         timeDifference > TimeUtils.ONE_DAY -> {
@@ -208,26 +194,11 @@ fun timeAgoNoDotNoDay(
 
     return when {
         timeDifference > TimeUtils.ONE_YEAR -> {
-            // Dec 12, 2022
-
-            if (locale != Locale.getDefault()) {
-                locale = Locale.getDefault()
-                yearNoDayFormatter = SimpleDateFormat(YEAR_NO_DAY_DATE_FORMAT, locale)
-                monthNoDayFormatter = SimpleDateFormat(MONTH_NO_DAY_DATE_FORMAT, locale)
-            }
-
-            yearNoDayFormatter.format(time * 1000)
+            yearNoDayFormatter.get().format(time * 1000)
         }
 
         timeDifference > TimeUtils.ONE_MONTH -> {
-            // Dec 12
-            if (locale != Locale.getDefault()) {
-                locale = Locale.getDefault()
-                yearNoDayFormatter = SimpleDateFormat(YEAR_NO_DAY_DATE_FORMAT, locale)
-                monthNoDayFormatter = SimpleDateFormat(MONTH_NO_DAY_DATE_FORMAT, locale)
-            }
-
-            monthNoDayFormatter.format(time * 1000)
+            monthFormatter.get().format(time * 1000)
         }
 
         timeDifference > TimeUtils.ONE_DAY -> {
@@ -259,26 +230,11 @@ fun timeAheadNoDot(
 
     return when {
         timeDifference > TimeUtils.ONE_YEAR -> {
-            // Dec 12, 2022
-
-            if (locale != Locale.getDefault()) {
-                locale = Locale.getDefault()
-                yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
-                monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
-            }
-
-            yearFormatter.format(time * 1000)
+            yearFormatter.get().format(time * 1000)
         }
 
         timeDifference > TimeUtils.ONE_MONTH -> {
-            // Dec 12
-            if (locale != Locale.getDefault()) {
-                locale = Locale.getDefault()
-                yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
-                monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
-            }
-
-            monthFormatter.format(time * 1000)
+            monthFormatter.get().format(time * 1000)
         }
 
         timeDifference > TimeUtils.ONE_DAY -> {
@@ -310,24 +266,9 @@ fun dateFormatter(
     val timeDifference = TimeUtils.now() - time
 
     return if (timeDifference > TimeUtils.ONE_YEAR) {
-        // Dec 12, 2022
-
-        if (locale != Locale.getDefault()) {
-            locale = Locale.getDefault()
-            yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
-            monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
-        }
-
-        yearFormatter.format(time * 1000)
+        yearFormatter.get().format(time * 1000)
     } else if (timeDifference > TimeUtils.ONE_DAY) {
-        // Dec 12
-        if (locale != Locale.getDefault()) {
-            locale = Locale.getDefault()
-            yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
-            monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
-        }
-
-        monthFormatter.format(time * 1000)
+        monthFormatter.get().format(time * 1000)
     } else {
         today
     }
@@ -409,12 +350,7 @@ fun lastSeenSentence(
             }
         }
 
-    if (locale != Locale.getDefault()) {
-        locale = Locale.getDefault()
-        yearFormatter = SimpleDateFormat(YEAR_DATE_FORMAT, locale)
-        monthFormatter = SimpleDateFormat(MONTH_DATE_FORMAT, locale)
-    }
-    val dateText = yearFormatter.format(time * 1000)
+    val dateText = yearFormatter.get().format(time * 1000)
 
     return stringRes(context, R.string.last_seen_on_date, dateText, durationText)
 }

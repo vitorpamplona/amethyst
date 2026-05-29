@@ -102,9 +102,22 @@ fun mapOutcomeToResolveState(outcome: NamecoinResolveOutcome): NamecoinResolveSt
  * Lightweight syntactic check: does this look like something we should
  * route to Namecoin? Mirrors [com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver.isNamecoinIdentifier]
  * but tolerates a leading `@` (matches the dropdown's [com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState.userSearchTermOrNull]).
+ *
+ * Accepted shapes:
+ *  - `host.bit` and `user@host.bit` (domain namespace)
+ *  - `d/<name>` (domain namespace, direct reference)
+ *  - `id/<name>` (identity namespace)
+ *
+ * The length floor matches the dropdown's `>2 chars` rule while still
+ * requiring at least one character after a `d/`/`id/` prefix, so single-
+ * character Namecoin labels (which are valid, if expensive, on chain)
+ * still trigger the on-chain lookup.
  */
 fun looksLikeNamecoinIdentifier(raw: String): Boolean {
     val trimmed = raw.trim().removePrefix("@").lowercase()
+    if (trimmed.length < 3) return false
+    if (trimmed.startsWith("d/") && trimmed.length > 2) return true
+    if (trimmed.startsWith("id/") && trimmed.length > 3) return true
     if (trimmed.length < 5) return false
     return trimmed.endsWith(".bit") ||
         trimmed.contains("@") && trimmed.substringAfter('@').endsWith(".bit")
@@ -117,7 +130,8 @@ fun looksLikeNamecoinIdentifier(raw: String): Boolean {
  * field and the global search bar both have this race).
  *
  * Behaviour:
- *  - Renders nothing when [searchInput] is not a `.bit` identifier.
+ *  - Renders nothing when [searchInput] is not a Namecoin-shaped
+ *    identifier (`.bit`, `d/<name>`, or `id/<name>`).
  *  - Shows a small spinner row ("Resolving on Namecoin…") while the
  *    ElectrumX lookup is in flight (after a 300 ms debounce to match
  *    typical input-field debounce intervals).

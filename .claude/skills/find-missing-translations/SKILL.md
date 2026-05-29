@@ -51,17 +51,28 @@ Target:   amethyst/src/main/res/values-<locale>/strings.xml
 
 Always diff against `cs-rCZ` first — it is the most complete locale and serves as the reference. Any keys missing in `cs-rCZ` will also be missing in the other target locales.
 
+You MUST diff **both** `<string name=` AND `<plurals name=` — these are independent resource types and a key that is a `<plurals>` in the source will never appear in a `<string>` diff. Forgetting `<plurals>` is the most common silent failure of this skill (it misses things like `music_playlist_track_count`, `notification_count_more`, etc.).
+
 ```bash
-# Extract translatable keys from default (exclude translatable="false")
+# Strings: extract translatable keys from default (exclude translatable="false")
+echo "=== missing <string> ==="
 comm -23 \
   <(grep '<string name=' amethyst/src/main/res/values/strings.xml \
     | grep -v 'translatable="false"' \
     | sed 's/.*name="\([^"]*\)".*/\1/' | sort) \
   <(grep '<string name=' amethyst/src/main/res/values-cs-rCZ/strings.xml \
     | sed 's/.*name="\([^"]*\)".*/\1/' | sort)
+
+# Plurals: a separate resource type — MUST be diffed independently
+echo "=== missing <plurals> ==="
+comm -23 \
+  <(grep '<plurals name=' amethyst/src/main/res/values/strings.xml \
+    | sed 's/.*name="\([^"]*\)".*/\1/' | sort) \
+  <(grep '<plurals name=' amethyst/src/main/res/values-cs-rCZ/strings.xml \
+    | sed 's/.*name="\([^"]*\)".*/\1/' | sort)
 ```
 
-This gives the list of missing key names. Do NOT diff each locale separately — assume the same keys are missing in all target locales.
+This gives two lists of missing key names — keep them separate; `<plurals>` translations need the per-locale CLDR category set (see Step 5 → "Plurals: handle with care"). Do NOT diff each locale separately for strings — assume the same keys are missing in all target locales (but DO repeat the `<plurals>` diff per locale if you suspect Crowdin asymmetric stripping).
 
 > **Caveat:** Crowdin can asymmetrically strip keys across locales (each translator independently chose source-identical for different keys). If the cs-rCZ list looks suspiciously short, run the same diff for each target locale individually and union the results before Step 2.5.
 
@@ -85,13 +96,27 @@ else
 fi
 
 # For each locale, list only keys added after the Crowdin sync (truly new).
+# Run for BOTH <string> and <plurals>.
 for locale in cs-rCZ de-rDE sv-rSE; do
-  echo "=== $locale: genuinely new (post-sync) keys ==="
+  echo "=== $locale: genuinely new (post-sync) <string> keys ==="
   comm -23 \
     <(grep '<string name=' amethyst/src/main/res/values/strings.xml \
       | grep -v 'translatable="false"' \
       | sed 's/.*name="\([^"]*\)".*/\1/' | sort) \
     <(grep '<string name=' amethyst/src/main/res/values-$locale/strings.xml \
+      | sed 's/.*name="\([^"]*\)".*/\1/' | sort) \
+  | while IFS= read -r key; do
+      added_ts=$(git log -1 --format=%ct -S "name=\"$key\"" -- amethyst/src/main/res/values/strings.xml)
+      if [ -n "$added_ts" ] && [ "$added_ts" -gt "$sync_ts" ]; then
+        echo "$key"
+      fi
+    done
+
+  echo "=== $locale: genuinely new (post-sync) <plurals> keys ==="
+  comm -23 \
+    <(grep '<plurals name=' amethyst/src/main/res/values/strings.xml \
+      | sed 's/.*name="\([^"]*\)".*/\1/' | sort) \
+    <(grep '<plurals name=' amethyst/src/main/res/values-$locale/strings.xml \
       | sed 's/.*name="\([^"]*\)".*/\1/' | sort) \
   | while IFS= read -r key; do
       added_ts=$(git log -1 --format=%ct -S "name=\"$key\"" -- amethyst/src/main/res/values/strings.xml)
@@ -118,10 +143,10 @@ If no Crowdin export commit can be found in history (`sync_ts=0` fallback), warn
 
 ### 3. Get English values for missing keys
 
-For each missing key, extract its English value:
+For each missing key, extract its English value. `<string>` is a single line; `<plurals>` is a multi-line block — handle each appropriately.
 
 ```bash
-# For each missing key, extract the full line from default strings.xml
+# Missing <string>: full line from default strings.xml
 while IFS= read -r key; do
   grep "name=\"$key\"" amethyst/src/main/res/values/strings.xml
 done < <(comm -23 \
@@ -129,6 +154,19 @@ done < <(comm -23 \
     | grep -v 'translatable="false"' \
     | sed 's/.*name="\([^"]*\)".*/\1/' | sort) \
   <(grep '<string name=' amethyst/src/main/res/values-cs-rCZ/strings.xml \
+    | sed 's/.*name="\([^"]*\)".*/\1/' | sort))
+
+# Missing <plurals>: extract the multi-line block (opening tag through </plurals>)
+while IFS= read -r key; do
+  awk -v key="$key" '
+    $0 ~ "<plurals name=\"" key "\"" { in_p = 1 }
+    in_p { print }
+    in_p && /<\/plurals>/ { in_p = 0 }
+  ' amethyst/src/main/res/values/strings.xml
+done < <(comm -23 \
+  <(grep '<plurals name=' amethyst/src/main/res/values/strings.xml \
+    | sed 's/.*name="\([^"]*\)".*/\1/' | sort) \
+  <(grep '<plurals name=' amethyst/src/main/res/values-cs-rCZ/strings.xml \
     | sed 's/.*name="\([^"]*\)".*/\1/' | sort))
 ```
 
@@ -262,7 +300,7 @@ When adding translated strings to locale files:
 ## Common Mistakes
 
 - **Forgetting `translatable="false"`** — these should never appear in locale files
-- **Not checking string-arrays/plurals** — only checking `<string>` misses other resource types
+- **Diffing only `<string name=`** — `<plurals>` is a separate resource type; a source `<plurals>` missing from a locale will never show up in a `<string>` diff. Always run the diff twice (once per resource type) as shown in Step 2. The same goes for `<string-array>` if the project uses it.
 - **Treating every missing key as actionable** — Crowdin strips on export any translation the translator marked as "use English", and we cannot distinguish that from "never seen" by looking at disk. Use the Step 2.5 sync-timestamp filter: only keys added to `values/strings.xml` after the last `l10n_crowdin_translations` sync are genuinely new.
 - **Trying to detect "stripped" from git history alone** — the on-disk locale file only sees keys the translator typed a non-identical value for. The "translator opened the key and picked English from the start" case never touches disk, so a history-only check misses it. Use the sync-timestamp cutoff instead.
 - **Adding source-identical fallbacks locally** — they get overwritten on the next Crowdin sync. Android falls back to `values/strings.xml` at runtime anyway, so there is no user-visible bug to fix.

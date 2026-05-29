@@ -32,12 +32,41 @@ import androidx.exifinterface.media.ExifInterface
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import java.io.File
+import java.io.InputStream
+import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 
 data class StrippingResult(
     val uri: Uri,
     val stripped: Boolean,
 )
+
+/**
+ * Raised when an AVIF file's EXIF metadata could not be confirmed safe.
+ *
+ * AVIF uses an HEIF/ISOBMFF container that `ExifInterface` cannot reliably rewrite,
+ * so we choose between (a) verifying the file is already clean (no sensitive tags)
+ * and passing it through unchanged, or (b) failing the upload. This exception
+ * signals case (b) and must bubble up past the generic image-stripping try/catch
+ * — callers should surface it to the user as an upload error.
+ */
+class AvifMetadataNotVerifiableException(
+    message: String,
+    cause: Throwable? = null,
+) : RuntimeException(message, cause)
+
+/**
+ * Reader of EXIF tags from an AVIF input stream. Tests substitute a fake to avoid
+ * mockkConstructor(ExifInterface) which fails under JDK 23 (native methods cannot
+ * be retransformed).
+ */
+fun interface AvifExifReader {
+    /**
+     * Consumes [stream] (the caller wraps it in `.use { }`) and returns a function
+     * that maps an EXIF tag name to its string value (or null if absent).
+     */
+    fun open(stream: InputStream): (String) -> String?
+}
 
 object MetadataStripper {
     private const val DEFAULT_REMUX_BUFFER_SIZE = 8 * 1024 * 1024
@@ -181,10 +210,37 @@ object MetadataStripper {
     fun stripImageMetadata(
         uri: Uri,
         context: Context,
+    ): StrippingResult =
+        stripImageMetadata(uri, context) { stream ->
+            val exif = ExifInterface(stream)
+            exif::getAttribute
+        }
+
+    /**
+     * Internal overload used by production code (via the public single-arity wrapper) and by
+     * unit tests to substitute a fake [openAvifExif] without needing bytecode instrumentation
+     * of [ExifInterface].
+     *
+     * [openAvifExif] receives an already-opened input stream and must return a function that
+     * maps an EXIF tag name to its string value (or null if absent). The stream is consumed
+     * inside the factory call. For non-AVIF images this factory is never invoked.
+     */
+    internal fun stripImageMetadata(
+        uri: Uri,
+        context: Context,
+        openAvifExif: AvifExifReader,
     ): StrippingResult {
+        val mimeType = context.contentResolver.getType(uri) ?: ""
+
+        // AVIF takes a different path: ExifInterface cannot reliably rewrite AVIF
+        // containers, so we inspect-only. Clean AVIFs pass through unchanged;
+        // AVIFs with sensitive tags or unreadable EXIF throw fail-closed.
+        if (isAvif(mimeType)) {
+            return inspectAvifMetadata(uri, context, openAvifExif)
+        }
+
         var tempFile: File? = null
         return try {
-            val mimeType = context.contentResolver.getType(uri) ?: ""
             val extension =
                 when {
                     mimeType.endsWith("jpeg", ignoreCase = true) ||
@@ -228,6 +284,34 @@ object MetadataStripper {
             Log.d("MetadataStripper") { "Failed to strip image metadata: ${e.message}" }
             StrippingResult(uri, false)
         }
+    }
+
+    private fun inspectAvifMetadata(
+        uri: Uri,
+        context: Context,
+        openAvifExif: AvifExifReader,
+    ): StrippingResult {
+        val stream =
+            context.contentResolver.openInputStream(uri)
+                ?: throw AvifMetadataNotVerifiableException("Cannot open AVIF input stream to inspect metadata")
+
+        val getAttribute =
+            try {
+                stream.use { openAvifExif.open(it) }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                throw AvifMetadataNotVerifiableException("Could not parse AVIF EXIF for inspection: ${e.message}", e)
+            }
+
+        val present = SENSITIVE_EXIF_TAGS.firstOrNull { tag -> getAttribute(tag) != null }
+        if (present != null) {
+            throw AvifMetadataNotVerifiableException(
+                "AVIF contains sensitive EXIF tag '$present' that cannot be safely stripped; upload refused",
+            )
+        }
+
+        Log.d("MetadataStripper", "AVIF EXIF inspection: no sensitive tags found, passing through")
+        return StrippingResult(uri, true)
     }
 
     fun stripVideoMetadata(
@@ -340,7 +424,7 @@ object MetadataStripper {
             // Read last 128 bytes to check for ID3v1 tag
             if (endOffset - startOffset >= 128) {
                 val tail = ByteArray(128)
-                java.io.RandomAccessFile(tempInputFile, "r").use { raf ->
+                RandomAccessFile(tempInputFile, "r").use { raf ->
                     raf.seek(endOffset - 128)
                     raf.readFully(tail)
                 }
@@ -361,7 +445,7 @@ object MetadataStripper {
             }
 
             val tempOutputFile = File.createTempFile("stripped_mp3_", ".mp3", context.cacheDir)
-            java.io.RandomAccessFile(tempInputFile, "r").use { raf ->
+            RandomAccessFile(tempInputFile, "r").use { raf ->
                 raf.seek(startOffset)
                 tempOutputFile.outputStream().use { output ->
                     val buffer = ByteArray(8192)

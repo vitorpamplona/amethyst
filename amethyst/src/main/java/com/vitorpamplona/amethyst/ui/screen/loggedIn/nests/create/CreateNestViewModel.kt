@@ -25,6 +25,7 @@ import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.uploads.AvifMetadataNotVerifiableException
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MetadataStripper
@@ -44,6 +45,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.summary
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ROLE
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -142,7 +144,7 @@ class CreateNestViewModel : ViewModel() {
         onError: (String, String) -> Unit,
     ): String? {
         _state.update { it.copy(isUploadingImage = true) }
-        try {
+        return try {
             val strippingResult =
                 if (account.settings.stripLocationOnUpload) {
                     MetadataStripper.strip(galleryUri.uri, galleryUri.mimeType, context.applicationContext)
@@ -208,6 +210,12 @@ class CreateNestViewModel : ViewModel() {
                 onError(stringRes(context, R.string.failed_to_upload_media_no_details), e.message ?: e.javaClass.simpleName)
                 null
             }
+        } catch (e: AvifMetadataNotVerifiableException) {
+            onError(
+                stringRes(context, R.string.metadata_strip_failed_title),
+                stringRes(context, R.string.avif_metadata_strip_failed, e.message ?: e.javaClass.simpleName),
+            )
+            null
         } finally {
             _state.update { it.copy(isUploadingImage = false) }
         }
@@ -262,9 +270,7 @@ class CreateNestViewModel : ViewModel() {
         // (Audience-side render is already past-aware: SCHEDULED
         // chips suppress the "Starts <date>" subline once `now` >
         // starts.)
-        val nowSec =
-            com.vitorpamplona.quartz.utils.TimeUtils
-                .now()
+        val nowSec = TimeUtils.now()
         if (current.scheduled && current.scheduledStartUnix < nowSec) {
             _state.update { it.copy(error = "Pick a future start time.") }
             return null

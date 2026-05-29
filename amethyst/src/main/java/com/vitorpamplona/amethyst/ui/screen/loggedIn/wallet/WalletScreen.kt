@@ -73,6 +73,10 @@ import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayDragState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.draggableRelayItem
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relayDragHandle
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.rememberRelayDragState
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
@@ -197,6 +201,12 @@ private fun MultiWalletHomeContent(
         }
     }
 
+    val dragState =
+        rememberRelayDragState(
+            onMove = { from, to -> walletViewModel.moveWallet(from, to) },
+            itemCount = { walletInfoList.size },
+        )
+
     LazyColumn(
         state = listState,
         modifier =
@@ -204,6 +214,7 @@ private fun MultiWalletHomeContent(
                 .fillMaxSize()
                 .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
+        userScrollEnabled = !dragState.isDragging,
     ) {
         item {
             Spacer(modifier = Modifier.height(8.dp))
@@ -218,7 +229,7 @@ private fun MultiWalletHomeContent(
             WalletCard(
                 walletInfo = walletInfo,
                 index = index,
-                totalCount = walletInfoList.size,
+                dragState = if (walletInfoList.size > 1) dragState else null,
                 onSelect = {
                     walletViewModel.selectWallet(walletInfo.walletId)
                     nav.nav(Route.WalletDetail(walletInfo.walletId))
@@ -228,12 +239,6 @@ private fun MultiWalletHomeContent(
                 },
                 onRename = { newName ->
                     walletViewModel.renameWallet(walletInfo.walletId, newName)
-                },
-                onMoveUp = {
-                    walletViewModel.moveWallet(index, index - 1)
-                },
-                onMoveDown = {
-                    walletViewModel.moveWallet(index, index + 1)
                 },
                 onRemove = {
                     walletViewModel.removeWallet(walletInfo.walletId)
@@ -264,12 +269,10 @@ private fun MultiWalletHomeContent(
 private fun WalletCard(
     walletInfo: WalletInfo,
     index: Int,
-    totalCount: Int,
+    dragState: RelayDragState?,
     onSelect: () -> Unit,
     onSetDefault: () -> Unit,
     onRename: (String) -> Unit,
-    onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit,
     onRemove: () -> Unit,
 ) {
     var showRemoveDialog by remember { mutableStateOf(false) }
@@ -311,6 +314,7 @@ private fun WalletCard(
         modifier =
             Modifier
                 .fillMaxWidth()
+                .let { if (dragState != null) it.draggableRelayItem(index, dragState) else it }
                 .clickable(onClick = onSelect),
         shape = RoundedCornerShape(16.dp),
         border =
@@ -363,32 +367,18 @@ private fun WalletCard(
                     }
                 }
 
-                // Reorder buttons
-                if (totalCount > 1) {
-                    Column {
-                        IconButton(
-                            onClick = onMoveUp,
-                            enabled = index > 0,
-                            modifier = Modifier.size(28.dp),
-                        ) {
-                            Icon(
-                                MaterialSymbols.KeyboardArrowUp,
-                                contentDescription = stringRes(R.string.wallet_move_up),
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-                        IconButton(
-                            onClick = onMoveDown,
-                            enabled = index < totalCount - 1,
-                            modifier = Modifier.size(28.dp),
-                        ) {
-                            Icon(
-                                MaterialSymbols.KeyboardArrowDown,
-                                contentDescription = stringRes(R.string.wallet_move_down),
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-                    }
+                // Drag handle for reordering
+                if (dragState != null) {
+                    Icon(
+                        MaterialSymbols.DragIndicator,
+                        contentDescription = stringRes(R.string.wallet_reorder),
+                        modifier =
+                            Modifier
+                                .size(24.dp)
+                                .relayDragHandle(index, dragState),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                 }
 
                 // Balance

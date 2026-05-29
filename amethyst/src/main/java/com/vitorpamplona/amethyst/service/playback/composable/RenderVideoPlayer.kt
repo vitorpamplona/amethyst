@@ -95,6 +95,8 @@ fun RenderVideoPlayer(
     val containerWidth = remember { intArrayOf(0) }
     val isLive = remember(mediaItem.src.videoUri) { isLiveStreaming(mediaItem.src.videoUri) }
 
+    WatchPlaybackErrors(controllerState)
+
     Box(
         modifier =
             borderModifier
@@ -127,6 +129,12 @@ fun RenderVideoPlayer(
             shutter = {},
         )
 
+        RenderPlaybackError(
+            controllerState = controllerState,
+            videoUri = mediaItem.src.videoUri,
+            modifier = Modifier.align(Alignment.Center),
+        )
+
         AudioPlayingAnimation(
             controllerState,
             mediaItem.src.waveformData,
@@ -134,7 +142,7 @@ fun RenderVideoPlayer(
             hasBlurhash = hasBlurhash,
         )
 
-        if (showControls) {
+        if (showControls && controllerState.playbackError.value == null) {
             TopGradientOverlay(
                 controllerVisible = controllerVisible,
                 modifier = Modifier.align(Alignment.TopCenter),

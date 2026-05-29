@@ -51,6 +51,8 @@ class MultiOrchestrator(
 
     fun hasGif() = list.any { it.media.isGif() }
 
+    fun hasCompressible() = list.any { it.media.isCompressible() }
+
     fun hasNonMedia() = list.any { it.media.isNotMedia() }
 
     suspend fun upload(

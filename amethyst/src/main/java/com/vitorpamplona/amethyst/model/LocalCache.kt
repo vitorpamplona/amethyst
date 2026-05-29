@@ -60,6 +60,10 @@ import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStory
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
+import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
+import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
+import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
@@ -175,6 +179,7 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.RelayFeedsListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
+import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
@@ -255,6 +260,10 @@ import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.OnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
@@ -3405,6 +3414,30 @@ object LocalCache : ILocalCache, ICacheProvider {
                     consume(event, relay, wasVerified)
                 }
 
+                is MusicTrackEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is MusicPlaylistEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is PodcastEpisodeEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is PodcastMetadataEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is AuthoredPodcastsEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is FavoritePodcastsListEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
                 is LnZapEvent -> {
                     consume(event, relay, wasVerified)
                 }
@@ -3553,12 +3586,24 @@ object LocalCache : ILocalCache, ICacheProvider {
                     consume(event, relay, wasVerified)
                 }
 
+                is ReleaseArtifactSetEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
                 is SealedRumorEvent -> {
                     consumeRegularEvent(event, relay, wasVerified)
                 }
 
                 is SearchRelayListEvent -> {
                     consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is SoftwareApplicationEvent -> {
+                    consumeBaseReplaceable(event, relay, wasVerified)
+                }
+
+                is SoftwareAssetEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
                 }
 
                 is StatusEvent -> {
