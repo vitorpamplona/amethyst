@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHash
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -53,9 +54,10 @@ class HashtagFeedFilter(
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + tag
 
     override fun feed(): List<Note> {
+        val follows = account.followingKeySet()
         val notes =
             cache.notes.filterIntoSet { _, it ->
-                acceptableEvent(it, tag)
+                acceptableEvent(it, tag, follows)
             }
 
         return sort(notes)
@@ -63,15 +65,38 @@ class HashtagFeedFilter(
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> = innerApplyFilter(newItems)
 
-    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> = collection.filterTo(HashSet()) { acceptableEvent(it, tag) }
+    private fun innerApplyFilter(collection: Collection<Note>): Set<Note> {
+        val follows = account.followingKeySet()
+        return collection.filterTo(HashSet()) { acceptableEvent(it, tag, follows) }
+    }
 
     fun acceptableEvent(
         it: Note,
         hashTag: String,
+        follows: Set<HexKey>,
     ): Boolean =
-        (acceptableViaHashtag(it.event, hashTag) || acceptableViaScope(it.event, hashTag)) &&
+        (
+            acceptableViaHashtag(it.event, hashTag) ||
+                acceptableViaScope(it.event, hashTag) ||
+                acceptableViaFollowLabel(it, hashTag, follows)
+        ) &&
             !it.isHiddenFor(account.hiddenUsers.flow.value) &&
             account.isAcceptable(it)
+
+    /**
+     * NIP-32: accept a post that a followed user has tagged with this hashtag via a kind
+     * 1985 label event (namespace `#t`), even if the post's author never used the hashtag.
+     * Requires the target to actually have an event so it can render.
+     */
+    fun acceptableViaFollowLabel(
+        note: Note,
+        hashTag: String,
+        follows: Set<HexKey>,
+    ): Boolean {
+        if (note.event == null) return false
+        val labelers = note.labels[hashTag.lowercase()] ?: return false
+        return labelers.any { it.author?.pubkeyHex in follows }
+    }
 
     fun acceptableViaHashtag(
         event: Event?,

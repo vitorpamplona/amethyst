@@ -143,6 +143,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip34Git.grasp.UserGraspListEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
@@ -1516,6 +1517,43 @@ object LocalCache : ILocalCache, ICacheProvider {
             note.loadEvent(event, author, repliesTo)
 
             repliesTo.forEach { it.addReaction(note) }
+
+            refreshNewNoteObservers(note)
+
+            return true
+        }
+
+        return false
+    }
+
+    fun consume(
+        event: LabelEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val note = getOrCreateNote(event.id)
+
+        // Already processed this event.
+        if (note.event != null) return true
+
+        if (wasVerified || justVerify(event)) {
+            val author = getOrCreateUser(event.pubKey)
+            val repliesTo = computeReplyTo(event)
+
+            note.loadEvent(event, author, repliesTo)
+
+            // Attach NIP-32 hashtag labels (namespace #t) to the labeled events so the
+            // hashtag feed can surface posts tagged by a follow and attribute the labeler.
+            val hashtags = event.hashtagAssociations()
+            if (hashtags.isNotEmpty()) {
+                event.labeledEvents().mapNotNull { checkGetOrCreateNote(it) }.forEach { target ->
+                    hashtags.forEach { hashtag -> target.addLabel(hashtag, note) }
+
+                    // If the labeled post is already in cache, re-notify feed observers so the
+                    // hashtag feed can pick it up now that a (possibly followed) user labeled it.
+                    if (target.event != null) refreshNewNoteObservers(target)
+                }
+            }
 
             refreshNewNoteObservers(note)
 
@@ -3727,6 +3765,10 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 is ReactionEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is LabelEvent -> {
                     consume(event, relay, wasVerified)
                 }
 

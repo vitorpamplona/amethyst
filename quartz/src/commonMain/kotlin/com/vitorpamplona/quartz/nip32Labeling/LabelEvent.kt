@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
@@ -34,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
+import com.vitorpamplona.quartz.nip01Core.tags.events.toETag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
@@ -82,6 +84,16 @@ class LabelEvent(
     /** Labels filtered by a specific namespace. */
     fun labelsByNamespace(namespace: String) = labels().filter { it.namespace == namespace }
 
+    /**
+     * Hashtags this event associates with its targets, via the NIP-32 tag-association
+     * namespace `#t` (`["L", "#t"]` + `["l", "<hashtag>", "#t"]`). Values are returned
+     * lowercased so callers can compare without worrying about case.
+     */
+    fun hashtagAssociations() =
+        labelsByNamespace(HASHTAG_NAMESPACE)
+            .map { it.label.lowercase() }
+            .distinct()
+
     /** Referenced event IDs (label targets). */
     fun labeledEvents() = tags.mapNotNull(ETag::parseId)
 
@@ -103,6 +115,30 @@ class LabelEvent(
     companion object {
         const val KIND = 1985
         const val ALT = "Label event"
+
+        /**
+         * NIP-32 tag-association namespace for hashtags. A label of the form
+         * `["l", "<hashtag>", "#t"]` (with `["L", "#t"]`) associates the target
+         * with the hashtag `<hashtag>` under the standard `t` tag.
+         */
+        const val HASHTAG_NAMESPACE = "#t"
+
+        /**
+         * Build a label event that tags an existing event with a hashtag, using the
+         * NIP-32 tag-association namespace `#t`. The hashtag is stored lowercased so
+         * follow-graph hashtag feeds match regardless of input case.
+         */
+        fun buildHashtagLabel(
+            labeledEvent: EventHintBundle<out Event>,
+            hashtag: String,
+            createdAt: Long = TimeUtils.now(),
+        ) = eventTemplate<LabelEvent>(KIND, "", createdAt) {
+            alt(ALT)
+            eTag(labeledEvent.toETag())
+            val tag = LabelTag(hashtag.removePrefix("#").lowercase(), HASHTAG_NAMESPACE)
+            labelNamespace(tag.namespace)
+            label(tag)
+        }
 
         /**
          * Build a label event for labeling events.
