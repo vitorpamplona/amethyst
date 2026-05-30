@@ -18,22 +18,23 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis
 
-import kotlin.math.roundToInt
+import androidx.compose.runtime.Stable
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 
-fun countToHumanReadableBytes(counter: Int) =
-    when {
-        counter >= 1000000000 -> "${(counter / 1000000000f).roundToInt()} GB"
-        counter >= 1000000 -> "${(counter / 1000000f).roundToInt()} MB"
-        counter >= 1000 -> "${(counter / 1000f).roundToInt()} KB"
-        else -> "$counter"
-    }
+@Stable
+data class OwnedEmojiPack(
+    val identifier: String,
+    val title: String,
+    val description: String?,
+    val image: String?,
+    val publicEmojis: List<EmojiUrlTag> = emptyList(),
+    val privateEmojis: List<EmojiUrlTag> = emptyList(),
+) {
+    val totalEmojis: Int get() = publicEmojis.size + privateEmojis.size
 
-fun countToHumanReadableBytes(counter: Long) =
-    when {
-        counter >= 1000000000 -> "${(counter / 1000000000f).roundToInt()} GB"
-        counter >= 1000000 -> "${(counter / 1000000f).roundToInt()} MB"
-        counter >= 1000 -> "${(counter / 1000f).roundToInt()} KB"
-        else -> "$counter"
-    }
+    fun containsShortcode(shortcode: String): Boolean =
+        publicEmojis.any { it.code == shortcode } ||
+            privateEmojis.any { it.code == shortcode }
+}

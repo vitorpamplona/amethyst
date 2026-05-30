@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.nip01Core.UserRelaysCache
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.UserNip05Cache
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.UserStatusCache
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.UserReportCache
-import com.vitorpamplona.amethyst.commons.model.trustedAssertions.UserCardsCache
+import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.UserCardsCache
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent

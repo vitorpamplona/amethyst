@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListS
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.UserStatusAction
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.ReportAction
+import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.TrustProviderListDecryptionCache
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSender
@@ -111,7 +112,6 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.FeedDecryptionCaches
 import com.vitorpamplona.amethyst.model.topNavFeeds.FeedTopNavFilterState
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxLoaderState
-import com.vitorpamplona.amethyst.model.trustedAssertions.TrustProviderListDecryptionCache
 import com.vitorpamplona.amethyst.model.trustedAssertions.TrustProviderListState
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler

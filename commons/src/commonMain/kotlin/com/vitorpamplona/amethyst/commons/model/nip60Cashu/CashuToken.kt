@@ -18,16 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.model.trustedAssertions
+package com.vitorpamplona.amethyst.commons.model.nip60Cashu
 
-import com.vitorpamplona.quartz.nip85TrustedAssertions.list.tags.ServiceProviderTag
-import kotlinx.coroutines.flow.StateFlow
+import androidx.compose.runtime.Immutable
+import kotlinx.serialization.Serializable
 
-/**
- * Interface for trust provider list state.
- * Used by UserCardsCache for accessing user rank and follower count providers.
- */
-interface TrustProviderListState {
-    val liveUserRankProvider: StateFlow<ServiceProviderTag?>
-    val liveUserFollowerCount: StateFlow<ServiceProviderTag?>
-}
+@Immutable
+data class CashuToken(
+    val token: String,
+    val mint: String,
+    val totalAmount: Long,
+    val proofs: List<Proof>,
+)
+
+@Serializable
+@Immutable
+class Proof(
+    val amount: Int,
+    val id: String,
+    val secret: String,
+    val C: String,
+)

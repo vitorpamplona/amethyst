@@ -18,23 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nip30CustomEmojis
+package com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions
 
-import androidx.compose.runtime.Stable
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEventCache
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.serviceProviderSet
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.serviceProviders
 
-@Stable
-data class OwnedEmojiPack(
-    val identifier: String,
-    val title: String,
-    val description: String?,
-    val image: String?,
-    val publicEmojis: List<EmojiUrlTag> = emptyList(),
-    val privateEmojis: List<EmojiUrlTag> = emptyList(),
+class TrustProviderListDecryptionCache(
+    val signer: NostrSigner,
 ) {
-    val totalEmojis: Int get() = publicEmojis.size + privateEmojis.size
+    val cachedPrivateLists = PrivateTagArrayEventCache<TrustProviderListEvent>(signer)
 
-    fun containsShortcode(shortcode: String): Boolean =
-        publicEmojis.any { it.code == shortcode } ||
-            privateEmojis.any { it.code == shortcode }
+    fun cachedServiceProviders(event: TrustProviderListEvent) = cachedPrivateLists.mergeTagListPrecached(event).serviceProviders()
+
+    fun cachedServiceProviderSet(event: TrustProviderListEvent) = cachedPrivateLists.mergeTagListPrecached(event).serviceProviderSet()
+
+    suspend fun serviceProviders(event: TrustProviderListEvent) = cachedPrivateLists.mergeTagList(event).serviceProviders()
+
+    suspend fun serviceProviderSet(event: TrustProviderListEvent) = cachedPrivateLists.mergeTagList(event).serviceProviderSet()
 }
