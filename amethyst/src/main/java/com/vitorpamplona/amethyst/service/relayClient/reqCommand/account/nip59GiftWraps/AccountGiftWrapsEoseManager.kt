@@ -46,6 +46,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 
 class AccountGiftWrapsEoseManager(
     client: INostrClient,
@@ -59,10 +60,12 @@ class AccountGiftWrapsEoseManager(
     // prefetch as the user scrolls. The step grows geometrically so a sparse history
     // (or confirming there is nothing older) converges in a handful of requests; it is
     // kept in lockstep with the NIP-04 window so both DM protocols advance together.
-    private val windows = mutableMapOf<HexKey, TimeWindowPagination>()
+    // Concurrent: windowFor is reached from the UI thread (loadMore / loadEverything) and from
+    // Dispatchers.IO (updateFilter, via the bundled invalidation), so a plain HashMap would race.
+    private val windows = ConcurrentHashMap<HexKey, TimeWindowPagination>()
 
     private fun windowFor(user: User) =
-        windows.getOrPut(user.pubkeyHex) {
+        windows.computeIfAbsent(user.pubkeyHex) {
             TimeWindowPagination(growthFactor = WINDOW_GROWTH_FACTOR).also {
                 Log.d(TAG) { "opening initial gift-wrap window for pubkey=${user.pubkeyHex.take(8)}… since=${it.since} (${daysAgo(it.since)}d back)" }
             }
@@ -78,7 +81,9 @@ class AccountGiftWrapsEoseManager(
     private val _exhausted = MutableStateFlow(false)
     val exhausted: StateFlow<Boolean> = _exhausted.asStateFlow()
 
-    // The account scope to run the window-load timeout on, captured when the subscription opens.
+    // The account scope to run the window-load watchdog on, captured when the subscription opens.
+    // Volatile: written on Dispatchers.IO (newSub), read on the UI thread (loadMore/loadEverything).
+    @Volatile
     private var scope: CoroutineScope? = null
 
     override fun updateFilter(
@@ -158,9 +163,11 @@ class AccountGiftWrapsEoseManager(
 
     // Cold-boot instrumentation: when the subscription opened (ms), how many gift
     // wraps have arrived since, and whether we've already logged the first EOSE.
-    private val bootStartMs = mutableMapOf<HexKey, Long>()
-    private val bootEventCount = mutableMapOf<HexKey, Int>()
-    private val bootEoseLogged = mutableSetOf<HexKey>()
+    // Concurrent because the listener callbacks below run on the relay reader threads
+    // (several relays delivering events at once during the cold-boot flood).
+    private val bootStartMs = ConcurrentHashMap<HexKey, Long>()
+    private val bootEventCount = ConcurrentHashMap<HexKey, Int>()
+    private val bootEoseLogged = ConcurrentHashMap.newKeySet<HexKey>()
 
     @OptIn(FlowPreview::class)
     override fun newSub(key: AccountQueryState): Subscription {
@@ -213,7 +220,7 @@ class AccountGiftWrapsEoseManager(
                     // so a relay mid-flood is never mistaken for a finished window.
                     windowLoad.onActivity()
                     if (pubkey !in bootEoseLogged) {
-                        bootEventCount[pubkey] = (bootEventCount[pubkey] ?: 0) + 1
+                        bootEventCount.merge(pubkey, 1, Int::plus)
                     }
                     if (isLive) {
                         newEose(key, relay, TimeUtils.now(), forFilters)

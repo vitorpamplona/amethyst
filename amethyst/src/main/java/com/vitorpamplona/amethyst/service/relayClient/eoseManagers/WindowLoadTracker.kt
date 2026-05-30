@@ -60,6 +60,10 @@ class WindowLoadTracker(
     private val responded = mutableSetOf<NormalizedRelayUrl>()
     private var watchdog: Job? = null
 
+    // Incremented on every (re)start so a stale watchdog that wakes right as a new load begins
+    // recognizes it has been superseded and bows out instead of completing the new window.
+    private var generation = 0
+
     // Wall-clock of the last EOSE or event for the current window; the watchdog completes the
     // window once this stops advancing for [idleTimeout]. Volatile so the hot per-event path
     // ([onActivity]) stays lock-free.
@@ -69,6 +73,7 @@ class WindowLoadTracker(
     /** Begins a fresh window load: clears the responded set, raises [loading], and arms the watchdog. */
     @Synchronized
     fun startLoading(scope: CoroutineScope) {
+        val gen = ++generation
         responded.clear()
         lastActivityMs = System.currentTimeMillis()
         _loading.value = true
@@ -76,14 +81,28 @@ class WindowLoadTracker(
         watchdog =
             scope.launch {
                 val deadline = System.currentTimeMillis() + absoluteCap.inWholeMilliseconds
-                while (isActive && _loading.value) {
+                while (isActive) {
                     delay(IDLE_CHECK_MS)
-                    val now = System.currentTimeMillis()
-                    if (now - lastActivityMs >= idleTimeout.inWholeMilliseconds || now >= deadline) {
-                        finish()
-                    }
+                    if (!tick(gen, System.currentTimeMillis(), deadline)) break
                 }
             }
+    }
+
+    // One watchdog poll. Returns false (stop polling) when this watchdog has been superseded by a
+    // newer load, the window already finished, or the idle/cap deadline is reached. Synchronized so
+    // the generation/loading checks and the completion are atomic against startLoading/finish.
+    @Synchronized
+    private fun tick(
+        gen: Int,
+        now: Long,
+        deadline: Long,
+    ): Boolean {
+        if (gen != generation || !_loading.value) return false
+        if (now - lastActivityMs >= idleTimeout.inWholeMilliseconds || now >= deadline) {
+            _loading.value = false
+            return false
+        }
+        return true
     }
 
     /**

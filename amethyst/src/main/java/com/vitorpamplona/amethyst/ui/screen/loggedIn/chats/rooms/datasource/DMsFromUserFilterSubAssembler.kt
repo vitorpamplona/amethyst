@@ -44,6 +44,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 
 class DMsFromUserFilterSubAssembler(
     client: INostrClient,
@@ -54,10 +55,12 @@ class DMsFromUserFilterSubAssembler(
     // NIP-17 only loaded the recent window, so widening (which fills the screen / prefetches)
     // landed new NIP-17 rooms in the middle of the NIP-04 tail instead of extending the list end.
     // Same growth factor as the gift-wrap window keeps both advancing in lockstep.
-    private val windows = mutableMapOf<HexKey, TimeWindowPagination>()
+    // Concurrent: windowFor is reached from the UI thread (loadMore / loadEverything) and from
+    // Dispatchers.IO (updateFilter, via the bundled invalidation), so a plain HashMap would race.
+    private val windows = ConcurrentHashMap<HexKey, TimeWindowPagination>()
 
     private fun windowFor(user: User) =
-        windows.getOrPut(user.pubkeyHex) {
+        windows.computeIfAbsent(user.pubkeyHex) {
             TimeWindowPagination(growthFactor = AccountGiftWrapsEoseManager.WINDOW_GROWTH_FACTOR)
         }
 
@@ -70,7 +73,9 @@ class DMsFromUserFilterSubAssembler(
     private val _exhausted = MutableStateFlow(false)
     val exhausted: StateFlow<Boolean> = _exhausted.asStateFlow()
 
-    // The account scope to run the window-load timeout on, captured when the subscription opens.
+    // The account scope to run the window-load watchdog on, captured when the subscription opens.
+    // Volatile: written on Dispatchers.IO (newSub), read on the UI thread (loadMore/loadEverything).
+    @Volatile
     private var scope: CoroutineScope? = null
 
     override fun updateFilter(
