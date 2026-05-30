@@ -85,7 +85,7 @@ package contains Compose UI (and is therefore *not* CLI-safe).
 | `richtext`     | no  | URL/media/pattern parsing for rich text. |
 | `blurhash`     | no  | BlurHash encode/decode (pure math; platform image bridge in platform sets). |
 | `thumbhash`    | no  | ThumbHash encode/decode. |
-| `call`         | no  | NIP-AC WebRTC **call state machine** + peer-session abstraction. See `call/ARCHITECTURE.md`. |
+| `nipACWebRtcCalls` | no | NIP-AC WebRTC **call state machine** + peer-session abstraction. See `nipACWebRtcCalls/ARCHITECTURE.md`. (Mirrors `quartz/.../nipACWebRtcCalls`.) |
 
 ### State holders & ViewModels
 | Package        | UI? | Purpose |
@@ -124,7 +124,7 @@ they are shared across the GUI apps. Treat as GUI-shared, not strictly headless.
 ### Mixed (documented debt — see §4)
 | Package        | UI? | Purpose |
 |----------------|-----|---------|
-| `chess`        | mixed | Live-chess feature: game/lobby/subscription logic **and** board/lobby composables in one flat package. Needs a `chess/ui` split. |
+| `nip64Chess`   | mixed | Live-chess feature: game/lobby/subscription logic **and** board/lobby composables in one flat package. Needs a `nip64Chess/ui` split. (Mirrors `quartz/.../nip64Chess`.) |
 | `domain`       | no  | Currently only `domain/nip46` (Nostr Connect signer flows). Sparse; candidate to fold into a clearer home. |
 
 ---
@@ -146,9 +146,30 @@ share them.
 ### Naming
 - **Singular, no synonyms.** `util` (not `utils`), `service` (not `services`).
   One concept → one package name.
-- Per-NIP model code goes in `model/nipNN<slug>` (e.g. `model/nip51Lists`).
 - Composables that belong to a feature go in `<feature>/ui`; cross-cutting
   composables go under `ui/<area>`.
+
+### NIP as the second axis (mirror `quartz`)
+`quartz` is ~94% organized by NIP (`nipNN<slug>` per spec), and that is correct
+*there* — the protocol layer is naturally NIP-partitioned. `commons` is **not**
+organized by NIP at the top level, and should not be: most of it is
+cross-cutting infrastructure (`ui`, `relayClient`, `viewmodels`, `feeds`,
+`util`…) that serves many NIPs at once, and the load-bearing UI/non-UI boundary
+(§1) cuts *across* NIPs, so a NIP-first top level would just nest the same
+problem one level down.
+
+Instead, **layer is the primary axis, NIP is the secondary axis**:
+
+- The big shared layers stay layer-organized (`model`, `ui`, `relayClient`, …).
+- **Inside a layer, NIP-specific code goes in a `nipNN<slug>` subpackage whose
+  name matches `quartz` exactly** — e.g. `model/nip57Zaps`, `ui/nip53LiveActivities`.
+  This gives a clean trace: `quartz/nip57Zaps` → `commons/model/nip57Zaps` →
+  `commons/ui/nip57Zaps`.
+- **A top-level package that *is* a single self-contained NIP feature takes the
+  same name as its `quartz` counterpart**: `nip64Chess`, `nipACWebRtcCalls`,
+  `nip53LiveActivities`, `marmot`. (`marmot` is un-numbered in `quartz` too.)
+  Generic/multi-NIP packages keep their concern name (`search`, `preview`,
+  `actions`, `richtext`…).
 
 ### Source sets
 | Source set    | For |
@@ -182,29 +203,30 @@ compiles: `commonMain` → `jvmAndroid` → platform-specific. See
 
 These are intentionally *documented*, not silently tolerated. Fix opportunistically.
 
-- **`chess` is UI+logic in one flat package.** `LiveChessGame.kt` mixes a state
-  class with composables. Split into `chess/` (logic) + `chess/ui/`
-  (composables); this needs file-level surgery (extracting composables out of
-  logic files), not just moves, so it is deferred.
+- **`nip64Chess` is UI+logic in one flat package.** `LiveChessGame.kt` mixes a
+  state class with composables. Split into `nip64Chess/` (logic) +
+  `nip64Chess/ui/` (composables); this needs file-level surgery (extracting
+  composables out of logic files), not just moves, so it is deferred.
 - **`ui/feeds` holds the feed data-access layer** (`FeedFilter`,
   `ChangesFlowFilter`, `FeedContentState`), which is logic, not UI, and overlaps
   conceptually with the top-level `feeds` (custom-feed definitions). Consider
   moving the DAL out of `ui/`.
 - **`domain` is sparse** (only `nip46`). Either grow it as the home for
-  use-case/flow types or fold `nip46` into a clearer location.
+  use-case/flow types or rename it to the matching `nip46RemoteSigner` per the
+  NIP-second-axis rule.
 - **`relays` vs `relayClient`** are coherent but close in name; `relays` is
   low-level EOSE bookkeeping, `relayClient` is the subscription client. Keep the
   distinction in mind when adding files.
 - Several **single-file feature packages** (`account`, `marmot`,
   `nip53LiveActivities`, `keystorage`, `threading`) are kept as feature/abstraction
   namespaces expected to grow; do not fold them into `util` just for size.
+- **`onchain`** (on-chain zap splitting) is `quartz`-adjacent but un-numbered;
+  leave readable unless a clear NIP number lands.
 
 ---
 
 ## 5. See also
-- `call/ARCHITECTURE.md` — WebRTC call state machine deep-dive.
+- `nipACWebRtcCalls/ARCHITECTURE.md` — WebRTC call state machine deep-dive.
 - Root `.claude/CLAUDE.md` — module overview, sharing philosophy, build commands.
 - `/kotlin-multiplatform`, `/compose-expert`, `/feed-patterns`, `/relay-client`,
   `/account-state` skills for the patterns referenced above.
-</content>
-</invoke>

@@ -35,7 +35,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.call.CallState
+import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
 import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.runBlocking

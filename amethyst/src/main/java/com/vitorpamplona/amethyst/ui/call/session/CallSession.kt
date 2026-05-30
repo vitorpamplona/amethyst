@@ -27,14 +27,14 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.commons.call.AnswerRouteAction
-import com.vitorpamplona.amethyst.commons.call.CallManager
-import com.vitorpamplona.amethyst.commons.call.CallState
-import com.vitorpamplona.amethyst.commons.call.IceCandidateData
-import com.vitorpamplona.amethyst.commons.call.PeerSession
-import com.vitorpamplona.amethyst.commons.call.PeerSessionManager
-import com.vitorpamplona.amethyst.commons.call.SdpType
-import com.vitorpamplona.amethyst.commons.call.SignalingState
+import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.AnswerRouteAction
+import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
+import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
+import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.IceCandidateData
+import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.PeerSession
+import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.PeerSessionManager
+import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.SdpType
+import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.SignalingState
 import com.vitorpamplona.amethyst.service.call.AudioRoute
 import com.vitorpamplona.amethyst.service.call.CallAudioManager
 import com.vitorpamplona.amethyst.service.call.CallForegroundService
@@ -148,23 +148,23 @@ class CallSession(
             callManager.sessionEvents.collect { event ->
                 if (closed) return@collect
                 when (event) {
-                    is com.vitorpamplona.amethyst.commons.call.CallSessionEvent.AnswerReceived -> {
+                    is com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallSessionEvent.AnswerReceived -> {
                         onCallAnswerReceived(event.event.pubKey, event.event.sdpAnswer())
                     }
 
-                    is com.vitorpamplona.amethyst.commons.call.CallSessionEvent.IceCandidateReceived -> {
+                    is com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallSessionEvent.IceCandidateReceived -> {
                         onIceCandidateReceived(event.event)
                     }
 
-                    is com.vitorpamplona.amethyst.commons.call.CallSessionEvent.NewPeerInGroupCall -> {
+                    is com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallSessionEvent.NewPeerInGroupCall -> {
                         onNewPeerInGroupCall(event.peerPubKey)
                     }
 
-                    is com.vitorpamplona.amethyst.commons.call.CallSessionEvent.MidCallOfferReceived -> {
+                    is com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallSessionEvent.MidCallOfferReceived -> {
                         onMidCallOfferReceived(event.peerPubKey, event.sdpOffer)
                     }
 
-                    is com.vitorpamplona.amethyst.commons.call.CallSessionEvent.PeerLeft -> {
+                    is com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallSessionEvent.PeerLeft -> {
                         disposePeerSession(event.peerPubKey)
                     }
                 }

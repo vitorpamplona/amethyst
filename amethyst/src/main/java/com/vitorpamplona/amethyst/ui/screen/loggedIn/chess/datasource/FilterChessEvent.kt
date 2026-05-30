@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.datasource
 
-import com.vitorpamplona.amethyst.commons.chess.subscription.ChessFilterBuilder
-import com.vitorpamplona.amethyst.commons.chess.subscription.ChessSubscriptionState
+import com.vitorpamplona.amethyst.commons.nip64Chess.subscription.ChessFilterBuilder
+import com.vitorpamplona.amethyst.commons.nip64Chess.subscription.ChessSubscriptionState
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 

@@ -20,16 +20,16 @@
  */
 package com.vitorpamplona.amethyst.desktop.chess
 
-import com.vitorpamplona.amethyst.commons.chess.ChessConfig
-import com.vitorpamplona.amethyst.commons.chess.ChessEventBroadcaster
-import com.vitorpamplona.amethyst.commons.chess.ChessEventPublisher
-import com.vitorpamplona.amethyst.commons.chess.ChessRelayFetchHelper
-import com.vitorpamplona.amethyst.commons.chess.ChessRelayFetcher
-import com.vitorpamplona.amethyst.commons.chess.IUserMetadataProvider
-import com.vitorpamplona.amethyst.commons.chess.RelayFetchProgress
-import com.vitorpamplona.amethyst.commons.chess.RelayGameSummary
-import com.vitorpamplona.amethyst.commons.chess.subscription.ChessFilterBuilder
 import com.vitorpamplona.amethyst.commons.model.cache.UserMetadataCache
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessConfig
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessEventBroadcaster
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessEventPublisher
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessRelayFetchHelper
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessRelayFetcher
+import com.vitorpamplona.amethyst.commons.nip64Chess.IUserMetadataProvider
+import com.vitorpamplona.amethyst.commons.nip64Chess.RelayFetchProgress
+import com.vitorpamplona.amethyst.commons.nip64Chess.RelayGameSummary
+import com.vitorpamplona.amethyst.commons.nip64Chess.subscription.ChessFilterBuilder
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
