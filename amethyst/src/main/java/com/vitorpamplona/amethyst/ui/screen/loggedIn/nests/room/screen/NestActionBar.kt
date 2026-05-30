@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.note.zapClick
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.reactions.RoomReactionPopup
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.navigateToReloadMint
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -564,6 +565,10 @@ private fun NestZapButton(
                     accountViewModel.tempManualPaymentCache.put(uid, it)
                     nav.nav(Route.ManualZapSplitPayment(uid))
                 }
+            },
+            onReloadNutzap = { amount ->
+                wantsToZap = false
+                navigateToReloadMint(accountViewModel, nav, roomNote, amount)
             },
         )
     }

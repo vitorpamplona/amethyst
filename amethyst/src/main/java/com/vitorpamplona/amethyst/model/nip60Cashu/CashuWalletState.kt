@@ -50,6 +50,7 @@ import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -760,23 +761,89 @@ class CashuWalletState(
      *  - we share no mint with them, or
      *  - their kind:10019 has no P2PK pubkey.
      */
-    fun peekNutzapTarget(recipientPubKey: HexKey): NutzapTarget? {
+    fun peekNutzapTarget(recipientPubKey: HexKey): NutzapTarget? = peekNutzapFunding(recipientPubKey)?.target
+
+    /** True if [mintUrl] is a mint we hold AND the recipient accepts nutzaps on. */
+    fun sharedNutzapMint(
+        recipientPubKey: HexKey,
+        mintUrl: String,
+    ): Boolean {
+        if (mintUrl !in _mints.value) return false
+        val info = cache.getOrCreateUser(recipientPubKey).nutzapInfo() ?: return false
+        return info.mints().any { it.mintUrl == mintUrl }
+    }
+
+    /**
+     * Resolve nutzap funding for [recipientPubKey]: the best shared mint to
+     * spend from plus the balance figures the zap picker needs to classify
+     * each amount as funded, reloadable, or out of reach.
+     *
+     * The chosen [NutzapFunding.target] is the shared mint where we hold the
+     * **most** balance — not merely the first one the recipient lists. The
+     * previous `firstOrNull` could pick an empty shared mint and make a zap
+     * fail with "No proofs available at <mint>" even though another shared
+     * mint was funded.
+     *
+     * All reads are synchronous from in-memory state (`_mints`,
+     * `_tokenEntries`, `LocalCache`), so this is safe to call from a
+     * composable `remember {}`. The User pins the recipient's kind:10019
+     * addressable note for its own lifetime, so the chip no longer races the
+     * notes.LargeSoftCache eviction.
+     *
+     * Returns null when a nutzap is structurally impossible: we have no mints,
+     * the recipient has no kind:10019, no P2PK pubkey, or shares no mint with
+     * us. A non-null result still does not guarantee a single mint can cover a
+     * given amount — compare against [NutzapFunding.bestSingleMintSats].
+     */
+    fun peekNutzapFunding(recipientPubKey: HexKey): NutzapFunding? {
         val ourMints = _mints.value.toSet()
         if (ourMints.isEmpty()) return null
 
-        // Read the recipient's kind:10019 via their User — User pins the
-        // addressable note for its own lifetime, so the previous race
-        // (notes.LargeSoftCache evicts the WeakReference even though the
-        // event was delivered) no longer drops the chip.
         val info = cache.getOrCreateUser(recipientPubKey).nutzapInfo() ?: return null
 
         val recipientPubkeyHex = info.p2pkPubkey() ?: return null
-        val shared = info.mints().firstOrNull { it.mintUrl in ourMints } ?: return null
+        val sharedMints = info.mints().map { it.mintUrl }.filter { it in ourMints }
+        if (sharedMints.isEmpty()) return null
 
-        return NutzapTarget(
-            mintUrl = shared.mintUrl,
-            recipientP2pkPubkeyHex = recipientPubkeyHex,
+        val entries = _tokenEntries.value
+        var bestMint = sharedMints.first()
+        var bestMintSats = 0L
+        for (mint in sharedMints) {
+            val balance = entries.filter { it.content.mint == mint }.sumOf { it.content.totalAmount() }
+            if (balance > bestMintSats) {
+                bestMintSats = balance
+                bestMint = mint
+            }
+        }
+
+        return NutzapFunding(
+            target = NutzapTarget(mintUrl = bestMint, recipientP2pkPubkeyHex = recipientPubkeyHex),
+            bestSingleMintSats = bestMintSats,
+            totalWalletSats = entries.sumOf { it.content.totalAmount() },
         )
+    }
+
+    /**
+     * Spendable cashu balance per mint URL, summed from in-memory proofs.
+     * Synchronous and local — feeds the Reload Mint screen's balances list and
+     * source-feasibility checks. May overstate by NUT-07 stale proofs; the
+     * actual move scrubs before melting.
+     */
+    fun peekMintBalances(): Map<String, Long> =
+        _tokenEntries.value
+            .groupBy { it.content.mint }
+            .mapValues { (_, entries) -> entries.sumOf { it.content.totalAmount() } }
+
+    /**
+     * Mints the recipient accepts (their kind:10019) that we also hold a wallet
+     * at — the candidate destinations for a reload. Empty when the recipient
+     * has no kind:10019 or shares no mint with us.
+     */
+    fun recipientSharedMints(recipientPubKey: HexKey): List<String> {
+        val ourMints = _mints.value.toSet()
+        if (ourMints.isEmpty()) return emptyList()
+        val info = cache.getOrCreateUser(recipientPubKey).nutzapInfo() ?: return emptyList()
+        return info.mints().map { it.mintUrl }.filter { it in ourMints }
     }
 
     /**
@@ -1021,12 +1088,22 @@ class CashuWalletState(
         recipientPubKey: HexKey,
         zappedEvent: EventHintBundle<out Event>,
         message: String = "",
+        preferredMintUrl: String? = null,
         onProgress: ((Float) -> Unit)? = null,
     ): NutzapSent {
         check(started) { "CashuWalletState.start() not called" }
-        val target =
+        val resolved =
             peekNutzapTarget(recipientPubKey)
                 ?: throw IllegalStateException("Recipient does not accept nutzaps from any of our mints")
+        // Honor an explicit mint when the caller has one in mind (e.g. the Top-up
+        // screen just funded a specific mint and must spend from THAT one, not
+        // whichever shared mint happens to hold the most). Only if it's still a
+        // valid shared target; otherwise fall back to the best-balance pick.
+        val target =
+            preferredMintUrl
+                ?.takeIf { it == resolved.mintUrl || sharedNutzapMint(recipientPubKey, it) }
+                ?.let { NutzapTarget(mintUrl = it, recipientP2pkPubkeyHex = resolved.recipientP2pkPubkeyHex) }
+                ?: resolved
 
         // NUT-07 check + immediate state cleanup before selecting.
         // The startup scrub can't catch entries that arrive from relays
@@ -1089,17 +1166,110 @@ class CashuWalletState(
     suspend fun meltToLightning(
         mintUrl: String,
         quote: MeltQuoteBolt11ResponseDto,
+        skipScrub: Boolean = false,
     ): MeltCompleted {
         check(started) { "CashuWalletState.start() not called" }
         if (mintUrl.isBlank()) throw IllegalArgumentException("Pick a mint")
 
-        scrubLocallyStaleProofs(mintUrl)
+        // [rebalance] already scrubbed this mint to compute its coverage check, so
+        // it passes skipScrub=true to avoid a second NUT-07 /checkstate round-trip.
+        if (!skipScrub) scrubLocallyStaleProofs(mintUrl)
 
         val available = _tokenEntries.value.filter { it.content.mint == mintUrl }
         if (available.isEmpty()) {
             throw IllegalStateException("No proofs available at $mintUrl")
         }
         return ops.meltToLightning(mintUrl, quote, available)
+    }
+
+    /**
+     * Move [sats] of cashu from [sourceMintUrl] into [targetMintUrl] by minting
+     * a fresh quote at the target and paying its invoice with a melt at the
+     * source — no new sats enter the wallet. Used by the Reload Mint screen to
+     * top up a recipient's mint from another mint the user already holds.
+     *
+     * The melt settles the Lightning payment synchronously, so the target quote
+     * should read PAID within moments; we poll briefly to absorb mint-side lag
+     * before issuing the proofs.
+     *
+     * Money is never lost on failure: a failed melt returns change to the
+     * source, and a paid-but-not-yet-issued target leaves a resumable kind:7374
+     * the pending-quote banner can finish later. Throws with a user-facing
+     * message on any failure; callers surface it via [describeMintError].
+     */
+    suspend fun rebalance(
+        sourceMintUrl: String,
+        targetMintUrl: String,
+        sats: Long,
+        onProgress: ((Float) -> Unit)? = null,
+        onFundsMoved: () -> Unit = {},
+    ): RebalanceCompleted {
+        check(started) { "CashuWalletState.start() not called" }
+        require(sats > 0) { "Amount must be positive" }
+        require(sourceMintUrl != targetMintUrl) { "Source and target mints must differ" }
+
+        // 1. Mint quote at the destination — publishes a resumable kind:7374.
+        onProgress?.invoke(0.1f)
+        val mintFlow = ops.startMintFromLightning(targetMintUrl, sats)
+
+        // 2. Quote the melt at the source and make sure it covers amount + fee
+        //    BEFORE spending. Abandon the unpaid mint quote otherwise so it
+        //    doesn't linger in the pending banner.
+        onProgress?.invoke(0.25f)
+        val meltQuote = ops.requestMeltQuote(sourceMintUrl, mintFlow.invoice)
+        scrubLocallyStaleProofs(sourceMintUrl)
+        val sourceBalance =
+            _tokenEntries.value
+                .filter { it.content.mint == sourceMintUrl }
+                .sumOf { it.content.totalAmount() }
+        val required = meltQuote.amount + meltQuote.feeReserve
+        if (sourceBalance < required) {
+            runCatching { ops.cancelMintQuote(mintFlow.quoteEvent) }
+            throw IllegalStateException("$sourceMintUrl has $sourceBalance sat — needs $required to move $sats")
+        }
+
+        // 3. Pay the destination invoice by melting at the source. We already
+        //    scrubbed sourceMintUrl above for the coverage check, so skip the
+        //    redundant second scrub inside meltToLightning.
+        onProgress?.invoke(0.5f)
+        meltToLightning(sourceMintUrl, meltQuote, skipScrub = true)
+        // Funds have now LEFT the source. Signal the caller immediately so a
+        // failure in the steps below (slow confirmation, completeMint error)
+        // never causes a retry to melt a second time — the destination quote is
+        // paid and resumable via the pending-quote banner instead.
+        onFundsMoved()
+
+        // 4. The melt paid the invoice; confirm + issue proofs at the target.
+        //    The melt settled synchronously, but a healthy mint can still lag a
+        //    while before flipping the quote to PAID, so give it a generous
+        //    ~60s steady budget rather than a tight escalating one — a merely
+        //    slow mint shouldn't strand funds that have already left the source.
+        onProgress?.invoke(0.75f)
+        val pollAttempts = 30
+        val pollDelayMs = 2_000L
+        var paid = false
+        var attempt = 0
+        while (!paid && attempt < pollAttempts) {
+            paid = ops.checkMintQuote(targetMintUrl, mintFlow.mintQuote.quote).isSettled()
+            if (!paid) {
+                delay(pollDelayMs)
+                attempt++
+            }
+        }
+        if (!paid) {
+            // Funds already left the source; the destination invoice is paid or
+            // will be. Leave the kind:7374 so the pending banner can finish it.
+            throw IllegalStateException("Paid $targetMintUrl but it hasn't confirmed yet — finish from the pending quote banner")
+        }
+        ops.completeMintFromLightning(targetMintUrl, mintFlow.quoteEvent, sats)
+        onProgress?.invoke(1.0f)
+
+        return RebalanceCompleted(
+            sourceMintUrl = sourceMintUrl,
+            targetMintUrl = targetMintUrl,
+            movedSats = sats,
+            feeSats = meltQuote.feeReserve,
+        )
     }
 
     // ============================================================
@@ -1132,4 +1302,25 @@ class CashuWalletState(
 data class NutzapTarget(
     val mintUrl: String,
     val recipientP2pkPubkeyHex: String,
+)
+
+/**
+ * Nutzap funding snapshot for a recipient — the [target] mint to spend from
+ * plus the balance figures the zap picker uses to classify a given amount:
+ *  - `amount <= bestSingleMintSats` → fundable instantly from one shared mint
+ *  - `amount <= totalWalletSats`    → fundable only after a mint reload/rebalance
+ *  - otherwise                      → out of reach with the current balance
+ */
+data class NutzapFunding(
+    val target: NutzapTarget,
+    val bestSingleMintSats: Long,
+    val totalWalletSats: Long,
+)
+
+/** Result of a [CashuWalletState.rebalance] mint-to-mint move. */
+data class RebalanceCompleted(
+    val sourceMintUrl: String,
+    val targetMintUrl: String,
+    val movedSats: Long,
+    val feeSats: Long,
 )

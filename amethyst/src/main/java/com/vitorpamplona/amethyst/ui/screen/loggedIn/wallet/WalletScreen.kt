@@ -68,6 +68,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.hashtags.Cashu
+import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
@@ -81,6 +83,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.rememberRelay
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
+import androidx.compose.material3.Icon as Material3Icon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -509,8 +512,8 @@ private fun CashuWalletRow(
                     .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                symbol = MaterialSymbols.AccountBalanceWallet,
+            Material3Icon(
+                imageVector = CustomHashTagIcons.Cashu,
                 contentDescription = null,
                 modifier = Modifier.size(28.dp),
                 tint = MaterialTheme.colorScheme.primary,

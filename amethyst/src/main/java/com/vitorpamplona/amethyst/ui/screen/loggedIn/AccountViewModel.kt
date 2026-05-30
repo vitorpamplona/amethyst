@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.ui.screen.UiSettingsState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.NOTIFICATION_LAST_READ_KEY
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.ReloadMintRequest
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
@@ -319,6 +320,9 @@ class AccountViewModel(
         )
 
     val tempManualPaymentCache = LruCache<String, List<ZapPaymentHandler.Payable>>(5)
+
+    /** Hand-off for the Reload Mint screen — keyed by a uid put on the back stack. */
+    val tempReloadRequestCache = LruCache<String, ReloadMintRequest>(5)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val notificationHasNewItems =
@@ -1297,10 +1301,9 @@ class AccountViewModel(
 
     fun updateZapAmounts(
         amountSet: List<Long>,
-        onchainAmountSet: List<Long>,
         selectedZapType: LnZapEvent.ZapType,
         nip47Update: Nip47WalletConnect.Nip47URINorm?,
-    ) = launchSigner { account.updateZapAmounts(amountSet, onchainAmountSet, selectedZapType, nip47Update) }
+    ) = launchSigner { account.updateZapAmounts(amountSet, selectedZapType, nip47Update) }
 
     fun toggleDontTranslateFrom(languageCode: String) = launchSigner { account.toggleDontTranslateFrom(languageCode) }
 
