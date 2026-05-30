@@ -31,14 +31,16 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtagAlts
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.utils.mapOfSet
+import kotlin.math.min
 
 /**
  * Builds the relay filters that power the NIP-32 side of the hashtag feed:
  *
- * 1. A subscription for kind 1985 label events that tag posts with this hashtag
- *    (the `l` tag under the `#t` namespace). We don't restrict authors at the relay
- *    — the feed restricts display to the user's follows locally — but we do bound it
- *    with a limit.
+ * 1. A subscription for kind 1985 label events that tag posts with this hashtag (the `l`
+ *    tag under the `#t` namespace), routed through the NIP-65 outbox model: each follow's
+ *    labels are requested from THAT follow's outbox relays, with the relay's filter
+ *    restricted to the follows that actually write there. This is what guarantees we pick
+ *    up a follow's labels even if they never reach the hashtag's own relays.
  * 2. Requests for the underlying posts a *followed* user has labeled but that aren't in
  *    cache yet, so they can actually render in the feed. This rotates as new label
  *    events arrive (the sub-assembler re-runs after each EOSE).
@@ -51,15 +53,20 @@ fun filterHashtagLabels(
 ): List<RelayBasedFilter> {
     val labelValues = hashtagAlts(hashtag).sorted()
 
+    // Outbox routing: relay -> the follows who publish to it.
+    val followsPerRelay = account.followsPerRelay.value
     val labelFilters =
-        relays.map { relay ->
+        followsPerRelay.mapNotNull { (relay, authors) ->
+            if (authors.isEmpty()) return@mapNotNull null
+            val authorList = authors.sorted()
             RelayBasedFilter(
                 relay = relay,
                 filter =
                     Filter(
                         kinds = listOf(LabelEvent.KIND),
+                        authors = authorList,
                         tags = mapOf("l" to labelValues),
-                        limit = 200,
+                        limit = min(authorList.size * 5, 500),
                         since = since?.get(relay)?.time,
                     ),
             )
