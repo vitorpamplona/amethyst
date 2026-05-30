@@ -21,14 +21,21 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.feed
 
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
@@ -47,12 +54,16 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChatroomHeaderCompose
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.Size10dp
+import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import java.io.Serializable
 
 @Composable
@@ -114,6 +125,11 @@ private fun FeedLoaded(
 
     val myPubKey = accountViewModel.userProfile().pubkeyHex
 
+    val giftWraps = remember(accountViewModel) { accountViewModel.dataSources().account.giftWraps }
+    val loadingMore by giftWraps.loadingMore.collectAsStateWithLifecycle()
+
+    LoadMoreWhenReachingEnd(listState, items.list.size, accountViewModel)
+
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
@@ -134,6 +150,49 @@ private fun FeedLoaded(
                 thickness = DividerThickness,
             )
         }
+
+        if (loadingMore) {
+            item(key = "loadingMoreFooter") {
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = Size10dp),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    CircularProgressIndicator(Modifier.size(Size25dp))
+                }
+            }
+        }
+    }
+}
+
+// Number of items from the end at which scrolling triggers loading the next,
+// older time window of conversations.
+private const val LOAD_MORE_THRESHOLD = 5
+
+/**
+ * Widens the DM time window when the messages list is scrolled near its end, so
+ * older conversations stream in on demand instead of all at boot. Re-evaluates as
+ * the list grows so a near-empty screen keeps filling; the per-account
+ * [AccountGiftWrapsEoseManager.loadingMore] guard prevents overlapping requests.
+ */
+@Composable
+private fun LoadMoreWhenReachingEnd(
+    listState: LazyListState,
+    itemCount: Int,
+    accountViewModel: AccountViewModel,
+) {
+    LaunchedEffect(listState, itemCount) {
+        snapshotFlow {
+            val info = listState.layoutInfo
+            val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: -1
+            lastVisible >= info.totalItemsCount - LOAD_MORE_THRESHOLD
+        }.distinctUntilChanged()
+            .filter { it && itemCount > 0 }
+            .collect {
+                val giftWraps = accountViewModel.dataSources().account.giftWraps
+                if (!giftWraps.loadingMore.value) {
+                    giftWraps.loadMore(accountViewModel.userProfile())
+                }
+            }
     }
 }
 

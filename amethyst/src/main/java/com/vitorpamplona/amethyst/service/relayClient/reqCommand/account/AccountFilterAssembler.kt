@@ -49,10 +49,12 @@ class AccountQueryState(
 class AccountFilterAssembler(
     client: INostrClient,
 ) : ComposeSubscriptionManager<AccountQueryState>() {
+    val giftWraps = AccountGiftWrapsEoseManager(client, ::allKeys)
+
     val group =
         listOf(
             AccountMetadataEoseManager(client, ::allKeys),
-            AccountGiftWrapsEoseManager(client, ::allKeys),
+            giftWraps,
             AccountDraftsEoseManager(client, ::allKeys),
             AccountNotificationsEoseFromInboxRelaysManager(client, ::allKeys),
             MarmotGroupEventsEoseManager(client, ::allKeys),
