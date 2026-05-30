@@ -62,6 +62,7 @@ import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import java.io.Serializable
@@ -189,7 +190,10 @@ private fun LoadMoreWhenReachingEnd(
             .filter { it && itemCount > 0 }
             .collect {
                 val giftWraps = accountViewModel.dataSources().account.giftWraps
-                if (!giftWraps.loadingMore.value) {
+                if (giftWraps.loadingMore.value) {
+                    Log.d("DMPagination") { "rooms list near end ($itemCount items) but a window load is already in flight, skipping" }
+                } else {
+                    Log.d("DMPagination") { "rooms list scrolled near end ($itemCount items), requesting an older window of conversations" }
                     giftWraps.loadMore(accountViewModel.userProfile())
                 }
             }

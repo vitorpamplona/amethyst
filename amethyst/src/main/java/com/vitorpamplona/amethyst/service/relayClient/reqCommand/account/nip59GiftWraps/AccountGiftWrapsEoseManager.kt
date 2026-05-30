@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscriptio
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -53,7 +54,12 @@ class AccountGiftWrapsEoseManager(
     // decrypted; scrolling to the end of the list widens it via [loadMore].
     private val windows = mutableMapOf<HexKey, TimeWindowPagination>()
 
-    private fun windowFor(user: User) = windows.getOrPut(user.pubkeyHex) { TimeWindowPagination() }
+    private fun windowFor(user: User) =
+        windows.getOrPut(user.pubkeyHex) {
+            TimeWindowPagination().also {
+                Log.d(TAG) { "opening initial gift-wrap window for pubkey=${user.pubkeyHex.take(8)}… since=${it.since} (${daysAgo(it.since)}d back)" }
+            }
+        }
 
     private val _loadingMore = MutableStateFlow(false)
     val loadingMore: StateFlow<Boolean> = _loadingMore.asStateFlow()
@@ -66,9 +72,9 @@ class AccountGiftWrapsEoseManager(
         return if (key.account.isWriteable()) {
             val relays = key.account.dmRelays.flow.value
             val windowSince = windowFor(user(key)).since
-            Log.d("MarmotDbg") {
-                "AccountGiftWrapsEoseManager.updateFilter: pubkey=${user(key).pubkeyHex.take(8)}… " +
-                    "subscribing kind:1059 since=$windowSince on ${relays.size} dmRelay(s): ${relays.map { it.url }}"
+            Log.d(TAG) {
+                "updateFilter: pubkey=${user(key).pubkeyHex.take(8)}… requesting kind:1059 " +
+                    "since=$windowSince (${daysAgo(windowSince)}d window) on ${relays.size} dmRelay(s): ${relays.map { it.url }}"
             }
             relays.flatMap { relay ->
                 filterGiftWrapsToPubkey(
@@ -78,7 +84,7 @@ class AccountGiftWrapsEoseManager(
                 )
             }
         } else {
-            Log.d("MarmotDbg") { "AccountGiftWrapsEoseManager.updateFilter: account not writeable, skipping" }
+            Log.d(TAG) { "updateFilter: pubkey=${user(key).pubkeyHex.take(8)}… account not writeable, skipping" }
             emptyList()
         }
     }
@@ -89,7 +95,13 @@ class AccountGiftWrapsEoseManager(
      * scrolled near its end.
      */
     fun loadMore(user: User) {
-        windowFor(user).loadMore()
+        val window = windowFor(user)
+        val before = window.since
+        window.loadMore()
+        Log.d(TAG) {
+            "loadMore: pubkey=${user.pubkeyHex.take(8)}… widening window since $before -> ${window.since} " +
+                "(${daysAgo(window.since)}d back, was ${daysAgo(before)}d), re-issuing subscription"
+        }
         _loadingMore.value = true
         invalidateFilters()
     }
@@ -100,10 +112,17 @@ class AccountGiftWrapsEoseManager(
         time: Long,
         filters: List<Filter>?,
     ) {
-        // A backfill window finished loading.
-        _loadingMore.value = false
+        // A backfill window finished loading. Only log the transition, not every live event.
+        if (_loadingMore.value) {
+            Log.d(TAG) {
+                "newEose: pubkey=${user(key).pubkeyHex.take(8)}… backfill window finished on ${relay.url}, clearing loadingMore"
+            }
+            _loadingMore.value = false
+        }
         super.newEose(key, relay, time, filters)
     }
+
+    private fun daysAgo(epochSeconds: Long) = (TimeUtils.now() - epochSeconds) / TimeUtils.ONE_DAY
 
     val userJobMap = mutableMapOf<User, List<Job>>()
 
@@ -129,5 +148,11 @@ class AccountGiftWrapsEoseManager(
     ) {
         super.endSub(key, subId)
         userJobMap[key]?.forEach { it.cancel() }
+    }
+
+    companion object {
+        // Shared log tag for the DM time-window pagination. Filter logcat by this
+        // tag to watch the boot window and scroll-driven backfill in real time.
+        private const val TAG = "DMPagination"
     }
 }
