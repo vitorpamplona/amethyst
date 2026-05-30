@@ -128,6 +128,11 @@ class ReloadMintViewModel : ViewModel() {
      *  scope, not this VM's). */
     private var job: Job? = null
 
+    /** Set once the target mint has actually been topped up, so a retry after a
+     *  later failure (e.g. the send) re-sends only — it must never move funds
+     *  again. Without this, "Try again" re-ran the whole pipeline and double-spent. */
+    private var toppedUp = false
+
     private var recipient: String? = null
 
     private val _uiState = MutableStateFlow(ReloadUiState())
@@ -278,8 +283,9 @@ class ReloadMintViewModel : ViewModel() {
             vm.launchSigner {
                 try {
                     when {
-                        // The target already covers the send — no top-up, just zap.
-                        moveSats <= 0L -> sendNutzapAndFinish(note, s.sendSats)
+                        // Already topped up (or the target already covers the send) —
+                        // never move funds again on retry, just (re)send the zap.
+                        toppedUp || moveSats <= 0L -> sendNutzapAndFinish(note, s.sendSats)
                         source is ReloadSource.Mint -> rebalanceThenZap(source.mintUrl, s.selectedTarget, moveSats, note, s.sendSats)
                         source is ReloadSource.LightningWallet ->
                             reloadFromLightningThenZap(s.selectedTarget, moveSats, walletUriFor(source.walletId), note, s.sendSats)
@@ -306,6 +312,9 @@ class ReloadMintViewModel : ViewModel() {
         st.rebalance(sourceMint, targetMint, moveSats) { p ->
             setStatus(ReloadStatus.Working("Moving funds", p.coerceIn(0.1f, 0.9f)))
         }
+        // Funds have moved — checkpoint so a later failure never re-moves them.
+        toppedUp = true
+        awaitTargetFunded(targetMint, sendSats)
         sendNutzapAndFinish(note, sendSats)
     }
 
@@ -355,7 +364,29 @@ class ReloadMintViewModel : ViewModel() {
         }
         setStatus(ReloadStatus.Working("Issuing ecash", 0.85f))
         ops.completeMintFromLightning(targetMint, flow.quoteEvent, moveSats)
+        // Ecash minted at the target — checkpoint so a later failure never re-mints.
+        toppedUp = true
+        awaitTargetFunded(targetMint, sendSats)
         sendNutzapAndFinish(note, sendSats)
+    }
+
+    /**
+     * Freshly moved/minted proofs reach [CashuWalletState] asynchronously (the
+     * kind:7375 token event round-trips before [peekMintBalances] reflects it).
+     * Give the target a moment to show the balance so the nutzap that follows
+     * doesn't fail with "No proofs available" on the first try. Best-effort: if it
+     * doesn't land in time the send still proceeds (and fails recoverably without
+     * re-moving funds, thanks to the [toppedUp] checkpoint).
+     */
+    private suspend fun awaitTargetFunded(
+        targetMint: String,
+        sats: Long,
+    ) {
+        val st = state ?: return
+        repeat(12) {
+            if ((st.peekMintBalances()[targetMint] ?: 0L) >= sats) return
+            delay(500)
+        }
     }
 
     /**
