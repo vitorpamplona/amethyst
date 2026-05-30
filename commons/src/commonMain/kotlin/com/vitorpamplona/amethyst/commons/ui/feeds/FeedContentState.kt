@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.service.BasicBundledInsert
 import com.vitorpamplona.amethyst.commons.service.BasicBundledUpdate
 import com.vitorpamplona.amethyst.commons.threading.checkNotInMainThread
-import com.vitorpamplona.amethyst.commons.utils.equalImmutableLists
+import com.vitorpamplona.amethyst.commons.util.equalImmutableLists
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.utils.flattenToSet
 import kotlinx.collections.immutable.ImmutableList

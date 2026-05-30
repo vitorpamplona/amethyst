@@ -76,7 +76,12 @@ amethyst/
 
 **Sharing Philosophy:**
 - `quartz/` = Nostr business logic, protocol, data (no UI)
-- `commons/` = Shared UI components, icons, composables, flows and ViewModels
+- `commons/` = Shared code for every front end (Android, Desktop, iOS, and the
+  headless `cli`): domain models, state holders, ViewModels, the relay client,
+  shared services, **and** the Compose UI that ≥1 GUI front end renders. The
+  package taxonomy, the CLI-safe / UI boundary, and a "where does my code go?"
+  guide are documented in **`commons/ARCHITECTURE.md`** — read it before adding
+  a new package or dropping code into `commons`.
 - `quic/` = Transport library (QUIC + HTTP/3 + WebTransport); reusable for any
   KMP project that needs MoQ. Has no Android-framework dependencies.
 - `nestsClient/` = MoQ + audio-rooms client; takes `:quic` as transport,

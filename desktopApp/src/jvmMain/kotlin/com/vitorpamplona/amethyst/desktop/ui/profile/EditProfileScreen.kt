@@ -76,8 +76,8 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.profile.EditProfileFields
-import com.vitorpamplona.amethyst.commons.profile.ProfileBroadcastBanner
 import com.vitorpamplona.amethyst.commons.profile.ProfileBroadcastStatus
+import com.vitorpamplona.amethyst.commons.profile.ui.ProfileBroadcastBanner
 import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
 import com.vitorpamplona.amethyst.desktop.DesktopPreferences
 import com.vitorpamplona.amethyst.desktop.account.AccountState

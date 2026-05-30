@@ -32,7 +32,7 @@ import com.vitorpamplona.amethyst.commons.actions.SearchActions
 import com.vitorpamplona.amethyst.commons.actions.ZapActions
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull
-import com.vitorpamplona.amethyst.commons.services.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.commons.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher

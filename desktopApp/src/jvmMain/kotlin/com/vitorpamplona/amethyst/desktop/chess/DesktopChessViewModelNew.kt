@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.commons.chess.ChessPollingDefaults
 import com.vitorpamplona.amethyst.commons.chess.ChessSyncStatus
 import com.vitorpamplona.amethyst.commons.chess.CompletedGame
 import com.vitorpamplona.amethyst.commons.chess.PublicGame
-import com.vitorpamplona.amethyst.commons.data.UserMetadataCache
+import com.vitorpamplona.amethyst.commons.model.cache.UserMetadataCache
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event

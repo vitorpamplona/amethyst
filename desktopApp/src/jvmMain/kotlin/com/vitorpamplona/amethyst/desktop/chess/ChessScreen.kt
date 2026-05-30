@@ -76,9 +76,9 @@ import com.vitorpamplona.amethyst.commons.chess.OverlappingAvatars
 import com.vitorpamplona.amethyst.commons.chess.PublicGame
 import com.vitorpamplona.amethyst.commons.chess.PublicGameCard
 import com.vitorpamplona.amethyst.commons.chess.SpectatingGameCard
-import com.vitorpamplona.amethyst.commons.data.UserMetadataCache
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.cache.UserMetadataCache
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager

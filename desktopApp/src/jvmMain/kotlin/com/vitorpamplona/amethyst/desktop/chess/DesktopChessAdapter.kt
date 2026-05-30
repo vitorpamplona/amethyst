@@ -29,7 +29,7 @@ import com.vitorpamplona.amethyst.commons.chess.IUserMetadataProvider
 import com.vitorpamplona.amethyst.commons.chess.RelayFetchProgress
 import com.vitorpamplona.amethyst.commons.chess.RelayGameSummary
 import com.vitorpamplona.amethyst.commons.chess.subscription.ChessFilterBuilder
-import com.vitorpamplona.amethyst.commons.data.UserMetadataCache
+import com.vitorpamplona.amethyst.commons.model.cache.UserMetadataCache
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
