@@ -2186,9 +2186,10 @@ private fun UnifiedZapAmountChip(
     Surface(
         shape = ButtonBorder,
         color = MaterialTheme.colorScheme.surfaceVariant,
-        // A clear outline around the whole component so it reads as one toggle
-        // control rather than a few loose icons.
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        // A soft outline around the whole component so it reads as one toggle
+        // control rather than a few loose icons (outlineVariant — between a hard
+        // outline and none).
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
     ) {
         Row(
@@ -2309,9 +2310,9 @@ internal fun ZapRailIcon(
                 imageVector = CustomHashTagIcons.Cashu,
                 contentDescription = stringRes(R.string.nutzap),
                 modifier = Modifier.size(cashuSize),
-                // The cashu mark is now a monochrome, tintable outline — colour it
-                // with the app accent when preferred, else the mono on-surface tint.
-                tint = if (colored) MaterialTheme.colorScheme.primary else mono,
+                // The cashu mark is a monochrome, tintable outline — colour it the
+                // same brand orange as the other rails when selected, else mono.
+                tint = if (colored) BitcoinOrange else mono,
             )
         ZapRail.RELOAD ->
             // Funds exist but in the wrong mint — a dimmed cashu logo with a
@@ -2321,13 +2322,13 @@ internal fun ZapRailIcon(
                     imageVector = CustomHashTagIcons.Cashu,
                     contentDescription = stringRes(R.string.reload_mint_title),
                     modifier = Modifier.size(cashuSize).alpha(0.5f),
-                    tint = if (colored) MaterialTheme.colorScheme.primary else mono,
+                    tint = if (colored) BitcoinOrange else mono,
                 )
                 Icon(
                     symbol = MaterialSymbols.AddCircle,
                     contentDescription = null,
                     modifier = Modifier.size(size * 0.5f),
-                    tint = if (colored) MaterialTheme.colorScheme.primary else mono,
+                    tint = if (colored) BitcoinOrange else mono,
                 )
             }
         ZapRail.LIGHTNING ->
