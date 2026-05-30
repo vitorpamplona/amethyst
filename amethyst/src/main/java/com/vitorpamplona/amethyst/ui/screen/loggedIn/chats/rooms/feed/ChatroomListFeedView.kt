@@ -127,7 +127,10 @@ private fun FeedLoaded(
     val myPubKey = accountViewModel.userProfile().pubkeyHex
 
     val giftWraps = remember(accountViewModel) { accountViewModel.dataSources().account.giftWraps }
-    val loadingMore by giftWraps.loadingMore.collectAsStateWithLifecycle()
+    val nip04Dms = remember(accountViewModel) { accountViewModel.dataSources().chatroomList.nip04Dms }
+    val loadingGiftWraps by giftWraps.loadingMore.collectAsStateWithLifecycle()
+    val loadingNip04 by nip04Dms.loadingMore.collectAsStateWithLifecycle()
+    val loadingMore = loadingGiftWraps || loadingNip04
 
     LoadMoreWhenReachingEnd(listState, items.list.size, accountViewModel)
 
@@ -170,10 +173,16 @@ private fun FeedLoaded(
 private const val LOAD_MORE_THRESHOLD = 5
 
 /**
- * Widens the DM time window when the messages list is scrolled near its end, so
+ * Widens the DM time windows when the messages list is scrolled near its end, so
  * older conversations stream in on demand instead of all at boot. Re-evaluates as
- * the list grows so a near-empty screen keeps filling; the per-account
- * [AccountGiftWrapsEoseManager.loadingMore] guard prevents overlapping requests.
+ * the list grows so a near-empty screen keeps filling.
+ *
+ * Both DM protocols are advanced in lockstep: NIP-17 gift wraps (always-on account
+ * loader) and NIP-04 (this screen's loader). They must move together — if only one
+ * were windowed, the merged time-sorted list would mix a deep tail of one protocol
+ * with a shallow window of the other, and reaching the list end would pull rooms
+ * that land in the middle of the feed instead of extending the end. The combined
+ * loadingMore guard prevents overlapping requests.
  */
 @Composable
 private fun LoadMoreWhenReachingEnd(
@@ -190,11 +199,14 @@ private fun LoadMoreWhenReachingEnd(
             .filter { it && itemCount > 0 }
             .collect {
                 val giftWraps = accountViewModel.dataSources().account.giftWraps
-                if (giftWraps.loadingMore.value) {
+                val nip04Dms = accountViewModel.dataSources().chatroomList.nip04Dms
+                if (giftWraps.loadingMore.value || nip04Dms.loadingMore.value) {
                     Log.d("DMPagination") { "rooms list near end ($itemCount items) but a window load is already in flight, skipping" }
                 } else {
-                    Log.d("DMPagination") { "rooms list scrolled near end ($itemCount items), requesting an older window of conversations" }
-                    giftWraps.loadMore(accountViewModel.userProfile())
+                    Log.d("DMPagination") { "rooms list scrolled near end ($itemCount items), widening NIP-17 + NIP-04 windows" }
+                    val user = accountViewModel.userProfile()
+                    giftWraps.loadMore(user)
+                    nip04Dms.loadMore(user)
                 }
             }
     }

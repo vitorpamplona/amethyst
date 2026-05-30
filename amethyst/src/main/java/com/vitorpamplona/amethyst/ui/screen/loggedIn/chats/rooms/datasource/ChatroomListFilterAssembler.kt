@@ -35,9 +35,11 @@ class ChatroomListState(
 class ChatroomListFilterAssembler(
     client: INostrClient,
 ) : ComposeSubscriptionManager<ChatroomListState>() {
+    val nip04Dms = DMsFromUserFilterSubAssembler(client, ::allKeys)
+
     val group =
         listOf(
-            DMsFromUserFilterSubAssembler(client, ::allKeys),
+            nip04Dms,
             FollowingPublicChatSubAssembler(client, ::allKeys),
             FollowingEphemeralChatSubAssembler(client, ::allKeys),
         )
