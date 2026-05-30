@@ -32,6 +32,7 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -47,6 +48,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
@@ -64,6 +66,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.graphicsLayer
@@ -198,13 +201,11 @@ fun UpdateZapAmountContent(
                         modifier =
                             Modifier
                                 .onGloballyPositioned { itemBounds[amountInSats] = it.boundsInParent() }
-                                .zIndex(if (dragging) 1f else 0f)
-                                .graphicsLayer {
-                                    if (dragging) {
-                                        translationX = dragOffset.x
-                                        translationY = dragOffset.y
-                                    }
-                                }.pointerInput(amountInSats) {
+                                // pointerInput must sit OUTSIDE the graphicsLayer
+                                // translation below — otherwise the layer moving under
+                                // the finger distorts the per-frame drag deltas and the
+                                // drag runs away / never settles.
+                                .pointerInput(amountInSats) {
                                     detectDragGesturesAfterLongPress(
                                         onDragStart = {
                                             draggingAmount = amountInSats
@@ -239,6 +240,12 @@ fun UpdateZapAmountContent(
                                             }
                                         },
                                     )
+                                }.zIndex(if (dragging) 1f else 0f)
+                                .graphicsLayer {
+                                    if (dragging) {
+                                        translationX = dragOffset.x
+                                        translationY = dragOffset.y
+                                    }
                                 },
                     )
                 }
@@ -339,28 +346,40 @@ private fun ZapAmountPresetChip(
     modifier: Modifier = Modifier,
 ) {
     val rails = remember(amountInSats) { previewRailsFor(amountInSats) }
+    // Mirrors the popup: one outlined track, the default rail + amount grouped in a
+    // highlighted "thumb", the alternatives as quiet mono icons, then the remove X.
     Surface(
         shape = ButtonBorder,
-        color = MaterialTheme.colorScheme.surface,
+        color = MaterialTheme.colorScheme.surfaceVariant,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = modifier,
     ) {
         Row(
-            modifier = Modifier.padding(start = 10.dp, end = 2.dp, top = 2.dp, bottom = 2.dp),
+            modifier = Modifier.padding(start = 4.dp, end = 2.dp, top = 3.dp, bottom = 3.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ZapRailIcon(rails.first(), colored = true)
-            Spacer(Modifier.width(5.dp))
-            Text(
-                text = showAmount(amountInSats.toBigDecimal().setScale(1)),
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.SemiBold,
-            )
+            Row(
+                modifier =
+                    Modifier
+                        .clip(RoundedCornerShape(percent = 50))
+                        .background(MaterialTheme.colorScheme.primaryContainer)
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ZapRailIcon(rails.first(), colored = true)
+                Spacer(Modifier.width(5.dp))
+                Text(
+                    text = showAmount(amountInSats.toBigDecimal().setScale(1)),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
             rails.drop(1).forEach { rail ->
-                Spacer(Modifier.width(4.dp))
+                Spacer(Modifier.width(8.dp))
                 ZapRailIcon(rail, colored = false, size = 14.dp)
             }
-            IconButton(onClick = onRemove, modifier = Modifier.size(30.dp)) {
+            Spacer(Modifier.width(4.dp))
+            IconButton(onClick = onRemove, modifier = Modifier.size(28.dp)) {
                 Icon(
                     symbol = MaterialSymbols.Close,
                     contentDescription = stringRes(R.string.remove),

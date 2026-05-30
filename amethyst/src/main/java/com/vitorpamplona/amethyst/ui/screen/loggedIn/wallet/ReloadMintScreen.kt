@@ -184,6 +184,14 @@ fun ReloadMintScreen(
                     tint = MaterialTheme.colorScheme.primary,
                 )
                 Spacer(Modifier.width(6.dp))
+                // The amount we're about to zap, shown along the flow.
+                Text(
+                    text = stringRes(R.string.reload_mint_sats_amount, sats(ui.sendSats)),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(Modifier.width(6.dp))
                 Icon(
                     symbol = MaterialSymbols.AutoMirrored.ArrowForward,
                     contentDescription = null,
