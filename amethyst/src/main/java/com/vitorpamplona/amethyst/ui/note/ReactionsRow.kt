@@ -40,6 +40,7 @@ import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -2185,6 +2186,9 @@ private fun UnifiedZapAmountChip(
     Surface(
         shape = ButtonBorder,
         color = MaterialTheme.colorScheme.surfaceVariant,
+        // A clear outline around the whole component so it reads as one toggle
+        // control rather than a few loose icons.
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
     ) {
         Row(
@@ -2199,12 +2203,6 @@ private fun UnifiedZapAmountChip(
                     targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
                     label = "zapRailThumb",
                 )
-                // A primary outline on the selected segment so the active state is
-                // unmistakable even where the container fill is close to the track.
-                val outline by animateColorAsState(
-                    targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                    label = "zapRailOutline",
-                )
                 val send: () -> Unit = {
                     when (rail) {
                         ZapRail.CASHU -> onNutzap(amountInSats)
@@ -2218,7 +2216,6 @@ private fun UnifiedZapAmountChip(
                         Modifier
                             .clip(RoundedCornerShape(percent = 50))
                             .background(thumb)
-                            .border(1.5.dp, outline, RoundedCornerShape(percent = 50))
                             .combinedClickable(
                                 onClick = { if (isSelected) send() else selectedRail = rail },
                                 onLongClick = onChangeAmount,
