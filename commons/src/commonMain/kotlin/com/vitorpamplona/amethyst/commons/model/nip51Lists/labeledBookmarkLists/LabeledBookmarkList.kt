@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists
+package com.vitorpamplona.amethyst.commons.model.nip51Lists.labeledBookmarkLists
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
