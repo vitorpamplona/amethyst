@@ -26,9 +26,11 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -126,6 +128,12 @@ class AccountGiftWrapsEoseManager(
 
     val userJobMap = mutableMapOf<User, List<Job>>()
 
+    // Cold-boot instrumentation: when the subscription opened (ms), how many gift
+    // wraps have arrived since, and whether we've already logged the first EOSE.
+    private val bootStartMs = mutableMapOf<HexKey, Long>()
+    private val bootEventCount = mutableMapOf<HexKey, Int>()
+    private val bootEoseLogged = mutableSetOf<HexKey>()
+
     @OptIn(FlowPreview::class)
     override fun newSub(key: AccountQueryState): Subscription {
         val user = user(key)
@@ -139,7 +147,47 @@ class AccountGiftWrapsEoseManager(
                 },
             )
 
-        return super.newSub(key)
+        // Reset and start the cold-boot timer for this subscription.
+        val pubkey = user.pubkeyHex
+        bootStartMs[pubkey] = System.currentTimeMillis()
+        bootEventCount[pubkey] = 0
+        bootEoseLogged.remove(pubkey)
+        Log.d(TAG) { "cold boot: pubkey=${pubkey.take(8)}… opening gift-wrap subscription, starting to load messages" }
+
+        // Custom listener so we can tell a real EOSE (load finished) apart from live
+        // events; the base class routes both into newEose, which can't distinguish them.
+        return requestNewSubscription(
+            object : SubscriptionListener {
+                override fun onEose(
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    if (bootEoseLogged.add(pubkey)) {
+                        val elapsed = System.currentTimeMillis() - (bootStartMs[pubkey] ?: System.currentTimeMillis())
+                        val count = bootEventCount[pubkey] ?: 0
+                        Log.d(TAG) {
+                            "cold boot: pubkey=${pubkey.take(8)}… initial load complete — first EOSE from ${relay.url} " +
+                                "after ${elapsed}ms, $count gift wrap(s) received so far"
+                        }
+                    }
+                    newEose(key, relay, TimeUtils.now(), forFilters)
+                }
+
+                override fun onEvent(
+                    event: Event,
+                    isLive: Boolean,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    if (pubkey !in bootEoseLogged) {
+                        bootEventCount[pubkey] = (bootEventCount[pubkey] ?: 0) + 1
+                    }
+                    if (isLive) {
+                        newEose(key, relay, TimeUtils.now(), forFilters)
+                    }
+                }
+            },
+        )
     }
 
     override fun endSub(
@@ -148,6 +196,9 @@ class AccountGiftWrapsEoseManager(
     ) {
         super.endSub(key, subId)
         userJobMap[key]?.forEach { it.cancel() }
+        bootStartMs.remove(key.pubkeyHex)
+        bootEventCount.remove(key.pubkeyHex)
+        bootEoseLogged.remove(key.pubkeyHex)
     }
 
     companion object {
