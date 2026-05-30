@@ -195,4 +195,118 @@ the dedups (§5.2–5.5) + a bulk move of 4–6 pure `nipNN` model packages
 (`nip17Dms`, `nip30CustomEmojis`, `nip47WalletConnect`, `nip65RelayList`,
 `trustedAssertions`, `zap`). Mechanical, compile-verifiable, no new abstractions.
 Phase A is its own large PR and should be planned separately.
-</content>
+
+---
+
+## 8. Architecture end-state (why the tree below is shaped this way)
+
+The ports already exist in commons (`IAccount`, `ICacheProvider`,
+`ICacheEventStream`) but **every app reimplements them** — `amethyst`
+(`object LocalCache` 3917 LOC + `class Account` 3565 LOC), `desktopApp`
+(`class DesktopLocalCache` 739 LOC + `DesktopIAccount` 278 LOC), `cli`
+(stateless). Crucially these implementations are **platform-agnostic already**
+(`Account.kt` has one android import — `@Stable` — plus a single `LocationState`
+coupling; `LocalCache.kt` has two; `DesktopLocalCache` has zero). So this is
+**accidental forking, not essential divergence.** The end-state is **one
+canonical implementation per port, living in commons**, with apps keeping only
+thin platform adapters.
+
+Two consequences shape the package tree:
+
+1. **Decompose the monoliths; don't relocate them.** `Account` (28 `StateFlow`s +
+   ~170 `suspend fun`s) splits into *state* (per-user reactive state), *actions*
+   (the verbs), and a thin *façade* implementing `IAccount`. `LocalCache`
+   becomes the cache *engine* as a `class` (so every platform gets multi-account;
+   Desktop already needed it).
+2. **Litmus test = CLI-constructibility.** `signer → cache → account state →
+   actions → relay client → pure services` must build in a headless `main()`
+   with no Compose/Android. Anything that can't is mislayered or missing a port.
+
+Layer is the primary axis; NIP is the secondary axis (`nipNN<slug>` matching
+quartz). The raw per-NIP list **state** lives in `model/nipNN<slug>`; the
+account's *composed/derived* view of those lists lives in `model/account/*`. The
+generic `state/` package (load-a-thing `StateFlow` machines) is **not** where
+account-specific state goes.
+
+## 9. Target package hierarchy (the destination tree)
+
+`commonMain/.../commons/` (✚ = new package, ⤺ = merge into existing, ✔ = exists):
+
+```
+model/
+├─ cache/
+│   ├─ ICacheProvider.kt  ICacheEventStream.kt            ✔ read ports
+│   ├─ ILocalCache.kt                                     ✚ write port (from amethyst)
+│   ├─ LocalCache.kt          ← unified cache ENGINE as a CLASS   (amethyst object + DesktopLocalCache collapse here)
+│   └─ UserMetadataCache.kt                               ✔
+├─ account/
+│   ├─ Account.kt             ← façade implementing IAccount       (from amethyst Account)
+│   ├─ AccountInfo.kt  AccountStorage.kt  SignerType.kt   ✔
+│   ├─ settings/   AccountSettings, AccountSyncedSettings(+Internal)          ✚
+│   ├─ follows/    derived per-feed live-follow lists + all-follows merge     ✚
+│   ├─ relays/     account relay sets + outbox relay cache                    ✚
+│   └─ hidden/     LiveHiddenUsers — mute/spam aggregated view               ✚
+├─ nip02FollowList/      ⤺ raw Kind-3 follow-list state      (amethyst nip02FollowLists)
+├─ nip65RelayList/       ⤺ relay-list state
+├─ nip51Lists/           ⤺ mute / bookmark / people lists
+├─ nip30CustomEmojis/    ⤺ emoji-pack state
+├─ nip01Core/            ⤺ kind-0 user-metadata relay-hint state  (amethyst nip01UserMetadata)
+├─ nip17Dm/  nip47WalletConnect/  nip60Cashu/  nip72ModCommunities/
+│  nip78AppData/  nip85TrustedAssertions/  nip86RelayManagement/
+│  nipA3PaymentTargets/  nipB7Blossom/  nipBCOnchainZaps/      ✚ per-NIP state holders (bulk)
+└─ settings/             ✚ UiSettings / UiSettingsFlow (global, NOT account-scoped)
+
+state/                   ✔ generic StateFlow machines (FollowState, …) — unchanged
+actions/                 ✔ the account "verbs" — extend, don't duplicate
+│   existing: DmActions  FollowActions  SearchActions  ZapActions  ZapSplitResolver
+│   add:      PostActions  ReactionActions  BookmarkActions  MuteActions
+│             RelayActions  ProfileActions  GroupActions  DeletionActions …
+feeds/
+├─ custom/               ✔
+├─ topNav/               ✚ (amethyst model/topNavFeeds)
+└─ algo/                 ✚ (amethyst model/algoFeeds)
+relayClient/             ✔ + cache-free EOSE managers lifted from amethyst service/relays
+keystorage/
+├─ SecureKeyStorage.kt   ✔
+├─ preferences/          ✚ LocalPreferences logic + DataStore/SharedPrefs schema (+actuals)
+├─ account/              ✚ account persistence (pairs with model/account/AccountStorage)
+└─ marmot/               ✚ MLS key-package / message / group-state store ports (+actuals)
+service/
+├─ upload/  nwc/  lnurl/ ✔   (lnurl: dedup amethyst LightningAddressResolver)
+├─ broadcast/  ai/  connectivity/  eventCache/   ✚ commonMain (pure)
+└─ okhttp/  nip11RelayInfo/  nip03Timestamp/  namecoin/  privacyOptions/   ✚ jvmAndroid (OkHttp/Jackson)
+tor/                     ✔ + torState relay-evaluation logic
+```
+
+UI destinations follow `commons/ARCHITECTURE.md` (cross-cutting → `ui/<area>`,
+feature-specific → `<feature>/ui`) and are detailed in §4 — out of scope for the
+"common objects" core tier above.
+
+## 10. Package-naming decisions (the rules behind §9)
+
+1. **`model/nipNN<slug>` (raw list state) vs `model/account/*` (composed view).**
+   `model/nip02FollowList` holds the raw Kind-3 list; `model/account/follows`
+   holds the user's *derived* per-feed follow flows that compose it. Same for
+   relays (`nip65RelayList` vs `account/relays`) and mutes (`nip51Lists` vs
+   `account/hidden`).
+2. **NIP slugs match quartz exactly**, normalizing amethyst's drift:
+   `nip02FollowLists→nip02FollowList`, `nip01UserMetadata→nip01Core`,
+   `nip30CustomEmojis` (keep — existing commons name), `nip72Communities→
+   nip72ModCommunities`, `nip78AppSpecific→nip78AppData`,
+   `trustedAssertions→nip85TrustedAssertions` (or keep the existing readable
+   `model/trustedAssertions` — pick one and converge).
+3. **`state/` stays generic.** Account-specific state never goes here; it goes in
+   `model/account/*`. `state/` is reusable load-a-thing `StateFlow` machines.
+4. **`actions/` = verbs, `model/` = nouns/state, `cache/` = the store.** The 170
+   `Account` methods become `*Actions` files grouped by concern, taking
+   `signer + cache + relayClient`.
+5. **`keystorage/` = persistence ports + actuals; the settings *schema* is
+   `model/account/settings`.** Schema (what) and persistence (how/where) are
+   separate packages.
+6. **`service/` name is source-set-agnostic.** Pure services sit in `commonMain`,
+   OkHttp/Jackson ones in `jvmAndroid` — same `service/<x>` path, different
+   source set (per `ARCHITECTURE.md` §"Source sets").
+7. **Keep the name `LocalCache`** for the engine class (222 amethyst files / 560
+   call-sites reference it); amethyst keeps a thin `object LocalCache` delegating
+   to one shared `class` instance during transition.
+
