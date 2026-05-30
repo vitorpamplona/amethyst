@@ -58,9 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -154,9 +152,6 @@ fun OnchainSection(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
-                Spacer(modifier = Modifier.height(12.dp))
-                AddressBlock(address = address)
-
                 Spacer(modifier = Modifier.height(12.dp))
                 ActionRow(address = address, accountViewModel = accountViewModel, orange = orange)
             }
@@ -335,23 +330,6 @@ private fun BalanceBlock(
             BalanceState.LOADING -> Unit
         }
     }
-}
-
-@Composable
-private fun AddressBlock(address: String) {
-    Text(
-        text = "Your Taproot address",
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-    Spacer(modifier = Modifier.height(2.dp))
-    Text(
-        text = address,
-        style = MaterialTheme.typography.bodySmall,
-        fontFamily = FontFamily.Monospace,
-        maxLines = 2,
-        overflow = TextOverflow.Ellipsis,
-    )
 }
 
 @Composable
