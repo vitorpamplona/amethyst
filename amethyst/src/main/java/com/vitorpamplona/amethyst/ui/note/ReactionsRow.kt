@@ -29,17 +29,19 @@ import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -54,7 +56,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
@@ -2170,60 +2172,77 @@ private fun UnifiedZapAmountChip(
             cashuReloadable -> ZapRail.RELOAD
             else -> ZapRail.ONCHAIN
         }
-    val others = present.filter { it != preferred }
-
-    val defaultAction: () -> Unit = {
-        when (preferred) {
-            ZapRail.CASHU -> onNutzap(amountInSats)
-            ZapRail.RELOAD -> onReloadNutzap(amountInSats)
-            ZapRail.LIGHTNING -> onLightningZap(amountInSats)
-            ZapRail.ONCHAIN -> onOnchainAmount(amountInSats)
-        }
+    // The rails are one connected segmented toggle (shared surfaceVariant track).
+    // Tapping a rail only *selects* it — switching never moves money. The selected
+    // segment is the only one that shows the amount (+ a send arrow) and is the
+    // only thing that, when tapped, actually sends. Starts on the amount-tier
+    // default.
+    var selectedRail by remember(preferred, present) {
+        mutableStateOf(if (preferred in present) preferred else present.first())
     }
 
     Surface(
         shape = ButtonBorder,
-        color = MaterialTheme.colorScheme.surface,
+        color = MaterialTheme.colorScheme.surfaceVariant,
         modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
     ) {
         Row(
-            modifier =
-                Modifier
-                    .combinedClickable(onClick = defaultAction, onLongClick = onChangeAmount)
-                    // With no alternative buttons on the right, match the left inset
-                    // so the icon+amount pill stays symmetric; the trailing buttons
-                    // supply their own right-side mass when present.
-                    .padding(start = 10.dp, end = if (others.isEmpty()) 10.dp else 6.dp, top = 6.dp, bottom = 6.dp),
+            modifier = Modifier.padding(3.dp),
             verticalAlignment = CenterVertically,
         ) {
-            // The default is ONE tap target: the preferred rail's logo hugs the
-            // amount (no separate button), and a plain tap anywhere here fires
-            // that rail; long-press edits the presets. Only the leading logo
-            // carries colour — the amount itself stays neutral so it doesn't
-            // shout across the feed.
-            ZapRailIcon(preferred, colored = true)
-            Spacer(Modifier.width(5.dp))
-            Text(
-                text = showAmount(amountInSats.toBigDecimal().setScale(1)),
-                color = MaterialTheme.colorScheme.onSurface,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
-            )
-            // Alternatives as small, quiet circular buttons (icon smaller than the
-            // preferred logo) to the right of the amount.
-            others.forEach { rail ->
-                Spacer(Modifier.width(6.dp))
-                RailButton(
-                    onClick = {
-                        when (rail) {
-                            ZapRail.CASHU -> onNutzap(amountInSats)
-                            ZapRail.RELOAD -> onReloadNutzap(amountInSats)
-                            ZapRail.LIGHTNING -> onLightningZap(amountInSats)
-                            ZapRail.ONCHAIN -> onOnchainAmount(amountInSats)
-                        }
-                    },
+            present.forEach { rail ->
+                val isSelected = rail == selectedRail
+                // The "thumb" fill slides to the selected segment (colour animates
+                // in/out per segment), showing both the grouping and the selection.
+                val thumb by animateColorAsState(
+                    targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                    label = "zapRailThumb",
+                )
+                val send: () -> Unit = {
+                    when (rail) {
+                        ZapRail.CASHU -> onNutzap(amountInSats)
+                        ZapRail.RELOAD -> onReloadNutzap(amountInSats)
+                        ZapRail.LIGHTNING -> onLightningZap(amountInSats)
+                        ZapRail.ONCHAIN -> onOnchainAmount(amountInSats)
+                    }
+                }
+                Row(
+                    modifier =
+                        Modifier
+                            .clip(RoundedCornerShape(percent = 50))
+                            .background(thumb)
+                            .combinedClickable(
+                                onClick = { if (isSelected) send() else selectedRail = rail },
+                                onLongClick = onChangeAmount,
+                            ).padding(horizontal = 8.dp, vertical = 5.dp),
+                    verticalAlignment = CenterVertically,
                 ) {
-                    ZapRailIcon(rail, colored = false, size = 14.dp)
+                    ZapRailIcon(rail, colored = isSelected)
+                    // The amount lives only on the selected segment — it expands in
+                    // here and shrinks away on the old one, so it reads as travelling
+                    // to the icon you picked.
+                    AnimatedVisibility(
+                        visible = isSelected,
+                        enter = fadeIn() + expandHorizontally(expandFrom = Alignment.Start),
+                        exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.Start),
+                    ) {
+                        Row(verticalAlignment = CenterVertically) {
+                            Spacer(Modifier.width(5.dp))
+                            Text(
+                                text = showAmount(amountInSats.toBigDecimal().setScale(1)),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                fontWeight = FontWeight.SemiBold,
+                                textAlign = TextAlign.Center,
+                            )
+                            Spacer(Modifier.width(3.dp))
+                            Icon(
+                                symbol = MaterialSymbols.AutoMirrored.ArrowForward,
+                                contentDescription = null,
+                                modifier = Modifier.size(13.dp),
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -2319,29 +2338,6 @@ internal fun ZapRailIcon(
                 modifier = Modifier.size(size),
                 tint = if (colored) BitcoinOrange else mono,
             )
-    }
-}
-
-/**
- * A circular, tappable button wrapping an alternative rail's logo. Sized close
- * to the amount's font height with a smaller icon inside, so the alternatives
- * stay quiet next to the bigger, coloured preferred rail.
- */
-@Composable
-private fun RailButton(
-    onClick: () -> Unit,
-    content: @Composable () -> Unit,
-) {
-    Box(
-        modifier =
-            Modifier
-                .size(22.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .clickable(onClick = onClick),
-        contentAlignment = Center,
-    ) {
-        content()
     }
 }
 
