@@ -309,11 +309,16 @@ class ReloadMintViewModel : ViewModel() {
     ) {
         val st = state ?: return
         setStatus(ReloadStatus.Working("Moving funds", 0.1f))
-        st.rebalance(sourceMint, targetMint, moveSats) { p ->
-            setStatus(ReloadStatus.Working("Moving funds", p.coerceIn(0.1f, 0.9f)))
-        }
-        // Funds have moved — checkpoint so a later failure never re-moves them.
-        toppedUp = true
+        st.rebalance(
+            sourceMintUrl = sourceMint,
+            targetMintUrl = targetMint,
+            sats = moveSats,
+            onProgress = { p -> setStatus(ReloadStatus.Working("Moving funds", p.coerceIn(0.1f, 0.9f))) },
+            // Checkpoint the instant funds leave the source — not after the whole
+            // rebalance returns. A failure between the melt and the issue/send steps
+            // must never let a retry melt again.
+            onFundsMoved = { toppedUp = true },
+        )
         awaitTargetFunded(targetMint, sendSats)
         sendNutzapAndFinish(note, sendSats)
     }
@@ -362,10 +367,12 @@ class ReloadMintViewModel : ViewModel() {
             setStatus(ReloadStatus.Failed("Invoice not paid yet — you can finish it later from the pending quote banner"))
             return
         }
+        // The invoice is paid — money has left the wallet. Checkpoint now, before
+        // issuing, so a failure in completeMintFromLightning never lets a retry
+        // mint+pay a second time (the paid quote is resumable from the banner).
+        toppedUp = true
         setStatus(ReloadStatus.Working("Issuing ecash", 0.85f))
         ops.completeMintFromLightning(targetMint, flow.quoteEvent, moveSats)
-        // Ecash minted at the target — checkpoint so a later failure never re-mints.
-        toppedUp = true
         awaitTargetFunded(targetMint, sendSats)
         sendNutzapAndFinish(note, sendSats)
     }

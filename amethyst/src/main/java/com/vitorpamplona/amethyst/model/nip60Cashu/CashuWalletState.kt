@@ -1179,6 +1179,7 @@ class CashuWalletState(
         targetMintUrl: String,
         sats: Long,
         onProgress: ((Float) -> Unit)? = null,
+        onFundsMoved: () -> Unit = {},
     ): RebalanceCompleted {
         check(started) { "CashuWalletState.start() not called" }
         require(sats > 0) { "Amount must be positive" }
@@ -1207,6 +1208,11 @@ class CashuWalletState(
         // 3. Pay the destination invoice by melting at the source.
         onProgress?.invoke(0.5f)
         meltToLightning(sourceMintUrl, meltQuote)
+        // Funds have now LEFT the source. Signal the caller immediately so a
+        // failure in the steps below (slow confirmation, completeMint error)
+        // never causes a retry to melt a second time — the destination quote is
+        // paid and resumable via the pending-quote banner instead.
+        onFundsMoved()
 
         // 4. The melt paid the invoice; confirm + issue proofs at the target.
         //    The melt settled synchronously, but a healthy mint can still lag a
