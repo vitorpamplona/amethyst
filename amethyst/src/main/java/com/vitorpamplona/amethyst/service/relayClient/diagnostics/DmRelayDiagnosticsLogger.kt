@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.Log
@@ -38,15 +39,17 @@ import com.vitorpamplona.quartz.utils.Log
 /**
  * Diagnostic connection listener for the DM / gift-wrap loading path.
  *
- * It folds the full per-relay timeline — connect, auth challenge, REQ sent,
- * gift-wrap events, EOSE, plus any NOTICE/CLOSED rejection — into the single
+ * It folds the per-relay timeline — REQ sent, gift-wrap events, EOSE, plus auth
+ * challenge / NOTICE / CLOSED rejection and connect/disconnect — into the single
  * `DMPagination` log tag with an elapsed-time prefix, so a slow cold boot can be
  * attributed (connection? auth? relay response?) and a silent failure to load
  * (e.g. a relay answering CLOSED "auth-required" / "restricted") becomes visible.
  *
- * Gift-wrap subscriptions are recognised by the kind:1059/1060 filter in the REQ
- * we send, so EOSE/CLOSED for those subscriptions can be singled out from the
- * rest of the app's relay traffic.
+ * The connection listener fires for EVERY relay the app talks to (hundreds, under
+ * the outbox model). To keep this readable we only log relays that are part of the
+ * gift-wrap path: a relay is "learned" the first time we send it a kind:1059/1060
+ * REQ or receive a gift wrap from it, and only those relays' connect/auth/notice
+ * lines are emitted thereafter.
  */
 class DmRelayDiagnosticsLogger(
     val client: INostrClient,
@@ -58,10 +61,16 @@ class DmRelayDiagnosticsLogger(
     // Subscription ids whose REQ carried a gift-wrap kind, so we can attribute their EOSE/CLOSED.
     private val giftWrapSubIds = mutableSetOf<String>()
 
+    // Relays we've seen on the gift-wrap path, so connect/auth/notice noise from the
+    // hundreds of unrelated follow/outbox relays is filtered out.
+    private val giftWrapRelays = mutableSetOf<NormalizedRelayUrl>()
+
+    private fun isDmRelay(relay: IRelayClient) = relay.url in giftWrapRelays
+
     private val listener =
         object : RelayConnectionListener {
             override fun onConnecting(relay: IRelayClient) {
-                Log.d(TAG) { "[+${at()}ms] connecting ${relay.url.url}" }
+                if (isDmRelay(relay)) Log.d(TAG) { "[+${at()}ms] connecting ${relay.url.url}" }
             }
 
             override fun onConnected(
@@ -69,7 +78,9 @@ class DmRelayDiagnosticsLogger(
                 pingMillis: Int,
                 compressed: Boolean,
             ) {
-                Log.d(TAG) { "[+${at()}ms] connected ${relay.url.url} (ping ${pingMillis}ms${if (compressed) ", compressed" else ""})" }
+                if (isDmRelay(relay)) {
+                    Log.d(TAG) { "[+${at()}ms] connected ${relay.url.url} (ping ${pingMillis}ms${if (compressed) ", compressed" else ""})" }
+                }
             }
 
             override fun onSent(
@@ -79,6 +90,7 @@ class DmRelayDiagnosticsLogger(
                 success: Boolean,
             ) {
                 if (!cmdStr.contains("1059") && !cmdStr.contains("1060")) return
+                giftWrapRelays.add(relay.url)
                 reqSubId(cmdStr)?.let { giftWrapSubIds.add(it) }
                 Log.d(TAG) { "[+${at()}ms] REQ -> ${relay.url.url} success=$success ${cmdStr.take(400)}" }
             }
@@ -90,10 +102,10 @@ class DmRelayDiagnosticsLogger(
             ) {
                 when (msg) {
                     is AuthMessage ->
-                        Log.d(TAG) { "[+${at()}ms] AUTH <- ${relay.url.url} challenge=${msg.challenge.take(12)}…" }
+                        if (isDmRelay(relay)) Log.d(TAG) { "[+${at()}ms] AUTH <- ${relay.url.url} challenge=${msg.challenge.take(12)}…" }
 
                     is NoticeMessage ->
-                        Log.d(TAG) { "[+${at()}ms] NOTICE <- ${relay.url.url} '${msg.message}'" }
+                        if (isDmRelay(relay)) Log.d(TAG) { "[+${at()}ms] NOTICE <- ${relay.url.url} '${msg.message}'" }
 
                     is ClosedMessage ->
                         if (msg.subId in giftWrapSubIds) {
@@ -107,11 +119,12 @@ class DmRelayDiagnosticsLogger(
 
                     is EventMessage ->
                         if (msg.event.kind == GiftWrapEvent.KIND || msg.event.kind == EphemeralGiftWrapEvent.KIND) {
+                            giftWrapRelays.add(relay.url)
                             Log.d(TAG) { "[+${at()}ms] EVENT <- ${relay.url.url} kind=${msg.event.kind} sub=${msg.subId} createdAt=${msg.event.createdAt}" }
                         }
 
                     is OkMessage ->
-                        if (!msg.success) {
+                        if (!msg.success && isDmRelay(relay)) {
                             Log.d(TAG) { "[+${at()}ms] OK(fail) <- ${relay.url.url} '${msg.message}'" }
                         }
 
@@ -120,14 +133,14 @@ class DmRelayDiagnosticsLogger(
             }
 
             override fun onDisconnected(relay: IRelayClient) {
-                Log.d(TAG) { "[+${at()}ms] disconnected ${relay.url.url}" }
+                if (isDmRelay(relay)) Log.d(TAG) { "[+${at()}ms] disconnected ${relay.url.url}" }
             }
 
             override fun onCannotConnect(
                 relay: IRelayClient,
                 errorMessage: String,
             ) {
-                Log.d(TAG) { "[+${at()}ms] CANNOT CONNECT ${relay.url.url}: $errorMessage" }
+                if (isDmRelay(relay)) Log.d(TAG) { "[+${at()}ms] CANNOT CONNECT ${relay.url.url}: $errorMessage" }
             }
         }
 
