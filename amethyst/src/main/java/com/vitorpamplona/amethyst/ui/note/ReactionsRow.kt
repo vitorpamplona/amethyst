@@ -42,6 +42,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -2198,6 +2199,12 @@ private fun UnifiedZapAmountChip(
                     targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
                     label = "zapRailThumb",
                 )
+                // A primary outline on the selected segment so the active state is
+                // unmistakable even where the container fill is close to the track.
+                val outline by animateColorAsState(
+                    targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                    label = "zapRailOutline",
+                )
                 val send: () -> Unit = {
                     when (rail) {
                         ZapRail.CASHU -> onNutzap(amountInSats)
@@ -2211,6 +2218,7 @@ private fun UnifiedZapAmountChip(
                         Modifier
                             .clip(RoundedCornerShape(percent = 50))
                             .background(thumb)
+                            .border(1.5.dp, outline, RoundedCornerShape(percent = 50))
                             .combinedClickable(
                                 onClick = { if (isSelected) send() else selectedRail = rail },
                                 onLongClick = onChangeAmount,
@@ -2286,8 +2294,9 @@ internal fun previewRailsFor(amountInSats: Long): List<ZapRail> {
 /**
  * Just the rail's logo (no click target), drawn at [size]. [colored] renders it
  * in its accent colour (the preferred rail); otherwise it's flattened to the
- * on-surface monochrome tint. The cashu mark is drawn ~0.72× so its (now
- * monochrome, tintable) cashew reads at the same optical size as the symbols.
+ * on-surface monochrome tint. The cashu mark is drawn ~0.86× the symbol size —
+ * the new monochrome outline carries less weight than the old multi-tone mark,
+ * so it needs less shrinking to read at a matching optical size.
  */
 @Composable
 internal fun ZapRailIcon(
@@ -2296,7 +2305,7 @@ internal fun ZapRailIcon(
     size: Dp = 18.dp,
 ) {
     val mono = MaterialTheme.colorScheme.onSurface
-    val cashuSize = size * 0.72f
+    val cashuSize = size * 0.86f
     when (rail) {
         ZapRail.CASHU ->
             Material3Icon(
