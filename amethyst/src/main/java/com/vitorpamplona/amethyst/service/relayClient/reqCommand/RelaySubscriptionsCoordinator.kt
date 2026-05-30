@@ -105,7 +105,7 @@ class RelaySubscriptionsCoordinator(
 
     // active depending on the screen.
     val channel = ChannelFilterAssembler(client)
-    val chatroom = ChatroomFilterAssembler(client)
+    val chatroom = ChatroomFilterAssembler(client, account.giftWraps)
     val community = CommunityFilterAssembler(client)
     val gitRepository = RepositoryFilterAssembler(client)
     val thread = ThreadFilterAssembler(client)

@@ -129,25 +129,27 @@ fun ChatroomView(
 }
 
 /**
- * Scroll-driven NIP-17 history loader for a conversation. The thread is reverse-laid-out (newest at
- * the bottom, index 0), so older messages live at higher indices; this widens the account-wide
- * gift-wrap window one step whenever nothing is loaded yet or the oldest visible row has crossed the
- * midpoint of what's loaded — prefetching older gift wraps before the user reaches the top — and
+ * Scroll-driven history loader for a conversation, advancing BOTH DM protocols in lockstep. The
+ * thread is reverse-laid-out (newest at the bottom, index 0), so older messages live at higher
+ * indices; this widens the window one step whenever nothing is loaded yet or the oldest visible row
+ * has crossed the midpoint of what's loaded — prefetching before the user reaches the top — and
  * stops once the window is exhausted.
  *
- * Gift wraps are addressed to us (not the partner), so a relay cannot filter them per-room: the only
- * lever is the shared account window. NIP-04 in a conversation is already loaded in full, so only the
- * windowed NIP-17 side needs this. The combined [AccountGiftWrapsEoseManager.loadingMore] guard gates
- * each step on the previous window finishing, so it advances one step at a time, not in a burst.
+ * The account-wide gift-wrap window is the single source of truth for the floor: NIP-17 advances via
+ * [AccountGiftWrapsEoseManager.loadMore], and the NIP-04 conversation loader reads that same floor,
+ * so re-invalidating the chatroom sub re-requests kind:4 to the new depth. Both protocols therefore
+ * stay aligned. The gift-wrap [AccountGiftWrapsEoseManager.loadingMore] guard gates each step on the
+ * previous window finishing, so it advances one step at a time rather than in a burst.
  */
 @Composable
-private fun LoadOlderGiftWrapsWhenScrolling(
+private fun LoadOlderMessagesWhenScrolling(
     listState: LazyListState,
     accountViewModel: AccountViewModel,
 ) {
     val giftWraps = remember(accountViewModel) { accountViewModel.dataSources().account.giftWraps }
+    val chatroom = remember(accountViewModel) { accountViewModel.dataSources().chatroom }
 
-    LaunchedEffect(listState, giftWraps) {
+    LaunchedEffect(listState, giftWraps, chatroom) {
         combine(
             snapshotFlow {
                 val info = listState.layoutInfo
@@ -162,7 +164,10 @@ private fun LoadOlderGiftWrapsWhenScrolling(
         }.distinctUntilChanged()
             .filter { it }
             .collect {
+                // Advance the shared gift-wrap window (NIP-17), then re-issue the NIP-04 sub so it
+                // re-requests kind:4 from the same, now-wider floor.
                 giftWraps.loadMore(accountViewModel.userProfile())
+                chatroom.invalidateFilters()
             }
     }
 }
@@ -197,7 +202,7 @@ fun ChatroomViewUI(
                 onWantsToReply = newPostModel::reply,
                 onWantsToEditDraft = newPostModel::editFromDraft,
                 listStateObserver = { listState ->
-                    LoadOlderGiftWrapsWhenScrolling(listState, accountViewModel)
+                    LoadOlderMessagesWhenScrolling(listState, accountViewModel)
                 },
             )
         }

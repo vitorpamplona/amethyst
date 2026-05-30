@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource
 
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 
@@ -35,10 +36,11 @@ class ChatroomQueryState(
 
 class ChatroomFilterAssembler(
     client: INostrClient,
+    giftWraps: AccountGiftWrapsEoseManager,
 ) : ComposeSubscriptionManager<ChatroomQueryState>() {
     val group =
         listOf(
-            ChatroomFilterSubAssembler(client, ::allKeys),
+            ChatroomFilterSubAssembler(client, ::allKeys, giftWraps),
         )
 
     override fun invalidateKeys() = invalidateFilters()

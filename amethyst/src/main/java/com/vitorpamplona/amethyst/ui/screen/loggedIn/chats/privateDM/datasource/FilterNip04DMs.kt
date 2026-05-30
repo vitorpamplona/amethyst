@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource
 
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -33,7 +32,7 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 fun filterNip04DMs(
     group: Set<HexKey>?,
     account: Account?,
-    since: SincePerRelayMap?,
+    windowStart: Long,
 ): List<RelayBasedFilter>? {
     if (group.isNullOrEmpty() || account == null) return null
 
@@ -75,7 +74,7 @@ fun filterNip04DMs(
                     kinds = listOf(PrivateDmEvent.KIND),
                     authors = group.toList(),
                     tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
-                    since = since?.get(it)?.time,
+                    since = windowStart,
                 ),
         )
     } +
@@ -87,7 +86,7 @@ fun filterNip04DMs(
                         kinds = listOf(PrivateDmEvent.KIND),
                         authors = listOf(account.userProfile().pubkeyHex),
                         tags = mapOf("p" to group.toList()),
-                        since = since?.get(it)?.time,
+                        since = windowStart,
                     ),
             )
         }

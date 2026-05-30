@@ -71,6 +71,13 @@ class AccountGiftWrapsEoseManager(
             }
         }
 
+    /**
+     * The current lower bound (epoch seconds) of this account's gift-wrap window. Exposed so the
+     * per-conversation NIP-04 loader can request from the SAME floor, keeping both DM protocols
+     * aligned in a thread instead of one reaching deeper than the other.
+     */
+    fun windowSince(user: User): Long = windowFor(user).since
+
     // A window is "loading" until every dmRelay it was sent to has answered (EOSE / live event),
     // or a timeout fires — not on the first EOSE, which a fast empty relay can trip prematurely.
     private val windowLoad = WindowLoadTracker()

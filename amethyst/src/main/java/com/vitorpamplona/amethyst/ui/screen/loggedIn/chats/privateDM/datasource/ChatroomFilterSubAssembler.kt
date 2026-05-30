@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource
 
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -28,13 +29,16 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 class ChatroomFilterSubAssembler(
     client: INostrClient,
     allKeys: () -> Set<ChatroomQueryState>,
+    // The account-wide gift-wrap window is the single source of truth for how far back DMs are
+    // requested; NIP-04 here follows its floor so a thread shows both protocols to the same depth.
+    private val giftWraps: AccountGiftWrapsEoseManager,
 ) : PerUserAndFollowListEoseManager<ChatroomQueryState, String>(client, allKeys) {
     override fun updateFilter(
         key: ChatroomQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? =
         if (key.account.isWriteable()) {
-            filterNip04DMs(key.room.users, key.account, since)
+            filterNip04DMs(key.room.users, key.account, giftWraps.windowSince(user(key)))
         } else {
             emptyList()
         }
