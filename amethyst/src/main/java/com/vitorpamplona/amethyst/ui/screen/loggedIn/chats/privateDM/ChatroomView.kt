@@ -122,6 +122,23 @@ fun ChatroomView(
     )
 }
 
+/**
+ * Pulls the account-wide gift-wrap (NIP-17) history all the way back when a conversation opens, so
+ * a thread always shows its full history regardless of how narrow the rooms-list window currently is.
+ *
+ * Gift wraps are addressed to us (not to the conversation partner), so a relay cannot filter them
+ * per-room — the only lever is the shared account window. [AccountGiftWrapsEoseManager.loadEverything]
+ * is idempotent: once the window has reached the maximum lookback this is a no-op, so opening or
+ * reopening conversations after the first full load costs nothing.
+ */
+@Composable
+private fun EnsureFullGiftWrapHistory(accountViewModel: AccountViewModel) {
+    LaunchedEffect(accountViewModel) {
+        val giftWraps = accountViewModel.dataSources().account.giftWraps
+        giftWraps.loadEverything(accountViewModel.userProfile())
+    }
+}
+
 @Composable
 fun ChatroomViewUI(
     room: ChatroomKey,
@@ -132,6 +149,7 @@ fun ChatroomViewUI(
 ) {
     WatchLifecycleAndUpdateModel(feedViewModel)
     ChatroomFilterAssemblerSubscription(room, accountViewModel.dataSources().chatroom, accountViewModel)
+    EnsureFullGiftWrapHistory(accountViewModel)
 
     Column(Modifier.fillMaxHeight()) {
         ObserveRelayListForDMsAndDisplayIfNotFound(accountViewModel, nav)
