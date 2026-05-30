@@ -136,6 +136,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteRepostsBy
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.uploads.FloatingRecordingIndicator
 import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
@@ -195,6 +196,7 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
+import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
@@ -1951,13 +1953,23 @@ fun ZapAmountChoicePopup(
     // [railCapability] rather than by keeping separate per-rail lists.
     //
     // [railCapability] gates which rails the recipient can receive on (plus the
-    // sender's cashu balance, which is free to read). It's recomputed only when
-    // the note changes — the underlying cache/wallet flows are stable for the
-    // ~1s the popup is open. A caller that can't drive the on-chain dialog
-    // (onchainSupported == false) masks that rail off here.
+    // sender's cashu balance). The inputs load asynchronously, so observe them and
+    // recompute as they arrive — the chip's Lightning logo appears once the
+    // recipient's lnAddress (kind:0) loads, and the cashu logo once their nutzap
+    // info (kind:10019) and our cashu wallet (mints + proofs) load. The observers
+    // also trigger the relay fetch, so a not-yet-seen lnAddress / kind:10019 is
+    // pulled in while the popup is open. A caller that can't drive the on-chain
+    // dialog (onchainSupported == false) masks that rail off here.
+    val cashuState = accountViewModel.account.cashuWalletState
+    val author = baseNote.author
+    val cashuMints by cashuState.mints.collectAsStateWithLifecycle()
+    val cashuEntries by cashuState.tokenEntries.collectAsStateWithLifecycle()
+    val recipientInfo = author?.let { observeUserInfo(it, accountViewModel).value }
+    val nutzapInfo = author?.let { observeNoteEvent<NutzapInfoEvent>(it.nutzapInfoNote, accountViewModel).value }
+
     val railCapability =
-        remember(baseNote, onchainSupported) {
-            val rc = RailCapabilityResolver.peek(baseNote, accountViewModel.account.cashuWalletState)
+        remember(baseNote, onchainSupported, cashuMints, cashuEntries, recipientInfo, nutzapInfo) {
+            val rc = RailCapabilityResolver.peek(baseNote, cashuState)
             if (onchainSupported) rc else rc.copy(hasOnchain = false)
         }
     val amountChoices =
