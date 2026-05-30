@@ -37,7 +37,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.util.countToHumanReadable
-import com.vitorpamplona.amethyst.service.countToHumanReadableBytes
+import com.vitorpamplona.amethyst.commons.util.countToHumanReadableBytes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
