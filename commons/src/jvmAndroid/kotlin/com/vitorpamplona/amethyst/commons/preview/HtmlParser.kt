@@ -18,11 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.previews
+package com.vitorpamplona.amethyst.commons.preview
 
-import com.vitorpamplona.amethyst.commons.preview.HtmlCharsetParser
-import com.vitorpamplona.amethyst.commons.preview.MetaTag
-import com.vitorpamplona.amethyst.commons.preview.MetaTagsParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okio.BufferedSource
