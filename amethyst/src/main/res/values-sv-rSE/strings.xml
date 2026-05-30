@@ -830,9 +830,6 @@
     <string name="wallet_connect_manual_config">Avancerat: ange anslutningsinformation manuellt</string>
     <string name="quick_zap_amounts">Snabba Zap-belopp</string>
     <string name="quick_zap_amounts_explainer">Visas när du trycker på Zap-knappen. Tryck på ett belopp för att ta bort det. Om du lämnar det tomt öppnas en dialog för att ange ett belopp varje gång.</string>
-    <string name="quick_zap_amounts_onchain">Snabba on-chain-zapbelopp</string>
-    <string name="quick_zap_amounts_onchain_explainer">On-chain-zappar betalar miner-avgifter, så beloppen är vanligtvis större än för Lightning. Tryck på ett belopp för att ta bort det.</string>
-    <string name="new_amount_in_sats_onchain">Nytt on-chain-belopp i sats</string>
     <string name="send_onchain_instead">Skicka on-chain istället</string>
     <string name="zap_privacy_section">Zap-sekretess</string>
     <string name="zap_type_section_explainer">Styr hur din identitet visas när du skickar ett Zap.</string>

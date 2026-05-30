@@ -821,9 +821,6 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="wallet_connect_manual_config">Napredno: ročni vnos podatkov o povezavi</string>
     <string name="quick_zap_amounts">Zneski za hitre zape</string>
     <string name="quick_zap_amounts_explainer">Prikaže se ob pritisku na gumb za zape. Tapnite znesek, da ga odstranite. Če pustite prazno, se bo ob vsakem zapu odprlo okno za vnos poljubnega zneska.</string>
-    <string name="quick_zap_amounts_onchain">Hitri On-chain zapi</string>
-    <string name="quick_zap_amounts_onchain_explainer">On-chain zapi vključujejo rudarske provizije, zato so zneski običajno višji kot prek Lightninga. Dotakni se zneska, da ga odstraniš.</string>
-    <string name="new_amount_in_sats_onchain">Nov on-chain znesek v sat</string>
     <string name="send_onchain_instead">Pošlji raje on-chain</string>
     <string name="zap_privacy_section">Zasebnost zapov</string>
     <string name="zap_type_section_explainer">Določa, kako je prikazana vaša identiteta, ko pošljete zap.</string>

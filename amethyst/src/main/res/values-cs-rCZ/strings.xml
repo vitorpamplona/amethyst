@@ -848,9 +848,6 @@
     <string name="wallet_connect_manual_config">Pokročilé: zadejte podrobnosti připojení ručně</string>
     <string name="quick_zap_amounts">Rychlé částky Zap</string>
     <string name="quick_zap_amounts_explainer">Zobrazí se při stisknutí tlačítka zap. Klepnutím na částku ji odeberete. Pokud ponecháte prázdné, otevře se pokaždé dialog pro zadání částky.</string>
-    <string name="quick_zap_amounts_onchain">Rychlé částky on-chain zapů</string>
-    <string name="quick_zap_amounts_onchain_explainer">On-chain zapy platí poplatky těžařům, takže částky jsou obvykle vyšší než u Lightningu. Klepnutím na částku ji odstraníte.</string>
-    <string name="new_amount_in_sats_onchain">Nová on-chain částka v sats</string>
     <string name="send_onchain_instead">Odeslat on-chain</string>
     <string name="zap_privacy_section">Soukromí Zap</string>
     <string name="zap_type_section_explainer">Určuje, jak je zobrazena vaše identita při odesílání zapsu.</string>

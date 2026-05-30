@@ -836,9 +836,6 @@ anz der Bedingungen ist erforderlich</string>
     <string name="wallet_connect_manual_config">Erweitert: Verbindungsdetails manuell eingeben</string>
     <string name="quick_zap_amounts">Schnelle Zap-Beträge</string>
     <string name="quick_zap_amounts_explainer">Wird beim Drücken der Zap-Schaltfläche angezeigt. Tippe auf einen Betrag, um ihn zu entfernen. Wenn du es leer lässt, wird jedes Mal ein Dialog zur Eingabe eines Betrags geöffnet.</string>
-    <string name="quick_zap_amounts_onchain">Schnelle On-Chain-Zap-Beträge</string>
-    <string name="quick_zap_amounts_onchain_explainer">On-Chain-Zaps zahlen Miner-Gebühren, daher sind die Beträge meist größer als bei Lightning. Tippe auf einen Betrag, um ihn zu entfernen.</string>
-    <string name="new_amount_in_sats_onchain">Neuer On-Chain-Betrag in Sats</string>
     <string name="send_onchain_instead">Stattdessen On-Chain senden</string>
     <string name="zap_privacy_section">Zap-Datenschutz</string>
     <string name="zap_type_section_explainer">Legt fest, wie deine Identität beim Senden eines Zaps angezeigt wird.</string>
