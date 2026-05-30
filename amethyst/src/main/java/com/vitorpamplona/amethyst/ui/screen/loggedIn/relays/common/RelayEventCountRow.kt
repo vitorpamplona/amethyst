@@ -39,7 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.service.countToHumanReadable
+import com.vitorpamplona.amethyst.commons.util.countToHumanReadable
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Font10SP
 import com.vitorpamplona.amethyst.ui.theme.Size10Modifier
