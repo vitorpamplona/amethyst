@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnection
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.AuthMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
@@ -89,7 +88,7 @@ class DmRelayDiagnosticsLogger(
                 cmd: Command,
                 success: Boolean,
             ) {
-                if (!cmdStr.contains("1059") && !cmdStr.contains("1060")) return
+                if (!isGiftWrapReq(cmdStr)) return
                 giftWrapRelays.add(relay.url)
                 reqSubId(cmdStr)?.let { giftWrapSubIds.add(it) }
                 Log.d(TAG) { "[+${at()}ms] REQ -> ${relay.url.url} success=$success ${cmdStr.take(400)}" }
@@ -110,11 +109,6 @@ class DmRelayDiagnosticsLogger(
                     is ClosedMessage ->
                         if (msg.subId in giftWrapSubIds) {
                             Log.d(TAG) { "[+${at()}ms] CLOSED <- ${relay.url.url} sub=${msg.subId} reason='${msg.message}'" }
-                        }
-
-                    is EoseMessage ->
-                        if (msg.subId in giftWrapSubIds) {
-                            Log.d(TAG) { "[+${at()}ms] EOSE <- ${relay.url.url} sub=${msg.subId}" }
                         }
 
                     is EventMessage ->
@@ -155,9 +149,24 @@ class DmRelayDiagnosticsLogger(
     companion object {
         private const val TAG = "DMPagination"
 
+        // The kinds a gift-wrap REQ carries (1059 + 21059). Matched exactly against the
+        // filter's "kinds" array — never as a substring of the whole command, since a
+        // pubkey hex or timestamp can incidentally contain "1059".
+        private val GIFT_WRAP_KINDS = setOf(GiftWrapEvent.KIND, EphemeralGiftWrapEvent.KIND)
+
+        private val KINDS_ARRAY = Regex("\"kinds\":\\[([0-9,\\s]*)]")
+
         // Extracts the subscription id from a `["REQ","<subId>",{...}]` command string.
         private val REQ_SUB_ID = Regex("^\\[\"REQ\",\"([^\"]+)\"")
 
         private fun reqSubId(cmdStr: String) = REQ_SUB_ID.find(cmdStr)?.groupValues?.get(1)
+
+        /** True only when one of the REQ's `kinds` arrays actually contains a gift-wrap kind. */
+        private fun isGiftWrapReq(cmdStr: String): Boolean =
+            KINDS_ARRAY.findAll(cmdStr).any { match ->
+                match.groupValues[1]
+                    .split(',')
+                    .any { it.trim().toIntOrNull() in GIFT_WRAP_KINDS }
+            }
     }
 }
