@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip32Labeling
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip32Labeling.tags.LabelTag
 import com.vitorpamplona.quartz.utils.EventFactory
@@ -162,10 +163,20 @@ class LabelEventTest {
 
     @Test
     fun testBuildHashtagLabel() {
+        val labeledEvent =
+            EventFactory.create<Event>(
+                id = testEventId,
+                pubKey = testPubKey,
+                createdAt = 1234567890L,
+                kind = 1,
+                tags = arrayOf(),
+                content = "hello",
+                sig = "c".repeat(128),
+            )
+
         val template =
             LabelEvent.buildHashtagLabel(
-                labeledEventId = testEventId,
-                labeledEventAuthor = testPubKey,
+                labeledEvent = EventHintBundle(labeledEvent),
                 hashtag = "#PhotoGraphy",
             )
 

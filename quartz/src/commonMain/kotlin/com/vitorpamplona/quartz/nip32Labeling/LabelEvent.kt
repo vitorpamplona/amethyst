@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.AddressHint
@@ -34,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
+import com.vitorpamplona.quartz.nip01Core.tags.events.toETag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
@@ -127,18 +129,16 @@ class LabelEvent(
          * follow-graph hashtag feeds match regardless of input case.
          */
         fun buildHashtagLabel(
-            labeledEventId: HexKey,
-            labeledEventRelay: String? = null,
-            labeledEventAuthor: HexKey? = null,
+            labeledEvent: EventHintBundle<out Event>,
             hashtag: String,
             createdAt: Long = TimeUtils.now(),
-        ) = buildEventLabel(
-            labeledEventId = labeledEventId,
-            labeledEventRelay = labeledEventRelay,
-            labeledEventAuthor = labeledEventAuthor,
-            labels = listOf(LabelTag(hashtag.removePrefix("#").lowercase(), HASHTAG_NAMESPACE)),
-            createdAt = createdAt,
-        )
+        ) = eventTemplate<LabelEvent>(KIND, "", createdAt) {
+            alt(ALT)
+            eTag(labeledEvent.toETag())
+            val tag = LabelTag(hashtag.removePrefix("#").lowercase(), HASHTAG_NAMESPACE)
+            labelNamespace(tag.namespace)
+            label(tag)
+        }
 
         /**
          * Build a label event for labeling events.

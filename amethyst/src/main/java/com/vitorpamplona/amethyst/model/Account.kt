@@ -769,13 +769,7 @@ class Account(
 
         val eventHint = note.toEventHint<Event>() ?: return null
 
-        val template =
-            LabelEvent.buildHashtagLabel(
-                labeledEventId = eventHint.event.id,
-                labeledEventRelay = eventHint.relay?.url,
-                labeledEventAuthor = eventHint.event.pubKey,
-                hashtag = hashtag,
-            )
+        val template = LabelEvent.buildHashtagLabel(eventHint, hashtag)
 
         val event = signer.sign(template)
         val relays = computeRelayListToBroadcast(event)
