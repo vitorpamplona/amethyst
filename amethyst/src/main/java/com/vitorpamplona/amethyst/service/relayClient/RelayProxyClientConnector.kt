@@ -21,10 +21,7 @@
 package com.vitorpamplona.amethyst.service.relayClient
 
 import com.vitorpamplona.amethyst.model.torState.TorRelayEvaluation
-import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityStatus
-import com.vitorpamplona.amethyst.service.okhttp.DualHttpClientManagerForRelays
-import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.utils.Log
@@ -44,9 +41,10 @@ import okhttp3.OkHttpClient
 
 class RelayProxyClientConnector(
     val torEvaluator: StateFlow<TorRelayEvaluation>,
-    val okHttpClients: DualHttpClientManagerForRelays,
-    val connManager: ConnectivityManager,
-    val torManager: TorManager,
+    val torConnection: StateFlow<OkHttpClient>,
+    val clearConnection: StateFlow<OkHttpClient>,
+    val connectivityStatus: StateFlow<ConnectivityStatus>,
+    val torStatus: StateFlow<TorServiceStatus>,
     val client: INostrClient,
     val scope: CoroutineScope,
 ) {
@@ -58,14 +56,21 @@ class RelayProxyClientConnector(
         val torStatus: TorServiceStatus,
     )
 
+    // The OkHttp clients in use the last time we forced a reconnect. These are only
+    // rebuilt when something connection-relevant changes (Tor's SOCKS port appears,
+    // wifi<->cellular switch), so comparing them tells us whether a wakeup is a real
+    // transport change or just noise (Tor bootstrap status churn, connectivity blips).
+    private var lastTorConnection: OkHttpClient? = null
+    private var lastClearConnection: OkHttpClient? = null
+
     @OptIn(FlowPreview::class)
     val relayServices =
         combine(
             torEvaluator,
-            okHttpClients.defaultHttpClient,
-            okHttpClients.defaultHttpClientWithoutProxy,
-            connManager.status,
-            torManager.status,
+            torConnection,
+            clearConnection,
+            connectivityStatus,
+            torStatus,
         ) { torSettings, torConnection, clearConnection, connectivity, torStatus ->
             RelayServiceInfra(torSettings, torConnection, clearConnection, connectivity, torStatus)
         }.debounce(100)
@@ -97,10 +102,19 @@ class RelayProxyClientConnector(
                     }
 
                     else -> {
-                        Log.d("ManageRelayServices", "Relay Services have changed, reconnecting relays that need to")
+                        // Only skip the per-relay exponential backoff when the actual HTTP
+                        // transport changed. Otherwise (e.g. Tor still bootstrapping, the SOCKS
+                        // port not yet listening) honor each relay's backoff so we don't
+                        // reconnect-fail-reconnect on every unrelated infrastructure event.
+                        val transportChanged =
+                            it.torConnection !== lastTorConnection || it.clearConnection !== lastClearConnection
+                        lastTorConnection = it.torConnection
+                        lastClearConnection = it.clearConnection
+
+                        Log.d("ManageRelayServices", "Relay Services have changed, reconnecting relays that need to (transportChanged=$transportChanged)")
                         client.reconnect(
                             onlyIfChanged = true,
-                            ignoreRetryDelays = true,
+                            ignoreRetryDelays = transportChanged,
                         )
                     }
                 }

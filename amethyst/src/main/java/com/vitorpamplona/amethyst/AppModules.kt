@@ -475,9 +475,10 @@ class AppModules(
     val relayProxyClientConnector =
         RelayProxyClientConnector(
             torEvaluatorFlow.flow,
-            okHttpClientForRelays,
-            connManager,
-            torManager,
+            okHttpClientForRelays.defaultHttpClient,
+            okHttpClientForRelays.defaultHttpClientWithoutProxy,
+            connManager.status,
+            torManager.status,
             client,
             applicationIOScope,
         )
