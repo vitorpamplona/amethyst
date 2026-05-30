@@ -115,6 +115,7 @@ fun CashuWalletScreen(
     val discovering by viewModel.discovering.collectAsState()
     val mints by viewModel.mints.collectAsState()
     val balanceSats by viewModel.balanceSats.collectAsState()
+    val mintBalances by viewModel.mintBalances.collectAsState()
     val history by viewModel.history.collectAsState()
     val pendingQuotes by viewModel.pendingQuotes.collectAsState()
 
@@ -158,6 +159,7 @@ fun CashuWalletScreen(
                     modifier = Modifier.padding(padding),
                     balanceSats = balanceSats,
                     mints = mints,
+                    mintBalances = mintBalances,
                     history = history,
                     pendingQuoteCount = pendingQuotes.size,
                     accountViewModel = accountViewModel,
@@ -166,7 +168,6 @@ fun CashuWalletScreen(
                     onSendLn = { sendLnOpen = true },
                     onSendToken = { sendTokenOpen = true },
                     onRedeem = { redeemOpen = true },
-                    onRecommendMint = { viewModel.recommendMint(it) },
                     onResumePendingQuote = {
                         pendingQuotes.firstOrNull()?.let {
                             viewModel.resumeMintQuote(it)
@@ -295,6 +296,7 @@ private fun CashuWalletContent(
     modifier: Modifier,
     balanceSats: Long,
     mints: List<String>,
+    mintBalances: Map<String, Long>,
     history: List<CashuSpendingHistoryEvent>,
     pendingQuoteCount: Int,
     accountViewModel: AccountViewModel,
@@ -303,7 +305,6 @@ private fun CashuWalletContent(
     onSendLn: () -> Unit,
     onSendToken: () -> Unit,
     onRedeem: () -> Unit,
-    onRecommendMint: (String) -> Unit,
     onResumePendingQuote: () -> Unit,
 ) {
     LazyColumn(
@@ -340,7 +341,7 @@ private fun CashuWalletContent(
             )
         }
         items(mints, key = { it }) { mint ->
-            MintRow(mint = mint, onRecommend = { onRecommendMint(mint) })
+            MintRow(mint = mint, balanceSats = mintBalances[mint] ?: 0L)
         }
 
         if (history.isNotEmpty()) {
@@ -526,8 +527,12 @@ private fun ActionTile(
 @Composable
 private fun MintRow(
     mint: String,
-    onRecommend: (() -> Unit)? = null,
+    balanceSats: Long,
 ) {
+    val formattedBalance =
+        remember(balanceSats) {
+            NumberFormat.getIntegerInstance().format(balanceSats)
+        }
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -543,16 +548,13 @@ private fun MintRow(
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(text = mint, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-            if (onRecommend != null) {
-                IconButton(onClick = onRecommend, modifier = Modifier.size(28.dp)) {
-                    Icon(
-                        symbol = MaterialSymbols.ThumbUp,
-                        contentDescription = stringRes(R.string.cashu_recommend_mint),
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "$formattedBalance ${stringRes(R.string.wallet_sats)}",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+            )
         }
     }
 }
