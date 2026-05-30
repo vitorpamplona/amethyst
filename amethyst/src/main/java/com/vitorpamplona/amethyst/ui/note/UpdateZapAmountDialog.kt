@@ -20,30 +20,20 @@
  */
 package com.vitorpamplona.amethyst.ui.note
 
-import android.app.Activity
 import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.activity.compose.ManagedActivityResultLauncher
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -58,58 +48,51 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.InputChip
-import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInParent
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
-import com.vitorpamplona.amethyst.ui.components.util.getText
-import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.keyBackup.getFragmentActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.DoubleHorzSpacer
-import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategoryFirstModifier
 import com.vitorpamplona.amethyst.ui.theme.SettingsCategorySpacingModifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -138,15 +121,9 @@ fun UpdateZapAmountContentPreview() {
 fun UpdateZapAmountContent(
     postViewModel: UpdateZapAmountViewModel,
     onClose: () -> Unit,
-    nip47uri: String? = null,
     accountViewModel: AccountViewModel,
     trailingContent: @Composable ColumnScope.() -> Unit = {},
 ) {
-    val context = LocalContext.current
-    val clipboardManager = LocalClipboard.current
-    val uri = LocalUriHandler.current
-    val scope = rememberCoroutineScope()
-
     val zapTypes =
         listOf(
             Triple(
@@ -176,36 +153,6 @@ fun UpdateZapAmountContent(
             zapTypes.map { TitleExplainer(it.second, it.third) }.toImmutableList()
         }
 
-    LaunchedEffect(accountViewModel, nip47uri) {
-        if (nip47uri != null) {
-            try {
-                postViewModel.updateNIP47(nip47uri)
-            } catch (e: IllegalArgumentException) {
-                if (e.message != null) {
-                    accountViewModel.toastManager.toast(
-                        stringRes(context, R.string.error_parsing_nip47_title),
-                        stringRes(context, R.string.error_parsing_nip47, nip47uri, e.message!!),
-                    )
-                } else {
-                    accountViewModel.toastManager.toast(
-                        stringRes(context, R.string.error_parsing_nip47_title),
-                        stringRes(context, R.string.error_parsing_nip47_no_error, nip47uri),
-                    )
-                }
-            }
-        }
-    }
-
-    var qrScanning by remember { mutableStateOf(false) }
-
-    // Expand manual config automatically when a wallet connection exists
-    var showManualConfig by remember { mutableStateOf(postViewModel.walletConnectPubkey.text.isNotBlank()) }
-    LaunchedEffect(postViewModel.walletConnectPubkey.text) {
-        if (postViewModel.walletConnectPubkey.text.isNotBlank()) {
-            showManualConfig = true
-        }
-    }
-
     Column(
         modifier =
             Modifier
@@ -229,8 +176,14 @@ fun UpdateZapAmountContent(
             modifier = Modifier.padding(bottom = 6.dp),
         )
 
-        // Amount chips — animateContentSize gives a smooth expand/collapse when
-        // chips are added or removed
+        // Amount chips — long-press a chip to drag it to a new position; the X
+        // removes it. animateContentSize smooths add/remove. Identity (and the
+        // bounds map + drag target) is keyed by the amount value, not the slot
+        // index, so reordering doesn't restart the in-flight drag gesture.
+        var draggingAmount by remember { mutableStateOf<Long?>(null) }
+        var dragOffset by remember { mutableStateOf(Offset.Zero) }
+        val itemBounds = remember { mutableStateMapOf<Long, Rect>() }
+
         FlowRow(
             modifier =
                 Modifier
@@ -240,28 +193,62 @@ fun UpdateZapAmountContent(
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             postViewModel.amountSet.forEach { amountInSats ->
-                InputChip(
-                    selected = false,
-                    onClick = { postViewModel.removeAmount(amountInSats) },
-                    label = {
-                        Text(
-                            text = "⚡ ${showAmount(amountInSats.toBigDecimal().setScale(1))}",
-                        )
-                    },
-                    trailingIcon = {
-                        Icon(
-                            symbol = MaterialSymbols.Close,
-                            contentDescription = stringRes(R.string.remove),
-                            modifier = Modifier.size(InputChipDefaults.AvatarSize),
-                        )
-                    },
-                    colors =
-                        InputChipDefaults.inputChipColors(
-                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                            labelColor = MaterialTheme.colorScheme.primary,
-                            trailingIconColor = MaterialTheme.colorScheme.primary,
-                        ),
-                )
+                key(amountInSats) {
+                    val dragging = draggingAmount == amountInSats
+                    ZapAmountPresetChip(
+                        amountInSats = amountInSats,
+                        onRemove = { postViewModel.removeAmount(amountInSats) },
+                        modifier =
+                            Modifier
+                                .onGloballyPositioned { itemBounds[amountInSats] = it.boundsInParent() }
+                                // pointerInput must sit OUTSIDE the graphicsLayer
+                                // translation below — otherwise the layer moving under
+                                // the finger distorts the per-frame drag deltas and the
+                                // drag runs away / never settles.
+                                .pointerInput(amountInSats) {
+                                    detectDragGesturesAfterLongPress(
+                                        onDragStart = {
+                                            draggingAmount = amountInSats
+                                            dragOffset = Offset.Zero
+                                        },
+                                        onDragEnd = {
+                                            draggingAmount = null
+                                            dragOffset = Offset.Zero
+                                        },
+                                        onDragCancel = {
+                                            draggingAmount = null
+                                            dragOffset = Offset.Zero
+                                        },
+                                        onDrag = { change, amount ->
+                                            change.consume()
+                                            dragOffset += amount
+                                            val from = draggingAmount ?: return@detectDragGesturesAfterLongPress
+                                            val fromBounds = itemBounds[from] ?: return@detectDragGesturesAfterLongPress
+                                            val pointer = fromBounds.center + dragOffset
+                                            val targetAmount =
+                                                itemBounds.entries
+                                                    .firstOrNull { (amt, rect) -> amt != from && rect.contains(pointer) }
+                                                    ?.key
+                                            if (targetAmount != null) {
+                                                val targetBounds = itemBounds[targetAmount]
+                                                postViewModel.moveAmount(
+                                                    postViewModel.amountSet.indexOf(from),
+                                                    postViewModel.amountSet.indexOf(targetAmount),
+                                                )
+                                                // Keep the chip under the finger across the slot swap.
+                                                if (targetBounds != null) dragOffset = pointer - targetBounds.center
+                                            }
+                                        },
+                                    )
+                                }.zIndex(if (dragging) 1f else 0f)
+                                .graphicsLayer {
+                                    if (dragging) {
+                                        translationX = dragOffset.x
+                                        translationY = dragOffset.y
+                                    }
+                                },
+                    )
+                }
             }
         }
 
@@ -339,401 +326,68 @@ fun UpdateZapAmountContent(
             )
         }
 
-        // ── Section 3: Quick On-chain Zap Amounts ─────────────────────────────
-
-        Text(
-            text = stringRes(R.string.quick_zap_amounts_onchain),
-            color = MaterialTheme.colorScheme.primary,
-            style = MaterialTheme.typography.titleSmall,
-            modifier = SettingsCategorySpacingModifier,
-        )
-        Text(
-            text = stringRes(R.string.quick_zap_amounts_onchain_explainer),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.placeholderText,
-            modifier = Modifier.padding(bottom = 6.dp),
-        )
-
-        FlowRow(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .animateContentSize(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            postViewModel.onchainAmountSet.forEach { amountInSats ->
-                InputChip(
-                    selected = false,
-                    onClick = { postViewModel.removeOnchainAmount(amountInSats) },
-                    label = {
-                        Text(
-                            text = "₿ ${showAmount(amountInSats.toBigDecimal().setScale(1))}",
-                        )
-                    },
-                    trailingIcon = {
-                        Icon(
-                            symbol = MaterialSymbols.Close,
-                            contentDescription = stringRes(R.string.remove),
-                            modifier = Modifier.size(InputChipDefaults.AvatarSize),
-                        )
-                    },
-                    colors =
-                        InputChipDefaults.inputChipColors(
-                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                            labelColor = MaterialTheme.colorScheme.primary,
-                            trailingIconColor = MaterialTheme.colorScheme.primary,
-                        ),
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            OutlinedTextField(
-                label = { Text(text = stringRes(R.string.new_amount_in_sats_onchain)) },
-                value = postViewModel.nextOnchainAmount,
-                onValueChange = { postViewModel.nextOnchainAmount = it },
-                keyboardOptions =
-                    KeyboardOptions.Default.copy(
-                        capitalization = KeyboardCapitalization.None,
-                        keyboardType = KeyboardType.Number,
-                    ),
-                placeholder = {
-                    Text(
-                        text = "5000, 25000, 100000",
-                        color = MaterialTheme.colorScheme.placeholderText,
-                    )
-                },
-                trailingIcon = {
-                    IconButton(
-                        onClick = postViewModel::addOnchainAmount,
-                        shape = ButtonBorder,
-                        enabled = postViewModel.nextOnchainAmount.text.isNotBlank(),
-                    ) {
-                        Icon(
-                            symbol = MaterialSymbols.AddCircle,
-                            contentDescription = stringRes(R.string.add),
-                            modifier = Size20Modifier,
-                        )
-                    }
-                },
-                singleLine = true,
-                modifier = Modifier.weight(1f),
-            )
-        }
-
-        // ── Section 4: Nostr Wallet Connect ───────────────────────────────────
-
-        HorizontalDivider(
-            modifier = Modifier.padding(vertical = 16.dp),
-            thickness = DividerThickness,
-        )
-
-        // Section header + connection status indicator
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stringRes(R.string.wallet_connect_service),
-                    color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.titleSmall,
-                )
-                Text(
-                    text = stringRes(R.string.wallet_connect_service_explainer),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.placeholderText,
-                    modifier = Modifier.padding(top = 2.dp),
-                )
-            }
-        }
-
-        // Animated connection status badge
-        val isConnected = postViewModel.walletConnectPubkey.text.isNotBlank()
-        val statusColor by animateColorAsState(
-            targetValue = if (isConnected) Color(0xFF4CAF50) else MaterialTheme.colorScheme.placeholderText,
-            animationSpec = tween(durationMillis = 400),
-            label = "nwc_status_color",
-        )
-
-        AnimatedContent(
-            targetState = isConnected,
-            transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(300)) },
-            label = "nwc_status_badge",
-        ) { connected ->
-            Row(
-                modifier = Modifier.padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Icon(
-                    symbol = if (connected) MaterialSymbols.CheckCircle else MaterialSymbols.RadioButtonUnchecked,
-                    contentDescription = null,
-                    tint = statusColor,
-                    modifier = Modifier.size(18.dp),
-                )
-                Text(
-                    text =
-                        if (connected) {
-                            stringRes(R.string.wallet_connect_status_connected)
-                        } else {
-                            stringRes(R.string.wallet_connect_status_not_connected)
-                        },
-                    color = statusColor,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-        }
-
-        // Connect action buttons
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Primary "Connect Wallet" button — opens the NWC app deep link
-            OutlinedButton(
-                modifier = Modifier.weight(1f),
-                shape = ButtonBorder,
-                onClick = {
-                    try {
-                        uri.openUri(
-                            "nostrnwc://connect?appname=Amethyst&appicon=https%3A%2F%2Fraw.githubusercontent.com%2Fvitorpamplona%2Famethyst%2Frefs%2Fheads%2Fmain%2Ficon.png&callback=amethyst%2Bwalletconnect%3A%2F%2Fdlnwc",
-                        )
-                        onClose()
-                    } catch (_: IllegalArgumentException) {
-                        accountViewModel.toastManager.toast(
-                            R.string.couldnt_find_nwc_wallets,
-                            R.string.couldnt_find_nwc_wallets_description,
-                        )
-                    }
-                },
-            ) {
-                Icon(
-                    symbol = MaterialSymbols.Add,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(text = stringRes(R.string.wallet_connect_connect_app))
-            }
-
-            Spacer(DoubleHorzSpacer)
-
-            // Paste from clipboard
-            IconButton(
-                onClick = {
-                    scope.launch {
-                        val clipText = clipboardManager.getText()
-                        try {
-                            clipText?.let { postViewModel.copyFromClipboard(it) }
-                        } catch (e: IllegalArgumentException) {
-                            accountViewModel.toastManager.toast(
-                                R.string.invalid_nip47_uri_title,
-                                R.string.invalid_nip47_uri_description,
-                                clipText ?: "",
-                            )
-                        }
-                    }
-                },
-            ) {
-                Icon(
-                    symbol = MaterialSymbols.ContentPaste,
-                    contentDescription = stringRes(id = R.string.paste_from_clipboard),
-                    modifier = Size24Modifier,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
-
-            // QR code scanner
-            IconButton(onClick = { qrScanning = true }) {
-                Icon(
-                    painter = painterRes(R.drawable.ic_qrcode, 3),
-                    contentDescription = stringRes(id = R.string.accessibility_scan_qr_code),
-                    modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
-        }
-
-        if (qrScanning) {
-            SimpleQrCodeScanner {
-                qrScanning = false
-                if (!it.isNullOrEmpty()) {
-                    try {
-                        postViewModel.updateNIP47(it)
-                    } catch (e: IllegalArgumentException) {
-                        if (e.message != null) {
-                            accountViewModel.toastManager.toast(
-                                stringRes(context, R.string.error_parsing_nip47_title),
-                                stringRes(context, R.string.error_parsing_nip47, it, e.message!!),
-                            )
-                        } else {
-                            accountViewModel.toastManager.toast(
-                                stringRes(context, R.string.error_parsing_nip47_title),
-                                stringRes(context, R.string.error_parsing_nip47_no_error, it),
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        // Expandable manual configuration section
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .clickable { showManualConfig = !showManualConfig }
-                    .padding(vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringRes(R.string.wallet_connect_manual_config),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.placeholderText,
-                modifier = Modifier.weight(1f),
-                fontSize = Font14SP,
-            )
-            Icon(
-                symbol = if (showManualConfig) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.placeholderText,
-                modifier = Modifier.size(20.dp),
-            )
-        }
-
-        AnimatedVisibility(
-            visible = showManualConfig,
-            enter = expandVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
-            exit = shrinkVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeOut(),
-        ) {
-            Column {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    OutlinedTextField(
-                        label = { Text(text = stringRes(R.string.wallet_connect_service_pubkey)) },
-                        value = postViewModel.walletConnectPubkey,
-                        onValueChange = { postViewModel.walletConnectPubkey = it },
-                        keyboardOptions =
-                            KeyboardOptions.Default.copy(
-                                capitalization = KeyboardCapitalization.None,
-                            ),
-                        placeholder = {
-                            Text(
-                                text = "npub, hex",
-                                color = MaterialTheme.colorScheme.placeholderText,
-                            )
-                        },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    OutlinedTextField(
-                        label = { Text(text = stringRes(R.string.wallet_connect_service_relay)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        value = postViewModel.walletConnectRelay,
-                        onValueChange = { postViewModel.walletConnectRelay = it },
-                        placeholder = {
-                            Text(
-                                text = "wss://relay.server.com",
-                                color = MaterialTheme.colorScheme.placeholderText,
-                                maxLines = 1,
-                            )
-                        },
-                        singleLine = true,
-                    )
-                }
-
-                var showPassword by remember { mutableStateOf(false) }
-
-                val secretContext = LocalContext.current
-
-                val keyguardLauncher =
-                    rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
-                        if (result.resultCode == Activity.RESULT_OK) {
-                            showPassword = true
-                        }
-                    }
-
-                val authTitle = stringRes(id = R.string.wallet_connect_service_show_secret)
-
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    OutlinedTextField(
-                        label = { Text(text = stringRes(R.string.wallet_connect_service_secret)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        value = postViewModel.walletConnectSecret,
-                        onValueChange = { postViewModel.walletConnectSecret = it },
-                        keyboardOptions =
-                            KeyboardOptions(
-                                autoCorrectEnabled = false,
-                                keyboardType = KeyboardType.Password,
-                                imeAction = ImeAction.Go,
-                            ),
-                        placeholder = {
-                            Text(
-                                text = stringRes(R.string.wallet_connect_service_secret_placeholder),
-                                color = MaterialTheme.colorScheme.placeholderText,
-                            )
-                        },
-                        trailingIcon = {
-                            IconButton(
-                                onClick = {
-                                    if (!showPassword) {
-                                        authenticate(
-                                            title = authTitle,
-                                            context = secretContext,
-                                            keyguardLauncher = keyguardLauncher,
-                                            onApproved = { showPassword = true },
-                                            onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
-                                        )
-                                    } else {
-                                        showPassword = false
-                                    }
-                                },
-                            ) {
-                                Icon(
-                                    symbol =
-                                        if (showPassword) {
-                                            MaterialSymbols.VisibilityOff
-                                        } else {
-                                            MaterialSymbols.Visibility
-                                        },
-                                    contentDescription =
-                                        if (showPassword) {
-                                            stringRes(R.string.show_password)
-                                        } else {
-                                            stringRes(R.string.hide_password)
-                                        },
-                                )
-                            }
-                        },
-                        visualTransformation =
-                            if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
-                    )
-                }
-            }
-        }
-
         trailingContent()
 
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+/**
+ * A quick-zap preset chip that mirrors the live feed chip: the amount with the
+ * rails it could pay on — the amount-tier default rail in colour on the left,
+ * the alternatives in monochrome — plus an X to remove it. No recipient context
+ * here, so the rails are the ones a preset of this size could use (cashu,
+ * Lightning, and on-chain at/above the minimum).
+ */
+@Composable
+private fun ZapAmountPresetChip(
+    amountInSats: Long,
+    onRemove: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val rails = remember(amountInSats) { previewRailsFor(amountInSats) }
+    // Mirrors the popup: one outlined track, the default rail + amount grouped in a
+    // highlighted "thumb", the alternatives as quiet mono icons, then the remove X.
+    Surface(
+        shape = ButtonBorder,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = modifier,
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 4.dp, end = 2.dp, top = 3.dp, bottom = 3.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(
+                modifier =
+                    Modifier
+                        .clip(RoundedCornerShape(percent = 50))
+                        .background(MaterialTheme.colorScheme.primaryContainer)
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ZapRailIcon(rails.first(), colored = true)
+                Spacer(Modifier.width(5.dp))
+                Text(
+                    text = showAmount(amountInSats.toBigDecimal().setScale(1)),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            rails.drop(1).forEach { rail ->
+                Spacer(Modifier.width(8.dp))
+                ZapRailIcon(rail, colored = false, size = 14.dp)
+            }
+            Spacer(Modifier.width(4.dp))
+            IconButton(onClick = onRemove, modifier = Modifier.size(28.dp)) {
+                Icon(
+                    symbol = MaterialSymbols.Close,
+                    contentDescription = stringRes(R.string.remove),
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.placeholderText,
+                )
+            }
+        }
     }
 }
 

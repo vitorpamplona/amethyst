@@ -29,15 +29,21 @@ import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -52,6 +58,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
@@ -83,6 +90,8 @@ import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterStart
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
@@ -107,10 +116,13 @@ import com.vitorpamplona.amethyst.commons.hashtags.Cashu
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.MIN_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.ReactionRowAction
 import com.vitorpamplona.amethyst.model.ReactionRowItem
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.model.zap.CashuRailStatus
+import com.vitorpamplona.amethyst.model.zap.RailCapability
 import com.vitorpamplona.amethyst.model.zap.RailCapabilityResolver
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
@@ -124,6 +136,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNo
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteRepostsBy
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteZaps
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.actions.uploads.FloatingRecordingIndicator
 import com.vitorpamplona.amethyst.ui.actions.uploads.MAX_VOICE_RECORD_SECONDS
@@ -140,6 +153,7 @@ import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.PaymentTargetsDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.OnchainZapSendDialog
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.navigateToReloadMint
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
@@ -182,6 +196,7 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
+import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
@@ -1251,6 +1266,10 @@ fun ZapReaction(
                         nav.nav(Route.ManualZapSplitPayment(uid))
                     }
                 },
+                onReloadNutzap = { amount ->
+                    wantsToZap = false
+                    navigateToReloadMint(accountViewModel, nav, baseNote, amount)
+                },
             )
         }
 
@@ -1375,17 +1394,26 @@ fun zapClick(
         }
 
         choices.size == 1 -> {
-            onZapStarts()
-            accountViewModel.zap(
-                baseNote,
-                choices.first() * 1000,
-                null,
-                "",
-                context,
-                onError = onError,
-                onProgress = { onZappingProgress(it) },
-                onPayViaIntent = onPayViaIntent,
-            )
+            // One-tap fast path is Lightning-only. If the recipient can't
+            // receive Lightning (no lud16/lud06), firing a zap here would just
+            // fail — open the picker instead so the rail-aware chip can route to
+            // cashu / on-chain / reload.
+            val caps = RailCapabilityResolver.peek(baseNote, accountViewModel.account.cashuWalletState)
+            if (caps.hasLightning) {
+                onZapStarts()
+                accountViewModel.zap(
+                    baseNote,
+                    choices.first() * 1000,
+                    null,
+                    "",
+                    context,
+                    onError = onError,
+                    onProgress = { onZappingProgress(it) },
+                    onPayViaIntent = onPayViaIntent,
+                )
+            } else {
+                onMultipleChoices()
+            }
         }
 
         choices.size > 1 -> {
@@ -1879,29 +1907,15 @@ fun ZapAmountChoicePopup(
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
     onOnchainAmount: ((Long?) -> Unit)? = null,
+    onReloadNutzap: (Long) -> Unit = {},
 ) {
     val zapAmountChoices by
         accountViewModel.account.settings.syncedSettings.zaps.zapAmountChoices
             .collectAsStateWithLifecycle()
-    val onchainZapAmountChoices by
-        accountViewModel.account.settings.syncedSettings.zaps.onchainZapAmountChoices
-            .collectAsStateWithLifecycle()
-
-    // Hide chips for rails the recipient(s) can't actually receive on. For a
-    // single-author note this gates against the author's kind:0 / kind:10019;
-    // for a note with `zap` split tags it considers every split recipient so
-    // splits where (e.g.) only one of three has a lud16 still surface the LN
-    // chips. Recomputed only when the note id changes — the underlying flows
-    // (CashuWalletState, LocalCache user metadata) are stable for the life of
-    // the popup, which is usually open for under a second.
-    val railCapability =
-        remember(baseNote) {
-            RailCapabilityResolver.peek(baseNote, accountViewModel.account.cashuWalletState)
-        }
 
     ZapAmountChoicePopup(
         baseNote = baseNote,
-        zapAmountChoices = if (railCapability.hasLightning) zapAmountChoices else persistentListOf(),
+        zapAmountChoices = zapAmountChoices,
         accountViewModel = accountViewModel,
         popupYOffset = popupYOffset,
         onZapStarts = onZapStarts,
@@ -1910,14 +1924,9 @@ fun ZapAmountChoicePopup(
         onError = onError,
         onProgress = onProgress,
         onPayViaIntent = onPayViaIntent,
-        onchainZapAmountChoices =
-            if (onOnchainAmount != null && railCapability.hasOnchain) {
-                onchainZapAmountChoices
-            } else {
-                persistentListOf()
-            },
         onOnchainAmount = onOnchainAmount ?: {},
-        nutzapEnabled = railCapability.hasCashu,
+        onchainSupported = onOnchainAmount != null,
+        onReloadNutzap = onReloadNutzap,
     )
 }
 
@@ -1933,15 +1942,53 @@ fun ZapAmountChoicePopup(
     onError: (title: String, text: String, user: User?) -> Unit,
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
-    onchainZapAmountChoices: ImmutableList<Long> = persistentListOf(),
     onOnchainAmount: (Long?) -> Unit = {},
-    nutzapEnabled: Boolean = false,
+    onchainSupported: Boolean = true,
+    onReloadNutzap: (Long) -> Unit = {},
 ) {
+    // One chip per amount; the chip itself shows which rails can pay it.
+    // [zapAmountChoices] is already the single merged+sorted preset list (the
+    // on-chain amounts were folded in at the settings layer), so rail
+    // availability per amount is decided in [UnifiedZapAmountChip] from
+    // [railCapability] rather than by keeping separate per-rail lists.
+    //
+    // [railCapability] gates which rails the recipient can receive on (plus the
+    // sender's cashu balance). The inputs load asynchronously, so observe them and
+    // recompute as they arrive — the chip's Lightning logo appears once the
+    // recipient's lnAddress (kind:0) loads, and the cashu logo once their nutzap
+    // info (kind:10019) and our cashu wallet (mints + proofs) load. The observers
+    // also trigger the relay fetch, so a not-yet-seen lnAddress / kind:10019 is
+    // pulled in while the popup is open. A caller that can't drive the on-chain
+    // dialog (onchainSupported == false) masks that rail off here.
+    val cashuState = accountViewModel.account.cashuWalletState
+    val author = baseNote.author
+    // These four are deliberately read only to drive the recompute below — do NOT
+    // delete them as "unused". Each observe* call ALSO subscribes the relay fetch
+    // (so a not-yet-seen kind:0 / kind:10019 gets pulled in while the popup is
+    // open), and each value is a remember() key so railCapability recomputes when
+    // it arrives. RailCapabilityResolver.peek re-reads everything itself; these
+    // just say *when* to re-run it.
+    val cashuMints by cashuState.mints.collectAsStateWithLifecycle()
+    val cashuEntries by cashuState.tokenEntries.collectAsStateWithLifecycle()
+    val recipientInfo = author?.let { observeUserInfo(it, accountViewModel).value }
+    val nutzapInfo = author?.let { observeNoteEvent<NutzapInfoEvent>(it.nutzapInfoNote, accountViewModel).value }
+
+    val railCapability =
+        remember(baseNote, onchainSupported, cashuMints, cashuEntries, recipientInfo, nutzapInfo) {
+            val rc = RailCapabilityResolver.peek(baseNote, cashuState)
+            if (onchainSupported) rc else rc.copy(hasOnchain = false)
+        }
+    val amountChoices =
+        remember(zapAmountChoices) {
+            // Keep the user's saved order (already de-duped at the settings
+            // layer); don't re-sort, that would override a deliberate ordering.
+            zapAmountChoices.distinct().toImmutableList()
+        }
     val visibilityState = rememberVisibilityState(onDismiss)
     ZapAmountChoicePopup(
         baseNote,
-        zapAmountChoices,
-        onchainZapAmountChoices,
+        amountChoices,
+        railCapability,
         accountViewModel,
         popupYOffset,
         visibilityState,
@@ -1951,7 +1998,7 @@ fun ZapAmountChoicePopup(
         onError,
         onProgress,
         onPayViaIntent,
-        nutzapEnabled,
+        onReloadNutzap,
     )
 }
 
@@ -1959,8 +2006,8 @@ fun ZapAmountChoicePopup(
 @Composable
 fun ZapAmountChoicePopup(
     baseNote: Note,
-    zapAmountChoices: ImmutableList<Long>,
-    onchainZapAmountChoices: ImmutableList<Long>,
+    amountChoices: ImmutableList<Long>,
+    railCapability: RailCapability,
     accountViewModel: AccountViewModel,
     popupYOffset: Dp,
     visibilityState: MutableTransitionState<Boolean>,
@@ -1970,7 +2017,7 @@ fun ZapAmountChoicePopup(
     onError: (title: String, text: String, user: User?) -> Unit,
     onProgress: (percent: Float) -> Unit,
     onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
-    nutzapEnabled: Boolean = false,
+    onReloadNutzap: (Long) -> Unit = {},
 ) {
     val context = LocalContext.current
     val yOffset = with(LocalDensity.current) { -popupYOffset.toPx().toInt() }
@@ -1987,9 +2034,9 @@ fun ZapAmountChoicePopup(
             exit = popupAnimationExit,
         ) {
             ZapAmountChoicePopupContent(
-                zapAmountChoices = zapAmountChoices,
-                onchainZapAmountChoices = onchainZapAmountChoices,
-                onZap = { amountInSats ->
+                amountChoices = amountChoices,
+                railCapability = railCapability,
+                onLightningZap = { amountInSats ->
                     onZapStarts()
                     accountViewModel.zap(
                         baseNote,
@@ -2004,12 +2051,6 @@ fun ZapAmountChoicePopup(
                     )
                     visibilityState.targetState = false
                 },
-                onChangeAmount = onChangeAmount,
-                onOnchainAmount = { amount ->
-                    onOnchainAmount(amount)
-                    visibilityState.targetState = false
-                },
-                nutzapAmountChoices = if (nutzapEnabled) zapAmountChoices else persistentListOf(),
                 onNutzap = { amountInSats ->
                     onZapStarts()
                     // Instant click feedback. Without this initial nudge
@@ -2025,6 +2066,15 @@ fun ZapAmountChoicePopup(
                     )
                     visibilityState.targetState = false
                 },
+                onOnchainAmount = { amount ->
+                    onOnchainAmount(amount)
+                    visibilityState.targetState = false
+                },
+                onReloadNutzap = { amount ->
+                    onReloadNutzap(amount)
+                    visibilityState.targetState = false
+                },
+                onChangeAmount = onChangeAmount,
             )
         }
     }
@@ -2033,13 +2083,13 @@ fun ZapAmountChoicePopup(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ZapAmountChoicePopupContent(
-    zapAmountChoices: ImmutableList<Long>,
-    onZap: (Long) -> Unit,
+    amountChoices: ImmutableList<Long>,
+    railCapability: RailCapability,
+    onLightningZap: (Long) -> Unit,
+    onNutzap: (Long) -> Unit,
+    onOnchainAmount: (Long?) -> Unit,
     onChangeAmount: () -> Unit,
-    onchainZapAmountChoices: ImmutableList<Long> = persistentListOf(),
-    onOnchainAmount: (Long?) -> Unit = {},
-    nutzapAmountChoices: ImmutableList<Long> = persistentListOf(),
-    onNutzap: (Long) -> Unit = {},
+    onReloadNutzap: (Long) -> Unit = {},
 ) {
     Box(HalfPadding, contentAlignment = Center) {
         ElevatedCard(
@@ -2053,29 +2103,15 @@ fun ZapAmountChoicePopupContent(
                 verticalArrangement = Arrangement.Center,
                 itemVerticalAlignment = CenterVertically,
             ) {
-                // Order: Cashu first (instant, no fees), then Lightning,
-                // then on-chain — matches the recipient-capability fallback
-                // order used elsewhere (RailCapabilityResolver) so the
-                // "happiest path" rail surfaces first for the eye.
-                nutzapAmountChoices.forEach { amountInSats ->
-                    NutzapAmountChip(
+                amountChoices.forEach { amountInSats ->
+                    UnifiedZapAmountChip(
                         amountInSats = amountInSats,
-                        onClick = { onNutzap(amountInSats) },
-                        onLongClick = onChangeAmount,
-                    )
-                }
-                zapAmountChoices.forEach { amountInSats ->
-                    ZapAmountChip(
-                        amountInSats = amountInSats,
-                        onClick = { onZap(amountInSats) },
-                        onLongClick = onChangeAmount,
-                    )
-                }
-                onchainZapAmountChoices.forEach { amountInSats ->
-                    OnchainZapAmountChip(
-                        amountInSats = amountInSats,
-                        onClick = { onOnchainAmount(amountInSats) },
-                        onLongClick = onChangeAmount,
+                        railCapability = railCapability,
+                        onLightningZap = onLightningZap,
+                        onNutzap = onNutzap,
+                        onOnchainAmount = onOnchainAmount,
+                        onReloadNutzap = onReloadNutzap,
+                        onChangeAmount = onChangeAmount,
                     )
                 }
                 ClickableBox(
@@ -2098,125 +2134,290 @@ fun ZapAmountChoicePopupContent(
     }
 }
 
+/**
+ * One pill per amount, showing a tappable logo for every rail that can pay it:
+ *  - **Cashu** as a solid logo when a single shared mint already covers the
+ *    amount (FUNDED), or as a dimmed logo with a "+" badge when funds exist but
+ *    in the wrong mint (NEEDS_RELOAD) — tapping the latter opens the Reload Mint
+ *    screen. Cashu is the one rail whose balance is free to read.
+ *  - **Lightning** optimistically whenever the recipient can receive — an
+ *    external wallet can pay any invoice, so we don't gate on a sender balance.
+ *  - **On-chain** when a backend is configured and the amount clears
+ *    [MIN_ONCHAIN_ZAP_SATS]; UTXO sufficiency stays a send-time check.
+ *
+ * Tapping the amount fires the amount-tiered default rail: under
+ * [CASHU_PREFERRED_BELOW_SATS] cashu, over [ONCHAIN_PREFERRED_ABOVE_SATS]
+ * on-chain, and Lightning in between (falling back through the other rails when
+ * the tier's rail isn't available). That default logo sits to the left of the
+ * amount in colour; the alternatives follow on the right in monochrome and can
+ * be tapped to force their rail. Long-press opens the amount-preset editor. A
+ * pill with no payable rail is not rendered.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun NutzapAmountChip(
+private fun UnifiedZapAmountChip(
     amountInSats: Long,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
+    railCapability: RailCapability,
+    onLightningZap: (Long) -> Unit,
+    onNutzap: (Long) -> Unit,
+    onOnchainAmount: (Long?) -> Unit,
+    onReloadNutzap: (Long) -> Unit,
+    onChangeAmount: () -> Unit,
 ) {
+    val cashuStatus = railCapability.cashuStatus(amountInSats)
+    val cashuReady = cashuStatus == CashuRailStatus.FUNDED
+    val cashuReloadable = cashuStatus == CashuRailStatus.NEEDS_RELOAD
+    val lightningReady = railCapability.hasLightning
+    val onchainReady = railCapability.hasOnchain && amountInSats >= MIN_ONCHAIN_ZAP_SATS
+
+    if (!cashuReady && !cashuReloadable && !lightningReady && !onchainReady) return
+
+    // Default rail is amount-tiered: tiny zaps lean on cashu (Lightning min/fees
+    // make sub-10-sat payments awkward), large zaps settle on-chain, and the
+    // middle ground defaults to Lightning, with the remaining rails as fallbacks.
+    val present =
+        buildList {
+            if (cashuReady) add(ZapRail.CASHU)
+            if (cashuReloadable) add(ZapRail.RELOAD)
+            if (lightningReady) add(ZapRail.LIGHTNING)
+            if (onchainReady) add(ZapRail.ONCHAIN)
+        }
+    val preferred =
+        when {
+            amountInSats < CASHU_PREFERRED_BELOW_SATS && cashuReady -> ZapRail.CASHU
+            amountInSats < CASHU_PREFERRED_BELOW_SATS && cashuReloadable -> ZapRail.RELOAD
+            amountInSats > ONCHAIN_PREFERRED_ABOVE_SATS && onchainReady -> ZapRail.ONCHAIN
+            lightningReady -> ZapRail.LIGHTNING
+            cashuReady -> ZapRail.CASHU
+            cashuReloadable -> ZapRail.RELOAD
+            else -> ZapRail.ONCHAIN
+        }
+    // The rails are one connected segmented toggle (shared surfaceVariant track).
+    // Tapping a rail only *selects* it — switching never moves money. The selected
+    // segment is the only one that shows the amount (+ a send arrow) and is the
+    // only thing that, when tapped, actually sends. Starts on the amount-tier
+    // default.
+    var selectedRail by remember(preferred, present) {
+        mutableStateOf(if (preferred in present) preferred else present.first())
+    }
+
     Surface(
         shape = ButtonBorder,
-        color = MaterialTheme.colorScheme.tertiary,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        // A soft outline around the whole component so it reads as one toggle
+        // control rather than a few loose icons (outlineVariant — between a hard
+        // outline and none).
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
     ) {
         Row(
-            modifier =
-                Modifier
-                    .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            modifier = Modifier.padding(3.dp),
             verticalAlignment = CenterVertically,
         ) {
+            present.forEach { rail ->
+                val isSelected = rail == selectedRail
+                // The "thumb" fill slides to the selected segment (colour animates
+                // in/out per segment), showing both the grouping and the selection.
+                val thumb by animateColorAsState(
+                    targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                    label = "zapRailThumb",
+                )
+                val send: () -> Unit = {
+                    when (rail) {
+                        ZapRail.CASHU -> onNutzap(amountInSats)
+                        ZapRail.RELOAD -> onReloadNutzap(amountInSats)
+                        ZapRail.LIGHTNING -> onLightningZap(amountInSats)
+                        ZapRail.ONCHAIN -> onOnchainAmount(amountInSats)
+                    }
+                }
+                Row(
+                    modifier =
+                        Modifier
+                            .clip(RoundedCornerShape(percent = 50))
+                            .background(thumb)
+                            .combinedClickable(
+                                onClick = { if (isSelected) send() else selectedRail = rail },
+                                onLongClick = onChangeAmount,
+                            ).padding(horizontal = 8.dp, vertical = 5.dp),
+                    verticalAlignment = CenterVertically,
+                ) {
+                    ZapRailIcon(rail, colored = isSelected)
+                    // The amount lives only on the selected segment — it expands in
+                    // here and shrinks away on the old one, so it reads as travelling
+                    // to the icon you picked.
+                    AnimatedVisibility(
+                        visible = isSelected,
+                        enter = fadeIn() + expandHorizontally(expandFrom = Alignment.Start),
+                        exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.Start),
+                    ) {
+                        Row(verticalAlignment = CenterVertically) {
+                            Spacer(Modifier.width(5.dp))
+                            Text(
+                                text = showAmount(amountInSats.toBigDecimal().setScale(1)),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                fontWeight = FontWeight.SemiBold,
+                                textAlign = TextAlign.Center,
+                            )
+                            Spacer(Modifier.width(3.dp))
+                            Icon(
+                                symbol = MaterialSymbols.AutoMirrored.ArrowForward,
+                                contentDescription = null,
+                                modifier = Modifier.size(13.dp),
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Payment rails a zap-amount chip can offer, in canonical display order. */
+internal enum class ZapRail { CASHU, RELOAD, LIGHTNING, ONCHAIN }
+
+/** Below this, the default rail is cashu (Lightning min/fees make tiny zaps awkward). */
+internal const val CASHU_PREFERRED_BELOW_SATS = 10L
+
+/** Above this, the default rail is an on-chain transaction. */
+internal const val ONCHAIN_PREFERRED_ABOVE_SATS = 10_000L
+
+/**
+ * Default rail for a preset amount with no recipient context (the settings
+ * preview): cashu under [CASHU_PREFERRED_BELOW_SATS], on-chain over
+ * [ONCHAIN_PREFERRED_ABOVE_SATS] (and at/above the on-chain minimum), else
+ * Lightning. Mirrors the live chip's tiering so the preview matches the feed.
+ */
+internal fun previewPreferredRail(amountInSats: Long): ZapRail =
+    when {
+        amountInSats < CASHU_PREFERRED_BELOW_SATS -> ZapRail.CASHU
+        amountInSats > ONCHAIN_PREFERRED_ABOVE_SATS && amountInSats >= MIN_ONCHAIN_ZAP_SATS -> ZapRail.ONCHAIN
+        else -> ZapRail.LIGHTNING
+    }
+
+/** Rails a preset of [amountInSats] could use, default first then the rest. */
+internal fun previewRailsFor(amountInSats: Long): List<ZapRail> {
+    val preferred = previewPreferredRail(amountInSats)
+    val all =
+        buildList {
+            add(ZapRail.CASHU)
+            add(ZapRail.LIGHTNING)
+            if (amountInSats >= MIN_ONCHAIN_ZAP_SATS) add(ZapRail.ONCHAIN)
+        }
+    return listOf(preferred) + all.filter { it != preferred }
+}
+
+/**
+ * Just the rail's logo (no click target), drawn at [size]. [colored] renders it
+ * in its accent colour (the preferred rail); otherwise it's flattened to the
+ * on-surface monochrome tint. The cashu mark is drawn ~0.86× the symbol size —
+ * the new monochrome outline carries less weight than the old multi-tone mark,
+ * so it needs less shrinking to read at a matching optical size.
+ */
+@Composable
+internal fun ZapRailIcon(
+    rail: ZapRail,
+    colored: Boolean,
+    size: Dp = 18.dp,
+) {
+    val mono = MaterialTheme.colorScheme.onSurface
+    val cashuSize = size * 0.86f
+    when (rail) {
+        ZapRail.CASHU ->
             Material3Icon(
                 imageVector = CustomHashTagIcons.Cashu,
                 contentDescription = stringRes(R.string.nutzap),
-                modifier = Size18Modifier,
+                modifier = Modifier.size(cashuSize),
+                // The cashu mark is a monochrome, tintable outline — colour it the
+                // same brand orange as the other rails when selected, else mono.
+                tint = if (colored) BitcoinOrange else mono,
             )
-            Spacer(Modifier.width(2.dp))
-            Text(
-                text = showAmount(amountInSats.toBigDecimal().setScale(1)),
-                color = MaterialTheme.colorScheme.onTertiary,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun ZapAmountChip(
-    amountInSats: Long,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-) {
-    Surface(
-        shape = ButtonBorder,
-        color = BitcoinOrange,
-        modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
-    ) {
-        Row(
-            modifier =
-                Modifier
-                    .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = CenterVertically,
-        ) {
+        ZapRail.RELOAD ->
+            // Funds exist but in the wrong mint — a dimmed cashu logo with a
+            // small "+" badge; tapping it opens the top-up screen.
+            Box(contentAlignment = Alignment.BottomEnd) {
+                Material3Icon(
+                    imageVector = CustomHashTagIcons.Cashu,
+                    contentDescription = stringRes(R.string.reload_mint_title),
+                    modifier = Modifier.size(cashuSize).alpha(0.5f),
+                    tint = if (colored) BitcoinOrange else mono,
+                )
+                Icon(
+                    symbol = MaterialSymbols.AddCircle,
+                    contentDescription = null,
+                    modifier = Modifier.size(size * 0.5f),
+                    tint = if (colored) BitcoinOrange else mono,
+                )
+            }
+        ZapRail.LIGHTNING ->
             Icon(
                 symbol = MaterialSymbols.Bolt,
                 contentDescription = null,
-                modifier = Size18Modifier,
-                tint = Color.White,
+                modifier = Modifier.size(size),
+                tint = if (colored) BitcoinOrange else mono,
             )
-            Spacer(Modifier.width(2.dp))
-            Text(
-                text = showAmount(amountInSats.toBigDecimal().setScale(1)),
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun OnchainZapAmountChip(
-    amountInSats: Long,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-) {
-    Surface(
-        shape = ButtonBorder,
-        color = BitcoinOrange,
-        modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
-    ) {
-        Row(
-            modifier =
-                Modifier
-                    .combinedClickable(onClick = onClick, onLongClick = onLongClick)
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = CenterVertically,
-        ) {
+        ZapRail.ONCHAIN ->
             Icon(
                 symbol = MaterialSymbols.CurrencyBitcoin,
                 contentDescription = null,
-                modifier = Size18Modifier,
-                tint = Color.White,
+                modifier = Modifier.size(size),
+                tint = if (colored) BitcoinOrange else mono,
             )
-            Spacer(Modifier.width(2.dp))
-            Text(
-                text = showAmount(amountInSats.toBigDecimal().setScale(1)),
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
+    }
+}
+
+/**
+ * Exercises the chip across rail combinations and amount bands so the default
+ * (coloured, left of the amount) and the alternative circular buttons can be
+ * eyeballed. Amounts span the tiers: 5 (cashu), 100/5k (Lightning), 100k
+ * (on-chain).
+ */
+@Preview
+@Composable
+fun ZapAmountChoicePopupPreview() {
+    val amounts = persistentListOf(5L, 100L, 5_000L, 100_000L)
+    ThemeComparisonColumn {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            ZapChipPreviewRow(
+                "All rails · cashu funded",
+                RailCapability(hasCashu = true, hasLightning = true, hasOnchain = true, cashuBestSingleMintSats = 1_000_000L, cashuTotalWalletSats = 1_000_000L),
+                amounts,
+            )
+            ZapChipPreviewRow(
+                "Cashu only",
+                RailCapability(hasCashu = true, hasLightning = false, hasOnchain = false, cashuBestSingleMintSats = 1_000_000L, cashuTotalWalletSats = 1_000_000L),
+                amounts,
+            )
+            ZapChipPreviewRow(
+                "Lightning only",
+                RailCapability(hasCashu = false, hasLightning = true, hasOnchain = false, cashuBestSingleMintSats = 0L, cashuTotalWalletSats = 0L),
+                amounts,
+            )
+            ZapChipPreviewRow(
+                "Reload (funds split across mints)",
+                RailCapability(hasCashu = true, hasLightning = true, hasOnchain = true, cashuBestSingleMintSats = 10L, cashuTotalWalletSats = 1_000_000L),
+                amounts,
             )
         }
     }
 }
 
-@Preview
 @Composable
-fun ZapAmountChoicePopupPreview() {
-    ThemeComparisonColumn {
-        ZapAmountChoicePopupContent(
-            zapAmountChoices = persistentListOf(50L, 100L, 500L, 1_000L, 5_000L, 10_000L, 100_000L),
-            onchainZapAmountChoices = persistentListOf(10_000L, 50_000L, 250_000L),
-            onZap = {},
-            onChangeAmount = {},
-            onOnchainAmount = {},
-        )
-    }
+private fun ZapChipPreviewRow(
+    label: String,
+    caps: RailCapability,
+    amounts: ImmutableList<Long>,
+) {
+    Text(label, style = MaterialTheme.typography.labelSmall)
+    ZapAmountChoicePopupContent(
+        amountChoices = amounts,
+        railCapability = caps,
+        onLightningZap = {},
+        onNutzap = {},
+        onOnchainAmount = {},
+        onReloadNutzap = {},
+        onChangeAmount = {},
+    )
 }
 
 fun showCount(count: Int?): String {

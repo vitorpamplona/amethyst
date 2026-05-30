@@ -97,7 +97,7 @@ fun AddWalletScreen(
                 // chooser has done its job. Without this, completing the
                 // add-wallet form pops back to the chooser, which is a
                 // pointless dead end.
-                onClick = { nav.popUpTo(Route.WalletAddNwc, Route.WalletAdd::class) },
+                onClick = { nav.popUpTo(Route.WalletAddNwc(), Route.WalletAdd::class) },
             )
             WalletTypeCard(
                 icon = MaterialSymbols.AccountBalanceWallet,

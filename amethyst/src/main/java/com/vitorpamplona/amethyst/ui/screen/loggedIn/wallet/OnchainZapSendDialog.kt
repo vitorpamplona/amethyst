@@ -73,7 +73,9 @@ import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapShare
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSplitter
+import com.vitorpamplona.amethyst.model.DEFAULT_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.MIN_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.components.namecoin.NamecoinResolutionRow
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
@@ -98,13 +100,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.NumberFormat
-
-// UX floor for onchain zaps. Below this any on-chain transaction is dominated
-// by miner fees — the recipient nets close to nothing even at low fee rates,
-// so quietly funneling the user to a Lightning zap is the friendlier outcome.
-// This is stricter than the protocol-level [OnchainZapBuilder.DUST_THRESHOLD_SATS]
-// (330 sats), which only guards against creating outputs the network rejects.
-private const val MIN_ONCHAIN_ZAP_SATS = 1_000L
 
 private enum class FeeTier(
     val label: String,
@@ -213,8 +208,17 @@ fun OnchainZapSendDialog(
         }
     }
 
-    val presetAmounts by accountViewModel.account.settings.syncedSettings.zaps.onchainZapAmountChoices
+    // On-chain shares the single zap-amount list now; show only the entries
+    // that clear the on-chain minimum as quick presets.
+    val zapAmountChoices by accountViewModel.account.settings.syncedSettings.zaps.zapAmountChoices
         .collectAsStateWithLifecycle()
+    // Presets that clear the on-chain minimum. If the user's unified list has
+    // none (e.g. only small Lightning amounts), fall back to a sensible default
+    // so the dialog still offers a quick-pick chip instead of an empty row.
+    val presetAmounts =
+        remember(zapAmountChoices) {
+            zapAmountChoices.filter { it >= MIN_ONCHAIN_ZAP_SATS }.ifEmpty { listOf(DEFAULT_ONCHAIN_ZAP_SATS) }
+        }
 
     // Mirror the dropdown's NIP-05 / Namecoin (.bit) resolution so Send can
     // enable as soon as the typed name resolves, without forcing the user to

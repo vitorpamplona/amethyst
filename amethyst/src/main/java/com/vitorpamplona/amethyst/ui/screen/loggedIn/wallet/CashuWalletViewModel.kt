@@ -426,7 +426,7 @@ class CashuWalletViewModel : ViewModel() {
         vm.launchSigner {
             try {
                 val status = ops.checkMintQuote(current.mintUrl, current.flow.mintQuote.quote)
-                val paid = status.paid == true || status.state == "PAID" || status.state == "ISSUED"
+                val paid = status.isSettled()
                 if (!paid) {
                     // Roll back to AwaitingPayment so the polling
                     // LaunchedEffect picks up again on the next tick.
@@ -480,7 +480,7 @@ class CashuWalletViewModel : ViewModel() {
                 val amountSats =
                     runCatching { LnInvoiceUtil.getAmountInSats(status.request).toLong() }
                         .getOrElse { 0L }
-                val paid = status.paid == true || status.state == "PAID" || status.state == "ISSUED"
+                val paid = status.isSettled()
                 if (paid && amountSats > 0) {
                     ops.completeMintFromLightning(mintUrl, quoteEvent, amountSats)
                     _mintState.value = CashuMintFlowState.Completed(amountSats)

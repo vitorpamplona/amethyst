@@ -79,7 +79,7 @@ fun UpdateZapAmountScreen(
             UpdateZapAmountContent(postViewModel, onClose = {
                 postViewModel.cancel()
                 nav.popBack()
-            }, nip47, accountViewModel)
+            }, accountViewModel)
         }
     }
 }

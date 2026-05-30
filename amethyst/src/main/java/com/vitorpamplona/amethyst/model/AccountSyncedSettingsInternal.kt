@@ -41,6 +41,23 @@ val DefaultZapAmounts = listOf(21L, 50L, 100L)
 val DefaultOnchainZapAmounts = listOf(5_000L)
 val DefaultReportWarningThreshold = 5
 
+/**
+ * Product floor for the on-chain rail — stricter than the protocol-level
+ * dust threshold (OnchainZapBuilder.DUST_THRESHOLD_SATS). The unified zap
+ * picker offers the on-chain logo only for amounts at or above this, and the
+ * on-chain send dialog draws its presets from the single zap-amount list
+ * filtered by it. Single source of truth for everywhere that gates on-chain
+ * by amount.
+ */
+const val MIN_ONCHAIN_ZAP_SATS = 1_000L
+
+/**
+ * Default on-chain quick-pick amount, used when the user's unified zap-amount
+ * list contains nothing at or above [MIN_ONCHAIN_ZAP_SATS]. Matches the legacy
+ * dedicated on-chain default so the send dialog always offers one preset.
+ */
+const val DEFAULT_ONCHAIN_ZAP_SATS = 5_000L
+
 @Serializable
 enum class ReactionRowAction {
     Reply,
@@ -154,6 +171,11 @@ class AccountReactionPreferencesInternal(
 @Serializable
 class AccountZapPreferencesInternal(
     var zapAmountChoices: List<Long> = DefaultZapAmounts,
+    // Legacy field: the on-chain rail no longer has its own editable preset
+    // list — amounts live in [zapAmountChoices] and on-chain just filters by
+    // [MIN_ONCHAIN_ZAP_SATS]. Kept (de)serialized so older clients still sync
+    // and so the on-chain-eligible subset round-trips back for them; on load it
+    // is unioned into [zapAmountChoices]. See AccountSyncedSettings.
     var onchainZapAmountChoices: List<Long> = DefaultOnchainZapAmounts,
     val defaultZapType: LnZapEvent.ZapType = LnZapEvent.ZapType.PUBLIC,
 )

@@ -122,7 +122,6 @@ fun NIP47SetupScreen(
                     paymentTargetsViewModel.refresh()
                     nav.popBack()
                 },
-                nip47,
                 accountViewModel,
             ) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))

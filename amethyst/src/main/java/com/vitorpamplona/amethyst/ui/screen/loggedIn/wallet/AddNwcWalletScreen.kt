@@ -74,12 +74,14 @@ import kotlinx.coroutines.launch
 fun AddNwcWalletScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
+    nip47Uri: String? = null,
 ) {
     val walletViewModel: WalletViewModel = viewModel()
     walletViewModel.init(accountViewModel)
 
     var walletName by remember { mutableStateOf("") }
-    var nwcUri by remember { mutableStateOf("") }
+    // Prefilled when arriving from the `nostr+walletconnect` connect deep link.
+    var nwcUri by remember { mutableStateOf(nip47Uri.orEmpty()) }
     var error by remember { mutableStateOf<String?>(null) }
     var qrScanning by remember { mutableStateOf(false) }
 
