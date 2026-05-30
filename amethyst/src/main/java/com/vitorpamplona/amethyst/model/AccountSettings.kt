@@ -385,21 +385,6 @@ class AccountSettings(
         return false
     }
 
-    fun moveNwcWallet(
-        fromIndex: Int,
-        toIndex: Int,
-    ): Boolean {
-        val wallets = nwcWallets.value.toMutableList()
-        if (fromIndex in wallets.indices && toIndex in wallets.indices && fromIndex != toIndex) {
-            val item = wallets.removeAt(fromIndex)
-            wallets.add(toIndex, item)
-            nwcWallets.tryEmit(wallets)
-            saveAccountSettings()
-            return true
-        }
-        return false
-    }
-
     fun changeZapPaymentRequest(newServer: Nip47WalletConnect.Nip47URINorm?): Boolean {
         if (newServer == null) {
             if (nwcWallets.value.isNotEmpty()) {

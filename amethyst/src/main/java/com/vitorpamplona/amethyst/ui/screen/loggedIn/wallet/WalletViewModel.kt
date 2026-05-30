@@ -296,15 +296,6 @@ class WalletViewModel : ViewModel() {
         refreshWalletList()
     }
 
-    fun moveWallet(
-        fromIndex: Int,
-        toIndex: Int,
-    ) {
-        val acc = account ?: return
-        acc.settings.moveNwcWallet(fromIndex, toIndex)
-        refreshWalletList()
-    }
-
     fun selectWallet(walletId: String) {
         _selectedWalletId.value = walletId
         _balanceSats.value = walletInfoMap.value[walletId]?.balanceSats
