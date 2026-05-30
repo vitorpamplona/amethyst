@@ -128,6 +128,20 @@ class AccountGiftWrapsEoseManager(
         invalidateFilters()
     }
 
+    /**
+     * Jumps the gift-wrap window straight to the maximum lookback so a single REQ pulls the entire
+     * history (the pre-windowing behavior), and marks it [exhausted] so auto-fill stops.
+     */
+    fun loadEverything(user: User) {
+        val window = windowFor(user)
+        if (window.isExhausted()) return
+        window.loadAll()
+        _exhausted.value = true
+        Log.d(TAG) { "loadEverything: pubkey=${user.pubkeyHex.take(8)}… loading full history since ${window.since}" }
+        scope?.let { windowLoad.startLoading(it) }
+        invalidateFilters()
+    }
+
     override fun newEose(
         key: AccountQueryState,
         relay: NormalizedRelayUrl,
@@ -195,6 +209,9 @@ class AccountGiftWrapsEoseManager(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
+                    // Every event (stored backfill included) keeps the window-load watchdog alive,
+                    // so a relay mid-flood is never mistaken for a finished window.
+                    windowLoad.onActivity()
                     if (pubkey !in bootEoseLogged) {
                         bootEventCount[pubkey] = (bootEventCount[pubkey] ?: 0) + 1
                     }

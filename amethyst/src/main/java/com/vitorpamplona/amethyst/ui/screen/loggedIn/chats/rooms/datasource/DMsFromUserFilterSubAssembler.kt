@@ -26,12 +26,15 @@ import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseMa
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.WindowLoadTracker
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -103,6 +106,19 @@ class DMsFromUserFilterSubAssembler(
         invalidateFilters()
     }
 
+    /**
+     * Jumps the NIP-04 window straight to the maximum lookback so a single REQ pulls the entire
+     * history (the pre-windowing behavior), and marks it [exhausted] so auto-fill stops.
+     */
+    fun loadEverything(user: User) {
+        val window = windowFor(user)
+        if (window.isExhausted()) return
+        window.loadAll()
+        _exhausted.value = true
+        scope?.let { windowLoad.startLoading(it) }
+        invalidateFilters()
+    }
+
     override fun newEose(
         key: ChatroomListState,
         relay: NormalizedRelayUrl,
@@ -137,7 +153,30 @@ class DMsFromUserFilterSubAssembler(
                 },
             )
 
-        return super.newSub(key)
+        // Custom listener (vs super.newSub) so every event — stored backfill included — keeps the
+        // window-load watchdog alive; otherwise a NIP-04 flood would look "done" mid-stream.
+        return requestNewSubscription(
+            object : SubscriptionListener {
+                override fun onEose(
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    newEose(key, relay, TimeUtils.now(), forFilters)
+                }
+
+                override fun onEvent(
+                    event: Event,
+                    isLive: Boolean,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    windowLoad.onActivity()
+                    if (isLive) {
+                        newEose(key, relay, TimeUtils.now(), forFilters)
+                    }
+                }
+            },
+        )
     }
 
     override fun endSub(

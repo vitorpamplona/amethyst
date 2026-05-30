@@ -99,6 +99,19 @@ class TimeWindowPaginationTest {
     }
 
     @Test
+    fun loadAllJumpsStraightToExhaustion() {
+        val maxLookback = 100L
+        val pagination = TimeWindowPagination(initialWindow = 10L, step = 10L, growthFactor = 2L, maxLookback = maxLookback)
+        assertTrue("not exhausted before loadAll", !pagination.isExhausted())
+
+        pagination.loadAll()
+
+        assertTrue("loadAll exhausts the window in one step", pagination.isExhausted())
+        val floor = TimeUtils.now() - maxLookback
+        assertTrue("since lands at the floor", kotlin.math.abs(pagination.since - floor) <= 2)
+    }
+
+    @Test
     fun resetClearsStepGrowth() {
         val pagination = TimeWindowPagination(initialWindow = 10L, step = 100L, growthFactor = 2L, maxLookback = Long.MAX_VALUE / 2)
         pagination.loadMore() // step grows to 200

@@ -63,6 +63,11 @@ class TimeWindowPagination(
         if (growthFactor > 1L) currentStep *= growthFactor
     }
 
+    /** Jumps straight to [maxLookback] so a single request pulls the entire history. */
+    fun loadAll() {
+        since = floor()
+    }
+
     /** True once the window has reached [maxLookback] — there is no older history to request. */
     fun isExhausted(): Boolean = since <= floor()
 

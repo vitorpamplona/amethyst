@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.feed
 
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -31,13 +31,18 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -149,6 +154,9 @@ private fun FeedLoaded(
     val loadingGiftWraps by giftWraps.loadingMore.collectAsStateWithLifecycle()
     val loadingNip04 by nip04Dms.loadingMore.collectAsStateWithLifecycle()
     val loadingMore = loadingGiftWraps || loadingNip04
+    val exhaustedGiftWraps by giftWraps.exhausted.collectAsStateWithLifecycle()
+    val exhaustedNip04 by nip04Dms.exhausted.collectAsStateWithLifecycle()
+    val historyExhausted = exhaustedGiftWraps && exhaustedNip04
 
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),
@@ -171,13 +179,28 @@ private fun FeedLoaded(
             )
         }
 
-        if (loadingMore) {
+        // Footer: shows the auto-fill / full-load spinner, and — while there is still older history
+        // to reach — a button to skip the windowed paging and pull the entire history at once.
+        if (loadingMore || !historyExhausted) {
             item(key = "loadingMoreFooter") {
-                Row(
+                Column(
                     Modifier.fillMaxWidth().padding(vertical = Size10dp),
-                    horizontalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    CircularProgressIndicator(Modifier.size(Size25dp))
+                    if (loadingMore) {
+                        CircularProgressIndicator(Modifier.size(Size25dp))
+                    }
+                    if (!historyExhausted) {
+                        TextButton(
+                            onClick = {
+                                val user = accountViewModel.userProfile()
+                                giftWraps.loadEverything(user)
+                                nip04Dms.loadEverything(user)
+                            },
+                        ) {
+                            Text(stringResource(R.string.chats_load_entire_history))
+                        }
+                    }
                 }
             }
         }

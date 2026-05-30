@@ -27,45 +27,71 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * Tracks when one relay-subscription "window" has finished loading, so callers can wait for the
- * WHOLE set of relays to answer instead of declaring victory on the first EOSE.
+ * Tracks when one relay-subscription "window" has finished loading, so callers (the rooms-screen
+ * auto-fill loop) can wait for the WHOLE response instead of declaring victory on the first EOSE.
  *
  * A subscription fans a single REQ out to several relays. The first EOSE is a misleading "done"
  * signal: a fast but near-empty relay can EOSE in milliseconds while the relay that actually holds
- * the data is still connecting (or stuck in an auth handshake). An auto-fill loop driven by the
- * first EOSE would therefore widen the time window again before the slow relay ever answered,
- * walking the window back uselessly.
+ * the data is still connecting, stuck in an auth handshake, or busy streaming thousands of stored
+ * events. An auto-fill loop driven by the first EOSE — or by a fixed wall-clock timeout — would
+ * widen the window again mid-stream, before the events were even decrypted into rooms, re-issuing
+ * an ever-wider REQ that re-downloads the whole history over and over.
  *
- * [loading] stays true until EVERY [setExpectedRelays] relay has answered (an EOSE, or a live event
- * that implies the stored set already drained), or until [timeout] elapses as a backstop for relays
- * that never answer (down, or looping on `auth-required`).
+ * So completion is **activity-based**: [loading] stays true until either every expected relay has
+ * EOSE'd, or the event stream has gone quiet for [idleTimeout] (a flood of events keeps resetting
+ * that timer via [onActivity], so a window that is still streaming is never declared done). An
+ * [absoluteCap] bounds the wait for pathological relays that dribble forever.
  */
 class WindowLoadTracker(
-    private val timeout: Duration = 15.seconds,
+    private val idleTimeout: Duration = 3.seconds,
+    private val absoluteCap: Duration = 5.minutes,
 ) {
     private val _loading = MutableStateFlow(true)
     val loading: StateFlow<Boolean> = _loading.asStateFlow()
 
     private var expected: Set<NormalizedRelayUrl> = emptySet()
     private val responded = mutableSetOf<NormalizedRelayUrl>()
-    private var timeoutJob: Job? = null
+    private var watchdog: Job? = null
 
-    /** Begins a fresh window load: clears the responded set, raises [loading], and arms the timeout. */
+    // Wall-clock of the last EOSE or event for the current window; the watchdog completes the
+    // window once this stops advancing for [idleTimeout]. Volatile so the hot per-event path
+    // ([onActivity]) stays lock-free.
+    @Volatile
+    private var lastActivityMs = 0L
+
+    /** Begins a fresh window load: clears the responded set, raises [loading], and arms the watchdog. */
     @Synchronized
     fun startLoading(scope: CoroutineScope) {
         responded.clear()
+        lastActivityMs = System.currentTimeMillis()
         _loading.value = true
-        timeoutJob?.cancel()
-        timeoutJob =
+        watchdog?.cancel()
+        watchdog =
             scope.launch {
-                delay(timeout)
-                finish()
+                val deadline = System.currentTimeMillis() + absoluteCap.inWholeMilliseconds
+                while (isActive && _loading.value) {
+                    delay(IDLE_CHECK_MS)
+                    val now = System.currentTimeMillis()
+                    if (now - lastActivityMs >= idleTimeout.inWholeMilliseconds || now >= deadline) {
+                        finish()
+                    }
+                }
             }
+    }
+
+    /**
+     * Records that the current window is still actively receiving events (stored OR live). Keeps the
+     * idle watchdog from completing while a relay is mid-flood. Lock-free: just bumps a timestamp.
+     */
+    fun onActivity() {
+        lastActivityMs = System.currentTimeMillis()
     }
 
     /** Records which relays the current REQ was sent to. Completes immediately if there are none. */
@@ -78,6 +104,7 @@ class WindowLoadTracker(
     /** Marks [relay] as having answered (EOSE or live event). Completes once all expected have. */
     @Synchronized
     fun onRelayResponded(relay: NormalizedRelayUrl) {
+        lastActivityMs = System.currentTimeMillis()
         responded.add(relay)
         if (expected.isNotEmpty() && responded.containsAll(expected)) finish()
     }
@@ -85,7 +112,11 @@ class WindowLoadTracker(
     @Synchronized
     private fun finish() {
         _loading.value = false
-        timeoutJob?.cancel()
-        timeoutJob = null
+        watchdog?.cancel()
+        watchdog = null
+    }
+
+    companion object {
+        private const val IDLE_CHECK_MS = 500L
     }
 }
