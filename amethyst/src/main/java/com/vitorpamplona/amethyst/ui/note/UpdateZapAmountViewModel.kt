@@ -72,7 +72,10 @@ class UpdateZapAmountViewModel : ViewModel() {
 
     fun addAmount() {
         val newValue = nextAmount.text.trim().toLongOrNull()
-        if (newValue != null) {
+        // De-dupe: a repeated amount would give two preset chips the same key (a
+        // Compose duplicate-key hazard) and make the drag-reorder's indexOf()
+        // resolve to the wrong chip.
+        if (newValue != null && newValue !in amountSet) {
             amountSet = amountSet + newValue
         }
 
