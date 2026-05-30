@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -161,18 +162,22 @@ class ReloadMintViewModel : ViewModel() {
 
         // Wallet proofs/mints arrive from relays and can land *after* the screen
         // opens — a one-time snapshot would show only the first-loaded mint. Keep
-        // balances/targets in sync as the wallet fills in.
+        // balances/targets in sync as the wallet fills in, but project to just the
+        // per-mint balance map and distinctUntilChanged so unrelated wallet churn
+        // (an inbound nutzap redeem, a scrub, a token for some other mint) doesn't
+        // re-run the whole rebuild on every global tokenEntries emission.
         viewModelScope.launch {
-            combine(st.tokenEntries, st.mints) { _, _ -> Unit }.collect { rebuild() }
+            combine(st.tokenEntries, st.mints) { _, _ -> st.peekMintBalances() }
+                .distinctUntilChanged()
+                .collect { rebuild(it) }
         }
     }
 
     /** Rebuild balances/targets/sources from the current wallet state, keeping the
      *  user's chosen target, top-up, source pick, and status intact. */
-    private fun rebuild() {
-        val st = state ?: return
+    private fun rebuild(balances: Map<String, Long>) {
         val recipient = recipient ?: return
-        val balances = st.peekMintBalances()
+        val st = state ?: return
         val targets = st.recipientSharedMints(recipient).sortedByDescending { balances[it] ?: 0L }
         _uiState.update { cur ->
             val target = cur.selectedTarget.takeIf { it in targets } ?: targets.firstOrNull().orEmpty()
@@ -285,7 +290,7 @@ class ReloadMintViewModel : ViewModel() {
                     when {
                         // Already topped up (or the target already covers the send) —
                         // never move funds again on retry, just (re)send the zap.
-                        toppedUp || moveSats <= 0L -> sendNutzapAndFinish(note, s.sendSats)
+                        toppedUp || moveSats <= 0L -> sendNutzapAndFinish(note, s.sendSats, s.selectedTarget)
                         source is ReloadSource.Mint -> rebalanceThenZap(source.mintUrl, s.selectedTarget, moveSats, note, s.sendSats)
                         source is ReloadSource.LightningWallet ->
                             reloadFromLightningThenZap(s.selectedTarget, moveSats, walletUriFor(source.walletId), note, s.sendSats)
@@ -320,7 +325,7 @@ class ReloadMintViewModel : ViewModel() {
             onFundsMoved = { toppedUp = true },
         )
         awaitTargetFunded(targetMint, sendSats)
-        sendNutzapAndFinish(note, sendSats)
+        sendNutzapAndFinish(note, sendSats, targetMint)
     }
 
     private suspend fun reloadFromLightningThenZap(
@@ -374,7 +379,7 @@ class ReloadMintViewModel : ViewModel() {
         setStatus(ReloadStatus.Working("Issuing ecash", 0.85f))
         ops.completeMintFromLightning(targetMint, flow.quoteEvent, moveSats)
         awaitTargetFunded(targetMint, sendSats)
-        sendNutzapAndFinish(note, sendSats)
+        sendNutzapAndFinish(note, sendSats, targetMint)
     }
 
     /**
@@ -406,6 +411,7 @@ class ReloadMintViewModel : ViewModel() {
     private suspend fun sendNutzapAndFinish(
         note: Note,
         sendSats: Long,
+        targetMint: String,
     ) {
         val st = state ?: return
         val recipient = note.author?.pubkeyHex ?: throw IllegalStateException("Recipient has no pubkey")
@@ -416,6 +422,9 @@ class ReloadMintViewModel : ViewModel() {
             recipientPubKey = recipient,
             zappedEvent = zappedEvent,
             message = "",
+            // Spend from the mint we just topped up, not whichever shared mint
+            // happens to hold the most — otherwise the top-up sits idle.
+            preferredMintUrl = targetMint.takeIf { it.isNotBlank() },
         )
         setStatus(ReloadStatus.Done)
     }

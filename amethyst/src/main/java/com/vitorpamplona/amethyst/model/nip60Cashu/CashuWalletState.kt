@@ -763,6 +763,16 @@ class CashuWalletState(
      */
     fun peekNutzapTarget(recipientPubKey: HexKey): NutzapTarget? = peekNutzapFunding(recipientPubKey)?.target
 
+    /** True if [mintUrl] is a mint we hold AND the recipient accepts nutzaps on. */
+    fun sharedNutzapMint(
+        recipientPubKey: HexKey,
+        mintUrl: String,
+    ): Boolean {
+        if (mintUrl !in _mints.value) return false
+        val info = cache.getOrCreateUser(recipientPubKey).nutzapInfo() ?: return false
+        return info.mints().any { it.mintUrl == mintUrl }
+    }
+
     /**
      * Resolve nutzap funding for [recipientPubKey]: the best shared mint to
      * spend from plus the balance figures the zap picker needs to classify
@@ -1078,12 +1088,22 @@ class CashuWalletState(
         recipientPubKey: HexKey,
         zappedEvent: EventHintBundle<out Event>,
         message: String = "",
+        preferredMintUrl: String? = null,
         onProgress: ((Float) -> Unit)? = null,
     ): NutzapSent {
         check(started) { "CashuWalletState.start() not called" }
-        val target =
+        val resolved =
             peekNutzapTarget(recipientPubKey)
                 ?: throw IllegalStateException("Recipient does not accept nutzaps from any of our mints")
+        // Honor an explicit mint when the caller has one in mind (e.g. the Top-up
+        // screen just funded a specific mint and must spend from THAT one, not
+        // whichever shared mint happens to hold the most). Only if it's still a
+        // valid shared target; otherwise fall back to the best-balance pick.
+        val target =
+            preferredMintUrl
+                ?.takeIf { it == resolved.mintUrl || sharedNutzapMint(recipientPubKey, it) }
+                ?.let { NutzapTarget(mintUrl = it, recipientP2pkPubkeyHex = resolved.recipientP2pkPubkeyHex) }
+                ?: resolved
 
         // NUT-07 check + immediate state cleanup before selecting.
         // The startup scrub can't catch entries that arrive from relays
@@ -1146,11 +1166,14 @@ class CashuWalletState(
     suspend fun meltToLightning(
         mintUrl: String,
         quote: MeltQuoteBolt11ResponseDto,
+        skipScrub: Boolean = false,
     ): MeltCompleted {
         check(started) { "CashuWalletState.start() not called" }
         if (mintUrl.isBlank()) throw IllegalArgumentException("Pick a mint")
 
-        scrubLocallyStaleProofs(mintUrl)
+        // [rebalance] already scrubbed this mint to compute its coverage check, so
+        // it passes skipScrub=true to avoid a second NUT-07 /checkstate round-trip.
+        if (!skipScrub) scrubLocallyStaleProofs(mintUrl)
 
         val available = _tokenEntries.value.filter { it.content.mint == mintUrl }
         if (available.isEmpty()) {
@@ -1205,9 +1228,11 @@ class CashuWalletState(
             throw IllegalStateException("$sourceMintUrl has $sourceBalance sat — needs $required to move $sats")
         }
 
-        // 3. Pay the destination invoice by melting at the source.
+        // 3. Pay the destination invoice by melting at the source. We already
+        //    scrubbed sourceMintUrl above for the coverage check, so skip the
+        //    redundant second scrub inside meltToLightning.
         onProgress?.invoke(0.5f)
-        meltToLightning(sourceMintUrl, meltQuote)
+        meltToLightning(sourceMintUrl, meltQuote, skipScrub = true)
         // Funds have now LEFT the source. Signal the caller immediately so a
         // failure in the steps below (slow confirmation, completeMint error)
         // never causes a retry to melt a second time — the destination quote is

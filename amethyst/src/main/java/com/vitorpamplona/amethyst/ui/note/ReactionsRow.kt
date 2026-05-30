@@ -1962,6 +1962,12 @@ fun ZapAmountChoicePopup(
     // dialog (onchainSupported == false) masks that rail off here.
     val cashuState = accountViewModel.account.cashuWalletState
     val author = baseNote.author
+    // These four are deliberately read only to drive the recompute below — do NOT
+    // delete them as "unused". Each observe* call ALSO subscribes the relay fetch
+    // (so a not-yet-seen kind:0 / kind:10019 gets pulled in while the popup is
+    // open), and each value is a remember() key so railCapability recomputes when
+    // it arrives. RailCapabilityResolver.peek re-reads everything itself; these
+    // just say *when* to re-run it.
     val cashuMints by cashuState.mints.collectAsStateWithLifecycle()
     val cashuEntries by cashuState.tokenEntries.collectAsStateWithLifecycle()
     val recipientInfo = author?.let { observeUserInfo(it, accountViewModel).value }

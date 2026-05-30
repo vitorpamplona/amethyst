@@ -20,9 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -58,10 +55,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -74,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.UserPicture
@@ -81,6 +80,7 @@ import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import kotlinx.coroutines.launch
 import java.util.UUID
 import androidx.compose.material3.Icon as Material3Icon
 
@@ -122,7 +122,8 @@ fun ReloadMintScreen(
     LaunchedEffect(requestId) { viewModel.init(accountViewModel, request) }
 
     val ui by viewModel.uiState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
 
     // Local source-of-truth for the editable top-up field. The send amount is
     // fixed; the top-up defaults to the shortfall the VM computes once the wallet
@@ -320,7 +321,7 @@ fun ReloadMintScreen(
                         Text(stringRes(R.string.reload_mint_awaiting_payment), style = MaterialTheme.typography.bodyMedium)
                     }
                     OutlinedButton(
-                        onClick = { copyToClipboard(context, status.invoice) },
+                        onClick = { scope.launch { clipboard.setText(status.invoice) } },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(stringRes(R.string.reload_mint_copy_invoice))
@@ -438,12 +439,4 @@ private fun SourceRow(
             }
         }
     }
-}
-
-private fun copyToClipboard(
-    context: Context,
-    text: String,
-) {
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    clipboard.setPrimaryClip(ClipData.newPlainText("invoice", text))
 }
