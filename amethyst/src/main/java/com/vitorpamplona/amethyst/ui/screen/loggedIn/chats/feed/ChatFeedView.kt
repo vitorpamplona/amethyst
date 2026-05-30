@@ -58,8 +58,12 @@ fun RefreshingChatroomFeedView(
     onWantsToEditDraft: (Note) -> Unit,
     avoidDraft: DraftTagState? = null,
     scrollStateKey: String? = null,
+    // Opt-in hook handed the feed's scroll state, so a specific screen (e.g. private DMs) can
+    // attach scroll-driven loading. No-op for the public-chat / channel callers that don't paginate.
+    listStateObserver: @Composable (LazyListState) -> Unit = {},
 ) {
     SaveableFeedState(feedContentState, scrollStateKey) { listState ->
+        listStateObserver(listState)
         RenderChatFeedView(
             feedContentState,
             accountViewModel,

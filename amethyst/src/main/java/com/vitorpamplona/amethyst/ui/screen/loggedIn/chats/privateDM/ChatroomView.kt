@@ -24,10 +24,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -46,6 +49,9 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 
 @Composable
@@ -123,19 +129,41 @@ fun ChatroomView(
 }
 
 /**
- * Pulls the account-wide gift-wrap (NIP-17) history all the way back when a conversation opens, so
- * a thread always shows its full history regardless of how narrow the rooms-list window currently is.
+ * Scroll-driven NIP-17 history loader for a conversation. The thread is reverse-laid-out (newest at
+ * the bottom, index 0), so older messages live at higher indices; this widens the account-wide
+ * gift-wrap window one step whenever nothing is loaded yet or the oldest visible row has crossed the
+ * midpoint of what's loaded — prefetching older gift wraps before the user reaches the top — and
+ * stops once the window is exhausted.
  *
- * Gift wraps are addressed to us (not to the conversation partner), so a relay cannot filter them
- * per-room — the only lever is the shared account window. [AccountGiftWrapsEoseManager.loadEverything]
- * is idempotent: once the window has reached the maximum lookback this is a no-op, so opening or
- * reopening conversations after the first full load costs nothing.
+ * Gift wraps are addressed to us (not the partner), so a relay cannot filter them per-room: the only
+ * lever is the shared account window. NIP-04 in a conversation is already loaded in full, so only the
+ * windowed NIP-17 side needs this. The combined [AccountGiftWrapsEoseManager.loadingMore] guard gates
+ * each step on the previous window finishing, so it advances one step at a time, not in a burst.
  */
 @Composable
-private fun EnsureFullGiftWrapHistory(accountViewModel: AccountViewModel) {
-    LaunchedEffect(accountViewModel) {
-        val giftWraps = accountViewModel.dataSources().account.giftWraps
-        giftWraps.loadEverything(accountViewModel.userProfile())
+private fun LoadOlderGiftWrapsWhenScrolling(
+    listState: LazyListState,
+    accountViewModel: AccountViewModel,
+) {
+    val giftWraps = remember(accountViewModel) { accountViewModel.dataSources().account.giftWraps }
+
+    LaunchedEffect(listState, giftWraps) {
+        combine(
+            snapshotFlow {
+                val info = listState.layoutInfo
+                val total = info.totalItemsCount
+                val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: -1
+                total == 0 || lastVisible >= total / 2
+            },
+            giftWraps.loadingMore,
+            giftWraps.exhausted,
+        ) { wantMore, loadingMore, exhausted ->
+            wantMore && !loadingMore && !exhausted
+        }.distinctUntilChanged()
+            .filter { it }
+            .collect {
+                giftWraps.loadMore(accountViewModel.userProfile())
+            }
     }
 }
 
@@ -149,7 +177,6 @@ fun ChatroomViewUI(
 ) {
     WatchLifecycleAndUpdateModel(feedViewModel)
     ChatroomFilterAssemblerSubscription(room, accountViewModel.dataSources().chatroom, accountViewModel)
-    EnsureFullGiftWrapHistory(accountViewModel)
 
     Column(Modifier.fillMaxHeight()) {
         ObserveRelayListForDMsAndDisplayIfNotFound(accountViewModel, nav)
@@ -169,6 +196,9 @@ fun ChatroomViewUI(
                 avoidDraft = newPostModel.draftTag,
                 onWantsToReply = newPostModel::reply,
                 onWantsToEditDraft = newPostModel::editFromDraft,
+                listStateObserver = { listState ->
+                    LoadOlderGiftWrapsWhenScrolling(listState, accountViewModel)
+                },
             )
         }
 
