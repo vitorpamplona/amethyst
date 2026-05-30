@@ -54,6 +54,11 @@ class DMsFromUserFilterSubAssembler(
     private val _loadingMore = MutableStateFlow(false)
     val loadingMore: StateFlow<Boolean> = _loadingMore.asStateFlow()
 
+    // True from (re)subscribe until the first relay response, so the rooms screen can
+    // keep a spinner up during the initial load instead of flashing the empty state.
+    private val _initialLoadInFlight = MutableStateFlow(true)
+    val initialLoadInFlight: StateFlow<Boolean> = _initialLoadInFlight.asStateFlow()
+
     override fun updateFilter(
         key: ChatroomListState,
         since: SincePerRelayMap?,
@@ -84,6 +89,7 @@ class DMsFromUserFilterSubAssembler(
         filters: List<Filter>?,
     ) {
         if (_loadingMore.value) _loadingMore.value = false
+        _initialLoadInFlight.value = false
         super.newEose(key, relay, time, filters)
     }
 

@@ -90,6 +90,15 @@ private fun CrossFadeState(
 ) {
     val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
 
+    // While the first gift-wrap / NIP-04 window is still being fetched and decrypted, an
+    // empty feed means "not loaded yet", not "no conversations". Keep the spinner up until
+    // both initial loads answer so cold boot doesn't flash the empty state before the DMs land.
+    val giftWraps = remember(accountViewModel) { accountViewModel.dataSources().account.giftWraps }
+    val nip04Dms = remember(accountViewModel) { accountViewModel.dataSources().chatroomList.nip04Dms }
+    val giftWrapsInitialLoad by giftWraps.initialLoadInFlight.collectAsStateWithLifecycle()
+    val nip04InitialLoad by nip04Dms.initialLoadInFlight.collectAsStateWithLifecycle()
+    val initialLoadInFlight = giftWrapsInitialLoad || nip04InitialLoad
+
     CrossfadeIfEnabled(
         targetState = feedState,
         animationSpec = tween(durationMillis = 100),
@@ -97,7 +106,11 @@ private fun CrossFadeState(
     ) { state ->
         when (state) {
             is FeedState.Empty -> {
-                FeedEmpty { feedContentState.invalidateData() }
+                if (initialLoadInFlight) {
+                    LoadingFeed()
+                } else {
+                    FeedEmpty { feedContentState.invalidateData() }
+                }
             }
 
             is FeedState.FeedError -> {
@@ -132,7 +145,7 @@ private fun FeedLoaded(
     val loadingNip04 by nip04Dms.loadingMore.collectAsStateWithLifecycle()
     val loadingMore = loadingGiftWraps || loadingNip04
 
-    LoadMoreWhenReachingEnd(listState, items.list.size, accountViewModel)
+    LoadMoreWhenReachingEnd(listState, accountViewModel)
 
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),
@@ -187,23 +200,28 @@ private const val LOAD_MORE_THRESHOLD = 5
 @Composable
 private fun LoadMoreWhenReachingEnd(
     listState: LazyListState,
-    itemCount: Int,
     accountViewModel: AccountViewModel,
 ) {
-    LaunchedEffect(listState, itemCount) {
+    // Keyed only on listState so the edge-detector is NOT restarted when a widen adds
+    // rooms. distinctUntilChanged then fires exactly once per reach-the-end gesture:
+    // staying at the end does not re-fire, and scrolling back up (nearEnd -> false)
+    // stops further loads. Keying on item count instead would re-arm on every item
+    // growth and cascade the window back for minutes over a slow connection.
+    LaunchedEffect(listState) {
         snapshotFlow {
             val info = listState.layoutInfo
+            val total = info.totalItemsCount
             val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: -1
-            lastVisible >= info.totalItemsCount - LOAD_MORE_THRESHOLD
+            total > 0 && lastVisible >= total - LOAD_MORE_THRESHOLD
         }.distinctUntilChanged()
-            .filter { it && itemCount > 0 }
+            .filter { it }
             .collect {
                 val giftWraps = accountViewModel.dataSources().account.giftWraps
                 val nip04Dms = accountViewModel.dataSources().chatroomList.nip04Dms
                 if (giftWraps.loadingMore.value || nip04Dms.loadingMore.value) {
-                    Log.d("DMPagination") { "rooms list near end ($itemCount items) but a window load is already in flight, skipping" }
+                    Log.d("DMPagination") { "rooms list reached end but a window load is already in flight, skipping" }
                 } else {
-                    Log.d("DMPagination") { "rooms list scrolled near end ($itemCount items), widening NIP-17 + NIP-04 windows" }
+                    Log.d("DMPagination") { "rooms list reached end, widening NIP-17 + NIP-04 windows one step" }
                     val user = accountViewModel.userProfile()
                     giftWraps.loadMore(user)
                     nip04Dms.loadMore(user)

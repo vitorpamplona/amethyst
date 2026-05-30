@@ -66,6 +66,12 @@ class AccountGiftWrapsEoseManager(
     private val _loadingMore = MutableStateFlow(false)
     val loadingMore: StateFlow<Boolean> = _loadingMore.asStateFlow()
 
+    // True from cold boot until the first EOSE arrives. Lets the rooms screen keep
+    // showing a spinner during the (Tor-slow) initial load instead of flashing the
+    // empty state before any relay has answered.
+    private val _initialLoadInFlight = MutableStateFlow(true)
+    val initialLoadInFlight: StateFlow<Boolean> = _initialLoadInFlight.asStateFlow()
+
     override fun updateFilter(
         key: AccountQueryState,
         since: SincePerRelayMap?,
@@ -152,6 +158,7 @@ class AccountGiftWrapsEoseManager(
         bootStartMs[pubkey] = System.currentTimeMillis()
         bootEventCount[pubkey] = 0
         bootEoseLogged.remove(pubkey)
+        _initialLoadInFlight.value = true
         Log.d(TAG) { "cold boot: pubkey=${pubkey.take(8)}… opening gift-wrap subscription, starting to load messages" }
 
         // Custom listener so we can tell a real EOSE (load finished) apart from live
@@ -163,6 +170,7 @@ class AccountGiftWrapsEoseManager(
                     forFilters: List<Filter>?,
                 ) {
                     if (bootEoseLogged.add(pubkey)) {
+                        _initialLoadInFlight.value = false
                         val elapsed = System.currentTimeMillis() - (bootStartMs[pubkey] ?: System.currentTimeMillis())
                         val count = bootEventCount[pubkey] ?: 0
                         Log.d(TAG) {
