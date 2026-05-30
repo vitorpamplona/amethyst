@@ -28,7 +28,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
@@ -105,9 +105,10 @@ private fun CrossFadeState(
     val nip04Exhausted by nip04Dms.exhausted.collectAsStateWithLifecycle()
     val historyExhausted = giftWrapsExhausted && nip04Exhausted
 
-    // Drive auto-fill / prefetch here (not inside FeedLoaded) so it keeps widening even while
-    // the feed is still Empty and there is no LazyColumn to scroll yet.
-    AutoFillAndPrefetch(listState, { feedState is FeedState.Empty }, accountViewModel)
+    // While the whole list is empty there is no LazyColumn to scroll, so keep widening the private
+    // DM window here until rooms appear or it is exhausted. (Public / ephemeral / group rooms are
+    // membership-based and load on their own — they are not part of the window.)
+    WidenPrivateWindowWhen(accountViewModel) { feedState is FeedState.Empty }
 
     CrossfadeIfEnabled(
         targetState = feedState,
@@ -158,14 +159,30 @@ private fun FeedLoaded(
     val exhaustedNip04 by nip04Dms.exhausted.collectAsStateWithLifecycle()
     val historyExhausted = exhaustedGiftWraps && exhaustedNip04
 
+    // Widen the private DM window only as the user approaches the oldest LOADED private chat —
+    // ignoring public / group / ephemeral rooms below it. Those are membership-based and can be
+    // arbitrarily old; counting them would either stall private paging or drag the window back
+    // years. The lambda reads the live items + scroll state inside the snapshotFlow.
+    WidenPrivateWindowWhen(accountViewModel) {
+        val info = listState.layoutInfo
+        val total = info.totalItemsCount
+        val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: -1
+        val oldestPrivate = items.list.indexOfLast { it.event is ChatroomKeyable }
+        total > 0 && (oldestPrivate < 0 || lastVisible >= oldestPrivate - PREFETCH_PRIVATE_CHATS)
+    }
+
+    // The private-DM loading boundary sits right after the last loaded private chat: that's where
+    // older private history streams in, while public / group rooms below are shown regardless.
+    val privateBoundaryIndex = items.list.indexOfLast { it.event is ChatroomKeyable }
+
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
-        items(
+        itemsIndexed(
             items.list,
-            key = { item -> chatroomLazyKey(item, myPubKey) },
-        ) { item ->
+            key = { _, item -> chatroomLazyKey(item, myPubKey) },
+        ) { index, item ->
             Row(Modifier.fillMaxWidth()) {
                 ChatroomHeaderCompose(
                     item,
@@ -177,85 +194,90 @@ private fun FeedLoaded(
             HorizontalDivider(
                 thickness = DividerThickness,
             )
+
+            if (index == privateBoundaryIndex && (loadingMore || !historyExhausted)) {
+                PrivateChatsLoadMoreFooter(loadingMore, showLoadAll = !historyExhausted) {
+                    val user = accountViewModel.userProfile()
+                    giftWraps.loadEverything(user)
+                    nip04Dms.loadEverything(user)
+                }
+            }
         }
 
-        // Footer: shows the auto-fill / full-load spinner, and — while there is still older history
-        // to reach — a button to skip the windowed paging and pull the entire history at once.
-        if (loadingMore || !historyExhausted) {
+        // No private chat is loaded yet (e.g. only public rooms so far): show the boundary at the end.
+        if (privateBoundaryIndex < 0 && (loadingMore || !historyExhausted)) {
             item(key = "loadingMoreFooter") {
-                Column(
-                    Modifier.fillMaxWidth().padding(vertical = Size10dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    if (loadingMore) {
-                        CircularProgressIndicator(Modifier.size(Size25dp))
-                    }
-                    if (!historyExhausted) {
-                        TextButton(
-                            onClick = {
-                                val user = accountViewModel.userProfile()
-                                giftWraps.loadEverything(user)
-                                nip04Dms.loadEverything(user)
-                            },
-                        ) {
-                            Text(stringResource(R.string.chats_load_entire_history))
-                        }
-                    }
+                PrivateChatsLoadMoreFooter(loadingMore, showLoadAll = !historyExhausted) {
+                    val user = accountViewModel.userProfile()
+                    giftWraps.loadEverything(user)
+                    nip04Dms.loadEverything(user)
                 }
             }
         }
     }
 }
 
+@Composable
+private fun PrivateChatsLoadMoreFooter(
+    loadingMore: Boolean,
+    showLoadAll: Boolean,
+    onLoadEverything: () -> Unit,
+) {
+    Column(
+        Modifier.fillMaxWidth().padding(vertical = Size10dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        if (loadingMore) {
+            CircularProgressIndicator(Modifier.size(Size25dp))
+        }
+        if (showLoadAll) {
+            TextButton(onClick = onLoadEverything) {
+                Text(stringResource(R.string.chats_load_entire_history))
+            }
+        }
+    }
+}
+
+// How many rows ahead of the oldest loaded private chat to start widening, so older private
+// history lands before the user scrolls into the (membership-based) public/group rooms below it.
+private const val PREFETCH_PRIVATE_CHATS = 5
+
 /**
- * Keeps the messages list filled and prefetched by widening the DM time windows.
+ * Widens the private-DM windows (NIP-17 gift wraps + NIP-04, in lockstep) whenever [wantMore]
+ * becomes true and a previous widen isn't still loading, stopping once both are exhausted.
  *
- * One condition drives three behaviors at once: widen when nothing is loaded yet (empty feed),
- * or when the last visible row has crossed the midpoint of what's loaded. Because everything
- * fits on screen while the list is short, the midpoint is trivially crossed, so it keeps
- * widening until the list overflows the viewport with a buffer below the fold — and once it
- * does, it only fires again as the user scrolls past the new midpoint, so fresh (geometrically
- * larger) windows land well before the user reaches the end. It stops only when the window is
- * exhausted (reached max lookback — nothing older exists).
+ * [wantMore] is evaluated inside a snapshotFlow, so it may read live Compose state (scroll position,
+ * the feed list). Callers decide the policy: the empty feed widens to discover the first rooms; the
+ * loaded feed widens as the user approaches the oldest loaded PRIVATE chat — public, group and
+ * ephemeral rooms are membership-based (shown regardless of age) and deliberately excluded, so an
+ * old public chat at the bottom of the list never drags the private window back with it.
  *
- * Both DM protocols advance in lockstep: NIP-17 gift wraps (always-on account loader) and NIP-04
- * (this screen's loader). They must move together — if only one were windowed, the merged
- * time-sorted list would mix a deep tail of one protocol with a shallow window of the other, and
- * a widen would pull rooms that land in the middle of the feed instead of extending the end.
- *
- * The per-window [loadingMore] guard gates each step on ALL of that window's relays answering
- * (or a timeout), not the first EOSE — otherwise a fast, near-empty relay would clear the guard
- * and let this loop outrun the slow relay that actually holds the conversations.
+ * The two windows must move together: if only one were widened, the merged time-sorted list would
+ * mix a deep tail of one protocol with a shallow window of the other. The [loadingMore] guard gates
+ * each step on ALL of that window's relays answering (or a timeout), not the first EOSE, so a fast
+ * near-empty relay can't let the loop outrun the slow relay that holds the conversations.
  */
 @Composable
-private fun AutoFillAndPrefetch(
-    listState: LazyListState,
-    isFeedEmpty: () -> Boolean,
+private fun WidenPrivateWindowWhen(
     accountViewModel: AccountViewModel,
+    wantMore: () -> Boolean,
 ) {
     val giftWraps = remember(accountViewModel) { accountViewModel.dataSources().account.giftWraps }
     val nip04Dms = remember(accountViewModel) { accountViewModel.dataSources().chatroomList.nip04Dms }
 
-    LaunchedEffect(listState, giftWraps, nip04Dms) {
+    LaunchedEffect(giftWraps, nip04Dms) {
         combine(
-            snapshotFlow {
-                val info = listState.layoutInfo
-                val total = info.totalItemsCount
-                val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: -1
-                // Want more when nothing is loaded yet, or when the last visible row has crossed
-                // the midpoint of what's loaded (prefetch well before reaching the end).
-                isFeedEmpty() || (total > 0 && lastVisible >= total / 2)
-            },
+            snapshotFlow { wantMore() },
             giftWraps.loadingMore,
             nip04Dms.loadingMore,
             giftWraps.exhausted,
             nip04Dms.exhausted,
-        ) { wantMore, loadingGiftWraps, loadingNip04, giftWrapsExhausted, nip04Exhausted ->
-            wantMore && !loadingGiftWraps && !loadingNip04 && !(giftWrapsExhausted && nip04Exhausted)
+        ) { want, loadingGiftWraps, loadingNip04, giftWrapsExhausted, nip04Exhausted ->
+            want && !loadingGiftWraps && !loadingNip04 && !(giftWrapsExhausted && nip04Exhausted)
         }.distinctUntilChanged()
             .filter { it }
             .collect {
-                Log.d("DMPagination") { "rooms list needs more (auto-fill/prefetch), widening NIP-17 + NIP-04 windows one step" }
+                Log.d("DMPagination") { "rooms list needs more private history, widening NIP-17 + NIP-04 windows one step" }
                 val user = accountViewModel.userProfile()
                 giftWraps.loadMore(user)
                 nip04Dms.loadMore(user)
