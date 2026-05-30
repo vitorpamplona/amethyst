@@ -21,8 +21,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -34,8 +36,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -61,6 +64,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -76,10 +81,6 @@ import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.RelayDragState
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.draggableRelayItem
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relayDragHandle
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.rememberRelayDragState
 import com.vitorpamplona.amethyst.ui.stringRes
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
@@ -221,12 +222,6 @@ private fun MultiWalletHomeContent(
         }
     }
 
-    val dragState =
-        rememberRelayDragState(
-            onMove = { from, to -> walletViewModel.moveWallet(from, to) },
-            itemCount = { walletInfoList.size },
-        )
-
     LazyColumn(
         state = listState,
         modifier =
@@ -234,17 +229,10 @@ private fun MultiWalletHomeContent(
                 .fillMaxSize()
                 .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
-        userScrollEnabled = !dragState.isDragging,
     ) {
-        item {
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-
-        itemsIndexed(walletInfoList, key = { _, info -> info.walletId }) { index, walletInfo ->
+        items(walletInfoList, key = { info -> info.walletId }) { walletInfo ->
             WalletCard(
                 walletInfo = walletInfo,
-                index = index,
-                dragState = if (walletInfoList.size > 1) dragState else null,
                 onSelect = {
                     walletViewModel.selectWallet(walletInfo.walletId)
                     nav.nav(Route.WalletDetail(walletInfo.walletId))
@@ -293,8 +281,6 @@ private fun MultiWalletHomeContent(
 @Composable
 private fun WalletCard(
     walletInfo: WalletInfo,
-    index: Int,
-    dragState: RelayDragState?,
     onSelect: () -> Unit,
     onSetDefault: () -> Unit,
     onRename: (String) -> Unit,
@@ -339,7 +325,6 @@ private fun WalletCard(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .let { if (dragState != null) it.draggableRelayItem(index, dragState) else it }
                 .clickable(onClick = onSelect),
         shape = RoundedCornerShape(16.dp),
         border =
@@ -366,22 +351,6 @@ private fun WalletCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Drag handle leads the row — same convention as the
-                // relay reorder list — so a center-aligned icon doesn't
-                // land between the balance amount and its "sats" label.
-                if (dragState != null) {
-                    Icon(
-                        MaterialSymbols.DragIndicator,
-                        contentDescription = stringRes(R.string.wallet_reorder),
-                        modifier =
-                            Modifier
-                                .size(24.dp)
-                                .relayDragHandle(index, dragState),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
@@ -489,6 +458,29 @@ private fun WalletCard(
     }
 }
 
+// Mirrors OnchainSection's BitcoinChip so both payment rails render their
+// logo the same way — a filled circular chip with a white glyph — instead of
+// one being a bare tinted vector. Cashu uses the theme primary in place of
+// bitcoin orange to keep the two rails distinct at a glance.
+@Composable
+private fun CashuChip() {
+    Box(
+        modifier =
+            Modifier
+                .size(28.dp)
+                .clip(CircleShape)
+                .background(color = MaterialTheme.colorScheme.primary),
+        contentAlignment = Alignment.Center,
+    ) {
+        Material3Icon(
+            imageVector = CustomHashTagIcons.Cashu,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(18.dp),
+        )
+    }
+}
+
 @Composable
 private fun CashuWalletRow(
     balanceSats: Long,
@@ -512,12 +504,7 @@ private fun CashuWalletRow(
                     .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Material3Icon(
-                imageVector = CustomHashTagIcons.Cashu,
-                contentDescription = null,
-                modifier = Modifier.size(28.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
+            CashuChip()
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
