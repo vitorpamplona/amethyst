@@ -60,4 +60,53 @@ class TimeWindowPaginationTest {
         val expected = TimeUtils.now() - window
         assertTrue("reset floor should be near now - window", kotlin.math.abs(pagination.since - expected) <= 2)
     }
+
+    @Test
+    fun growingStepDoublesTheReachEachLoadMore() {
+        val pagination = TimeWindowPagination(initialWindow = 10L, step = 100L, growthFactor = 2L, maxLookback = Long.MAX_VALUE / 2)
+        val before = pagination.since
+
+        pagination.loadMore()
+        assertEquals("first step is the base step", before - 100L, pagination.since)
+
+        pagination.loadMore()
+        assertEquals("second step is doubled", before - 300L, pagination.since)
+
+        pagination.loadMore()
+        assertEquals("third step is doubled again", before - 700L, pagination.since)
+    }
+
+    @Test
+    fun windowIsNotExhaustedWhileWithinLookback() {
+        val pagination = TimeWindowPagination(initialWindow = 10L, step = 10L, growthFactor = 2L, maxLookback = 100L)
+        assertTrue("a fresh window is not exhausted", !pagination.isExhausted())
+
+        pagination.loadMore() // -> now-20
+        assertTrue("still within the 100s lookback", !pagination.isExhausted())
+    }
+
+    @Test
+    fun windowBecomesExhaustedAndClampsAtMaxLookback() {
+        val maxLookback = 100L
+        val pagination = TimeWindowPagination(initialWindow = 10L, step = 10L, growthFactor = 2L, maxLookback = maxLookback)
+
+        // Geometric reach 10,20,40,80 crosses the 100s floor within a handful of steps.
+        repeat(6) { pagination.loadMore() }
+
+        assertTrue("window should report exhausted at the floor", pagination.isExhausted())
+        val floor = TimeUtils.now() - maxLookback
+        assertTrue("since must not go past the floor", pagination.since >= floor - 2 && pagination.since <= floor + 2)
+    }
+
+    @Test
+    fun resetClearsStepGrowth() {
+        val pagination = TimeWindowPagination(initialWindow = 10L, step = 100L, growthFactor = 2L, maxLookback = Long.MAX_VALUE / 2)
+        pagination.loadMore() // step grows to 200
+        pagination.loadMore() // step grows to 400
+
+        pagination.reset()
+        val before = pagination.since
+        pagination.loadMore()
+        assertEquals("after reset the step is back to the base", before - 100L, pagination.since)
+    }
 }

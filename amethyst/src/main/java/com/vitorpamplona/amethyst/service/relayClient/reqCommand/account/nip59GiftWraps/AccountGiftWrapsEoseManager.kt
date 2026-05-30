@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.filterGiftWrapsToP
 import com.vitorpamplona.amethyst.commons.relayClient.pagination.TimeWindowPagination
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.WindowLoadTracker
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -36,6 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -53,24 +55,31 @@ class AccountGiftWrapsEoseManager(
 
     // How far back in time gift wraps are requested, per account. Boot opens a small
     // window so the messages list is usable before the whole DM history is fetched and
-    // decrypted; scrolling to the end of the list widens it via [loadMore].
+    // decrypted; the rooms screen widens it via [loadMore] to fill the screen and to
+    // prefetch as the user scrolls. The step grows geometrically so a sparse history
+    // (or confirming there is nothing older) converges in a handful of requests; it is
+    // kept in lockstep with the NIP-04 window so both DM protocols advance together.
     private val windows = mutableMapOf<HexKey, TimeWindowPagination>()
 
     private fun windowFor(user: User) =
         windows.getOrPut(user.pubkeyHex) {
-            TimeWindowPagination().also {
+            TimeWindowPagination(growthFactor = WINDOW_GROWTH_FACTOR).also {
                 Log.d(TAG) { "opening initial gift-wrap window for pubkey=${user.pubkeyHex.take(8)}… since=${it.since} (${daysAgo(it.since)}d back)" }
             }
         }
 
-    private val _loadingMore = MutableStateFlow(false)
-    val loadingMore: StateFlow<Boolean> = _loadingMore.asStateFlow()
+    // A window is "loading" until every dmRelay it was sent to has answered (EOSE / live event),
+    // or a timeout fires — not on the first EOSE, which a fast empty relay can trip prematurely.
+    private val windowLoad = WindowLoadTracker()
+    val loadingMore: StateFlow<Boolean> = windowLoad.loading
 
-    // True from cold boot until the first EOSE arrives. Lets the rooms screen keep
-    // showing a spinner during the (Tor-slow) initial load instead of flashing the
-    // empty state before any relay has answered.
-    private val _initialLoadInFlight = MutableStateFlow(true)
-    val initialLoadInFlight: StateFlow<Boolean> = _initialLoadInFlight.asStateFlow()
+    // True once the window has reached the maximum lookback: there is no older history to fetch,
+    // so the rooms screen can stop the auto-fill loop and show the real empty state.
+    private val _exhausted = MutableStateFlow(false)
+    val exhausted: StateFlow<Boolean> = _exhausted.asStateFlow()
+
+    // The account scope to run the window-load timeout on, captured when the subscription opens.
+    private var scope: CoroutineScope? = null
 
     override fun updateFilter(
         key: AccountQueryState,
@@ -79,6 +88,7 @@ class AccountGiftWrapsEoseManager(
         // Only loads DMs if the account is writeable
         return if (key.account.isWriteable()) {
             val relays = key.account.dmRelays.flow.value
+            windowLoad.setExpectedRelays(relays.toSet())
             val windowSince = windowFor(user(key)).since
             Log.d(TAG) {
                 "updateFilter: pubkey=${user(key).pubkeyHex.take(8)}… requesting kind:1059 " +
@@ -92,6 +102,7 @@ class AccountGiftWrapsEoseManager(
                 )
             }
         } else {
+            windowLoad.setExpectedRelays(emptySet())
             Log.d(TAG) { "updateFilter: pubkey=${user(key).pubkeyHex.take(8)}… account not writeable, skipping" }
             emptyList()
         }
@@ -99,18 +110,21 @@ class AccountGiftWrapsEoseManager(
 
     /**
      * Widens the gift-wrap time window for [user] one step back and re-issues the
-     * subscription so older conversations stream in. Called when the messages list is
-     * scrolled near its end.
+     * subscription so older conversations stream in. Called by the rooms screen to
+     * fill the screen and to prefetch older history as the user scrolls. No-op once
+     * the window is [exhausted]. Kept in lockstep with the NIP-04 window.
      */
     fun loadMore(user: User) {
         val window = windowFor(user)
+        if (window.isExhausted()) return
         val before = window.since
         window.loadMore()
+        _exhausted.value = window.isExhausted()
         Log.d(TAG) {
             "loadMore: pubkey=${user.pubkeyHex.take(8)}… widening window since $before -> ${window.since} " +
-                "(${daysAgo(window.since)}d back, was ${daysAgo(before)}d), re-issuing subscription"
+                "(${daysAgo(window.since)}d back, was ${daysAgo(before)}d, exhausted=${_exhausted.value}), re-issuing subscription"
         }
-        _loadingMore.value = true
+        scope?.let { windowLoad.startLoading(it) }
         invalidateFilters()
     }
 
@@ -120,13 +134,7 @@ class AccountGiftWrapsEoseManager(
         time: Long,
         filters: List<Filter>?,
     ) {
-        // A backfill window finished loading. Only log the transition, not every live event.
-        if (_loadingMore.value) {
-            Log.d(TAG) {
-                "newEose: pubkey=${user(key).pubkeyHex.take(8)}… backfill window finished on ${relay.url}, clearing loadingMore"
-            }
-            _loadingMore.value = false
-        }
+        windowLoad.onRelayResponded(relay)
         super.newEose(key, relay, time, filters)
     }
 
@@ -143,6 +151,7 @@ class AccountGiftWrapsEoseManager(
     @OptIn(FlowPreview::class)
     override fun newSub(key: AccountQueryState): Subscription {
         val user = user(key)
+        scope = key.account.scope
         userJobMap[user]?.forEach { it.cancel() }
         userJobMap[user] =
             listOf(
@@ -158,7 +167,7 @@ class AccountGiftWrapsEoseManager(
         bootStartMs[pubkey] = System.currentTimeMillis()
         bootEventCount[pubkey] = 0
         bootEoseLogged.remove(pubkey)
-        _initialLoadInFlight.value = true
+        windowLoad.startLoading(key.account.scope)
         Log.d(TAG) { "cold boot: pubkey=${pubkey.take(8)}… opening gift-wrap subscription, starting to load messages" }
 
         // Custom listener so we can tell a real EOSE (load finished) apart from live
@@ -170,7 +179,6 @@ class AccountGiftWrapsEoseManager(
                     forFilters: List<Filter>?,
                 ) {
                     if (bootEoseLogged.add(pubkey)) {
-                        _initialLoadInFlight.value = false
                         val elapsed = System.currentTimeMillis() - (bootStartMs[pubkey] ?: System.currentTimeMillis())
                         val count = bootEventCount[pubkey] ?: 0
                         Log.d(TAG) {
@@ -213,5 +221,10 @@ class AccountGiftWrapsEoseManager(
         // Shared log tag for the DM time-window pagination. Filter logcat by this
         // tag to watch the boot window and scroll-driven backfill in real time.
         private const val TAG = "DMPagination"
+
+        // The window doubles each widen so a sparse history (or confirming there is nothing
+        // older) reaches the 10-year backstop in ~10 requests instead of crawling weekly.
+        // Must match the NIP-04 window so both DM protocols advance in lockstep.
+        const val WINDOW_GROWTH_FACTOR = 2L
     }
 }

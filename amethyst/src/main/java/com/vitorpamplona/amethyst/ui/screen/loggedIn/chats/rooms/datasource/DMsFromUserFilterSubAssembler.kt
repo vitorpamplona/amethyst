@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource
 import com.vitorpamplona.amethyst.commons.relayClient.pagination.TimeWindowPagination
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.WindowLoadTracker
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -30,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -45,40 +48,58 @@ class DMsFromUserFilterSubAssembler(
 ) : PerUserEoseManager<ChatroomListState>(client, allKeys) {
     // Same moving time window as the gift-wrap (NIP-17) loader, so the merged rooms list is
     // bounded uniformly across both DM protocols. Without this, NIP-04 loaded all history while
-    // NIP-17 only loaded the recent window, so scroll-to-end (which widens the windows) landed
-    // new NIP-17 rooms in the middle of the NIP-04 tail instead of extending the list end.
+    // NIP-17 only loaded the recent window, so widening (which fills the screen / prefetches)
+    // landed new NIP-17 rooms in the middle of the NIP-04 tail instead of extending the list end.
+    // Same growth factor as the gift-wrap window keeps both advancing in lockstep.
     private val windows = mutableMapOf<HexKey, TimeWindowPagination>()
 
-    private fun windowFor(user: User) = windows.getOrPut(user.pubkeyHex) { TimeWindowPagination() }
+    private fun windowFor(user: User) =
+        windows.getOrPut(user.pubkeyHex) {
+            TimeWindowPagination(growthFactor = AccountGiftWrapsEoseManager.WINDOW_GROWTH_FACTOR)
+        }
 
-    private val _loadingMore = MutableStateFlow(false)
-    val loadingMore: StateFlow<Boolean> = _loadingMore.asStateFlow()
+    // A window is "loading" until every relay it was sent to has answered (EOSE / live event),
+    // or a timeout fires — not on the first EOSE, which a fast empty relay can trip prematurely.
+    private val windowLoad = WindowLoadTracker()
+    val loadingMore: StateFlow<Boolean> = windowLoad.loading
 
-    // True from (re)subscribe until the first relay response, so the rooms screen can
-    // keep a spinner up during the initial load instead of flashing the empty state.
-    private val _initialLoadInFlight = MutableStateFlow(true)
-    val initialLoadInFlight: StateFlow<Boolean> = _initialLoadInFlight.asStateFlow()
+    // True once the window has reached the maximum lookback: no older history to fetch.
+    private val _exhausted = MutableStateFlow(false)
+    val exhausted: StateFlow<Boolean> = _exhausted.asStateFlow()
+
+    // The account scope to run the window-load timeout on, captured when the subscription opens.
+    private var scope: CoroutineScope? = null
 
     override fun updateFilter(
         key: ChatroomListState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? =
         if (key.account.isWriteable()) {
+            val homeRelays = key.account.homeRelays.flow.value
+            val dmRelays = key.account.dmRelays.flow.value
+            windowLoad.setExpectedRelays((homeRelays + dmRelays).toSet())
             val windowSince = windowFor(user(key)).since
-            key.account.homeRelays.flow.value.map {
+            homeRelays.map {
                 filterNip04DMsFromMe(key.account.userProfile(), it, windowSince)
             } +
-                key.account.dmRelays.flow.value.map {
+                dmRelays.map {
                     filterNip04DMsToMe(key.account.userProfile(), it, windowSince)
                 }
         } else {
+            windowLoad.setExpectedRelays(emptySet())
             emptyList()
         }
 
-    /** Widens the NIP-04 time window for [user] one step back. Kept in lockstep with the gift-wrap window. */
+    /**
+     * Widens the NIP-04 time window for [user] one step back, kept in lockstep with the
+     * gift-wrap window. No-op once the window is [exhausted].
+     */
     fun loadMore(user: User) {
-        windowFor(user).loadMore()
-        _loadingMore.value = true
+        val window = windowFor(user)
+        if (window.isExhausted()) return
+        window.loadMore()
+        _exhausted.value = window.isExhausted()
+        scope?.let { windowLoad.startLoading(it) }
         invalidateFilters()
     }
 
@@ -88,8 +109,7 @@ class DMsFromUserFilterSubAssembler(
         time: Long,
         filters: List<Filter>?,
     ) {
-        if (_loadingMore.value) _loadingMore.value = false
-        _initialLoadInFlight.value = false
+        windowLoad.onRelayResponded(relay)
         super.newEose(key, relay, time, filters)
     }
 
@@ -100,6 +120,8 @@ class DMsFromUserFilterSubAssembler(
     @OptIn(FlowPreview::class)
     override fun newSub(key: ChatroomListState): Subscription {
         val user = user(key)
+        scope = key.account.scope
+        windowLoad.startLoading(key.account.scope)
         userJobMap[user]?.forEach { it.cancel() }
         userJobMap[user] =
             listOf(

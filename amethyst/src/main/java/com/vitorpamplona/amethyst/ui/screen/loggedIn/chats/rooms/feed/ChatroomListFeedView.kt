@@ -63,6 +63,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import java.io.Serializable
@@ -90,14 +91,18 @@ private fun CrossFadeState(
 ) {
     val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
 
-    // While the first gift-wrap / NIP-04 window is still being fetched and decrypted, an
-    // empty feed means "not loaded yet", not "no conversations". Keep the spinner up until
-    // both initial loads answer so cold boot doesn't flash the empty state before the DMs land.
+    // Both DM windows reach the maximum lookback together (lockstep), so the rooms list has
+    // pulled everything there is once both report exhausted. Until then an empty feed means
+    // "still filling", not "no conversations" — keep the spinner up rather than flash empty.
     val giftWraps = remember(accountViewModel) { accountViewModel.dataSources().account.giftWraps }
     val nip04Dms = remember(accountViewModel) { accountViewModel.dataSources().chatroomList.nip04Dms }
-    val giftWrapsInitialLoad by giftWraps.initialLoadInFlight.collectAsStateWithLifecycle()
-    val nip04InitialLoad by nip04Dms.initialLoadInFlight.collectAsStateWithLifecycle()
-    val initialLoadInFlight = giftWrapsInitialLoad || nip04InitialLoad
+    val giftWrapsExhausted by giftWraps.exhausted.collectAsStateWithLifecycle()
+    val nip04Exhausted by nip04Dms.exhausted.collectAsStateWithLifecycle()
+    val historyExhausted = giftWrapsExhausted && nip04Exhausted
+
+    // Drive auto-fill / prefetch here (not inside FeedLoaded) so it keeps widening even while
+    // the feed is still Empty and there is no LazyColumn to scroll yet.
+    AutoFillAndPrefetch(listState, { feedState is FeedState.Empty }, accountViewModel)
 
     CrossfadeIfEnabled(
         targetState = feedState,
@@ -106,10 +111,10 @@ private fun CrossFadeState(
     ) { state ->
         when (state) {
             is FeedState.Empty -> {
-                if (initialLoadInFlight) {
-                    LoadingFeed()
-                } else {
+                if (historyExhausted) {
                     FeedEmpty { feedContentState.invalidateData() }
+                } else {
+                    LoadingFeed()
                 }
             }
 
@@ -145,8 +150,6 @@ private fun FeedLoaded(
     val loadingNip04 by nip04Dms.loadingMore.collectAsStateWithLifecycle()
     val loadingMore = loadingGiftWraps || loadingNip04
 
-    LoadMoreWhenReachingEnd(listState, accountViewModel)
-
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
@@ -181,51 +184,58 @@ private fun FeedLoaded(
     }
 }
 
-// Number of items from the end at which scrolling triggers loading the next,
-// older time window of conversations.
-private const val LOAD_MORE_THRESHOLD = 5
-
 /**
- * Widens the DM time windows when the messages list is scrolled near its end, so
- * older conversations stream in on demand instead of all at boot. Re-evaluates as
- * the list grows so a near-empty screen keeps filling.
+ * Keeps the messages list filled and prefetched by widening the DM time windows.
  *
- * Both DM protocols are advanced in lockstep: NIP-17 gift wraps (always-on account
- * loader) and NIP-04 (this screen's loader). They must move together — if only one
- * were windowed, the merged time-sorted list would mix a deep tail of one protocol
- * with a shallow window of the other, and reaching the list end would pull rooms
- * that land in the middle of the feed instead of extending the end. The combined
- * loadingMore guard prevents overlapping requests.
+ * One condition drives three behaviors at once: widen when nothing is loaded yet (empty feed),
+ * or when the last visible row has crossed the midpoint of what's loaded. Because everything
+ * fits on screen while the list is short, the midpoint is trivially crossed, so it keeps
+ * widening until the list overflows the viewport with a buffer below the fold — and once it
+ * does, it only fires again as the user scrolls past the new midpoint, so fresh (geometrically
+ * larger) windows land well before the user reaches the end. It stops only when the window is
+ * exhausted (reached max lookback — nothing older exists).
+ *
+ * Both DM protocols advance in lockstep: NIP-17 gift wraps (always-on account loader) and NIP-04
+ * (this screen's loader). They must move together — if only one were windowed, the merged
+ * time-sorted list would mix a deep tail of one protocol with a shallow window of the other, and
+ * a widen would pull rooms that land in the middle of the feed instead of extending the end.
+ *
+ * The per-window [loadingMore] guard gates each step on ALL of that window's relays answering
+ * (or a timeout), not the first EOSE — otherwise a fast, near-empty relay would clear the guard
+ * and let this loop outrun the slow relay that actually holds the conversations.
  */
 @Composable
-private fun LoadMoreWhenReachingEnd(
+private fun AutoFillAndPrefetch(
     listState: LazyListState,
+    isFeedEmpty: () -> Boolean,
     accountViewModel: AccountViewModel,
 ) {
-    // Keyed only on listState so the edge-detector is NOT restarted when a widen adds
-    // rooms. distinctUntilChanged then fires exactly once per reach-the-end gesture:
-    // staying at the end does not re-fire, and scrolling back up (nearEnd -> false)
-    // stops further loads. Keying on item count instead would re-arm on every item
-    // growth and cascade the window back for minutes over a slow connection.
-    LaunchedEffect(listState) {
-        snapshotFlow {
-            val info = listState.layoutInfo
-            val total = info.totalItemsCount
-            val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: -1
-            total > 0 && lastVisible >= total - LOAD_MORE_THRESHOLD
+    val giftWraps = remember(accountViewModel) { accountViewModel.dataSources().account.giftWraps }
+    val nip04Dms = remember(accountViewModel) { accountViewModel.dataSources().chatroomList.nip04Dms }
+
+    LaunchedEffect(listState, giftWraps, nip04Dms) {
+        combine(
+            snapshotFlow {
+                val info = listState.layoutInfo
+                val total = info.totalItemsCount
+                val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: -1
+                // Want more when nothing is loaded yet, or when the last visible row has crossed
+                // the midpoint of what's loaded (prefetch well before reaching the end).
+                isFeedEmpty() || (total > 0 && lastVisible >= total / 2)
+            },
+            giftWraps.loadingMore,
+            nip04Dms.loadingMore,
+            giftWraps.exhausted,
+            nip04Dms.exhausted,
+        ) { wantMore, loadingGiftWraps, loadingNip04, giftWrapsExhausted, nip04Exhausted ->
+            wantMore && !loadingGiftWraps && !loadingNip04 && !(giftWrapsExhausted && nip04Exhausted)
         }.distinctUntilChanged()
             .filter { it }
             .collect {
-                val giftWraps = accountViewModel.dataSources().account.giftWraps
-                val nip04Dms = accountViewModel.dataSources().chatroomList.nip04Dms
-                if (giftWraps.loadingMore.value || nip04Dms.loadingMore.value) {
-                    Log.d("DMPagination") { "rooms list reached end but a window load is already in flight, skipping" }
-                } else {
-                    Log.d("DMPagination") { "rooms list reached end, widening NIP-17 + NIP-04 windows one step" }
-                    val user = accountViewModel.userProfile()
-                    giftWraps.loadMore(user)
-                    nip04Dms.loadMore(user)
-                }
+                Log.d("DMPagination") { "rooms list needs more (auto-fill/prefetch), widening NIP-17 + NIP-04 windows one step" }
+                val user = accountViewModel.userProfile()
+                giftWraps.loadMore(user)
+                nip04Dms.loadMore(user)
             }
     }
 }
