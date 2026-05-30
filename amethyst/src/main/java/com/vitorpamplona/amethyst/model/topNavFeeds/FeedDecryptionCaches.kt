@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.model.topNavFeeds
 
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.hashtagLists.HashtagListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListDecryptionCache
-import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.muteList.MuteListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListDecryptionCache

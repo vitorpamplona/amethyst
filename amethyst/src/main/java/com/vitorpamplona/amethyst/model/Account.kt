@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListS
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.UserStatusAction
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.favoriteAlgoFeedsLists.FavoriteAlgoFeedsListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.hashtagLists.HashtagListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.ReportAction
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.TrustProviderListDecryptionCache
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
@@ -77,7 +78,6 @@ import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRela
 import com.vitorpamplona.amethyst.model.nip51Lists.favoriteAlgoFeedsLists.FavoriteAlgoFeedsListState
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListState
-import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListState
 import com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays.IndexerRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays.IndexerRelayListState
