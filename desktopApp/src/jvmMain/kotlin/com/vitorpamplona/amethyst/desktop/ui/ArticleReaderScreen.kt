@@ -69,9 +69,9 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip23LongContent.ReadingTimeCalculator
-import com.vitorpamplona.amethyst.commons.ui.article.ArticleHeader
-import com.vitorpamplona.amethyst.commons.ui.article.TableOfContents
-import com.vitorpamplona.amethyst.commons.ui.article.extractTableOfContents
+import com.vitorpamplona.amethyst.commons.nip23LongContent.ui.article.ArticleHeader
+import com.vitorpamplona.amethyst.commons.nip23LongContent.ui.article.TableOfContents
+import com.vitorpamplona.amethyst.commons.nip23LongContent.ui.article.extractTableOfContents
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.markdown.RenderMarkdown

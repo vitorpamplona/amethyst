@@ -78,7 +78,7 @@ package contains Compose UI (and is therefore *not* CLI-safe).
 | `account`      | no  | New-account bootstrap events. |
 | `onchain`      | no  | On-chain zap splitting/broadcasting. |
 | `marmot`       | no  | MLS group-chat event processing. |
-| `nip53LiveActivities` | no | Live-activity zapper aggregation. |
+| `nip53LiveActivities` | mixed | Live-activity zapper aggregation (logic) + the stream card in `nip53LiveActivities/ui`. |
 | `search`       | no  | Event search filtering/ranking, kind registry. |
 | `preview`      | no  | OpenGraph / meta-tag link-preview parsing. |
 | `emojicoder`   | no  | Variation-selector emoji encode/decode. |
@@ -116,7 +116,8 @@ they are shared across the GUI apps. Treat as GUI-shared, not strictly headless.
 ### UI (Compose — **not** CLI-safe)
 | Package        | UI? | Purpose |
 |----------------|-----|---------|
-| `ui`           | yes | All shared composables, organized by area: `ui/components`, `ui/theme`, `ui/signing`, `ui/thread`, `ui/feeds` (feed DAL + filters — see debt §4), `ui/notifications`, `ui/screens`, `ui/article`, `ui/editor`, `ui/elements`, `ui/layouts`, `ui/markdown`, `ui/nip53LiveActivities`, plus Compose helpers in `ui/state` (cached-state) and `ui/text` (TextField extensions). |
+| `ui`           | yes | **Cross-cutting** shared composables only, organized by area: `ui/components`, `ui/theme`, `ui/signing`, `ui/thread`, `ui/feeds` (feed DAL + filters — see debt §4), `ui/notifications`, `ui/screens`, `ui/elements`, `ui/layouts`, `ui/markdown`, plus Compose helpers in `ui/state` (cached-state) and `ui/text` (TextField extensions). Feature-specific UI lives in `<feature>/ui`, **not** here. |
+| `nip23LongContent` | yes | Long-form (NIP-23) article UI: `nip23LongContent/ui/article` (reader) + `…/ui/editor` (authoring). The model lives in `model/nip23LongContent`. |
 | `icons`        | yes | `ImageVector` icon definitions + builders. |
 | `hashtags`     | yes | Custom hashtag `ImageVector`s. |
 | `robohash`     | yes | Procedural robohash avatar `ImageVector` assembly. |
@@ -146,8 +147,14 @@ share them.
 ### Naming
 - **Singular, no synonyms.** `util` (not `utils`), `service` (not `services`).
   One concept → one package name.
-- Composables that belong to a feature go in `<feature>/ui`; cross-cutting
-  composables go under `ui/<area>`.
+- **Feature UI vs cross-cutting UI — the deciding test.** A composable goes in
+  `<feature>/ui` if it renders/edits *one* feature's content (it would make no
+  sense outside that feature) — e.g. `profile/ui`, `nip53LiveActivities/ui`,
+  `nip23LongContent/ui`. It goes in `ui/<area>` only if it is reusable across
+  features (theme, avatars, buttons, layouts, markdown rendering, shimmer…).
+  When in doubt, ask "could a second, unrelated feature reuse this as-is?" —
+  yes → `ui/<area>`, no → `<feature>/ui`. The top-level `ui/` package holds
+  **no** feature-specific composables.
 
 ### NIP as the second axis (mirror `quartz`)
 `quartz` is ~94% organized by NIP (`nipNN<slug>` per spec), and that is correct
@@ -160,16 +167,20 @@ problem one level down.
 
 Instead, **layer is the primary axis, NIP is the secondary axis**:
 
-- The big shared layers stay layer-organized (`model`, `ui`, `relayClient`, …).
+- The big shared layers stay layer-organized (`model`, `relayClient`, the
+  cross-cutting `ui`, …).
 - **Inside a layer, NIP-specific code goes in a `nipNN<slug>` subpackage whose
-  name matches `quartz` exactly** — e.g. `model/nip57Zaps`, `ui/nip53LiveActivities`.
-  This gives a clean trace: `quartz/nip57Zaps` → `commons/model/nip57Zaps` →
-  `commons/ui/nip57Zaps`.
+  name matches `quartz` exactly** — e.g. `model/nip57Zaps`. This gives a clean
+  trace: `quartz/nip57Zaps` → `commons/model/nip57Zaps`.
 - **A top-level package that *is* a single self-contained NIP feature takes the
-  same name as its `quartz` counterpart**: `nip64Chess`, `nipACWebRtcCalls`,
-  `nip53LiveActivities`, `marmot`. (`marmot` is un-numbered in `quartz` too.)
+  same name as its `quartz` counterpart**, and owns its own UI under
+  `<feature>/ui`: `nip64Chess`, `nipACWebRtcCalls`, `nip53LiveActivities`,
+  `nip23LongContent`, `marmot`. (`marmot` is un-numbered in `quartz` too.)
   Generic/multi-NIP packages keep their concern name (`search`, `preview`,
   `actions`, `richtext`…).
+- **Feature UI is never under `ui/`.** A single-NIP feature's composables live
+  in `<feature>/ui` (e.g. `nip53LiveActivities/ui`), not `ui/nip53LiveActivities`.
+  `ui/` is exclusively cross-cutting (§2, Naming).
 
 ### Source sets
 | Source set    | For |
