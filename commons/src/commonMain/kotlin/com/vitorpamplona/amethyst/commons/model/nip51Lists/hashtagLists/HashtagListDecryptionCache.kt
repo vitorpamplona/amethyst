@@ -18,31 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nip47WalletConnect
+package com.vitorpamplona.amethyst.commons.model.nip51Lists.hashtagLists
 
-import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
-import kotlinx.serialization.Serializable
-import java.util.UUID
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEventCache
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.HashtagListEvent
+import com.vitorpamplona.quartz.nip51Lists.hashtagList.hashtagSet
 
-@Serializable
-data class NwcWalletEntry(
-    val id: String = UUID.randomUUID().toString(),
-    val name: String,
-    val uri: Nip47WalletConnect.Nip47URI,
+class HashtagListDecryptionCache(
+    val signer: NostrSigner,
 ) {
-    fun normalize(): NwcWalletEntryNorm? =
-        uri.normalize()?.let {
-            NwcWalletEntryNorm(id, name, it)
-        }
-}
+    val cachedPrivateLists = PrivateTagArrayEventCache<HashtagListEvent>(signer)
 
-data class NwcWalletEntryNorm(
-    val id: String,
-    val name: String,
-    val uri: Nip47WalletConnect.Nip47URINorm,
-) {
-    fun denormalize(): NwcWalletEntry? =
-        uri.denormalize()?.let {
-            NwcWalletEntry(id, name, it)
-        }
+    fun cachedHashtags(event: HashtagListEvent) = cachedPrivateLists.mergeTagListPrecached(event).hashtagSet()
+
+    suspend fun hashtags(event: HashtagListEvent) = cachedPrivateLists.mergeTagList(event).hashtagSet()
 }

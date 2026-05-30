@@ -18,25 +18,33 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists
+package com.vitorpamplona.amethyst.commons.model.nip47WalletConnect
 
-import androidx.compose.runtime.Stable
-import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
-import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
-import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
+import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
+import kotlinx.serialization.Serializable
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
-@Stable
-data class LabeledBookmarkList(
-    val identifier: String,
-    val title: String,
-    val description: String?,
-    val image: String?,
-    val privateBookmarks: Set<BookmarkIdTag> = emptySet(),
-    val publicBookmarks: Set<BookmarkIdTag> = emptySet(),
+@OptIn(ExperimentalUuidApi::class)
+@Serializable
+data class NwcWalletEntry(
+    val id: String = Uuid.random().toString(),
+    val name: String,
+    val uri: Nip47WalletConnect.Nip47URI,
 ) {
-    val privatePostBookmarks = privateBookmarks.filterIsInstance<EventBookmark>()
-    val publicPostBookmarks = publicBookmarks.filterIsInstance<EventBookmark>()
+    fun normalize(): NwcWalletEntryNorm? =
+        uri.normalize()?.let {
+            NwcWalletEntryNorm(id, name, it)
+        }
+}
 
-    val privateArticleBookmarks = privateBookmarks.filterIsInstance<AddressBookmark>()
-    val publicArticleBookmarks = publicBookmarks.filterIsInstance<AddressBookmark>()
+data class NwcWalletEntryNorm(
+    val id: String,
+    val name: String,
+    val uri: Nip47WalletConnect.Nip47URINorm,
+) {
+    fun denormalize(): NwcWalletEntry? =
+        uri.denormalize()?.let {
+            NwcWalletEntry(id, name, it)
+        }
 }

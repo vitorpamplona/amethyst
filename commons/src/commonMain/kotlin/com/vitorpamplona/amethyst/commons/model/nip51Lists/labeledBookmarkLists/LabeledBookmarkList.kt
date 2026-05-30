@@ -18,16 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nip51Lists.interestSets
+package com.vitorpamplona.amethyst.commons.model.nip51Lists.labeledBookmarkLists
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
+import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
 
 @Stable
-data class InterestSet(
+data class LabeledBookmarkList(
     val identifier: String,
     val title: String,
-    val publicHashtags: Set<String> = emptySet(),
-    val privateHashtags: Set<String> = emptySet(),
+    val description: String?,
+    val image: String?,
+    val privateBookmarks: Set<BookmarkIdTag> = emptySet(),
+    val publicBookmarks: Set<BookmarkIdTag> = emptySet(),
 ) {
-    val allHashtags: Set<String> get() = publicHashtags + privateHashtags
+    val privatePostBookmarks = privateBookmarks.filterIsInstance<EventBookmark>()
+    val publicPostBookmarks = publicBookmarks.filterIsInstance<EventBookmark>()
+
+    val privateArticleBookmarks = privateBookmarks.filterIsInstance<AddressBookmark>()
+    val publicArticleBookmarks = publicBookmarks.filterIsInstance<AddressBookmark>()
 }

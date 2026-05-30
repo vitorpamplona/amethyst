@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.nip51Lists.favoriteAlgoFeedsLists
 
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.favoriteAlgoFeedsLists.FavoriteAlgoFeedsListDecryptionCache
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache

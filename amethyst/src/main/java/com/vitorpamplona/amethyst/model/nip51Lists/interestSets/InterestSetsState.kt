@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model.nip51Lists.interestSets
 import com.vitorpamplona.amethyst.commons.model.anyNotNullEvent
 import com.vitorpamplona.amethyst.commons.model.eventIdSet
 import com.vitorpamplona.amethyst.commons.model.events
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.interestSets.InterestSet
 import com.vitorpamplona.amethyst.commons.model.updateFlow
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote

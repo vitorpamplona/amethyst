@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.model.nip72Communities
 
+import com.vitorpamplona.amethyst.commons.model.nip72Communities.CommunityListDecryptionCache
 import com.vitorpamplona.amethyst.model.AccountSettings
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache

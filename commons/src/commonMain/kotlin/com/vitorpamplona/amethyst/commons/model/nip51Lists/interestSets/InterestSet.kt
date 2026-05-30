@@ -18,18 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds
+package com.vitorpamplona.amethyst.commons.model.nip51Lists.interestSets
 
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.hashtagLists.HashtagListDecryptionCache
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.muteList.MuteListDecryptionCache
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleListDecryptionCache
-import com.vitorpamplona.amethyst.commons.model.nip72Communities.CommunityListDecryptionCache
-import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListDecryptionCache
+import androidx.compose.runtime.Stable
 
-class FeedDecryptionCaches(
-    val peopleListCache: PeopleListDecryptionCache,
-    val muteListCache: MuteListDecryptionCache,
-    val communityListCache: CommunityListDecryptionCache,
-    val hashtagCache: HashtagListDecryptionCache,
-    val geohashCache: GeohashListDecryptionCache,
-)
+@Stable
+data class InterestSet(
+    val identifier: String,
+    val title: String,
+    val publicHashtags: Set<String> = emptySet(),
+    val privateHashtags: Set<String> = emptySet(),
+) {
+    val allHashtags: Set<String> get() = publicHashtags + privateHashtags
+}
