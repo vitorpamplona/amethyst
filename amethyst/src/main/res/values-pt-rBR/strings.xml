@@ -783,9 +783,6 @@
     <string name="wallet_connect_manual_config">Avançado: inserir detalhes de conexão manualmente</string>
     <string name="quick_zap_amounts">Valores Rápidos de Zap</string>
     <string name="quick_zap_amounts_explainer">Exibido ao pressionar o botão de zap. Toque em um valor para removê-lo. Se deixar vazio, abrirá o diálogo para inserir um valor todas as vezes.</string>
-    <string name="quick_zap_amounts_onchain">Valores rápidos de zap on-chain</string>
-    <string name="quick_zap_amounts_onchain_explainer">Zaps on-chain pagam taxas de mineradores, por isso os valores costumam ser maiores que no Lightning. Toque num valor para removê-lo.</string>
-    <string name="new_amount_in_sats_onchain">Novo valor on-chain em sats</string>
     <string name="send_onchain_instead">Enviar on-chain em vez disso</string>
     <string name="zap_privacy_section">Privacidade do Zap</string>
     <string name="zap_type_section_explainer">Controla como sua identidade é exibida ao enviar um Zap.</string>
