@@ -62,13 +62,13 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.commons.compose.editor.MarkdownEditorState
-import com.vitorpamplona.amethyst.commons.compose.editor.MarkdownToolbar
-import com.vitorpamplona.amethyst.commons.compose.editor.MetadataPanel
-import com.vitorpamplona.amethyst.commons.compose.markdown.RenderMarkdown
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip23LongContent.LongFormPublishAction
+import com.vitorpamplona.amethyst.commons.nip23LongContent.ui.editor.MarkdownEditorState
+import com.vitorpamplona.amethyst.commons.nip23LongContent.ui.editor.MarkdownToolbar
+import com.vitorpamplona.amethyst.commons.nip23LongContent.ui.editor.MetadataPanel
+import com.vitorpamplona.amethyst.commons.ui.markdown.RenderMarkdown
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.service.drafts.DesktopDraftStore

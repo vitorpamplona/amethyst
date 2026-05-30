@@ -73,12 +73,12 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.chess.RelaySyncStatus
 import com.vitorpamplona.amethyst.commons.feeds.custom.canBecomeFeed
 import com.vitorpamplona.amethyst.commons.feeds.custom.toFeedDefinition
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinResolveState
+import com.vitorpamplona.amethyst.commons.nip64Chess.RelaySyncStatus
 import com.vitorpamplona.amethyst.commons.search.AdvancedSearchBarState
 import com.vitorpamplona.amethyst.commons.search.QuerySerializer
 import com.vitorpamplona.amethyst.commons.search.SavedSearch

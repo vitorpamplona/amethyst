@@ -1,5 +1,11 @@
 # Shared UI Components Analysis
 
+> **Superseded (2026-05-30).** This was the original feasibility analysis that
+> motivated the `commons` module (then called "shared-ui"). The module now
+> exists and is documented authoritatively in **`commons/ARCHITECTURE.md`**,
+> which defines the package taxonomy, the CLI-safe / UI boundary, and the
+> "where does my code go?" guide. Keep this file only as historical context.
+
 Analysis of Android vs Desktop UI to identify reusable Compose Multiplatform components.
 
 ## Executive Summary

@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.feeds
 
-import com.vitorpamplona.amethyst.commons.utils.logTime
+import com.vitorpamplona.amethyst.commons.util.logTime
 
 abstract class FeedFilter<T> : IFeedFilter<T> {
     override fun loadTop(): List<T> {

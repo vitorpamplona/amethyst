@@ -40,7 +40,7 @@ import androidx.core.util.Consumer
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.call.CallState
+import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallState
 import com.vitorpamplona.amethyst.service.crashreports.DisplayCrashMessages
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.compose.DisplayNotifyMessages
 import com.vitorpamplona.amethyst.ui.actions.NewUserMetadataScreen

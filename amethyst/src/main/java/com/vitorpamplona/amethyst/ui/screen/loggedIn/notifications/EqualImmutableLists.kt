@@ -27,5 +27,5 @@ fun <T> equalImmutableLists(
     list1: ImmutableList<T>,
     list2: ImmutableList<T>,
 ): Boolean =
-    com.vitorpamplona.amethyst.commons.utils
+    com.vitorpamplona.amethyst.commons.util
         .equalImmutableLists(list1, list2)

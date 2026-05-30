@@ -73,8 +73,8 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip02FollowList.FollowAction
-import com.vitorpamplona.amethyst.commons.profile.ProfileBroadcastBanner
 import com.vitorpamplona.amethyst.commons.profile.ProfileBroadcastStatus
+import com.vitorpamplona.amethyst.commons.profile.ui.ProfileBroadcastBanner
 import com.vitorpamplona.amethyst.commons.state.FollowState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar

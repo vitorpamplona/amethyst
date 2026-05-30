@@ -25,7 +25,7 @@ import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
-import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
+import com.vitorpamplona.amethyst.commons.ui.state.GenericBaseCache
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

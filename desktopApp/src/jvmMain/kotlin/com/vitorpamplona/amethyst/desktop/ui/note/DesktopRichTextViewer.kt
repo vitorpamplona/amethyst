@@ -53,7 +53,6 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.commons.compose.markdown.RenderMarkdown
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -81,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
 import com.vitorpamplona.amethyst.commons.richtext.Segment
 import com.vitorpamplona.amethyst.commons.richtext.VideoSegment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
+import com.vitorpamplona.amethyst.commons.ui.markdown.RenderMarkdown
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.service.DesktopCachedRichTextParser
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
