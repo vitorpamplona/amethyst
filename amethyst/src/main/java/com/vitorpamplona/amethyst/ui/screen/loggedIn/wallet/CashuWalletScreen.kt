@@ -168,6 +168,7 @@ fun CashuWalletScreen(
                     onSendLn = { sendLnOpen = true },
                     onSendToken = { sendTokenOpen = true },
                     onRedeem = { redeemOpen = true },
+                    onTopUpMint = { nav.nav(Route.TopUpMint(it)) },
                     onResumePendingQuote = {
                         pendingQuotes.firstOrNull()?.let {
                             viewModel.resumeMintQuote(it)
@@ -305,6 +306,7 @@ private fun CashuWalletContent(
     onSendLn: () -> Unit,
     onSendToken: () -> Unit,
     onRedeem: () -> Unit,
+    onTopUpMint: (String) -> Unit,
     onResumePendingQuote: () -> Unit,
 ) {
     LazyColumn(
@@ -341,7 +343,7 @@ private fun CashuWalletContent(
             )
         }
         items(mints, key = { it }) { mint ->
-            MintRow(mint = mint, balanceSats = mintBalances[mint] ?: 0L)
+            MintRow(mint = mint, balanceSats = mintBalances[mint] ?: 0L, onTopUp = { onTopUpMint(mint) })
         }
 
         if (history.isNotEmpty()) {
@@ -528,6 +530,7 @@ private fun ActionTile(
 private fun MintRow(
     mint: String,
     balanceSats: Long,
+    onTopUp: () -> Unit,
 ) {
     val formattedBalance =
         remember(balanceSats) {
@@ -538,7 +541,7 @@ private fun MintRow(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Material3Icon(
@@ -555,6 +558,14 @@ private fun MintRow(
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.primary,
             )
+            IconButton(onClick = onTopUp) {
+                Icon(
+                    symbol = MaterialSymbols.AddCircle,
+                    contentDescription = stringRes(R.string.topup_mint_action),
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
         }
     }
 }

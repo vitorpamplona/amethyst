@@ -650,6 +650,11 @@ sealed class Route {
     data class ReloadMint(
         val requestId: String,
     ) : Route()
+
+    @Serializable
+    data class TopUpMint(
+        val mintUrl: String,
+    ) : Route()
 }
 
 inline fun <reified T : Route> isBaseRoute(navController: NavHostController): Boolean = navController.currentBackStackEntry?.destination?.hasRoute<T>() == true
