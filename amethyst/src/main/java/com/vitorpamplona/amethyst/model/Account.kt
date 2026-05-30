@@ -192,6 +192,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
+import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip37Drafts.DraftEventCache
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
@@ -738,6 +739,54 @@ class Account(
      * Called when tracked broadcasting succeeds.
      */
     fun consumeReactionEvent(event: Event) {
+        cache.justConsumeMyOwnEvent(event)
+    }
+
+    /**
+     * NIP-32: tags [note] with [hashtag] by publishing a kind 1985 label event using the
+     * `#t` tag-association namespace. Fire-and-forget; signs and broadcasts immediately.
+     */
+    suspend fun labelHashtag(
+        note: Note,
+        hashtag: String,
+    ) {
+        createLabelHashtagEvent(note, hashtag)?.let { (event, relays) ->
+            cache.justConsumeMyOwnEvent(event)
+            client.publish(event, relays)
+        }
+    }
+
+    /**
+     * Builds and signs a NIP-32 hashtag label event for [note] without sending it.
+     * Returns the signed event and target relays for tracked broadcasting, or null if
+     * the account can't write or the note has no underlying event.
+     */
+    suspend fun createLabelHashtagEvent(
+        note: Note,
+        hashtag: String,
+    ): Pair<Event, Set<NormalizedRelayUrl>>? {
+        if (!signer.isWriteable()) return null
+
+        val eventHint = note.toEventHint<Event>() ?: return null
+
+        val template =
+            LabelEvent.buildHashtagLabel(
+                labeledEventId = eventHint.event.id,
+                labeledEventRelay = eventHint.relay?.url,
+                labeledEventAuthor = eventHint.event.pubKey,
+                hashtag = hashtag,
+            )
+
+        val event = signer.sign(template)
+        val relays = computeRelayListToBroadcast(event)
+
+        return event to relays
+    }
+
+    /**
+     * Consumes a label event into local cache. Called when tracked broadcasting succeeds.
+     */
+    fun consumeLabelEvent(event: Event) {
         cache.justConsumeMyOwnEvent(event)
     }
 

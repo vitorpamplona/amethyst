@@ -161,6 +161,51 @@ class LabelEventTest {
     }
 
     @Test
+    fun testBuildHashtagLabel() {
+        val template =
+            LabelEvent.buildHashtagLabel(
+                labeledEventId = testEventId,
+                labeledEventAuthor = testPubKey,
+                hashtag = "#PhotoGraphy",
+            )
+
+        assertEquals(1985, template.kind)
+
+        val hasEventRef = template.tags.any { it[0] == "e" && it[1] == testEventId }
+        assertTrue(hasEventRef, "Should have e tag targeting labeled event")
+
+        val hasNamespace = template.tags.any { it[0] == "L" && it[1] == "#t" }
+        assertTrue(hasNamespace, "Should have the #t tag-association namespace")
+
+        // The leading '#' is stripped and the value is lowercased.
+        val hasLabel = template.tags.any { it[0] == "l" && it[1] == "photography" && it[2] == "#t" }
+        assertTrue(hasLabel, "Should have a lowercased l label tag under #t")
+    }
+
+    @Test
+    fun testHashtagAssociations() {
+        val event =
+            EventFactory.create<LabelEvent>(
+                id = testEventId,
+                pubKey = testPubKey,
+                createdAt = 1234567890L,
+                kind = 1985,
+                tags =
+                    arrayOf(
+                        arrayOf("L", "#t"),
+                        arrayOf("l", "Bitcoin", "#t"),
+                        arrayOf("l", "nostr", "#t"),
+                        arrayOf("l", "MIT", "license"),
+                        arrayOf("e", testEventId),
+                    ),
+                content = "",
+                sig = "c".repeat(128),
+            )
+
+        assertEquals(listOf("bitcoin", "nostr"), event.hashtagAssociations())
+    }
+
+    @Test
     fun testLabeledTargets() {
         val event =
             EventFactory.create<LabelEvent>(

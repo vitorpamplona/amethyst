@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource
 
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
+import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
@@ -28,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 class HashtagQueryState(
     val hashtag: String,
     val relays: Set<NormalizedRelayUrl>,
+    val account: Account,
 ) {
     val lowercaseHashtag = hashtag.lowercase()
 }
@@ -38,6 +40,7 @@ class HashtagFilterAssembler(
     val group =
         listOf(
             HashtagFeedFilterSubAssembler(client, ::allKeys),
+            HashtagLabelSubAssembler(client, ::allKeys),
         )
 
     override fun invalidateKeys() = invalidateFilters()

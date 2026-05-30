@@ -1068,6 +1068,16 @@ class AccountViewModel(
             direct = { account.removeBookmark(note, false) },
         )
 
+    /** NIP-32: tags [note] with [hashtag] by publishing a kind 1985 label event. */
+    fun labelWithHashtag(
+        note: Note,
+        hashtag: String,
+    ) = launchTrackedOrDirect(
+        createTracked = { account.createLabelHashtagEvent(note, hashtag) },
+        consumeTracked = account::consumeLabelEvent,
+        direct = { account.labelHashtag(note, hashtag) },
+    )
+
     fun removeDeletedBookmarks(
         deletedEventIds: Set<String>,
         deletedAddresses: Set<Address>,

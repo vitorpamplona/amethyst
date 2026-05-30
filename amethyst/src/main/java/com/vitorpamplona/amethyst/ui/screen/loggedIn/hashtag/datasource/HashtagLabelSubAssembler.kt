@@ -20,27 +20,27 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.hashtag.datasource
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUniqueIdEoseManager
+import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 
-@Composable
-fun HashtagFilterAssemblerSubscription(
-    tag: Route.Hashtag,
-    accountViewModel: AccountViewModel,
-) {
-    // different screens get different states
-    // even if they are tracking the same tag.
-    val state =
-        remember(tag) {
-            HashtagQueryState(
-                tag.hashtag,
-                accountViewModel.account.followOutboxesOrProxy.flow.value,
-                accountViewModel.account,
-            )
-        }
+/**
+ * NIP-32: streams kind 1985 label events that tag posts with the screen's hashtag and
+ * pulls in the posts a followed user labeled. Rotates after each EOSE (`invalidateAfterEose`)
+ * so newly-arrived label events get their target posts fetched on the next pass.
+ */
+class HashtagLabelSubAssembler(
+    client: INostrClient,
+    allKeys: () -> Set<HashtagQueryState>,
+) : PerUniqueIdEoseManager<HashtagQueryState, String>(client, allKeys, invalidateAfterEose = true) {
+    override fun updateFilter(
+        key: HashtagQueryState,
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter> = filterHashtagLabels(key.account, key.lowercaseHashtag, key.relays, since)
 
-    LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().hashtags)
+    /**
+     * Only one key per hashtag. Prefixed so it doesn't collide with the main feed sub-assembler.
+     */
+    override fun id(key: HashtagQueryState) = "label-" + key.lowercaseHashtag
 }

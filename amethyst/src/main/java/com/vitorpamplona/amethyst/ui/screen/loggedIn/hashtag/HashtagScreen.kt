@@ -113,6 +113,9 @@ fun HashtagScreen(
             null,
             accountViewModel = accountViewModel,
             nav = nav,
+            onLoaded = { state, listState ->
+                HashtagFeedLoaded(tag.hashtag, state, listState, accountViewModel, nav)
+            },
         )
     }
 }
