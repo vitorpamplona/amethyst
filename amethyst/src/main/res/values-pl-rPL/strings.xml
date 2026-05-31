@@ -885,6 +885,10 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="reload_mint_needs_more">potrzebuje %1$s więcej</string>
     <string name="reload_mint_funded">sfinansowane</string>
     <string name="reload_mint_copy_invoice">Kopiuj fakturę</string>
+    <string name="topup_mint_title">Doładuj Minta</string>
+    <string name="topup_mint_action">Doładuj tego Minta</string>
+    <string name="topup_mint_amount_label">Kwota do dodania</string>
+    <string name="topup_mint_confirm">Doładuj</string>
     <string name="zap_privacy_section">Prywatność Zap</string>
     <string name="zap_type_section_explainer">Kontroluje sposób wyświetlania Twojej tożsamości podczas wysyłania zapa.</string>
     <string name="wallet_connect_connect_app">Podłącz portfel</string>

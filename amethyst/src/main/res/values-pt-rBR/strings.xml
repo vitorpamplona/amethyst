@@ -555,11 +555,15 @@
     <string name="profile_badges_description">Escolha quais dos selos que você recebeu aparecerão no seu perfil.</string>
     <string name="profile_badges_empty">Você ainda não recebeu nenhum selo.</string>
     <string name="pictures">Imagens</string>
+    <string name="software_apps">Aplicativos</string>
+    <string name="route_software_apps">Aplicativos</string>
     <string name="nip82_repository_label">Fonte: %1$s</string>
+    <string name="nip82_version_label">v%1$s</string>
     <string name="nip82_download">Baixar</string>
     <string name="nip82_section_about">Sobre</string>
     <string name="nip82_section_platforms">Plataformas</string>
     <string name="nip82_section_topics">Tópicos</string>
+    <string name="nip82_section_links">Links</string>
     <string name="nip82_section_latest_release">Versão mais recente</string>
     <string name="nip82_section_comments">Comentários</string>
     <string name="nip82_no_comments">Seja o primeiro a comentar.</string>
@@ -726,7 +730,9 @@
     <string name="longs">Vídeos</string>
     <string name="articles">Artigos</string>
     <string name="route_music_tracks">Música</string>
+    <string name="route_music_playlists">Listas de reprodução</string>
     <string name="route_podcast_episodes">Episódios</string>
+    <string name="route_podcasts">Podcasts</string>
     <string name="podcast_view_episodes">Ver episódios</string>
     <string name="podcast_episodes_section">Episódios</string>
     <string name="podcast_no_episodes">Nenhum episódio encontrado ainda</string>
@@ -741,6 +747,7 @@
     <string name="music_track_artist_label">Artista</string>
     <string name="music_track_artist_placeholder">Nome do artista</string>
     <string name="music_track_audio_url_label">URL do áudio</string>
+    <string name="music_track_audio_url_placeholder">https://… .mp3</string>
     <string name="music_track_image_url_label">URL da imagem de capa (opcional)</string>
     <string name="music_track_album_label">Álbum (opcional)</string>
     <string name="music_track_duration_label">Duração em segundos (opcional)</string>
@@ -768,6 +775,7 @@
     <string name="add_hashtag_label">Adicionar hashtag</string>
     <string name="add_hashtag_label_title">Adicionar uma hashtag</string>
     <string name="add_hashtag_label_explainer">Marque publicamente este post com uma hashtag (etiqueta NIP-32). Quem segue você o verá no feed dessa hashtag.</string>
+    <string name="add_hashtag_label_field">Hashtag</string>
     <string name="add_hashtag_label_confirm">Adicionar</string>
     <string name="hashtag_label_added_by">adicionado por</string>
     <string name="pinned_notes">Notas Fixadas</string>
@@ -839,6 +847,7 @@
     <string name="quick_zap_amounts_explainer">Exibido ao pressionar o botão de zap. Toque em um valor para removê-lo. Se deixar vazio, abrirá o diálogo para inserir um valor todas as vezes.</string>
     <string name="send_onchain_instead">Enviar on-chain em vez disso</string>
     <string name="reload_mint_title">Recarregar mint</string>
+    <string name="reload_mint_sats_amount">%1$s sats</string>
     <string name="reload_mint_topup_label">Quantia da recarga</string>
     <string name="reload_mint_section_to">Mint a recarregar</string>
     <string name="reload_mint_section_from">Fundos de</string>
@@ -1751,6 +1760,7 @@
     <string name="cashu_discovering">Procurando sua carteira…</string>
     <string name="cashu_discovering_description">Carteiras NIP-60 sincronizam entre clientes. Se você criou uma em outro app com esta chave Nostr, ela deve aparecer em alguns segundos.</string>
     <string name="cashu_balance">Saldo</string>
+    <string name="cashu_mints">Mints</string>
     <string name="cashu_mint_url">URL do mint</string>
     <string name="cashu_remove_mint">Remover mint</string>
     <string name="cashu_history">Histórico</string>
@@ -1810,7 +1820,9 @@
     <string name="cashu_quote_confirm">Pagar %1$s sat + até %2$s sat em taxas?</string>
     <string name="cashu_verify">Verificar</string>
     <string name="cashu_mint_reachable">✓ O mint está acessível</string>
+    <string name="cashu_mint_reachable_named">✓ %1$s</string>
     <string name="cashu_mint_unreachable">Não foi possível acessar o mint: %1$s</string>
+    <string name="nutzap">Nutzap</string>
     <string name="nutzap_failed_title">Falha no nutzap</string>
     <string name="nutzap_failed_no_recipient">Sem chave pública do destinatário na nota</string>
     <string name="nutzap_failed_no_event">Não foi possível construir a referência do evento</string>
@@ -1864,6 +1876,7 @@
     <string name="edit_calendar_collection">Editar calendário</string>
     <string name="calendar_collection_events_section">Eventos neste calendário (%1$d)</string>
     <string name="calendar_collection_no_events_yet">Você ainda não criou nenhum evento de calendário.</string>
+    <string name="calendar_view_feed">Feed</string>
     <string name="calendar_view_month">Mês</string>
     <string name="calendar_view_week">Semana</string>
     <string name="calendar_view_day">Dia</string>
@@ -1939,6 +1952,7 @@
     <string name="calendar_relative_ongoing_with_end">%1$s · termina %2$s</string>
     <string name="calendar_export_share_title">Compartilhar evento de calendário</string>
     <string name="calendar_export_event">Exportar para calendário (.ics)</string>
+    <string name="calendar_reminder_channel_id">calendar_reminders</string>
     <string name="calendar_reminder_channel_name">Lembretes de calendário</string>
     <string name="calendar_reminder_channel_description">Aviso quando um evento do qual você participa está prestes a começar.</string>
     <string name="calendar_reminder_default_title">Evento de calendário</string>
@@ -1964,6 +1978,10 @@
     <string name="calendar_reminder_settings_enabled_subtitle">Uma notificação é disparada quando um evento do qual você participa está prestes a começar.</string>
     <string name="calendar_reminder_settings_lead_title">Antecedência do lembrete</string>
     <string name="calendar_reminder_settings_lead_subtitle">Quantos minutos antes do evento você quer ser notificado.</string>
+    <plurals name="calendar_reminder_settings_lead_choice">
+        <item quantity="one">%1$d min</item>
+        <item quantity="other">%1$d min</item>
+    </plurals>
     <string name="calendar_share_nostr">Compartilhar como link Nostr</string>
     <string name="calendar_share_nostr_title">Compartilhar link do calendário</string>
     <string name="calendar_filter_all">Todos os calendários</string>
@@ -2171,8 +2189,10 @@
     <string name="git_status_closed">Fechado</string>
     <string name="git_status_draft">Rascunho</string>
     <string name="git_repo_tab_overview">Visão geral</string>
+    <string name="git_repo_tab_issues">Tickets</string>
     <string name="git_repo_tab_patches">Patches e PRs</string>
     <string name="git_repo_section_about">Sobre</string>
+    <string name="git_repo_section_links">Links</string>
     <string name="git_repo_section_maintainers">Mantenedores</string>
     <string name="git_repo_section_topics">Tópicos</string>
     <string name="git_repo_personal_fork">Fork pessoal</string>
@@ -2666,6 +2686,10 @@
         <item quantity="one">%1$d ano</item>
         <item quantity="other">%1$d anos</item>
     </plurals>
+    <plurals name="cashu_wallet_subtitle_mints">
+        <item quantity="one">%1$d mint</item>
+        <item quantity="other">%1$d mints</item>
+    </plurals>
     <plurals name="cashu_pending_quotes_title">
         <item quantity="one">%1$d fatura pendente</item>
         <item quantity="other">%1$d faturas pendentes</item>
@@ -2954,6 +2978,7 @@
     <string name="nowhere_link_card_store">Nowhere Loja</string>
     <string name="nowhere_link_card_petition">Nowhere Petição</string>
     <string name="nowhere_link_card_message">Nowhere Mensagem</string>
+    <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Arte</string>
     <string name="nowhere_link_card_forum">Nowhere Fórum</string>
 </resources>

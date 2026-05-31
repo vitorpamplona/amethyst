@@ -738,6 +738,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="route_music_tracks">Musik</string>
     <string name="route_music_playlists">Wiedergabelisten</string>
     <string name="route_podcast_episodes">Folgen</string>
+    <string name="route_podcasts">Podcasts</string>
     <string name="podcast_view_episodes">Folgen ansehen</string>
     <string name="podcast_episodes_section">Folgen</string>
     <string name="podcast_no_episodes">Noch keine Folgen gefunden</string>
@@ -780,6 +781,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="add_hashtag_label">Hashtag hinzufügen</string>
     <string name="add_hashtag_label_title">Hashtag hinzufügen</string>
     <string name="add_hashtag_label_explainer">Markiere diesen Beitrag öffentlich mit einem Hashtag (NIP-32-Label). Wer dir folgt, sieht ihn im Feed dieses Hashtags.</string>
+    <string name="add_hashtag_label_field">Hashtag</string>
     <string name="add_hashtag_label_confirm">Hinzufügen</string>
     <string name="hashtag_label_added_by">hinzugefügt von</string>
     <string name="pinned_notes">Angeheftete Notizen</string>
@@ -1763,6 +1765,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="cashu_discovering">Suche nach deiner Wallet…</string>
     <string name="cashu_discovering_description">NIP-60-Wallets werden über Clients hinweg synchronisiert. Wenn du in einer anderen App eine mit diesem Nostr-Schlüssel erstellt hast, sollte sie in wenigen Sekunden erscheinen.</string>
     <string name="cashu_balance">Guthaben</string>
+    <string name="cashu_mints">Mints</string>
     <string name="cashu_mint_url">Mint-URL</string>
     <string name="cashu_remove_mint">Mint entfernen</string>
     <string name="cashu_history">Verlauf</string>
@@ -1822,7 +1825,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="cashu_quote_confirm">%1$s Sat + bis zu %2$s Sat Gebühren bezahlen?</string>
     <string name="cashu_verify">Prüfen</string>
     <string name="cashu_mint_reachable">✓ Mint ist erreichbar</string>
+    <string name="cashu_mint_reachable_named">✓ %1$s</string>
     <string name="cashu_mint_unreachable">Mint nicht erreichbar: %1$s</string>
+    <string name="nutzap">Nutzap</string>
     <string name="nutzap_failed_title">Nutzap fehlgeschlagen</string>
     <string name="nutzap_failed_no_recipient">Kein Empfänger-Pubkey in der Notiz</string>
     <string name="nutzap_failed_no_event">Ereignisreferenz kann nicht erstellt werden</string>
