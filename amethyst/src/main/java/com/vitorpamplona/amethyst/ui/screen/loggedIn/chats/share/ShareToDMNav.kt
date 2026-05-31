@@ -36,6 +36,14 @@ class ShareToDMNav(
     private val attachment: String?,
 ) : INav by delegate {
     override fun nav(route: Route) {
-        delegate.nav(ShareToDMRouteRewriter.rewrite(route, message, attachment))
+        val rewritten = ShareToDMRouteRewriter.rewrite(route, message, attachment)
+        if (route is Route.Room) {
+            // One-shot: replace the picker in the back stack so backing out of the
+            // chat exits the share flow instead of returning to the picker, which
+            // would re-inject the shared text on re-tap and create duplicate drafts.
+            delegate.popUpTo(rewritten, Route.ShareToDM::class)
+        } else {
+            delegate.nav(rewritten)
+        }
     }
 }

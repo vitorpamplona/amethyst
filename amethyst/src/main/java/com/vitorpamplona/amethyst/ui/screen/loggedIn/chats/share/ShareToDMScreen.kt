@@ -55,6 +55,12 @@ fun ShareToDMScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    // Deliberately a screen-scoped, transient FeedContentState (not wired into
+    // AccountFeedContentStates like dmKnown/dmNew). The share picker is a one-shot,
+    // short-lived screen, so it owns its feed via viewModelScope and relies on
+    // WatchLifecycleAndUpdateModel to load/refresh on entry and resume rather than
+    // on the always-on additive update loop. Account switch recreates it (the
+    // remember key), which is correct for a transient picker.
     val feedContentState =
         remember(accountViewModel) {
             FeedContentState(
@@ -85,7 +91,7 @@ fun ShareToDMScreen(
                         .clickable(
                             role = Role.Button,
                             onClickLabel = stringRes(R.string.share_to_dm_start_new),
-                        ) { nav.nav(Route.NewGroupDM(message = message, attachment = attachment)) }
+                        ) { nav.popUpTo(Route.NewGroupDM(message = message, attachment = attachment), Route.ShareToDM::class) }
                         .padding(16.dp),
             )
 

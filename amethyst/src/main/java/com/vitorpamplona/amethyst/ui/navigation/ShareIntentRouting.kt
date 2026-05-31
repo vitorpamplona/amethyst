@@ -26,8 +26,13 @@ package com.vitorpamplona.amethyst.ui.navigation
  * component class name of the launching intent (the activity-alias name).
  */
 object ShareIntentRouting {
-    /** Simple class name of the activity-alias declared in AndroidManifest.xml. */
+    /**
+     * Simple class name of the `<activity-alias>` declared in AndroidManifest.xml
+     * (android:name=".ui.ShareAsDMAlias"). MUST stay in sync with the manifest —
+     * renaming the alias there without updating this constant silently routes
+     * "Send as DM" shares to the New Post composer (no build error).
+     */
     const val SHARE_AS_DM_ALIAS_SIMPLE_NAME = "ShareAsDMAlias"
 
-    fun isShareAsDm(componentClassName: String?): Boolean = componentClassName?.endsWith(SHARE_AS_DM_ALIAS_SIMPLE_NAME) == true
+    fun isShareAsDm(componentClassName: String?): Boolean = componentClassName?.endsWith(".$SHARE_AS_DM_ALIAS_SIMPLE_NAME") == true
 }

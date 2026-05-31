@@ -625,6 +625,14 @@ private fun NavigateIfIntentRequested(
         } else {
             nav.newStack(Route.NewShortNote(message = message, attachment = media.toString()))
         }
+
+        // Consume the launch intent so a later recomposition can't re-fire
+        // newStack for the same share (the isBaseRoute guard is a non-reactive
+        // snapshot and stops guarding once we navigate past the destination,
+        // e.g. into a chat via the one-shot picker). Clearing the action also
+        // lets the else-branch register the onNewIntent listener for the rest
+        // of this session.
+        activity.intent.action = null
     } else {
         var newAccount by remember { mutableStateOf<String?>(null) }
 

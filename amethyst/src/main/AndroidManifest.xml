@@ -218,6 +218,9 @@
             </intent-filter>
         </activity>
 
+        <!-- "Send as DM" share target. The android:name simple class ("ShareAsDMAlias")
+             is matched at runtime by ShareIntentRouting.SHARE_AS_DM_ALIAS_SIMPLE_NAME;
+             keep the two in sync when renaming. -->
         <activity-alias
             android:name=".ui.ShareAsDMAlias"
             android:exported="true"

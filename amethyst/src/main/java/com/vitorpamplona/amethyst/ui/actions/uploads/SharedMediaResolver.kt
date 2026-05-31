@@ -18,37 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.navigation
+package com.vitorpamplona.amethyst.ui.actions.uploads
 
-import com.vitorpamplona.amethyst.ui.navigation.ShareIntentRouting
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import android.content.Context
+import androidx.core.net.toUri
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-class ShareIntentRoutingTest {
-    @Test
-    fun detectsAliasByExactClassName() {
-        assertTrue(ShareIntentRouting.isShareAsDm("com.vitorpamplona.amethyst.ui.ShareAsDMAlias"))
+/**
+ * Resolves a shared content-URI string (from an Android SEND intent) into a
+ * [SelectedMedia] by reading its MIME type off the main thread. Returns null for
+ * a null/blank URI. Shared by the share-to-compose pre-fill paths (DM chatroom,
+ * group DM, …) so the URI→MIME→SelectedMedia logic lives in one place.
+ */
+suspend fun resolveSharedMedia(
+    context: Context,
+    uriString: String?,
+): SelectedMedia? =
+    uriString?.ifBlank { null }?.toUri()?.let { uri ->
+        withContext(Dispatchers.IO) {
+            SelectedMedia(uri, context.contentResolver.getType(uri))
+        }
     }
-
-    @Test
-    fun detectsAliasRegardlessOfPackagePrefix() {
-        // Flavors can change the resolved package prefix; match on the simple name.
-        assertTrue(ShareIntentRouting.isShareAsDm("com.example.fork.ui.ShareAsDMAlias"))
-    }
-
-    @Test
-    fun rejectsMainActivity() {
-        assertFalse(ShareIntentRouting.isShareAsDm("com.vitorpamplona.amethyst.ui.MainActivity"))
-    }
-
-    @Test
-    fun rejectsNull() {
-        assertFalse(ShareIntentRouting.isShareAsDm(null))
-    }
-
-    @Test
-    fun rejectsSuffixThatIsNotASimpleName() {
-        assertFalse(ShareIntentRouting.isShareAsDm("com.evil.XShareAsDMAlias"))
-    }
-}
