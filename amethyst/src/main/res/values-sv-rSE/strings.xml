@@ -775,6 +775,7 @@
     <string name="add_hashtag_label">Lägg till hashtag</string>
     <string name="add_hashtag_label_title">Lägg till en hashtag</string>
     <string name="add_hashtag_label_explainer">Tagga det här inlägget offentligt med en hashtag (NIP-32-etikett). De som följer dig ser det i den hashtaggens flöde.</string>
+    <string name="add_hashtag_label_field">Hashtag</string>
     <string name="add_hashtag_label_confirm">Lägg till</string>
     <string name="hashtag_label_added_by">tillagd av</string>
     <string name="pinned_notes">Fästa anteckningar</string>
@@ -846,6 +847,7 @@
     <string name="quick_zap_amounts_explainer">Visas när du trycker på Zap-knappen. Tryck på ett belopp för att ta bort det. Om du lämnar det tomt öppnas en dialog för att ange ett belopp varje gång.</string>
     <string name="send_onchain_instead">Skicka on-chain istället</string>
     <string name="reload_mint_title">Fyll på mint</string>
+    <string name="reload_mint_sats_amount">%1$s sats</string>
     <string name="reload_mint_topup_label">Påfyllningsbelopp</string>
     <string name="reload_mint_section_to">Mint att fylla på</string>
     <string name="reload_mint_section_from">Medel från</string>
@@ -1757,6 +1759,7 @@
     <string name="cashu_discovering">Letar efter din plånbok…</string>
     <string name="cashu_discovering_description">NIP-60-plånböcker synkroniseras mellan klienter. Om du skapade en i en annan app med den här Nostr-nyckeln bör den dyka upp inom några sekunder.</string>
     <string name="cashu_balance">Saldo</string>
+    <string name="cashu_mints">Mints</string>
     <string name="cashu_mint_url">Mint-URL</string>
     <string name="cashu_remove_mint">Ta bort mint</string>
     <string name="cashu_history">Historik</string>
@@ -1816,7 +1819,9 @@
     <string name="cashu_quote_confirm">Betala %1$s sat + upp till %2$s sat i avgifter?</string>
     <string name="cashu_verify">Verifiera</string>
     <string name="cashu_mint_reachable">✓ Mint är nåbar</string>
+    <string name="cashu_mint_reachable_named">✓ %1$s</string>
     <string name="cashu_mint_unreachable">Kunde inte nå mint: %1$s</string>
+    <string name="nutzap">Nutzap</string>
     <string name="nutzap_failed_title">Nutzap misslyckades</string>
     <string name="nutzap_failed_no_recipient">Ingen mottagar-pubkey på noten</string>
     <string name="nutzap_failed_no_event">Kan inte bygga händelsereferens</string>
@@ -2679,6 +2684,10 @@
     <plurals name="duration_years">
         <item quantity="one">%1$d år</item>
         <item quantity="other">%1$d år</item>
+    </plurals>
+    <plurals name="cashu_wallet_subtitle_mints">
+        <item quantity="one">%1$d mint</item>
+        <item quantity="other">%1$d mints</item>
     </plurals>
     <plurals name="cashu_pending_quotes_title">
         <item quantity="one">%1$d väntande faktura</item>

@@ -795,6 +795,7 @@
     <string name="add_hashtag_label">Přidat hashtag</string>
     <string name="add_hashtag_label_title">Přidat hashtag</string>
     <string name="add_hashtag_label_explainer">Veřejně označte tento příspěvek hashtagem (štítek NIP-32). Lidé, kteří vás sledují, jej uvidí ve feedu daného hashtagu.</string>
+    <string name="add_hashtag_label_field">Hashtag</string>
     <string name="add_hashtag_label_confirm">Přidat</string>
     <string name="hashtag_label_added_by">přidal(a)</string>
     <string name="pinned_notes">Připnuté poznámky</string>
@@ -866,6 +867,7 @@
     <string name="quick_zap_amounts_explainer">Zobrazí se při stisknutí tlačítka zap. Klepnutím na částku ji odeberete. Pokud ponecháte prázdné, otevře se pokaždé dialog pro zadání částky.</string>
     <string name="send_onchain_instead">Odeslat on-chain</string>
     <string name="reload_mint_title">Dobít mint</string>
+    <string name="reload_mint_sats_amount">%1$s sats</string>
     <string name="reload_mint_topup_label">Částka dobití</string>
     <string name="reload_mint_section_to">Mint k dobití</string>
     <string name="reload_mint_section_from">Prostředky z</string>
@@ -1846,7 +1848,9 @@
     <string name="cashu_quote_confirm">Zaplatit %1$s sat + až %2$s sat na poplatcích?</string>
     <string name="cashu_verify">Ověřit</string>
     <string name="cashu_mint_reachable">✓ Mint je dostupný</string>
+    <string name="cashu_mint_reachable_named">✓ %1$s</string>
     <string name="cashu_mint_unreachable">Nelze se připojit k mintu: %1$s</string>
+    <string name="nutzap">Nutzap</string>
     <string name="nutzap_failed_title">Nutzap selhal</string>
     <string name="nutzap_failed_no_recipient">V poznámce chybí veřejný klíč příjemce</string>
     <string name="nutzap_failed_no_event">Nelze sestavit odkaz na událost</string>
@@ -2729,6 +2733,12 @@
         <item quantity="few">%1$d roky</item>
         <item quantity="many">%1$d let</item>
         <item quantity="other">%1$d let</item>
+    </plurals>
+    <plurals name="cashu_wallet_subtitle_mints">
+        <item quantity="one">%1$d mint</item>
+        <item quantity="few">%1$d minty</item>
+        <item quantity="many">%1$d mintů</item>
+        <item quantity="other">%1$d mintů</item>
     </plurals>
     <plurals name="cashu_pending_quotes_title">
         <item quantity="one">%1$d čekající faktura</item>
