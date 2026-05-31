@@ -145,6 +145,7 @@ open class Note(
         removeZap(note)
         removeZapPayment(note)
         removeReport(note)
+        removeLabel(note)
     }
 
     var poll: PollResponsesCache? = null
@@ -164,6 +165,16 @@ open class Note(
         private set
 
     var reports = mapOf<User, List<Note>>()
+        private set
+
+    /**
+     * NIP-32 hashtag labels (kind 1985) targeting this note.
+     * Key: hashtag value, lowercased (the `l` tag value under the `#t` namespace).
+     * Value: the list of LabelEvent notes that applied that hashtag to this note,
+     * so `source.author` identifies who labeled it. Used by the hashtag feed to
+     * surface posts a follow has tagged and to attribute the label in the UI.
+     */
+    var labels = mapOf<String, List<Note>>()
         private set
 
     var zaps = mapOf<Note, Note?>()
@@ -366,12 +377,14 @@ open class Note(
         val zapsChanged = zaps.isNotEmpty() || zapPayments.isNotEmpty() || onchainZaps.isNotEmpty() || nutzaps.isNotEmpty()
         val boostsChanged = boosts.isNotEmpty()
         val reportsChanged = reports.isNotEmpty()
+        val labelsChanged = labels.isNotEmpty()
 
         val toBeRemoved =
             replies +
                 reactions.values.flatten() +
                 boosts +
                 reports.values.flatten() +
+                labels.values.flatten() +
                 zaps.keys +
                 zaps.values.filterNotNull() +
                 zapPayments.keys +
@@ -382,6 +395,7 @@ open class Note(
         reactions = mapOf()
         boosts = listOf()
         reports = mapOf()
+        labels = mapOf()
         zaps = mapOf()
         onchainZaps = mapOf()
         onchainZapResolved = false
@@ -394,6 +408,7 @@ open class Note(
         if (reactionsChanged) flowSet?.reactions?.invalidateData()
         if (boostsChanged) flowSet?.boosts?.invalidateData()
         if (reportsChanged) flowSet?.reports?.invalidateData()
+        if (labelsChanged) flowSet?.labels?.invalidateData()
         if (zapsChanged) flowSet?.zaps?.invalidateData()
 
         return toBeRemoved
@@ -666,6 +681,32 @@ open class Note(
             reports = reports + Pair(author, reportsByAuthor + note)
             flowSet?.reports?.invalidateData()
         }
+    }
+
+    /** Attach a NIP-32 LabelEvent note as having tagged this note with [hashtag] (lowercased). */
+    fun addLabel(
+        hashtag: String,
+        note: Note,
+    ) {
+        val listOfLabelers = labels[hashtag]
+        if (listOfLabelers == null) {
+            labels = labels + Pair(hashtag, listOf(note))
+            flowSet?.labels?.invalidateData()
+        } else if (!listOfLabelers.contains(note)) {
+            labels = labels + Pair(hashtag, listOfLabelers + note)
+            flowSet?.labels?.invalidateData()
+        }
+    }
+
+    /** Detach a LabelEvent note (e.g. deleted) from every hashtag bucket it was in. */
+    fun removeLabel(note: Note) {
+        if (labels.none { it.value.contains(note) }) return
+
+        labels =
+            labels
+                .mapValues { it.value - note }
+                .filterValues { it.isNotEmpty() }
+        flowSet?.labels?.invalidateData()
     }
 
     fun addRelaySync(relay: NormalizedRelayUrl) =
@@ -1239,6 +1280,7 @@ class NoteFlowSet(
     val zaps = NoteBundledRefresherFlow(u)
     val ots = NoteBundledRefresherFlow(u)
     val edits = NoteBundledRefresherFlow(u)
+    val labels = NoteBundledRefresherFlow(u)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     fun author() =
@@ -1257,7 +1299,8 @@ class NoteFlowSet(
             replies.hasObservers() ||
             zaps.hasObservers() ||
             ots.hasObservers() ||
-            edits.hasObservers()
+            edits.hasObservers() ||
+            labels.hasObservers()
 }
 
 @Stable

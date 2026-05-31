@@ -18,24 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.cashu
+package com.vitorpamplona.amethyst.commons.model.nip51Lists.interestSets
 
-import androidx.compose.runtime.Immutable
-import kotlinx.serialization.Serializable
+import androidx.compose.runtime.Stable
 
-@Immutable
-data class CashuToken(
-    val token: String,
-    val mint: String,
-    val totalAmount: Long,
-    val proofs: List<Proof>,
-)
-
-@Serializable
-@Immutable
-class Proof(
-    val amount: Int,
-    val id: String,
-    val secret: String,
-    val C: String,
-)
+@Stable
+data class InterestSet(
+    val identifier: String,
+    val title: String,
+    val publicHashtags: Set<String> = emptySet(),
+    val privateHashtags: Set<String> = emptySet(),
+) {
+    val allHashtags: Set<String> get() = publicHashtags + privateHashtags
+}

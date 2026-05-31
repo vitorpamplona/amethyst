@@ -18,29 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.nip72Communities
+package com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions
 
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEventCache
-import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
-import com.vitorpamplona.quartz.nip72ModCommunities.follow.communities
-import com.vitorpamplona.quartz.nip72ModCommunities.follow.communityIdSet
-import com.vitorpamplona.quartz.nip72ModCommunities.follow.communityIds
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.TrustProviderListEvent
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.serviceProviderSet
+import com.vitorpamplona.quartz.nip85TrustedAssertions.list.serviceProviders
 
-class CommunityListDecryptionCache(
+class TrustProviderListDecryptionCache(
     val signer: NostrSigner,
 ) {
-    val cachedPrivateLists = PrivateTagArrayEventCache<CommunityListEvent>(signer)
+    val cachedPrivateLists = PrivateTagArrayEventCache<TrustProviderListEvent>(signer)
 
-    fun cachedCommunityIds(event: CommunityListEvent) = cachedPrivateLists.mergeTagListPrecached(event).communityIds()
+    fun cachedServiceProviders(event: TrustProviderListEvent) = cachedPrivateLists.mergeTagListPrecached(event).serviceProviders()
 
-    fun cachedCommunityIdSet(event: CommunityListEvent) = cachedPrivateLists.mergeTagListPrecached(event).communityIdSet()
+    fun cachedServiceProviderSet(event: TrustProviderListEvent) = cachedPrivateLists.mergeTagListPrecached(event).serviceProviderSet()
 
-    fun cachedCommunities(event: CommunityListEvent) = cachedPrivateLists.mergeTagListPrecached(event).communities()
+    suspend fun serviceProviders(event: TrustProviderListEvent) = cachedPrivateLists.mergeTagList(event).serviceProviders()
 
-    suspend fun communityIds(event: CommunityListEvent) = cachedPrivateLists.mergeTagList(event).communityIds()
-
-    suspend fun communityIdSet(event: CommunityListEvent) = cachedPrivateLists.mergeTagList(event).communityIdSet()
-
-    suspend fun communities(event: CommunityListEvent) = cachedPrivateLists.mergeTagList(event).communities()
+    suspend fun serviceProviderSet(event: TrustProviderListEvent) = cachedPrivateLists.mergeTagList(event).serviceProviderSet()
 }

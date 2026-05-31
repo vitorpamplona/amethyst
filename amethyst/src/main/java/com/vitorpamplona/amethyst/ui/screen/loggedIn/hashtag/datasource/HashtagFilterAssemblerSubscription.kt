@@ -35,7 +35,11 @@ fun HashtagFilterAssemblerSubscription(
     // even if they are tracking the same tag.
     val state =
         remember(tag) {
-            HashtagQueryState(tag.hashtag, accountViewModel.account.followOutboxesOrProxy.flow.value)
+            HashtagQueryState(
+                tag.hashtag,
+                accountViewModel.account.followOutboxesOrProxy.flow.value,
+                accountViewModel.account,
+            )
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().hashtags)

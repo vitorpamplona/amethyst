@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
@@ -293,15 +293,6 @@ class WalletViewModel : ViewModel() {
     ) {
         val acc = account ?: return
         acc.settings.renameNwcWallet(walletId, newName)
-        refreshWalletList()
-    }
-
-    fun moveWallet(
-        fromIndex: Int,
-        toIndex: Int,
-    ) {
-        val acc = account ?: return
-        acc.settings.moveNwcWallet(fromIndex, toIndex)
         refreshWalletList()
     }
 

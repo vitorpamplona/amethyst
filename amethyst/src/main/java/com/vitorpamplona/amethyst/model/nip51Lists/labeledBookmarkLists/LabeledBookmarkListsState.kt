@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists
 import com.vitorpamplona.amethyst.commons.model.anyNotNullEvent
 import com.vitorpamplona.amethyst.commons.model.eventIdSet
 import com.vitorpamplona.amethyst.commons.model.events
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
 import com.vitorpamplona.amethyst.commons.model.updateFlow
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote

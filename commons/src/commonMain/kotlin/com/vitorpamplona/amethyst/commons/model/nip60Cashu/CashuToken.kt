@@ -18,22 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.amethyst.commons.model.nip60Cashu
 
-import kotlin.math.roundToInt
+import androidx.compose.runtime.Immutable
+import kotlinx.serialization.Serializable
 
-fun countToHumanReadableBytes(counter: Int) =
-    when {
-        counter >= 1000000000 -> "${(counter / 1000000000f).roundToInt()} GB"
-        counter >= 1000000 -> "${(counter / 1000000f).roundToInt()} MB"
-        counter >= 1000 -> "${(counter / 1000f).roundToInt()} KB"
-        else -> "$counter"
-    }
+@Immutable
+data class CashuToken(
+    val token: String,
+    val mint: String,
+    val totalAmount: Long,
+    val proofs: List<Proof>,
+)
 
-fun countToHumanReadableBytes(counter: Long) =
-    when {
-        counter >= 1000000000 -> "${(counter / 1000000000f).roundToInt()} GB"
-        counter >= 1000000 -> "${(counter / 1000000f).roundToInt()} MB"
-        counter >= 1000 -> "${(counter / 1000f).roundToInt()} KB"
-        else -> "$counter"
-    }
+@Serializable
+@Immutable
+class Proof(
+    val amount: Int,
+    val id: String,
+    val secret: String,
+    val C: String,
+)

@@ -35,7 +35,13 @@ import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListD
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.UserStatusAction
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.favoriteAlgoFeedsLists.FavoriteAlgoFeedsListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.hashtagLists.HashtagListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.muteList.MuteListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.ReportAction
+import com.vitorpamplona.amethyst.commons.model.nip72Communities.CommunityListDecryptionCache
+import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.TrustProviderListDecryptionCache
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSender
@@ -72,20 +78,16 @@ import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayLis
 import com.vitorpamplona.amethyst.model.nip51Lists.blockedRelays.BlockedRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.broadcastRelays.BroadcastRelayListState
-import com.vitorpamplona.amethyst.model.nip51Lists.favoriteAlgoFeedsLists.FavoriteAlgoFeedsListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.favoriteAlgoFeedsLists.FavoriteAlgoFeedsListState
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.geohashLists.GeohashListState
-import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.hashtagLists.HashtagListState
 import com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays.IndexerRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.indexerRelays.IndexerRelayListState
 import com.vitorpamplona.amethyst.model.nip51Lists.interestSets.InterestSetsState
 import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkListsState
-import com.vitorpamplona.amethyst.model.nip51Lists.muteList.MuteListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.muteList.MuteListState
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.FollowListsState
-import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.peopleList.PeopleListsState
 import com.vitorpamplona.amethyst.model.nip51Lists.proxyRelays.ProxyRelayListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip51Lists.proxyRelays.ProxyRelayListState
@@ -97,7 +99,6 @@ import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayLis
 import com.vitorpamplona.amethyst.model.nip51Lists.trustedRelays.TrustedRelayListState
 import com.vitorpamplona.amethyst.model.nip62Vanish.VanishRequestsState
 import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
-import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListDecryptionCache
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListState
 import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState
 import com.vitorpamplona.amethyst.model.nipA3PaymentTargets.NipA3PaymentTargetsState
@@ -111,7 +112,6 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.FeedDecryptionCaches
 import com.vitorpamplona.amethyst.model.topNavFeeds.FeedTopNavFilterState
 import com.vitorpamplona.amethyst.model.topNavFeeds.IFeedTopNavFilter
 import com.vitorpamplona.amethyst.model.topNavFeeds.OutboxLoaderState
-import com.vitorpamplona.amethyst.model.trustedAssertions.TrustProviderListDecryptionCache
 import com.vitorpamplona.amethyst.model.trustedAssertions.TrustProviderListState
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
@@ -192,6 +192,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
+import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip37Drafts.DraftEventCache
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
@@ -738,6 +739,48 @@ class Account(
      * Called when tracked broadcasting succeeds.
      */
     fun consumeReactionEvent(event: Event) {
+        cache.justConsumeMyOwnEvent(event)
+    }
+
+    /**
+     * NIP-32: tags [note] with [hashtag] by publishing a kind 1985 label event using the
+     * `#t` tag-association namespace. Fire-and-forget; signs and broadcasts immediately.
+     */
+    suspend fun labelHashtag(
+        note: Note,
+        hashtag: String,
+    ) {
+        createLabelHashtagEvent(note, hashtag)?.let { (event, relays) ->
+            cache.justConsumeMyOwnEvent(event)
+            client.publish(event, relays)
+        }
+    }
+
+    /**
+     * Builds and signs a NIP-32 hashtag label event for [note] without sending it.
+     * Returns the signed event and target relays for tracked broadcasting, or null if
+     * the account can't write or the note has no underlying event.
+     */
+    suspend fun createLabelHashtagEvent(
+        note: Note,
+        hashtag: String,
+    ): Pair<Event, Set<NormalizedRelayUrl>>? {
+        if (!signer.isWriteable()) return null
+
+        val eventHint = note.toEventHint<Event>() ?: return null
+
+        val template = LabelEvent.buildHashtagLabel(eventHint, hashtag)
+
+        val event = signer.sign(template)
+        val relays = computeRelayListToBroadcast(event)
+
+        return event to relays
+    }
+
+    /**
+     * Consumes a label event into local cache. Called when tracked broadcasting succeeds.
+     */
+    fun consumeLabelEvent(event: Event) {
         cache.justConsumeMyOwnEvent(event)
     }
 

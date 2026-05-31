@@ -99,9 +99,9 @@ fun navigateToReloadMint(
     nav.nav(Route.ReloadMint(uid))
 }
 
-private fun shortMint(url: String): String = url.removePrefix("https://").removePrefix("http://").removeSuffix("/")
+internal fun shortMint(url: String): String = url.removePrefix("https://").removePrefix("http://").removeSuffix("/")
 
-private fun sats(value: Long): String = showAmount(value.toBigDecimal().setScale(1))
+internal fun sats(value: Long): String = showAmount(value.toBigDecimal().setScale(1))
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -359,7 +359,7 @@ fun ReloadMintScreen(
 }
 
 @Composable
-private fun SectionHeader(text: String) {
+internal fun SectionHeader(text: String) {
     Text(
         text = text,
         color = MaterialTheme.colorScheme.primary,
@@ -368,7 +368,7 @@ private fun SectionHeader(text: String) {
 }
 
 @Composable
-private fun SourceRow(
+internal fun SourceRow(
     source: ReloadSource,
     selected: Boolean,
     onSelect: () -> Unit,

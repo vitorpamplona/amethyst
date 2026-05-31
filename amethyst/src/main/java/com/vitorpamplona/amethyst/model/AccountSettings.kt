@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatRepository
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListRepository
-import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcWalletEntryNorm
+import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
@@ -378,21 +378,6 @@ class AccountSettings(
         val index = wallets.indexOfFirst { it.id == walletId }
         if (index >= 0) {
             wallets[index] = wallets[index].copy(name = newName)
-            nwcWallets.tryEmit(wallets)
-            saveAccountSettings()
-            return true
-        }
-        return false
-    }
-
-    fun moveNwcWallet(
-        fromIndex: Int,
-        toIndex: Int,
-    ): Boolean {
-        val wallets = nwcWallets.value.toMutableList()
-        if (fromIndex in wallets.indices && toIndex in wallets.indices && fromIndex != toIndex) {
-            val item = wallets.removeAt(fromIndex)
-            wallets.add(toIndex, item)
             nwcWallets.tryEmit(wallets)
             saveAccountSettings()
             return true

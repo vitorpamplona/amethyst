@@ -1824,7 +1824,6 @@
     <string name="wallet_invalid_uri">Érvénytelen NWC-kapcsolati cím</string>
     <string name="wallet_move_up">Mozgatás felfelé</string>
     <string name="wallet_move_down">Mozgatás lefelé</string>
-    <string name="wallet_reorder">Pénztárca újrarendezése</string>
     <string name="wallet_onchain_transactions">Láncon belüli tranzakciók</string>
     <string name="wallet_onchain_no_address">Ehhez a fiókhoz nincs elérhető láncon belüli cím.</string>
     <string name="wallet_onchain_no_backend">Nincs beállítva lánc-háttérprogram.</string>

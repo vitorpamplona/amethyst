@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.cashu.v3
 
-import com.vitorpamplona.amethyst.service.cashu.Proof
+import com.vitorpamplona.amethyst.commons.model.nip60Cashu.Proof
 import kotlinx.serialization.Serializable
 
 @Serializable

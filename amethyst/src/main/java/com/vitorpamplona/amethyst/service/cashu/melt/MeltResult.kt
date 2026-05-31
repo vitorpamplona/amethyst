@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.cashu.melt
 
-import com.vitorpamplona.amethyst.service.cashu.CashuToken
+import com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuToken
 
 class MeltResult(
     val token: CashuToken,

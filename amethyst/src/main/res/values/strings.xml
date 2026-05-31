@@ -806,6 +806,13 @@
     <string name="remove_from_private_bookmarks">Remove from Private Bookmarks</string>
     <string name="remove_from_public_bookmarks">Remove from Public Bookmarks</string>
 
+    <string name="add_hashtag_label">Add hashtag</string>
+    <string name="add_hashtag_label_title">Add a hashtag</string>
+    <string name="add_hashtag_label_explainer">Publicly tag this post with a hashtag (NIP-32 label). People who follow you will see it in that hashtag\'s feed.</string>
+    <string name="add_hashtag_label_field">Hashtag</string>
+    <string name="add_hashtag_label_confirm">Add</string>
+    <string name="hashtag_label_added_by">added by</string>
+
     <string name="pinned_notes">Pinned Notes</string>
     <string name="pinned_notes_explainer">Your pinned notes</string>
     <string name="pin_to_profile">Pin to Profile</string>
@@ -897,6 +904,10 @@
     <string name="reload_mint_needs_more">needs %1$s sat more</string>
     <string name="reload_mint_funded">funded</string>
     <string name="reload_mint_copy_invoice">Copy invoice</string>
+    <string name="topup_mint_title">Top up mint</string>
+    <string name="topup_mint_action">Top up this mint</string>
+    <string name="topup_mint_amount_label">Amount to add</string>
+    <string name="topup_mint_confirm">Top up</string>
     <string name="zap_privacy_section">Zap Privacy</string>
     <string name="zap_type_section_explainer">Controls how your identity is shown when you send a zap.</string>
     <string name="wallet_connect_connect_app">Connect Wallet</string>
@@ -2051,7 +2062,6 @@
     <string name="wallet_invalid_uri">Invalid NWC connection URI</string>
     <string name="wallet_move_up">Move Up</string>
     <string name="wallet_move_down">Move Down</string>
-    <string name="wallet_reorder">Reorder wallet</string>
     <string name="wallet_onchain_transactions">Onchain Transactions</string>
     <string name="wallet_onchain_no_address">No on-chain address available for this account.</string>
     <string name="wallet_onchain_no_backend">No chain backend is configured.</string>

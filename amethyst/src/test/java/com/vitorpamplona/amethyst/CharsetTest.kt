@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst
 
-import com.vitorpamplona.amethyst.service.firstFullChar
+import com.vitorpamplona.amethyst.commons.util.firstFullChar
 import org.junit.Assert
 import org.junit.Test
 

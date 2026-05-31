@@ -115,6 +115,7 @@ fun NoteDropDownMenu(
     nav: INav,
 ) {
     var reportDialogShowing by remember { mutableStateOf(false) }
+    var addLabelDialogShowing by remember { mutableStateOf(false) }
 
     val state by observeBookmarksFollowsAndAccount(note, accountViewModel).collectAsStateWithLifecycle(
         DropDownParams(
@@ -286,6 +287,9 @@ fun NoteDropDownMenu(
                     }
                 }
             }
+            M3ActionRow(icon = MaterialSymbols.Tag, text = stringRes(R.string.add_hashtag_label)) {
+                addLabelDialogShowing = true
+            }
             // Pick exactly one curation flow per kind: music tracks go to playlists, emoji
             // packs go to the emoji list, everything else gets the standard bookmark rows.
             // Showing both at once is noisy and makes "bookmark" feel like the catch-all when
@@ -386,6 +390,17 @@ fun NoteDropDownMenu(
             reportDialogShowing = false
             onDismiss()
         }
+    }
+
+    if (addLabelDialogShowing) {
+        AddHashtagLabelDialog(
+            note = note,
+            accountViewModel = accountViewModel,
+            onDismiss = {
+                addLabelDialogShowing = false
+                onDismiss()
+            },
+        )
     }
 }
 

@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip32Labeling
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip32Labeling.tags.LabelTag
 import com.vitorpamplona.quartz.utils.EventFactory
@@ -158,6 +159,61 @@ class LabelEventTest {
         val languageLabels = event.labelsByNamespace("ISO-639-1")
         assertEquals(1, languageLabels.size)
         assertEquals("en", languageLabels[0].label)
+    }
+
+    @Test
+    fun testBuildHashtagLabel() {
+        val labeledEvent =
+            EventFactory.create<Event>(
+                id = testEventId,
+                pubKey = testPubKey,
+                createdAt = 1234567890L,
+                kind = 1,
+                tags = arrayOf(),
+                content = "hello",
+                sig = "c".repeat(128),
+            )
+
+        val template =
+            LabelEvent.buildHashtagLabel(
+                labeledEvent = EventHintBundle(labeledEvent),
+                hashtag = "#PhotoGraphy",
+            )
+
+        assertEquals(1985, template.kind)
+
+        val hasEventRef = template.tags.any { it[0] == "e" && it[1] == testEventId }
+        assertTrue(hasEventRef, "Should have e tag targeting labeled event")
+
+        val hasNamespace = template.tags.any { it[0] == "L" && it[1] == "#t" }
+        assertTrue(hasNamespace, "Should have the #t tag-association namespace")
+
+        // The leading '#' is stripped and the value is lowercased.
+        val hasLabel = template.tags.any { it[0] == "l" && it[1] == "photography" && it[2] == "#t" }
+        assertTrue(hasLabel, "Should have a lowercased l label tag under #t")
+    }
+
+    @Test
+    fun testHashtagAssociations() {
+        val event =
+            EventFactory.create<LabelEvent>(
+                id = testEventId,
+                pubKey = testPubKey,
+                createdAt = 1234567890L,
+                kind = 1985,
+                tags =
+                    arrayOf(
+                        arrayOf("L", "#t"),
+                        arrayOf("l", "Bitcoin", "#t"),
+                        arrayOf("l", "nostr", "#t"),
+                        arrayOf("l", "MIT", "license"),
+                        arrayOf("e", testEventId),
+                    ),
+                content = "",
+                sig = "c".repeat(128),
+            )
+
+        assertEquals(listOf("bitcoin", "nostr"), event.hashtagAssociations())
     }
 
     @Test
