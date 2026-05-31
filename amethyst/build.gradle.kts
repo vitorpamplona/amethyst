@@ -8,10 +8,11 @@ plugins {
     alias(libs.plugins.googleKsp)
 }
 
-fun getCurrentBranch(): String =
+fun getCurrentBranch(workingDir: java.io.File): String =
     try {
         val process =
             ProcessBuilder("git", "rev-parse", "--abbrev-ref", "HEAD")
+                .directory(workingDir)
                 .redirectErrorStream(true)
                 .start()
         val branch =
@@ -19,15 +20,18 @@ fun getCurrentBranch(): String =
                 .bufferedReader()
                 .use { it.readText() }
                 .trim()
-        process.waitFor()
-        branch
+        val exitCode = process.waitFor()
+        if (exitCode != 0) "unknown" else branch
     } catch (e: Exception) {
         println("Could not determine git branch: ${e.message}")
         "unknown"
     }
 
-fun generateVersionName(baseVersion: String): String {
-    val currentBranch = getCurrentBranch()
+fun generateVersionName(
+    baseVersion: String,
+    workingDir: java.io.File,
+): String {
+    val currentBranch = getCurrentBranch(workingDir)
 
     if (currentBranch == "main" || currentBranch == "master" || currentBranch == "unknown" || currentBranch == "HEAD") {
         return baseVersion
@@ -73,7 +77,7 @@ android {
                 .get()
                 .toInt()
         versionCode = 447
-        versionName = generateVersionName(libs.versions.app.get())
+        versionName = generateVersionName(libs.versions.app.get(), rootDir)
         buildConfigField("String", "RELEASE_NOTES_ID", "\"8ec0d94550b5538115226c6858159b1115713c9c6ed942173bd4fd5d292d8ba6\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
