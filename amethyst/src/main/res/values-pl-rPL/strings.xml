@@ -792,6 +792,12 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="add_to_public_bookmarks">Dodaj do publicznych zakładek</string>
     <string name="remove_from_private_bookmarks">Usuń z prywatnych zakładek</string>
     <string name="remove_from_public_bookmarks">Usuń z publicznych zakładek</string>
+    <string name="add_hashtag_label">Dodaj hasztag</string>
+    <string name="add_hashtag_label_title">Dodaj hasztag</string>
+    <string name="add_hashtag_label_explainer">Publicznie oznacz ten post hasztagiem (etykietą NIP-32). Osoby, które Cię obserwują, zobaczą go w kanale tego hasztagu.</string>
+    <string name="add_hashtag_label_field">Hasztag</string>
+    <string name="add_hashtag_label_confirm">Dodaj</string>
+    <string name="hashtag_label_added_by">dodany przez</string>
     <string name="pinned_notes">Przypięte notatki</string>
     <string name="pinned_notes_explainer">Twoje przypięte notatki</string>
     <string name="pin_to_profile">Przypnij do profilu</string>
@@ -1436,7 +1442,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="geohash_explainer">Dodaje Geohash twojej lokalizacji do wpisu. Użytkownicy będą wiedzieli, że jesteś mniej niż 5 km od bieżącej lokalizacji</string>
     <string name="geohash_exclusive">Post ekskluzywny dla lokalizacji</string>
     <string name="geohash_exclusive_explainer">Tylko obserwatorzy z twojej lokalizacji to zobaczą. Twoi ogólni obserwatorzy nie zobaczą tego.</string>
-    <string name="hashtag_exclusive">Wpis hashtagowy</string>
+    <string name="hashtag_exclusive">Wpis hasztagowy</string>
     <string name="hashtag_exclusive_explainer">Tylko obserwujący ten hashtag to zobaczą. Twoi ogólni obserwujący nie zobaczą tego.</string>
     <string name="external_url_scope">Skomentuj na stronie internetowej</string>
     <string name="external_id_scope">Skomentuj na zewnętrznym serwisie</string>
@@ -1869,7 +1875,6 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="wallet_invalid_uri">Nieprawidłowy URI połączenia NWC</string>
     <string name="wallet_move_up">W górę</string>
     <string name="wallet_move_down">W dół</string>
-    <string name="wallet_reorder">Powtórne zamów portfel</string>
     <string name="wallet_onchain_transactions">Transakcje w łańcuchu</string>
     <string name="wallet_onchain_no_address">Brak dostępnego adresu w łańcuchu dla tego konta.</string>
     <string name="wallet_onchain_no_backend">Nie skonfigurowano backendu łańcucha.</string>
@@ -2332,7 +2337,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="share_video">Udostępnij film…</string>
     <string name="unable_to_share_video">Nie można udostępnić filmu, spróbuj ponownie później…</string>
     <string name="downloading_video_for_sharing">Pobieranie filmu…</string>
-    <string name="search_by_hashtag">Szukaj tagu: #%1$s</string>
+    <string name="search_by_hashtag">Szukaj hasztagu: #%1$s</string>
     <string name="search_scope_all">Wszytko</string>
     <string name="search_scope_people">Osoby</string>
     <string name="search_scope_notes">Wpisy</string>

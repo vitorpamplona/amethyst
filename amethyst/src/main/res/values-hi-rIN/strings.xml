@@ -1824,7 +1824,6 @@
     <string name="wallet_invalid_uri">अमान्य नोस्टर धनकोष संयोजन पता</string>
     <string name="wallet_move_up">ऊर्ध्वगमन</string>
     <string name="wallet_move_down">अधोगमन</string>
-    <string name="wallet_reorder">धनकोष पुनःव्यवस्थित करें</string>
     <string name="wallet_onchain_transactions">खण्डश्रृंखला सत्यापित लेनदेन</string>
     <string name="wallet_onchain_no_address">इस लेखा के लिए कोई खण्डश्रृंखला पता उपलब्ध नहीं।</string>
     <string name="wallet_onchain_no_backend">कोई खणडश्रृंखला पृष्ठभाग समाकृत नहीं।</string>
