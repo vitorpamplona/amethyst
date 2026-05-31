@@ -201,6 +201,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.CashuWalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.CashuWalletSettingsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.OnchainTransactionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.ReloadMintScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.TopUpMintScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletDetailScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletReceiveScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletScreen
@@ -347,6 +348,8 @@ fun BuildNavigation(
         composableFromBottomArgs<Route.ManualZapSplitPayment> { PayViaIntentScreen(it.paymentId, accountViewModel, nav) }
 
         composableFromBottomArgs<Route.ReloadMint> { ReloadMintScreen(it.requestId, accountViewModel, nav) }
+
+        composableFromBottomArgs<Route.TopUpMint> { TopUpMintScreen(it.mintUrl, accountViewModel, nav) }
 
         composableFromBottomArgs<Route.EditProfile> { NewUserMetadataScreen(nav, accountViewModel) }
         composable<Route.Search> { SearchScreen(accountViewModel, nav) }

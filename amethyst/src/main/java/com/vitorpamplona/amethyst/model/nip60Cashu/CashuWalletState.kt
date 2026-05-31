@@ -203,6 +203,22 @@ class CashuWalletState(
             .flowOn(Dispatchers.Default)
             .stateIn(scope, SharingStarted.Eagerly, 0L)
 
+    /**
+     * Spendable cashu balance per mint URL — the reactive twin of
+     * [peekMintBalances], for UI that needs to re-render as proofs arrive
+     * (the wallet screen's mint list). Derived from [_tokenEntries] exactly
+     * like [balanceSats]. May overstate by NUT-07 stale proofs; the actual
+     * spend scrubs before melting.
+     */
+    val mintBalances: StateFlow<Map<String, Long>> =
+        _tokenEntries
+            .map { entries ->
+                entries
+                    .groupBy { it.content.mint }
+                    .mapValues { (_, byMint) -> byMint.sumOf { it.content.totalAmount() } }
+            }.flowOn(Dispatchers.Default)
+            .stateIn(scope, SharingStarted.Eagerly, emptyMap())
+
     private val _history = MutableStateFlow<List<CashuSpendingHistoryEvent>>(emptyList())
     val history: StateFlow<List<CashuSpendingHistoryEvent>> = _history.asStateFlow()
 

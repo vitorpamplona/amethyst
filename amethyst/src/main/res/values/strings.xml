@@ -904,6 +904,10 @@
     <string name="reload_mint_needs_more">needs %1$s sat more</string>
     <string name="reload_mint_funded">funded</string>
     <string name="reload_mint_copy_invoice">Copy invoice</string>
+    <string name="topup_mint_title">Top up mint</string>
+    <string name="topup_mint_action">Top up this mint</string>
+    <string name="topup_mint_amount_label">Amount to add</string>
+    <string name="topup_mint_confirm">Top up</string>
     <string name="zap_privacy_section">Zap Privacy</string>
     <string name="zap_type_section_explainer">Controls how your identity is shown when you send a zap.</string>
     <string name="wallet_connect_connect_app">Connect Wallet</string>
