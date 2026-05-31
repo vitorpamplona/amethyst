@@ -29,9 +29,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
@@ -46,12 +49,16 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun ChatroomView(
     room: ChatroomKey,
     draftMessage: String?,
+    attachmentUri: String? = null,
     replyToNote: HexKey? = null,
     editFromDraft: HexKey? = null,
     expiresDays: Int? = null,
@@ -110,6 +117,17 @@ fun ChatroomView(
         LaunchedEffect(key1 = draftMessage) {
             newPostModel.message.setTextAndPlaceCursorAtEnd(draftMessage)
             newPostModel.onMessageChanged()
+        }
+    }
+    val context = LocalContext.current
+    if (attachmentUri != null) {
+        LaunchedEffect(key1 = attachmentUri) {
+            attachmentUri.ifBlank { null }?.toUri()?.let { uri ->
+                withContext(Dispatchers.IO) {
+                    val mediaType = context.contentResolver.getType(uri)
+                    newPostModel.pickedMedia(persistentListOf(SelectedMedia(uri, mediaType)))
+                }
+            }
         }
     }
 

@@ -218,6 +218,31 @@
             </intent-filter>
         </activity>
 
+        <activity-alias
+            android:name=".ui.ShareAsDMAlias"
+            android:exported="true"
+            android:label="@string/share_target_as_dm"
+            android:targetActivity=".ui.MainActivity">
+
+            <intent-filter android:label="@string/share_target_as_dm">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+
+            <intent-filter android:label="@string/share_target_as_dm">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+
+            <intent-filter android:label="@string/share_target_as_dm">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="video/*" />
+            </intent-filter>
+        </activity-alias>
+
         <activity
             android:name="com.journeyapps.barcodescanner.CaptureActivity"
             android:screenOrientation="fullSensor"
