@@ -1888,8 +1888,8 @@ class Account(
     suspend fun <T : Event> signAnonymouslyAndBroadcast(
         template: EventTemplate<T>,
         broadcast: List<Event> = emptyList(),
+        anonymousSigner: NostrSigner = NostrSignerInternal(KeyPair()),
     ): T {
-        val anonymousSigner = NostrSignerInternal(KeyPair())
         val event = anonymousSigner.sign(template)
 
         cache.justConsumeMyOwnEvent(event)

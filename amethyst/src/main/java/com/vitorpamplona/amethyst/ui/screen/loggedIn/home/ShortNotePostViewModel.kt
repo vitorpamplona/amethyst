@@ -91,7 +91,10 @@ import com.vitorpamplona.quartz.experimental.zapPolls.minAmount
 import com.vitorpamplona.quartz.experimental.zapPolls.tags.PollOptionTag
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
@@ -305,6 +308,14 @@ open class ShortNotePostViewModel :
 
     // Anonymous Reply
     var wantsAnonymousPost by mutableStateOf(false)
+
+    // A single ephemeral signer reused for the whole compose session so that media
+    // uploads (Blossom/NIP-96 auth events) and the final anonymous post are all signed
+    // by the same throwaway key, instead of leaking the real account's pubkey into the
+    // upload authorization (and therefore into the returned media URL).
+    private var anonymousSignerCache: NostrSigner? = null
+
+    fun anonymousSigner(): NostrSigner = anonymousSignerCache ?: NostrSignerInternal(KeyPair()).also { anonymousSignerCache = it }
 
     // Scheduled posting: epoch seconds (UTC) when the post should be published.
     // Null = post immediately on Send (existing behavior).
@@ -870,7 +881,7 @@ open class ShortNotePostViewModel :
         }
 
         if (anonymous) {
-            accountViewModel.account.signAnonymouslyAndBroadcast(template, extraNotesToBroadcast)
+            accountViewModel.account.signAnonymouslyAndBroadcast(template, extraNotesToBroadcast, anonymousSigner())
         } else if (accountViewModel.settings.useTrackedBroadcasts()) {
             // Tracked broadcasting with progress feedback (non-blocking)
             val (event, relays, extras) = accountViewModel.account.createPostEvent(template, extraNotesToBroadcast)
@@ -1138,6 +1149,7 @@ open class ShortNotePostViewModel :
                     stripMetadata,
                     onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
                     convertGifToMp4 = convertGifToMp4,
+                    forcedSigner = if (wantsAnonymousPost) anonymousSigner() else null,
                 )
 
             if (results.allGood) {
@@ -1235,6 +1247,7 @@ open class ShortNotePostViewModel :
         wantsExclusiveGeoPost = false
         wantsSecretEmoji = false
         wantsAnonymousPost = false
+        anonymousSignerCache = null
         scheduledForSec = null
 
         forwardZapTo.value = SplitBuilder()
@@ -1467,6 +1480,7 @@ open class ShortNotePostViewModel :
                     account = account,
                     context = appContext,
                     useH265 = false,
+                    forcedSigner = if (wantsAnonymousPost) anonymousSigner() else null,
                 )
 
             when (result) {
