@@ -371,17 +371,20 @@ fun ThreadScreen(
                                 } else {
                                     replyNotes.forEachIndexed { index, note ->
                                         val event = note.event
-                                        val author =
-                                            remember(event?.pubKey) {
-                                                event?.pubKey?.let { localCache.getUserIfExists(it) }
-                                            }
 
-                                        // Observe reactions for this reply
+                                        // Observe metadata + reactions so we recompose
+                                        // when author info arrives from relays
                                         val flowSet = remember(note) { note.flow() }
+                                        val metadataState by flowSet.metadata.stateFlow.collectAsState()
                                         val reactionsState by flowSet.reactions.stateFlow.collectAsState()
                                         val zapsState by flowSet.zaps.stateFlow.collectAsState()
 
                                         DisposableEffect(note) { onDispose { note.clearFlow() } }
+
+                                        val author =
+                                            remember(event?.pubKey, metadataState) {
+                                                event?.pubKey?.let { localCache.getUserIfExists(it) }
+                                            }
 
                                         val reactionCount =
                                             remember(reactionsState) { note.countReactions() }
@@ -401,6 +404,7 @@ fun ThreadScreen(
                                             timeAgo = (event?.createdAt ?: 0L).toTimeAgo(),
                                             reactionCount = reactionCount,
                                             zapAmount = zapAmount.toLong(),
+                                            onReply = { event?.let { onReply(it) } },
                                             onAuthorClick = {
                                                 event?.pubKey?.let { onNavigateToProfile(it) }
                                             },
@@ -428,6 +432,7 @@ fun ThreadScreen(
                                         noteHashtags = noteHashtags,
                                         localCache = localCache,
                                         onItemClick = onNavigateToThread,
+                                        onViewAll = { onNavigateToProfile(rootEvent.pubKey) },
                                     )
                                 }
                             }

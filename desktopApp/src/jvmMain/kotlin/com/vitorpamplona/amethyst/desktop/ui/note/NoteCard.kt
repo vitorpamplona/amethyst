@@ -163,21 +163,25 @@ fun NoteCard(
             Column {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     // Author with avatar — stadium-shaped hover to match the
                     // avatar+name chip's visual shape.
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier =
-                            if (onAuthorClick != null) {
-                                Modifier
-                                    .clip(RoundedCornerShape(100.dp))
-                                    .clickable { onAuthorClick(note.pubKeyHex) }
-                            } else {
-                                Modifier
-                            },
+                            Modifier
+                                .weight(1f, fill = false)
+                                .then(
+                                    if (onAuthorClick != null) {
+                                        Modifier
+                                            .clip(RoundedCornerShape(100.dp))
+                                            .clickable { onAuthorClick(note.pubKeyHex) }
+                                    } else {
+                                        Modifier
+                                    },
+                                ),
                     ) {
                         UserAvatar(
                             userHex = note.pubKeyHex,

@@ -75,6 +75,7 @@ fun RelatedContentSection(
     noteHashtags: Set<String>,
     localCache: DesktopLocalCache,
     onItemClick: (String) -> Unit,
+    onViewAll: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var relatedItems by remember(noteId) { mutableStateOf<List<CompactNoteData>>(emptyList()) }
@@ -172,7 +173,7 @@ fun RelatedContentSection(
                     text = "View all >",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.clickable { /* TODO: navigate to full related list */ },
+                    modifier = Modifier.clickable(onClick = onViewAll),
                 )
             }
 
