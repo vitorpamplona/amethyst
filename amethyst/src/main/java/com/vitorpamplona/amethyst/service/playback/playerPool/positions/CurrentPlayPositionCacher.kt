@@ -55,36 +55,25 @@ class CurrentPlayPositionCacher(
 
     override fun onPlaybackStateChanged(playbackState: Int) {
         currentUrl?.let { uri ->
-            when (playbackState) {
-                Player.STATE_IDLE -> {
-                    // only saves if it wqs playing
-                    if (!isLiveStreaming && abs(player.currentPosition) > 1) {
-                        cache.add(uri, player.currentPosition)
-                    }
-                }
-
-                Player.STATE_READY -> {
-                    if (!isLiveStreaming) {
-                        cache.get(uri)?.let { lastPosition ->
-                            // Restore the saved position only if it's meaningfully far from
-                            // the player's current position. Position values are in
-                            // milliseconds, so the previous `5 * 60` constant was a 300 ms
-                            // threshold — small enough to trigger a seek (and an extra buffer
-                            // flush right at playback start) for almost any saved position.
-                            // 5 s gives the user a perceptible "resumed where I left off"
-                            // without forcing a re-seek for trivially short clips.
-                            if (abs(player.currentPosition - lastPosition) > 5_000) {
-                                player.seekTo(lastPosition)
-                            }
+            if (playbackState == Player.STATE_READY) {
+                if (!isLiveStreaming) {
+                    cache.get(uri)?.let { lastPosition ->
+                        // Restore the saved position only if it's meaningfully far from
+                        // the player's current position. Position values are in
+                        // milliseconds, so the previous `5 * 60` constant was a 300 ms
+                        // threshold — small enough to trigger a seek (and an extra buffer
+                        // flush right at playback start) for almost any saved position.
+                        // 5 s gives the user a perceptible "resumed where I left off"
+                        // without forcing a re-seek for trivially short clips.
+                        if (abs(player.currentPosition - lastPosition) > 5_000) {
+                            player.seekTo(lastPosition)
                         }
                     }
                 }
-
-                else -> {
-                    // only saves if it wqs playing
-                    if (!isLiveStreaming && abs(player.currentPosition) > 1) {
-                        cache.add(uri, player.currentPosition)
-                    }
+            } else {
+                // STATE_IDLE / STATE_BUFFERING / STATE_ENDED: only saves if it was playing.
+                if (!isLiveStreaming && abs(player.currentPosition) > 1) {
+                    cache.add(uri, player.currentPosition)
                 }
             }
         }

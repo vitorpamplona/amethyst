@@ -39,7 +39,7 @@ import com.vitorpamplona.amethyst.commons.model.observables.NewEventMatchingFilt
 import com.vitorpamplona.amethyst.commons.model.observables.NoteListMatchingFilter
 import com.vitorpamplona.amethyst.commons.model.observables.Observable
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
-import com.vitorpamplona.amethyst.commons.services.nwc.NwcPaymentTracker
+import com.vitorpamplona.amethyst.commons.service.nwc.NwcPaymentTracker
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.model.LocalCache.observeEvents
 import com.vitorpamplona.amethyst.model.nip51Lists.HiddenUsersState
@@ -116,6 +116,7 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip18Reposts.BaseRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -142,6 +143,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip34Git.grasp.UserGraspListEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
@@ -1030,14 +1032,9 @@ object LocalCache : ILocalCache, ICacheProvider {
                     event.taggedAddresses().map { getOrCreateAddressableNote(it) }
             }
 
-            is AcceptedBadgeSetEvent -> {
-                event.badgeAwardEvents().mapNotNull { checkGetOrCreateNote(it) } +
-                    event.badgeAwardDefinitions().map { getOrCreateAddressableNote(it) }
-            }
-
-            is ProfileBadgesEvent -> {
-                event.badgeAwardEvents().mapNotNull { checkGetOrCreateNote(it) } +
-                    event.badgeAwardDefinitions().map { getOrCreateAddressableNote(it) }
+            is AcceptedBadgeSetEvent, is ProfileBadgesEvent -> {
+                event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) } +
+                    event.taggedAddresses().map { getOrCreateAddressableNote(it) }
             }
 
             is BadgeAwardEvent -> {
@@ -1048,17 +1045,11 @@ object LocalCache : ILocalCache, ICacheProvider {
                 event.taggedEvents().mapNotNull { checkGetOrCreateNote(it) }
             }
 
-            is RepostEvent -> {
+            is RepostEvent, is GenericRepostEvent -> {
+                val repost = event as BaseRepostEvent
                 listOfNotNull(
-                    event.boostedEventId()?.let { checkGetOrCreateNote(it) },
-                    event.boostedAddress()?.let { getOrCreateAddressableNote(it) },
-                )
-            }
-
-            is GenericRepostEvent -> {
-                listOfNotNull(
-                    event.boostedEventId()?.let { checkGetOrCreateNote(it) },
-                    event.boostedAddress()?.let { getOrCreateAddressableNote(it) },
+                    repost.boostedEventId()?.let { checkGetOrCreateNote(it) },
+                    repost.boostedAddress()?.let { getOrCreateAddressableNote(it) },
                 )
             }
 
@@ -1526,6 +1517,43 @@ object LocalCache : ILocalCache, ICacheProvider {
             note.loadEvent(event, author, repliesTo)
 
             repliesTo.forEach { it.addReaction(note) }
+
+            refreshNewNoteObservers(note)
+
+            return true
+        }
+
+        return false
+    }
+
+    fun consume(
+        event: LabelEvent,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
+        val note = getOrCreateNote(event.id)
+
+        // Already processed this event.
+        if (note.event != null) return true
+
+        if (wasVerified || justVerify(event)) {
+            val author = getOrCreateUser(event.pubKey)
+            val repliesTo = computeReplyTo(event)
+
+            note.loadEvent(event, author, repliesTo)
+
+            // Attach NIP-32 hashtag labels (namespace #t) to the labeled events so the
+            // hashtag feed can surface posts tagged by a follow and attribute the labeler.
+            val hashtags = event.hashtagAssociations()
+            if (hashtags.isNotEmpty()) {
+                event.labeledEvents().mapNotNull { checkGetOrCreateNote(it) }.forEach { target ->
+                    hashtags.forEach { hashtag -> target.addLabel(hashtag, note) }
+
+                    // If the labeled post is already in cache, re-notify feed observers so the
+                    // hashtag feed can pick it up now that a (possibly followed) user labeled it.
+                    if (target.event != null) refreshNewNoteObservers(target)
+                }
+            }
 
             refreshNewNoteObservers(note)
 
@@ -3737,6 +3765,10 @@ object LocalCache : ILocalCache, ICacheProvider {
                 }
 
                 is ReactionEvent -> {
+                    consume(event, relay, wasVerified)
+                }
+
+                is LabelEvent -> {
                     consume(event, relay, wasVerified)
                 }
 

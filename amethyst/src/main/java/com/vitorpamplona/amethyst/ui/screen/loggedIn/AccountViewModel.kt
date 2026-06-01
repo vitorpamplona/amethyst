@@ -37,17 +37,19 @@ import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.call.CallManager
-import com.vitorpamplona.amethyst.commons.compose.GenericBaseCache
-import com.vitorpamplona.amethyst.commons.compose.GenericBaseCacheAsync
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuToken
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
+import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
+import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastTracker
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.notifications.CardFeedState
+import com.vitorpamplona.amethyst.commons.ui.state.GenericBaseCache
+import com.vitorpamplona.amethyst.commons.ui.state.GenericBaseCacheAsync
 import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -62,8 +64,6 @@ import com.vitorpamplona.amethyst.model.privacyOptions.IRoleBasedHttpClientBuild
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
-import com.vitorpamplona.amethyst.service.broadcast.BroadcastTracker
-import com.vitorpamplona.amethyst.service.cashu.CashuToken
 import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
@@ -1067,6 +1067,16 @@ class AccountViewModel(
             consumeTracked = account::consumeBookmarkEvent,
             direct = { account.removeBookmark(note, false) },
         )
+
+    /** NIP-32: tags [note] with [hashtag] by publishing a kind 1985 label event. */
+    fun labelWithHashtag(
+        note: Note,
+        hashtag: String,
+    ) = launchTrackedOrDirect(
+        createTracked = { account.createLabelHashtagEvent(note, hashtag) },
+        consumeTracked = account::consumeLabelEvent,
+        direct = { account.labelHashtag(note, hashtag) },
+    )
 
     fun removeDeletedBookmarks(
         deletedEventIds: Set<String>,

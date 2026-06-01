@@ -146,6 +146,7 @@ class CashuWalletViewModel : ViewModel() {
     val walletEvent get() = state.walletEvent
     val mints get() = state.mints
     val balanceSats get() = state.balanceSats
+    val mintBalances get() = state.mintBalances
     val tokenEntries: StateFlow<List<TokenEntry>> get() = state.tokenEntries
     val history get() = state.history
     val pendingQuotes get() = state.pendingQuotes

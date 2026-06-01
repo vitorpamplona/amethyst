@@ -20,17 +20,17 @@
  */
 package com.vitorpamplona.amethyst.service.call
 
-import com.vitorpamplona.amethyst.commons.call.IceCandidateData
-import com.vitorpamplona.amethyst.commons.call.PeerSession
-import com.vitorpamplona.amethyst.commons.call.SdpType
-import com.vitorpamplona.amethyst.commons.call.SignalingState
+import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.IceCandidateData
+import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.PeerSession
+import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.SdpType
+import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.SignalingState
 import org.webrtc.IceCandidate
 import org.webrtc.PeerConnection
 import org.webrtc.SessionDescription
 
 /**
  * Adapts a [WebRtcCallSession] to the platform-independent [PeerSession] interface,
- * allowing [com.vitorpamplona.amethyst.commons.call.PeerSessionManager] to manage
+ * allowing [com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.PeerSessionManager] to manage
  * ICE buffering, answer routing, and renegotiation glare without depending on org.webrtc.
  */
 class WebRtcPeerSessionAdapter(

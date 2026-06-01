@@ -59,7 +59,7 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.model.nip30CustomEmojis.OwnedEmojiPack
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.OwnedEmojiPack
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection

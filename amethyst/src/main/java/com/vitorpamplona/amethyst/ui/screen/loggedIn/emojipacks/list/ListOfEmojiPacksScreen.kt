@@ -56,7 +56,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.NoteState
-import com.vitorpamplona.amethyst.model.nip30CustomEmojis.OwnedEmojiPack
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.OwnedEmojiPack
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.ui.components.M3ActionDialog

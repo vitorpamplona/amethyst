@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model.nip30CustomEmojis
 import com.vitorpamplona.amethyst.commons.model.anyNotNullEvent
 import com.vitorpamplona.amethyst.commons.model.eventIdSet
 import com.vitorpamplona.amethyst.commons.model.events
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.OwnedEmojiPack
 import com.vitorpamplona.amethyst.commons.model.updateFlow
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote

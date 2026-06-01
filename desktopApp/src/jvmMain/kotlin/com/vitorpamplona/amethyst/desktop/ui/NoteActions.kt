@@ -84,7 +84,7 @@ import com.vitorpamplona.amethyst.commons.model.nip18Reposts.RepostAction
 import com.vitorpamplona.amethyst.commons.model.nip25Reactions.ReactionAction
 import com.vitorpamplona.amethyst.commons.model.nip51Bookmarks.BookmarkAction
 import com.vitorpamplona.amethyst.commons.model.nip57Zaps.ZapAction
-import com.vitorpamplona.amethyst.commons.services.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.commons.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache

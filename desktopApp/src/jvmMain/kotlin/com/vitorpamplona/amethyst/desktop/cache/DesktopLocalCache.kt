@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.UserContext
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheEventStream
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
-import com.vitorpamplona.amethyst.commons.services.nwc.NwcPaymentTracker
+import com.vitorpamplona.amethyst.commons.service.nwc.NwcPaymentTracker
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event

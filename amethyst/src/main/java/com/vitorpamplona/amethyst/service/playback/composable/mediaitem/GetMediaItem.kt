@@ -23,7 +23,7 @@ package com.vitorpamplona.amethyst.service.playback.composable.mediaitem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import com.vitorpamplona.amethyst.commons.compose.produceCachedState
+import com.vitorpamplona.amethyst.commons.ui.state.produceCachedState
 import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 

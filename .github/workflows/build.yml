@@ -34,7 +34,7 @@ jobs:
       # :amethyst alone). Replaces the narrower `cache: gradle` previously on
       # actions/setup-java, which only cached `modules-2`.
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
@@ -75,7 +75,7 @@ jobs:
           java-version: 21
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
@@ -87,7 +87,7 @@ jobs:
       # we fall back to fetching, which is what the in-build retry budget
       # exists for.
       - name: Cache vlc-setup downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.gradle/vlcSetup
           key: vlcsetup-${{ runner.os }}-${{ hashFiles('desktopApp/build.gradle.kts') }}
@@ -207,7 +207,7 @@ jobs:
           java-version: 21
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
@@ -260,7 +260,7 @@ jobs:
           java-version: 21
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 

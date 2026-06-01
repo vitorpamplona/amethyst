@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
@@ -31,13 +31,13 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetInfoMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetInfoSuccessResponse
+import com.vitorpamplona.quartz.nip47WalletConnect.rpc.IErrorResponseLike
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ListTransactionsMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.ListTransactionsSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.MakeInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcTransaction
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
@@ -293,15 +293,6 @@ class WalletViewModel : ViewModel() {
     ) {
         val acc = account ?: return
         acc.settings.renameNwcWallet(walletId, newName)
-        refreshWalletList()
-    }
-
-    fun moveWallet(
-        fromIndex: Int,
-        toIndex: Int,
-    ) {
-        val acc = account ?: return
-        acc.settings.moveNwcWallet(fromIndex, toIndex)
         refreshWalletList()
     }
 
@@ -567,17 +558,13 @@ class WalletViewModel : ViewModel() {
                             fetchBalance()
                         }
 
-                        is PayInvoiceErrorResponse -> {
+                        is IErrorResponseLike -> {
+                            // Both PayInvoiceErrorResponse (method-specific, kept for
+                            // back-compat) and NwcErrorResponse (generic) reduce to the
+                            // same user-visible "payment failed" message.
                             _sendState.value =
                                 SendState.Error(
-                                    response.error?.message ?: PAYMENT_FAILED,
-                                )
-                        }
-
-                        is NwcErrorResponse -> {
-                            _sendState.value =
-                                SendState.Error(
-                                    response.error?.message ?: PAYMENT_FAILED,
+                                    response.errorMessage() ?: PAYMENT_FAILED,
                                 )
                         }
 

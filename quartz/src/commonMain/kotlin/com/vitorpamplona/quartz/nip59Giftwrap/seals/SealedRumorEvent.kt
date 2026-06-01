@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip40Expiration.ExpirationTag
+import com.vitorpamplona.quartz.nip59Giftwrap.HasInnerEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.HostStub
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
@@ -39,10 +40,11 @@ class SealedRumorEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : WrappedEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : WrappedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    HasInnerEvent {
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
-    var innerEventId: HexKey? = null
+    override var innerEventId: HexKey? = null
 
     fun copyNoContent(): SealedRumorEvent {
         val copy =

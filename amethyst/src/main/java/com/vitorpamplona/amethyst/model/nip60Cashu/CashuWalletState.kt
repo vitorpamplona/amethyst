@@ -203,6 +203,22 @@ class CashuWalletState(
             .flowOn(Dispatchers.Default)
             .stateIn(scope, SharingStarted.Eagerly, 0L)
 
+    /**
+     * Spendable cashu balance per mint URL — the reactive twin of
+     * [peekMintBalances], for UI that needs to re-render as proofs arrive
+     * (the wallet screen's mint list). Derived from [_tokenEntries] exactly
+     * like [balanceSats]. May overstate by NUT-07 stale proofs; the actual
+     * spend scrubs before melting.
+     */
+    val mintBalances: StateFlow<Map<String, Long>> =
+        _tokenEntries
+            .map { entries ->
+                entries
+                    .groupBy { it.content.mint }
+                    .mapValues { (_, byMint) -> byMint.sumOf { it.content.totalAmount() } }
+            }.flowOn(Dispatchers.Default)
+            .stateIn(scope, SharingStarted.Eagerly, emptyMap())
+
     private val _history = MutableStateFlow<List<CashuSpendingHistoryEvent>>(emptyList())
     val history: StateFlow<List<CashuSpendingHistoryEvent>> = _history.asStateFlow()
 
@@ -863,7 +879,7 @@ class CashuWalletState(
      * is loaded.
      */
     suspend fun restoreFromMint(mintUrl: String): RestoreOutcome? {
-        check(started) { "CashuWalletState.start() not called" }
+        check(started) { NOT_STARTED_MESSAGE }
         val seed = ensureSeed() ?: return null
         // Heal any prior-Resync duplicates BEFORE running the new
         // restore. Without this the existingSecrets set below would
@@ -925,7 +941,7 @@ class CashuWalletState(
      * excludes the ghosts.
      */
     suspend fun cleanupDuplicateProofs() {
-        check(started) { "CashuWalletState.start() not called" }
+        check(started) { NOT_STARTED_MESSAGE }
         val entries = _tokenEntries.value
         if (entries.size < 2) return
 
@@ -1003,7 +1019,7 @@ class CashuWalletState(
      * caller would still pick the ghosts.
      */
     suspend fun scrubLocallyStaleProofs(mintUrlFilter: String? = null) {
-        check(started) { "CashuWalletState.start() not called" }
+        check(started) { NOT_STARTED_MESSAGE }
         val byMint =
             _tokenEntries.value
                 .groupBy { it.content.mint }
@@ -1059,7 +1075,7 @@ class CashuWalletState(
      * migration (e.g. a future "compact wallet" action).
      */
     suspend fun migrateStaleKeysets() {
-        check(started) { "CashuWalletState.start() not called" }
+        check(started) { NOT_STARTED_MESSAGE }
         // Group held tokens by mint URL — each mint has its own keysets.
         val byMint = _tokenEntries.value.groupBy { it.content.mint }
         for ((mintUrl, entries) in byMint) {
@@ -1091,7 +1107,7 @@ class CashuWalletState(
         preferredMintUrl: String? = null,
         onProgress: ((Float) -> Unit)? = null,
     ): NutzapSent {
-        check(started) { "CashuWalletState.start() not called" }
+        check(started) { NOT_STARTED_MESSAGE }
         val resolved =
             peekNutzapTarget(recipientPubKey)
                 ?: throw IllegalStateException("Recipient does not accept nutzaps from any of our mints")
@@ -1144,7 +1160,7 @@ class CashuWalletState(
         amountSats: Long,
         memo: String? = null,
     ): SendTokenCompleted {
-        check(started) { "CashuWalletState.start() not called" }
+        check(started) { NOT_STARTED_MESSAGE }
         if (amountSats <= 0) throw IllegalArgumentException("Amount must be positive")
         if (mintUrl.isBlank()) throw IllegalArgumentException("Pick a mint")
 
@@ -1168,7 +1184,7 @@ class CashuWalletState(
         quote: MeltQuoteBolt11ResponseDto,
         skipScrub: Boolean = false,
     ): MeltCompleted {
-        check(started) { "CashuWalletState.start() not called" }
+        check(started) { NOT_STARTED_MESSAGE }
         if (mintUrl.isBlank()) throw IllegalArgumentException("Pick a mint")
 
         // [rebalance] already scrubbed this mint to compute its coverage check, so
@@ -1204,7 +1220,7 @@ class CashuWalletState(
         onProgress: ((Float) -> Unit)? = null,
         onFundsMoved: () -> Unit = {},
     ): RebalanceCompleted {
-        check(started) { "CashuWalletState.start() not called" }
+        check(started) { NOT_STARTED_MESSAGE }
         require(sats > 0) { "Amount must be positive" }
         require(sourceMintUrl != targetMintUrl) { "Source and target mints must differ" }
 
@@ -1281,7 +1297,7 @@ class CashuWalletState(
      * call [publishEvent] is gated behind `started` so the no-op default is
      * never observed by produced events.
      */
-    private var publish: suspend (Event) -> Unit = { error("CashuWalletState.start() not called") }
+    private var publish: suspend (Event) -> Unit = { error(NOT_STARTED_MESSAGE) }
 
     private suspend fun publishEvent(event: Event) {
         publish(event)
@@ -1295,6 +1311,8 @@ class CashuWalletState(
          * wallet-less users don't stare at a spinner.
          */
         const val DISCOVERY_TIMEOUT_MS = 8_000L
+
+        private const val NOT_STARTED_MESSAGE = "CashuWalletState.start() not called"
     }
 }
 

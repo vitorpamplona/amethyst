@@ -28,8 +28,8 @@ import com.vitorpamplona.quartz.nip19Bech32.toNpub
 
 @Immutable
 data class NPub(
-    val hex: String,
-) : Entity {
+    override val hex: HexKey,
+) : IPubKeyEntity {
     companion object {
         fun parse(bytes: ByteArray): NPub? {
             if (bytes.isEmpty()) return null

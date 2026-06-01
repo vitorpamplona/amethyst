@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.cashu
 
+import com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuToken
 import com.vitorpamplona.amethyst.service.cashu.v3.V3Parser
 import com.vitorpamplona.amethyst.service.cashu.v4.V4Parser
 import com.vitorpamplona.amethyst.service.checkNotInMainThread

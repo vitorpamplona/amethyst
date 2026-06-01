@@ -24,10 +24,10 @@ import android.content.Context
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.interestSets.InterestSet
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.TopFilter
-import com.vitorpamplona.amethyst.model.nip51Lists.interestSets.InterestSet
 import com.vitorpamplona.amethyst.service.checkNotInMainThread
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -326,6 +326,15 @@ sealed class Name {
     open fun name(context: Context) = name()
 }
 
+/**
+ * Names whose displayed title is derived from a Nostr note (community
+ * definition, people list, DVM algo feed). UI layers can subscribe to
+ * the underlying `note` so the title updates as the event arrives.
+ */
+interface NoteBackedName {
+    val note: AddressableNote
+}
+
 @Stable
 class GeoHashName(
     val geoHashTag: String,
@@ -358,8 +367,9 @@ class ResourceName(
 
 @Stable
 class PeopleListName(
-    val note: AddressableNote,
-) : Name() {
+    override val note: AddressableNote,
+) : Name(),
+    NoteBackedName {
     override fun name(): String {
         val noteEvent = note.event
         return if (noteEvent is PeopleListEvent) {
@@ -374,8 +384,9 @@ class PeopleListName(
 
 @Stable
 class CommunityName(
-    val note: AddressableNote,
-) : Name() {
+    override val note: AddressableNote,
+) : Name(),
+    NoteBackedName {
     override fun name(): String {
         val definition = note.event as? CommunityDefinitionEvent
         val label = definition?.name()?.ifBlank { null } ?: note.dTag()
@@ -385,8 +396,9 @@ class CommunityName(
 
 @Stable
 class FavoriteAlgoFeedName(
-    val note: AddressableNote,
-) : Name() {
+    override val note: AddressableNote,
+) : Name(),
+    NoteBackedName {
     override fun name(): String =
         (note.event as? AppDefinitionEvent)?.appMetaData()?.name?.takeIf { it.isNotBlank() }
             ?: note.dTag()

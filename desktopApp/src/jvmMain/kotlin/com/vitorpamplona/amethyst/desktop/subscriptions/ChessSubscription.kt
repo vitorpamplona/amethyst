@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.desktop.subscriptions
 
-import com.vitorpamplona.amethyst.commons.chess.subscription.ChessFilterBuilder
-import com.vitorpamplona.amethyst.commons.chess.subscription.ChessSubscriptionController
-import com.vitorpamplona.amethyst.commons.chess.subscription.ChessSubscriptionState
+import com.vitorpamplona.amethyst.commons.nip64Chess.subscription.ChessFilterBuilder
+import com.vitorpamplona.amethyst.commons.nip64Chess.subscription.ChessSubscriptionController
+import com.vitorpamplona.amethyst.commons.nip64Chess.subscription.ChessSubscriptionState
 import com.vitorpamplona.amethyst.desktop.chess.DesktopChessEventCache
 import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event

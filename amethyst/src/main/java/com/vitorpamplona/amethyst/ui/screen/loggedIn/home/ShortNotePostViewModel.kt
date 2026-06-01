@@ -35,11 +35,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.compose.currentWord
-import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
-import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
-import com.vitorpamplona.amethyst.commons.compose.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
+import com.vitorpamplona.amethyst.commons.ui.text.currentWord
+import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
+import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
+import com.vitorpamplona.amethyst.commons.ui.text.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.model.LocalCache

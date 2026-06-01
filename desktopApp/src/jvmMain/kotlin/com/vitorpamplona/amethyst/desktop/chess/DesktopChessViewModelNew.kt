@@ -20,15 +20,15 @@
  */
 package com.vitorpamplona.amethyst.desktop.chess
 
-import com.vitorpamplona.amethyst.commons.chess.ChessBroadcastStatus
-import com.vitorpamplona.amethyst.commons.chess.ChessChallenge
-import com.vitorpamplona.amethyst.commons.chess.ChessDismissedGamesStorage
-import com.vitorpamplona.amethyst.commons.chess.ChessLobbyLogic
-import com.vitorpamplona.amethyst.commons.chess.ChessPollingDefaults
-import com.vitorpamplona.amethyst.commons.chess.ChessSyncStatus
-import com.vitorpamplona.amethyst.commons.chess.CompletedGame
-import com.vitorpamplona.amethyst.commons.chess.PublicGame
-import com.vitorpamplona.amethyst.commons.data.UserMetadataCache
+import com.vitorpamplona.amethyst.commons.model.cache.UserMetadataCache
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessBroadcastStatus
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessChallenge
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessDismissedGamesStorage
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessLobbyLogic
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessPollingDefaults
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessSyncStatus
+import com.vitorpamplona.amethyst.commons.nip64Chess.CompletedGame
+import com.vitorpamplona.amethyst.commons.nip64Chess.PublicGame
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.quartz.nip01Core.core.Event

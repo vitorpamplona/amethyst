@@ -51,10 +51,22 @@ fun RefresheableFeedView(
     scrollStateKey: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
+    onLoaded: (@Composable (FeedState.Loaded, LazyListState) -> Unit)? = null,
 ) {
     RefresheableBox(viewModel, enablePullRefresh) {
         SaveableFeedState(viewModel.feedState, scrollStateKey) { listState ->
-            RenderFeedState(viewModel, accountViewModel, listState, nav, routeForLastRead)
+            if (onLoaded != null) {
+                RenderFeedState(
+                    viewModel,
+                    accountViewModel,
+                    listState,
+                    nav,
+                    routeForLastRead,
+                    onLoaded = { onLoaded(it, listState) },
+                )
+            } else {
+                RenderFeedState(viewModel, accountViewModel, listState, nav, routeForLastRead)
+            }
         }
     }
 }

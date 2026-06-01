@@ -33,15 +33,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.compose.currentWord
-import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
-import com.vitorpamplona.amethyst.commons.compose.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
+import com.vitorpamplona.amethyst.commons.ui.text.currentWord
+import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
+import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -264,16 +264,14 @@ open class ChannelNewMessageViewModel :
             wantsForwardZapTo = true
         }
 
-        if (draftEvent as? ChannelMessageEvent != null) {
-            val replyId = draftEvent.reply()?.eventId
-            if (replyId != null) {
-                replyTo.value = accountViewModel.checkGetOrCreateNote(replyId)
-            }
-        } else if (draftEvent as? LiveActivitiesChatMessageEvent != null) {
-            val replyId = draftEvent.reply()?.eventId
-            if (replyId != null) {
-                replyTo.value = accountViewModel.checkGetOrCreateNote(replyId)
-            }
+        // Both event kinds extend BaseThreadedEvent and share `reply()`. Cast through
+        // both candidates so the elvis result lands on the common supertype, then
+        // load the addressed reply note in a single block.
+        val threadedDraft =
+            (draftEvent as? ChannelMessageEvent)
+                ?: (draftEvent as? LiveActivitiesChatMessageEvent)
+        threadedDraft?.reply()?.eventId?.let { replyId ->
+            replyTo.value = accountViewModel.checkGetOrCreateNote(replyId)
         }
 
         message.setTextAndPlaceCursorAtEnd(draftEvent.content)

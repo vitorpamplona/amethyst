@@ -57,10 +57,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.compose.produceCachedStateAsync
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
+import com.vitorpamplona.amethyst.commons.ui.state.produceCachedStateAsync
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -238,7 +238,6 @@ import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
@@ -1266,20 +1265,6 @@ private fun RenderNoteRow(
                 canPreview,
                 quotesLeft,
                 backgroundColor,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is CommentEvent -> {
-            RenderTextEvent(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                unPackReply,
-                backgroundColor,
-                editState,
                 accountViewModel,
                 nav,
             )

@@ -30,9 +30,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.compose.currentWord
-import com.vitorpamplona.amethyst.commons.compose.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.text.currentWord
+import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User

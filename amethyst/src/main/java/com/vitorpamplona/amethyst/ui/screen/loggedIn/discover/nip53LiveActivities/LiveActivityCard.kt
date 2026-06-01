@@ -69,9 +69,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutabl
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
+import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.LiveStreamLike
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.ParticipantTag
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.tags.StatusTag
 import kotlinx.collections.immutable.ImmutableList
@@ -101,23 +101,12 @@ fun RenderLiveActivityThumb(
 ) {
     val card by observeNoteAndMap(baseNote, accountViewModel) {
         when (val noteEvent = it.event) {
-            is LiveActivitiesEvent -> {
+            is LiveStreamLike -> {
+                // Both LiveActivitiesEvent (kind 30311) and MeetingRoomEvent (kind 30312)
+                // expose the same NIP-53 streaming tags via LiveStreamLike. address()/dTag()
+                // come from the shared BaseAddressableEvent parent.
                 LiveActivityCard(
-                    id = noteEvent.address(),
-                    name = noteEvent.dTag(),
-                    cover = noteEvent.image()?.ifBlank { null },
-                    media = noteEvent.streaming(),
-                    subject = noteEvent.title()?.ifBlank { null },
-                    content = noteEvent.summary(),
-                    participants = noteEvent.participants().toImmutableList(),
-                    status = noteEvent.status(),
-                    starts = noteEvent.starts(),
-                )
-            }
-
-            is MeetingRoomEvent -> {
-                LiveActivityCard(
-                    id = noteEvent.address(),
+                    id = (noteEvent as BaseAddressableEvent).address(),
                     name = noteEvent.dTag(),
                     cover = noteEvent.image()?.ifBlank { null },
                     media = noteEvent.streaming(),

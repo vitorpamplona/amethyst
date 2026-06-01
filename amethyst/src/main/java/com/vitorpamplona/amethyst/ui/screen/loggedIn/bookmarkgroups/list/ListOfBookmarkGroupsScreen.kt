@@ -35,10 +35,10 @@ import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
 import com.vitorpamplona.amethyst.model.nip51Lists.BookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.model.nip51Lists.PinListState
-import com.vitorpamplona.amethyst.model.nip51Lists.labeledBookmarkLists.LabeledBookmarkList
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.fabBottomBarPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav

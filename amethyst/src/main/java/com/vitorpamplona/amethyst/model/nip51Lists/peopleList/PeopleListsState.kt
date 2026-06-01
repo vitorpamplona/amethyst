@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model.nip51Lists.peopleList
 import com.vitorpamplona.amethyst.commons.model.anyNotNullEvent
 import com.vitorpamplona.amethyst.commons.model.eventIdSet
 import com.vitorpamplona.amethyst.commons.model.events
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.updateFlow
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote

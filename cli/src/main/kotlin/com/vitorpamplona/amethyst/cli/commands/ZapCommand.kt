@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.actions.ZapActions
-import com.vitorpamplona.amethyst.commons.services.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.commons.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent

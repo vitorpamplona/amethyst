@@ -465,16 +465,9 @@ fun RenderNIP05VerifiedSymbol(
 ) {
     CrossfadeIfEnabled(targetState = state, accountViewModel = accountViewModel) {
         when (it) {
-            is Nip05VerifState.Verifying -> {
-                Icon(
-                    symbol = MaterialSymbols.Downloading,
-                    contentDescription = stringRes(id = R.string.nip05_checking),
-                    modifier = modifier,
-                    tint = Color.Yellow,
-                )
-            }
-
-            is Nip05VerifState.NotStarted -> {
+            is Nip05VerifState.Verifying, is Nip05VerifState.NotStarted -> {
+                // Treat "not started" and "in flight" as a single loading visual so the
+                // badge doesn't blank-flash before the first check fires.
                 Icon(
                     symbol = MaterialSymbols.Downloading,
                     contentDescription = stringRes(id = R.string.nip05_checking),
@@ -492,16 +485,9 @@ fun RenderNIP05VerifiedSymbol(
                 )
             }
 
-            is Nip05VerifState.Failed -> {
-                Icon(
-                    symbol = MaterialSymbols.Report,
-                    contentDescription = stringRes(id = R.string.nip05_failed),
-                    modifier = modifier,
-                    tint = Color.Red,
-                )
-            }
-
-            is Nip05VerifState.Error -> {
+            is Nip05VerifState.Failed, is Nip05VerifState.Error -> {
+                // Failed (pubkey mismatch) and Error (HTTP/network) carry distinct retry
+                // timing but look the same to the user — both mean "badge isn't showing".
                 Icon(
                     symbol = MaterialSymbols.Report,
                     contentDescription = stringRes(id = R.string.nip05_failed),

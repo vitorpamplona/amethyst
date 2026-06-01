@@ -96,38 +96,11 @@ class FeedTopNavFilterState(
                 AllFollowsFeedFlow(allFollows, followsRelays, blockedRelays, proxyRelays)
             }
 
-            is TopFilter.Community -> {
+            is TopFilter.Community, is TopFilter.PeopleList, is TopFilter.MuteList -> {
+                val addressFilter = listName as TopFilter.AddressableTopFilter
                 NoteFeedFlow(
                     LocalCache
-                        .getOrCreateAddressableNote(listName.address)
-                        .flow()
-                        .metadata.stateFlow,
-                    signer,
-                    followsRelays,
-                    blockedRelays,
-                    proxyRelays,
-                    caches,
-                )
-            }
-
-            is TopFilter.PeopleList -> {
-                NoteFeedFlow(
-                    LocalCache
-                        .getOrCreateAddressableNote(listName.address)
-                        .flow()
-                        .metadata.stateFlow,
-                    signer,
-                    followsRelays,
-                    blockedRelays,
-                    proxyRelays,
-                    caches,
-                )
-            }
-
-            is TopFilter.MuteList -> {
-                NoteFeedFlow(
-                    LocalCache
-                        .getOrCreateAddressableNote(listName.address)
+                        .getOrCreateAddressableNote(addressFilter.address)
                         .flow()
                         .metadata.stateFlow,
                     signer,

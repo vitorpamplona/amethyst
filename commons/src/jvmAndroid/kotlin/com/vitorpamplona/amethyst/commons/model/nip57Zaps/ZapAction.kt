@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.nip57Zaps
 
-import com.vitorpamplona.amethyst.commons.services.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.commons.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
