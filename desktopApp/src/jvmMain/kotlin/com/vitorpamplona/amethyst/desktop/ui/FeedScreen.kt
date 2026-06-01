@@ -1513,13 +1513,22 @@ private fun ExpandedNoteContent(
         }
     }
 
-    // Get reply notes from cache
-    val replyNotes = remember(note.replies) { note.replies.sortedByDescending { it.createdAt() } }
+    // Observe replies flow so we recompose when new replies arrive
+    val noteFlowSet = remember(note) { note.flow() }
+    val repliesState by noteFlowSet.replies.stateFlow.collectAsState()
+
+    DisposableEffect(note) { onDispose { note.clearFlow() } }
+
+    // Get reply notes from cache — recompute when replies change
+    val replyNotes = remember(repliesState) { note.replies.sortedByDescending { it.createdAt() } }
 
     // Load metadata for reply authors
     LaunchedEffect(replyNotes, subscriptionsCoordinator) {
         if (subscriptionsCoordinator != null && replyNotes.isNotEmpty()) {
-            subscriptionsCoordinator.loadMetadataForNotes(replyNotes)
+            val authors = replyNotes.mapNotNull { it.event?.pubKey }.distinct()
+            if (authors.isNotEmpty()) {
+                subscriptionsCoordinator.loadMetadataBatched(authors)
+            }
         }
     }
 
