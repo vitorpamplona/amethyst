@@ -1602,22 +1602,40 @@ private fun ExpandedNoteContent(
                         timeAgo = (replyEvent?.createdAt ?: 0L).toTimeAgo(),
                         reactionCount = reactionCount,
                         zapAmount = zapAmount.toLong(),
-                        onReply = { replyEvent?.let { onReply(it) } },
+                        onReply = { replyNote.event?.let { onReply(it) } },
                         onLike = {
-                            if (account != null && replyEvent != null) {
+                            val ev = replyNote.event
+                            if (account != null && ev != null) {
                                 expandedScope.launch(Dispatchers.IO) {
                                     val signed =
                                         ReactionAction.reactTo(
-                                            EventHintBundle(replyEvent, null),
+                                            EventHintBundle(ev, null),
                                             "+",
                                             account.signer,
                                         )
                                     relayManager.broadcastToAll(signed)
+                                    localCache.consume(signed, relay = null)
                                 }
                             }
                         },
-                        onZap = { /* Zap from comment requires NWC flow — use card actions */ },
-                        onAuthorClick = { replyEvent?.pubKey?.let { onNavigateToProfile(it) } },
+                        onZap = {
+                            val ev = replyNote.event
+                            if (account != null && ev != null && nwcConnection != null) {
+                                expandedScope.launch {
+                                    val feedback =
+                                        zapNote(
+                                            event = ev,
+                                            account = account,
+                                            relayManager = relayManager,
+                                            localCache = localCache,
+                                            amountSats = 21,
+                                            nwcConnection = nwcConnection,
+                                        )
+                                    onZapFeedback(feedback)
+                                }
+                            }
+                        },
+                        onAuthorClick = { replyNote.event?.pubKey?.let { onNavigateToProfile(it) } },
                     )
                     if (index < replyNotes.take(5).lastIndex) {
                         Spacer(Modifier.height(12.dp))

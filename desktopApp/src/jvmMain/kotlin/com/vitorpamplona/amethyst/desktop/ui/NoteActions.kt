@@ -1483,7 +1483,7 @@ private suspend fun repostNote(
  * Creates a zap request and pays via NWC or opens external wallet.
  * Returns feedback for UI display.
  */
-private suspend fun zapNote(
+internal suspend fun zapNote(
     event: Event,
     account: AccountState.LoggedIn,
     relayManager: DesktopRelayConnectionManager,

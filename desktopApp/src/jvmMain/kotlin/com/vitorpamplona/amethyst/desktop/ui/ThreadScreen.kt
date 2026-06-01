@@ -44,6 +44,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.nip25Reactions.ReactionAction
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
@@ -74,6 +76,7 @@ import com.vitorpamplona.amethyst.desktop.ui.thread.InlineReplyInput
 import com.vitorpamplona.amethyst.desktop.ui.thread.RelatedContentSection
 import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -84,6 +87,7 @@ import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -108,6 +112,7 @@ fun ThreadScreen(
 ) {
     val relayStatuses by relayManager.relayStatuses.collectAsState()
     val connectedRelays = relayStatuses.keys
+    val threadScope = rememberCoroutineScope()
 
     // Lightbox state
     var lightboxState by remember { mutableStateOf<LightboxState?>(null) }
@@ -404,9 +409,39 @@ fun ThreadScreen(
                                             timeAgo = (event?.createdAt ?: 0L).toTimeAgo(),
                                             reactionCount = reactionCount,
                                             zapAmount = zapAmount.toLong(),
-                                            onReply = { event?.let { onReply(it) } },
+                                            onReply = { note.event?.let { onReply(it) } },
+                                            onLike = {
+                                                val ev = note.event
+                                                if (account != null && ev != null) {
+                                                    threadScope.launch(Dispatchers.IO) {
+                                                        val signed =
+                                                            ReactionAction.reactTo(
+                                                                EventHintBundle(ev, null),
+                                                                "+",
+                                                                account.signer,
+                                                            )
+                                                        relayManager.broadcastToAll(signed)
+                                                        localCache.consume(signed, relay = null)
+                                                    }
+                                                }
+                                            },
+                                            onZap = {
+                                                val ev = note.event
+                                                if (account != null && ev != null && nwcConnection != null) {
+                                                    threadScope.launch {
+                                                        zapNote(
+                                                            event = ev,
+                                                            account = account,
+                                                            relayManager = relayManager,
+                                                            localCache = localCache,
+                                                            amountSats = 21,
+                                                            nwcConnection = nwcConnection,
+                                                        )
+                                                    }
+                                                }
+                                            },
                                             onAuthorClick = {
-                                                event?.pubKey?.let { onNavigateToProfile(it) }
+                                                note.event?.pubKey?.let { onNavigateToProfile(it) }
                                             },
                                         )
                                         if (index < replyNotes.lastIndex) {
