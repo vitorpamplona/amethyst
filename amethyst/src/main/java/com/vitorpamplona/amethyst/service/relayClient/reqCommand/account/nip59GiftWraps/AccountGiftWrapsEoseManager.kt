@@ -88,11 +88,13 @@ class AccountGiftWrapsEoseManager(
     private var scope: CoroutineScope? = null
 
     // Per-load instrumentation. Each gift-wrap event the relays push during a load is counted, and
-    // those whose (outer, randomized) created_at falls before the floor the REQ asked for are counted
-    // separately — a relay ignoring `since` re-streams the whole history every widen, so a total that
-    // keeps growing (and a large out-of-window share) is the fingerprint of "getting all events over
-    // and over again". [loadSince] is the floor the in-flight load asked for. Volatile/atomic because
-    // the event hook runs on the relay IO threads while the summary collector reads on the account scope.
+    // those whose (outer, randomized) created_at falls before the floor the REQ actually asked for are
+    // counted separately — a relay ignoring `since` re-streams the whole history every widen, so a
+    // total that keeps growing (and a non-zero out-of-window share) is the fingerprint of "getting all
+    // events over and over again". [loadSince] is the *margined* floor (window.since − 2 days, matching
+    // the wire REQ from filterGiftWrapsToPubkey), so the deliberate 2-day randomization band reads as
+    // in-window and only a relay that under-shoots that floor is flagged. Volatile/atomic because the
+    // event hook runs on the relay IO threads while the summary collector reads on the account scope.
     @Volatile
     private var loadSince = 0L
     private val eventsThisLoad = AtomicInteger(0)
@@ -117,7 +119,7 @@ class AccountGiftWrapsEoseManager(
         user: User,
         scope: CoroutineScope,
     ) {
-        loadSince = windowFor(user).since
+        loadSince = windowFor(user).since - TimeUtils.twoDays()
         eventsThisLoad.set(0)
         outOfWindowThisLoad.set(0)
         ensureSummaryLogger(scope)
