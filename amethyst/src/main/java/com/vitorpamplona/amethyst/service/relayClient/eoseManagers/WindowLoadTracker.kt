@@ -50,13 +50,18 @@ import kotlin.time.Duration.Companion.seconds
  *
  * So completion is **activity-based**: [loading] stays true until either every expected relay has
  * EOSE'd, or the event stream has gone quiet for [idleTimeout] (a flood of events keeps resetting
- * that timer via [onActivity], so a window that is still streaming is never declared done). An
- * [absoluteCap] bounds the wait for pathological relays that dribble forever.
+ * that timer via [onActivity], so a window that is still streaming is never declared done). The idle
+ * path only arms **after the first event or EOSE** — a cold boot whose relays have not finished
+ * connecting yet is silent for reasons that have nothing to do with the data, and declaring it "done"
+ * there would empty the screen and trip the auto-fill into widening over and over. Until that first
+ * sign of life, only [noResponseTimeout] (a generous "nothing answered at all" bound) and the
+ * [absoluteCap] (for pathological relays that dribble forever) can end the load.
  */
 class WindowLoadTracker(
     // Short label for the DMPagination logs (e.g. "giftwrap", "rooms.nip04", "convo.nip04").
     private val name: String = "dm",
     private val idleTimeout: Duration = 3.seconds,
+    private val noResponseTimeout: Duration = 30.seconds,
     private val absoluteCap: Duration = 5.minutes,
 ) {
     private val _loading = MutableStateFlow(true)
@@ -76,12 +81,24 @@ class WindowLoadTracker(
     @Volatile
     private var lastActivityMs = 0L
 
+    // When the current load started, and whether anything (event or EOSE) has arrived for it yet.
+    // Until the first sign of life the idle timer is meaningless (the relays may still be connecting),
+    // so completion falls back to the longer [noResponseTimeout]. Volatile for the lock-free hot path.
+    @Volatile
+    private var loadStartedMs = 0L
+
+    @Volatile
+    private var sawActivity = false
+
     /** Begins a fresh window load: clears the responded set, raises [loading], and arms the watchdog. */
     @Synchronized
     fun startLoading(scope: CoroutineScope) {
         val gen = ++generation
         responded.clear()
-        lastActivityMs = System.currentTimeMillis()
+        val now = System.currentTimeMillis()
+        lastActivityMs = now
+        loadStartedMs = now
+        sawActivity = false
         val wasLoading = _loading.value
         _loading.value = true
         Log.d(TAG) { "[$name] load start" + if (!wasLoading) "" else " (restart)" }
@@ -97,7 +114,7 @@ class WindowLoadTracker(
     }
 
     // One watchdog poll. Returns false (stop polling) when this watchdog has been superseded by a
-    // newer load, the window already finished, or the idle/cap deadline is reached. Synchronized so
+    // newer load, the window already finished, or a completion deadline is reached. Synchronized so
     // the generation/loading checks and the completion are atomic against startLoading/finish.
     @Synchronized
     private fun tick(
@@ -106,9 +123,19 @@ class WindowLoadTracker(
         deadline: Long,
     ): Boolean {
         if (gen != generation || !_loading.value) return false
-        if (now - lastActivityMs >= idleTimeout.inWholeMilliseconds) {
-            finish("idle")
-            return false
+        if (sawActivity) {
+            // The stream started and then went quiet: the relays are done sending.
+            if (now - lastActivityMs >= idleTimeout.inWholeMilliseconds) {
+                finish("idle")
+                return false
+            }
+        } else {
+            // Nothing has answered yet. Don't mistake a slow cold-boot connect for "done"; only give
+            // up once even the generous no-response bound has elapsed.
+            if (now - loadStartedMs >= noResponseTimeout.inWholeMilliseconds) {
+                finish("no response")
+                return false
+            }
         }
         if (now >= deadline) {
             finish("cap")
@@ -119,10 +146,12 @@ class WindowLoadTracker(
 
     /**
      * Records that the current window is still actively receiving events (stored OR live). Keeps the
-     * idle watchdog from completing while a relay is mid-flood. Lock-free: just bumps a timestamp.
+     * idle watchdog from completing while a relay is mid-flood, and marks that the stream has started
+     * (arming the idle path). Lock-free: just bumps a timestamp and a flag.
      */
     fun onActivity() {
         lastActivityMs = System.currentTimeMillis()
+        sawActivity = true
     }
 
     /** Records which relays the current REQ was sent to. Completes immediately if there are none. */
@@ -140,6 +169,7 @@ class WindowLoadTracker(
     @Synchronized
     fun onRelayResponded(relay: NormalizedRelayUrl) {
         lastActivityMs = System.currentTimeMillis()
+        sawActivity = true
         responded.add(relay)
         if (expected.isNotEmpty() && responded.containsAll(expected)) finish("all relays")
     }

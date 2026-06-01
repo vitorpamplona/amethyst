@@ -98,9 +98,49 @@ class AccountGiftWrapsEoseManager(
     private val eventsThisLoad = AtomicInteger(0)
     private val outOfWindowThisLoad = AtomicInteger(0)
 
+    // The single tracker is shared across every account, so the summary collector is launched once
+    // (not per newSub) — otherwise a second logged-in account would double every summary line.
+    @Volatile
+    private var summaryJob: Job? = null
+
     private fun countEvent(createdAt: Long) {
         eventsThisLoad.incrementAndGet()
         if (createdAt < loadSince) outOfWindowThisLoad.incrementAndGet()
+    }
+
+    /**
+     * Starts a window load and resets the per-load counters in the same breath (synchronously, before
+     * [WindowLoadTracker.startLoading] raises `loading`, so no in-flight event is counted against the
+     * wrong load). The summary is emitted by a single collector that logs on each load's falling edge.
+     */
+    private fun beginWindowLoad(
+        user: User,
+        scope: CoroutineScope,
+    ) {
+        loadSince = windowFor(user).since
+        eventsThisLoad.set(0)
+        outOfWindowThisLoad.set(0)
+        ensureSummaryLogger(scope)
+        windowLoad.startLoading(scope)
+    }
+
+    private fun ensureSummaryLogger(scope: CoroutineScope) {
+        if (summaryJob?.isActive == true) return
+        summaryJob =
+            scope.launch {
+                var wasLoading = false
+                windowLoad.loading.collect { loading ->
+                    if (!loading && wasLoading) {
+                        val total = eventsThisLoad.get()
+                        val outOfWindow = outOfWindowThisLoad.get()
+                        Log.d(TAG) {
+                            "[giftwrap] load summary: $total event(s), $outOfWindow before floor " +
+                                "(since=$loadSince, ${daysAgo(loadSince)}d back)"
+                        }
+                    }
+                    wasLoading = loading
+                }
+            }
     }
 
     override fun updateFilter(
@@ -131,7 +171,7 @@ class AccountGiftWrapsEoseManager(
         window.loadMore()
         _exhausted.value = window.isExhausted()
         Log.d(TAG) { "[giftwrap] loadMore ${daysAgo(before)}d -> ${daysAgo(window.since)}d back (exhausted=${_exhausted.value})" }
-        scope?.let { windowLoad.startLoading(it) }
+        scope?.let { beginWindowLoad(user, it) }
         invalidateFilters()
     }
 
@@ -142,7 +182,7 @@ class AccountGiftWrapsEoseManager(
         window.loadAll()
         _exhausted.value = true
         Log.d(TAG) { "[giftwrap] loadEverything — full history (${daysAgo(window.since)}d back)" }
-        scope?.let { windowLoad.startLoading(it) }
+        scope?.let { beginWindowLoad(user, it) }
         invalidateFilters()
     }
 
@@ -152,33 +192,13 @@ class AccountGiftWrapsEoseManager(
     override fun newSub(key: AccountQueryState): Subscription {
         val user = user(key)
         scope = key.account.scope
-        windowLoad.startLoading(key.account.scope)
+        beginWindowLoad(user, key.account.scope)
         userJobMap[user]?.forEach { it.cancel() }
         userJobMap[user] =
             listOf(
                 key.account.scope.launch(Dispatchers.IO) {
                     key.account.dmRelays.flow
                         .collectLatest { invalidateFilters() }
-                },
-                // Resets the per-load counters when a load begins and logs the tally when it ends, so
-                // the trail shows how many events each widen pulled and how many were below the floor.
-                key.account.scope.launch {
-                    var wasLoading = false
-                    windowLoad.loading.collect { loading ->
-                        if (loading && !wasLoading) {
-                            loadSince = windowFor(user).since
-                            eventsThisLoad.set(0)
-                            outOfWindowThisLoad.set(0)
-                        } else if (!loading && wasLoading) {
-                            val total = eventsThisLoad.get()
-                            val outOfWindow = outOfWindowThisLoad.get()
-                            Log.d(TAG) {
-                                "[giftwrap] load summary: $total event(s), $outOfWindow before floor " +
-                                    "(since=$loadSince, ${daysAgo(loadSince)}d back)"
-                            }
-                        }
-                        wasLoading = loading
-                    }
                 },
             )
 
