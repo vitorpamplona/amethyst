@@ -67,7 +67,6 @@ import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
-import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -96,14 +95,11 @@ private fun CrossFadeState(
 ) {
     val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
 
-    // Both DM windows reach the maximum lookback together (lockstep), so the rooms list has
-    // pulled everything there is once both report exhausted. Until then an empty feed means
+    // The gift-wrap window is the single DM window (NIP-04 follows it), so once it reaches the
+    // maximum lookback the rooms list has pulled everything there is. Until then an empty feed means
     // "still filling", not "no conversations" — keep the spinner up rather than flash empty.
     val giftWraps = remember(accountViewModel) { accountViewModel.dataSources().account.giftWraps }
-    val nip04Dms = remember(accountViewModel) { accountViewModel.dataSources().chatroomList.nip04Dms }
-    val giftWrapsExhausted by giftWraps.exhausted.collectAsStateWithLifecycle()
-    val nip04Exhausted by nip04Dms.exhausted.collectAsStateWithLifecycle()
-    val historyExhausted = giftWrapsExhausted && nip04Exhausted
+    val historyExhausted by giftWraps.exhausted.collectAsStateWithLifecycle()
 
     // While the whole list is empty there is no LazyColumn to scroll, so keep widening the private
     // DM window here until rooms appear or it is exhausted. (Public / ephemeral / group rooms are
@@ -151,13 +147,11 @@ private fun FeedLoaded(
     val myPubKey = accountViewModel.userProfile().pubkeyHex
 
     val giftWraps = remember(accountViewModel) { accountViewModel.dataSources().account.giftWraps }
-    val nip04Dms = remember(accountViewModel) { accountViewModel.dataSources().chatroomList.nip04Dms }
+    val nip04 = remember(accountViewModel) { accountViewModel.dataSources().chatroomList.nip04 }
     val loadingGiftWraps by giftWraps.loadingMore.collectAsStateWithLifecycle()
-    val loadingNip04 by nip04Dms.loadingMore.collectAsStateWithLifecycle()
+    val loadingNip04 by nip04.loadingMore.collectAsStateWithLifecycle()
     val loadingMore = loadingGiftWraps || loadingNip04
-    val exhaustedGiftWraps by giftWraps.exhausted.collectAsStateWithLifecycle()
-    val exhaustedNip04 by nip04Dms.exhausted.collectAsStateWithLifecycle()
-    val historyExhausted = exhaustedGiftWraps && exhaustedNip04
+    val historyExhausted by giftWraps.exhausted.collectAsStateWithLifecycle()
 
     // Widen the private DM window only as the user approaches the oldest LOADED private chat —
     // ignoring public / group / ephemeral rooms below it. Those are membership-based and can be
@@ -199,7 +193,7 @@ private fun FeedLoaded(
                 PrivateChatsLoadMoreFooter(loadingMore, showLoadAll = !historyExhausted) {
                     val user = accountViewModel.userProfile()
                     giftWraps.loadEverything(user)
-                    nip04Dms.loadEverything(user)
+                    nip04.reload()
                 }
             }
         }
@@ -210,7 +204,7 @@ private fun FeedLoaded(
                 PrivateChatsLoadMoreFooter(loadingMore, showLoadAll = !historyExhausted) {
                     val user = accountViewModel.userProfile()
                     giftWraps.loadEverything(user)
-                    nip04Dms.loadEverything(user)
+                    nip04.reload()
                 }
             }
         }
@@ -243,19 +237,19 @@ private fun PrivateChatsLoadMoreFooter(
 private const val PREFETCH_PRIVATE_CHATS = 5
 
 /**
- * Widens the private-DM windows (NIP-17 gift wraps + NIP-04, in lockstep) whenever [wantMore]
- * becomes true and a previous widen isn't still loading, stopping once both are exhausted.
+ * Widens the DM window whenever [wantMore] becomes true and the previous step isn't still loading,
+ * stopping once the window is exhausted. Advances the single gift-wrap window ([loadMore]) and tells
+ * the NIP-04 follower to re-request at the new floor ([reload]).
  *
  * [wantMore] is evaluated inside a snapshotFlow, so it may read live Compose state (scroll position,
  * the feed list). Callers decide the policy: the empty feed widens to discover the first rooms; the
  * loaded feed widens as the user approaches the oldest loaded PRIVATE chat — public, group and
  * ephemeral rooms are membership-based (shown regardless of age) and deliberately excluded, so an
- * old public chat at the bottom of the list never drags the private window back with it.
+ * old public chat at the bottom never drags the window back with it.
  *
- * The two windows must move together: if only one were widened, the merged time-sorted list would
- * mix a deep tail of one protocol with a shallow window of the other. The [loadingMore] guard gates
- * each step on ALL of that window's relays answering (or a timeout), not the first EOSE, so a fast
- * near-empty relay can't let the loop outrun the slow relay that holds the conversations.
+ * The guard waits on BOTH loaders, gated on all of each one's relays answering (or a timeout) rather
+ * than the first EOSE, so a fast near-empty relay can't let the loop outrun the slow relay that
+ * holds the conversations.
  */
 @Composable
 private fun WidenPrivateWindowWhen(
@@ -263,24 +257,21 @@ private fun WidenPrivateWindowWhen(
     wantMore: () -> Boolean,
 ) {
     val giftWraps = remember(accountViewModel) { accountViewModel.dataSources().account.giftWraps }
-    val nip04Dms = remember(accountViewModel) { accountViewModel.dataSources().chatroomList.nip04Dms }
+    val nip04 = remember(accountViewModel) { accountViewModel.dataSources().chatroomList.nip04 }
 
-    LaunchedEffect(giftWraps, nip04Dms) {
+    LaunchedEffect(giftWraps, nip04) {
         combine(
             snapshotFlow { wantMore() },
             giftWraps.loadingMore,
-            nip04Dms.loadingMore,
+            nip04.loadingMore,
             giftWraps.exhausted,
-            nip04Dms.exhausted,
-        ) { want, loadingGiftWraps, loadingNip04, giftWrapsExhausted, nip04Exhausted ->
-            want && !loadingGiftWraps && !loadingNip04 && !(giftWrapsExhausted && nip04Exhausted)
+        ) { want, loadingGiftWraps, loadingNip04, exhausted ->
+            want && !loadingGiftWraps && !loadingNip04 && !exhausted
         }.distinctUntilChanged()
             .filter { it }
             .collect {
-                Log.d("DMPagination") { "rooms list needs more private history, widening NIP-17 + NIP-04 windows one step" }
-                val user = accountViewModel.userProfile()
-                giftWraps.loadMore(user)
-                nip04Dms.loadMore(user)
+                giftWraps.loadMore(accountViewModel.userProfile())
+                nip04.reload()
             }
     }
 }

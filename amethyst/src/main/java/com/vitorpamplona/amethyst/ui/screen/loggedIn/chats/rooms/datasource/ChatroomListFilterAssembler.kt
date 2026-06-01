@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
 // This allows multiple screen to be listening to tags, even the same tag
@@ -34,12 +35,14 @@ class ChatroomListState(
 @Stable
 class ChatroomListFilterAssembler(
     client: INostrClient,
+    giftWraps: AccountGiftWrapsEoseManager,
 ) : ComposeSubscriptionManager<ChatroomListState>() {
-    val nip04Dms = DMsFromUserFilterSubAssembler(client, ::allKeys)
+    // NIP-04 DMs follow the account gift-wrap window's floor (the single source of truth).
+    val nip04 = ChatroomListNip04SubAssembler(client, ::allKeys, giftWraps)
 
     val group =
         listOf(
-            nip04Dms,
+            nip04,
             FollowingPublicChatSubAssembler(client, ::allKeys),
             FollowingEphemeralChatSubAssembler(client, ::allKeys),
         )

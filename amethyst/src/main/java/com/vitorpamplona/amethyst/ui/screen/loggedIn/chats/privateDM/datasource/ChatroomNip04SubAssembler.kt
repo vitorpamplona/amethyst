@@ -22,33 +22,32 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource
 
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.WindowLoadTracker
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.trackingListener
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
 
-class ChatroomFilterSubAssembler(
+/**
+ * Loads one conversation's NIP-04 DMs (kind 4). Like the rooms-list loader, it follows the account
+ * gift-wrap window's [AccountGiftWrapsEoseManager.windowSince] floor so a thread shows both DM
+ * protocols to the same depth. [reload] re-issues at the current floor; [loadingMore] reports when
+ * this protocol has covered it, which the conversation screen joins with the gift-wrap loader's flag
+ * to decide how deep the thread is safe to reveal.
+ */
+class ChatroomNip04SubAssembler(
     client: INostrClient,
     allKeys: () -> Set<ChatroomQueryState>,
-    // The account-wide gift-wrap window is the single source of truth for how far back DMs are
-    // requested; NIP-04 here follows its floor so a thread shows both protocols to the same depth.
     private val giftWraps: AccountGiftWrapsEoseManager,
 ) : PerUserAndFollowListEoseManager<ChatroomQueryState, String>(client, allKeys) {
-    // A NIP-04 load is "in flight" until every relay it was sent to has answered (or a timeout).
-    // The conversation screen reads this alongside the gift-wrap loader's flag to know when BOTH
-    // protocols have fully covered the current floor, so it never reveals a half-loaded depth.
     private val windowLoad = WindowLoadTracker()
     val loadingMore: StateFlow<Boolean> = windowLoad.loading
 
-    // Account scope to run the window-load watchdog on, captured when the subscription opens.
+    // Account scope for the watchdog. Volatile: written on IO (newSub), read on UI (reload).
     @Volatile
     private var scope: CoroutineScope? = null
 
@@ -65,7 +64,7 @@ class ChatroomFilterSubAssembler(
             emptyList()
         }
 
-    /** Re-issues the NIP-04 subscription at the (now-wider) shared gift-wrap floor and tracks the load. */
+    /** Re-issues at the (now-wider) shared gift-wrap floor and tracks the load. */
     fun reload() {
         scope?.let { windowLoad.startLoading(it) }
         invalidateFilters()
@@ -78,32 +77,8 @@ class ChatroomFilterSubAssembler(
     override fun newSub(key: ChatroomQueryState): Subscription {
         scope = key.account.scope
         windowLoad.startLoading(key.account.scope)
-
-        // Custom listener (vs super.newSub) so every event — stored backfill included — keeps the
-        // window-load watchdog alive and EOSEs mark relays answered, feeding [loadingMore].
         return requestNewSubscription(
-            object : SubscriptionListener {
-                override fun onEose(
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    windowLoad.onRelayResponded(relay)
-                    newEose(key, relay, TimeUtils.now(), forFilters)
-                }
-
-                override fun onEvent(
-                    event: Event,
-                    isLive: Boolean,
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    windowLoad.onActivity()
-                    if (isLive) {
-                        windowLoad.onRelayResponded(relay)
-                        newEose(key, relay, TimeUtils.now(), forFilters)
-                    }
-                }
-            },
+            windowLoad.trackingListener { relay, filters -> newEose(key, relay, TimeUtils.now(), filters) },
         )
     }
 }

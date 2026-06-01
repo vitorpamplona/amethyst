@@ -38,7 +38,7 @@ class ChatroomFilterAssembler(
     client: INostrClient,
     giftWraps: AccountGiftWrapsEoseManager,
 ) : ComposeSubscriptionManager<ChatroomQueryState>() {
-    val nip04 = ChatroomFilterSubAssembler(client, ::allKeys, giftWraps)
+    val nip04 = ChatroomNip04SubAssembler(client, ::allKeys, giftWraps)
 
     val group =
         listOf(

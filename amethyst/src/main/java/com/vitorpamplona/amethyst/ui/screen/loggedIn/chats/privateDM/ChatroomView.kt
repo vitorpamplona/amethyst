@@ -144,7 +144,7 @@ private const val GIFT_WRAP_OUTER_JITTER_SECONDS = 2L * 24 * 60 * 60
  * of what's loaded — prefetching before the user reaches the top — and stops once exhausted.
  *
  * The account-wide gift-wrap window is the single source of truth for the floor: NIP-17 advances via
- * [AccountGiftWrapsEoseManager.loadMore], and the NIP-04 loader [ChatroomFilterSubAssembler.reload]
+ * [AccountGiftWrapsEoseManager.loadMore], and the NIP-04 loader [ChatroomNip04SubAssembler.reload]
  * re-requests kind:4 from that same floor. The step is gated on BOTH loaders being idle, so it never
  * outruns the slower protocol.
  */

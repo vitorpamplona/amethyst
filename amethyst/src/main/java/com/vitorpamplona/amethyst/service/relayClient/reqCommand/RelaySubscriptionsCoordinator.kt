@@ -90,7 +90,7 @@ class RelaySubscriptionsCoordinator(
 
     // always running, feed assemblers.
     val home = HomeFilterAssembler(client)
-    val chatroomList = ChatroomListFilterAssembler(client)
+    val chatroomList = ChatroomListFilterAssembler(client, account.giftWraps)
     val video = VideoFilterAssembler(client)
     val discovery = DiscoveryFilterAssembler(client)
 

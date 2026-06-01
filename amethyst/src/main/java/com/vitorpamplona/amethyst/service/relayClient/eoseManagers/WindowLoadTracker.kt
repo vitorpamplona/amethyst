@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -139,3 +142,33 @@ class WindowLoadTracker(
         private const val IDLE_CHECK_MS = 500L
     }
 }
+
+/**
+ * Builds the standard [SubscriptionListener] that feeds this tracker: every event (stored backfill
+ * included) marks activity so a relay mid-flood is never mistaken for done, and an EOSE or live
+ * event marks that relay answered. [forward] is invoked with the same EOSE / live-event signal so
+ * the owning EOSE manager can record the relay's EOSE timestamp (its usual `newEose`).
+ */
+fun WindowLoadTracker.trackingListener(forward: (NormalizedRelayUrl, List<Filter>?) -> Unit): SubscriptionListener =
+    object : SubscriptionListener {
+        override fun onEose(
+            relay: NormalizedRelayUrl,
+            forFilters: List<Filter>?,
+        ) {
+            onRelayResponded(relay)
+            forward(relay, forFilters)
+        }
+
+        override fun onEvent(
+            event: Event,
+            isLive: Boolean,
+            relay: NormalizedRelayUrl,
+            forFilters: List<Filter>?,
+        ) {
+            onActivity()
+            if (isLive) {
+                onRelayResponded(relay)
+                forward(relay, forFilters)
+            }
+        }
+    }
