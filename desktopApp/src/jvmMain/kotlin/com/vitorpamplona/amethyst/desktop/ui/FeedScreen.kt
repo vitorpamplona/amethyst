@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip02FollowList.FollowAction
+import com.vitorpamplona.amethyst.commons.model.nip25Reactions.ReactionAction
 import com.vitorpamplona.amethyst.commons.nip64Chess.RelaySyncStatus
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.search.AdvancedSearchBarState
@@ -131,6 +132,7 @@ import com.vitorpamplona.amethyst.desktop.ui.thread.InlineReplyInput
 import com.vitorpamplona.amethyst.desktop.ui.thread.RelatedContentSection
 import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -802,6 +804,7 @@ fun FeedScreen(
                                     onNavigateToThread = { noteId ->
                                         expandedNoteId = if (expandedNoteId == noteId) null else noteId
                                     },
+                                    onNavigateToThreadOverlay = onNavigateToThread,
                                     onReply = { replyToEvent = it },
                                     onZapFeedback = onZapFeedback,
                                 )
@@ -1487,11 +1490,13 @@ private fun ExpandedNoteContent(
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
     onNavigateToProfile: (String) -> Unit = {},
     onNavigateToThread: (String) -> Unit = {},
+    onNavigateToThreadOverlay: (String) -> Unit = {},
     onReply: (Event) -> Unit = {},
     onZapFeedback: (ZapFeedback) -> Unit = {},
 ) {
     val event = note.event ?: return
     val noteId = event.id
+    val expandedScope = rememberCoroutineScope()
     val connectedRelays =
         relayManager.relayStatuses
             .collectAsState()
@@ -1598,6 +1603,20 @@ private fun ExpandedNoteContent(
                         reactionCount = reactionCount,
                         zapAmount = zapAmount.toLong(),
                         onReply = { replyEvent?.let { onReply(it) } },
+                        onLike = {
+                            if (account != null && replyEvent != null) {
+                                expandedScope.launch(Dispatchers.IO) {
+                                    val signed =
+                                        ReactionAction.reactTo(
+                                            EventHintBundle(replyEvent, null),
+                                            "+",
+                                            account.signer,
+                                        )
+                                    relayManager.broadcastToAll(signed)
+                                }
+                            }
+                        },
+                        onZap = { /* Zap from comment requires NWC flow — use card actions */ },
                         onAuthorClick = { replyEvent?.pubKey?.let { onNavigateToProfile(it) } },
                     )
                     if (index < replyNotes.take(5).lastIndex) {
@@ -1617,7 +1636,7 @@ private fun ExpandedNoteContent(
             authorPubKey = event.pubKey,
             noteHashtags = noteHashtags,
             localCache = localCache,
-            onItemClick = onNavigateToThread,
+            onItemClick = onNavigateToThreadOverlay,
             onViewAll = { onNavigateToProfile(event.pubKey) },
         )
     }
