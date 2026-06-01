@@ -61,10 +61,6 @@ fun RefreshingChatroomFeedView(
     // Opt-in hook handed the feed's scroll state, so a specific screen (e.g. private DMs) can
     // attach scroll-driven loading. No-op for the public-chat / channel callers that don't paginate.
     listStateObserver: @Composable (LazyListState) -> Unit = {},
-    // Only reveal messages at or newer than this epoch-second floor. Private DMs use it to hold back
-    // a depth until BOTH protocols (NIP-04 + NIP-17) have fully loaded it, so the thread never shows
-    // a region with one protocol missing. Default reveals everything (public chats / channels).
-    oldestVisibleTime: Long = Long.MIN_VALUE,
     // Optional footer rendered at the oldest end of the thread (a "load more" / spinner affordance).
     // Null for callers that load their whole history at once (public chats / channels).
     olderBoundary: (@Composable () -> Unit)? = null,
@@ -80,7 +76,6 @@ fun RefreshingChatroomFeedView(
             onWantsToReply,
             onWantsToEditDraft,
             avoidDraft,
-            oldestVisibleTime,
             olderBoundary,
         )
     }
@@ -96,7 +91,6 @@ fun RenderChatFeedView(
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
     avoidDraft: DraftTagState? = null,
-    oldestVisibleTime: Long = Long.MIN_VALUE,
     olderBoundary: (@Composable () -> Unit)? = null,
 ) {
     val feedState by feed.feedContent.collectAsStateWithLifecycle()
@@ -125,7 +119,6 @@ fun RenderChatFeedView(
                     onWantsToReply,
                     onWantsToEditDraft,
                     avoidDraft,
-                    oldestVisibleTime,
                     olderBoundary,
                 )
             }
@@ -143,23 +136,11 @@ fun ChatFeedLoaded(
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
     avoidDraft: DraftTagState? = null,
-    oldestVisibleTime: Long = Long.MIN_VALUE,
     olderBoundary: (@Composable () -> Unit)? = null,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
-    // Clip the bottom of the thread to the depth both DM protocols have fully covered. A note whose
-    // event hasn't loaded yet (null createdAt) is kept visible — fail toward showing, never hiding.
-    val visibleItems =
-        remember(items.list, oldestVisibleTime) {
-            if (oldestVisibleTime == Long.MIN_VALUE) {
-                items.list
-            } else {
-                items.list.filter { (it.createdAt() ?: Long.MAX_VALUE) >= oldestVisibleTime }
-            }
-        }
-
-    LaunchedEffect(visibleItems.firstOrNull()) {
+    LaunchedEffect(items.list.firstOrNull()) {
         if (listState.firstVisibleItemIndex <= 1) {
             listState.animateScrollToItem(0)
         }
@@ -168,7 +149,7 @@ fun ChatFeedLoaded(
     val scope = rememberCoroutineScope()
     val highlightedNoteId = remember { mutableStateOf<String?>(null) }
     val onScrollToNote: (Note) -> Unit = { note ->
-        val index = visibleItems.indexOfFirst { it.idHex == note.idHex }
+        val index = items.list.indexOfFirst { it.idHex == note.idHex }
         if (index >= 0) {
             scope.launch {
                 listState.animateScrollToItem(index)
@@ -183,7 +164,7 @@ fun ChatFeedLoaded(
         reverseLayout = true,
         state = listState,
     ) {
-        itemsIndexed(visibleItems, key = { _, item -> item.idHex }, contentType = { _, item -> item.event?.kind ?: -1 }) { index, item ->
+        itemsIndexed(items.list, key = { _, item -> item.idHex }, contentType = { _, item -> item.event?.kind ?: -1 }) { index, item ->
             val noteEvent = item.event
             if (avoidDraft == null || noteEvent !is DraftWrapEvent || noteEvent.dTag() !in avoidDraft.usedDraftTags) {
                 ChatroomMessageCompose(
@@ -198,13 +179,12 @@ fun ChatFeedLoaded(
                     onHighlightFinished = { highlightedNoteId.value = null },
                 )
 
-                NewDateOrSubjectDivisor(visibleItems.getOrNull(index + 1), item)
+                NewDateOrSubjectDivisor(items.list.getOrNull(index + 1), item)
             }
         }
 
         // Reverse layout: a trailing item sits at the highest index, i.e. the visual TOP (oldest end).
-        // This is where the clipped-back depth reveals as more history loads, so the caller's
-        // "load more" affordance / spinner lives here.
+        // That's where the caller's "load more" affordance / spinner lives.
         if (olderBoundary != null) {
             item(key = "olderBoundary") { olderBoundary() }
         }

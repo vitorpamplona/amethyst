@@ -29,7 +29,6 @@ import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -133,16 +132,16 @@ fun ChatroomView(
     )
 }
 
-// NIP-17 senders may backdate the gift wrap's OUTER created_at up to two days (randomWithTwoDays),
-// and relays filter on that outer time. So once we've fetched outer >= F, we're only guaranteed to
-// hold every message whose real (inner) time is >= F + 2d. The revealed floor carries this margin.
-private const val GIFT_WRAP_OUTER_JITTER_SECONDS = 2L * 24 * 60 * 60
+// Rows from the oldest loaded message at which to prefetch the next, older window.
+private const val PREFETCH_OLDER_MESSAGES = 3
 
 /**
- * Scroll-driven history loader for a conversation, advancing BOTH DM protocols together. The thread
- * is reverse-laid-out (newest at the bottom, index 0), so older messages live at higher indices;
- * this widens one step whenever nothing is loaded yet or the oldest visible row crosses the midpoint
- * of what's loaded — prefetching before the user reaches the top — and stops once exhausted.
+ * Scroll-driven history loader for a conversation. The thread is reverse-laid-out (newest at the
+ * bottom, index 0), so older messages live at higher indices. It loads the next, older window only
+ * when the thread already overflows the screen AND the user has scrolled near the oldest loaded
+ * message — so a short thread is never auto-walked to the start of history (that would load the whole
+ * account's gift-wrap history). For more than what scrolling reaches, the oldest-end boundary offers
+ * an explicit "Load entire history".
  *
  * The account-wide gift-wrap window is the single source of truth for the floor: NIP-17 advances via
  * [AccountGiftWrapsEoseManager.loadMore], and the NIP-04 loader [ChatroomNip04SubAssembler.reload]
@@ -163,7 +162,8 @@ private fun LoadOlderMessagesWhenScrolling(
                 val info = listState.layoutInfo
                 val total = info.totalItemsCount
                 val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: -1
-                total == 0 || lastVisible >= total / 2
+                val overflowsScreen = info.visibleItemsInfo.size < total
+                overflowsScreen && lastVisible >= total - PREFETCH_OLDER_MESSAGES
             },
             giftWraps.loadingMore,
             nip04.loadingMore,
@@ -176,38 +176,6 @@ private fun LoadOlderMessagesWhenScrolling(
                 giftWraps.loadMore(accountViewModel.userProfile())
                 nip04.reload()
             }
-    }
-}
-
-/**
- * The epoch-second floor at or above which the thread is safe to reveal: the deepest gift-wrap floor
- * at which BOTH protocols have finished loading, plus the [GIFT_WRAP_OUTER_JITTER_SECONDS] margin.
- *
- * It only descends (monotonic), so revealed history never retracts. Until the first completion it is
- * [Long.MAX_VALUE] (reveal nothing yet); once the window is exhausted it is [Long.MIN_VALUE] (reveal
- * everything). Holding back a depth until both NIP-04 and NIP-17 have covered it is what prevents a
- * fast NIP-04 stream from painting a thread that's missing the NIP-17 messages in between.
- */
-@Composable
-private fun rememberConversationDisplayFloor(accountViewModel: AccountViewModel): Long {
-    val giftWraps = remember(accountViewModel) { accountViewModel.dataSources().account.giftWraps }
-    val nip04 = remember(accountViewModel) { accountViewModel.dataSources().chatroom.nip04 }
-    val loadingGiftWraps by giftWraps.loadingMore.collectAsStateWithLifecycle()
-    val loadingNip04 by nip04.loadingMore.collectAsStateWithLifecycle()
-    val exhausted by giftWraps.exhausted.collectAsStateWithLifecycle()
-
-    var coveredSince by remember(accountViewModel) { mutableStateOf(Long.MAX_VALUE) }
-    LaunchedEffect(loadingGiftWraps, loadingNip04, accountViewModel) {
-        if (!loadingGiftWraps && !loadingNip04) {
-            val since = giftWraps.windowSince(accountViewModel.userProfile())
-            if (since < coveredSince) coveredSince = since
-        }
-    }
-
-    return when {
-        exhausted -> Long.MIN_VALUE
-        coveredSince == Long.MAX_VALUE -> Long.MAX_VALUE
-        else -> coveredSince + GIFT_WRAP_OUTER_JITTER_SECONDS
     }
 }
 
@@ -228,9 +196,6 @@ fun ChatroomViewUI(
     val loadingNip04 by nip04.loadingMore.collectAsStateWithLifecycle()
     val historyExhausted by giftWraps.exhausted.collectAsStateWithLifecycle()
 
-    // Only reveal a depth once BOTH DM protocols have fully loaded it (gap-free timeline).
-    val displayFloor = rememberConversationDisplayFloor(accountViewModel)
-
     Column(Modifier.fillMaxHeight()) {
         ObserveRelayListForDMsAndDisplayIfNotFound(accountViewModel, nav)
 
@@ -249,7 +214,6 @@ fun ChatroomViewUI(
                 avoidDraft = newPostModel.draftTag,
                 onWantsToReply = newPostModel::reply,
                 onWantsToEditDraft = newPostModel::editFromDraft,
-                oldestVisibleTime = displayFloor,
                 // While there is older history to reach, show the same spinner / "load all" boundary
                 // as the rooms list at the oldest end (spinner only while actually loading).
                 olderBoundary =
