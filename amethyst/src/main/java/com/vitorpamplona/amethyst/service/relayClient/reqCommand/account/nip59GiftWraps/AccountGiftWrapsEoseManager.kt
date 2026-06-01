@@ -44,6 +44,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Always-on loader for the account's NIP-17 gift wraps (kind 1059). It owns the single DM time
@@ -85,6 +86,22 @@ class AccountGiftWrapsEoseManager(
     // Account scope for the window-load watchdog. Volatile: written on IO (newSub), read on UI (loadMore).
     @Volatile
     private var scope: CoroutineScope? = null
+
+    // Per-load instrumentation. Each gift-wrap event the relays push during a load is counted, and
+    // those whose (outer, randomized) created_at falls before the floor the REQ asked for are counted
+    // separately — a relay ignoring `since` re-streams the whole history every widen, so a total that
+    // keeps growing (and a large out-of-window share) is the fingerprint of "getting all events over
+    // and over again". [loadSince] is the floor the in-flight load asked for. Volatile/atomic because
+    // the event hook runs on the relay IO threads while the summary collector reads on the account scope.
+    @Volatile
+    private var loadSince = 0L
+    private val eventsThisLoad = AtomicInteger(0)
+    private val outOfWindowThisLoad = AtomicInteger(0)
+
+    private fun countEvent(createdAt: Long) {
+        eventsThisLoad.incrementAndGet()
+        if (createdAt < loadSince) outOfWindowThisLoad.incrementAndGet()
+    }
 
     override fun updateFilter(
         key: AccountQueryState,
@@ -143,10 +160,32 @@ class AccountGiftWrapsEoseManager(
                     key.account.dmRelays.flow
                         .collectLatest { invalidateFilters() }
                 },
+                // Resets the per-load counters when a load begins and logs the tally when it ends, so
+                // the trail shows how many events each widen pulled and how many were below the floor.
+                key.account.scope.launch {
+                    var wasLoading = false
+                    windowLoad.loading.collect { loading ->
+                        if (loading && !wasLoading) {
+                            loadSince = windowFor(user).since
+                            eventsThisLoad.set(0)
+                            outOfWindowThisLoad.set(0)
+                        } else if (!loading && wasLoading) {
+                            val total = eventsThisLoad.get()
+                            val outOfWindow = outOfWindowThisLoad.get()
+                            Log.d(TAG) {
+                                "[giftwrap] load summary: $total event(s), $outOfWindow before floor " +
+                                    "(since=$loadSince, ${daysAgo(loadSince)}d back)"
+                            }
+                        }
+                        wasLoading = loading
+                    }
+                },
             )
 
         return requestNewSubscription(
-            windowLoad.trackingListener { relay, filters -> newEose(key, relay, TimeUtils.now(), filters) },
+            windowLoad.trackingListener(
+                onEachEvent = { event -> countEvent(event.createdAt) },
+            ) { relay, filters -> newEose(key, relay, TimeUtils.now(), filters) },
         )
     }
 

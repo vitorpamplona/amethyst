@@ -23,9 +23,7 @@ package com.vitorpamplona.amethyst.service.relayClient.diagnostics
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.AuthMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
@@ -38,11 +36,12 @@ import com.vitorpamplona.quartz.utils.Log
 /**
  * Diagnostic connection listener for the DM / gift-wrap loading path.
  *
- * It folds the per-relay timeline — REQ sent, gift-wrap events, EOSE, plus auth
- * challenge / NOTICE / CLOSED rejection and connect/disconnect — into the single
- * `DMPagination` log tag with an elapsed-time prefix, so a slow cold boot can be
- * attributed (connection? auth? relay response?) and a silent failure to load
- * (e.g. a relay answering CLOSED "auth-required" / "restricted") becomes visible.
+ * It folds the per-relay timeline — REQ sent, connect/disconnect, NOTICE / CLOSED
+ * rejection and OK failures — into the single `DMPagination` log tag with an
+ * elapsed-time prefix, so a slow cold boot can be attributed (connection? relay
+ * response?) and a silent failure to load (e.g. a relay answering CLOSED
+ * "auth-required" / "restricted") becomes visible. Per-event and auth-challenge
+ * lines are intentionally omitted to keep the trail readable.
  *
  * The connection listener fires for EVERY relay the app talks to (hundreds, under
  * the outbox model). To keep this readable we only log relays that are part of the
@@ -100,21 +99,12 @@ class DmRelayDiagnosticsLogger(
                 msg: Message,
             ) {
                 when (msg) {
-                    is AuthMessage ->
-                        if (isDmRelay(relay)) Log.d(TAG) { "[+${at()}ms] AUTH <- ${relay.url.url} challenge=${msg.challenge.take(12)}…" }
-
                     is NoticeMessage ->
                         if (isDmRelay(relay)) Log.d(TAG) { "[+${at()}ms] NOTICE <- ${relay.url.url} '${msg.message}'" }
 
                     is ClosedMessage ->
                         if (msg.subId in giftWrapSubIds) {
                             Log.d(TAG) { "[+${at()}ms] CLOSED <- ${relay.url.url} sub=${msg.subId} reason='${msg.message}'" }
-                        }
-
-                    is EventMessage ->
-                        if (msg.event.kind == GiftWrapEvent.KIND || msg.event.kind == EphemeralGiftWrapEvent.KIND) {
-                            giftWrapRelays.add(relay.url)
-                            Log.d(TAG) { "[+${at()}ms] EVENT <- ${relay.url.url} kind=${msg.event.kind} sub=${msg.subId} createdAt=${msg.event.createdAt}" }
                         }
 
                     is OkMessage ->

@@ -163,10 +163,14 @@ class WindowLoadTracker(
 /**
  * Builds the standard [SubscriptionListener] that feeds this tracker: every event (stored backfill
  * included) marks activity so a relay mid-flood is never mistaken for done, and an EOSE or live
- * event marks that relay answered. [forward] is invoked with the same EOSE / live-event signal so
- * the owning EOSE manager can record the relay's EOSE timestamp (its usual `newEose`).
+ * event marks that relay answered. [onEachEvent] is invoked for every event (stored or live) for
+ * optional instrumentation; [forward] is invoked with the same EOSE / live-event signal so the
+ * owning EOSE manager can record the relay's EOSE timestamp (its usual `newEose`).
  */
-fun WindowLoadTracker.trackingListener(forward: (NormalizedRelayUrl, List<Filter>?) -> Unit): SubscriptionListener =
+fun WindowLoadTracker.trackingListener(
+    onEachEvent: (Event) -> Unit = {},
+    forward: (NormalizedRelayUrl, List<Filter>?) -> Unit,
+): SubscriptionListener =
     object : SubscriptionListener {
         override fun onEose(
             relay: NormalizedRelayUrl,
@@ -183,6 +187,7 @@ fun WindowLoadTracker.trackingListener(forward: (NormalizedRelayUrl, List<Filter
             forFilters: List<Filter>?,
         ) {
             onActivity()
+            onEachEvent(event)
             if (isLive) {
                 onRelayResponded(relay)
                 forward(relay, forFilters)
