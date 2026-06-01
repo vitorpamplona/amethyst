@@ -226,7 +226,7 @@ fun FeedNoteCard(
                 BoostedMark()
             }
 
-            // Original note content
+            // Original note content with actions inside card
             val displayData = remember(originalEvent, metadataState) { originalEvent.toNoteDisplayData(localCache) }
             NoteCard(
                 note = displayData,
@@ -238,30 +238,33 @@ fun FeedNoteCard(
                 onHashtagClick = onHashtagClick,
                 onImageClick = onImageClick,
                 onMediaClick = onMediaClick,
+                bottomContent =
+                    if (account != null) {
+                        {
+                            NoteActionsRow(
+                                event = originalEvent,
+                                relayManager = relayManager,
+                                localCache = localCache,
+                                account = account,
+                                nwcConnection = nwcConnection,
+                                onReplyClick = onReply,
+                                onZapFeedback = onZapFeedback,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                note = originalNote,
+                                zapCount = originalNote.zaps.size,
+                                zapAmountSats = zapAmount.toLong(),
+                                zapReceipts = emptyList(),
+                                reactionCount = reactionCount,
+                                replyCount = replyCount,
+                                repostCount = repostCount,
+                                onNavigateToThread = onNavigateToThread,
+                                onNavigateToProfile = onNavigateToProfile,
+                            )
+                        }
+                    } else {
+                        null
+                    },
             )
-
-            // Action buttons for original note
-            if (account != null) {
-                NoteActionsRow(
-                    event = originalEvent,
-                    relayManager = relayManager,
-                    localCache = localCache,
-                    account = account,
-                    nwcConnection = nwcConnection,
-                    onReplyClick = onReply,
-                    onZapFeedback = onZapFeedback,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                    note = originalNote,
-                    zapCount = originalNote.zaps.size,
-                    zapAmountSats = zapAmount.toLong(),
-                    zapReceipts = emptyList(),
-                    reactionCount = reactionCount,
-                    replyCount = replyCount,
-                    repostCount = repostCount,
-                    onNavigateToThread = onNavigateToThread,
-                    onNavigateToProfile = onNavigateToProfile,
-                )
-            }
         }
     } else {
         // Regular note rendering
@@ -280,42 +283,44 @@ fun FeedNoteCard(
             onDispose { note.clearFlow() }
         }
 
-        Column {
-            val displayData = remember(event, metadataState) { event.toNoteDisplayData(localCache) }
-            NoteCard(
-                note = displayData,
-                modifier = Modifier.fillMaxWidth(),
-                localCache = localCache,
-                onClick = { onNavigateToThread(event.id) },
-                onAuthorClick = onNavigateToProfile,
-                onMentionClick = onNavigateToProfile,
-                onHashtagClick = onHashtagClick,
-                onImageClick = onImageClick,
-                onMediaClick = onMediaClick,
-            )
-
-            if (account != null) {
-                NoteActionsRow(
-                    event = event,
-                    relayManager = relayManager,
-                    localCache = localCache,
-                    account = account,
-                    nwcConnection = nwcConnection,
-                    onReplyClick = onReply,
-                    onZapFeedback = onZapFeedback,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                    note = note,
-                    zapCount = note.zaps.size,
-                    zapAmountSats = zapAmount.toLong(),
-                    zapReceipts = emptyList(),
-                    reactionCount = reactionCount,
-                    replyCount = replyCount,
-                    repostCount = repostCount,
-                    onNavigateToThread = onNavigateToThread,
-                    onNavigateToProfile = onNavigateToProfile,
-                )
-            }
-        }
+        val displayData = remember(event, metadataState) { event.toNoteDisplayData(localCache) }
+        NoteCard(
+            note = displayData,
+            modifier = Modifier.fillMaxWidth(),
+            localCache = localCache,
+            onClick = { onNavigateToThread(event.id) },
+            onAuthorClick = onNavigateToProfile,
+            onMentionClick = onNavigateToProfile,
+            onHashtagClick = onHashtagClick,
+            onImageClick = onImageClick,
+            onMediaClick = onMediaClick,
+            bottomContent =
+                if (account != null) {
+                    {
+                        NoteActionsRow(
+                            event = event,
+                            relayManager = relayManager,
+                            localCache = localCache,
+                            account = account,
+                            nwcConnection = nwcConnection,
+                            onReplyClick = onReply,
+                            onZapFeedback = onZapFeedback,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                            note = note,
+                            zapCount = note.zaps.size,
+                            zapAmountSats = zapAmount.toLong(),
+                            zapReceipts = emptyList(),
+                            reactionCount = reactionCount,
+                            replyCount = replyCount,
+                            repostCount = repostCount,
+                            onNavigateToThread = onNavigateToThread,
+                            onNavigateToProfile = onNavigateToProfile,
+                        )
+                    }
+                } else {
+                    null
+                },
+        )
     }
 }
 

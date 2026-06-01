@@ -101,6 +101,7 @@ fun NoteCard(
     onImageClick: ((List<String>, Int) -> Unit)? = null,
     onMediaClick: ((List<String>, Int, Float) -> Unit)? = null,
     onPayInvoice: ((String) -> Unit)? = null,
+    bottomContent: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     val urls = remember(note.content) { UrlParser().parseValidUrls(note.content) }
     val imageUrls =
@@ -305,6 +306,10 @@ fun NoteCard(
                     }
                 }
             }
+        }
+
+        if (bottomContent != null) {
+            bottomContent()
         }
     }
 
