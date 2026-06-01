@@ -91,14 +91,14 @@ import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.nwc.NwcPaymentHandler
+import com.vitorpamplona.amethyst.desktop.ui.note.ShareMenu
+import com.vitorpamplona.amethyst.desktop.ui.note.rememberShareMenuState
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
-import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -106,8 +106,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import java.awt.Toolkit
-import java.awt.datatransfer.StringSelection
 import kotlin.coroutines.resume
 
 private val ZAP_AMOUNTS = listOf(21L, 100L, 500L, 1000L, 5000L, 10000L)
@@ -1312,56 +1310,25 @@ fun NoteActionsRow(
             )
         }
 
-        // Overflow menu (three dots)
-        var showOverflowMenu by remember { mutableStateOf(false) }
+        // Share menu
+        val shareMenuState = rememberShareMenuState()
         Box {
             IconButton(
-                onClick = { showOverflowMenu = true },
+                onClick = { shareMenuState.open() },
                 modifier = Modifier.size(32.dp),
             ) {
                 Icon(
-                    MaterialSymbols.MoreVert,
-                    contentDescription = "More options",
+                    MaterialSymbols.Share,
+                    contentDescription = "Share",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(18.dp),
                 )
             }
-            DropdownMenu(
-                expanded = showOverflowMenu,
-                onDismissRequest = { showOverflowMenu = false },
-            ) {
-                DropdownMenuItem(
-                    text = { Text("Copy Note Link") },
-                    onClick = {
-                        val noteLink = "nostr:${NNote.create(event.id)}"
-                        copyToClipboard(noteLink)
-                        showOverflowMenu = false
-                    },
-                )
-                DropdownMenuItem(
-                    text = { Text("Copy Event Link") },
-                    onClick = {
-                        val relays = relayManager.connectedRelays.value.take(3)
-                        val neventLink = "nostr:${NEvent.create(event.id, event.pubKey, event.kind, relays)}"
-                        copyToClipboard(neventLink)
-                        showOverflowMenu = false
-                    },
-                )
-                DropdownMenuItem(
-                    text = { Text("Copy Event ID") },
-                    onClick = {
-                        copyToClipboard(event.id)
-                        showOverflowMenu = false
-                    },
-                )
-                DropdownMenuItem(
-                    text = { Text("Copy Raw JSON") },
-                    onClick = {
-                        copyToClipboard(event.toJson())
-                        showOverflowMenu = false
-                    },
-                )
-            }
+            ShareMenu(
+                state = shareMenuState,
+                event = event,
+                relayManager = relayManager,
+            )
         }
     }
 
@@ -1693,11 +1660,3 @@ private suspend fun fetchUserLightningAddress(
             relayManager.unsubscribe(subId)
         }
     }
-
-/**
- * Copies text to the system clipboard.
- */
-private fun copyToClipboard(text: String) {
-    val clipboard = Toolkit.getDefaultToolkit().systemClipboard
-    clipboard.setContents(StringSelection(text), null)
-}
