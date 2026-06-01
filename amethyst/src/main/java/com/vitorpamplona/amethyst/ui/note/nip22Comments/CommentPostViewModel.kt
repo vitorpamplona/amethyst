@@ -71,8 +71,11 @@ import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.hasGeohashes
@@ -214,6 +217,14 @@ open class CommentPostViewModel :
     override val zapRaiserAmount = mutableStateOf<Long?>(null)
 
     var wantsAnonymousPost by mutableStateOf(false)
+
+    // A single ephemeral signer reused for the whole compose session so that media
+    // uploads (Blossom/NIP-96 auth events) and the final anonymous post are all signed
+    // by the same throwaway key, instead of leaking the real account's pubkey into the
+    // upload authorization (and therefore into the returned media URL).
+    private var anonymousSignerCache: NostrSigner? = null
+
+    fun anonymousSigner(): NostrSigner = anonymousSignerCache ?: NostrSignerInternal(KeyPair()).also { anonymousSignerCache = it }
 
     fun lnAddress(): String? = account.userProfile().lnAddress()
 
@@ -452,7 +463,7 @@ open class CommentPostViewModel :
         cancel()
 
         if (anonymous) {
-            accountViewModel.account.signAnonymouslyAndBroadcast(template, extraNotesToBroadcast)
+            accountViewModel.account.signAnonymouslyAndBroadcast(template, extraNotesToBroadcast, anonymousSigner())
         } else {
             accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
         }
@@ -619,6 +630,7 @@ open class CommentPostViewModel :
                     context,
                     stripMetadata = stripMetadata,
                     onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
+                    forcedSigner = if (wantsAnonymousPost) anonymousSigner() else null,
                 )
 
             if (results.allGood) {
@@ -711,6 +723,7 @@ open class CommentPostViewModel :
         wantsToAddGeoHash = false
         wantsSecretEmoji = false
         wantsAnonymousPost = false
+        anonymousSignerCache = null
 
         forwardZapTo.value = SplitBuilder()
         forwardZapToEditting.clearText()
