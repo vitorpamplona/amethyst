@@ -441,10 +441,14 @@ class DesktopLocalCache : ICacheProvider {
      */
     private var lastContactListCreatedAt = 0L
 
+    var lastContactListEvent: ContactListEvent? = null
+        private set
+
     private fun consumeContactList(event: ContactListEvent): Boolean {
         // Replaceable event — only accept newer contact lists
         if (event.createdAt <= lastContactListCreatedAt) return false
         lastContactListCreatedAt = event.createdAt
+        lastContactListEvent = event
         _followedUsers.value = event.verifiedFollowKeySet()
         return true
     }

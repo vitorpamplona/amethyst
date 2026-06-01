@@ -85,6 +85,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.nip02FollowList.FollowAction
 import com.vitorpamplona.amethyst.commons.nip64Chess.RelaySyncStatus
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.search.AdvancedSearchBarState
@@ -137,6 +138,8 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 data class LightboxState(
     val urls: List<String>,
@@ -165,6 +168,9 @@ fun FeedNoteCard(
     onImageClick: ((List<String>, Int) -> Unit)? = null,
     onMediaClick: ((List<String>, Int, Float) -> Unit)? = null,
     onHashtagClick: ((String) -> Unit)? = null,
+    followedUsers: Set<String> = emptySet(),
+    myPubKeyHex: String? = null,
+    onFollow: ((String) -> Unit)? = null,
 ) {
     val event = note.event ?: return
     val isRepost = event is RepostEvent || event is GenericRepostEvent
@@ -228,6 +234,11 @@ fun FeedNoteCard(
 
             // Original note content with actions inside card
             val displayData = remember(originalEvent, metadataState) { originalEvent.toNoteDisplayData(localCache) }
+            val showRepostFollowPill =
+                account != null &&
+                    onFollow != null &&
+                    originalEvent.pubKey != myPubKeyHex &&
+                    originalEvent.pubKey !in followedUsers
             NoteCard(
                 note = displayData,
                 modifier = Modifier.fillMaxWidth(),
@@ -238,6 +249,14 @@ fun FeedNoteCard(
                 onHashtagClick = onHashtagClick,
                 onImageClick = onImageClick,
                 onMediaClick = onMediaClick,
+                headerTrailingContent =
+                    if (showRepostFollowPill) {
+                        {
+                            FollowPill(onClick = { onFollow.invoke(originalEvent.pubKey) })
+                        }
+                    } else {
+                        null
+                    },
                 bottomContent =
                     if (account != null) {
                         {
@@ -284,6 +303,11 @@ fun FeedNoteCard(
         }
 
         val displayData = remember(event, metadataState) { event.toNoteDisplayData(localCache) }
+        val showFollowPill =
+            account != null &&
+                onFollow != null &&
+                event.pubKey != myPubKeyHex &&
+                event.pubKey !in followedUsers
         NoteCard(
             note = displayData,
             modifier = Modifier.fillMaxWidth(),
@@ -294,6 +318,14 @@ fun FeedNoteCard(
             onHashtagClick = onHashtagClick,
             onImageClick = onImageClick,
             onMediaClick = onMediaClick,
+            headerTrailingContent =
+                if (showFollowPill) {
+                    {
+                        FollowPill(onClick = { onFollow.invoke(event.pubKey) })
+                    }
+                } else {
+                    null
+                },
             bottomContent =
                 if (account != null) {
                     {
@@ -361,6 +393,23 @@ fun FeedScreen(
 
     var replyToEvent by remember { mutableStateOf<Event?>(null) }
     var lightboxState by remember { mutableStateOf<LightboxState?>(null) }
+
+    // Follow pill state
+    val scope = rememberCoroutineScope()
+    val followMutex = remember { Mutex() }
+    val onFollowFromFeed: (String) -> Unit = { pubKeyHex ->
+        if (account != null) {
+            scope.launch(Dispatchers.IO) {
+                followMutex.withLock {
+                    val currentList = localCache.lastContactListEvent
+                    val updatedEvent = FollowAction.follow(pubKeyHex, account.signer, currentList)
+                    relayManager.broadcastToAll(updatedEvent)
+                    // consume updates followedUsers StateFlow + stores the event
+                    localCache.consume(updatedEvent, relay = null)
+                }
+            }
+        }
+    }
     var showRelayPicker by remember { mutableStateOf(false) }
     var activeFeedId by remember { mutableStateOf(customFeedId) }
     var activeFeedSource by remember {
@@ -710,6 +759,9 @@ fun FeedScreen(
                                     com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
                                         .toggleFullscreen()
                                 },
+                                followedUsers = followedUsers,
+                                myPubKeyHex = account?.pubKeyHex,
+                                onFollow = onFollowFromFeed,
                             )
                         }
                     }
@@ -1380,4 +1432,29 @@ private fun FeedHeader(
             }
         }
     }
+}
+
+@Composable
+private fun FollowPill(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    FilterChip(
+        selected = false,
+        onClick = onClick,
+        label = {
+            Text(
+                "Follow",
+                style = MaterialTheme.typography.labelSmall,
+            )
+        },
+        leadingIcon = {
+            Icon(
+                MaterialSymbols.PersonAdd,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+            )
+        },
+        modifier = modifier.height(28.dp),
+    )
 }

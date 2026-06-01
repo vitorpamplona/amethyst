@@ -102,6 +102,7 @@ fun NoteCard(
     onMediaClick: ((List<String>, Int, Float) -> Unit)? = null,
     onPayInvoice: ((String) -> Unit)? = null,
     bottomContent: (@Composable ColumnScope.() -> Unit)? = null,
+    headerTrailingContent: (@Composable () -> Unit)? = null,
 ) {
     val urls = remember(note.content) { UrlParser().parseValidUrls(note.content) }
     val imageUrls =
@@ -193,6 +194,10 @@ fun NoteCard(
                             color = MaterialTheme.colorScheme.primary,
                             maxLines = 1,
                         )
+                    }
+
+                    if (headerTrailingContent != null) {
+                        headerTrailingContent()
                     }
 
                     // Timestamp
