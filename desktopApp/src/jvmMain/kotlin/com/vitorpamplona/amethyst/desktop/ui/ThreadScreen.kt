@@ -70,11 +70,21 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.createThreadRepliesSubsc
 import com.vitorpamplona.amethyst.desktop.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
+import com.vitorpamplona.amethyst.desktop.ui.thread.InlineReplyInput
+import com.vitorpamplona.amethyst.desktop.ui.thread.RelatedContentSection
 import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Desktop Thread Screen - displays a note and all its replies in a thread view.
@@ -311,6 +321,37 @@ fun ThreadScreen(
                             }
                         }
 
+                        // Inline reply input
+                        if (account != null && rootNote != null) {
+                            item(key = "inline-reply") {
+                                val myPubKey = account.pubKeyHex
+                                val myUser = remember(myPubKey) { localCache.getUserIfExists(myPubKey) }
+                                val myAvatarUrl = remember(myUser) { myUser?.profilePicture() }
+
+                                InlineReplyInput(
+                                    myAvatarUrl = myAvatarUrl,
+                                    onSend = { content ->
+                                        withContext(Dispatchers.IO) {
+                                            val rootEvent = rootNote.event ?: return@withContext
+                                            val template =
+                                                TextNoteEvent.build(content) {
+                                                    val etag = ETag(rootEvent.id)
+                                                    etag.relay = null
+                                                    etag.author = rootEvent.pubKey
+                                                    eTag(etag)
+                                                    pTag(PTag(rootEvent.pubKey, relayHint = null))
+                                                }
+                                            val signedEvent = account.signer.sign(template)
+                                            localCache.consume(signedEvent, relay = null)
+                                            relayManager.broadcastToAll(signedEvent)
+                                        }
+                                    },
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                )
+                                HorizontalDivider(thickness = 1.dp)
+                            }
+                        }
+
                         // Reply notes with level indicators
                         items(replyNotes, key = { it.idHex }) { note ->
                             val level = calculateLevel(note)
@@ -359,6 +400,26 @@ fun ThreadScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(16.dp),
                                 )
+                            }
+                        }
+
+                        // Related content section
+                        if (rootNote != null) {
+                            item(key = "related-content") {
+                                val rootEvent = rootNote.event
+                                if (rootEvent != null) {
+                                    val noteHashtags =
+                                        remember(rootEvent) {
+                                            rootEvent.tags.hashtags().toSet()
+                                        }
+                                    RelatedContentSection(
+                                        noteId = noteId,
+                                        authorPubKey = rootEvent.pubKey,
+                                        noteHashtags = noteHashtags,
+                                        localCache = localCache,
+                                        onItemClick = onNavigateToThread,
+                                    )
+                                }
                             }
                         }
                     }
