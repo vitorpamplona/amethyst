@@ -21,16 +21,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,7 +32,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -72,8 +65,9 @@ fun RefreshingChatroomFeedView(
     // a depth until BOTH protocols (NIP-04 + NIP-17) have fully loaded it, so the thread never shows
     // a region with one protocol missing. Default reveals everything (public chats / channels).
     oldestVisibleTime: Long = Long.MIN_VALUE,
-    // Show a "loading older messages" boundary at the oldest end while more history may still arrive.
-    loadingOlder: Boolean = false,
+    // Optional footer rendered at the oldest end of the thread (a "load more" / spinner affordance).
+    // Null for callers that load their whole history at once (public chats / channels).
+    olderBoundary: (@Composable () -> Unit)? = null,
 ) {
     SaveableFeedState(feedContentState, scrollStateKey) { listState ->
         listStateObserver(listState)
@@ -87,7 +81,7 @@ fun RefreshingChatroomFeedView(
             onWantsToEditDraft,
             avoidDraft,
             oldestVisibleTime,
-            loadingOlder,
+            olderBoundary,
         )
     }
 }
@@ -103,7 +97,7 @@ fun RenderChatFeedView(
     onWantsToEditDraft: (Note) -> Unit,
     avoidDraft: DraftTagState? = null,
     oldestVisibleTime: Long = Long.MIN_VALUE,
-    loadingOlder: Boolean = false,
+    olderBoundary: (@Composable () -> Unit)? = null,
 ) {
     val feedState by feed.feedContent.collectAsStateWithLifecycle()
 
@@ -132,7 +126,7 @@ fun RenderChatFeedView(
                     onWantsToEditDraft,
                     avoidDraft,
                     oldestVisibleTime,
-                    loadingOlder,
+                    olderBoundary,
                 )
             }
         }
@@ -150,7 +144,7 @@ fun ChatFeedLoaded(
     onWantsToEditDraft: (Note) -> Unit,
     avoidDraft: DraftTagState? = null,
     oldestVisibleTime: Long = Long.MIN_VALUE,
-    loadingOlder: Boolean = false,
+    olderBoundary: (@Composable () -> Unit)? = null,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
@@ -209,17 +203,10 @@ fun ChatFeedLoaded(
         }
 
         // Reverse layout: a trailing item sits at the highest index, i.e. the visual TOP (oldest end).
-        // While older history may still arrive, it both signals "not complete yet" and is where the
-        // clipped-back depth reveals as both protocols catch up.
-        if (loadingOlder) {
-            item(key = "loadingOlderMessages") {
-                Row(
-                    Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    CircularProgressIndicator(Modifier.size(25.dp))
-                }
-            }
+        // This is where the clipped-back depth reveals as more history loads, so the caller's
+        // "load more" affordance / spinner lives here.
+        if (olderBoundary != null) {
+            item(key = "olderBoundary") { olderBoundary() }
         }
     }
 }

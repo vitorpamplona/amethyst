@@ -21,28 +21,19 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.feed
 
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -56,11 +47,10 @@ import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.DmLoadMoreIndicator
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChatroomHeaderCompose
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
-import com.vitorpamplona.amethyst.ui.theme.Size10dp
-import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
@@ -190,7 +180,7 @@ private fun FeedLoaded(
             )
 
             if (index == privateBoundaryIndex && (loadingMore || !historyExhausted)) {
-                PrivateChatsLoadMoreFooter(loadingMore, showLoadAll = !historyExhausted) {
+                DmLoadMoreIndicator(loadingMore, showLoadAll = !historyExhausted) {
                     val user = accountViewModel.userProfile()
                     giftWraps.loadEverything(user)
                     nip04.reload()
@@ -201,32 +191,11 @@ private fun FeedLoaded(
         // No private chat is loaded yet (e.g. only public rooms so far): show the boundary at the end.
         if (privateBoundaryIndex < 0 && (loadingMore || !historyExhausted)) {
             item(key = "loadingMoreFooter") {
-                PrivateChatsLoadMoreFooter(loadingMore, showLoadAll = !historyExhausted) {
+                DmLoadMoreIndicator(loadingMore, showLoadAll = !historyExhausted) {
                     val user = accountViewModel.userProfile()
                     giftWraps.loadEverything(user)
                     nip04.reload()
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PrivateChatsLoadMoreFooter(
-    loadingMore: Boolean,
-    showLoadAll: Boolean,
-    onLoadEverything: () -> Unit,
-) {
-    Column(
-        Modifier.fillMaxWidth().padding(vertical = Size10dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        if (loadingMore) {
-            CircularProgressIndicator(Modifier.size(Size25dp))
-        }
-        if (showLoadAll) {
-            TextButton(onClick = onLoadEverything) {
-                Text(stringResource(R.string.chats_load_entire_history))
             }
         }
     }

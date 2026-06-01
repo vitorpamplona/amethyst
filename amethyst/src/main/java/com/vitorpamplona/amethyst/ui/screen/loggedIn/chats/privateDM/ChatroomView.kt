@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.elements.ObserveRelayListForDMsAndDisplayIfNotFound
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.DmLoadMoreIndicator
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.dal.ChatroomFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource.ChatroomFilterAssemblerSubscription
@@ -221,10 +222,14 @@ fun ChatroomViewUI(
     WatchLifecycleAndUpdateModel(feedViewModel)
     ChatroomFilterAssemblerSubscription(room, accountViewModel.dataSources().chatroom, accountViewModel)
 
-    // Only reveal a depth once BOTH DM protocols have fully loaded it (gap-free timeline); show a
-    // "loading older" boundary while more history may still arrive.
+    val giftWraps = remember(accountViewModel) { accountViewModel.dataSources().account.giftWraps }
+    val nip04 = remember(accountViewModel) { accountViewModel.dataSources().chatroom.nip04 }
+    val loadingGiftWraps by giftWraps.loadingMore.collectAsStateWithLifecycle()
+    val loadingNip04 by nip04.loadingMore.collectAsStateWithLifecycle()
+    val historyExhausted by giftWraps.exhausted.collectAsStateWithLifecycle()
+
+    // Only reveal a depth once BOTH DM protocols have fully loaded it (gap-free timeline).
     val displayFloor = rememberConversationDisplayFloor(accountViewModel)
-    val loadingOlder = displayFloor != Long.MIN_VALUE
 
     Column(Modifier.fillMaxHeight()) {
         ObserveRelayListForDMsAndDisplayIfNotFound(accountViewModel, nav)
@@ -245,7 +250,23 @@ fun ChatroomViewUI(
                 onWantsToReply = newPostModel::reply,
                 onWantsToEditDraft = newPostModel::editFromDraft,
                 oldestVisibleTime = displayFloor,
-                loadingOlder = loadingOlder,
+                // While there is older history to reach, show the same spinner / "load all" boundary
+                // as the rooms list at the oldest end (spinner only while actually loading).
+                olderBoundary =
+                    if (historyExhausted) {
+                        null
+                    } else {
+                        {
+                            DmLoadMoreIndicator(
+                                loadingMore = loadingGiftWraps || loadingNip04,
+                                showLoadAll = true,
+                            ) {
+                                val user = accountViewModel.userProfile()
+                                giftWraps.loadEverything(user)
+                                nip04.reload()
+                            }
+                        }
+                    },
                 listStateObserver = { listState ->
                     LoadOlderMessagesWhenScrolling(listState, accountViewModel)
                 },
