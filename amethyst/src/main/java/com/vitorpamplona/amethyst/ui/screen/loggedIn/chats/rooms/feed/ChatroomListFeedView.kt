@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -57,6 +58,7 @@ import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -69,6 +71,10 @@ fun ChatroomListFeedView(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    DisposableEffect(Unit) {
+        Log.d("DMPagination") { "rooms.list: OPEN" }
+        onDispose { Log.d("DMPagination") { "rooms.list: CLOSE" } }
+    }
     RefresheableBox(feedContentState, true) {
         SaveableFeedContentState(feedContentState, scrollStateKey) { listState ->
             CrossFadeState(feedContentState, listState, accountViewModel, nav)
@@ -94,7 +100,7 @@ private fun CrossFadeState(
     // While the whole list is empty there is no LazyColumn to scroll, so keep widening the private
     // DM window here until rooms appear or it is exhausted. (Public / ephemeral / group rooms are
     // membership-based and load on their own — they are not part of the window.)
-    WidenPrivateWindowWhen(accountViewModel) { feedState is FeedState.Empty }
+    WidenPrivateWindowWhen(accountViewModel, "empty") { feedState is FeedState.Empty }
 
     CrossfadeIfEnabled(
         targetState = feedState,
@@ -147,7 +153,7 @@ private fun FeedLoaded(
     // ignoring public / group / ephemeral rooms below it. Those are membership-based and can be
     // arbitrarily old; counting them would either stall private paging or drag the window back
     // years. The lambda reads the live items + scroll state inside the snapshotFlow.
-    WidenPrivateWindowWhen(accountViewModel) {
+    WidenPrivateWindowWhen(accountViewModel, "scroll") {
         val info = listState.layoutInfo
         val total = info.totalItemsCount
         val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: -1
@@ -223,6 +229,7 @@ private const val PREFETCH_PRIVATE_CHATS = 5
 @Composable
 private fun WidenPrivateWindowWhen(
     accountViewModel: AccountViewModel,
+    trigger: String,
     wantMore: () -> Boolean,
 ) {
     val giftWraps = remember(accountViewModel) { accountViewModel.dataSources().account.giftWraps }
@@ -239,6 +246,7 @@ private fun WidenPrivateWindowWhen(
         }.distinctUntilChanged()
             .filter { it }
             .collect {
+                Log.d("DMPagination") { "rooms.list: widen ($trigger) → loadMore + reload" }
                 giftWraps.loadMore(accountViewModel.userProfile())
                 nip04.reload()
             }

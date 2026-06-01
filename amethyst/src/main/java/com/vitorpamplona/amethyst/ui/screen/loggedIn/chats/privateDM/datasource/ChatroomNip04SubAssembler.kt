@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.StateFlow
@@ -44,7 +45,7 @@ class ChatroomNip04SubAssembler(
     allKeys: () -> Set<ChatroomQueryState>,
     private val giftWraps: AccountGiftWrapsEoseManager,
 ) : PerUserAndFollowListEoseManager<ChatroomQueryState, String>(client, allKeys) {
-    private val windowLoad = WindowLoadTracker()
+    private val windowLoad = WindowLoadTracker("convo.nip04")
     val loadingMore: StateFlow<Boolean> = windowLoad.loading
 
     // Account scope for the watchdog. Volatile: written on IO (newSub), read on UI (reload).
@@ -56,8 +57,11 @@ class ChatroomNip04SubAssembler(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? =
         if (key.account.isWriteable()) {
-            val filters = filterNip04DMs(key.room.users, key.account, giftWraps.windowSince(user(key)))
+            val windowSince = giftWraps.windowSince(user(key))
+            val filters = filterNip04DMs(key.room.users, key.account, windowSince)
             windowLoad.setExpectedRelays(filters?.mapTo(mutableSetOf()) { it.relay } ?: emptySet())
+            val daysAgo = (TimeUtils.now() - windowSince) / TimeUtils.ONE_DAY
+            Log.d("DMPagination") { "[convo.nip04] REQ since=$windowSince (${daysAgo}d) on ${filters?.size ?: 0} relay-filter(s)" }
             filters
         } else {
             windowLoad.setExpectedRelays(emptySet())
@@ -66,6 +70,7 @@ class ChatroomNip04SubAssembler(
 
     /** Re-issues at the (now-wider) shared gift-wrap floor and tracks the load. */
     fun reload() {
+        Log.d("DMPagination") { "[convo.nip04] reload" }
         scope?.let { windowLoad.startLoading(it) }
         invalidateFilters()
     }

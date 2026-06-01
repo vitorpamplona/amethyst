@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -53,6 +54,8 @@ import kotlin.time.Duration.Companion.seconds
  * [absoluteCap] bounds the wait for pathological relays that dribble forever.
  */
 class WindowLoadTracker(
+    // Short label for the DMPagination logs (e.g. "giftwrap", "rooms.nip04", "convo.nip04").
+    private val name: String = "dm",
     private val idleTimeout: Duration = 3.seconds,
     private val absoluteCap: Duration = 5.minutes,
 ) {
@@ -79,7 +82,9 @@ class WindowLoadTracker(
         val gen = ++generation
         responded.clear()
         lastActivityMs = System.currentTimeMillis()
+        val wasLoading = _loading.value
         _loading.value = true
+        Log.d(TAG) { "[$name] load start" + if (!wasLoading) "" else " (restart)" }
         watchdog?.cancel()
         watchdog =
             scope.launch {
@@ -101,8 +106,12 @@ class WindowLoadTracker(
         deadline: Long,
     ): Boolean {
         if (gen != generation || !_loading.value) return false
-        if (now - lastActivityMs >= idleTimeout.inWholeMilliseconds || now >= deadline) {
-            _loading.value = false
+        if (now - lastActivityMs >= idleTimeout.inWholeMilliseconds) {
+            finish("idle")
+            return false
+        }
+        if (now >= deadline) {
+            finish("cap")
             return false
         }
         return true
@@ -120,7 +129,11 @@ class WindowLoadTracker(
     @Synchronized
     fun setExpectedRelays(relays: Set<NormalizedRelayUrl>) {
         expected = relays
-        if (relays.isEmpty() || responded.containsAll(relays)) finish()
+        if (relays.isEmpty()) {
+            finish("no relays")
+        } else if (responded.containsAll(relays)) {
+            finish("all relays")
+        }
     }
 
     /** Marks [relay] as having answered (EOSE or live event). Completes once all expected have. */
@@ -128,17 +141,21 @@ class WindowLoadTracker(
     fun onRelayResponded(relay: NormalizedRelayUrl) {
         lastActivityMs = System.currentTimeMillis()
         responded.add(relay)
-        if (expected.isNotEmpty() && responded.containsAll(expected)) finish()
+        if (expected.isNotEmpty() && responded.containsAll(expected)) finish("all relays")
     }
 
+    // Idempotent: only the first call after a load actually completes (and logs); later calls no-op.
     @Synchronized
-    private fun finish() {
+    private fun finish(reason: String) {
+        if (!_loading.value) return
         _loading.value = false
         watchdog?.cancel()
         watchdog = null
+        Log.d(TAG) { "[$name] load done: $reason" }
     }
 
     companion object {
+        private const val TAG = "DMPagination"
         private const val IDLE_CHECK_MS = 500L
     }
 }

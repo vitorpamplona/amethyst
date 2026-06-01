@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -49,7 +50,7 @@ class ChatroomListNip04SubAssembler(
     allKeys: () -> Set<ChatroomListState>,
     private val giftWraps: AccountGiftWrapsEoseManager,
 ) : PerUserEoseManager<ChatroomListState>(client, allKeys) {
-    private val windowLoad = WindowLoadTracker()
+    private val windowLoad = WindowLoadTracker("rooms.nip04")
     val loadingMore: StateFlow<Boolean> = windowLoad.loading
 
     // Account scope for the watchdog. Volatile: written on IO (newSub), read on UI (reload).
@@ -63,8 +64,11 @@ class ChatroomListNip04SubAssembler(
         if (key.account.isWriteable()) {
             val homeRelays = key.account.homeRelays.flow.value
             val dmRelays = key.account.dmRelays.flow.value
-            windowLoad.setExpectedRelays((homeRelays + dmRelays).toSet())
+            val relays = (homeRelays + dmRelays).toSet()
+            windowLoad.setExpectedRelays(relays)
             val windowSince = giftWraps.windowSince(user(key))
+            val daysAgo = (TimeUtils.now() - windowSince) / TimeUtils.ONE_DAY
+            Log.d("DMPagination") { "[rooms.nip04] REQ since=$windowSince (${daysAgo}d) on ${relays.size} relay(s)" }
             homeRelays.map { filterNip04DMsFromMe(key.account.userProfile(), it, windowSince) } +
                 dmRelays.map { filterNip04DMsToMe(key.account.userProfile(), it, windowSince) }
         } else {
@@ -74,6 +78,7 @@ class ChatroomListNip04SubAssembler(
 
     /** Re-issues at the (now-wider) shared gift-wrap floor and tracks the load. */
     fun reload() {
+        Log.d("DMPagination") { "[rooms.nip04] reload" }
         scope?.let { windowLoad.startLoading(it) }
         invalidateFilters()
     }

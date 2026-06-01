@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -60,14 +61,21 @@ class AccountGiftWrapsEoseManager(
     // loadEverything) and from Dispatchers.IO (updateFilter), so a plain HashMap would race.
     private val windows = ConcurrentHashMap<HexKey, TimeWindowPagination>()
 
-    private fun windowFor(user: User) = windows.computeIfAbsent(user.pubkeyHex) { TimeWindowPagination(growthFactor = WINDOW_GROWTH_FACTOR) }
+    private fun windowFor(user: User) =
+        windows.computeIfAbsent(user.pubkeyHex) {
+            TimeWindowPagination(growthFactor = WINDOW_GROWTH_FACTOR).also {
+                Log.d(TAG) { "[giftwrap] open window since=${it.since} (${daysAgo(it.since)}d back)" }
+            }
+        }
 
     /** The current lower bound (epoch seconds) of this account's gift-wrap window. */
     fun windowSince(user: User): Long = windowFor(user).since
 
+    private fun daysAgo(epochSeconds: Long) = (TimeUtils.now() - epochSeconds) / TimeUtils.ONE_DAY
+
     // A window load is in flight until every dmRelay it was sent to has answered, the event stream
     // goes quiet, or a cap fires — never on just the first EOSE (a fast empty relay would trip it).
-    private val windowLoad = WindowLoadTracker()
+    private val windowLoad = WindowLoadTracker("giftwrap")
     val loadingMore: StateFlow<Boolean> = windowLoad.loading
 
     // True once the window reached the maximum lookback: nothing older to fetch.
@@ -89,6 +97,7 @@ class AccountGiftWrapsEoseManager(
         val relays = key.account.dmRelays.flow.value
         windowLoad.setExpectedRelays(relays.toSet())
         val windowSince = windowFor(user(key)).since
+        Log.d(TAG) { "[giftwrap] REQ since=$windowSince (${daysAgo(windowSince)}d) on ${relays.size} relay(s)" }
         return relays.flatMap { relay ->
             filterGiftWrapsToPubkey(relay = relay, pubkey = user(key).pubkeyHex, since = windowSince)
         }
@@ -97,9 +106,14 @@ class AccountGiftWrapsEoseManager(
     /** Widens the window one (geometric) step back and re-issues the subscription. No-op if exhausted. */
     fun loadMore(user: User) {
         val window = windowFor(user)
-        if (window.isExhausted()) return
+        if (window.isExhausted()) {
+            Log.d(TAG) { "[giftwrap] loadMore ignored — already exhausted" }
+            return
+        }
+        val before = window.since
         window.loadMore()
         _exhausted.value = window.isExhausted()
+        Log.d(TAG) { "[giftwrap] loadMore ${daysAgo(before)}d -> ${daysAgo(window.since)}d back (exhausted=${_exhausted.value})" }
         scope?.let { windowLoad.startLoading(it) }
         invalidateFilters()
     }
@@ -110,6 +124,7 @@ class AccountGiftWrapsEoseManager(
         if (window.isExhausted()) return
         window.loadAll()
         _exhausted.value = true
+        Log.d(TAG) { "[giftwrap] loadEverything — full history (${daysAgo(window.since)}d back)" }
         scope?.let { windowLoad.startLoading(it) }
         invalidateFilters()
     }
@@ -144,6 +159,8 @@ class AccountGiftWrapsEoseManager(
     }
 
     companion object {
+        private const val TAG = "DMPagination"
+
         // The window doubles each widen so a sparse history (or confirming nothing older exists)
         // reaches the 10-year backstop in ~10 requests instead of crawling a week at a time.
         private const val WINDOW_GROWTH_FACTOR = 2L

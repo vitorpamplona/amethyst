@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -53,6 +54,7 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -173,6 +175,7 @@ private fun LoadOlderMessagesWhenScrolling(
         }.distinctUntilChanged()
             .filter { it }
             .collect {
+                Log.d("DMPagination") { "convo: widen (scrolled near oldest) → loadMore + reload" }
                 giftWraps.loadMore(accountViewModel.userProfile())
                 nip04.reload()
             }
@@ -189,6 +192,11 @@ fun ChatroomViewUI(
 ) {
     WatchLifecycleAndUpdateModel(feedViewModel)
     ChatroomFilterAssemblerSubscription(room, accountViewModel.dataSources().chatroom, accountViewModel)
+
+    DisposableEffect(room) {
+        Log.d("DMPagination") { "convo: OPEN room=${room.hashCode()}" }
+        onDispose { Log.d("DMPagination") { "convo: CLOSE room=${room.hashCode()}" } }
+    }
 
     val giftWraps = remember(accountViewModel) { accountViewModel.dataSources().account.giftWraps }
     val nip04 = remember(accountViewModel) { accountViewModel.dataSources().chatroom.nip04 }
@@ -225,6 +233,7 @@ fun ChatroomViewUI(
                                 loadingMore = loadingGiftWraps || loadingNip04,
                                 showLoadAll = true,
                             ) {
+                                Log.d("DMPagination") { "convo: Load entire history tapped" }
                                 val user = accountViewModel.userProfile()
                                 giftWraps.loadEverything(user)
                                 nip04.reload()
