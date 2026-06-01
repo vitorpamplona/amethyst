@@ -34,7 +34,7 @@ jobs:
           java-version: 21
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
         with:
           cache-read-only: true
 
@@ -64,12 +64,12 @@ jobs:
           java-version: 21
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
         with:
           cache-read-only: true
 
       - name: Cache vlc-setup downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.gradle/vlcSetup
           key: vlcsetup-Linux-${{ hashFiles('desktopApp/build.gradle.kts') }}
