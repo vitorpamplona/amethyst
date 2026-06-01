@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -48,57 +49,61 @@ import kotlin.time.Duration.Companion.seconds
  * widen the window again mid-stream, before the events were even decrypted into rooms, re-issuing
  * an ever-wider REQ that re-downloads the whole history over and over.
  *
- * So completion is **activity-based**: [loading] stays true until either every expected relay has
- * EOSE'd, or the event stream has gone quiet for [idleTimeout] (a flood of events keeps resetting
- * that timer via [onActivity], so a window that is still streaming is never declared done). The idle
- * path only arms **after the first event or EOSE** — a cold boot whose relays have not finished
- * connecting yet is silent for reasons that have nothing to do with the data, and declaring it "done"
- * there would empty the screen and trip the auto-fill into widening over and over. Until that first
- * sign of life, only [noResponseTimeout] (a generous "nothing answered at all" bound) and the
- * [absoluteCap] (for pathological relays that dribble forever) can end the load.
+ * Completion is therefore **per-relay terminal-state** based, not wall-clock based. A relay is
+ * *settled* once it answers with a terminal signal — an EOSE (stored backfill done), a CLOSED (it
+ * rejected the REQ, e.g. `auth-required`), or a cannot-connect (it is unreachable). The load is done
+ * when **every targeted relay has settled** ([settled] ⊇ [expected]). This is the only signal that
+ * survives the real world: relays connect over a wide spread (tens of seconds on mobile), and some
+ * answer only with CLOSED — a quiet-time heuristic fires in the gap between two relays connecting and
+ * mistakes a half-loaded window for a finished one, which is exactly how a load reports "1 event"
+ * when a hundred are still on the way.
+ *
+ * Two backstops cover misbehaving relays. If every relay has at least been *heard from* (any event,
+ * EOSE, CLOSED, or cannot-connect) but one streamed events without ever sending EOSE, an [idleTimeout]
+ * of quiet completes the load — the "heard from all" gate is what keeps this from firing in a
+ * connection gap. And an [absoluteCap] bounds a relay that connects and then dribbles or hangs forever.
  */
 class WindowLoadTracker(
     // Short label for the DMPagination logs (e.g. "giftwrap", "rooms.nip04", "convo.nip04").
     private val name: String = "dm",
     private val idleTimeout: Duration = 3.seconds,
-    private val noResponseTimeout: Duration = 30.seconds,
     private val absoluteCap: Duration = 5.minutes,
 ) {
     private val _loading = MutableStateFlow(true)
     val loading: StateFlow<Boolean> = _loading.asStateFlow()
 
+    // Relays the current REQ was sent to. Volatile: written on IO (updateFilter), read on the
+    // listener threads and the watchdog.
+    @Volatile
     private var expected: Set<NormalizedRelayUrl> = emptySet()
-    private val responded = mutableSetOf<NormalizedRelayUrl>()
+
+    // Relays that have produced any signal at all (event / EOSE / CLOSED / cannot-connect). The idle
+    // backstop only arms once this covers [expected], so a still-connecting relay can't be skipped.
+    private val heardFrom = ConcurrentHashMap.newKeySet<NormalizedRelayUrl>()
+
+    // Relays that reached a terminal signal (EOSE / CLOSED / cannot-connect). When this covers
+    // [expected] the stored backfill is complete on every relay and the load is done.
+    private val settled = ConcurrentHashMap.newKeySet<NormalizedRelayUrl>()
+
     private var watchdog: Job? = null
 
     // Incremented on every (re)start so a stale watchdog that wakes right as a new load begins
     // recognizes it has been superseded and bows out instead of completing the new window.
     private var generation = 0
 
-    // Wall-clock of the last EOSE or event for the current window; the watchdog completes the
-    // window once this stops advancing for [idleTimeout]. Volatile so the hot per-event path
-    // ([onActivity]) stays lock-free.
+    // Wall-clock of the last signal for the current window; the idle backstop completes the window
+    // once this stops advancing for [idleTimeout]. Volatile so the hot per-event path stays lock-free.
     @Volatile
     private var lastActivityMs = 0L
 
-    // When the current load started, and whether anything (event or EOSE) has arrived for it yet.
-    // Until the first sign of life the idle timer is meaningless (the relays may still be connecting),
-    // so completion falls back to the longer [noResponseTimeout]. Volatile for the lock-free hot path.
-    @Volatile
-    private var loadStartedMs = 0L
-
-    @Volatile
-    private var sawActivity = false
-
-    /** Begins a fresh window load: clears the responded set, raises [loading], and arms the watchdog. */
+    /** Begins a fresh window load: clears the per-relay sets, raises [loading], and arms the watchdog. */
     @Synchronized
     fun startLoading(scope: CoroutineScope) {
         val gen = ++generation
-        responded.clear()
-        val now = System.currentTimeMillis()
-        lastActivityMs = now
-        loadStartedMs = now
-        sawActivity = false
+        expected = emptySet()
+        heardFrom.clear()
+        settled.clear()
+        lastActivityMs = System.currentTimeMillis()
         val wasLoading = _loading.value
         _loading.value = true
         Log.d(TAG) { "[$name] load start" + if (!wasLoading) "" else " (restart)" }
@@ -123,19 +128,11 @@ class WindowLoadTracker(
         deadline: Long,
     ): Boolean {
         if (gen != generation || !_loading.value) return false
-        if (sawActivity) {
-            // The stream started and then went quiet: the relays are done sending.
-            if (now - lastActivityMs >= idleTimeout.inWholeMilliseconds) {
-                finish("idle")
-                return false
-            }
-        } else {
-            // Nothing has answered yet. Don't mistake a slow cold-boot connect for "done"; only give
-            // up once even the generous no-response bound has elapsed.
-            if (now - loadStartedMs >= noResponseTimeout.inWholeMilliseconds) {
-                finish("no response")
-                return false
-            }
+        // Every relay has spoken and the stream has gone quiet: a relay that streamed without ever
+        // EOSE'ing is done. The "heard from all" gate keeps this from firing in a connection gap.
+        if (expected.isNotEmpty() && heardFrom.containsAll(expected) && now - lastActivityMs >= idleTimeout.inWholeMilliseconds) {
+            finish("idle")
+            return false
         }
         if (now >= deadline) {
             finish("cap")
@@ -144,34 +141,33 @@ class WindowLoadTracker(
         return true
     }
 
-    /**
-     * Records that the current window is still actively receiving events (stored OR live). Keeps the
-     * idle watchdog from completing while a relay is mid-flood, and marks that the stream has started
-     * (arming the idle path). Lock-free: just bumps a timestamp and a flag.
-     */
-    fun onActivity() {
-        lastActivityMs = System.currentTimeMillis()
-        sawActivity = true
-    }
-
     /** Records which relays the current REQ was sent to. Completes immediately if there are none. */
     @Synchronized
     fun setExpectedRelays(relays: Set<NormalizedRelayUrl>) {
         expected = relays
         if (relays.isEmpty()) {
             finish("no relays")
-        } else if (responded.containsAll(relays)) {
+        } else if (settled.containsAll(relays)) {
             finish("all relays")
         }
     }
 
-    /** Marks [relay] as having answered (EOSE or live event). Completes once all expected have. */
-    @Synchronized
-    fun onRelayResponded(relay: NormalizedRelayUrl) {
+    /** A non-terminal sign of life from [relay] (a stored or live event). Keeps the idle timer alive. */
+    fun onRelayEvent(relay: NormalizedRelayUrl) {
+        heardFrom.add(relay)
         lastActivityMs = System.currentTimeMillis()
-        sawActivity = true
-        responded.add(relay)
-        if (expected.isNotEmpty() && responded.containsAll(expected)) finish("all relays")
+    }
+
+    /**
+     * A terminal signal from [relay] — EOSE, CLOSED, or cannot-connect. Once every expected relay has
+     * settled the stored backfill is complete and the load finishes.
+     */
+    @Synchronized
+    fun onRelaySettled(relay: NormalizedRelayUrl) {
+        lastActivityMs = System.currentTimeMillis()
+        heardFrom.add(relay)
+        settled.add(relay)
+        if (expected.isNotEmpty() && settled.containsAll(expected)) finish("all relays")
     }
 
     // Idempotent: only the first call after a load actually completes (and logs); later calls no-op.
@@ -191,11 +187,11 @@ class WindowLoadTracker(
 }
 
 /**
- * Builds the standard [SubscriptionListener] that feeds this tracker: every event (stored backfill
- * included) marks activity so a relay mid-flood is never mistaken for done, and an EOSE or live
- * event marks that relay answered. [onEachEvent] is invoked for every event (stored or live) for
- * optional instrumentation; [forward] is invoked with the same EOSE / live-event signal so the
- * owning EOSE manager can record the relay's EOSE timestamp (its usual `newEose`).
+ * Builds the standard [SubscriptionListener] that feeds this tracker. Every event (stored backfill
+ * included) is a non-terminal sign of life from its relay; an EOSE, CLOSED, or cannot-connect settles
+ * that relay. [onEachEvent] is invoked for every event (stored or live) for optional instrumentation;
+ * [forward] carries the EOSE / live-event signal so the owning EOSE manager can record the relay's
+ * timestamp (its usual `newEose`).
  */
 fun WindowLoadTracker.trackingListener(
     onEachEvent: (Event) -> Unit = {},
@@ -206,7 +202,7 @@ fun WindowLoadTracker.trackingListener(
             relay: NormalizedRelayUrl,
             forFilters: List<Filter>?,
         ) {
-            onRelayResponded(relay)
+            onRelaySettled(relay)
             forward(relay, forFilters)
         }
 
@@ -216,11 +212,26 @@ fun WindowLoadTracker.trackingListener(
             relay: NormalizedRelayUrl,
             forFilters: List<Filter>?,
         ) {
-            onActivity()
+            onRelayEvent(relay)
             onEachEvent(event)
             if (isLive) {
-                onRelayResponded(relay)
                 forward(relay, forFilters)
             }
+        }
+
+        override fun onClosed(
+            message: String,
+            relay: NormalizedRelayUrl,
+            forFilters: List<Filter>?,
+        ) {
+            onRelaySettled(relay)
+        }
+
+        override fun onCannotConnect(
+            relay: NormalizedRelayUrl,
+            message: String,
+            forFilters: List<Filter>?,
+        ) {
+            onRelaySettled(relay)
         }
     }
