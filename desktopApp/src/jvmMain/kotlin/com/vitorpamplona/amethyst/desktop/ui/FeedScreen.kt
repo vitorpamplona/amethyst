@@ -749,16 +749,6 @@ fun FeedScreen(
                             }
                     }
 
-                    // Auto-scroll expanded card to top
-                    LaunchedEffect(expandedNoteId) {
-                        if (expandedNoteId != null) {
-                            val index = loadedState.list.indexOfFirst { it.idHex == expandedNoteId }
-                            if (index >= 0) {
-                                lazyListState.animateScrollToItem(index)
-                            }
-                        }
-                    }
-
                     val sidePadding = LocalReadingSidePadding.current
                     LazyColumn(
                         state = lazyListState,
