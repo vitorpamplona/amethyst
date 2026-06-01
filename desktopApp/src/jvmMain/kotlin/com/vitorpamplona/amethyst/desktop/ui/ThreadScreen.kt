@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,7 +33,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -57,7 +55,7 @@ import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
-import com.vitorpamplona.amethyst.commons.ui.thread.drawReplyLevel
+import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.feeds.DesktopThreadFilter
@@ -70,6 +68,8 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.createThreadRepliesSubsc
 import com.vitorpamplona.amethyst.desktop.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
+import com.vitorpamplona.amethyst.desktop.ui.thread.CommentItem
+import com.vitorpamplona.amethyst.desktop.ui.thread.CommentsCard
 import com.vitorpamplona.amethyst.desktop.ui.thread.InlineReplyInput
 import com.vitorpamplona.amethyst.desktop.ui.thread.RelatedContentSection
 import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
@@ -321,85 +321,95 @@ fun ThreadScreen(
                             }
                         }
 
-                        // Inline reply input
-                        if (account != null && rootNote != null) {
-                            item(key = "inline-reply") {
-                                val myPubKey = account.pubKeyHex
-                                val myUser = remember(myPubKey) { localCache.getUserIfExists(myPubKey) }
-                                val myAvatarUrl = remember(myUser) { myUser?.profilePicture() }
+                        // Comments card (replies + inline reply input)
+                        item(key = "comments-card") {
+                            Spacer(Modifier.height(12.dp))
+                            CommentsCard(
+                                commentCount = replyNotes.size,
+                                replyContent = {
+                                    if (account != null && rootNote != null) {
+                                        val myPubKey = account.pubKeyHex
+                                        val myUser =
+                                            remember(myPubKey) { localCache.getUserIfExists(myPubKey) }
+                                        val myAvatarUrl = remember(myUser) { myUser?.profilePicture() }
 
-                                InlineReplyInput(
-                                    myAvatarUrl = myAvatarUrl,
-                                    onSend = { content ->
-                                        withContext(Dispatchers.IO) {
-                                            val rootEvent = rootNote.event ?: return@withContext
-                                            val template =
-                                                TextNoteEvent.build(content) {
-                                                    val etag = ETag(rootEvent.id)
-                                                    etag.relay = null
-                                                    etag.author = rootEvent.pubKey
-                                                    eTag(etag)
-                                                    pTag(PTag(rootEvent.pubKey, relayHint = null))
+                                        InlineReplyInput(
+                                            myAvatarUrl = myAvatarUrl,
+                                            onSend = { content ->
+                                                withContext(Dispatchers.IO) {
+                                                    val rootEvent =
+                                                        rootNote.event ?: return@withContext
+                                                    val template =
+                                                        TextNoteEvent.build(content) {
+                                                            val etag = ETag(rootEvent.id)
+                                                            etag.relay = null
+                                                            etag.author = rootEvent.pubKey
+                                                            eTag(etag)
+                                                            pTag(
+                                                                PTag(
+                                                                    rootEvent.pubKey,
+                                                                    relayHint = null,
+                                                                ),
+                                                            )
+                                                        }
+                                                    val signedEvent = account.signer.sign(template)
+                                                    localCache.consume(signedEvent, relay = null)
+                                                    relayManager.broadcastToAll(signedEvent)
                                                 }
-                                            val signedEvent = account.signer.sign(template)
-                                            localCache.consume(signedEvent, relay = null)
-                                            relayManager.broadcastToAll(signedEvent)
-                                        }
-                                    },
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                )
-                                HorizontalDivider(thickness = 1.dp)
-                            }
-                        }
-
-                        // Reply notes with level indicators
-                        items(replyNotes, key = { it.idHex }) { note ->
-                            val level = calculateLevel(note)
-                            Column(
-                                modifier =
-                                    Modifier
-                                        .drawReplyLevel(
-                                            level = level,
-                                            color = MaterialTheme.colorScheme.outlineVariant,
-                                            selected = MaterialTheme.colorScheme.outlineVariant,
-                                        ).clickable {
-                                            note.event?.let { onNavigateToThread(it.id) }
-                                        },
+                                            },
+                                        )
+                                    }
+                                },
                             ) {
-                                FeedNoteCard(
-                                    note = note,
-                                    relayManager = relayManager,
-                                    localCache = localCache,
-                                    account = account,
-                                    nwcConnection = nwcConnection,
-                                    onReply = { note.event?.let { onReply(it) } },
-                                    onZapFeedback = onZapFeedback,
-                                    onNavigateToProfile = onNavigateToProfile,
-                                    onNavigateToThread = onNavigateToThread,
-                                    onImageClick = { urls, index ->
-                                        lightboxState = LightboxState(urls, index)
-                                    },
-                                    onMediaClick = { urls, index, seekPos ->
-                                        com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
-                                            .playVideo(urls[index], seekPos)
-                                        com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
-                                            .toggleFullscreen()
-                                    },
-                                )
-                            }
-                            HorizontalDivider(thickness = 1.dp)
-                        }
+                                if (replyNotes.isEmpty()) {
+                                    Text(
+                                        "No replies yet",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(vertical = 16.dp),
+                                    )
+                                } else {
+                                    replyNotes.forEachIndexed { index, note ->
+                                        val event = note.event
+                                        val author =
+                                            remember(event?.pubKey) {
+                                                event?.pubKey?.let { localCache.getUserIfExists(it) }
+                                            }
 
-                        // Empty/loading state for replies
-                        if (replyNotes.isEmpty()) {
-                            item {
-                                Spacer(Modifier.height(32.dp))
-                                Text(
-                                    "No replies yet",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(16.dp),
-                                )
+                                        // Observe reactions for this reply
+                                        val flowSet = remember(note) { note.flow() }
+                                        val reactionsState by flowSet.reactions.stateFlow.collectAsState()
+                                        val zapsState by flowSet.zaps.stateFlow.collectAsState()
+
+                                        DisposableEffect(note) { onDispose { note.clearFlow() } }
+
+                                        val reactionCount =
+                                            remember(reactionsState) { note.countReactions() }
+                                        val zapAmount = remember(zapsState) { note.zapsAmount }
+
+                                        CommentItem(
+                                            authorName =
+                                                author?.toBestDisplayName()
+                                                    ?: event?.pubKey?.take(8)
+                                                    ?: "",
+                                            authorHandle =
+                                                author?.pubkeyNpub()?.take(16)?.let { "@$it..." }
+                                                    ?: "",
+                                            authorAvatarUrl = author?.profilePicture(),
+                                            authorPubKeyHex = event?.pubKey ?: "",
+                                            content = event?.content ?: "",
+                                            timeAgo = (event?.createdAt ?: 0L).toTimeAgo(),
+                                            reactionCount = reactionCount,
+                                            zapAmount = zapAmount.toLong(),
+                                            onAuthorClick = {
+                                                event?.pubKey?.let { onNavigateToProfile(it) }
+                                            },
+                                        )
+                                        if (index < replyNotes.lastIndex) {
+                                            Spacer(Modifier.height(12.dp))
+                                        }
+                                    }
+                                }
                             }
                         }
 

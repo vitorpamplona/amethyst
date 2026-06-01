@@ -20,12 +20,15 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.thread
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -42,13 +45,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.feeds.related.CompactNoteData
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHashes
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -105,14 +115,24 @@ fun RelatedContentSection(
                 .take(limit)
                 .map { note ->
                     val event = note.event
-                    val content = event?.content?.take(80) ?: ""
-                    val firstLine = content.lineSequence().firstOrNull()?.take(60) ?: ""
+                    val content = event?.content ?: ""
+                    val firstLine =
+                        content
+                            .take(80)
+                            .lineSequence()
+                            .firstOrNull()
+                            ?.take(60) ?: ""
                     val author = localCache.getUserIfExists(event?.pubKey ?: "")
+                    val imageUrl =
+                        UrlParser()
+                            .parseValidUrls(content)
+                            .withScheme
+                            .firstOrNull { RichTextParser.isImageUrl(it) }
                     CompactNoteData(
                         id = note.idHex,
                         title = firstLine.ifBlank { "Note" },
                         authorName = author?.toBestDisplayName() ?: event?.pubKey?.take(8) ?: "",
-                        thumbnailUrl = null,
+                        thumbnailUrl = imageUrl,
                         zapCount = if (note.zapsAmount > java.math.BigDecimal.ZERO) "${note.zapsAmount.toLong()}" else "",
                     )
                 }
@@ -123,12 +143,38 @@ fun RelatedContentSection(
     if (relatedItems.isNotEmpty()) {
         val primaryHashtag = noteHashtags.firstOrNull()
         Column(modifier = modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-            Text(
-                text = if (primaryHashtag != null) "Related from #$primaryHashtag" else "More from this author",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (primaryHashtag != null) {
+                    Row {
+                        Text(
+                            text = "Related from ",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onBackground,
+                        )
+                        Text(
+                            text = "#$primaryHashtag",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                } else {
+                    Text(
+                        text = "More from this author",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                }
+                Text(
+                    text = "View all >",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.clickable { /* TODO: navigate to full related list */ },
+                )
+            }
 
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -151,47 +197,93 @@ private fun CompactRelatedCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val shape = MaterialTheme.shapes.medium
     Card(
         modifier =
             modifier
-                .width(160.dp)
+                .width(200.dp)
+                .height(140.dp)
                 .clickable(onClick = onClick),
+        shape = shape,
         colors =
             CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
             ),
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                text = item.title,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface,
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Background: image or gradient placeholder
+            if (item.thumbnailUrl != null) {
+                AsyncImage(
+                    model = item.thumbnailUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().clip(shape),
+                )
+            } else {
+                Box(
+                    modifier =
+                        Modifier.fillMaxSize().background(
+                            Brush.verticalGradient(
+                                colors =
+                                    listOf(
+                                        MaterialTheme.colorScheme.surfaceVariant,
+                                        MaterialTheme.colorScheme.surface,
+                                    ),
+                            ),
+                        ),
+                )
+            }
+
+            // Dark gradient overlay at bottom
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(72.dp)
+                        .align(Alignment.BottomCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                colors =
+                                    listOf(
+                                        Color.Transparent,
+                                        Color.Black.copy(alpha = 0.6f),
+                                    ),
+                            ),
+                        ),
             )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = item.authorName,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (item.zapCount.isNotBlank()) {
+
+            // Text over the gradient
+            Column(
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(10.dp),
+            ) {
+                Text(
+                    text = item.title,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = Color.White,
+                )
                 Spacer(Modifier.height(2.dp))
-                Row {
-                    Icon(
-                        MaterialSymbols.Bolt,
-                        contentDescription = null,
-                        modifier = Modifier.height(12.dp),
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                    Text(
-                        text = "${item.zapCount} sats",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
+                val subtitle =
+                    buildString {
+                        append(item.authorName)
+                        if (item.zapCount.isNotBlank()) {
+                            append(" · ")
+                            append(item.zapCount)
+                            append(" zaps")
+                        }
+                    }
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.8f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }

@@ -24,11 +24,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -141,28 +144,30 @@ fun InlineReplyInput(
                 maxLines = 5,
             )
             Spacer(Modifier.width(8.dp))
-            IconButton(
+            Button(
                 onClick = { doSend() },
                 enabled = text.isNotBlank() && !isSending,
-                modifier = Modifier.size(36.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                    ),
+                modifier = Modifier.height(36.dp),
             ) {
                 if (isSending) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(16.dp),
                         strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary,
                     )
                 } else {
                     Icon(
                         MaterialSymbols.AutoMirrored.Send,
-                        contentDescription = "Send reply",
-                        modifier = Modifier.size(20.dp),
-                        tint =
-                            if (text.isNotBlank()) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
                     )
+                    Spacer(Modifier.width(4.dp))
+                    Text("Send", style = MaterialTheme.typography.labelMedium)
                 }
             }
         }
