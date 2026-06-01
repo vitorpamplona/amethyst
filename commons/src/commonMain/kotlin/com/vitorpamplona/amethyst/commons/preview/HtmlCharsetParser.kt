@@ -20,37 +20,37 @@
  */
 package com.vitorpamplona.amethyst.commons.preview
 
-import java.nio.charset.Charset
-
 object HtmlCharsetParser {
     val ATTRIBUTE_VALUE_CHARSET = "charset"
     val ATTRIBUTE_VALUE_HTTP_EQUIV = "http-equiv"
     val CONTENT = "content"
 
+    private const val DEFAULT_CHARSET = "UTF-8"
+
     private val RE_CONTENT_TYPE_CHARSET = Regex("""charset=([^;]+)""")
 
-    fun detectCharset(bodyBytes: ByteArray): Charset {
+    /**
+     * Sniffs the charset declared in the document's `<meta>` tags, returning its
+     * IANA name. Returns [DEFAULT_CHARSET] when no usable declaration is found.
+     */
+    fun detectCharset(bodyBytes: ByteArray): String {
         // try to detect charset from meta tags parsed from first 1024 bytes of body
-        val firstPart = String(bodyBytes, 0, 1024, Charset.forName("utf-8"))
+        val firstPart = bodyBytes.decodeToString(0, minOf(1024, bodyBytes.size))
         val metaTags = MetaTagsParser.parse(firstPart)
         metaTags.forEach { meta ->
             val charsetAttr = meta.attr(ATTRIBUTE_VALUE_CHARSET)
             if (charsetAttr.isNotEmpty()) {
-                runCatching { Charset.forName(charsetAttr) }.getOrNull()?.let {
-                    return it
-                }
+                return charsetAttr
             }
             if (meta.attr(ATTRIBUTE_VALUE_HTTP_EQUIV).lowercase() == "content-type") {
                 RE_CONTENT_TYPE_CHARSET
                     .find(meta.attr(CONTENT))
                     ?.let {
-                        runCatching { Charset.forName(it.groupValues[1]) }.getOrNull()
-                    }?.let {
-                        return it
+                        return it.groupValues[1]
                     }
             }
         }
         // defaults to UTF-8
-        return Charset.forName("utf-8")
+        return DEFAULT_CHARSET
     }
 }

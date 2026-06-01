@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.util.replace
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.replace
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.count
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl

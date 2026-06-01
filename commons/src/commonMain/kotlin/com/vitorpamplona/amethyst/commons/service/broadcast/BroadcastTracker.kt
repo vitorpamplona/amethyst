@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.broadcast
+package com.vitorpamplona.amethyst.commons.service.broadcast
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.RandomInstance
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -41,7 +42,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.UUID
 
 /**
  * Tracks event broadcasts to relays with live progress updates.
@@ -73,7 +73,7 @@ class BroadcastTracker {
         relays: Set<NormalizedRelayUrl>,
         client: INostrClient,
     ) {
-        val trackingId = UUID.randomUUID().toString()
+        val trackingId = RandomInstance.randomChars(16)
 
         val broadcast =
             BroadcastEvent(

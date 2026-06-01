@@ -114,6 +114,12 @@ kotlin {
                     // coil-ktor when the iOS Compose UI ships.
                     implementation(libs.coil.okhttp)
 
+                    // OkHttp (+ coroutines bridge) for the link-preview fetcher
+                    // (service/preview/UrlPreview). JVM-only; iOS will swap to
+                    // Ktor when its UI ships.
+                    implementation(libs.okhttp)
+                    implementation(libs.okhttpCoroutines)
+
                     // Markdown rendering (richtext-commonmark). The single
                     // consumer (RenderMarkdown.kt) already lives in jvmAndroid.
                     // iOS support pending Phase 3 markdown decision.

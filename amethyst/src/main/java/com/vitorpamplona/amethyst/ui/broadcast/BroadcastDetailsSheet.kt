@@ -72,9 +72,9 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.service.broadcast.BroadcastEvent
-import com.vitorpamplona.amethyst.service.broadcast.BroadcastStatus
-import com.vitorpamplona.amethyst.service.broadcast.RelayResult
+import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastEvent
+import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastStatus
+import com.vitorpamplona.amethyst.commons.service.broadcast.RelayResult
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
