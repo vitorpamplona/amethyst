@@ -24,13 +24,14 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.WindowLoadTracker
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.trackingListener
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsHistoryEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -39,33 +40,47 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 /**
- * Always-on **live tail** for the account's NIP-04 DMs (kind 4) in the rooms list. Mirrors the
- * gift-wrap live tail: a fixed one-week floor, no upper bound, never widens. Older NIP-04 history is
- * loaded by [ChatroomListNip04HistorySubAssembler] in bounded slices.
+ * Loads older NIP-04 DMs (kind 4) for the rooms list, following the gift-wrap history's current
+ * bounded slice ([AccountGiftWrapsHistoryEoseManager.currentSlice]) so both DM protocols page the
+ * past to the same depth. NIP-04 timestamps are exact, so the slice needs no 2-day margin. [reload]
+ * re-issues at the (now-advanced) slice and tracks the load; idle until the first slice is opened.
  */
-class ChatroomListNip04SubAssembler(
+class ChatroomListNip04HistorySubAssembler(
     client: INostrClient,
     allKeys: () -> Set<ChatroomListState>,
+    private val giftWrapsHistory: AccountGiftWrapsHistoryEoseManager,
 ) : PerUserEoseManager<ChatroomListState>(client, allKeys) {
-    private val windowLoad = WindowLoadTracker("rooms.nip04.live")
+    private val windowLoad = WindowLoadTracker("rooms.nip04.history")
     val loadingMore: StateFlow<Boolean> = windowLoad.loading
+
+    // Account scope for the watchdog. Volatile: written on IO (newSub), read on UI (reload).
+    @Volatile
+    private var scope: CoroutineScope? = null
 
     override fun updateFilter(
         key: ChatroomListState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter>? =
-        if (key.account.isWriteable()) {
-            val homeRelays = key.account.homeRelays.flow.value
-            val dmRelays = key.account.dmRelays.flow.value
-            windowLoad.setExpectedRelays((homeRelays + dmRelays).toSet())
-            val sinceTime = TimeUtils.now() - AccountGiftWrapsEoseManager.LIVE_TAIL_SECONDS
-            Log.d("DMPagination") { "[rooms.nip04.live] REQ since=$sinceTime (7d, no until) on ${homeRelays.size + dmRelays.size} relay(s)" }
-            homeRelays.map { filterNip04DMsFromMe(key.account.userProfile(), it, sinceTime) } +
-                dmRelays.map { filterNip04DMsToMe(key.account.userProfile(), it, sinceTime) }
-        } else {
+    ): List<RelayBasedFilter>? {
+        val slice = giftWrapsHistory.currentSlice(user(key))
+        if (!key.account.isWriteable() || slice == null) {
             windowLoad.setExpectedRelays(emptySet())
-            emptyList()
+            return emptyList()
         }
+        val (sliceSince, sliceUntil) = slice
+        val homeRelays = key.account.homeRelays.flow.value
+        val dmRelays = key.account.dmRelays.flow.value
+        windowLoad.setExpectedRelays((homeRelays + dmRelays).toSet())
+        Log.d("DMPagination") { "[rooms.nip04.history] REQ slice since=$sliceSince until=$sliceUntil on ${homeRelays.size + dmRelays.size} relay(s)" }
+        return homeRelays.map { filterNip04DMsFromMe(key.account.userProfile(), it, sliceSince, sliceUntil) } +
+            dmRelays.map { filterNip04DMsToMe(key.account.userProfile(), it, sliceSince, sliceUntil) }
+    }
+
+    /** Re-issues at the gift-wrap history's now-advanced slice and tracks the load. */
+    fun reload() {
+        Log.d("DMPagination") { "[rooms.nip04.history] reload" }
+        scope?.let { windowLoad.startLoading(it) }
+        invalidateFilters()
+    }
 
     override fun user(key: ChatroomListState) = key.account.userProfile()
 
@@ -74,7 +89,7 @@ class ChatroomListNip04SubAssembler(
     @OptIn(FlowPreview::class)
     override fun newSub(key: ChatroomListState): Subscription {
         val user = user(key)
-        windowLoad.startLoading(key.account.scope)
+        scope = key.account.scope
         userJobMap[user]?.forEach { it.cancel() }
         userJobMap[user] =
             listOf(

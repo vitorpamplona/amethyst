@@ -33,6 +33,7 @@ fun filterNip04DMs(
     group: Set<HexKey>?,
     account: Account?,
     windowStart: Long,
+    windowEnd: Long? = null,
 ): List<RelayBasedFilter>? {
     if (group.isNullOrEmpty() || account == null) return null
 
@@ -75,6 +76,7 @@ fun filterNip04DMs(
                     authors = group.toList(),
                     tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
                     since = windowStart,
+                    until = windowEnd,
                 ),
         )
     } +
@@ -87,6 +89,7 @@ fun filterNip04DMs(
                         authors = listOf(account.userProfile().pubkeyHex),
                         tags = mapOf("p" to group.toList()),
                         since = windowStart,
+                        until = windowEnd,
                     ),
             )
         }

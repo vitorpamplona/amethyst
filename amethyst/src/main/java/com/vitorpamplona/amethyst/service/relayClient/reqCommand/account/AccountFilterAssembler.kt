@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.marmot.
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.metadata.AccountMetadataEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip01Notifications.AccountNotificationsEoseFromInboxRelaysManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsHistoryEoseManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountFeedContentStates
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -49,12 +50,17 @@ class AccountQueryState(
 class AccountFilterAssembler(
     client: INostrClient,
 ) : ComposeSubscriptionManager<AccountQueryState>() {
+    // Live tail: the recent week of gift wraps, always open at the top for new messages.
     val giftWraps = AccountGiftWrapsEoseManager(client, ::allKeys)
+
+    // History: older gift wraps, loaded on demand in bounded one-shot slices.
+    val giftWrapsHistory = AccountGiftWrapsHistoryEoseManager(client, ::allKeys)
 
     val group =
         listOf(
             AccountMetadataEoseManager(client, ::allKeys),
             giftWraps,
+            giftWrapsHistory,
             AccountDraftsEoseManager(client, ::allKeys),
             AccountNotificationsEoseFromInboxRelaysManager(client, ::allKeys),
             MarmotGroupEventsEoseManager(client, ::allKeys),

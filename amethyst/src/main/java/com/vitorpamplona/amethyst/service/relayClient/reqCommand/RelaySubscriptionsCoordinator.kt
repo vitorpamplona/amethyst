@@ -90,7 +90,7 @@ class RelaySubscriptionsCoordinator(
 
     // always running, feed assemblers.
     val home = HomeFilterAssembler(client)
-    val chatroomList = ChatroomListFilterAssembler(client, account.giftWraps)
+    val chatroomList = ChatroomListFilterAssembler(client, account.giftWrapsHistory)
     val video = VideoFilterAssembler(client)
     val discovery = DiscoveryFilterAssembler(client)
 
@@ -105,7 +105,7 @@ class RelaySubscriptionsCoordinator(
 
     // active depending on the screen.
     val channel = ChannelFilterAssembler(client)
-    val chatroom = ChatroomFilterAssembler(client, account.giftWraps)
+    val chatroom = ChatroomFilterAssembler(client, account.giftWrapsHistory)
     val community = CommunityFilterAssembler(client)
     val gitRepository = RepositoryFilterAssembler(client)
     val thread = ThreadFilterAssembler(client)

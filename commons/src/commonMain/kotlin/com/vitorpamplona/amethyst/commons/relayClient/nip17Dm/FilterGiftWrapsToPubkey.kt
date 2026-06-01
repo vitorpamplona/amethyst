@@ -32,6 +32,7 @@ fun filterGiftWrapsToPubkey(
     relay: NormalizedRelayUrl,
     pubkey: HexKey?,
     since: Long?,
+    until: Long? = null,
 ): List<RelayBasedFilter> {
     if (pubkey.isNullOrEmpty()) return emptyList()
 
@@ -42,7 +43,12 @@ fun filterGiftWrapsToPubkey(
                 Filter(
                     kinds = listOf(GiftWrapEvent.KIND, EphemeralGiftWrapEvent.KIND),
                     tags = mapOf("p" to listOf(pubkey)),
+                    // A gift wrap's outer created_at is randomized up to 2 days before the real
+                    // message time, so widen the lower bound by 2 days to catch wraps for messages
+                    // right at the floor. (The upper bound needs no margin: a slice's `until` is the
+                    // previous slice's un-margined floor, so the 2-day overlap already covers the seam.)
                     since = since?.minus(TimeUtils.twoDays()),
+                    until = until,
                 ),
         ),
     )

@@ -61,7 +61,6 @@ import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
 import java.io.Serializable
 
 @Composable
@@ -91,11 +90,11 @@ private fun CrossFadeState(
 ) {
     val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
 
-    // The gift-wrap window is the single DM window (NIP-04 follows it), so once it reaches the
-    // maximum lookback the rooms list has pulled everything there is. Until then an empty feed means
-    // "still filling", not "no conversations" — keep the spinner up rather than flash empty.
-    val giftWraps = remember(accountViewModel) { accountViewModel.dataSources().account.giftWraps }
-    val historyExhausted by giftWraps.exhausted.collectAsStateWithLifecycle()
+    // The gift-wrap history window is the DM history window (NIP-04 history follows it), so once it
+    // reaches the maximum lookback the rooms list has pulled everything there is. Until then an empty
+    // feed means "still filling", not "no conversations" — keep the spinner up rather than flash empty.
+    val giftWrapsHistory = remember(accountViewModel) { accountViewModel.dataSources().account.giftWrapsHistory }
+    val historyExhausted by giftWrapsHistory.exhausted.collectAsStateWithLifecycle()
 
     // While the whole list is empty there is no LazyColumn to scroll, so keep widening the private
     // DM window here until rooms appear or it is exhausted. (Public / ephemeral / group rooms are
@@ -142,18 +141,24 @@ private fun FeedLoaded(
 
     val myPubKey = accountViewModel.userProfile().pubkeyHex
 
-    val giftWraps = remember(accountViewModel) { accountViewModel.dataSources().account.giftWraps }
-    val nip04 = remember(accountViewModel) { accountViewModel.dataSources().chatroomList.nip04 }
-    val loadingGiftWraps by giftWraps.loadingMore.collectAsStateWithLifecycle()
-    val loadingNip04 by nip04.loadingMore.collectAsStateWithLifecycle()
+    val giftWrapsHistory = remember(accountViewModel) { accountViewModel.dataSources().account.giftWrapsHistory }
+    val nip04History = remember(accountViewModel) { accountViewModel.dataSources().chatroomList.nip04History }
+    val loadingGiftWraps by giftWrapsHistory.loadingMore.collectAsStateWithLifecycle()
+    val loadingNip04 by nip04History.loadingMore.collectAsStateWithLifecycle()
     val loadingMore = loadingGiftWraps || loadingNip04
-    val historyExhausted by giftWraps.exhausted.collectAsStateWithLifecycle()
+    val historyExhausted by giftWrapsHistory.exhausted.collectAsStateWithLifecycle()
 
     // Widen the private DM window only as the user approaches the oldest LOADED private chat —
     // ignoring public / group / ephemeral rooms below it. Those are membership-based and can be
     // arbitrarily old; counting them would either stall private paging or drag the window back
-    // years. The lambda reads the live items + scroll state inside the snapshotFlow.
-    WidenPrivateWindowWhen(accountViewModel, "scroll") {
+    // years. [privateRoomCount] feeds the stall-gate: widening keeps pulling older MESSAGES, which for
+    // a few busy correspondents floods events without adding a row — so paging stops once a step
+    // brings in no new private room. The lambda reads the live items + scroll state in the snapshotFlow.
+    WidenPrivateWindowWhen(
+        accountViewModel,
+        "scroll",
+        privateRoomCount = { items.list.count { it.event is ChatroomKeyable } },
+    ) {
         val info = listState.layoutInfo
         val total = info.totalItemsCount
         val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: -1
@@ -188,8 +193,8 @@ private fun FeedLoaded(
             if (index == privateBoundaryIndex && (loadingMore || !historyExhausted)) {
                 DmLoadMoreIndicator(loadingMore, showLoadAll = !historyExhausted) {
                     val user = accountViewModel.userProfile()
-                    giftWraps.loadEverything(user)
-                    nip04.reload()
+                    giftWrapsHistory.loadEverything(user)
+                    nip04History.reload()
                 }
             }
         }
@@ -199,8 +204,8 @@ private fun FeedLoaded(
             item(key = "loadingMoreFooter") {
                 DmLoadMoreIndicator(loadingMore, showLoadAll = !historyExhausted) {
                     val user = accountViewModel.userProfile()
-                    giftWraps.loadEverything(user)
-                    nip04.reload()
+                    giftWrapsHistory.loadEverything(user)
+                    nip04History.reload()
                 }
             }
         }
@@ -230,28 +235,47 @@ private const val PREFETCH_PRIVATE_CHATS = 5
 private fun WidenPrivateWindowWhen(
     accountViewModel: AccountViewModel,
     trigger: String,
+    // Number of distinct private rooms currently loaded, or null for callers that should keep widening
+    // regardless (the empty feed, still hunting for the first room). When provided, the loop stops
+    // advancing once a widen brings in no new private room — widening only adds older MESSAGES, so a
+    // few correspondents' history can flood thousands of events without adding a row, and "fill the
+    // screen" must stop at "no new people" instead of walking the window to the 10-year backstop. The
+    // mark lives on the history manager so it survives leaving/reopening the screen.
+    privateRoomCount: (() -> Int)? = null,
     wantMore: () -> Boolean,
 ) {
-    val giftWraps = remember(accountViewModel) { accountViewModel.dataSources().account.giftWraps }
-    val nip04 = remember(accountViewModel) { accountViewModel.dataSources().chatroomList.nip04 }
+    val giftWrapsHistory = remember(accountViewModel) { accountViewModel.dataSources().account.giftWrapsHistory }
+    val nip04History = remember(accountViewModel) { accountViewModel.dataSources().chatroomList.nip04History }
 
-    LaunchedEffect(giftWraps, nip04) {
+    LaunchedEffect(giftWrapsHistory, nip04History) {
         combine(
-            snapshotFlow { wantMore() },
-            giftWraps.loadingMore,
-            nip04.loadingMore,
-            giftWraps.exhausted,
-        ) { want, loadingGiftWraps, loadingNip04, exhausted ->
-            want && !loadingGiftWraps && !loadingNip04 && !exhausted
+            // Carries the private-room count (>= 0) while a widen is wanted, or NOT_WANTED otherwise.
+            snapshotFlow { if (wantMore()) (privateRoomCount?.invoke() ?: STILL_SEARCHING) else NOT_WANTED },
+            giftWrapsHistory.loadingMore,
+            nip04History.loadingMore,
+            giftWrapsHistory.exhausted,
+        ) { count, loadingGiftWraps, loadingNip04, exhausted ->
+            if (count != NOT_WANTED && !loadingGiftWraps && !loadingNip04 && !exhausted) count else NOT_WANTED
         }.distinctUntilChanged()
-            .filter { it }
-            .collect {
-                Log.d("DMPagination") { "rooms.list: widen ($trigger) → loadMore + reload" }
-                giftWraps.loadMore(accountViewModel.userProfile())
-                nip04.reload()
+            .collect { count ->
+                if (count == NOT_WANTED) return@collect
+                // Stop once a widen adds no new private room (but keep hunting while none are loaded).
+                if (privateRoomCount != null && count > 0 && count <= giftWrapsHistory.autoFillPrivateRoomMark) {
+                    Log.d("DMPagination") { "rooms.list: widen ($trigger) stop — no new private rooms (count=$count)" }
+                    return@collect
+                }
+                if (privateRoomCount != null) giftWrapsHistory.autoFillPrivateRoomMark = count
+                Log.d("DMPagination") { "rooms.list: widen ($trigger) → loadMore + reload (privateRooms=$count)" }
+                giftWrapsHistory.loadMore(accountViewModel.userProfile())
+                nip04History.reload()
             }
     }
 }
+
+// Sentinels for the widen-trigger flow: NOT_WANTED suppresses widening; STILL_SEARCHING is the count a
+// caller without a private-room measure reports while it wants to keep widening (e.g. the empty feed).
+private const val NOT_WANTED = -1
+private const val STILL_SEARCHING = 0
 
 // Stable per-chatroom key — derived from chatroom identity, not the latest
 // message id, so reorders move the row instead of recreating it. Compose

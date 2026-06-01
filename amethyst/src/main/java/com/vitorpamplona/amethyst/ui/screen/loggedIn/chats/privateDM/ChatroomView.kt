@@ -155,10 +155,10 @@ private fun LoadOlderMessagesWhenScrolling(
     listState: LazyListState,
     accountViewModel: AccountViewModel,
 ) {
-    val giftWraps = remember(accountViewModel) { accountViewModel.dataSources().account.giftWraps }
-    val nip04 = remember(accountViewModel) { accountViewModel.dataSources().chatroom.nip04 }
+    val giftWrapsHistory = remember(accountViewModel) { accountViewModel.dataSources().account.giftWrapsHistory }
+    val nip04History = remember(accountViewModel) { accountViewModel.dataSources().chatroom.nip04History }
 
-    LaunchedEffect(listState, giftWraps, nip04) {
+    LaunchedEffect(listState, giftWrapsHistory, nip04History) {
         combine(
             snapshotFlow {
                 val info = listState.layoutInfo
@@ -167,17 +167,17 @@ private fun LoadOlderMessagesWhenScrolling(
                 val overflowsScreen = info.visibleItemsInfo.size < total
                 overflowsScreen && lastVisible >= total - PREFETCH_OLDER_MESSAGES
             },
-            giftWraps.loadingMore,
-            nip04.loadingMore,
-            giftWraps.exhausted,
+            giftWrapsHistory.loadingMore,
+            nip04History.loadingMore,
+            giftWrapsHistory.exhausted,
         ) { wantMore, loadingGiftWraps, loadingNip04, exhausted ->
             wantMore && !loadingGiftWraps && !loadingNip04 && !exhausted
         }.distinctUntilChanged()
             .filter { it }
             .collect {
                 Log.d("DMPagination") { "convo: widen (scrolled near oldest) → loadMore + reload" }
-                giftWraps.loadMore(accountViewModel.userProfile())
-                nip04.reload()
+                giftWrapsHistory.loadMore(accountViewModel.userProfile())
+                nip04History.reload()
             }
     }
 }
@@ -198,11 +198,11 @@ fun ChatroomViewUI(
         onDispose { Log.d("DMPagination") { "convo: CLOSE room=${room.hashCode()}" } }
     }
 
-    val giftWraps = remember(accountViewModel) { accountViewModel.dataSources().account.giftWraps }
-    val nip04 = remember(accountViewModel) { accountViewModel.dataSources().chatroom.nip04 }
-    val loadingGiftWraps by giftWraps.loadingMore.collectAsStateWithLifecycle()
-    val loadingNip04 by nip04.loadingMore.collectAsStateWithLifecycle()
-    val historyExhausted by giftWraps.exhausted.collectAsStateWithLifecycle()
+    val giftWrapsHistory = remember(accountViewModel) { accountViewModel.dataSources().account.giftWrapsHistory }
+    val nip04History = remember(accountViewModel) { accountViewModel.dataSources().chatroom.nip04History }
+    val loadingGiftWraps by giftWrapsHistory.loadingMore.collectAsStateWithLifecycle()
+    val loadingNip04 by nip04History.loadingMore.collectAsStateWithLifecycle()
+    val historyExhausted by giftWrapsHistory.exhausted.collectAsStateWithLifecycle()
 
     Column(Modifier.fillMaxHeight()) {
         ObserveRelayListForDMsAndDisplayIfNotFound(accountViewModel, nav)
@@ -235,8 +235,8 @@ fun ChatroomViewUI(
                             ) {
                                 Log.d("DMPagination") { "convo: Load entire history tapped" }
                                 val user = accountViewModel.userProfile()
-                                giftWraps.loadEverything(user)
-                                nip04.reload()
+                                giftWrapsHistory.loadEverything(user)
+                                nip04History.reload()
                             }
                         }
                     },
