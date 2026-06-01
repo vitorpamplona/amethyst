@@ -29,12 +29,14 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.utils.Log
 
 /**
- * Diagnostic connection listener for the DM / gift-wrap loading path.
+ * Diagnostic connection listener for the DM loading path — both NIP-17 gift wraps
+ * (kind 1059 / 21059) and NIP-04 legacy DMs (kind 4).
  *
  * It folds the per-relay timeline — REQ sent, connect/disconnect, NOTICE / CLOSED
  * rejection and OK failures — into the single `DMPagination` log tag with an
@@ -45,9 +47,8 @@ import com.vitorpamplona.quartz.utils.Log
  *
  * The connection listener fires for EVERY relay the app talks to (hundreds, under
  * the outbox model). To keep this readable we only log relays that are part of the
- * gift-wrap path: a relay is "learned" the first time we send it a kind:1059/1060
- * REQ or receive a gift wrap from it, and only those relays' connect/auth/notice
- * lines are emitted thereafter.
+ * DM path: a relay is "learned" the first time we send it a kind:1059/21059/4
+ * REQ, and only those relays' connect/auth/notice lines are emitted thereafter.
  */
 class DmRelayDiagnosticsLogger(
     val client: INostrClient,
@@ -56,14 +57,14 @@ class DmRelayDiagnosticsLogger(
 
     private fun at() = System.currentTimeMillis() - startMs
 
-    // Subscription ids whose REQ carried a gift-wrap kind, so we can attribute their EOSE/CLOSED.
-    private val giftWrapSubIds = mutableSetOf<String>()
+    // Subscription ids whose REQ carried a DM kind, so we can attribute their EOSE/CLOSED.
+    private val dmSubIds = mutableSetOf<String>()
 
-    // Relays we've seen on the gift-wrap path, so connect/auth/notice noise from the
+    // Relays we've seen on the DM path, so connect/auth/notice noise from the
     // hundreds of unrelated follow/outbox relays is filtered out.
-    private val giftWrapRelays = mutableSetOf<NormalizedRelayUrl>()
+    private val dmPathRelays = mutableSetOf<NormalizedRelayUrl>()
 
-    private fun isDmRelay(relay: IRelayClient) = relay.url in giftWrapRelays
+    private fun isDmRelay(relay: IRelayClient) = relay.url in dmPathRelays
 
     private val listener =
         object : RelayConnectionListener {
@@ -87,9 +88,9 @@ class DmRelayDiagnosticsLogger(
                 cmd: Command,
                 success: Boolean,
             ) {
-                if (!isGiftWrapReq(cmdStr)) return
-                giftWrapRelays.add(relay.url)
-                reqSubId(cmdStr)?.let { giftWrapSubIds.add(it) }
+                if (!isDmReq(cmdStr)) return
+                dmPathRelays.add(relay.url)
+                reqSubId(cmdStr)?.let { dmSubIds.add(it) }
                 Log.d(TAG) { "[+${at()}ms] REQ -> ${relay.url.url} success=$success ${cmdStr.take(400)}" }
             }
 
@@ -103,7 +104,7 @@ class DmRelayDiagnosticsLogger(
                         if (isDmRelay(relay)) Log.d(TAG) { "[+${at()}ms] NOTICE <- ${relay.url.url} '${msg.message}'" }
 
                     is ClosedMessage ->
-                        if (msg.subId in giftWrapSubIds) {
+                        if (msg.subId in dmSubIds) {
                             Log.d(TAG) { "[+${at()}ms] CLOSED <- ${relay.url.url} sub=${msg.subId} reason='${msg.message}'" }
                         }
 
@@ -139,10 +140,10 @@ class DmRelayDiagnosticsLogger(
     companion object {
         private const val TAG = "DMPagination"
 
-        // The kinds a gift-wrap REQ carries (1059 + 21059). Matched exactly against the
-        // filter's "kinds" array — never as a substring of the whole command, since a
-        // pubkey hex or timestamp can incidentally contain "1059".
-        private val GIFT_WRAP_KINDS = setOf(GiftWrapEvent.KIND, EphemeralGiftWrapEvent.KIND)
+        // The kinds a DM-path REQ carries: NIP-17 gift wraps (1059 + 21059) and NIP-04 legacy DMs
+        // (4). Matched exactly against the filter's "kinds" array — never as a substring of the whole
+        // command, since a pubkey hex or timestamp can incidentally contain "1059" or "4".
+        private val DM_KINDS = setOf(GiftWrapEvent.KIND, EphemeralGiftWrapEvent.KIND, PrivateDmEvent.KIND)
 
         private val KINDS_ARRAY = Regex("\"kinds\":\\[([0-9,\\s]*)]")
 
@@ -151,12 +152,12 @@ class DmRelayDiagnosticsLogger(
 
         private fun reqSubId(cmdStr: String) = REQ_SUB_ID.find(cmdStr)?.groupValues?.get(1)
 
-        /** True only when one of the REQ's `kinds` arrays actually contains a gift-wrap kind. */
-        private fun isGiftWrapReq(cmdStr: String): Boolean =
+        /** True only when one of the REQ's `kinds` arrays actually contains a DM kind. */
+        private fun isDmReq(cmdStr: String): Boolean =
             KINDS_ARRAY.findAll(cmdStr).any { match ->
                 match.groupValues[1]
                     .split(',')
-                    .any { it.trim().toIntOrNull() in GIFT_WRAP_KINDS }
+                    .any { it.trim().toIntOrNull() in DM_KINDS }
             }
     }
 }
