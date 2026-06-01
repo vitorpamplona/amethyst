@@ -38,9 +38,11 @@ class ChatroomFilterAssembler(
     client: INostrClient,
     giftWraps: AccountGiftWrapsEoseManager,
 ) : ComposeSubscriptionManager<ChatroomQueryState>() {
+    val nip04 = ChatroomFilterSubAssembler(client, ::allKeys, giftWraps)
+
     val group =
         listOf(
-            ChatroomFilterSubAssembler(client, ::allKeys, giftWraps),
+            nip04,
         )
 
     override fun invalidateKeys() = invalidateFilters()

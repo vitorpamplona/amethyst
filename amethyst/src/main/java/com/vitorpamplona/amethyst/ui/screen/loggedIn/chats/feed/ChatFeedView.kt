@@ -21,10 +21,16 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -32,6 +38,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -61,6 +68,12 @@ fun RefreshingChatroomFeedView(
     // Opt-in hook handed the feed's scroll state, so a specific screen (e.g. private DMs) can
     // attach scroll-driven loading. No-op for the public-chat / channel callers that don't paginate.
     listStateObserver: @Composable (LazyListState) -> Unit = {},
+    // Only reveal messages at or newer than this epoch-second floor. Private DMs use it to hold back
+    // a depth until BOTH protocols (NIP-04 + NIP-17) have fully loaded it, so the thread never shows
+    // a region with one protocol missing. Default reveals everything (public chats / channels).
+    oldestVisibleTime: Long = Long.MIN_VALUE,
+    // Show a "loading older messages" boundary at the oldest end while more history may still arrive.
+    loadingOlder: Boolean = false,
 ) {
     SaveableFeedState(feedContentState, scrollStateKey) { listState ->
         listStateObserver(listState)
@@ -73,6 +86,8 @@ fun RefreshingChatroomFeedView(
             onWantsToReply,
             onWantsToEditDraft,
             avoidDraft,
+            oldestVisibleTime,
+            loadingOlder,
         )
     }
 }
@@ -87,6 +102,8 @@ fun RenderChatFeedView(
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
     avoidDraft: DraftTagState? = null,
+    oldestVisibleTime: Long = Long.MIN_VALUE,
+    loadingOlder: Boolean = false,
 ) {
     val feedState by feed.feedContent.collectAsStateWithLifecycle()
 
@@ -114,6 +131,8 @@ fun RenderChatFeedView(
                     onWantsToReply,
                     onWantsToEditDraft,
                     avoidDraft,
+                    oldestVisibleTime,
+                    loadingOlder,
                 )
             }
         }
@@ -130,10 +149,23 @@ fun ChatFeedLoaded(
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
     avoidDraft: DraftTagState? = null,
+    oldestVisibleTime: Long = Long.MIN_VALUE,
+    loadingOlder: Boolean = false,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
-    LaunchedEffect(items.list.firstOrNull()) {
+    // Clip the bottom of the thread to the depth both DM protocols have fully covered. A note whose
+    // event hasn't loaded yet (null createdAt) is kept visible — fail toward showing, never hiding.
+    val visibleItems =
+        remember(items.list, oldestVisibleTime) {
+            if (oldestVisibleTime == Long.MIN_VALUE) {
+                items.list
+            } else {
+                items.list.filter { (it.createdAt() ?: Long.MAX_VALUE) >= oldestVisibleTime }
+            }
+        }
+
+    LaunchedEffect(visibleItems.firstOrNull()) {
         if (listState.firstVisibleItemIndex <= 1) {
             listState.animateScrollToItem(0)
         }
@@ -142,7 +174,7 @@ fun ChatFeedLoaded(
     val scope = rememberCoroutineScope()
     val highlightedNoteId = remember { mutableStateOf<String?>(null) }
     val onScrollToNote: (Note) -> Unit = { note ->
-        val index = items.list.indexOfFirst { it.idHex == note.idHex }
+        val index = visibleItems.indexOfFirst { it.idHex == note.idHex }
         if (index >= 0) {
             scope.launch {
                 listState.animateScrollToItem(index)
@@ -157,7 +189,7 @@ fun ChatFeedLoaded(
         reverseLayout = true,
         state = listState,
     ) {
-        itemsIndexed(items.list, key = { _, item -> item.idHex }, contentType = { _, item -> item.event?.kind ?: -1 }) { index, item ->
+        itemsIndexed(visibleItems, key = { _, item -> item.idHex }, contentType = { _, item -> item.event?.kind ?: -1 }) { index, item ->
             val noteEvent = item.event
             if (avoidDraft == null || noteEvent !is DraftWrapEvent || noteEvent.dTag() !in avoidDraft.usedDraftTags) {
                 ChatroomMessageCompose(
@@ -172,7 +204,21 @@ fun ChatFeedLoaded(
                     onHighlightFinished = { highlightedNoteId.value = null },
                 )
 
-                NewDateOrSubjectDivisor(items.list.getOrNull(index + 1), item)
+                NewDateOrSubjectDivisor(visibleItems.getOrNull(index + 1), item)
+            }
+        }
+
+        // Reverse layout: a trailing item sits at the highest index, i.e. the visual TOP (oldest end).
+        // While older history may still arrive, it both signals "not complete yet" and is where the
+        // clipped-back depth reveals as both protocols catch up.
+        if (loadingOlder) {
+            item(key = "loadingOlderMessages") {
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    CircularProgressIndicator(Modifier.size(25.dp))
+                }
             }
         }
     }
