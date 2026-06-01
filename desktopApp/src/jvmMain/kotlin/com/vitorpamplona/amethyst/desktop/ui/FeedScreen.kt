@@ -97,6 +97,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.ui.elements.BoostedMark
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.GenericRepostLayout
+import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.desktop.DesktopPreferences
 import com.vitorpamplona.amethyst.desktop.SearchHistoryStore
 import com.vitorpamplona.amethyst.desktop.account.AccountState
@@ -116,6 +117,7 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.createCustomFeedSubscrip
 import com.vitorpamplona.amethyst.desktop.subscriptions.createFollowingFeedSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createGlobalFeedSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createSearchPeopleSubscription
+import com.vitorpamplona.amethyst.desktop.subscriptions.createThreadRepliesSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
@@ -123,10 +125,20 @@ import com.vitorpamplona.amethyst.desktop.ui.note.NoteCard
 import com.vitorpamplona.amethyst.desktop.ui.relay.LocalRelayCategories
 import com.vitorpamplona.amethyst.desktop.ui.relay.Nip65RelayEditor
 import com.vitorpamplona.amethyst.desktop.ui.search.SearchResultsList
+import com.vitorpamplona.amethyst.desktop.ui.thread.CommentItem
+import com.vitorpamplona.amethyst.desktop.ui.thread.CommentsCard
+import com.vitorpamplona.amethyst.desktop.ui.thread.InlineReplyInput
+import com.vitorpamplona.amethyst.desktop.ui.thread.RelatedContentSection
 import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -140,6 +152,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 data class LightboxState(
     val urls: List<String>,
@@ -394,6 +407,9 @@ fun FeedScreen(
     var replyToEvent by remember { mutableStateOf<Event?>(null) }
     var lightboxState by remember { mutableStateOf<LightboxState?>(null) }
 
+    // Inline expansion state — which note is expanded to show comments + related
+    var expandedNoteId by remember { mutableStateOf<String?>(null) }
+
     // Follow pill state
     val scope = rememberCoroutineScope()
     val followMutex = remember { Mutex() }
@@ -519,7 +535,7 @@ fun FeedScreen(
     // Force refresh when followedUsers arrives and feed is still empty
     LaunchedEffect(followedUsers, feedState) {
         if (followedUsers.isNotEmpty() && feedState is FeedState.Empty) {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            withContext(Dispatchers.IO) {
                 viewModel.feedState.refreshSuspended()
             }
         }
@@ -733,6 +749,16 @@ fun FeedScreen(
                             }
                     }
 
+                    // Auto-scroll expanded card to top
+                    LaunchedEffect(expandedNoteId) {
+                        if (expandedNoteId != null) {
+                            val index = loadedState.list.indexOfFirst { it.idHex == expandedNoteId }
+                            if (index >= 0) {
+                                lazyListState.animateScrollToItem(index)
+                            }
+                        }
+                    }
+
                     val sidePadding = LocalReadingSidePadding.current
                     LazyColumn(
                         state = lazyListState,
@@ -740,6 +766,8 @@ fun FeedScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         items(loadedState.list, key = { it.idHex }) { note ->
+                            val isExpanded = note.idHex == expandedNoteId
+
                             FeedNoteCard(
                                 note = note,
                                 relayManager = relayManager,
@@ -749,7 +777,10 @@ fun FeedScreen(
                                 onReply = { replyToEvent = note.event },
                                 onZapFeedback = onZapFeedback,
                                 onNavigateToProfile = onNavigateToProfile,
-                                onNavigateToThread = onNavigateToThread,
+                                onNavigateToThread = { noteId ->
+                                    // Toggle inline expansion instead of navigating
+                                    expandedNoteId = if (expandedNoteId == noteId) null else noteId
+                                },
                                 onImageClick = { urls, index ->
                                     lightboxState = LightboxState(urls, index)
                                 },
@@ -763,6 +794,28 @@ fun FeedScreen(
                                 myPubKeyHex = account?.pubKeyHex,
                                 onFollow = onFollowFromFeed,
                             )
+
+                            // Inline expanded content: CommentsCard + Related
+                            AnimatedVisibility(
+                                visible = isExpanded,
+                                enter = expandVertically() + fadeIn(),
+                                exit = shrinkVertically() + fadeOut(),
+                            ) {
+                                ExpandedNoteContent(
+                                    note = note,
+                                    relayManager = relayManager,
+                                    localCache = localCache,
+                                    account = account,
+                                    nwcConnection = nwcConnection,
+                                    subscriptionsCoordinator = subscriptionsCoordinator,
+                                    onNavigateToProfile = onNavigateToProfile,
+                                    onNavigateToThread = { noteId ->
+                                        expandedNoteId = if (expandedNoteId == noteId) null else noteId
+                                    },
+                                    onReply = { replyToEvent = it },
+                                    onZapFeedback = onZapFeedback,
+                                )
+                            }
                         }
                     }
                 }
@@ -1431,6 +1484,143 @@ private fun FeedHeader(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ExpandedNoteContent(
+    note: com.vitorpamplona.amethyst.commons.model.Note,
+    relayManager: DesktopRelayConnectionManager,
+    localCache: DesktopLocalCache,
+    account: AccountState.LoggedIn?,
+    nwcConnection: com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm? = null,
+    subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
+    onNavigateToProfile: (String) -> Unit = {},
+    onNavigateToThread: (String) -> Unit = {},
+    onReply: (Event) -> Unit = {},
+    onZapFeedback: (ZapFeedback) -> Unit = {},
+) {
+    val event = note.event ?: return
+    val noteId = event.id
+    val connectedRelays =
+        relayManager.relayStatuses
+            .collectAsState()
+            .value.keys
+
+    // Subscribe for replies when expanded
+    rememberSubscription(connectedRelays, noteId, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty()) {
+            createThreadRepliesSubscription(
+                relays = connectedRelays,
+                noteId = noteId,
+                onEvent = { ev, _, relay, _ ->
+                    subscriptionsCoordinator?.consumeEvent(ev, relay)
+                },
+                onEose = { _, _ -> },
+            )
+        } else {
+            null
+        }
+    }
+
+    // Get reply notes from cache
+    val replyNotes = remember(note.replies) { note.replies.sortedByDescending { it.createdAt() } }
+
+    // Load metadata for reply authors
+    LaunchedEffect(replyNotes, subscriptionsCoordinator) {
+        if (subscriptionsCoordinator != null && replyNotes.isNotEmpty()) {
+            subscriptionsCoordinator.loadMetadataForNotes(replyNotes)
+        }
+    }
+
+    Column(modifier = Modifier.padding(top = 8.dp)) {
+        // Comments card
+        CommentsCard(
+            commentCount = replyNotes.size,
+            replyContent = {
+                if (account != null) {
+                    val myUser = remember(account.pubKeyHex) { localCache.getUserIfExists(account.pubKeyHex) }
+                    val myAvatarUrl = remember(myUser) { myUser?.profilePicture() }
+
+                    InlineReplyInput(
+                        myAvatarUrl = myAvatarUrl,
+                        onSend = { content ->
+                            withContext(Dispatchers.IO) {
+                                val template =
+                                    TextNoteEvent.build(content) {
+                                        val etag = ETag(event.id)
+                                        etag.relay = null
+                                        etag.author = event.pubKey
+                                        eTag(etag)
+                                        pTag(
+                                            PTag(event.pubKey, relayHint = null),
+                                        )
+                                    }
+                                val signedEvent = account.signer.sign(template)
+                                localCache.consume(signedEvent, relay = null)
+                                relayManager.broadcastToAll(signedEvent)
+                            }
+                        },
+                    )
+                }
+            },
+        ) {
+            if (replyNotes.isEmpty()) {
+                Text(
+                    "No replies yet",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 16.dp),
+                )
+            } else {
+                replyNotes.take(5).forEachIndexed { index, replyNote ->
+                    val replyEvent = replyNote.event
+                    val flowSet = remember(replyNote) { replyNote.flow() }
+                    val metadataState by flowSet.metadata.stateFlow.collectAsState()
+                    val reactionsState by flowSet.reactions.stateFlow.collectAsState()
+                    val zapsState by flowSet.zaps.stateFlow.collectAsState()
+
+                    DisposableEffect(replyNote) { onDispose { replyNote.clearFlow() } }
+
+                    val author =
+                        remember(replyEvent?.pubKey, metadataState) {
+                            replyEvent?.pubKey?.let { localCache.getUserIfExists(it) }
+                        }
+                    val reactionCount = remember(reactionsState) { replyNote.countReactions() }
+                    val zapAmount = remember(zapsState) { replyNote.zapsAmount }
+
+                    CommentItem(
+                        authorName = author?.toBestDisplayName() ?: replyEvent?.pubKey?.take(8) ?: "",
+                        authorHandle = author?.pubkeyNpub()?.take(16)?.let { "@$it..." } ?: "",
+                        authorAvatarUrl = author?.profilePicture(),
+                        authorPubKeyHex = replyEvent?.pubKey ?: "",
+                        content = replyEvent?.content ?: "",
+                        timeAgo = (replyEvent?.createdAt ?: 0L).toTimeAgo(),
+                        reactionCount = reactionCount,
+                        zapAmount = zapAmount.toLong(),
+                        onReply = { replyEvent?.let { onReply(it) } },
+                        onAuthorClick = { replyEvent?.pubKey?.let { onNavigateToProfile(it) } },
+                    )
+                    if (index < replyNotes.take(5).lastIndex) {
+                        Spacer(Modifier.height(12.dp))
+                    }
+                }
+            }
+        }
+
+        // Related content
+        val noteHashtags =
+            remember(event) {
+                event.tags.mapNotNull(HashtagTag::parse).toSet()
+            }
+        RelatedContentSection(
+            noteId = noteId,
+            authorPubKey = event.pubKey,
+            noteHashtags = noteHashtags,
+            localCache = localCache,
+            onItemClick = onNavigateToThread,
+            onViewAll = { onNavigateToProfile(event.pubKey) },
+        )
     }
 }
 
