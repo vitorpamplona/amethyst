@@ -50,6 +50,14 @@ class UntilLimitPager<K> {
         // Set once the relay answered an empty page with EOSE: there is nothing older on it.
         @Volatile var done: Boolean = false
 
+        // Set once the relay has rejected us [GIVE_UP_AFTER_CLOSES] times in a row without ever
+        // answering (CLOSED, e.g. "auth-required" for authors we can't authenticate). It is NOT done —
+        // we just can't read its window — but it must be excluded so it doesn't block exhaustion forever.
+        @Volatile var givenUp: Boolean = false
+
+        // Consecutive CLOSEDs since this relay last actually answered (event or EOSE). Reset on contact.
+        @Volatile var closedStreak: Int = 0
+
         // Per-round tallies, reset by [beginRound]: how many events arrived and the oldest among them.
         @Volatile var roundCount: Int = 0
 
@@ -95,6 +103,7 @@ class UntilLimitPager<K> {
         createdAt: Long,
     ) {
         val c = cursor(key, relay)
+        c.closedStreak = 0
         c.roundCount++
         if (createdAt < c.roundOldest) c.roundOldest = createdAt
     }
@@ -109,11 +118,31 @@ class UntilLimitPager<K> {
         relay: NormalizedRelayUrl,
     ) {
         val c = cursor(key, relay)
+        c.closedStreak = 0
         if (c.roundCount == 0) {
             c.done = true
         } else {
             c.until = c.roundOldest - 1
         }
+    }
+
+    /**
+     * Records a CLOSED (rejection) from [relay]. After [GIVE_UP_AFTER_CLOSES] in a row with no answer in
+     * between — i.e. the relay keeps rejecting us and auth can't fix it — the relay is [given up][givenUp]
+     * so it stops blocking exhaustion. Returns true if this CLOSED tipped it into given-up.
+     */
+    fun onClosed(
+        key: K,
+        relay: NormalizedRelayUrl,
+    ): Boolean {
+        val c = cursor(key, relay)
+        if (c.givenUp || c.done) return false
+        c.closedStreak++
+        if (c.closedStreak >= GIVE_UP_AFTER_CLOSES) {
+            c.givenUp = true
+            return true
+        }
+        return false
     }
 
     /** Total events received across [relays] in the round just finished. Zero ⇒ nothing more is reachable. */
@@ -122,11 +151,18 @@ class UntilLimitPager<K> {
         relays: Collection<NormalizedRelayUrl>,
     ): Int = relays.sumOf { cursor(key, it).roundCount }
 
-    /** Relays from [all] that still have older history to ask for (not yet empty-EOSE'd). */
+    /**
+     * Relays from [all] that still have older history to ask for: not yet empty-EOSE'd ([done]) and not
+     * abandoned as unreadable ([givenUp]).
+     */
     fun activeRelays(
         key: K,
         all: Collection<NormalizedRelayUrl>,
-    ): List<NormalizedRelayUrl> = all.filterNot { cursor(key, it).done }
+    ): List<NormalizedRelayUrl> =
+        all.filterNot {
+            val c = cursor(key, it)
+            c.done || c.givenUp
+        }
 
     /**
      * The oldest point reached across [relays] — the minimum cursor (how far back paging has gone).
@@ -137,4 +173,10 @@ class UntilLimitPager<K> {
         relays: Collection<NormalizedRelayUrl>,
         start: Long,
     ): Long? = relays.takeIf { it.isNotEmpty() }?.minOf { cursor(key, it).until ?: start }
+
+    companion object {
+        // Consecutive CLOSEDs (with no answer in between) before a relay is abandoned as unreadable.
+        // Allows for the pool's auth handshake + a retry or two before concluding auth can't succeed.
+        private const val GIVE_UP_AFTER_CLOSES = 3
+    }
 }

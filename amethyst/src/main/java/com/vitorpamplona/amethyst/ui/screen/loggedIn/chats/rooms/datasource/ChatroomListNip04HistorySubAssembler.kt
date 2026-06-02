@@ -255,6 +255,7 @@ class ChatroomListNip04HistorySubAssembler(
                 forFilters: List<Filter>?,
             ) {
                 windowLoad.onRelaySettled(relay)
+                if (pager.onClosed(user.pubkeyHex, relay)) markExhaustedIfAllDone(user)
             }
 
             override fun onCannotConnect(

@@ -277,6 +277,9 @@ class ChatroomNip04HistorySubAssembler(
                 forFilters: List<Filter>?,
             ) {
                 windowLoad.onRelaySettled(relay)
+                // A relay (e.g. the correspondent's) may demand auth we can't satisfy and CLOSE every
+                // round; once the pager gives up on it, it stops blocking this thread's exhaustion.
+                if (pager.onClosed(pk, relay)) markExhaustedIfAllDone()
             }
 
             override fun onCannotConnect(

@@ -299,8 +299,11 @@ class AccountGiftWrapsHistoryEoseManager(
                 forFilters: List<Filter>?,
             ) {
                 // CLOSED (e.g. auth-required) is not "empty": don't mark the relay done — it may answer
-                // after the auth handshake. It just settles the load so the spinner can clear.
+                // after the auth handshake. It just settles the load so the spinner can clear. But if it
+                // keeps rejecting us (auth we can't satisfy), the pager eventually gives up on it; once
+                // that's the last blocker, exhaustion can complete.
                 windowLoad.onRelaySettled(relay)
+                if (pager.onClosed(user.pubkeyHex, relay)) markExhaustedIfAllDone(user)
             }
 
             override fun onCannotConnect(
