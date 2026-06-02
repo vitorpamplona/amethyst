@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMediaProcessing
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
@@ -66,6 +67,7 @@ class MultiOrchestrator(
         stripMetadata: Boolean = true,
         onStrippingFailed: suspend () -> Boolean = { true },
         convertGifToMp4: Boolean = false,
+        forcedSigner: NostrSigner? = null,
     ): Result {
         coroutineScope {
             val jobs =
@@ -84,6 +86,7 @@ class MultiOrchestrator(
                             stripMetadata,
                             onStrippingFailed,
                             convertGifToMp4 = convertGifToMp4,
+                            forcedSigner = forcedSigner,
                         )
                     }
                 }
@@ -106,6 +109,7 @@ class MultiOrchestrator(
         stripMetadata: Boolean = true,
         onStrippingFailed: suspend () -> Boolean = { true },
         convertGifToMp4: Boolean = false,
+        forcedSigner: NostrSigner? = null,
     ): Result {
         coroutineScope {
             val jobs =
@@ -125,6 +129,7 @@ class MultiOrchestrator(
                             stripMetadata,
                             onStrippingFailed,
                             convertGifToMp4 = convertGifToMp4,
+                            forcedSigner = forcedSigner,
                         )
                     }
                 }

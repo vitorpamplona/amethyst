@@ -18,34 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.amethyst.commons.preview
 
-import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.delay
+import java.nio.charset.Charset
 
-suspend fun <T> retryIfException(
-    debugTag: String = "RetryIfException",
-    maxRetries: Int = 10,
-    delayMs: Long = 1000,
-    func: suspend () -> T,
-) {
-    var tentative = 0
-    var currentDelay = delayMs
-    while (tentative < maxRetries) {
-        try {
-            func()
-
-            // if it works, finishes.
-            return
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.e(debugTag, "Tentative $tentative failed", e)
-
-            delay(currentDelay)
-            tentative++
-            currentDelay = currentDelay * 2
-        }
-    }
-    // gives up
+actual fun decodeBytes(
+    bytes: ByteArray,
+    charsetName: String?,
+): String {
+    val charset =
+        charsetName
+            ?.let { runCatching { Charset.forName(it) }.getOrNull() }
+            ?: Charsets.UTF_8
+    return bytes.toString(charset)
 }

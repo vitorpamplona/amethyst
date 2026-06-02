@@ -30,7 +30,10 @@ import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerType
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
+import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -142,6 +145,7 @@ class UploadOrchestrator {
         contentTypeForResult: String?,
         originalHash: String?,
         account: Account,
+        forcedSigner: NostrSigner?,
         context: Context,
     ): UploadingFinalState {
         updateState(0.2, UploadingState.Uploading)
@@ -158,7 +162,12 @@ class UploadOrchestrator {
                     onProgress = { percent: Float ->
                         updateState(0.2 + (0.2 * percent), UploadingState.Uploading)
                     },
-                    httpAuth = account::createHTTPAuthorization,
+                    httpAuth =
+                        if (forcedSigner != null) {
+                            { url, method, body -> forcedSigner.sign(HTTPAuthorizationEvent.build(url, method, body)) }
+                        } else {
+                            account::createHTTPAuthorization
+                        },
                     context = context,
                 )
 
@@ -187,6 +196,7 @@ class UploadOrchestrator {
         contentTypeForResult: String?,
         originalHash: String?,
         account: Account,
+        forcedSigner: NostrSigner?,
         context: Context,
     ): UploadingFinalState {
         updateState(0.2, UploadingState.Uploading)
@@ -201,7 +211,12 @@ class UploadOrchestrator {
                         sensitiveContent = contentWarningReason,
                         serverBaseUrl = serverBaseUrl,
                         okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
-                        httpAuth = account::createBlossomUploadAuth,
+                        httpAuth =
+                            if (forcedSigner != null) {
+                                { hash, size, alt -> BlossomAuthorizationEvent.createUploadAuth(hash, size, alt, forcedSigner) }
+                            } else {
+                                account::createBlossomUploadAuth
+                            },
                         context = context,
                     )
 
@@ -360,6 +375,7 @@ class UploadOrchestrator {
         stripMetadata: Boolean = true,
         onStrippingFailed: suspend () -> Boolean = { true },
         convertGifToMp4: Boolean = false,
+        forcedSigner: NostrSigner? = null,
     ): UploadingFinalState {
         val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context, useH265, convertGifToMp4)
 
@@ -379,8 +395,8 @@ class UploadOrchestrator {
         try {
             return when (server.type) {
                 ServerType.NIP95 -> uploadNIP95(finalUri, compressed.contentType, null, null, context)
-                ServerType.NIP96 -> uploadNIP96(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, context)
-                ServerType.Blossom -> uploadBlossom(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, context)
+                ServerType.NIP96 -> uploadNIP96(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, forcedSigner, context)
+                ServerType.Blossom -> uploadBlossom(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, forcedSigner, context)
             }
         } finally {
             deleteTempUri(finalUri, uri)
@@ -401,6 +417,7 @@ class UploadOrchestrator {
         stripMetadata: Boolean = true,
         onStrippingFailed: suspend () -> Boolean = { true },
         convertGifToMp4: Boolean = false,
+        forcedSigner: NostrSigner? = null,
     ): UploadingFinalState {
         val compressed = compressIfNeeded(uri, mimeType, compressionQuality, context, useH265, convertGifToMp4)
 
@@ -423,8 +440,8 @@ class UploadOrchestrator {
         try {
             return when (server.type) {
                 ServerType.NIP95 -> uploadNIP95(encrypted.uri, encrypted.contentType, compressed.contentType, encrypted.originalHash, context)
-                ServerType.NIP96 -> uploadNIP96(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, context)
-                ServerType.Blossom -> uploadBlossom(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, context)
+                ServerType.NIP96 -> uploadNIP96(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, forcedSigner, context)
+                ServerType.Blossom -> uploadBlossom(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, forcedSigner, context)
             }
         } finally {
             deleteTempUri(encrypted.uri, uri)

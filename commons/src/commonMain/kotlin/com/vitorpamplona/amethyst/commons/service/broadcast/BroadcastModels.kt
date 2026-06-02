@@ -18,11 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.broadcast
+package com.vitorpamplona.amethyst.commons.service.broadcast
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * Result of a relay's response to an event publish.
@@ -72,7 +73,7 @@ data class BroadcastEvent(
     val id: String,
     val event: Event,
     val targetRelays: List<NormalizedRelayUrl>,
-    val startedAt: Long = System.currentTimeMillis(),
+    val startedAt: Long = TimeUtils.now(),
     val results: Map<NormalizedRelayUrl, RelayResult> = emptyMap(),
     val status: BroadcastStatus = BroadcastStatus.IN_PROGRESS,
 ) {
