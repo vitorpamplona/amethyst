@@ -1,0 +1,84 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
+
+import androidx.annotation.StringRes
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
+
+/** Leading-icon representation mirroring the two [SettingsItem] overloads. */
+sealed interface SettingsIcon {
+    data class Symbol(
+        val symbol: MaterialSymbol,
+    ) : SettingsIcon
+
+    data class Painter(
+        val iconPainter: Int,
+        val iconPainterRef: Int,
+    ) : SettingsIcon
+}
+
+/** One row on the settings screen. [keywordsRes] is an optional comma-separated
+ *  list of localized search terms describing the destination sub-screen. */
+data class SettingsEntry(
+    @StringRes val titleRes: Int,
+    val icon: SettingsIcon,
+    @StringRes val keywordsRes: Int? = null,
+    val isDanger: Boolean = false,
+    val onClick: () -> Unit,
+)
+
+/** One category card on the settings screen. */
+data class SettingsCategory(
+    @StringRes val titleRes: Int,
+    val isDanger: Boolean = false,
+    val entries: List<SettingsEntry>,
+)
+
+/**
+ * Filters [catalog] by [query] (case-insensitive substring over category title + entry title + keywords).
+ * Blank/whitespace query returns [catalog] unchanged. Categories left with no
+ * matching entries are dropped. Pure — no Compose/Android — so it is unit-testable;
+ * string resolution is injected via [titleLookup] / [keywordsLookup].
+ */
+fun filterSettings(
+    catalog: List<SettingsCategory>,
+    query: String,
+    titleLookup: (Int) -> String,
+    keywordsLookup: (Int) -> String,
+): List<SettingsCategory> {
+    val needle = query.trim().lowercase()
+    if (needle.isEmpty()) return catalog
+
+    return catalog.mapNotNull { category ->
+        val categoryTitle = titleLookup(category.titleRes)
+        val matched =
+            category.entries.filter { entry ->
+                val keywords = entry.keywordsRes?.let { keywordsLookup(it) } ?: ""
+                val haystack = (categoryTitle + " " + titleLookup(entry.titleRes) + " " + keywords).lowercase()
+                haystack.contains(needle)
+            }
+        if (matched.isEmpty()) {
+            null
+        } else {
+            SettingsCategory(category.titleRes, category.isDanger, matched)
+        }
+    }
+}

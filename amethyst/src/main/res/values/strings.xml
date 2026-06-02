@@ -1504,6 +1504,19 @@
     <string name="settings">Settings</string>
     <string name="account_settings">Account Settings</string>
     <string name="app_settings">App Settings</string>
+
+    <!-- Settings search -->
+    <string name="settings_search_placeholder">Search settings</string>
+    <string name="settings_search_no_results">No settings found for \"%1$s\"</string>
+
+    <!-- Settings search keywords (comma-separated, localizable) -->
+    <string name="relay_setup_search_keywords">relays, inbox, outbox, connections, servers</string>
+    <string name="privacy_options_search_keywords">tor, orbot, proxy, privacy, anonymous</string>
+    <string name="ui_preferences_search_keywords">dark mode, light mode, theme, font size, language, appearance</string>
+    <string name="notification_settings_search_keywords">push, alerts, sounds, vibration</string>
+    <string name="security_filters_search_keywords">spam, block, mute, filter, warnings</string>
+    <string name="zaps_search_keywords">lightning, sats, tips, wallet, amount</string>
+
     <string name="danger_zone">Danger Zone</string>
     <string name="reset_marmot_state">Reset Marmot State</string>
     <string name="reset_marmot_confirm_title">Reset Marmot State?</string>

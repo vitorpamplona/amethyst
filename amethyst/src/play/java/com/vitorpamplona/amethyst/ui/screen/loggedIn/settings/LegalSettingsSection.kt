@@ -20,38 +20,37 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.UriHandler
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 
-@Composable
-fun LegalSettingsSection() {
-    val uriHandler = LocalUriHandler.current
-
-    SettingsSection(R.string.about_legal) {
-        SettingsItem(
-            title = R.string.privacy_policy,
-            icon = MaterialSymbols.Lock,
-            onClick = {
-                runCatching {
-                    uriHandler.openUri(
-                        "https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md",
-                    )
-                }
-            },
-        )
-        SettingsDivider()
-        SettingsItem(
-            title = R.string.child_safety_standards,
-            icon = MaterialSymbols.Shield,
-            onClick = {
-                runCatching {
-                    uriHandler.openUri(
-                        "https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md#child-safety-standards",
-                    )
-                }
-            },
-        )
-    }
-}
+/** Play build surfaces the GitHub-hosted legal policy links. */
+fun legalSettingsCategory(uriHandler: UriHandler): SettingsCategory? =
+    SettingsCategory(
+        titleRes = R.string.about_legal,
+        entries =
+            listOf(
+                SettingsEntry(
+                    titleRes = R.string.privacy_policy,
+                    icon = SettingsIcon.Symbol(MaterialSymbols.Lock),
+                    onClick = {
+                        runCatching {
+                            uriHandler.openUri(
+                                "https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md",
+                            )
+                        }
+                    },
+                ),
+                SettingsEntry(
+                    titleRes = R.string.child_safety_standards,
+                    icon = SettingsIcon.Symbol(MaterialSymbols.Shield),
+                    onClick = {
+                        runCatching {
+                            uriHandler.openUri(
+                                "https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md#child-safety-standards",
+                            )
+                        }
+                    },
+                ),
+            ),
+    )
