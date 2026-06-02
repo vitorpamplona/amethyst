@@ -21,67 +21,180 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource
 
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.UntilLimitPager
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.WindowLoadTracker
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.trackingListener
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsHistoryEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Loads older NIP-04 DMs (kind 4) for one conversation, following the gift-wrap history's current
- * bounded slice ([AccountGiftWrapsHistoryEoseManager.currentSlice]) so a thread shows both DM
- * protocols to the same depth. NIP-04 timestamps are exact, so the slice needs no margin. [reload]
- * re-issues at the now-advanced slice; idle until the first slice is opened.
+ * Loads older NIP-04 DMs (kind 4) for one conversation by `until`+`limit` paging, per relay, scoped to
+ * the two participants. Same gap-proof model as the gift-wrap history (a relay is done on an empty
+ * page + EOSE; [exhausted] once a round advances no relay), keyed per conversation. Idle until
+ * [loadMore].
  */
 class ChatroomNip04HistorySubAssembler(
     client: INostrClient,
     allKeys: () -> Set<ChatroomQueryState>,
-    private val giftWrapsHistory: AccountGiftWrapsHistoryEoseManager,
 ) : PerUserAndFollowListEoseManager<ChatroomQueryState, String>(client, allKeys) {
+    // Keyed per conversation (listId): each thread paginates independently.
+    private val pager = UntilLimitPager<String>()
+    private val started = ConcurrentHashMap.newKeySet<String>()
+    private val askedRelays = ConcurrentHashMap<String, Set<NormalizedRelayUrl>>()
+
     private val windowLoad = WindowLoadTracker("convo.nip04.history")
     val loadingMore: StateFlow<Boolean> = windowLoad.loading
 
-    // Account scope for the watchdog. Volatile: written on IO (newSub), read on UI (reload).
+    private val _exhausted = MutableStateFlow(false)
+    val exhausted: StateFlow<Boolean> = _exhausted.asStateFlow()
+
     @Volatile
     private var scope: CoroutineScope? = null
 
-    override fun updateFilter(
-        key: ChatroomQueryState,
-        since: SincePerRelayMap?,
-    ): List<RelayBasedFilter>? {
-        val slice = giftWrapsHistory.currentSlice(user(key))
-        if (!key.account.isWriteable() || slice == null) {
-            windowLoad.setExpectedRelays(emptySet())
-            return emptyList()
-        }
-        val (sliceSince, sliceUntil) = slice
-        val filters = filterNip04DMs(key.room.users, key.account, sliceSince, sliceUntil)
-        windowLoad.setExpectedRelays(filters?.mapTo(mutableSetOf()) { it.relay } ?: emptySet())
-        Log.d("DMPagination") { "[convo.nip04.history] REQ slice since=$sliceSince until=$sliceUntil on ${filters?.size ?: 0} relay-filter(s)" }
-        return filters
-    }
+    @Volatile
+    private var roundJob: Job? = null
 
-    /** Re-issues at the gift-wrap history's now-advanced slice and tracks the load. */
-    fun reload() {
-        Log.d("DMPagination") { "[convo.nip04.history] reload" }
-        scope?.let { windowLoad.startLoading(it) }
-        invalidateFilters()
-    }
+    @Volatile
+    private var autoLoadAll = false
+
+    private fun startUntil() = TimeUtils.now() - AccountGiftWrapsEoseManager.LIVE_TAIL_SECONDS
 
     override fun user(key: ChatroomQueryState) = key.account.userProfile()
 
     override fun list(key: ChatroomQueryState) = key.listId
 
+    override fun updateFilter(
+        key: ChatroomQueryState,
+        since: SincePerRelayMap?,
+    ): List<RelayBasedFilter>? {
+        val relays = nip04DMRelays(key.room.users, key.account)
+        if (!key.account.isWriteable() || key.listId !in started || relays == null) {
+            windowLoad.setExpectedRelays(emptySet())
+            return emptyList()
+        }
+        val active = pager.activeRelays(key.listId, relays.all).toSet()
+        askedRelays[key.listId] = active
+        windowLoad.setExpectedRelays(active)
+        if (active.isEmpty()) return emptyList()
+        Log.d("DMPagination") { "[convo.nip04.history] REQ ${active.size} relay(s), limit=$PAGE_LIMIT" }
+        val activeRelays =
+            Nip04DmRelays(
+                toMeRelays = relays.toMeRelays.intersect(active),
+                fromMeRelays = relays.fromMeRelays.intersect(active),
+            )
+        return filterNip04DMsHistory(key.room.users, key.account, activeRelays, PAGE_LIMIT) { relay ->
+            pager.untilFor(key.listId, relay, startUntil())
+        }
+    }
+
+    /** Requests the next backward page for every open conversation that still has older history. */
+    fun loadMore() {
+        if (_exhausted.value) return
+        var anyActive = false
+        allKeys().forEach { key ->
+            val relays = nip04DMRelays(key.room.users, key.account) ?: return@forEach
+            started.add(key.listId)
+            val active = pager.activeRelays(key.listId, relays.all)
+            if (active.isNotEmpty()) {
+                pager.beginRound(key.listId, active)
+                anyActive = true
+            }
+        }
+        if (!anyActive) {
+            _exhausted.value = true
+            return
+        }
+        Log.d("DMPagination") { "[convo.nip04.history] loadMore" }
+        scope?.let {
+            ensureRoundCollector(it)
+            windowLoad.startLoading(it)
+        }
+        invalidateFilters()
+    }
+
+    /** Pages to the end: each completed round auto-issues the next until exhausted. */
+    fun loadEverything() {
+        if (_exhausted.value) return
+        autoLoadAll = true
+        loadMore()
+    }
+
+    private fun ensureRoundCollector(scope: CoroutineScope) {
+        if (roundJob?.isActive == true) return
+        roundJob =
+            scope.launch {
+                var wasLoading = false
+                windowLoad.loading.collect { loading ->
+                    if (!loading && wasLoading) {
+                        val count = started.sumOf { listId -> pager.roundEventCount(listId, askedRelays[listId] ?: emptySet()) }
+                        _exhausted.value = count == 0
+                        Log.d("DMPagination") { "[convo.nip04.history] round done: $count event(s), exhausted=${count == 0}" }
+                        if (autoLoadAll && count > 0) loadMore()
+                    }
+                    wasLoading = loading
+                }
+            }
+    }
+
     override fun newSub(key: ChatroomQueryState): Subscription {
         scope = key.account.scope
-        return requestNewSubscription(
-            windowLoad.trackingListener { relay, filters -> newEose(key, relay, TimeUtils.now(), filters) },
-        )
+        return requestNewSubscription(historyListener(key))
+    }
+
+    private fun historyListener(key: ChatroomQueryState): SubscriptionListener =
+        object : SubscriptionListener {
+            override fun onEvent(
+                event: Event,
+                isLive: Boolean,
+                relay: NormalizedRelayUrl,
+                forFilters: List<Filter>?,
+            ) {
+                windowLoad.onRelayEvent(relay)
+                pager.onEvent(key.listId, relay, event.createdAt)
+            }
+
+            override fun onEose(
+                relay: NormalizedRelayUrl,
+                forFilters: List<Filter>?,
+            ) {
+                pager.onEose(key.listId, relay)
+                windowLoad.onRelaySettled(relay)
+                newEose(key, relay, TimeUtils.now(), forFilters)
+            }
+
+            override fun onClosed(
+                message: String,
+                relay: NormalizedRelayUrl,
+                forFilters: List<Filter>?,
+            ) {
+                windowLoad.onRelaySettled(relay)
+            }
+
+            override fun onCannotConnect(
+                relay: NormalizedRelayUrl,
+                message: String,
+                forFilters: List<Filter>?,
+            ) {
+                windowLoad.onRelaySettled(relay)
+            }
+        }
+
+    companion object {
+        private const val PAGE_LIMIT = 10000
     }
 }

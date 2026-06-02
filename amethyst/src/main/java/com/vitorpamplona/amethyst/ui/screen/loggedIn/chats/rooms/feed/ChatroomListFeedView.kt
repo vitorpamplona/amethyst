@@ -90,11 +90,14 @@ private fun CrossFadeState(
 ) {
     val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
 
-    // The gift-wrap history window is the DM history window (NIP-04 history follows it), so once it
-    // reaches the maximum lookback the rooms list has pulled everything there is. Until then an empty
-    // feed means "still filling", not "no conversations" — keep the spinner up rather than flash empty.
+    // History is exhausted only once BOTH DM protocols have paged to their end (each stops when a
+    // round of until+limit pages brings nothing back). Until then an empty feed means "still filling",
+    // not "no conversations" — keep the spinner up rather than flash empty.
     val giftWrapsHistory = remember(accountViewModel) { accountViewModel.dataSources().account.giftWrapsHistory }
-    val historyExhausted by giftWrapsHistory.exhausted.collectAsStateWithLifecycle()
+    val nip04History = remember(accountViewModel) { accountViewModel.dataSources().chatroomList.nip04History }
+    val giftWrapsExhausted by giftWrapsHistory.exhausted.collectAsStateWithLifecycle()
+    val nip04Exhausted by nip04History.exhausted.collectAsStateWithLifecycle()
+    val historyExhausted = giftWrapsExhausted && nip04Exhausted
 
     // While the whole list is empty there is no LazyColumn to scroll, so keep widening the private
     // DM window here until rooms appear or it is exhausted. (Public / ephemeral / group rooms are
@@ -146,7 +149,9 @@ private fun FeedLoaded(
     val loadingGiftWraps by giftWrapsHistory.loadingMore.collectAsStateWithLifecycle()
     val loadingNip04 by nip04History.loadingMore.collectAsStateWithLifecycle()
     val loadingMore = loadingGiftWraps || loadingNip04
-    val historyExhausted by giftWrapsHistory.exhausted.collectAsStateWithLifecycle()
+    val giftWrapsExhausted by giftWrapsHistory.exhausted.collectAsStateWithLifecycle()
+    val nip04Exhausted by nip04History.exhausted.collectAsStateWithLifecycle()
+    val historyExhausted = giftWrapsExhausted && nip04Exhausted
 
     // Widen the private DM window only as the user approaches the oldest LOADED private chat —
     // ignoring public / group / ephemeral rooms below it. Those are membership-based and can be
@@ -194,7 +199,7 @@ private fun FeedLoaded(
                 DmLoadMoreIndicator(loadingMore, showLoadAll = !historyExhausted) {
                     val user = accountViewModel.userProfile()
                     giftWrapsHistory.loadEverything(user)
-                    nip04History.reload()
+                    nip04History.loadEverything(user)
                 }
             }
         }
@@ -205,7 +210,7 @@ private fun FeedLoaded(
                 DmLoadMoreIndicator(loadingMore, showLoadAll = !historyExhausted) {
                     val user = accountViewModel.userProfile()
                     giftWrapsHistory.loadEverything(user)
-                    nip04History.reload()
+                    nip04History.loadEverything(user)
                 }
             }
         }
@@ -254,8 +259,10 @@ private fun WidenPrivateWindowWhen(
             giftWrapsHistory.loadingMore,
             nip04History.loadingMore,
             giftWrapsHistory.exhausted,
-        ) { count, loadingGiftWraps, loadingNip04, exhausted ->
-            if (count != NOT_WANTED && !loadingGiftWraps && !loadingNip04 && !exhausted) count else NOT_WANTED
+            nip04History.exhausted,
+        ) { count, loadingGiftWraps, loadingNip04, giftWrapsExhausted, nip04Exhausted ->
+            // Keep paging while either protocol still has older history to reach.
+            if (count != NOT_WANTED && !loadingGiftWraps && !loadingNip04 && !(giftWrapsExhausted && nip04Exhausted)) count else NOT_WANTED
         }.distinctUntilChanged()
             .collect { count ->
                 if (count == NOT_WANTED) return@collect
@@ -265,9 +272,9 @@ private fun WidenPrivateWindowWhen(
                     return@collect
                 }
                 if (privateRoomCount != null) giftWrapsHistory.autoFillPrivateRoomMark = count
-                Log.d("DMPagination") { "rooms.list: widen ($trigger) → loadMore + reload (privateRooms=$count)" }
+                Log.d("DMPagination") { "rooms.list: widen ($trigger) → loadMore (privateRooms=$count)" }
                 giftWrapsHistory.loadMore(accountViewModel.userProfile())
-                nip04History.reload()
+                nip04History.loadMore(accountViewModel.userProfile())
             }
     }
 }

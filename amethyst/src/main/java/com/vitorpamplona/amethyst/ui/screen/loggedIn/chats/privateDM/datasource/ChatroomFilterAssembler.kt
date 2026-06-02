@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource
 
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsHistoryEoseManager
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 
@@ -36,13 +35,12 @@ class ChatroomQueryState(
 
 class ChatroomFilterAssembler(
     client: INostrClient,
-    giftWrapsHistory: AccountGiftWrapsHistoryEoseManager,
 ) : ComposeSubscriptionManager<ChatroomQueryState>() {
     // NIP-04 live tail: the recent week, always open at the top.
     val nip04 = ChatroomNip04SubAssembler(client, ::allKeys)
 
-    // NIP-04 history: older DMs, following the gift-wrap history's bounded slice.
-    val nip04History = ChatroomNip04HistorySubAssembler(client, ::allKeys, giftWrapsHistory)
+    // NIP-04 history: older DMs, paged backward by until+limit, independently of gift wraps.
+    val nip04History = ChatroomNip04HistorySubAssembler(client, ::allKeys)
 
     val group =
         listOf(

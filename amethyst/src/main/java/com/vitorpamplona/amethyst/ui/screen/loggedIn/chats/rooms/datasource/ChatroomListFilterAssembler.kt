@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsHistoryEoseManager
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 
 // This allows multiple screen to be listening to tags, even the same tag
@@ -35,13 +34,12 @@ class ChatroomListState(
 @Stable
 class ChatroomListFilterAssembler(
     client: INostrClient,
-    giftWrapsHistory: AccountGiftWrapsHistoryEoseManager,
 ) : ComposeSubscriptionManager<ChatroomListState>() {
     // NIP-04 live tail: the recent week, always open at the top.
     val nip04 = ChatroomListNip04SubAssembler(client, ::allKeys)
 
-    // NIP-04 history: older DMs, following the gift-wrap history's bounded slice.
-    val nip04History = ChatroomListNip04HistorySubAssembler(client, ::allKeys, giftWrapsHistory)
+    // NIP-04 history: older DMs, paged backward by until+limit, independently of gift wraps.
+    val nip04History = ChatroomListNip04HistorySubAssembler(client, ::allKeys)
 
     val group =
         listOf(

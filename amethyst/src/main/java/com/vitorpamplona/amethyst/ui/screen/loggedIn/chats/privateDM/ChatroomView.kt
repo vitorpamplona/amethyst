@@ -172,14 +172,16 @@ private fun LoadOlderMessagesWhenScrolling(
             giftWrapsHistory.loadingMore,
             nip04History.loadingMore,
             giftWrapsHistory.exhausted,
-        ) { wantMore, loadingGiftWraps, loadingNip04, exhausted ->
-            wantMore && !loadingGiftWraps && !loadingNip04 && !exhausted
+            nip04History.exhausted,
+        ) { wantMore, loadingGiftWraps, loadingNip04, giftWrapsExhausted, nip04Exhausted ->
+            // Keep paging while either protocol still has older history to reach.
+            wantMore && !loadingGiftWraps && !loadingNip04 && !(giftWrapsExhausted && nip04Exhausted)
         }.distinctUntilChanged()
             .filter { it }
             .collect {
-                Log.d("DMPagination") { "convo: widen (oldest in view) → loadMore + reload" }
+                Log.d("DMPagination") { "convo: widen (oldest in view) → loadMore" }
                 giftWrapsHistory.loadMore(accountViewModel.userProfile())
-                nip04History.reload()
+                nip04History.loadMore()
             }
     }
 }
@@ -204,7 +206,9 @@ fun ChatroomViewUI(
     val nip04History = remember(accountViewModel) { accountViewModel.dataSources().chatroom.nip04History }
     val loadingGiftWraps by giftWrapsHistory.loadingMore.collectAsStateWithLifecycle()
     val loadingNip04 by nip04History.loadingMore.collectAsStateWithLifecycle()
-    val historyExhausted by giftWrapsHistory.exhausted.collectAsStateWithLifecycle()
+    val giftWrapsExhausted by giftWrapsHistory.exhausted.collectAsStateWithLifecycle()
+    val nip04Exhausted by nip04History.exhausted.collectAsStateWithLifecycle()
+    val historyExhausted = giftWrapsExhausted && nip04Exhausted
 
     Column(Modifier.fillMaxHeight()) {
         ObserveRelayListForDMsAndDisplayIfNotFound(accountViewModel, nav)
@@ -238,7 +242,7 @@ fun ChatroomViewUI(
                                 Log.d("DMPagination") { "convo: Load entire history tapped" }
                                 val user = accountViewModel.userProfile()
                                 giftWrapsHistory.loadEverything(user)
-                                nip04History.reload()
+                                nip04History.loadEverything()
                             }
                         }
                     },

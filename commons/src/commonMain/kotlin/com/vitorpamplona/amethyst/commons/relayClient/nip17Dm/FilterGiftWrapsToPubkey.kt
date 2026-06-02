@@ -33,6 +33,7 @@ fun filterGiftWrapsToPubkey(
     pubkey: HexKey?,
     since: Long?,
     until: Long? = null,
+    limit: Int? = null,
 ): List<RelayBasedFilter> {
     if (pubkey.isNullOrEmpty()) return emptyList()
 
@@ -49,6 +50,7 @@ fun filterGiftWrapsToPubkey(
                     // previous slice's un-margined floor, so the 2-day overlap already covers the seam.)
                     since = since?.minus(TimeUtils.twoDays()),
                     until = until,
+                    limit = limit,
                 ),
         ),
     )

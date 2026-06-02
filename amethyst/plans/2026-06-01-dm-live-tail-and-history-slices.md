@@ -73,3 +73,22 @@ screen). "Fill until full **or nothing new found**", instead of walking to the
   managers.
 - `ChatroomListFeedView`, `ChatroomView` — point "load older" at the history
   managers; combine live+history `loadingMore` for spinners; add the stall-gate.
+
+## Update: time-slices → `until`+`limit` paging
+
+The time-slice history (above) bounded re-downloads but still couldn't tell
+"this relay is empty" from "this is a gap" — an empty slice might sit above
+older messages, so the only stop was the 10-year `maxLookback`, and a wide late
+slice could pull a 20k-event firehose.
+
+The history managers now page **backward by `until`+`limit`, per relay**
+(`UntilLimitPager`). A relay returns up to `limit` (10000) events older than its
+cursor, **skipping gaps**, so an empty page + EOSE is a gap-proof "nothing older"
+signal. A relay returning fewer is treated as its own cap, not exhaustion (only
+empty ends it). A relay answering CLOSED isn't "empty" (it may answer post-auth),
+so the **global** exhausted flag flips only when a whole round advances no relay
+at all. `limit` also caps per-request volume.
+
+Both NIP-04 history managers now paginate themselves (per relay) instead of
+following the gift-wrap slice; `loadEverything` pages to the end by auto-issuing
+the next round until exhausted. The live tail and stall-gate are unchanged.

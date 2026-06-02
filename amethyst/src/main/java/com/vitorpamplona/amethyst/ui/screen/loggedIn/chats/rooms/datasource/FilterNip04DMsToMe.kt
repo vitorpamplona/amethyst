@@ -31,6 +31,7 @@ fun filterNip04DMsToMe(
     relay: NormalizedRelayUrl,
     since: Long?,
     until: Long? = null,
+    limit: Int? = null,
 ): RelayBasedFilter =
     RelayBasedFilter(
         relay = relay,
@@ -40,5 +41,6 @@ fun filterNip04DMsToMe(
                 tags = mapOf("p" to listOf(user.pubkeyHex)),
                 since = since,
                 until = until,
+                limit = limit,
             ),
     )

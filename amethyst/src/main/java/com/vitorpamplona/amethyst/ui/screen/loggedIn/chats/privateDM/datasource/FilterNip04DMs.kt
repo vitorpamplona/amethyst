@@ -29,12 +29,22 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
-fun filterNip04DMs(
+/** The two relay sets a conversation's NIP-04 DMs flow over, resolved via the outbox model. */
+class Nip04DmRelays(
+    val toMeRelays: Set<NormalizedRelayUrl>,
+    val fromMeRelays: Set<NormalizedRelayUrl>,
+) {
+    val all: Set<NormalizedRelayUrl> get() = toMeRelays + fromMeRelays
+}
+
+/**
+ * Resolves where a conversation's NIP-04 DMs flow: messages **to me** arrive on my inbox + the
+ * group's outbox relays; messages **from me** arrive on my outbox + the group's inbox relays.
+ */
+fun nip04DMRelays(
     group: Set<HexKey>?,
     account: Account?,
-    windowStart: Long,
-    windowEnd: Long? = null,
-): List<RelayBasedFilter>? {
+): Nip04DmRelays? {
     if (group.isNullOrEmpty() || account == null) return null
 
     val userOutboxRelays = account.homeRelays.flow.value
@@ -64,33 +74,74 @@ fun filterNip04DMs(
         groupInboxRelays.addAll(inbox)
     }
 
-    val toMeRelays = (userInboxRelays + groupOutboxRelays)
-    val fromMeRelays = (userOutboxRelays + groupInboxRelays)
-
-    return toMeRelays.map {
-        RelayBasedFilter(
-            relay = it,
-            filter =
-                Filter(
-                    kinds = listOf(PrivateDmEvent.KIND),
-                    authors = group.toList(),
-                    tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
-                    since = windowStart,
-                    until = windowEnd,
-                ),
-        )
-    } +
-        fromMeRelays.map {
-            RelayBasedFilter(
-                relay = it,
-                filter =
-                    Filter(
-                        kinds = listOf(PrivateDmEvent.KIND),
-                        authors = listOf(account.userProfile().pubkeyHex),
-                        tags = mapOf("p" to group.toList()),
-                        since = windowStart,
-                        until = windowEnd,
-                    ),
-            )
-        }
+    return Nip04DmRelays(
+        toMeRelays = userInboxRelays + groupOutboxRelays,
+        fromMeRelays = userOutboxRelays + groupInboxRelays,
+    )
 }
+
+private fun toMeFilter(
+    relay: NormalizedRelayUrl,
+    group: Set<HexKey>,
+    account: Account,
+    since: Long?,
+    until: Long?,
+    limit: Int?,
+) = RelayBasedFilter(
+    relay = relay,
+    filter =
+        Filter(
+            kinds = listOf(PrivateDmEvent.KIND),
+            authors = group.toList(),
+            tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
+            since = since,
+            until = until,
+            limit = limit,
+        ),
+)
+
+private fun fromMeFilter(
+    relay: NormalizedRelayUrl,
+    group: Set<HexKey>,
+    account: Account,
+    since: Long?,
+    until: Long?,
+    limit: Int?,
+) = RelayBasedFilter(
+    relay = relay,
+    filter =
+        Filter(
+            kinds = listOf(PrivateDmEvent.KIND),
+            authors = listOf(account.userProfile().pubkeyHex),
+            tags = mapOf("p" to group.toList()),
+            since = since,
+            until = until,
+            limit = limit,
+        ),
+)
+
+/** Live-tail filters: everything since [windowStart], open-ended at the top (new messages keep arriving). */
+fun filterNip04DMs(
+    group: Set<HexKey>?,
+    account: Account?,
+    windowStart: Long,
+): List<RelayBasedFilter>? {
+    if (group.isNullOrEmpty() || account == null) return null
+    val relays = nip04DMRelays(group, account) ?: return null
+    return relays.toMeRelays.map { toMeFilter(it, group, account, since = windowStart, until = null, limit = null) } +
+        relays.fromMeRelays.map { fromMeFilter(it, group, account, since = windowStart, until = null, limit = null) }
+}
+
+/**
+ * History filters: a bounded backward page per relay. Each relay is asked for [limit] events older
+ * than [untilFor]`(relay)` (no `since`), so it can be paged down to empty independently.
+ */
+fun filterNip04DMsHistory(
+    group: Set<HexKey>,
+    account: Account,
+    relays: Nip04DmRelays,
+    limit: Int,
+    untilFor: (NormalizedRelayUrl) -> Long?,
+): List<RelayBasedFilter> =
+    relays.toMeRelays.map { toMeFilter(it, group, account, since = null, until = untilFor(it), limit = limit) } +
+        relays.fromMeRelays.map { fromMeFilter(it, group, account, since = null, until = untilFor(it), limit = limit) }
