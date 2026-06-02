@@ -69,7 +69,7 @@ class ChatroomNip04HistorySubAssembler(
     private val started = ConcurrentHashMap.newKeySet<ConvoKey>()
     private val askedRelays = ConcurrentHashMap<ConvoKey, Set<NormalizedRelayUrl>>()
 
-    private val windowLoad = WindowLoadTracker("convo.nip04.history")
+    private val windowLoad = WindowLoadTracker("convo.nip04.history", onAbandoned = ::onRelaysAbandoned)
     val loadingMore: StateFlow<Boolean> = windowLoad.loading
 
     private val _exhausted = MutableStateFlow(false)
@@ -233,6 +233,18 @@ class ChatroomNip04HistorySubAssembler(
         return requestNewSubscription(historyListener(key))
     }
 
+    // A relay accepted the REQ but never answered (auth-walled / dead): drop it from every open
+    // conversation's pager so it stops blocking the relay count and exhaustion on the next round. May
+    // complete exhaustion right away if it was the last relay still holding a thread open.
+    private fun onRelaysAbandoned(relays: Set<NormalizedRelayUrl>) {
+        var gaveUp = false
+        started.forEach { pk ->
+            val asked = askedRelays[pk] ?: return@forEach
+            relays.forEach { if (it in asked && pager.giveUp(pk, it)) gaveUp = true }
+        }
+        if (gaveUp) markExhaustedIfAllDone()
+    }
+
     // Flips to exhausted only once every open conversation's relays have all returned an empty page +
     // EOSE. Sets true only — false transitions belong to loadMore / the round collector.
     private fun markExhaustedIfAllDone() {
@@ -252,6 +264,13 @@ class ChatroomNip04HistorySubAssembler(
     private fun historyListener(key: ChatroomQueryState): SubscriptionListener {
         val pk = convoKey(key)
         return object : SubscriptionListener {
+            override fun onSubscriptionStarted(
+                relay: String,
+                forFilters: List<Filter>,
+            ) {
+                windowLoad.onReqSent(relay)
+            }
+
             override fun onEvent(
                 event: Event,
                 isLive: Boolean,

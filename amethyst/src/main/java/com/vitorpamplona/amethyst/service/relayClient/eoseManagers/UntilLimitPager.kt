@@ -145,6 +145,22 @@ class UntilLimitPager<K> {
         return false
     }
 
+    /**
+     * Abandons [relay] for [key] when it accepted our REQ but never answered (no event, EOSE, or CLOSED
+     * within the silence window). Like [givenUp] via [onClosed], it is excluded from [activeRelays] so a
+     * silent relay can't block exhaustion forever — but a relay that already finished cleanly ([done])
+     * is left alone. Returns true if this abandoned a relay that wasn't already done/given-up.
+     */
+    fun giveUp(
+        key: K,
+        relay: NormalizedRelayUrl,
+    ): Boolean {
+        val c = cursor(key, relay)
+        if (c.done || c.givenUp) return false
+        c.givenUp = true
+        return true
+    }
+
     /** Total events received across [relays] in the round just finished. Zero ⇒ nothing more is reachable. */
     fun roundEventCount(
         key: K,
