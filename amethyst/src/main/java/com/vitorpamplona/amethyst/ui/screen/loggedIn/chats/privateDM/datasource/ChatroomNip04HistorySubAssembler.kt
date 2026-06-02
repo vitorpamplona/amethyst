@@ -63,6 +63,12 @@ class ChatroomNip04HistorySubAssembler(
     private val _exhausted = MutableStateFlow(false)
     val exhausted: StateFlow<Boolean> = _exhausted.asStateFlow()
 
+    private val _relayCount = MutableStateFlow(0)
+    val relayCount: StateFlow<Int> = _relayCount.asStateFlow()
+
+    private val _reachedBack = MutableStateFlow<Long?>(null)
+    val reachedBack: StateFlow<Long?> = _reachedBack.asStateFlow()
+
     @Volatile
     private var scope: CoroutineScope? = null
 
@@ -106,6 +112,8 @@ class ChatroomNip04HistorySubAssembler(
     fun loadMore() {
         if (_exhausted.value) return
         var anyActive = false
+        var totalRelays = 0
+        var deepest: Long? = null
         allKeys().forEach { key ->
             val relays = nip04DMRelays(key.room.users, key.account) ?: return@forEach
             started.add(key.listId)
@@ -113,12 +121,18 @@ class ChatroomNip04HistorySubAssembler(
             if (active.isNotEmpty()) {
                 pager.beginRound(key.listId, active)
                 anyActive = true
+                totalRelays += active.size
+                pager.deepestUntil(key.listId, active, startUntil())?.let { d ->
+                    deepest = deepest?.let { minOf(it, d) } ?: d
+                }
             }
         }
         if (!anyActive) {
             _exhausted.value = true
             return
         }
+        _relayCount.value = totalRelays
+        _reachedBack.value = deepest
         Log.d("DMPagination") { "[convo.nip04.history] loadMore" }
         scope?.let {
             ensureRoundCollector(it)
@@ -143,6 +157,7 @@ class ChatroomNip04HistorySubAssembler(
                     if (!loading && wasLoading) {
                         val count = started.sumOf { listId -> pager.roundEventCount(listId, askedRelays[listId] ?: emptySet()) }
                         _exhausted.value = count == 0
+                        _reachedBack.value = started.mapNotNull { listId -> pager.deepestUntil(listId, askedRelays[listId] ?: emptySet(), startUntil()) }.minOrNull()
                         Log.d("DMPagination") { "[convo.nip04.history] round done: $count event(s), exhausted=${count == 0}" }
                         if (autoLoadAll && count > 0) loadMore()
                     }

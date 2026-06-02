@@ -127,4 +127,14 @@ class UntilLimitPager<K> {
         key: K,
         all: Collection<NormalizedRelayUrl>,
     ): List<NormalizedRelayUrl> = all.filterNot { cursor(key, it).done }
+
+    /**
+     * The oldest point reached across [relays] — the minimum cursor (how far back paging has gone).
+     * Relays not yet paged count as [start]. Null when [relays] is empty.
+     */
+    fun deepestUntil(
+        key: K,
+        relays: Collection<NormalizedRelayUrl>,
+        start: Long,
+    ): Long? = relays.takeIf { it.isNotEmpty() }?.minOf { cursor(key, it).until ?: start }
 }

@@ -34,7 +34,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -48,7 +50,7 @@ import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.DmLoadMoreIndicator
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.DmHistoryLoadingCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChatroomHeaderCompose
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -207,9 +209,16 @@ private fun FeedLoaded(
         info.totalItemsCount > 0 && (oldest < 0 || lastVisible >= oldest - PREFETCH_PRIVATE_CHATS)
     }
 
-    // One loading boundary PER protocol, at that protocol's oldest loaded room: a spinner while it
-    // pages and a "load entire history" button until it is exhausted. They sit at different depths
-    // (NIP-04's typically deeper), so the user sees each protocol load where its history actually ends.
+    // One status card PER protocol, at that protocol's oldest loaded room: it shows what the app is
+    // reaching for (relays + how far back it has paged) while it loads, then crossfades to "All caught
+    // up" and collapses when it runs dry. The two sit at different depths (NIP-04's typically deeper),
+    // so the user sees each protocol load where its own history actually ends.
+    val giftWrapsRelays by giftWrapsHistory.relayCount.collectAsStateWithLifecycle()
+    val giftWrapsReached by giftWrapsHistory.reachedBack.collectAsStateWithLifecycle()
+    val nip04Relays by nip04History.relayCount.collectAsStateWithLifecycle()
+    val nip04Reached by nip04History.reachedBack.collectAsStateWithLifecycle()
+    val nip17Name = stringResource(R.string.chats_history_proto_nip17)
+    val nip04Name = stringResource(R.string.chats_history_proto_nip04)
     val oldestNip17Index = items.list.indexOfLast { it.event is ChatroomKeyable && it.event !is PrivateDmEvent }
     val oldestNip04Index = items.list.indexOfLast { it.event is PrivateDmEvent }
 
@@ -233,31 +242,25 @@ private fun FeedLoaded(
                 thickness = DividerThickness,
             )
 
-            if (index == oldestNip17Index && (loadingGiftWraps || !giftWrapsExhausted)) {
-                DmLoadMoreIndicator(loadingGiftWraps, showLoadAll = !giftWrapsExhausted) {
-                    giftWrapsHistory.loadEverything(user)
-                }
+            // Rendered unconditionally at the protocol's oldest room so the card can run its own
+            // "All caught up" crossfade-and-collapse when that protocol exhausts.
+            if (index == oldestNip17Index) {
+                DmHistoryLoadingCard(nip17Name, "NIP-17", loadingGiftWraps, giftWrapsExhausted, giftWrapsRelays, giftWrapsReached)
             }
-            if (index == oldestNip04Index && (loadingNip04 || !nip04Exhausted)) {
-                DmLoadMoreIndicator(loadingNip04, showLoadAll = !nip04Exhausted) {
-                    nip04History.loadEverything(user)
-                }
+            if (index == oldestNip04Index) {
+                DmHistoryLoadingCard(nip04Name, "NIP-04", loadingNip04, nip04Exhausted, nip04Relays, nip04Reached)
             }
         }
 
-        // Protocols with no room loaded yet (e.g. only public rooms so far): show their boundary at the end.
+        // Protocols with no room loaded yet (e.g. only public rooms so far): show their card at the end.
         if (oldestNip17Index < 0 && (loadingGiftWraps || !giftWrapsExhausted)) {
             item(key = "nip17Footer") {
-                DmLoadMoreIndicator(loadingGiftWraps, showLoadAll = !giftWrapsExhausted) {
-                    giftWrapsHistory.loadEverything(user)
-                }
+                DmHistoryLoadingCard(nip17Name, "NIP-17", loadingGiftWraps, giftWrapsExhausted, giftWrapsRelays, giftWrapsReached)
             }
         }
         if (oldestNip04Index < 0 && (loadingNip04 || !nip04Exhausted)) {
             item(key = "nip04Footer") {
-                DmLoadMoreIndicator(loadingNip04, showLoadAll = !nip04Exhausted) {
-                    nip04History.loadEverything(user)
-                }
+                DmHistoryLoadingCard(nip04Name, "NIP-04", loadingNip04, nip04Exhausted, nip04Relays, nip04Reached)
             }
         }
     }

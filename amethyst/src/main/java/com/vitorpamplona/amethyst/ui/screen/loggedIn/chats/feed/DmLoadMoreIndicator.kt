@@ -20,43 +20,156 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.theme.Size10dp
-import com.vitorpamplona.amethyst.ui.theme.Size25dp
+import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+// How long the "All caught up" state lingers before the card collapses away.
+private const val ALL_DONE_VISIBLE_MS = 2200L
 
 /**
- * The DM "older history" boundary, shared by the rooms list and the conversation screen: a spinner
- * while a window load is in flight, and — while there is still older history to reach — a button to
- * skip the windowed paging and pull the entire history at once.
+ * The DM "older history" status card, shown at one protocol's oldest-loaded boundary (rooms list and
+ * conversation). It tells the user exactly what the app is reaching for: which protocol, how many
+ * relays it is asking, and how far back it has paged. When that protocol runs dry it does NOT just
+ * vanish — it crossfades to an "All caught up" state, holds for a beat, then collapses away.
+ *
+ * @param protocolName human label woven into sentences, e.g. "encrypted" / "legacy".
+ * @param protocolTag  short technical tag for the subtitle, e.g. "NIP-17" / "NIP-04".
+ * @param reachedBack  epoch seconds of the oldest point reached so far (the deepest `until` cursor).
  */
 @Composable
-fun DmLoadMoreIndicator(
-    loadingMore: Boolean,
-    showLoadAll: Boolean,
-    onLoadEntireHistory: () -> Unit,
+fun DmHistoryLoadingCard(
+    protocolName: String,
+    protocolTag: String,
+    loading: Boolean,
+    exhausted: Boolean,
+    relayCount: Int,
+    reachedBack: Long?,
+    modifier: Modifier = Modifier,
 ) {
-    Column(
-        Modifier.fillMaxWidth().padding(vertical = Size10dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+    // Once exhausted, show "All caught up" for a beat, then collapse. Reset if it un-exhausts.
+    var collapsed by remember { mutableStateOf(false) }
+    LaunchedEffect(exhausted) {
+        collapsed =
+            if (exhausted) {
+                delay(ALL_DONE_VISIBLE_MS)
+                true
+            } else {
+                false
+            }
+    }
+
+    AnimatedVisibility(
+        visible = !collapsed,
+        modifier = modifier,
+        enter = fadeIn(),
+        exit = shrinkVertically(tween(400)) + fadeOut(tween(250)),
     ) {
-        if (loadingMore) {
-            CircularProgressIndicator(Modifier.size(Size25dp))
-        }
-        if (showLoadAll) {
-            TextButton(onClick = onLoadEntireHistory) {
-                Text(stringResource(R.string.chats_load_entire_history))
+        Surface(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            shape = RoundedCornerShape(14.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+            tonalElevation = 2.dp,
+        ) {
+            Crossfade(targetState = exhausted, animationSpec = tween(500), label = "dmHistoryState") { done ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(Modifier.size(22.dp), contentAlignment = Alignment.Center) {
+                        if (done) {
+                            Text(
+                                "✓",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        } else if (loading) {
+                            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        }
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text =
+                                if (done) {
+                                    stringResource(R.string.chats_history_all_caught_up)
+                                } else {
+                                    stringResource(R.string.chats_history_older, protocolName)
+                                },
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text =
+                                if (done) {
+                                    stringResource(R.string.chats_history_reached_start, protocolName)
+                                } else {
+                                    historySubtitle(protocolTag, relayCount, reachedBack)
+                                },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun historySubtitle(
+    protocolTag: String,
+    relayCount: Int,
+    reachedBack: Long?,
+): String {
+    val backLabel =
+        remember(reachedBack) {
+            reachedBack?.let { SimpleDateFormat("MMM yyyy", Locale.getDefault()).format(Date(it * 1000)) }
+        }
+    val relays = pluralStringResource(R.plurals.chats_history_relays, relayCount, relayCount)
+    return if (backLabel != null) {
+        stringResource(R.string.chats_history_subtitle, protocolTag, relays, backLabel)
+    } else {
+        stringResource(R.string.chats_history_subtitle_no_date, protocolTag, relays)
     }
 }

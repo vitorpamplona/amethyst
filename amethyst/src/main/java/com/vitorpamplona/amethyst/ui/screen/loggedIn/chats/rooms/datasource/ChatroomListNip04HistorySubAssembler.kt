@@ -67,6 +67,12 @@ class ChatroomListNip04HistorySubAssembler(
     private val _exhausted = MutableStateFlow(false)
     val exhausted: StateFlow<Boolean> = _exhausted.asStateFlow()
 
+    private val _relayCount = MutableStateFlow(0)
+    val relayCount: StateFlow<Int> = _relayCount.asStateFlow()
+
+    private val _reachedBack = MutableStateFlow<Long?>(null)
+    val reachedBack: StateFlow<Long?> = _reachedBack.asStateFlow()
+
     @Volatile
     private var scope: CoroutineScope? = null
 
@@ -124,6 +130,8 @@ class ChatroomListNip04HistorySubAssembler(
         }
         pager.beginRound(user.pubkeyHex, active)
         lastRoundUser = user
+        _relayCount.value = active.size
+        _reachedBack.value = pager.deepestUntil(user.pubkeyHex, active, startUntil())
         Log.d("DMPagination") { "[rooms.nip04.history] loadMore → ${active.size} active relay(s)" }
         scope?.let {
             ensureRoundCollector(it)
@@ -151,6 +159,7 @@ class ChatroomListNip04HistorySubAssembler(
                             val asked = askedRelays[user.pubkeyHex] ?: emptySet()
                             val count = pager.roundEventCount(user.pubkeyHex, asked)
                             _exhausted.value = count == 0
+                            _reachedBack.value = pager.deepestUntil(user.pubkeyHex, asked, startUntil())
                             Log.d("DMPagination") { "[rooms.nip04.history] round done: $count event(s), exhausted=${count == 0}" }
                             if (autoLoadAll && count > 0) loadMore(user)
                         }

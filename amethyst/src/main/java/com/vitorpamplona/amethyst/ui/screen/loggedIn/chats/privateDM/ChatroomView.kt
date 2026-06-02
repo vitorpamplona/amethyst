@@ -36,9 +36,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.uploads.resolveSharedMedia
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
@@ -46,7 +48,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.elements.ObserveRelayListForDMsAndDisplayIfNotFound
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.DmLoadMoreIndicator
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.DmHistoryLoadingCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.dal.ChatroomFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource.ChatroomFilterAssemblerSubscription
@@ -219,7 +221,12 @@ fun ChatroomViewUI(
     val loadingNip04 by nip04History.loadingMore.collectAsStateWithLifecycle()
     val giftWrapsExhausted by giftWrapsHistory.exhausted.collectAsStateWithLifecycle()
     val nip04Exhausted by nip04History.exhausted.collectAsStateWithLifecycle()
-    val historyExhausted = giftWrapsExhausted && nip04Exhausted
+    val giftWrapsRelays by giftWrapsHistory.relayCount.collectAsStateWithLifecycle()
+    val giftWrapsReached by giftWrapsHistory.reachedBack.collectAsStateWithLifecycle()
+    val nip04Relays by nip04History.relayCount.collectAsStateWithLifecycle()
+    val nip04Reached by nip04History.reachedBack.collectAsStateWithLifecycle()
+    val nip17Name = stringResource(R.string.chats_history_proto_nip17)
+    val nip04Name = stringResource(R.string.chats_history_proto_nip04)
 
     Column(Modifier.fillMaxHeight()) {
         ObserveRelayListForDMsAndDisplayIfNotFound(accountViewModel, nav)
@@ -239,24 +246,14 @@ fun ChatroomViewUI(
                 avoidDraft = newPostModel.draftTag,
                 onWantsToReply = newPostModel::reply,
                 onWantsToEditDraft = newPostModel::editFromDraft,
-                // While there is older history to reach, show the same spinner / "load all" boundary
-                // as the rooms list at the oldest end (spinner only while actually loading).
-                olderBoundary =
-                    if (historyExhausted) {
-                        null
-                    } else {
-                        {
-                            DmLoadMoreIndicator(
-                                loadingMore = loadingGiftWraps || loadingNip04,
-                                showLoadAll = true,
-                            ) {
-                                Log.d("DMPagination") { "convo: Load entire history tapped" }
-                                val user = accountViewModel.userProfile()
-                                giftWrapsHistory.loadEverything(user)
-                                nip04History.loadEverything()
-                            }
-                        }
-                    },
+                // One status card per protocol at the oldest end: each shows what it's reaching for
+                // while it pages and crossfades to "All caught up" when that protocol runs dry.
+                olderBoundary = {
+                    Column {
+                        DmHistoryLoadingCard(nip17Name, "NIP-17", loadingGiftWraps, giftWrapsExhausted, giftWrapsRelays, giftWrapsReached)
+                        DmHistoryLoadingCard(nip04Name, "NIP-04", loadingNip04, nip04Exhausted, nip04Relays, nip04Reached)
+                    }
+                },
                 listStateObserver = { listState ->
                     LoadOlderMessagesWhenScrolling(listState, accountViewModel)
                 },

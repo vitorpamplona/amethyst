@@ -83,6 +83,14 @@ class AccountGiftWrapsHistoryEoseManager(
     private val _exhausted = MutableStateFlow(false)
     val exhausted: StateFlow<Boolean> = _exhausted.asStateFlow()
 
+    // Status surfaced to the loading card: how many relays the current page is asking, and the oldest
+    // point paging has reached (epoch seconds, the deepest cursor).
+    private val _relayCount = MutableStateFlow(0)
+    val relayCount: StateFlow<Int> = _relayCount.asStateFlow()
+
+    private val _reachedBack = MutableStateFlow<Long?>(null)
+    val reachedBack: StateFlow<Long?> = _reachedBack.asStateFlow()
+
     // Rooms-list auto-fill stall mark: the number of THIS protocol's distinct rooms shown the last
     // time the list auto-widened it. The list stops widening once a step adds no new room of this
     // protocol (widening only pulls older MESSAGES, which for a few busy correspondents can be
@@ -152,6 +160,8 @@ class AccountGiftWrapsHistoryEoseManager(
         }
         pager.beginRound(user.pubkeyHex, active)
         lastRoundUser = user
+        _relayCount.value = active.size
+        _reachedBack.value = pager.deepestUntil(user.pubkeyHex, active, startUntil())
         Log.d(TAG) { "[giftwrap.history] loadMore → ${active.size} active relay(s)" }
         scope?.let {
             ensureRoundCollector(it)
@@ -183,6 +193,7 @@ class AccountGiftWrapsHistoryEoseManager(
                             val asked = askedRelays[user.pubkeyHex] ?: emptySet()
                             val count = pager.roundEventCount(user.pubkeyHex, asked)
                             _exhausted.value = count == 0
+                            _reachedBack.value = pager.deepestUntil(user.pubkeyHex, asked, startUntil())
                             Log.d(TAG) { "[giftwrap.history] round done: $count event(s), exhausted=${count == 0}" }
                             if (autoLoadAll && count > 0) loadMore(user)
                         }
