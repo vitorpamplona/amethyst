@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 fun ChatroomScreen(
     roomId: ChatroomKey,
     draftMessage: String? = null,
+    attachmentUri: String? = null,
     replyToNote: HexKey? = null,
     editFromDraft: HexKey? = null,
     expiresDays: Int? = null,
@@ -86,6 +87,7 @@ fun ChatroomScreen(
             ChatroomView(
                 room = roomId,
                 draftMessage = draftMessage,
+                attachmentUri = attachmentUri,
                 replyToNote = replyToNote,
                 editFromDraft = editFromDraft,
                 expiresDays = expiresDays,

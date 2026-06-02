@@ -114,9 +114,15 @@ fun PrivateMessageEditFieldRow(
         if (channelScreenModel.message.text.isNotBlank()) {
             accountViewModel.launchSigner {
                 channelScreenModel.sendDraftSync()
+                // Rotate the draft tag only AFTER the async save completes. Doing it
+                // synchronously here (before launchSigner runs) would make sendDraftSync
+                // persist under a freshly-rotated tag, duplicating the draft. See the
+                // matching order in NewGroupDMScreen.
+                channelScreenModel.cancel()
             }
+        } else {
+            channelScreenModel.cancel()
         }
-        channelScreenModel.cancel()
         nav.popBack()
     }
 

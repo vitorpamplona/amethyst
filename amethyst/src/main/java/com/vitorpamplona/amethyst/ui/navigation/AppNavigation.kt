@@ -93,6 +93,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28P
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.metadata.ChannelMetadataScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip53LiveActivities.LiveActivityChannelScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.MessagesScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.share.ShareToDMScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessGameScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chess.ChessLobbyScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.communities.CommunityScreen
@@ -415,7 +416,7 @@ fun BuildNavigation(
         composableFromEndArgs<Route.GitRepository> { GitRepositoryScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
         composableFromEndArgs<Route.FollowPack> { FollowPackFeedScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
 
-        composableFromEndArgs<Route.Room> { ChatroomScreen(it.toKey(), it.message, it.replyId, it.draftId, it.expiresDays, accountViewModel, nav) }
+        composableFromEndArgs<Route.Room> { ChatroomScreen(it.toKey(), it.message, it.attachment, it.replyId, it.draftId, it.expiresDays, accountViewModel, nav) }
         composableFromEndArgs<Route.RoomByAuthor> { ChatroomByAuthorScreen(it.id, null, accountViewModel, nav) }
 
         composableFromEnd<Route.MarmotGroupList> { MarmotGroupListScreen(accountViewModel, nav) }
@@ -461,6 +462,7 @@ fun BuildNavigation(
         composableFromBottomArgs<Route.ChannelMetadataEdit> { ChannelMetadataScreen(it.id, accountViewModel, nav) }
         composableFromBottomArgs<Route.NewEphemeralChat> { NewEphemeralChatScreen(accountViewModel, nav) }
         composableFromBottomArgs<Route.NewGroupDM> { NewGroupDMScreen(it.message, it.attachment, accountViewModel, nav) }
+        composableFromBottomArgs<Route.ShareToDM> { ShareToDMScreen(it.message, it.attachment, accountViewModel, nav) }
 
         composableArgs<Route.EventRedirect> { LoadRedirectScreen(it.id, accountViewModel, nav) }
 
@@ -593,9 +595,15 @@ private fun NavigateIfIntentRequested(
     val activity = LocalContext.current.getActivity()
 
     if (activity.intent.action == Intent.ACTION_SEND) {
-        // avoids restarting the new Post screen when the intent is for the screen.
+        val isShareAsDm = ShareIntentRouting.isShareAsDm(activity.intent.component?.className)
+
+        // avoids restarting the destination screen when the intent is for the screen.
         // Microsoft's swift key sends Gifs as new actions
-        if (isBaseRoute<Route.NewShortNote>(nav.controller)) return
+        if (isShareAsDm) {
+            if (isBaseRoute<Route.ShareToDM>(nav.controller)) return
+        } else {
+            if (isBaseRoute<Route.NewShortNote>(nav.controller)) return
+        }
 
         // saves the intent to avoid processing again
         var message by remember {
@@ -612,7 +620,19 @@ private fun NavigateIfIntentRequested(
             )
         }
 
-        nav.newStack(Route.NewShortNote(message = message, attachment = media.toString()))
+        if (isShareAsDm) {
+            nav.newStack(Route.ShareToDM(message = message, attachment = media?.toString()))
+        } else {
+            nav.newStack(Route.NewShortNote(message = message, attachment = media.toString()))
+        }
+
+        // Consume the launch intent so a later recomposition can't re-fire
+        // newStack for the same share (the isBaseRoute guard is a non-reactive
+        // snapshot and stops guarding once we navigate past the destination,
+        // e.g. into a chat via the one-shot picker). Clearing the action also
+        // lets the else-branch register the onNewIntent listener for the rest
+        // of this session.
+        activity.intent.action = null
     } else {
         var newAccount by remember { mutableStateOf<String?>(null) }
 
@@ -671,9 +691,17 @@ private fun NavigateIfIntentRequested(
             val consumer =
                 Consumer<Intent> { intent ->
                     if (intent.action == Intent.ACTION_SEND) {
-                        // avoids restarting the new Post screen when the intent is for the screen.
+                        val isShareAsDm = ShareIntentRouting.isShareAsDm(intent.component?.className)
+                        // avoids restarting the destination screen when the intent is for the screen.
                         // Microsoft's swift key sends Gifs as new actions
-                        if (!isBaseRoute<Route.NewShortNote>(nav.controller)) {
+                        if (isShareAsDm) {
+                            if (!isBaseRoute<Route.ShareToDM>(nav.controller)) {
+                                val message = intent.getStringExtra(Intent.EXTRA_TEXT)?.ifBlank { null }
+                                val attachment =
+                                    IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)?.toString()
+                                nav.newStack(Route.ShareToDM(message = message, attachment = attachment))
+                            }
+                        } else if (!isBaseRoute<Route.NewShortNote>(nav.controller)) {
                             intent.getStringExtra(Intent.EXTRA_TEXT)?.let {
                                 nav.newStack(Route.NewShortNote(message = it))
                             }
