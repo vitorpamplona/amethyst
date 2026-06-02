@@ -52,27 +52,36 @@ data class SettingsCategory(
     val entries: List<SettingsEntry>,
 )
 
+private val SEARCH_DELIMITERS = Regex("[^\\p{L}\\p{N}]+")
+
+/** Lowercases and splits text into searchable words on any non-letter/digit run. */
+private fun String.searchWords(): List<String> = lowercase().split(SEARCH_DELIMITERS).filter { it.isNotEmpty() }
+
 /**
- * Filters [catalog] by [query] (case-insensitive substring over category title + entry title + keywords).
- * Blank/whitespace query returns [catalog] unchanged. Categories left with no
- * matching entries are dropped. Pure — no Compose/Android — so it is unit-testable;
- * string-resource resolution is injected via [stringLookup].
+ * Filters [catalog] by [query] using case-insensitive **word-prefix** matching over
+ * category title + entry title + keywords: an entry matches when every word in the
+ * query is the prefix of some word in that haystack (so `dark mo` matches "dark mode",
+ * but `tor` does not match "his**tor**y"). Blank/whitespace query returns [catalog]
+ * unchanged. Categories left with no matching entries are dropped. Pure — no
+ * Compose/Android — so it is unit-testable; string-resource resolution is injected
+ * via [stringLookup].
  */
 fun filterSettings(
     catalog: List<SettingsCategory>,
     query: String,
     stringLookup: (Int) -> String,
 ): List<SettingsCategory> {
-    val needle = query.trim().lowercase()
-    if (needle.isEmpty()) return catalog
+    val terms = query.searchWords()
+    if (terms.isEmpty()) return catalog
 
     return catalog.mapNotNull { category ->
-        val categoryTitle = stringLookup(category.titleRes)
+        val categoryWords = stringLookup(category.titleRes).searchWords()
         val matched =
             category.entries.filter { entry ->
-                val keywords = entry.keywordsRes?.let { stringLookup(it) } ?: ""
-                val haystack = (categoryTitle + " " + stringLookup(entry.titleRes) + " " + keywords).lowercase()
-                haystack.contains(needle)
+                val words =
+                    categoryWords + stringLookup(entry.titleRes).searchWords() +
+                        entry.keywordsRes?.let { stringLookup(it).searchWords() }.orEmpty()
+                terms.all { term -> words.any { it.startsWith(term) } }
             }
         if (matched.isEmpty()) null else category.copy(entries = matched)
     }

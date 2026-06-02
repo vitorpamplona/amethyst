@@ -126,4 +126,23 @@ class SettingsCatalogFilterTest {
         assertTrue(result[0].isDanger)
         assertTrue(result[0].entries[0].isDanger)
     }
+
+    @Test
+    fun prefixOfAWordMatches() {
+        // "rel" is a prefix of "Relay" (title); "the" is a prefix of "theme" (keyword).
+        assertEquals(1, run("rel")[0].entries[0].titleRes)
+        assertEquals(2, run("the")[0].entries[0].titleRes)
+    }
+
+    @Test
+    fun midWordTermDoesNotMatch() {
+        // Word-prefix, not substring: "ackup" is inside "Backup" but not a prefix of any word.
+        assertTrue(run("ackup").isEmpty())
+    }
+
+    @Test
+    fun everyQueryTermMustPrefixSomeWord() {
+        assertEquals(2, run("dark size")[0].entries[0].titleRes) // both terms hit UI Preferences
+        assertTrue(run("dark zzz").isEmpty()) // second term matches nothing
+    }
 }

@@ -47,27 +47,71 @@ fun buildSettingsCatalog(
                         icon = SettingsIcon.Painter(R.drawable.relays, 4),
                         keywordsRes = R.string.relay_setup_search_keywords,
                     ) { nav.nav(Route.EditRelays) },
-                    SettingsEntry(R.string.event_sync_title, SettingsIcon.Symbol(MaterialSymbols.Sync)) { nav.nav(Route.EventSync) },
-                    SettingsEntry(R.string.route_import_follows, SettingsIcon.Symbol(MaterialSymbols.GroupAdd)) { nav.nav(Route.ImportFollowsSelectUser) },
-                    SettingsEntry(R.string.media_servers, SettingsIcon.Symbol(MaterialSymbols.CloudUpload)) { nav.nav(Route.EditMediaServers) },
-                    SettingsEntry(R.string.nests_servers_title, SettingsIcon.Symbol(MaterialSymbols.CloudUpload)) { nav.nav(Route.EditNestsServers) },
-                    SettingsEntry(R.string.profile_badges_title, SettingsIcon.Symbol(MaterialSymbols.MilitaryTech)) { nav.nav(Route.ProfileBadges) },
-                    SettingsEntry(R.string.favorite_dvms_title, SettingsIcon.Symbol(MaterialSymbols.AutoAwesome)) { nav.nav(Route.EditFavoriteAlgoFeeds) },
-                    SettingsEntry(R.string.reactions, SettingsIcon.Symbol(MaterialSymbols.FavoriteBorder)) { nav.nav(Route.UpdateReactionType) },
-                    SettingsEntry(R.string.video_player_settings, SettingsIcon.Symbol(MaterialSymbols.VideoSettings)) { nav.nav(Route.VideoPlayerSettings) },
+                    SettingsEntry(
+                        titleRes = R.string.event_sync_title,
+                        icon = SettingsIcon.Symbol(MaterialSymbols.Sync),
+                        keywordsRes = R.string.event_sync_search_keywords,
+                    ) { nav.nav(Route.EventSync) },
+                    SettingsEntry(
+                        titleRes = R.string.route_import_follows,
+                        icon = SettingsIcon.Symbol(MaterialSymbols.GroupAdd),
+                        keywordsRes = R.string.import_follows_search_keywords,
+                    ) { nav.nav(Route.ImportFollowsSelectUser) },
+                    SettingsEntry(
+                        titleRes = R.string.media_servers,
+                        icon = SettingsIcon.Symbol(MaterialSymbols.CloudUpload),
+                        keywordsRes = R.string.media_servers_search_keywords,
+                    ) { nav.nav(Route.EditMediaServers) },
+                    SettingsEntry(
+                        titleRes = R.string.nests_servers_title,
+                        icon = SettingsIcon.Symbol(MaterialSymbols.CloudUpload),
+                        keywordsRes = R.string.nests_servers_search_keywords,
+                    ) { nav.nav(Route.EditNestsServers) },
+                    SettingsEntry(
+                        titleRes = R.string.profile_badges_title,
+                        icon = SettingsIcon.Symbol(MaterialSymbols.MilitaryTech),
+                        keywordsRes = R.string.profile_badges_search_keywords,
+                    ) { nav.nav(Route.ProfileBadges) },
+                    SettingsEntry(
+                        titleRes = R.string.favorite_dvms_title,
+                        icon = SettingsIcon.Symbol(MaterialSymbols.AutoAwesome),
+                        keywordsRes = R.string.favorite_dvms_search_keywords,
+                    ) { nav.nav(Route.EditFavoriteAlgoFeeds) },
+                    SettingsEntry(
+                        titleRes = R.string.reactions,
+                        icon = SettingsIcon.Symbol(MaterialSymbols.FavoriteBorder),
+                        keywordsRes = R.string.reactions_search_keywords,
+                    ) { nav.nav(Route.UpdateReactionType) },
+                    SettingsEntry(
+                        titleRes = R.string.video_player_settings,
+                        icon = SettingsIcon.Symbol(MaterialSymbols.VideoSettings),
+                        keywordsRes = R.string.video_player_search_keywords,
+                    ) { nav.nav(Route.VideoPlayerSettings) },
                     SettingsEntry(
                         titleRes = R.string.zaps,
                         icon = SettingsIcon.Symbol(MaterialSymbols.Bolt),
                         keywordsRes = R.string.zaps_search_keywords,
                     ) { nav.nav(Route.UpdateZapAmount()) },
-                    SettingsEntry(R.string.payment_targets, SettingsIcon.Symbol(MaterialSymbols.Payment)) { nav.nav(Route.EditPaymentTargets) },
+                    SettingsEntry(
+                        titleRes = R.string.payment_targets,
+                        icon = SettingsIcon.Symbol(MaterialSymbols.Payment),
+                        keywordsRes = R.string.payment_targets_search_keywords,
+                    ) { nav.nav(Route.EditPaymentTargets) },
                     SettingsEntry(
                         titleRes = R.string.security_filters,
                         icon = SettingsIcon.Symbol(MaterialSymbols.Security),
                         keywordsRes = R.string.security_filters_search_keywords,
                     ) { nav.nav(Route.SecurityFilters) },
-                    SettingsEntry(R.string.call_settings, SettingsIcon.Symbol(MaterialSymbols.Phone)) { nav.nav(Route.CallSettings) },
-                    SettingsEntry(R.string.translations, SettingsIcon.Symbol(MaterialSymbols.Translate)) { nav.nav(Route.UserSettings) },
+                    SettingsEntry(
+                        titleRes = R.string.call_settings,
+                        icon = SettingsIcon.Symbol(MaterialSymbols.Phone),
+                        keywordsRes = R.string.call_settings_search_keywords,
+                    ) { nav.nav(Route.CallSettings) },
+                    SettingsEntry(
+                        titleRes = R.string.translations,
+                        icon = SettingsIcon.Symbol(MaterialSymbols.Translate),
+                        keywordsRes = R.string.translations_search_keywords,
+                    ) { nav.nav(Route.UserSettings) },
                 ),
         )
 
@@ -81,8 +125,16 @@ fun buildSettingsCatalog(
                         icon = SettingsIcon.Painter(R.drawable.ic_tor, 1),
                         keywordsRes = R.string.privacy_options_search_keywords,
                     ) { nav.nav(Route.PrivacyOptions) },
-                    SettingsEntry(R.string.ots_explorer_settings, SettingsIcon.Symbol(MaterialSymbols.Search)) { nav.nav(Route.OtsSettings) },
-                    SettingsEntry(R.string.namecoin_settings, SettingsIcon.Symbol(MaterialSymbols.Security)) { nav.nav(Route.NamecoinSettings) },
+                    SettingsEntry(
+                        titleRes = R.string.ots_explorer_settings,
+                        icon = SettingsIcon.Symbol(MaterialSymbols.Search),
+                        keywordsRes = R.string.ots_explorer_search_keywords,
+                    ) { nav.nav(Route.OtsSettings) },
+                    SettingsEntry(
+                        titleRes = R.string.namecoin_settings,
+                        icon = SettingsIcon.Symbol(MaterialSymbols.Security),
+                        keywordsRes = R.string.namecoin_search_keywords,
+                    ) { nav.nav(Route.NamecoinSettings) },
                     SettingsEntry(
                         titleRes = R.string.ui_preferences,
                         icon = SettingsIcon.Symbol(MaterialSymbols.Settings),
@@ -93,12 +145,36 @@ fun buildSettingsCatalog(
                         icon = SettingsIcon.Symbol(MaterialSymbols.Notifications),
                         keywordsRes = R.string.notification_settings_search_keywords,
                     ) { nav.nav(Route.NotificationSettings) },
-                    SettingsEntry(R.string.calendar_reminder_settings_title, SettingsIcon.Symbol(MaterialSymbols.CalendarMonth)) { nav.nav(Route.CalendarReminderSettings) },
-                    SettingsEntry(R.string.compose_settings, SettingsIcon.Symbol(MaterialSymbols.Edit)) { nav.nav(Route.ComposeSettings) },
-                    SettingsEntry(R.string.reactions_settings, SettingsIcon.Symbol(MaterialSymbols.ThumbUp)) { nav.nav(Route.ReactionsSettings) },
-                    SettingsEntry(R.string.bottom_bar_settings, SettingsIcon.Symbol(MaterialSymbols.Dashboard)) { nav.nav(Route.BottomBarSettings) },
-                    SettingsEntry(R.string.home_tabs_settings, SettingsIcon.Symbol(MaterialSymbols.Home)) { nav.nav(Route.HomeTabsSettings) },
-                    SettingsEntry(R.string.profile_ui_settings, SettingsIcon.Symbol(MaterialSymbols.AccountCircle)) { nav.nav(Route.ProfileUiSettings) },
+                    SettingsEntry(
+                        titleRes = R.string.calendar_reminder_settings_title,
+                        icon = SettingsIcon.Symbol(MaterialSymbols.CalendarMonth),
+                        keywordsRes = R.string.calendar_reminder_search_keywords,
+                    ) { nav.nav(Route.CalendarReminderSettings) },
+                    SettingsEntry(
+                        titleRes = R.string.compose_settings,
+                        icon = SettingsIcon.Symbol(MaterialSymbols.Edit),
+                        keywordsRes = R.string.compose_search_keywords,
+                    ) { nav.nav(Route.ComposeSettings) },
+                    SettingsEntry(
+                        titleRes = R.string.reactions_settings,
+                        icon = SettingsIcon.Symbol(MaterialSymbols.ThumbUp),
+                        keywordsRes = R.string.reactions_settings_search_keywords,
+                    ) { nav.nav(Route.ReactionsSettings) },
+                    SettingsEntry(
+                        titleRes = R.string.bottom_bar_settings,
+                        icon = SettingsIcon.Symbol(MaterialSymbols.Dashboard),
+                        keywordsRes = R.string.bottom_bar_search_keywords,
+                    ) { nav.nav(Route.BottomBarSettings) },
+                    SettingsEntry(
+                        titleRes = R.string.home_tabs_settings,
+                        icon = SettingsIcon.Symbol(MaterialSymbols.Home),
+                        keywordsRes = R.string.home_tabs_search_keywords,
+                    ) { nav.nav(Route.HomeTabsSettings) },
+                    SettingsEntry(
+                        titleRes = R.string.profile_ui_settings,
+                        icon = SettingsIcon.Symbol(MaterialSymbols.AccountCircle),
+                        keywordsRes = R.string.profile_ui_search_keywords,
+                    ) { nav.nav(Route.ProfileUiSettings) },
                 ),
         )
 
@@ -109,11 +185,40 @@ fun buildSettingsCatalog(
             entries =
                 buildList {
                     if (hasPrivateKey) {
-                        add(SettingsEntry(R.string.backup_keys, SettingsIcon.Symbol(MaterialSymbols.Key), isDanger = true) { nav.nav(Route.AccountBackup) })
-                        add(SettingsEntry(R.string.request_to_vanish, SettingsIcon.Symbol(MaterialSymbols.DeleteForever), isDanger = true) { nav.nav(Route.RequestToVanish) })
+                        add(
+                            SettingsEntry(
+                                titleRes = R.string.backup_keys,
+                                icon = SettingsIcon.Symbol(MaterialSymbols.Key),
+                                keywordsRes = R.string.backup_keys_search_keywords,
+                                isDanger = true,
+                            ) { nav.nav(Route.AccountBackup) },
+                        )
+                        add(
+                            SettingsEntry(
+                                titleRes = R.string.request_to_vanish,
+                                icon = SettingsIcon.Symbol(MaterialSymbols.DeleteForever),
+                                keywordsRes = R.string.request_to_vanish_search_keywords,
+                                isDanger = true,
+                            ) { nav.nav(Route.RequestToVanish) },
+                        )
                     }
-                    add(SettingsEntry(R.string.vanish_history, SettingsIcon.Symbol(MaterialSymbols.History), isDanger = true) { nav.nav(Route.VanishEvents) })
-                    add(SettingsEntry(R.string.reset_marmot_state, SettingsIcon.Symbol(MaterialSymbols.DeleteSweep), isDanger = true, onClick = onResetMarmot))
+                    add(
+                        SettingsEntry(
+                            titleRes = R.string.vanish_history,
+                            icon = SettingsIcon.Symbol(MaterialSymbols.History),
+                            keywordsRes = R.string.vanish_history_search_keywords,
+                            isDanger = true,
+                        ) { nav.nav(Route.VanishEvents) },
+                    )
+                    add(
+                        SettingsEntry(
+                            titleRes = R.string.reset_marmot_state,
+                            icon = SettingsIcon.Symbol(MaterialSymbols.DeleteSweep),
+                            keywordsRes = R.string.reset_marmot_search_keywords,
+                            isDanger = true,
+                            onClick = onResetMarmot,
+                        ),
+                    )
                 },
         )
 
