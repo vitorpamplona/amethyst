@@ -159,7 +159,14 @@ class ChatroomNip04HistorySubAssembler(
             return
         }
         if (activeUnion == lastAskedActive && lastRoundEventCount == 0) {
-            Log.d("DMPagination") { "[convo.nip04.history] loadMore skipped — no progress on the same relays" }
+            // The same relays just returned nothing two rounds running — they're unreadable: a
+            // correspondent's auth-walled relay that only ever CLOSEs (ditto: "all authors must be
+            // authenticated"), or one perpetually stuck reconnecting. Give up on them so the
+            // conversation reports as finished instead of lingering forever on a "N relays" count
+            // with no progress bar. (My own reachable relays empty-EOSE to `done` and never land here.)
+            Log.d("DMPagination") { "[convo.nip04.history] giving up — no progress on the same relays ${activeUnion.map { it.url }}" }
+            perKeyActive.forEach { (pk, active) -> active.forEach { pager.giveUp(pk, it) } }
+            markExhaustedIfAllDone()
             return
         }
         lastAskedActive = activeUnion
