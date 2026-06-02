@@ -139,16 +139,17 @@ private const val PREFETCH_OLDER_MESSAGES = 3
 
 /**
  * Scroll-driven history loader for a conversation. The thread is reverse-laid-out (newest at the
- * bottom, index 0), so older messages live at higher indices. It loads the next, older window only
- * when the thread already overflows the screen AND the user has scrolled near the oldest loaded
- * message — so a short thread is never auto-walked to the start of history (that would load the whole
- * account's gift-wrap history). For more than what scrolling reaches, the oldest-end boundary offers
- * an explicit "Load entire history".
+ * bottom, index 0), so older messages (and the load-more boundary) live at the highest indices. It
+ * loads the next, older slice whenever the oldest end is in view — including a thread too short to
+ * scroll, so sitting at the start of a one-message chat keeps walking history back to its real
+ * beginning (or until the window is exhausted). Each step is a bounded, one-shot slice that never
+ * re-downloads, so walking a short thread is cheap per step — gift wraps can't be filtered per room,
+ * so this advances the shared account-wide history window and the conversation's messages surface as
+ * its slices are decrypted.
  *
- * The account-wide gift-wrap window is the single source of truth for the floor: NIP-17 advances via
- * [AccountGiftWrapsEoseManager.loadMore], and the NIP-04 loader [ChatroomNip04SubAssembler.reload]
- * re-requests kind:4 from that same floor. The step is gated on BOTH loaders being idle, so it never
- * outruns the slower protocol.
+ * NIP-17 advances via [AccountGiftWrapsHistoryEoseManager.loadMore]; the NIP-04 follower
+ * [ChatroomNip04HistorySubAssembler.reload] re-requests kind:4 at that same slice. The step is gated
+ * on BOTH loaders being idle, so it never outruns the slower protocol, and stops once exhausted.
  */
 @Composable
 private fun LoadOlderMessagesWhenScrolling(
@@ -164,8 +165,9 @@ private fun LoadOlderMessagesWhenScrolling(
                 val info = listState.layoutInfo
                 val total = info.totalItemsCount
                 val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: -1
-                val overflowsScreen = info.visibleItemsInfo.size < total
-                overflowsScreen && lastVisible >= total - PREFETCH_OLDER_MESSAGES
+                // The oldest end is in view (no overflow requirement, so a one-message thread that
+                // can't scroll still qualifies and walks history to its start).
+                total > 0 && lastVisible >= total - PREFETCH_OLDER_MESSAGES
             },
             giftWrapsHistory.loadingMore,
             nip04History.loadingMore,
@@ -175,7 +177,7 @@ private fun LoadOlderMessagesWhenScrolling(
         }.distinctUntilChanged()
             .filter { it }
             .collect {
-                Log.d("DMPagination") { "convo: widen (scrolled near oldest) → loadMore + reload" }
+                Log.d("DMPagination") { "convo: widen (oldest in view) → loadMore + reload" }
                 giftWrapsHistory.loadMore(accountViewModel.userProfile())
                 nip04History.reload()
             }
