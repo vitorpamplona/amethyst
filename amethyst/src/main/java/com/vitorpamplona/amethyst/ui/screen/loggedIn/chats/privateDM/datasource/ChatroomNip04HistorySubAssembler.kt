@@ -69,6 +69,12 @@ class ChatroomNip04HistorySubAssembler(
     private val _reachedBack = MutableStateFlow<Long?>(null)
     val reachedBack: StateFlow<Long?> = _reachedBack.asStateFlow()
 
+    // Shared across accounts/conversations (singleton coordinator): repoint the display flows to the
+    // conversation now on screen instead of leaking the previous one's state. Cursors live in [pager].
+    @Volatile
+    private var activeList: String? = null
+    private val exhaustedByList = ConcurrentHashMap<String, Boolean>()
+
     @Volatile
     private var scope: CoroutineScope? = null
 
@@ -84,17 +90,23 @@ class ChatroomNip04HistorySubAssembler(
 
     override fun list(key: ChatroomQueryState) = key.listId
 
+    // The pager/state key is account-scoped: a ChatroomKey (and thus listId) is the same for the same
+    // correspondent across accounts, so without the account pubkey two logged-in users viewing the
+    // same person would share one cursor.
+    private fun pagerKey(key: ChatroomQueryState) = user(key).pubkeyHex + "/" + key.listId
+
     override fun updateFilter(
         key: ChatroomQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
+        val pk = pagerKey(key)
         val relays = nip04DMRelays(key.room.users, key.account)
-        if (!key.account.isWriteable() || key.listId !in started || relays == null) {
+        if (!key.account.isWriteable() || pk !in started || relays == null) {
             windowLoad.setExpectedRelays(emptySet())
             return emptyList()
         }
-        val active = pager.activeRelays(key.listId, relays.all).toSet()
-        askedRelays[key.listId] = active
+        val active = pager.activeRelays(pk, relays.all).toSet()
+        askedRelays[pk] = active
         windowLoad.setExpectedRelays(active)
         if (active.isEmpty()) return emptyList()
         Log.d("DMPagination") { "[convo.nip04.history] REQ ${active.size} relay(s), limit=$PAGE_LIMIT" }
@@ -104,7 +116,7 @@ class ChatroomNip04HistorySubAssembler(
                 fromMeRelays = relays.fromMeRelays.intersect(active),
             )
         return filterNip04DMsHistory(key.room.users, key.account, activeRelays, PAGE_LIMIT) { relay ->
-            pager.untilFor(key.listId, relay, startUntil())
+            pager.untilFor(pk, relay, startUntil())
         }
     }
 
@@ -116,18 +128,20 @@ class ChatroomNip04HistorySubAssembler(
         var deepest: Long? = null
         allKeys().forEach { key ->
             val relays = nip04DMRelays(key.room.users, key.account) ?: return@forEach
-            started.add(key.listId)
-            val active = pager.activeRelays(key.listId, relays.all)
+            val pk = pagerKey(key)
+            started.add(pk)
+            val active = pager.activeRelays(pk, relays.all)
             if (active.isNotEmpty()) {
-                pager.beginRound(key.listId, active)
+                pager.beginRound(pk, active)
                 anyActive = true
                 totalRelays += active.size
-                pager.deepestUntil(key.listId, active, startUntil())?.let { d ->
+                pager.deepestUntil(pk, active, startUntil())?.let { d ->
                     deepest = deepest?.let { minOf(it, d) } ?: d
                 }
             }
         }
         if (!anyActive) {
+            activeList?.let { exhaustedByList[it] = true }
             _exhausted.value = true
             return
         }
@@ -155,9 +169,10 @@ class ChatroomNip04HistorySubAssembler(
                 var wasLoading = false
                 windowLoad.loading.collect { loading ->
                     if (!loading && wasLoading) {
-                        val count = started.sumOf { listId -> pager.roundEventCount(listId, askedRelays[listId] ?: emptySet()) }
+                        val count = started.sumOf { pk -> pager.roundEventCount(pk, askedRelays[pk] ?: emptySet()) }
+                        activeList?.let { exhaustedByList[it] = count == 0 }
                         _exhausted.value = count == 0
-                        _reachedBack.value = started.mapNotNull { listId -> pager.deepestUntil(listId, askedRelays[listId] ?: emptySet(), startUntil()) }.minOrNull()
+                        _reachedBack.value = started.mapNotNull { pk -> pager.deepestUntil(pk, askedRelays[pk] ?: emptySet(), startUntil()) }.minOrNull()
                         Log.d("DMPagination") { "[convo.nip04.history] round done: $count event(s), exhausted=${count == 0}" }
                         if (autoLoadAll && count > 0) loadMore()
                     }
@@ -168,11 +183,20 @@ class ChatroomNip04HistorySubAssembler(
 
     override fun newSub(key: ChatroomQueryState): Subscription {
         scope = key.account.scope
+        val pk = pagerKey(key)
+        if (activeList != pk) {
+            activeList = pk
+            // A different conversation (or account) is on screen: repoint the display flows to it.
+            _exhausted.value = exhaustedByList[pk] ?: false
+            _relayCount.value = 0
+            _reachedBack.value = null
+        }
         return requestNewSubscription(historyListener(key))
     }
 
-    private fun historyListener(key: ChatroomQueryState): SubscriptionListener =
-        object : SubscriptionListener {
+    private fun historyListener(key: ChatroomQueryState): SubscriptionListener {
+        val pk = pagerKey(key)
+        return object : SubscriptionListener {
             override fun onEvent(
                 event: Event,
                 isLive: Boolean,
@@ -180,14 +204,14 @@ class ChatroomNip04HistorySubAssembler(
                 forFilters: List<Filter>?,
             ) {
                 windowLoad.onRelayEvent(relay)
-                pager.onEvent(key.listId, relay, event.createdAt)
+                pager.onEvent(pk, relay, event.createdAt)
             }
 
             override fun onEose(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                pager.onEose(key.listId, relay)
+                pager.onEose(pk, relay)
                 windowLoad.onRelaySettled(relay)
                 newEose(key, relay, TimeUtils.now(), forFilters)
             }
@@ -208,6 +232,7 @@ class ChatroomNip04HistorySubAssembler(
                 windowLoad.onRelaySettled(relay)
             }
         }
+    }
 
     companion object {
         private const val PAGE_LIMIT = 10000

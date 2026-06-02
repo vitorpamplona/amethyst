@@ -61,6 +61,12 @@ class ChatroomListNip04HistorySubAssembler(
     private val askedRelays = ConcurrentHashMap<HexKey, Set<NormalizedRelayUrl>>()
     private val accounts = ConcurrentHashMap<HexKey, Account>()
 
+    // Shared across accounts (singleton coordinator): repoint the display flows to the active account
+    // on switch instead of leaking the previous one's exhausted/mark state. Cursors live in [pager].
+    @Volatile
+    private var activeUser: HexKey? = null
+    private val exhaustedByUser = ConcurrentHashMap<HexKey, Boolean>()
+
     private val windowLoad = WindowLoadTracker("rooms.nip04.history")
     val loadingMore: StateFlow<Boolean> = windowLoad.loading
 
@@ -125,6 +131,7 @@ class ChatroomListNip04HistorySubAssembler(
         val all = (account.homeRelays.flow.value + account.dmRelays.flow.value).toSet()
         val active = pager.activeRelays(user.pubkeyHex, all)
         if (active.isEmpty()) {
+            exhaustedByUser[user.pubkeyHex] = true
             _exhausted.value = true
             return
         }
@@ -158,6 +165,7 @@ class ChatroomListNip04HistorySubAssembler(
                         if (user != null) {
                             val asked = askedRelays[user.pubkeyHex] ?: emptySet()
                             val count = pager.roundEventCount(user.pubkeyHex, asked)
+                            exhaustedByUser[user.pubkeyHex] = count == 0
                             _exhausted.value = count == 0
                             _reachedBack.value = pager.deepestUntil(user.pubkeyHex, asked, startUntil())
                             Log.d("DMPagination") { "[rooms.nip04.history] round done: $count event(s), exhausted=${count == 0}" }
@@ -173,6 +181,13 @@ class ChatroomListNip04HistorySubAssembler(
         val user = user(key)
         scope = key.account.scope
         accounts[user.pubkeyHex] = key.account
+        if (activeUser != user.pubkeyHex) {
+            activeUser = user.pubkeyHex
+            _exhausted.value = exhaustedByUser[user.pubkeyHex] ?: false
+            _relayCount.value = 0
+            _reachedBack.value = null
+            autoFillRoomMark = Int.MIN_VALUE
+        }
         return requestNewSubscription(historyListener(user, key))
     }
 

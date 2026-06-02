@@ -76,6 +76,14 @@ class AccountGiftWrapsHistoryEoseManager(
     // the DM relay list without the key.
     private val accounts = ConcurrentHashMap<HexKey, Account>()
 
+    // This manager is shared across logged-in accounts (one singleton coordinator), so the single
+    // display flows below must follow whichever account is currently active. Per-account paging
+    // cursors live in [pager], so switching away and back preserves progress; [exhaustedByUser] lets
+    // the display flow repoint accurately on switch instead of leaking the previous account's state.
+    @Volatile
+    private var activeUser: HexKey? = null
+    private val exhaustedByUser = ConcurrentHashMap<HexKey, Boolean>()
+
     private val windowLoad = WindowLoadTracker("giftwrap.history")
     val loadingMore: StateFlow<Boolean> = windowLoad.loading
 
@@ -155,6 +163,7 @@ class AccountGiftWrapsHistoryEoseManager(
         started.add(user.pubkeyHex)
         val active = pager.activeRelays(user.pubkeyHex, account.dmRelays.flow.value)
         if (active.isEmpty()) {
+            exhaustedByUser[user.pubkeyHex] = true
             _exhausted.value = true
             return
         }
@@ -192,6 +201,7 @@ class AccountGiftWrapsHistoryEoseManager(
                         if (user != null) {
                             val asked = askedRelays[user.pubkeyHex] ?: emptySet()
                             val count = pager.roundEventCount(user.pubkeyHex, asked)
+                            exhaustedByUser[user.pubkeyHex] = count == 0
                             _exhausted.value = count == 0
                             _reachedBack.value = pager.deepestUntil(user.pubkeyHex, asked, startUntil())
                             Log.d(TAG) { "[giftwrap.history] round done: $count event(s), exhausted=${count == 0}" }
@@ -207,6 +217,14 @@ class AccountGiftWrapsHistoryEoseManager(
         val user = user(key)
         scope = key.account.scope
         accounts[user.pubkeyHex] = key.account
+        if (activeUser != user.pubkeyHex) {
+            activeUser = user.pubkeyHex
+            // Account switched: repoint the shared display flows to this account's own state.
+            _exhausted.value = exhaustedByUser[user.pubkeyHex] ?: false
+            _relayCount.value = 0
+            _reachedBack.value = null
+            autoFillRoomMark = Int.MIN_VALUE
+        }
         return requestNewSubscription(historyListener(user, key))
     }
 
