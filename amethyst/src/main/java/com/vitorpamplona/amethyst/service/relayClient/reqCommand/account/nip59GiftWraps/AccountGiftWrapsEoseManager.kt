@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59G
 
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.filterGiftWrapsToPubkey
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.WindowLoadTracker
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.trackingListener
@@ -68,7 +69,8 @@ class AccountGiftWrapsEoseManager(
         val relays = key.account.dmRelays.flow.value
         windowLoad.setExpectedRelays(relays.toSet())
         val sinceTime = TimeUtils.now() - LIVE_TAIL_SECONDS
-        Log.d(TAG) { "[giftwrap.live] REQ since=$sinceTime (7d, no until) on ${relays.size} relay(s)" }
+        DmRelayLog.log("giftwrap.live", key.account)
+        Log.d(TAG) { "[giftwrap.live] REQ since=$sinceTime (7d, no until) on ${relays.size} relay(s): ${relays.map { it.url }}" }
         return relays.flatMap { relay ->
             filterGiftWrapsToPubkey(relay = relay, pubkey = user(key).pubkeyHex, since = sinceTime)
         }

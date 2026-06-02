@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource
 
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.UntilLimitPager
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.WindowLoadTracker
@@ -123,7 +124,8 @@ class ChatroomNip04HistorySubAssembler(
         askedRelays[pk] = active
         windowLoad.setExpectedRelays(active)
         if (active.isEmpty()) return emptyList()
-        Log.d("DMPagination") { "[convo.nip04.history] REQ ${active.size} relay(s), limit=$PAGE_LIMIT" }
+        DmRelayLog.log("convo.nip04.history", key.account)
+        Log.d("DMPagination") { "[convo.nip04.history] REQ ${active.size} relay(s), limit=$PAGE_LIMIT fromMe(outbox)=${relays.fromMeRelays.intersect(active).map { it.url }} toMe(inbox)=${relays.toMeRelays.intersect(active).map { it.url }}" }
         val activeRelays =
             Nip04DmRelays(
                 toMeRelays = relays.toMeRelays.intersect(active),

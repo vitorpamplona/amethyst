@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource
 
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.WindowLoadTracker
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.trackingListener
@@ -52,7 +53,8 @@ class ChatroomNip04SubAssembler(
             val sinceTime = TimeUtils.now() - AccountGiftWrapsEoseManager.LIVE_TAIL_SECONDS
             val filters = filterNip04DMs(key.room.users, key.account, sinceTime)
             windowLoad.setExpectedRelays(filters?.mapTo(mutableSetOf()) { it.relay } ?: emptySet())
-            Log.d("DMPagination") { "[convo.nip04.live] REQ since=$sinceTime (7d, no until) on ${filters?.size ?: 0} relay-filter(s)" }
+            DmRelayLog.log("convo.nip04.live", key.account)
+            Log.d("DMPagination") { "[convo.nip04.live] REQ since=$sinceTime (7d, no until) on ${filters?.size ?: 0} relay-filter(s): ${filters?.map { it.relay.url }?.distinct()}" }
             filters
         } else {
             windowLoad.setExpectedRelays(emptySet())

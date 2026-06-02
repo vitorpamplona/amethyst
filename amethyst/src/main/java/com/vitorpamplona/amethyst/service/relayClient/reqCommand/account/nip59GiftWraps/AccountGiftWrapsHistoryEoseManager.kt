@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59G
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.filterGiftWrapsToPubkey
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.UntilLimitPager
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.WindowLoadTracker
@@ -151,7 +152,8 @@ class AccountGiftWrapsHistoryEoseManager(
         askedRelays[user.pubkeyHex] = active
         windowLoad.setExpectedRelays(active)
         if (active.isEmpty()) return emptyList()
-        Log.d(TAG) { "[giftwrap.history] REQ ${active.size} relay(s), limit=$PAGE_LIMIT (until ${daysAgo(pager.untilFor(user.pubkeyHex, active.first(), startUntil()))}d…)" }
+        DmRelayLog.log("giftwrap.history", key.account)
+        Log.d(TAG) { "[giftwrap.history] REQ ${active.size} relay(s) ${active.map { it.url }}, limit=$PAGE_LIMIT (until ${daysAgo(pager.untilFor(user.pubkeyHex, active.first(), startUntil()))}d…)" }
         return active.flatMap { relay ->
             filterGiftWrapsToPubkey(
                 relay = relay,

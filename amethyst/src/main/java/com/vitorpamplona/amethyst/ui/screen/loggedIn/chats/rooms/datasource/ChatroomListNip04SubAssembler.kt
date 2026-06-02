@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource
 
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.WindowLoadTracker
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.trackingListener
@@ -59,7 +60,8 @@ class ChatroomListNip04SubAssembler(
             val dmRelays = key.account.dmRelays.flow.value
             windowLoad.setExpectedRelays((homeRelays + dmRelays).toSet())
             val sinceTime = TimeUtils.now() - AccountGiftWrapsEoseManager.LIVE_TAIL_SECONDS
-            Log.d("DMPagination") { "[rooms.nip04.live] REQ since=$sinceTime (7d, no until) on ${homeRelays.size + dmRelays.size} relay(s)" }
+            DmRelayLog.log("rooms.nip04.live", key.account)
+            Log.d("DMPagination") { "[rooms.nip04.live] REQ since=$sinceTime (7d, no until) fromMe(outbox)=${homeRelays.map { it.url }} toMe(inbox)=${dmRelays.map { it.url }}" }
             homeRelays.map { filterNip04DMsFromMe(key.account.userProfile(), it, sinceTime) } +
                 dmRelays.map { filterNip04DMsToMe(key.account.userProfile(), it, sinceTime) }
         } else {
