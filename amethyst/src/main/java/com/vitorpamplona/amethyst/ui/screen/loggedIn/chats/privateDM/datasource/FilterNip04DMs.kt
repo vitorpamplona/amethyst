@@ -29,25 +29,34 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 
-/** The two relay sets a conversation's NIP-04 DMs flow over, resolved via the outbox model. */
+/**
+ * Where a conversation's NIP-04 DMs flow, resolved via the outbox model and **scoped per relay** so
+ * every filter only names the keys that actually own the relay it is sent to.
+ *
+ * Each map is `relay -> the counterpart keys to name in that relay's filter`:
+ *  - [toMeRelays] queries messages **to me** (`authors=[those keys], #p=[me]`). A relay appears here
+ *    when it is my inbox (then the key set is the whole group) and/or a counterpart's outbox (then
+ *    the key set is just the counterparts who publish there).
+ *  - [fromMeRelays] queries messages **from me** (`authors=[me], #p=[those keys]`). A relay appears
+ *    here when it is my outbox (then the key set is the whole group) and/or a counterpart's inbox
+ *    (then the key set is just the counterparts who read there).
+ *
+ * Scoping the key set per relay is what keeps us from sending, e.g., `authors=[bob]` to a relay that
+ * is only charlie's — a filter that relay has no reason to serve.
+ */
 class Nip04DmRelays(
-    val toMeRelays: Set<NormalizedRelayUrl>,
-    val fromMeRelays: Set<NormalizedRelayUrl>,
+    val toMeRelays: Map<NormalizedRelayUrl, Set<HexKey>>,
+    val fromMeRelays: Map<NormalizedRelayUrl, Set<HexKey>>,
 ) {
-    val all: Set<NormalizedRelayUrl> get() = toMeRelays + fromMeRelays
+    val all: Set<NormalizedRelayUrl> get() = toMeRelays.keys + fromMeRelays.keys
 }
 
-/**
- * Resolves where a conversation's NIP-04 DMs flow, scoped to relay owners so a filter naming a user
- * is only sent to relays that user actually lists:
- *
- *  - **to me** (`authors=[group]`) → the group's **outbox** (where they publish) plus **my inbox**
- *    (my own DM relays, as a safety net for legacy senders that delivered straight to my inbox).
- *  - **from me** (`authors=[me]`) → **my outbox** only. We deliberately do *not* ask the group's
- *    inbox relays for my-authored messages: those relays belong to the correspondent, not me, and
- *    querying them for `authors=[me]` is both redundant (my outbox already has them) and a trigger
- *    for auth-walled relays like ditto that reject authors they can't authenticate.
- */
+private fun addAll(
+    map: MutableMap<NormalizedRelayUrl, MutableSet<HexKey>>,
+    relays: Collection<NormalizedRelayUrl>,
+    keys: Collection<HexKey>,
+) = relays.forEach { map.getOrPut(it) { mutableSetOf() }.addAll(keys) }
+
 fun nip04DMRelays(
     group: Set<HexKey>?,
     account: Account?,
@@ -57,8 +66,18 @@ fun nip04DMRelays(
     val userOutboxRelays = account.homeRelays.flow.value
     val userInboxRelays = account.dmRelays.flow.value
 
-    val groupOutboxRelays = mutableSetOf<NormalizedRelayUrl>()
+    // relay -> counterpart keys whose messages-to-me we ask that relay for (authors set, #p=[me]).
+    val toMe = mutableMapOf<NormalizedRelayUrl, MutableSet<HexKey>>()
+    // relay -> counterpart keys whose copy of my messages we ask that relay for (#p set, authors=[me]).
+    val fromMe = mutableMapOf<NormalizedRelayUrl, MutableSet<HexKey>>()
 
+    // My own relays carry the whole conversation: my inbox holds everyone's messages to me, my outbox
+    // holds all of mine. Both filters name the full group on these relays.
+    addAll(toMe, userInboxRelays, group)
+    addAll(fromMe, userOutboxRelays, group)
+
+    // Each counterpart's own relays only get a filter naming that counterpart: their outbox (where
+    // they publish their messages to me) and their inbox (where they keep my messages to them).
     group.forEach {
         val authorHomeRelayEventAddress = AdvertisedRelayListEvent.createAddressTag(it)
         val authorHomeRelayEvent = (LocalCache.getAddressableNoteIfExists(authorHomeRelayEventAddress)?.event as? AdvertisedRelayListEvent)
@@ -69,18 +88,22 @@ fun nip04DMRelays(
                 ?: LocalCache.relayHints.hintsForKey(it).ifEmpty { null }
                 ?: emptyList()
 
-        groupOutboxRelays.addAll(outbox)
+        val inbox =
+            authorHomeRelayEvent?.readRelaysNorm()?.ifEmpty { null }
+                ?: LocalCache.getUserIfExists(it)?.allUsedRelaysOrNull()
+                ?: LocalCache.relayHints.hintsForKey(it).ifEmpty { null }
+                ?: emptyList()
+
+        addAll(toMe, outbox, listOf(it))
+        addAll(fromMe, inbox, listOf(it))
     }
 
-    return Nip04DmRelays(
-        toMeRelays = userInboxRelays + groupOutboxRelays,
-        fromMeRelays = userOutboxRelays,
-    )
+    return Nip04DmRelays(toMe, fromMe)
 }
 
 private fun toMeFilter(
     relay: NormalizedRelayUrl,
-    group: Set<HexKey>,
+    authors: Set<HexKey>,
     account: Account,
     since: Long?,
     until: Long?,
@@ -90,7 +113,7 @@ private fun toMeFilter(
     filter =
         Filter(
             kinds = listOf(PrivateDmEvent.KIND),
-            authors = group.toList(),
+            authors = authors.toList(),
             tags = mapOf("p" to listOf(account.userProfile().pubkeyHex)),
             since = since,
             until = until,
@@ -100,7 +123,7 @@ private fun toMeFilter(
 
 private fun fromMeFilter(
     relay: NormalizedRelayUrl,
-    group: Set<HexKey>,
+    pTags: Set<HexKey>,
     account: Account,
     since: Long?,
     until: Long?,
@@ -111,7 +134,7 @@ private fun fromMeFilter(
         Filter(
             kinds = listOf(PrivateDmEvent.KIND),
             authors = listOf(account.userProfile().pubkeyHex),
-            tags = mapOf("p" to group.toList()),
+            tags = mapOf("p" to pTags.toList()),
             since = since,
             until = until,
             limit = limit,
@@ -126,20 +149,20 @@ fun filterNip04DMs(
 ): List<RelayBasedFilter>? {
     if (group.isNullOrEmpty() || account == null) return null
     val relays = nip04DMRelays(group, account) ?: return null
-    return relays.toMeRelays.map { toMeFilter(it, group, account, since = windowStart, until = null, limit = null) } +
-        relays.fromMeRelays.map { fromMeFilter(it, group, account, since = windowStart, until = null, limit = null) }
+    return relays.toMeRelays.map { (relay, authors) -> toMeFilter(relay, authors, account, since = windowStart, until = null, limit = null) } +
+        relays.fromMeRelays.map { (relay, pTags) -> fromMeFilter(relay, pTags, account, since = windowStart, until = null, limit = null) }
 }
 
 /**
  * History filters: a bounded backward page per relay. Each relay is asked for [limit] events older
- * than [untilFor]`(relay)` (no `since`), so it can be paged down to empty independently.
+ * than [untilFor]`(relay)` (no `since`), so it can be paged down to empty independently. The author /
+ * `#p` key set per relay comes straight from [relays], so each relay only sees the keys it owns.
  */
 fun filterNip04DMsHistory(
-    group: Set<HexKey>,
     account: Account,
     relays: Nip04DmRelays,
     limit: Int,
     untilFor: (NormalizedRelayUrl) -> Long?,
 ): List<RelayBasedFilter> =
-    relays.toMeRelays.map { toMeFilter(it, group, account, since = null, until = untilFor(it), limit = limit) } +
-        relays.fromMeRelays.map { fromMeFilter(it, group, account, since = null, until = untilFor(it), limit = limit) }
+    relays.toMeRelays.map { (relay, authors) -> toMeFilter(relay, authors, account, since = null, until = untilFor(relay), limit = limit) } +
+        relays.fromMeRelays.map { (relay, pTags) -> fromMeFilter(relay, pTags, account, since = null, until = untilFor(relay), limit = limit) }

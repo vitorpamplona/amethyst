@@ -125,13 +125,13 @@ class ChatroomNip04HistorySubAssembler(
         windowLoad.setExpectedRelays(active)
         if (active.isEmpty()) return emptyList()
         DmRelayLog.log("convo.nip04.history", key.account)
-        Log.d("DMPagination") { "[convo.nip04.history] REQ ${active.size} relay(s), limit=$PAGE_LIMIT fromMe(outbox)=${relays.fromMeRelays.intersect(active).map { it.url }} toMe(inbox)=${relays.toMeRelays.intersect(active).map { it.url }}" }
+        Log.d("DMPagination") { "[convo.nip04.history] REQ ${active.size} relay(s), limit=$PAGE_LIMIT fromMe(outbox)=${relays.fromMeRelays.keys.intersect(active).map { it.url }} toMe(inbox)=${relays.toMeRelays.keys.intersect(active).map { it.url }}" }
         val activeRelays =
             Nip04DmRelays(
-                toMeRelays = relays.toMeRelays.intersect(active),
-                fromMeRelays = relays.fromMeRelays.intersect(active),
+                toMeRelays = relays.toMeRelays.filterKeys { it in active },
+                fromMeRelays = relays.fromMeRelays.filterKeys { it in active },
             )
-        return filterNip04DMsHistory(key.room.users, key.account, activeRelays, PAGE_LIMIT) { relay ->
+        return filterNip04DMsHistory(key.account, activeRelays, PAGE_LIMIT) { relay ->
             pager.untilFor(pk, relay, startUntil())
         }
     }
