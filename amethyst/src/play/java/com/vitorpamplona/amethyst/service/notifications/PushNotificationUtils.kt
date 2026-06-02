@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.service.notifications
 
 import com.google.firebase.messaging.FirebaseMessaging
 import com.vitorpamplona.amethyst.AccountInfo
-import com.vitorpamplona.amethyst.service.retryIfException
+import com.vitorpamplona.amethyst.commons.util.retryIfException
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await

@@ -18,10 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.previews
+package com.vitorpamplona.amethyst.commons.preview
 
-import com.vitorpamplona.amethyst.commons.preview.OpenGraphParser
-import com.vitorpamplona.amethyst.commons.preview.UrlInfoItem
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -65,7 +63,7 @@ class UrlPreview {
                                 ?: throw IllegalArgumentException("Website returned unknown mimetype: ${response.headers["Content-Type"]}")
                         when {
                             mimeType.type == "text" && mimeType.subtype == "html" -> {
-                                val metaTags = HtmlParser().parseHtml(response.body.source(), mimeType.charset())
+                                val metaTags = HtmlParser().parseHtml(response.body.bytes(), mimeType.charset()?.name())
                                 val data = OpenGraphParser().extractUrlInfo(metaTags)
                                 UrlInfoItem(url, data.title, data.description, data.image, mimeType.toString())
                             }

@@ -18,9 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service
+package com.vitorpamplona.amethyst.commons.preview
 
-fun <T> Iterable<T>.replace(
-    old: T,
-    new: T,
-): List<T> = map { if (it == old) new else it }
+/**
+ * Decodes [bytes] into a String using the charset named [charsetName].
+ *
+ * [charsetName] is an IANA charset name (e.g. "UTF-8", "ISO-8859-1",
+ * "windows-1252"). When it is null or cannot be resolved on the current
+ * platform, the implementation falls back to UTF-8.
+ *
+ * The decode is the only platform-specific step of link-preview HTML parsing:
+ * the JVM actual delegates to `java.nio.charset`, which supports every charset
+ * the JRE ships; the iOS actual maps the common web charsets to
+ * `NSStringEncoding` and falls back to UTF-8 for anything exotic.
+ */
+expect fun decodeBytes(
+    bytes: ByteArray,
+    charsetName: String?,
+): String
