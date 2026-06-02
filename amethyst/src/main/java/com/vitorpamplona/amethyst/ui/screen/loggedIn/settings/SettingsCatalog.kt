@@ -56,29 +56,24 @@ data class SettingsCategory(
  * Filters [catalog] by [query] (case-insensitive substring over category title + entry title + keywords).
  * Blank/whitespace query returns [catalog] unchanged. Categories left with no
  * matching entries are dropped. Pure — no Compose/Android — so it is unit-testable;
- * string resolution is injected via [titleLookup] / [keywordsLookup].
+ * string-resource resolution is injected via [stringLookup].
  */
 fun filterSettings(
     catalog: List<SettingsCategory>,
     query: String,
-    titleLookup: (Int) -> String,
-    keywordsLookup: (Int) -> String,
+    stringLookup: (Int) -> String,
 ): List<SettingsCategory> {
     val needle = query.trim().lowercase()
     if (needle.isEmpty()) return catalog
 
     return catalog.mapNotNull { category ->
-        val categoryTitle = titleLookup(category.titleRes)
+        val categoryTitle = stringLookup(category.titleRes)
         val matched =
             category.entries.filter { entry ->
-                val keywords = entry.keywordsRes?.let { keywordsLookup(it) } ?: ""
-                val haystack = (categoryTitle + " " + titleLookup(entry.titleRes) + " " + keywords).lowercase()
+                val keywords = entry.keywordsRes?.let { stringLookup(it) } ?: ""
+                val haystack = (categoryTitle + " " + stringLookup(entry.titleRes) + " " + keywords).lowercase()
                 haystack.contains(needle)
             }
-        if (matched.isEmpty()) {
-            null
-        } else {
-            SettingsCategory(category.titleRes, category.isDanger, matched)
-        }
+        if (matched.isEmpty()) null else category.copy(entries = matched)
     }
 }

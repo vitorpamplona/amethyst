@@ -46,6 +46,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -97,20 +98,25 @@ fun AllSettingsScreen(
     val searchState = rememberTextFieldState()
     val query = searchState.text.toString()
 
+    // The catalog is structurally stable for the screen's lifetime, so it is rebuilt only when
+    // an input actually changes — not on every keystroke. `onResetMarmot` reads the volatile
+    // `isResettingMarmot` through `rememberUpdatedState` so the memoized closure never goes stale.
+    val onResetMarmot by rememberUpdatedState(newValue = { if (!isResettingMarmot) showResetMarmotDialog = true })
     val catalog =
-        buildSettingsCatalog(
-            nav = nav,
-            uriHandler = uriHandler,
-            hasPrivateKey = hasPrivateKey,
-            onResetMarmot = { if (!isResettingMarmot) showResetMarmotDialog = true },
-        )
+        remember(hasPrivateKey, nav, uriHandler) {
+            buildSettingsCatalog(
+                nav = nav,
+                uriHandler = uriHandler,
+                hasPrivateKey = hasPrivateKey,
+                onResetMarmot = { onResetMarmot() },
+            )
+        }
 
     val filtered =
         filterSettings(
             catalog = catalog,
             query = query,
-            titleLookup = { stringRes(context, it) },
-            keywordsLookup = { stringRes(context, it) },
+            stringLookup = { stringRes(context, it) },
         )
 
     Scaffold(

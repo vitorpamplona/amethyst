@@ -25,16 +25,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SettingsCatalogFilterTest {
-    private val titles =
+    private val strings =
         mapOf(
             100 to "Account Settings",
             200 to "Danger Zone",
             1 to "Relay Setup",
             2 to "UI Preferences",
             3 to "Backup Keys",
-        )
-    private val keywords =
-        mapOf(
             20 to "dark mode, theme, font size",
         )
 
@@ -71,8 +68,7 @@ class SettingsCatalogFilterTest {
         filterSettings(
             catalog = catalog,
             query = query,
-            titleLookup = { titles.getValue(it) },
-            keywordsLookup = { keywords.getValue(it) },
+            stringLookup = { strings.getValue(it) },
         )
 
     @Test
