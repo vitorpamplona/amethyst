@@ -79,6 +79,10 @@ class ChatroomListNip04HistorySubAssembler(
     @Volatile
     private var autoLoadAll = false
 
+    // Rooms-list auto-fill stall mark for NIP-04 rooms (see the gift-wrap history manager's twin).
+    @Volatile
+    var autoFillRoomMark: Int = Int.MIN_VALUE
+
     private fun startUntil() = TimeUtils.now() - AccountGiftWrapsEoseManager.LIVE_TAIL_SECONDS
 
     override fun user(key: ChatroomListState) = key.account.userProfile()
