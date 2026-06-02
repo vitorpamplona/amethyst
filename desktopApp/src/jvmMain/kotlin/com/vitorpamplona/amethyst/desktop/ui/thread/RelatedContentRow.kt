@@ -40,11 +40,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,9 +56,11 @@ import com.vitorpamplona.amethyst.commons.feeds.related.CompactNoteData
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
+import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.isTaggedHashes
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import java.math.BigDecimal
 
 /**
  * Horizontal scrollable row of compact related content cards.
@@ -78,67 +77,37 @@ fun RelatedContentSection(
     onViewAll: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    var relatedItems by remember(noteId) { mutableStateOf<List<CompactNoteData>>(emptyList()) }
+    val lowercaseTags = noteHashtags.map { it.lowercase() }.toSet()
 
-    DisposableEffect(noteId) {
-        val results = mutableListOf<Note>()
-        val lowercaseTags = noteHashtags.map { it.lowercase() }.toSet()
-        val limit = 6
-
-        // Scan cache for related content
-        if (lowercaseTags.isNotEmpty()) {
-            localCache.notes.forEach { key, note ->
-                if (note.idHex != noteId &&
-                    note.event is TextNoteEvent &&
-                    note.event?.tags?.isTaggedHashes(lowercaseTags) == true
-                ) {
-                    results.add(note)
-                }
+    // Re-scan the cache initially and whenever a bundle of new events arrives
+    // that contains a candidate (same hashtag or same author). Without this,
+    // expanding a note on a cold cache leaves the section empty until the user
+    // collapses + re-expands.
+    val relatedItems by produceState<List<CompactNoteData>>(
+        initialValue = emptyList(),
+        key1 = noteId,
+        key2 = authorPubKey,
+        key3 = lowercaseTags,
+    ) {
+        fun rescan() {
+            runCatching {
+                value = scanRelated(localCache, noteId, authorPubKey, lowercaseTags)
             }
         }
-
-        // Fallback: same author
-        if (results.size < limit) {
-            localCache.notes.forEach { key, note ->
-                if (note.idHex != noteId &&
-                    note.event is TextNoteEvent &&
-                    note.event?.pubKey == authorPubKey &&
-                    note !in results
-                ) {
-                    results.add(note)
+        rescan()
+        localCache.eventStream.newEventBundles.collect { bundle ->
+            val matters =
+                bundle.any { n ->
+                    val ev = n.event
+                    ev is TextNoteEvent &&
+                        n.idHex != noteId &&
+                        (
+                            ev.pubKey == authorPubKey ||
+                                (lowercaseTags.isNotEmpty() && ev.tags.isTaggedHashes(lowercaseTags))
+                        )
                 }
-            }
+            if (matters) rescan()
         }
-
-        relatedItems =
-            results
-                .sortedByDescending { it.createdAt() }
-                .take(limit)
-                .map { note ->
-                    val event = note.event
-                    val content = event?.content ?: ""
-                    val firstLine =
-                        content
-                            .take(80)
-                            .lineSequence()
-                            .firstOrNull()
-                            ?.take(60) ?: ""
-                    val author = localCache.getUserIfExists(event?.pubKey ?: "")
-                    val imageUrl =
-                        UrlParser()
-                            .parseValidUrls(content)
-                            .withScheme
-                            .firstOrNull { RichTextParser.isImageUrl(it) }
-                    CompactNoteData(
-                        id = note.idHex,
-                        title = firstLine.ifBlank { "Note" },
-                        authorName = author?.toBestDisplayName() ?: event?.pubKey?.take(8) ?: "",
-                        thumbnailUrl = imageUrl,
-                        zapCount = if (note.zapsAmount > java.math.BigDecimal.ZERO) "${note.zapsAmount.toLong()}" else "",
-                    )
-                }
-
-        onDispose { }
     }
 
     if (relatedItems.isNotEmpty()) {
@@ -190,6 +159,76 @@ fun RelatedContentSection(
             }
         }
     }
+}
+
+private const val RELATED_LIMIT = 6
+
+/**
+ * Scan the local cache for notes related to [noteId] either by sharing a
+ * hashtag in [lowercaseTags] or by being authored by [authorPubKey]. Returns
+ * up to [RELATED_LIMIT] notes, most recent first, mapped to [CompactNoteData].
+ *
+ * Runs O(N) over `localCache.notes` — backed by `ConcurrentSkipListMap` which
+ * supports concurrent inserts during iteration (weakly consistent). Safe on
+ * the main composition coroutine for typical cache sizes (~30k notes).
+ */
+private fun scanRelated(
+    localCache: DesktopLocalCache,
+    noteId: String,
+    authorPubKey: String,
+    lowercaseTags: Set<String>,
+): List<CompactNoteData> {
+    val results = mutableListOf<Note>()
+
+    if (lowercaseTags.isNotEmpty()) {
+        localCache.notes.forEach { _, note ->
+            if (note.idHex != noteId &&
+                note.event is TextNoteEvent &&
+                note.event?.tags?.isTaggedHashes(lowercaseTags) == true
+            ) {
+                results.add(note)
+            }
+        }
+    }
+
+    if (results.size < RELATED_LIMIT) {
+        localCache.notes.forEach { _, note ->
+            if (note.idHex != noteId &&
+                note.event is TextNoteEvent &&
+                note.event?.pubKey == authorPubKey &&
+                note !in results
+            ) {
+                results.add(note)
+            }
+        }
+    }
+
+    return results
+        .sortedByDescending { it.createdAt() }
+        .take(RELATED_LIMIT)
+        .map { note ->
+            val event = note.event
+            val content = event?.content ?: ""
+            val firstLine =
+                content
+                    .take(80)
+                    .lineSequence()
+                    .firstOrNull()
+                    ?.take(60) ?: ""
+            val author = localCache.getUserIfExists(event?.pubKey ?: "")
+            val imageUrl =
+                UrlParser()
+                    .parseValidUrls(content)
+                    .withScheme
+                    .firstOrNull { RichTextParser.isImageUrl(it) }
+            CompactNoteData(
+                id = note.idHex,
+                title = firstLine.ifBlank { "Note" },
+                authorName = author?.toBestDisplayName() ?: event?.pubKey?.take(8) ?: "",
+                thumbnailUrl = imageUrl,
+                zapCount = if (note.zapsAmount > BigDecimal.ZERO) showAmount(note.zapsAmount) else "",
+            )
+        }
 }
 
 @Composable

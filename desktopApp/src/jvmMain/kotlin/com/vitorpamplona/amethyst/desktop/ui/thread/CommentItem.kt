@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
+import com.vitorpamplona.amethyst.commons.util.toZapAmount
 
 @Composable
 fun CommentItem(
@@ -152,7 +153,7 @@ fun CommentItem(
                     if (zapAmount > 0) {
                         Spacer(Modifier.width(4.dp))
                         Text(
-                            text = formatZapAmount(zapAmount),
+                            text = zapAmount.toZapAmount(),
                             style = MaterialTheme.typography.labelSmall,
                             color = zapColor,
                         )
@@ -162,10 +163,3 @@ fun CommentItem(
         }
     }
 }
-
-private fun formatZapAmount(sats: Long): String =
-    when {
-        sats >= 1_000_000 -> "${sats / 1_000_000}M"
-        sats >= 1_000 -> "${sats / 1_000}k"
-        else -> sats.toString()
-    }

@@ -146,8 +146,12 @@ fun DeckColumnContainer(
     val currentOverlay = navState.current
     val focusRequester = remember { FocusRequester() }
 
-    // Request focus on nav change so Esc key works
-    LaunchedEffect(currentOverlay) {
+    // Request focus once when the column is created. Re-keying on
+    // `currentOverlay` would steal focus from sibling columns whenever any
+    // deck column mutates its overlay state (e.g. typing in column A's reply
+    // box loses focus when column B opens a profile). Esc continues to work
+    // because the column still owns focus when the user hits the key.
+    LaunchedEffect(Unit) {
         focusRequester.requestFocus()
     }
 

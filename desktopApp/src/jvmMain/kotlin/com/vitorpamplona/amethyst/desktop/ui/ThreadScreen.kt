@@ -49,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.actions.ReplyActions
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -60,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.cache.dispatch
 import com.vitorpamplona.amethyst.desktop.feeds.DesktopThreadFilter
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.subscriptions.DesktopRelaySubscriptionsCoordinator
@@ -77,11 +79,7 @@ import com.vitorpamplona.amethyst.desktop.ui.thread.RelatedContentSection
 import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
-import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
@@ -342,24 +340,16 @@ fun ThreadScreen(
                                             myAvatarUrl = myAvatarUrl,
                                             onSend = { content ->
                                                 withContext(Dispatchers.IO) {
-                                                    val rootEvent =
-                                                        rootNote.event ?: return@withContext
-                                                    val template =
-                                                        TextNoteEvent.build(content) {
-                                                            val etag = ETag(rootEvent.id)
-                                                            etag.relay = null
-                                                            etag.author = rootEvent.pubKey
-                                                            eTag(etag)
-                                                            pTag(
-                                                                PTag(
-                                                                    rootEvent.pubKey,
-                                                                    relayHint = null,
-                                                                ),
-                                                            )
-                                                        }
-                                                    val signedEvent = account.signer.sign(template)
-                                                    localCache.consume(signedEvent, relay = null)
-                                                    relayManager.broadcastToAll(signedEvent)
+                                                    val parentText =
+                                                        rootNote.event as? TextNoteEvent
+                                                            ?: return@withContext
+                                                    val signedEvent =
+                                                        ReplyActions.replyTo(
+                                                            EventHintBundle(parentText, null),
+                                                            content,
+                                                            account.signer,
+                                                        )
+                                                    dispatch(signedEvent, localCache, relayManager)
                                                 }
                                             },
                                         )
@@ -420,8 +410,7 @@ fun ThreadScreen(
                                                                 "+",
                                                                 account.signer,
                                                             )
-                                                        relayManager.broadcastToAll(signed)
-                                                        localCache.consume(signed, relay = null)
+                                                        dispatch(signed, localCache, relayManager)
                                                     }
                                                 }
                                             },

@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.model.nip51Bookmarks.BookmarkAction
 import com.vitorpamplona.amethyst.commons.model.nip57Zaps.ZapAction
 import com.vitorpamplona.amethyst.commons.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
+import com.vitorpamplona.amethyst.commons.util.toZapAmount
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
@@ -232,7 +233,7 @@ fun ZapAmountDialog(
                         FilterChip(
                             selected = selectedAmount == amount,
                             onClick = { selectedAmount = amount },
-                            label = { Text(formatSats(amount)) },
+                            label = { Text(amount.toZapAmount()) },
                         )
                     }
                 }
@@ -250,7 +251,7 @@ fun ZapAmountDialog(
         },
         confirmButton = {
             Button(onClick = { onZap(selectedAmount, message) }) {
-                Text("Zap ${formatSats(selectedAmount)} sats")
+                Text("Zap ${selectedAmount.toZapAmount()} sats")
             }
         },
         dismissButton = {
@@ -260,8 +261,6 @@ fun ZapAmountDialog(
         },
     )
 }
-
-private fun formatSats(amount: Long): String = if (amount >= 1000) "${amount / 1000}k" else "$amount"
 
 /**
  * Dialog for choosing bookmark visibility (public or private).
@@ -369,7 +368,7 @@ fun ZapReceiptsDialog(
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(24.dp),
                 )
-                Text("${formatSats(totalAmount)} sats")
+                Text("${totalAmount.toZapAmount()} sats")
                 if (isLoading) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(16.dp),
@@ -411,7 +410,7 @@ fun ZapReceiptsDialog(
                                 }
                             }
                             Text(
-                                text = "${formatSats(receipt.amountSats)} sats",
+                                text = "${receipt.amountSats.toZapAmount()} sats",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -526,7 +525,7 @@ fun ZapReceiptsPopup(
                             modifier = Modifier.size(16.dp),
                         )
                         Text(
-                            "${formatSats(totalSats)} sats",
+                            "${totalSats.toZapAmount()} sats",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
@@ -567,7 +566,7 @@ fun ZapReceiptsPopup(
                                 }
                             }
                             Text(
-                                text = "${formatSats(entry.amount)} sats",
+                                text = "${entry.amount.toZapAmount()} sats",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -1229,7 +1228,7 @@ fun NoteActionsRow(
             }
             if (zapAmountSats > 0) {
                 Text(
-                    text = formatSats(zapAmountSats),
+                    text = zapAmountSats.toZapAmount(),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.clickable { showZapReceiptsDialog = true },

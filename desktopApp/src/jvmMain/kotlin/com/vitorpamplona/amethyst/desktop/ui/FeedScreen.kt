@@ -82,6 +82,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.actions.ReplyActions
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -103,6 +104,7 @@ import com.vitorpamplona.amethyst.desktop.DesktopPreferences
 import com.vitorpamplona.amethyst.desktop.SearchHistoryStore
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.cache.dispatch
 import com.vitorpamplona.amethyst.desktop.feeds.DesktopCustomFeedFilter
 import com.vitorpamplona.amethyst.desktop.feeds.DesktopFollowingFeedFilter
 import com.vitorpamplona.amethyst.desktop.feeds.DesktopGlobalFeedFilter
@@ -135,11 +137,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
-import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -421,9 +419,8 @@ fun FeedScreen(
                 followMutex.withLock {
                     val currentList = localCache.lastContactListEvent
                     val updatedEvent = FollowAction.follow(pubKeyHex, account.signer, currentList)
-                    relayManager.broadcastToAll(updatedEvent)
-                    // consume updates followedUsers StateFlow + stores the event
-                    localCache.consume(updatedEvent, relay = null)
+                    // consume updates followedUsers StateFlow + stores the event before broadcast
+                    dispatch(updatedEvent, localCache, relayManager)
                 }
             }
         }
@@ -1550,19 +1547,14 @@ private fun ExpandedNoteContent(
                         myAvatarUrl = myAvatarUrl,
                         onSend = { content ->
                             withContext(Dispatchers.IO) {
-                                val template =
-                                    TextNoteEvent.build(content) {
-                                        val etag = ETag(event.id)
-                                        etag.relay = null
-                                        etag.author = event.pubKey
-                                        eTag(etag)
-                                        pTag(
-                                            PTag(event.pubKey, relayHint = null),
-                                        )
-                                    }
-                                val signedEvent = account.signer.sign(template)
-                                localCache.consume(signedEvent, relay = null)
-                                relayManager.broadcastToAll(signedEvent)
+                                val parentText = event as? TextNoteEvent ?: return@withContext
+                                val signedEvent =
+                                    ReplyActions.replyTo(
+                                        EventHintBundle(parentText, null),
+                                        content,
+                                        account.signer,
+                                    )
+                                dispatch(signedEvent, localCache, relayManager)
                             }
                         },
                     )
@@ -1613,8 +1605,7 @@ private fun ExpandedNoteContent(
                                             "+",
                                             account.signer,
                                         )
-                                    relayManager.broadcastToAll(signed)
-                                    localCache.consume(signed, relay = null)
+                                    dispatch(signed, localCache, relayManager)
                                 }
                             }
                         },

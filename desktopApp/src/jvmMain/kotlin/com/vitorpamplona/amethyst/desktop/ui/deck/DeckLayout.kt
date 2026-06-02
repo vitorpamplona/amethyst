@@ -35,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
@@ -119,27 +120,31 @@ fun DeckLayout(
                     )
                 }
 
-                DeckColumnContainer(
-                    column = column,
-                    canClose = columns.size > 1,
-                    onClose = { deckState.removeColumn(column.id) },
-                    onDoubleClickHeader = { deckState.expandColumn(column.id, availableWidthDp) },
-                    relayManager = relayManager,
-                    localCache = localCache,
-                    accountManager = accountManager,
-                    account = account,
-                    iAccount = iAccount,
-                    nwcConnection = nwcConnection,
-                    subscriptionsCoordinator = subscriptionsCoordinator,
-                    highlightStore = highlightStore,
-                    draftStore = draftStore,
-                    nip11Fetcher = nip11Fetcher,
-                    appScope = appScope,
-                    onShowComposeDialog = onShowComposeDialog,
-                    onShowReplyDialog = onShowReplyDialog,
-                    onZapFeedback = onZapFeedback,
-                    onNavigateToRelays = onNavigateToRelays,
-                )
+                // Key by column id so reorder/remove doesn't re-run the
+                // child's `LaunchedEffect(Unit)` (which grabs keyboard focus).
+                key(column.id) {
+                    DeckColumnContainer(
+                        column = column,
+                        canClose = columns.size > 1,
+                        onClose = { deckState.removeColumn(column.id) },
+                        onDoubleClickHeader = { deckState.expandColumn(column.id, availableWidthDp) },
+                        relayManager = relayManager,
+                        localCache = localCache,
+                        accountManager = accountManager,
+                        account = account,
+                        iAccount = iAccount,
+                        nwcConnection = nwcConnection,
+                        subscriptionsCoordinator = subscriptionsCoordinator,
+                        highlightStore = highlightStore,
+                        draftStore = draftStore,
+                        nip11Fetcher = nip11Fetcher,
+                        appScope = appScope,
+                        onShowComposeDialog = onShowComposeDialog,
+                        onShowReplyDialog = onShowReplyDialog,
+                        onZapFeedback = onZapFeedback,
+                        onNavigateToRelays = onNavigateToRelays,
+                    )
+                }
             }
         }
     }
