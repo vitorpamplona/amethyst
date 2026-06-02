@@ -43,11 +43,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
@@ -98,6 +100,8 @@ import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.ui.elements.BoostedMark
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.ui.feeds.NewPostsChip
+import com.vitorpamplona.amethyst.commons.ui.feeds.rememberNewPostsChipState
 import com.vitorpamplona.amethyst.commons.ui.layouts.GenericRepostLayout
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.desktop.DesktopPreferences
@@ -670,16 +674,18 @@ fun FeedScreen(
         )
     }
 
+    // Hoisted so the floating "New posts" chip can share the same scroll
+    // state as the LazyColumn and follow the animated header height.
+    val homeFeedLazyListState = rememberLazyListState()
+    val headerSpacerHeight by animateDpAsState(
+        targetValue = if (searchActive) 300.dp else 60.dp,
+        animationSpec = tween(200),
+    )
+
     Box(modifier = Modifier.fillMaxSize()) {
         // Layer 1: Feed content (scrollable, behind scrim)
         ReadingColumn {
-            // Reserve space for the header card that floats above
-            // Reserve space for the header card that floats above.
-            // When search is expanded, the card grows — add more margin.
-            val headerSpacerHeight by animateDpAsState(
-                targetValue = if (searchActive) 300.dp else 60.dp,
-                animationSpec = tween(200),
-            )
+            // Reserve space for the header card that floats above the feed.
             Spacer(Modifier.height(headerSpacerHeight))
 
             // Feed content based on FeedState
@@ -720,9 +726,7 @@ fun FeedScreen(
 
                 is FeedState.Loaded -> {
                     val loadedState by state.feed.collectAsState()
-                    val lazyListState =
-                        androidx.compose.foundation.lazy
-                            .rememberLazyListState()
+                    val lazyListState = homeFeedLazyListState
 
                     // Viewport-aware scroll observation: fetch metadata for newly visible notes
                     LaunchedEffect(lazyListState, loadedState) {
@@ -810,6 +814,25 @@ fun FeedScreen(
                     }
                 }
             }
+        }
+
+        // Layer 1.5: "New posts" chip — floats below the header card,
+        // appears when fresh events prepend while the user is scrolled
+        // away from the top of the feed. Below the scrim in z-order so
+        // it dims along with the feed when search is expanded.
+        if (feedState is FeedState.Loaded) {
+            val chipState =
+                rememberNewPostsChipState(
+                    feedContentState = viewModel.feedState,
+                    listState = homeFeedLazyListState,
+                )
+            NewPostsChip(
+                state = chipState,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .offset(y = headerSpacerHeight + 8.dp),
+            )
         }
 
         // Reply dialog
