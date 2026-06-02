@@ -82,9 +82,12 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.actions.ReplyActions
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.nip02FollowList.FollowAction
+import com.vitorpamplona.amethyst.commons.model.nip25Reactions.ReactionAction
 import com.vitorpamplona.amethyst.commons.nip64Chess.RelaySyncStatus
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.search.AdvancedSearchBarState
@@ -96,10 +99,12 @@ import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.ui.elements.BoostedMark
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.layouts.GenericRepostLayout
+import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.desktop.DesktopPreferences
 import com.vitorpamplona.amethyst.desktop.SearchHistoryStore
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.amethyst.desktop.cache.dispatch
 import com.vitorpamplona.amethyst.desktop.feeds.DesktopCustomFeedFilter
 import com.vitorpamplona.amethyst.desktop.feeds.DesktopFollowingFeedFilter
 import com.vitorpamplona.amethyst.desktop.feeds.DesktopGlobalFeedFilter
@@ -115,6 +120,7 @@ import com.vitorpamplona.amethyst.desktop.subscriptions.createCustomFeedSubscrip
 import com.vitorpamplona.amethyst.desktop.subscriptions.createFollowingFeedSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createGlobalFeedSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.createSearchPeopleSubscription
+import com.vitorpamplona.amethyst.desktop.subscriptions.createThreadRepliesSubscription
 import com.vitorpamplona.amethyst.desktop.subscriptions.generateSubId
 import com.vitorpamplona.amethyst.desktop.subscriptions.rememberSubscription
 import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
@@ -122,10 +128,17 @@ import com.vitorpamplona.amethyst.desktop.ui.note.NoteCard
 import com.vitorpamplona.amethyst.desktop.ui.relay.LocalRelayCategories
 import com.vitorpamplona.amethyst.desktop.ui.relay.Nip65RelayEditor
 import com.vitorpamplona.amethyst.desktop.ui.search.SearchResultsList
+import com.vitorpamplona.amethyst.desktop.ui.thread.CommentItem
+import com.vitorpamplona.amethyst.desktop.ui.thread.CommentsCard
+import com.vitorpamplona.amethyst.desktop.ui.thread.InlineReplyInput
+import com.vitorpamplona.amethyst.desktop.ui.thread.RelatedContentSection
 import com.vitorpamplona.amethyst.desktop.viewmodels.DesktopFeedViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -137,6 +150,9 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 data class LightboxState(
     val urls: List<String>,
@@ -165,6 +181,9 @@ fun FeedNoteCard(
     onImageClick: ((List<String>, Int) -> Unit)? = null,
     onMediaClick: ((List<String>, Int, Float) -> Unit)? = null,
     onHashtagClick: ((String) -> Unit)? = null,
+    followedUsers: Set<String> = emptySet(),
+    myPubKeyHex: String? = null,
+    onFollow: ((String) -> Unit)? = null,
 ) {
     val event = note.event ?: return
     val isRepost = event is RepostEvent || event is GenericRepostEvent
@@ -226,8 +245,13 @@ fun FeedNoteCard(
                 BoostedMark()
             }
 
-            // Original note content
+            // Original note content with actions inside card
             val displayData = remember(originalEvent, metadataState) { originalEvent.toNoteDisplayData(localCache) }
+            val showRepostFollowPill =
+                account != null &&
+                    onFollow != null &&
+                    originalEvent.pubKey != myPubKeyHex &&
+                    originalEvent.pubKey !in followedUsers
             NoteCard(
                 note = displayData,
                 modifier = Modifier.fillMaxWidth(),
@@ -238,30 +262,41 @@ fun FeedNoteCard(
                 onHashtagClick = onHashtagClick,
                 onImageClick = onImageClick,
                 onMediaClick = onMediaClick,
+                headerTrailingContent =
+                    if (showRepostFollowPill) {
+                        {
+                            FollowPill(onClick = { onFollow.invoke(originalEvent.pubKey) })
+                        }
+                    } else {
+                        null
+                    },
+                bottomContent =
+                    if (account != null) {
+                        {
+                            NoteActionsRow(
+                                event = originalEvent,
+                                relayManager = relayManager,
+                                localCache = localCache,
+                                account = account,
+                                nwcConnection = nwcConnection,
+                                onReplyClick = onReply,
+                                onZapFeedback = onZapFeedback,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                note = originalNote,
+                                zapCount = originalNote.zaps.size,
+                                zapAmountSats = zapAmount.toLong(),
+                                zapReceipts = emptyList(),
+                                reactionCount = reactionCount,
+                                replyCount = replyCount,
+                                repostCount = repostCount,
+                                onNavigateToThread = onNavigateToThread,
+                                onNavigateToProfile = onNavigateToProfile,
+                            )
+                        }
+                    } else {
+                        null
+                    },
             )
-
-            // Action buttons for original note
-            if (account != null) {
-                NoteActionsRow(
-                    event = originalEvent,
-                    relayManager = relayManager,
-                    localCache = localCache,
-                    account = account,
-                    nwcConnection = nwcConnection,
-                    onReplyClick = onReply,
-                    onZapFeedback = onZapFeedback,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                    note = originalNote,
-                    zapCount = originalNote.zaps.size,
-                    zapAmountSats = zapAmount.toLong(),
-                    zapReceipts = emptyList(),
-                    reactionCount = reactionCount,
-                    replyCount = replyCount,
-                    repostCount = repostCount,
-                    onNavigateToThread = onNavigateToThread,
-                    onNavigateToProfile = onNavigateToProfile,
-                )
-            }
         }
     } else {
         // Regular note rendering
@@ -280,42 +315,57 @@ fun FeedNoteCard(
             onDispose { note.clearFlow() }
         }
 
-        Column {
-            val displayData = remember(event, metadataState) { event.toNoteDisplayData(localCache) }
-            NoteCard(
-                note = displayData,
-                modifier = Modifier.fillMaxWidth(),
-                localCache = localCache,
-                onClick = { onNavigateToThread(event.id) },
-                onAuthorClick = onNavigateToProfile,
-                onMentionClick = onNavigateToProfile,
-                onHashtagClick = onHashtagClick,
-                onImageClick = onImageClick,
-                onMediaClick = onMediaClick,
-            )
-
-            if (account != null) {
-                NoteActionsRow(
-                    event = event,
-                    relayManager = relayManager,
-                    localCache = localCache,
-                    account = account,
-                    nwcConnection = nwcConnection,
-                    onReplyClick = onReply,
-                    onZapFeedback = onZapFeedback,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                    note = note,
-                    zapCount = note.zaps.size,
-                    zapAmountSats = zapAmount.toLong(),
-                    zapReceipts = emptyList(),
-                    reactionCount = reactionCount,
-                    replyCount = replyCount,
-                    repostCount = repostCount,
-                    onNavigateToThread = onNavigateToThread,
-                    onNavigateToProfile = onNavigateToProfile,
-                )
-            }
-        }
+        val displayData = remember(event, metadataState) { event.toNoteDisplayData(localCache) }
+        val showFollowPill =
+            account != null &&
+                onFollow != null &&
+                event.pubKey != myPubKeyHex &&
+                event.pubKey !in followedUsers
+        NoteCard(
+            note = displayData,
+            modifier = Modifier.fillMaxWidth(),
+            localCache = localCache,
+            onClick = { onNavigateToThread(event.id) },
+            onAuthorClick = onNavigateToProfile,
+            onMentionClick = onNavigateToProfile,
+            onHashtagClick = onHashtagClick,
+            onImageClick = onImageClick,
+            onMediaClick = onMediaClick,
+            headerTrailingContent =
+                if (showFollowPill) {
+                    {
+                        FollowPill(onClick = { onFollow.invoke(event.pubKey) })
+                    }
+                } else {
+                    null
+                },
+            bottomContent =
+                if (account != null) {
+                    {
+                        NoteActionsRow(
+                            event = event,
+                            relayManager = relayManager,
+                            localCache = localCache,
+                            account = account,
+                            nwcConnection = nwcConnection,
+                            onReplyClick = onReply,
+                            onZapFeedback = onZapFeedback,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                            note = note,
+                            zapCount = note.zaps.size,
+                            zapAmountSats = zapAmount.toLong(),
+                            zapReceipts = emptyList(),
+                            reactionCount = reactionCount,
+                            replyCount = replyCount,
+                            repostCount = repostCount,
+                            onNavigateToThread = onNavigateToThread,
+                            onNavigateToProfile = onNavigateToProfile,
+                        )
+                    }
+                } else {
+                    null
+                },
+        )
     }
 }
 
@@ -356,6 +406,25 @@ fun FeedScreen(
 
     var replyToEvent by remember { mutableStateOf<Event?>(null) }
     var lightboxState by remember { mutableStateOf<LightboxState?>(null) }
+
+    // Inline expansion state — which note is expanded to show comments + related
+    var expandedNoteId by remember { mutableStateOf<String?>(null) }
+
+    // Follow pill state
+    val scope = rememberCoroutineScope()
+    val followMutex = remember { Mutex() }
+    val onFollowFromFeed: (String) -> Unit = { pubKeyHex ->
+        if (account != null) {
+            scope.launch(Dispatchers.IO) {
+                followMutex.withLock {
+                    val currentList = localCache.lastContactListEvent
+                    val updatedEvent = FollowAction.follow(pubKeyHex, account.signer, currentList)
+                    // consume updates followedUsers StateFlow + stores the event before broadcast
+                    dispatch(updatedEvent, localCache, relayManager)
+                }
+            }
+        }
+    }
     var showRelayPicker by remember { mutableStateOf(false) }
     var activeFeedId by remember { mutableStateOf(customFeedId) }
     var activeFeedSource by remember {
@@ -465,7 +534,7 @@ fun FeedScreen(
     // Force refresh when followedUsers arrives and feed is still empty
     LaunchedEffect(followedUsers, feedState) {
         if (followedUsers.isNotEmpty() && feedState is FeedState.Empty) {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            withContext(Dispatchers.IO) {
                 viewModel.feedState.refreshSuspended()
             }
         }
@@ -686,6 +755,8 @@ fun FeedScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         items(loadedState.list, key = { it.idHex }) { note ->
+                            val isExpanded = note.idHex == expandedNoteId
+
                             FeedNoteCard(
                                 note = note,
                                 relayManager = relayManager,
@@ -695,7 +766,10 @@ fun FeedScreen(
                                 onReply = { replyToEvent = note.event },
                                 onZapFeedback = onZapFeedback,
                                 onNavigateToProfile = onNavigateToProfile,
-                                onNavigateToThread = onNavigateToThread,
+                                onNavigateToThread = { noteId ->
+                                    // Toggle inline expansion instead of navigating
+                                    expandedNoteId = if (expandedNoteId == noteId) null else noteId
+                                },
                                 onImageClick = { urls, index ->
                                     lightboxState = LightboxState(urls, index)
                                 },
@@ -705,7 +779,33 @@ fun FeedScreen(
                                     com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
                                         .toggleFullscreen()
                                 },
+                                followedUsers = followedUsers,
+                                myPubKeyHex = account?.pubKeyHex,
+                                onFollow = onFollowFromFeed,
                             )
+
+                            // Inline expanded content: CommentsCard + Related
+                            AnimatedVisibility(
+                                visible = isExpanded,
+                                enter = expandVertically() + fadeIn(),
+                                exit = shrinkVertically() + fadeOut(),
+                            ) {
+                                ExpandedNoteContent(
+                                    note = note,
+                                    relayManager = relayManager,
+                                    localCache = localCache,
+                                    account = account,
+                                    nwcConnection = nwcConnection,
+                                    subscriptionsCoordinator = subscriptionsCoordinator,
+                                    onNavigateToProfile = onNavigateToProfile,
+                                    onNavigateToThread = { noteId ->
+                                        expandedNoteId = if (expandedNoteId == noteId) null else noteId
+                                    },
+                                    onNavigateToThreadOverlay = onNavigateToThread,
+                                    onReply = { replyToEvent = it },
+                                    onZapFeedback = onZapFeedback,
+                                )
+                            }
                         }
                     }
                 }
@@ -1375,4 +1475,203 @@ private fun FeedHeader(
             }
         }
     }
+}
+
+@Composable
+private fun ExpandedNoteContent(
+    note: com.vitorpamplona.amethyst.commons.model.Note,
+    relayManager: DesktopRelayConnectionManager,
+    localCache: DesktopLocalCache,
+    account: AccountState.LoggedIn?,
+    nwcConnection: com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm? = null,
+    subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator? = null,
+    onNavigateToProfile: (String) -> Unit = {},
+    onNavigateToThread: (String) -> Unit = {},
+    onNavigateToThreadOverlay: (String) -> Unit = {},
+    onReply: (Event) -> Unit = {},
+    onZapFeedback: (ZapFeedback) -> Unit = {},
+) {
+    val event = note.event ?: return
+    val noteId = event.id
+    val expandedScope = rememberCoroutineScope()
+    val connectedRelays =
+        relayManager.relayStatuses
+            .collectAsState()
+            .value.keys
+
+    // Subscribe for replies when expanded
+    rememberSubscription(connectedRelays, noteId, relayManager = relayManager) {
+        if (connectedRelays.isNotEmpty()) {
+            createThreadRepliesSubscription(
+                relays = connectedRelays,
+                noteId = noteId,
+                onEvent = { ev, _, relay, _ ->
+                    subscriptionsCoordinator?.consumeEvent(ev, relay)
+                },
+                onEose = { _, _ -> },
+            )
+        } else {
+            null
+        }
+    }
+
+    // Observe replies flow so we recompose when new replies arrive
+    val noteFlowSet = remember(note) { note.flow() }
+    val repliesState by noteFlowSet.replies.stateFlow.collectAsState()
+
+    DisposableEffect(note) { onDispose { note.clearFlow() } }
+
+    // Get reply notes from cache — recompute when replies change
+    val replyNotes = remember(repliesState) { note.replies.sortedByDescending { it.createdAt() } }
+
+    // Load metadata for reply authors
+    LaunchedEffect(replyNotes, subscriptionsCoordinator) {
+        if (subscriptionsCoordinator != null && replyNotes.isNotEmpty()) {
+            val authors = replyNotes.mapNotNull { it.event?.pubKey }.distinct()
+            if (authors.isNotEmpty()) {
+                subscriptionsCoordinator.loadMetadataBatched(authors)
+            }
+        }
+    }
+
+    Column(modifier = Modifier.padding(top = 8.dp)) {
+        // Comments card
+        CommentsCard(
+            commentCount = replyNotes.size,
+            replyContent = {
+                if (account != null) {
+                    val myUser = remember(account.pubKeyHex) { localCache.getUserIfExists(account.pubKeyHex) }
+                    val myAvatarUrl = remember(myUser) { myUser?.profilePicture() }
+
+                    InlineReplyInput(
+                        myAvatarUrl = myAvatarUrl,
+                        onSend = { content ->
+                            withContext(Dispatchers.IO) {
+                                val parentText = event as? TextNoteEvent ?: return@withContext
+                                val signedEvent =
+                                    ReplyActions.replyTo(
+                                        EventHintBundle(parentText, null),
+                                        content,
+                                        account.signer,
+                                    )
+                                dispatch(signedEvent, localCache, relayManager)
+                            }
+                        },
+                    )
+                }
+            },
+        ) {
+            if (replyNotes.isEmpty()) {
+                Text(
+                    "No replies yet",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 16.dp),
+                )
+            } else {
+                replyNotes.take(5).forEachIndexed { index, replyNote ->
+                    val replyEvent = replyNote.event
+                    val flowSet = remember(replyNote) { replyNote.flow() }
+                    val metadataState by flowSet.metadata.stateFlow.collectAsState()
+                    val reactionsState by flowSet.reactions.stateFlow.collectAsState()
+                    val zapsState by flowSet.zaps.stateFlow.collectAsState()
+
+                    DisposableEffect(replyNote) { onDispose { replyNote.clearFlow() } }
+
+                    val author =
+                        remember(replyEvent?.pubKey, metadataState) {
+                            replyEvent?.pubKey?.let { localCache.getUserIfExists(it) }
+                        }
+                    val reactionCount = remember(reactionsState) { replyNote.countReactions() }
+                    val zapAmount = remember(zapsState) { replyNote.zapsAmount }
+
+                    CommentItem(
+                        authorName = author?.toBestDisplayName() ?: replyEvent?.pubKey?.take(8) ?: "",
+                        authorHandle = author?.pubkeyNpub()?.take(16)?.let { "@$it..." } ?: "",
+                        authorAvatarUrl = author?.profilePicture(),
+                        authorPubKeyHex = replyEvent?.pubKey ?: "",
+                        content = replyEvent?.content ?: "",
+                        timeAgo = (replyEvent?.createdAt ?: 0L).toTimeAgo(),
+                        reactionCount = reactionCount,
+                        zapAmount = zapAmount.toLong(),
+                        onReply = { replyNote.event?.let { onReply(it) } },
+                        onLike = {
+                            val ev = replyNote.event
+                            if (account != null && ev != null) {
+                                expandedScope.launch(Dispatchers.IO) {
+                                    val signed =
+                                        ReactionAction.reactTo(
+                                            EventHintBundle(ev, null),
+                                            "+",
+                                            account.signer,
+                                        )
+                                    dispatch(signed, localCache, relayManager)
+                                }
+                            }
+                        },
+                        onZap = {
+                            val ev = replyNote.event
+                            if (account != null && ev != null && nwcConnection != null) {
+                                expandedScope.launch {
+                                    val feedback =
+                                        zapNote(
+                                            event = ev,
+                                            account = account,
+                                            relayManager = relayManager,
+                                            localCache = localCache,
+                                            amountSats = 21,
+                                            nwcConnection = nwcConnection,
+                                        )
+                                    onZapFeedback(feedback)
+                                }
+                            }
+                        },
+                        onAuthorClick = { replyNote.event?.pubKey?.let { onNavigateToProfile(it) } },
+                    )
+                    if (index < replyNotes.take(5).lastIndex) {
+                        Spacer(Modifier.height(12.dp))
+                    }
+                }
+            }
+        }
+
+        // Related content
+        val noteHashtags =
+            remember(event) {
+                event.tags.mapNotNull(HashtagTag::parse).toSet()
+            }
+        RelatedContentSection(
+            noteId = noteId,
+            authorPubKey = event.pubKey,
+            noteHashtags = noteHashtags,
+            localCache = localCache,
+            onItemClick = onNavigateToThreadOverlay,
+            onViewAll = { onNavigateToProfile(event.pubKey) },
+        )
+    }
+}
+
+@Composable
+private fun FollowPill(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    FilterChip(
+        selected = false,
+        onClick = onClick,
+        label = {
+            Text(
+                "Follow",
+                style = MaterialTheme.typography.labelSmall,
+            )
+        },
+        leadingIcon = {
+            Icon(
+                MaterialSymbols.PersonAdd,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+            )
+        },
+        modifier = modifier.height(28.dp),
+    )
 }

@@ -234,7 +234,7 @@ fun routeToMessage(
 ): Route {
     account.chatroomList.getOrCreatePrivateChatroom(room)
 
-    return Route.Room(room, draftMessage, replyId, draftId, expiresDays)
+    return Route.Room(room, message = draftMessage, replyId = replyId, draftId = draftId, expiresDays = expiresDays)
 }
 
 fun routeToMessage(

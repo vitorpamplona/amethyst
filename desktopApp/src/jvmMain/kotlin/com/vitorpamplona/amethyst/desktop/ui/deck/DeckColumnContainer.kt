@@ -20,6 +20,14 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.deck
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -29,11 +37,22 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.desktop.DesktopScreen
 import com.vitorpamplona.amethyst.desktop.RelaySettingsScreen
@@ -65,25 +84,38 @@ import com.vitorpamplona.amethyst.desktop.ui.chats.DesktopMessagesScreen
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayDashboardScreen
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect.Nip47URINorm
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 
 class ColumnNavigationState {
-    private val _stack = MutableStateFlow<List<DesktopScreen>>(emptyList())
-    val stack: kotlinx.coroutines.flow.StateFlow<List<DesktopScreen>> = _stack.asStateFlow()
+    private val _stack = mutableStateListOf<DesktopScreen>()
+    val stack: List<DesktopScreen> get() = _stack
+    val current: DesktopScreen? get() = _stack.lastOrNull()
+    val hasBackStack: Boolean get() = _stack.isNotEmpty()
+
+    var navigatingForward by mutableStateOf(true)
+        private set
+
+    fun pushWithCap(
+        screen: DesktopScreen,
+        maxDepth: Int = 2,
+    ) {
+        navigatingForward = true
+        if (_stack.size >= maxDepth) _stack.removeFirst()
+        _stack.add(screen)
+    }
 
     fun push(screen: DesktopScreen) {
-        _stack.value = _stack.value + screen
+        pushWithCap(screen)
     }
 
     fun pop(): Boolean {
-        if (_stack.value.isEmpty()) return false
-        _stack.value = _stack.value.dropLast(1)
+        if (_stack.isEmpty()) return false
+        navigatingForward = false
+        _stack.removeLast()
         return true
     }
 
     fun clear() {
-        _stack.value = emptyList()
+        _stack.clear()
     }
 }
 
@@ -111,19 +143,38 @@ fun DeckColumnContainer(
     modifier: Modifier = Modifier,
 ) {
     val navState = remember(column.id) { ColumnNavigationState() }
-    val navStack by navState.stack.collectAsState()
-    val currentOverlay = navStack.lastOrNull()
+    val currentOverlay = navState.current
+    val focusRequester = remember { FocusRequester() }
+
+    // Request focus once when the column is created. Re-keying on
+    // `currentOverlay` would steal focus from sibling columns whenever any
+    // deck column mutates its overlay state (e.g. typing in column A's reply
+    // box loses focus when column B opens a profile). Esc continues to work
+    // because the column still owns focus when the user hits the key.
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
 
     Column(
         modifier =
             modifier
                 .width(column.width.dp)
-                .fillMaxHeight(),
+                .fillMaxHeight()
+                .focusRequester(focusRequester)
+                .focusable()
+                .onPreviewKeyEvent { event ->
+                    if (event.key == Key.Escape && event.type == KeyEventType.KeyUp && navState.hasBackStack) {
+                        navState.pop()
+                        true
+                    } else {
+                        false
+                    }
+                },
     ) {
         ColumnHeader(
             column = column,
             canClose = canClose,
-            hasBackStack = navStack.isNotEmpty(),
+            hasBackStack = navState.hasBackStack,
             onBack = { navState.pop() },
             onClose = onClose,
             onDoubleClick = onDoubleClickHeader,
@@ -147,10 +198,8 @@ fun DeckColumnContainer(
         )
 
         // Content runs edge-to-edge; each screen adds its own header padding
-        // to match the Messages pattern (padding(horizontal = 12, vertical = 8)
-        // on the title row, no outer wrapper).
         Box(modifier = Modifier.fillMaxSize()) {
-            // Always keep RootContent composed so state (e.g. search results) survives navigation
+            // Always keep RootContent composed so state survives navigation
             RootContent(
                 columnType = column.type,
                 relayManager = relayManager,
@@ -174,28 +223,75 @@ fun DeckColumnContainer(
                 onNavigateToEditor = { navState.push(DesktopScreen.Editor(it)) },
                 onNavigateToRelays = onNavigateToRelays,
             )
-            if (currentOverlay != null) {
-                Surface(
-                    color = MaterialTheme.colorScheme.background,
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    OverlayContent(
-                        screen = currentOverlay,
-                        relayManager = relayManager,
-                        localCache = localCache,
-                        account = account,
-                        nwcConnection = nwcConnection,
-                        subscriptionsCoordinator = subscriptionsCoordinator,
-                        highlightStore = highlightStore,
-                        draftStore = draftStore,
-                        onShowComposeDialog = onShowComposeDialog,
-                        onShowReplyDialog = onShowReplyDialog,
-                        onZapFeedback = onZapFeedback,
-                        onNavigateToProfile = { navState.push(DesktopScreen.UserProfile(it)) },
-                        onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
-                        onNavigateToArticle = { navState.push(DesktopScreen.Article(it)) },
-                        onBack = { navState.pop() },
-                    )
+
+            // Overlay with slide animation
+            AnimatedContent(
+                targetState = currentOverlay,
+                transitionSpec = {
+                    val duration = 200
+                    if (navState.navigatingForward) {
+                        (
+                            slideInHorizontally(
+                                tween(duration),
+                            ) { it } +
+                                fadeIn(
+                                    androidx.compose.animation.core
+                                        .tween(duration),
+                                )
+                        ).togetherWith(
+                            slideOutHorizontally(
+                                tween(duration),
+                            ) { -it } +
+                                fadeOut(
+                                    androidx.compose.animation.core
+                                        .tween(duration),
+                                ),
+                        )
+                    } else {
+                        (
+                            slideInHorizontally(
+                                tween(duration),
+                            ) { -it } +
+                                fadeIn(
+                                    androidx.compose.animation.core
+                                        .tween(duration),
+                                )
+                        ).togetherWith(
+                            slideOutHorizontally(
+                                tween(duration),
+                            ) { it } +
+                                fadeOut(
+                                    androidx.compose.animation.core
+                                        .tween(duration),
+                                ),
+                        )
+                    }
+                },
+                label = "ColumnNavAnimation",
+            ) { overlayScreen ->
+                if (overlayScreen != null) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.background,
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        OverlayContent(
+                            screen = overlayScreen,
+                            relayManager = relayManager,
+                            localCache = localCache,
+                            account = account,
+                            nwcConnection = nwcConnection,
+                            subscriptionsCoordinator = subscriptionsCoordinator,
+                            highlightStore = highlightStore,
+                            draftStore = draftStore,
+                            onShowComposeDialog = onShowComposeDialog,
+                            onShowReplyDialog = onShowReplyDialog,
+                            onZapFeedback = onZapFeedback,
+                            onNavigateToProfile = { navState.push(DesktopScreen.UserProfile(it)) },
+                            onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
+                            onNavigateToArticle = { navState.push(DesktopScreen.Article(it)) },
+                            onBack = { navState.pop() },
+                        )
+                    }
                 }
             }
         }

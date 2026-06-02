@@ -113,6 +113,7 @@ fun MainSidebar(
     onOpenSettings: () -> Unit,
     onNavigate: (DeckColumnType) -> Unit,
     activeColumnType: DeckColumnType?,
+    feedTabActive: Boolean = false,
     onShowImportFollowListDialog: () -> Unit = {},
     signerConnectionState: SignerConnectionState,
     lastPingTimeSec: Long?,
@@ -183,12 +184,14 @@ fun MainSidebar(
         ) {
             NAV_ITEMS.forEach { item ->
                 val isActive = activeColumnType?.typeKey() == item.type.typeKey()
+                val isMuted = isActive && item.type is DeckColumnType.HomeFeed && feedTabActive
                 SidebarNavItem(
                     icon = item.icon,
                     label = item.label,
                     isActive = isActive,
                     expanded = expanded,
                     onClick = { onNavigate(item.type) },
+                    muted = isMuted,
                 )
             }
 
@@ -439,28 +442,30 @@ private fun SidebarNavItem(
     isActive: Boolean,
     expanded: Boolean,
     onClick: () -> Unit,
+    muted: Boolean = false,
 ) {
     var isHovered by remember { mutableStateOf(false) }
 
     val backgroundColor =
         when {
+            isActive && muted -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             isActive -> MaterialTheme.colorScheme.primaryContainer
             isHovered -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
             else -> MaterialTheme.colorScheme.surface
         }
 
     val iconTint =
-        if (isActive) {
-            MaterialTheme.colorScheme.primary
-        } else {
-            MaterialTheme.colorScheme.onSurfaceVariant
+        when {
+            isActive && muted -> MaterialTheme.colorScheme.onSurfaceVariant
+            isActive -> MaterialTheme.colorScheme.primary
+            else -> MaterialTheme.colorScheme.onSurfaceVariant
         }
 
     val textColor =
-        if (isActive) {
-            MaterialTheme.colorScheme.onPrimaryContainer
-        } else {
-            MaterialTheme.colorScheme.onSurfaceVariant
+        when {
+            isActive && muted -> MaterialTheme.colorScheme.onSurfaceVariant
+            isActive -> MaterialTheme.colorScheme.onPrimaryContainer
+            else -> MaterialTheme.colorScheme.onSurfaceVariant
         }
 
     Row(
@@ -491,7 +496,7 @@ private fun SidebarNavItem(
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
+                fontWeight = if (isActive && !muted) FontWeight.SemiBold else FontWeight.Normal,
                 color = textColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

@@ -218,6 +218,34 @@
             </intent-filter>
         </activity>
 
+        <!-- "Send as DM" share target. The android:name simple class ("ShareAsDMAlias")
+             is matched at runtime by ShareIntentRouting.SHARE_AS_DM_ALIAS_SIMPLE_NAME;
+             keep the two in sync when renaming. -->
+        <activity-alias
+            android:name=".ui.ShareAsDMAlias"
+            android:exported="true"
+            android:label="@string/share_target_as_dm"
+            android:targetActivity=".ui.MainActivity">
+
+            <intent-filter android:label="@string/share_target_as_dm">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+
+            <intent-filter android:label="@string/share_target_as_dm">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+
+            <intent-filter android:label="@string/share_target_as_dm">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="video/*" />
+            </intent-filter>
+        </activity-alias>
+
         <activity
             android:name="com.journeyapps.barcodescanner.CaptureActivity"
             android:screenOrientation="fullSensor"

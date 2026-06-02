@@ -35,10 +35,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.actions.uploads.resolveSharedMedia
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
@@ -55,6 +57,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -64,6 +67,7 @@ import kotlinx.coroutines.launch
 fun ChatroomView(
     room: ChatroomKey,
     draftMessage: String?,
+    attachmentUri: String? = null,
     replyToNote: HexKey? = null,
     editFromDraft: HexKey? = null,
     expiresDays: Int? = null,
@@ -124,6 +128,14 @@ fun ChatroomView(
             newPostModel.onMessageChanged()
         }
     }
+    val context = LocalContext.current
+    if (attachmentUri != null) {
+        LaunchedEffect(key1 = attachmentUri) {
+            resolveSharedMedia(context, attachmentUri)?.let {
+                newPostModel.pickedMedia(persistentListOf(it))
+            }
+        }
+    }
 
     ChatroomViewUI(
         room = room,
@@ -140,16 +152,15 @@ private const val PREFETCH_OLDER_MESSAGES = 3
 /**
  * Scroll-driven history loader for a conversation. The thread is reverse-laid-out (newest at the
  * bottom, index 0), so older messages (and the load-more boundary) live at the highest indices. It
- * loads the next, older slice whenever the oldest end is in view — including a thread too short to
+ * loads the next, older page whenever the oldest end is in view — including a thread too short to
  * scroll, so sitting at the start of a one-message chat keeps walking history back to its real
- * beginning (or until the window is exhausted). Each step is a bounded, one-shot slice that never
- * re-downloads, so walking a short thread is cheap per step — gift wraps can't be filtered per room,
- * so this advances the shared account-wide history window and the conversation's messages surface as
- * its slices are decrypted.
+ * beginning (or until both protocols are exhausted). Each step is a bounded `until`+`limit` page that
+ * never re-downloads, so walking a short thread is cheap per step — gift wraps can't be filtered per
+ * room, so this advances the shared account-wide history window and the conversation's messages
+ * surface as its pages are decrypted.
  *
- * NIP-17 advances via [AccountGiftWrapsHistoryEoseManager.loadMore]; the NIP-04 follower
- * [ChatroomNip04HistorySubAssembler.reload] re-requests kind:4 at that same slice. The step is gated
- * on BOTH loaders being idle, so it never outruns the slower protocol, and stops once exhausted.
+ * Both protocols advance via their history managers' `loadMore`; the step is gated on BOTH loaders
+ * being idle, so it never outruns the slower one, and stops once both report exhausted.
  */
 @Composable
 private fun LoadOlderMessagesWhenScrolling(

@@ -101,6 +101,8 @@ fun NoteCard(
     onImageClick: ((List<String>, Int) -> Unit)? = null,
     onMediaClick: ((List<String>, Int, Float) -> Unit)? = null,
     onPayInvoice: ((String) -> Unit)? = null,
+    bottomContent: (@Composable ColumnScope.() -> Unit)? = null,
+    headerTrailingContent: (@Composable () -> Unit)? = null,
 ) {
     val urls = remember(note.content) { UrlParser().parseValidUrls(note.content) }
     val imageUrls =
@@ -161,21 +163,25 @@ fun NoteCard(
             Column {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     // Author with avatar — stadium-shaped hover to match the
                     // avatar+name chip's visual shape.
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier =
-                            if (onAuthorClick != null) {
-                                Modifier
-                                    .clip(RoundedCornerShape(100.dp))
-                                    .clickable { onAuthorClick(note.pubKeyHex) }
-                            } else {
-                                Modifier
-                            },
+                            Modifier
+                                .weight(1f, fill = false)
+                                .then(
+                                    if (onAuthorClick != null) {
+                                        Modifier
+                                            .clip(RoundedCornerShape(100.dp))
+                                            .clickable { onAuthorClick(note.pubKeyHex) }
+                                    } else {
+                                        Modifier
+                                    },
+                                ),
                     ) {
                         UserAvatar(
                             userHex = note.pubKeyHex,
@@ -192,6 +198,10 @@ fun NoteCard(
                             color = MaterialTheme.colorScheme.primary,
                             maxLines = 1,
                         )
+                    }
+
+                    if (headerTrailingContent != null) {
+                        headerTrailingContent()
                     }
 
                     // Timestamp
@@ -305,6 +315,10 @@ fun NoteCard(
                     }
                 }
             }
+        }
+
+        if (bottomContent != null) {
+            bottomContent()
         }
     }
 

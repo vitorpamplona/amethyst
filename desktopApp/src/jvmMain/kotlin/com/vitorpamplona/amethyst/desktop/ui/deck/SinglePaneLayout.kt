@@ -20,6 +20,13 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.deck
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -74,8 +81,7 @@ fun SinglePaneLayout(
 ) {
     val currentColumnType by singlePaneState.currentScreen.collectAsState()
     val navState = remember { ColumnNavigationState() }
-    val navStack by navState.stack.collectAsState()
-    val currentOverlay = navStack.lastOrNull()
+    val currentOverlay = navState.current
 
     // Sidebar is now provided by Main.kt (shared MainSidebar for both layout modes).
     // SinglePaneLayout only renders the content pane.
@@ -124,28 +130,43 @@ fun SinglePaneLayout(
                     onNavigateToRelays = { singlePaneState.navigate(DeckColumnType.Relays) },
                     onOpenFeedsDrawer = onOpenFeedsDrawer,
                 )
-                if (currentOverlay != null) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.background,
-                        modifier = Modifier.fillMaxSize(),
-                    ) {
-                        OverlayContent(
-                            screen = currentOverlay,
-                            relayManager = relayManager,
-                            localCache = localCache,
-                            account = account,
-                            nwcConnection = nwcConnection,
-                            subscriptionsCoordinator = subscriptionsCoordinator,
-                            highlightStore = highlightStore,
-                            draftStore = draftStore,
-                            onShowComposeDialog = onShowComposeDialog,
-                            onShowReplyDialog = onShowReplyDialog,
-                            onZapFeedback = onZapFeedback,
-                            onNavigateToProfile = { navState.push(DesktopScreen.UserProfile(it)) },
-                            onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
-                            onNavigateToArticle = { navState.push(DesktopScreen.Article(it)) },
-                            onBack = { navState.pop() },
-                        )
+                AnimatedContent(
+                    targetState = currentOverlay,
+                    transitionSpec = {
+                        val duration = 200
+                        if (navState.navigatingForward) {
+                            (slideInHorizontally(tween(duration)) { it } + fadeIn(tween(duration)))
+                                .togetherWith(slideOutHorizontally(tween(duration)) { -it } + fadeOut(tween(duration)))
+                        } else {
+                            (slideInHorizontally(tween(duration)) { -it } + fadeIn(tween(duration)))
+                                .togetherWith(slideOutHorizontally(tween(duration)) { it } + fadeOut(tween(duration)))
+                        }
+                    },
+                    label = "SinglePaneNavAnimation",
+                ) { overlayScreen ->
+                    if (overlayScreen != null) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.background,
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            OverlayContent(
+                                screen = overlayScreen,
+                                relayManager = relayManager,
+                                localCache = localCache,
+                                account = account,
+                                nwcConnection = nwcConnection,
+                                subscriptionsCoordinator = subscriptionsCoordinator,
+                                highlightStore = highlightStore,
+                                draftStore = draftStore,
+                                onShowComposeDialog = onShowComposeDialog,
+                                onShowReplyDialog = onShowReplyDialog,
+                                onZapFeedback = onZapFeedback,
+                                onNavigateToProfile = { navState.push(DesktopScreen.UserProfile(it)) },
+                                onNavigateToThread = { navState.push(DesktopScreen.Thread(it)) },
+                                onNavigateToArticle = { navState.push(DesktopScreen.Article(it)) },
+                                onBack = { navState.pop() },
+                            )
+                        }
                     }
                 }
             }

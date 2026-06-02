@@ -1459,6 +1459,7 @@ fun MainContent(
                                     }
                                 },
                                 activeColumnType = activeColumnType,
+                                feedTabActive = activeColumnType is DeckColumnType.HomeFeed,
                                 onShowImportFollowListDialog = onShowImportFollowListDialog,
                                 signerConnectionState = signerConnectionState,
                                 lastPingTimeSec = lastPingTimeSec,
