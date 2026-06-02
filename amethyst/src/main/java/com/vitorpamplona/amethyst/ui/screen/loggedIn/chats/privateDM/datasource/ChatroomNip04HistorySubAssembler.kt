@@ -26,12 +26,14 @@ import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.WindowLoadTra
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
@@ -52,10 +54,19 @@ class ChatroomNip04HistorySubAssembler(
     client: INostrClient,
     allKeys: () -> Set<ChatroomQueryState>,
 ) : PerUserAndFollowListEoseManager<ChatroomQueryState, String>(client, allKeys) {
-    // Keyed per conversation (listId): each thread paginates independently.
-    private val pager = UntilLimitPager<String>()
-    private val started = ConcurrentHashMap.newKeySet<String>()
-    private val askedRelays = ConcurrentHashMap<String, Set<NormalizedRelayUrl>>()
+    // Keyed by (account, conversation) so each thread paginates independently — and so the same
+    // correspondent opened from two logged-in accounts doesn't share a cursor. ChatroomKey is a data
+    // class over the participant set, so it's a collision-free key (unlike its 32-bit hashCode/listId).
+    private data class ConvoKey(
+        val account: HexKey,
+        val room: ChatroomKey,
+    )
+
+    private fun convoKey(key: ChatroomQueryState) = ConvoKey(user(key).pubkeyHex, key.room)
+
+    private val pager = UntilLimitPager<ConvoKey>()
+    private val started = ConcurrentHashMap.newKeySet<ConvoKey>()
+    private val askedRelays = ConcurrentHashMap<ConvoKey, Set<NormalizedRelayUrl>>()
 
     private val windowLoad = WindowLoadTracker("convo.nip04.history")
     val loadingMore: StateFlow<Boolean> = windowLoad.loading
@@ -72,8 +83,8 @@ class ChatroomNip04HistorySubAssembler(
     // Shared across accounts/conversations (singleton coordinator): repoint the display flows to the
     // conversation now on screen instead of leaking the previous one's state. Cursors live in [pager].
     @Volatile
-    private var activeList: String? = null
-    private val exhaustedByList = ConcurrentHashMap<String, Boolean>()
+    private var activeConvo: ConvoKey? = null
+    private val exhaustedByConvo = ConcurrentHashMap<ConvoKey, Boolean>()
 
     @Volatile
     private var scope: CoroutineScope? = null
@@ -90,16 +101,11 @@ class ChatroomNip04HistorySubAssembler(
 
     override fun list(key: ChatroomQueryState) = key.listId
 
-    // The pager/state key is account-scoped: a ChatroomKey (and thus listId) is the same for the same
-    // correspondent across accounts, so without the account pubkey two logged-in users viewing the
-    // same person would share one cursor.
-    private fun pagerKey(key: ChatroomQueryState) = user(key).pubkeyHex + "/" + key.listId
-
     override fun updateFilter(
         key: ChatroomQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
-        val pk = pagerKey(key)
+        val pk = convoKey(key)
         val relays = nip04DMRelays(key.room.users, key.account)
         if (!key.account.isWriteable() || pk !in started || relays == null) {
             windowLoad.setExpectedRelays(emptySet())
@@ -128,7 +134,7 @@ class ChatroomNip04HistorySubAssembler(
         var deepest: Long? = null
         allKeys().forEach { key ->
             val relays = nip04DMRelays(key.room.users, key.account) ?: return@forEach
-            val pk = pagerKey(key)
+            val pk = convoKey(key)
             started.add(pk)
             val active = pager.activeRelays(pk, relays.all)
             if (active.isNotEmpty()) {
@@ -141,7 +147,7 @@ class ChatroomNip04HistorySubAssembler(
             }
         }
         if (!anyActive) {
-            activeList?.let { exhaustedByList[it] = true }
+            activeConvo?.let { exhaustedByConvo[it] = true }
             _exhausted.value = true
             return
         }
@@ -170,7 +176,7 @@ class ChatroomNip04HistorySubAssembler(
                 windowLoad.loading.collect { loading ->
                     if (!loading && wasLoading) {
                         val count = started.sumOf { pk -> pager.roundEventCount(pk, askedRelays[pk] ?: emptySet()) }
-                        activeList?.let { exhaustedByList[it] = count == 0 }
+                        activeConvo?.let { exhaustedByConvo[it] = count == 0 }
                         _exhausted.value = count == 0
                         _reachedBack.value = started.mapNotNull { pk -> pager.deepestUntil(pk, askedRelays[pk] ?: emptySet(), startUntil()) }.minOrNull()
                         Log.d("DMPagination") { "[convo.nip04.history] round done: $count event(s), exhausted=${count == 0}" }
@@ -183,11 +189,11 @@ class ChatroomNip04HistorySubAssembler(
 
     override fun newSub(key: ChatroomQueryState): Subscription {
         scope = key.account.scope
-        val pk = pagerKey(key)
-        if (activeList != pk) {
-            activeList = pk
+        val pk = convoKey(key)
+        if (activeConvo != pk) {
+            activeConvo = pk
             // A different conversation (or account) is on screen: repoint the display flows to it.
-            _exhausted.value = exhaustedByList[pk] ?: false
+            _exhausted.value = exhaustedByConvo[pk] ?: false
             _relayCount.value = 0
             _reachedBack.value = null
         }
@@ -195,7 +201,7 @@ class ChatroomNip04HistorySubAssembler(
     }
 
     private fun historyListener(key: ChatroomQueryState): SubscriptionListener {
-        val pk = pagerKey(key)
+        val pk = convoKey(key)
         return object : SubscriptionListener {
             override fun onEvent(
                 event: Event,
