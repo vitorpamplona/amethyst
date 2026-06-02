@@ -86,6 +86,14 @@ class ChatroomNip04HistorySubAssembler(
     private var activeConvo: ConvoKey? = null
     private val exhaustedByConvo = ConcurrentHashMap<ConvoKey, Boolean>()
 
+    // No-progress guard (see the gift-wrap history manager's twin): skip re-issuing an identical round
+    // that brought nothing; cleared by onEose.
+    @Volatile
+    private var lastAskedActive: Set<NormalizedRelayUrl> = emptySet()
+
+    @Volatile
+    private var lastRoundEventCount = -1
+
     @Volatile
     private var scope: CoroutineScope? = null
 
@@ -129,27 +137,38 @@ class ChatroomNip04HistorySubAssembler(
     /** Requests the next backward page for every open conversation that still has older history. */
     fun loadMore() {
         if (_exhausted.value) return
-        var anyActive = false
-        var totalRelays = 0
-        var deepest: Long? = null
+        // Gather the active (not-finished) relays per open conversation first, so the no-progress guard
+        // is checked before any beginRound (which would otherwise reset round tallies prematurely).
+        val perKeyActive = mutableListOf<Pair<ConvoKey, List<NormalizedRelayUrl>>>()
+        val activeUnion = mutableSetOf<NormalizedRelayUrl>()
         allKeys().forEach { key ->
             val relays = nip04DMRelays(key.room.users, key.account) ?: return@forEach
             val pk = convoKey(key)
             started.add(pk)
             val active = pager.activeRelays(pk, relays.all)
             if (active.isNotEmpty()) {
-                pager.beginRound(pk, active)
-                anyActive = true
-                totalRelays += active.size
-                pager.deepestUntil(pk, active, startUntil())?.let { d ->
-                    deepest = deepest?.let { minOf(it, d) } ?: d
-                }
+                perKeyActive.add(pk to active)
+                activeUnion.addAll(active)
             }
         }
-        if (!anyActive) {
+        if (perKeyActive.isEmpty()) {
             activeConvo?.let { exhaustedByConvo[it] = true }
             _exhausted.value = true
             return
+        }
+        if (activeUnion == lastAskedActive && lastRoundEventCount == 0) {
+            Log.d("DMPagination") { "[convo.nip04.history] loadMore skipped — no progress on the same relays" }
+            return
+        }
+        lastAskedActive = activeUnion
+        var totalRelays = 0
+        var deepest: Long? = null
+        perKeyActive.forEach { (pk, active) ->
+            pager.beginRound(pk, active)
+            totalRelays += active.size
+            pager.deepestUntil(pk, active, startUntil())?.let { d ->
+                deepest = deepest?.let { minOf(it, d) } ?: d
+            }
         }
         _relayCount.value = totalRelays
         _reachedBack.value = deepest
@@ -176,11 +195,21 @@ class ChatroomNip04HistorySubAssembler(
                 windowLoad.loading.collect { loading ->
                     if (!loading && wasLoading) {
                         val count = started.sumOf { pk -> pager.roundEventCount(pk, askedRelays[pk] ?: emptySet()) }
-                        activeConvo?.let { exhaustedByConvo[it] = count == 0 }
-                        _exhausted.value = count == 0
+                        lastRoundEventCount = count
+                        // Exhausted ONLY when every open conversation's relays have all returned an
+                        // empty page + EOSE; a CLOSED / unanswered relay isn't finished, so keep loading.
+                        val keys = allKeys()
+                        val exhaustedNow =
+                            keys.isNotEmpty() &&
+                                keys.none { key ->
+                                    val relays = nip04DMRelays(key.room.users, key.account)
+                                    relays != null && pager.activeRelays(convoKey(key), relays.all).isNotEmpty()
+                                }
+                        activeConvo?.let { exhaustedByConvo[it] = exhaustedNow }
+                        _exhausted.value = exhaustedNow
                         _reachedBack.value = started.mapNotNull { pk -> pager.deepestUntil(pk, askedRelays[pk] ?: emptySet(), startUntil()) }.minOrNull()
-                        Log.d("DMPagination") { "[convo.nip04.history] round done: $count event(s), exhausted=${count == 0}" }
-                        if (autoLoadAll && count > 0) loadMore()
+                        Log.d("DMPagination") { "[convo.nip04.history] round done: $count event(s), exhausted=$exhaustedNow" }
+                        if (autoLoadAll && !exhaustedNow) loadMore()
                     }
                     wasLoading = loading
                 }
@@ -196,8 +225,26 @@ class ChatroomNip04HistorySubAssembler(
             _exhausted.value = exhaustedByConvo[pk] ?: false
             _relayCount.value = 0
             _reachedBack.value = null
+            lastAskedActive = emptySet()
+            lastRoundEventCount = -1
         }
         return requestNewSubscription(historyListener(key))
+    }
+
+    // Flips to exhausted only once every open conversation's relays have all returned an empty page +
+    // EOSE. Sets true only — false transitions belong to loadMore / the round collector.
+    private fun markExhaustedIfAllDone() {
+        val keys = allKeys()
+        val allDone =
+            keys.isNotEmpty() &&
+                keys.none { key ->
+                    val relays = nip04DMRelays(key.room.users, key.account)
+                    relays != null && pager.activeRelays(convoKey(key), relays.all).isNotEmpty()
+                }
+        if (allDone) {
+            activeConvo?.let { exhaustedByConvo[it] = true }
+            _exhausted.value = true
+        }
     }
 
     private fun historyListener(key: ChatroomQueryState): SubscriptionListener {
@@ -220,6 +267,8 @@ class ChatroomNip04HistorySubAssembler(
                 pager.onEose(pk, relay)
                 windowLoad.onRelaySettled(relay)
                 newEose(key, relay, TimeUtils.now(), forFilters)
+                lastRoundEventCount = -1
+                markExhaustedIfAllDone()
             }
 
             override fun onClosed(

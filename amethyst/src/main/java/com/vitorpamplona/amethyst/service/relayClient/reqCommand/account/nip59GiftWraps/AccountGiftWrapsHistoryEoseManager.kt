@@ -84,6 +84,16 @@ class AccountGiftWrapsHistoryEoseManager(
     private var activeUser: HexKey? = null
     private val exhaustedByUser = ConcurrentHashMap<HexKey, Boolean>()
 
+    // No-progress guard: the relay set the last round asked and how many events it returned. If a fresh
+    // loadMore would ask the same relays and the last round brought nothing (all CLOSED / unanswered),
+    // we skip it rather than busy-retry — the pool re-auths on the open subscription and its EOSE will
+    // advance/finish them. Cleared by onEose (any EOSE means something changed).
+    @Volatile
+    private var lastAskedActive: Set<NormalizedRelayUrl> = emptySet()
+
+    @Volatile
+    private var lastRoundEventCount = -1
+
     private val windowLoad = WindowLoadTracker("giftwrap.history")
     val loadingMore: StateFlow<Boolean> = windowLoad.loading
 
@@ -167,6 +177,15 @@ class AccountGiftWrapsHistoryEoseManager(
             _exhausted.value = true
             return
         }
+        val activeSet = active.toSet()
+        if (activeSet == lastAskedActive && lastRoundEventCount == 0) {
+            // The same relays just returned nothing (e.g. all CLOSED, auth pending). The pool retries
+            // auth on the open subscription and its EOSE finishes them (see markExhaustedIfAllDone), so
+            // don't hammer with an identical round. onEose clears this gate when anything changes.
+            Log.d(TAG) { "[giftwrap.history] loadMore skipped — no progress on the same relays" }
+            return
+        }
+        lastAskedActive = activeSet
         pager.beginRound(user.pubkeyHex, active)
         lastRoundUser = user
         _relayCount.value = active.size
@@ -187,9 +206,10 @@ class AccountGiftWrapsHistoryEoseManager(
         loadMore(user)
     }
 
-    // Emits the round tally and the exhausted decision when the in-flight load settles. A round that
-    // received no events means no relay had anything older → exhausted; otherwise (and in load-all
-    // mode) keep paging.
+    // Emits the round tally and the exhausted decision when the in-flight load settles. Exhausted ONLY
+    // when every relay has returned an empty page + EOSE (pager.done): a relay that merely CLOSED (e.g.
+    // auth-required, before its post-auth retry) or never answered is NOT finished, so we don't call it
+    // "all caught up" — we keep loading it. In load-all mode, keep paging until that's true.
     private fun ensureRoundCollector(scope: CoroutineScope) {
         if (roundJob?.isActive == true) return
         roundJob =
@@ -201,16 +221,29 @@ class AccountGiftWrapsHistoryEoseManager(
                         if (user != null) {
                             val asked = askedRelays[user.pubkeyHex] ?: emptySet()
                             val count = pager.roundEventCount(user.pubkeyHex, asked)
-                            exhaustedByUser[user.pubkeyHex] = count == 0
-                            _exhausted.value = count == 0
+                            lastRoundEventCount = count
+                            val allRelays = accounts[user.pubkeyHex]?.dmRelays?.flow?.value ?: emptySet()
+                            val exhaustedNow = allRelays.isNotEmpty() && pager.activeRelays(user.pubkeyHex, allRelays).isEmpty()
+                            exhaustedByUser[user.pubkeyHex] = exhaustedNow
+                            _exhausted.value = exhaustedNow
                             _reachedBack.value = pager.deepestUntil(user.pubkeyHex, asked, startUntil())
-                            Log.d(TAG) { "[giftwrap.history] round done: $count event(s), exhausted=${count == 0}" }
-                            if (autoLoadAll && count > 0) loadMore(user)
+                            Log.d(TAG) { "[giftwrap.history] round done: $count event(s), exhausted=$exhaustedNow" }
+                            if (autoLoadAll && !exhaustedNow) loadMore(user)
                         }
                     }
                     wasLoading = loading
                 }
             }
+    }
+
+    // Flips to exhausted only once every relay has returned an empty page + EOSE (all done). Sets true
+    // only — the false transitions belong to loadMore / the round collector. Safe off the round path.
+    private fun markExhaustedIfAllDone(user: User) {
+        val allRelays = accounts[user.pubkeyHex]?.dmRelays?.flow?.value ?: return
+        if (allRelays.isNotEmpty() && pager.activeRelays(user.pubkeyHex, allRelays).isEmpty()) {
+            exhaustedByUser[user.pubkeyHex] = true
+            if (activeUser == user.pubkeyHex) _exhausted.value = true
+        }
     }
 
     override fun newSub(key: AccountQueryState): Subscription {
@@ -224,6 +257,8 @@ class AccountGiftWrapsHistoryEoseManager(
             _relayCount.value = 0
             _reachedBack.value = null
             autoFillRoomMark = Int.MIN_VALUE
+            lastAskedActive = emptySet()
+            lastRoundEventCount = -1
         }
         return requestNewSubscription(historyListener(user, key))
     }
@@ -250,6 +285,12 @@ class AccountGiftWrapsHistoryEoseManager(
                 pager.onEose(user.pubkeyHex, relay)
                 windowLoad.onRelaySettled(relay)
                 newEose(key, relay, TimeUtils.now(), forFilters)
+                // An EOSE means this relay changed (finished, or delivered a page) — clear the
+                // no-progress gate so the next loadMore can continue, even off the round path.
+                lastRoundEventCount = -1
+                // A post-auth empty EOSE can land after the round already settled on the earlier CLOSED;
+                // flip to exhausted the moment this finishes the last relay, not only at round end.
+                markExhaustedIfAllDone(user)
             }
 
             override fun onClosed(

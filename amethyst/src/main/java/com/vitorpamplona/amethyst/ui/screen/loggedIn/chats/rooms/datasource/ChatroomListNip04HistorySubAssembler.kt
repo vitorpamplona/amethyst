@@ -67,6 +67,14 @@ class ChatroomListNip04HistorySubAssembler(
     private var activeUser: HexKey? = null
     private val exhaustedByUser = ConcurrentHashMap<HexKey, Boolean>()
 
+    // No-progress guard: skip re-issuing an identical round that brought nothing (see the gift-wrap
+    // history manager's twin); cleared by onEose.
+    @Volatile
+    private var lastAskedActive: Set<NormalizedRelayUrl> = emptySet()
+
+    @Volatile
+    private var lastRoundEventCount = -1
+
     private val windowLoad = WindowLoadTracker("rooms.nip04.history")
     val loadingMore: StateFlow<Boolean> = windowLoad.loading
 
@@ -135,6 +143,12 @@ class ChatroomListNip04HistorySubAssembler(
             _exhausted.value = true
             return
         }
+        val activeSet = active.toSet()
+        if (activeSet == lastAskedActive && lastRoundEventCount == 0) {
+            Log.d("DMPagination") { "[rooms.nip04.history] loadMore skipped — no progress on the same relays" }
+            return
+        }
+        lastAskedActive = activeSet
         pager.beginRound(user.pubkeyHex, active)
         lastRoundUser = user
         _relayCount.value = active.size
@@ -165,11 +179,17 @@ class ChatroomListNip04HistorySubAssembler(
                         if (user != null) {
                             val asked = askedRelays[user.pubkeyHex] ?: emptySet()
                             val count = pager.roundEventCount(user.pubkeyHex, asked)
-                            exhaustedByUser[user.pubkeyHex] = count == 0
-                            _exhausted.value = count == 0
+                            lastRoundEventCount = count
+                            val account = accounts[user.pubkeyHex]
+                            val allRelays = account?.let { (it.homeRelays.flow.value + it.dmRelays.flow.value).toSet() } ?: emptySet()
+                            // Exhausted ONLY when every relay returned an empty page + EOSE; CLOSED /
+                            // unanswered relays are not finished, so keep loading them.
+                            val exhaustedNow = allRelays.isNotEmpty() && pager.activeRelays(user.pubkeyHex, allRelays).isEmpty()
+                            exhaustedByUser[user.pubkeyHex] = exhaustedNow
+                            _exhausted.value = exhaustedNow
                             _reachedBack.value = pager.deepestUntil(user.pubkeyHex, asked, startUntil())
-                            Log.d("DMPagination") { "[rooms.nip04.history] round done: $count event(s), exhausted=${count == 0}" }
-                            if (autoLoadAll && count > 0) loadMore(user)
+                            Log.d("DMPagination") { "[rooms.nip04.history] round done: $count event(s), exhausted=$exhaustedNow" }
+                            if (autoLoadAll && !exhaustedNow) loadMore(user)
                         }
                     }
                     wasLoading = loading
@@ -187,8 +207,20 @@ class ChatroomListNip04HistorySubAssembler(
             _relayCount.value = 0
             _reachedBack.value = null
             autoFillRoomMark = Int.MIN_VALUE
+            lastAskedActive = emptySet()
+            lastRoundEventCount = -1
         }
         return requestNewSubscription(historyListener(user, key))
+    }
+
+    // Flips to exhausted only once every relay has returned an empty page + EOSE. Sets true only.
+    private fun markExhaustedIfAllDone(user: User) {
+        val account = accounts[user.pubkeyHex] ?: return
+        val allRelays = (account.homeRelays.flow.value + account.dmRelays.flow.value).toSet()
+        if (allRelays.isNotEmpty() && pager.activeRelays(user.pubkeyHex, allRelays).isEmpty()) {
+            exhaustedByUser[user.pubkeyHex] = true
+            if (activeUser == user.pubkeyHex) _exhausted.value = true
+        }
     }
 
     private fun historyListener(
@@ -213,6 +245,8 @@ class ChatroomListNip04HistorySubAssembler(
                 pager.onEose(user.pubkeyHex, relay)
                 windowLoad.onRelaySettled(relay)
                 newEose(key, relay, TimeUtils.now(), forFilters)
+                lastRoundEventCount = -1
+                markExhaustedIfAllDone(user)
             }
 
             override fun onClosed(
