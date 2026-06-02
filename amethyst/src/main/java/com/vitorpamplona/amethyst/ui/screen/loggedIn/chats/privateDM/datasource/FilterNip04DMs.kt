@@ -38,8 +38,15 @@ class Nip04DmRelays(
 }
 
 /**
- * Resolves where a conversation's NIP-04 DMs flow: messages **to me** arrive on my inbox + the
- * group's outbox relays; messages **from me** arrive on my outbox + the group's inbox relays.
+ * Resolves where a conversation's NIP-04 DMs flow, scoped to relay owners so a filter naming a user
+ * is only sent to relays that user actually lists:
+ *
+ *  - **to me** (`authors=[group]`) → the group's **outbox** (where they publish) plus **my inbox**
+ *    (my own DM relays, as a safety net for legacy senders that delivered straight to my inbox).
+ *  - **from me** (`authors=[me]`) → **my outbox** only. We deliberately do *not* ask the group's
+ *    inbox relays for my-authored messages: those relays belong to the correspondent, not me, and
+ *    querying them for `authors=[me]` is both redundant (my outbox already has them) and a trigger
+ *    for auth-walled relays like ditto that reject authors they can't authenticate.
  */
 fun nip04DMRelays(
     group: Set<HexKey>?,
@@ -51,7 +58,6 @@ fun nip04DMRelays(
     val userInboxRelays = account.dmRelays.flow.value
 
     val groupOutboxRelays = mutableSetOf<NormalizedRelayUrl>()
-    val groupInboxRelays = mutableSetOf<NormalizedRelayUrl>()
 
     group.forEach {
         val authorHomeRelayEventAddress = AdvertisedRelayListEvent.createAddressTag(it)
@@ -64,19 +70,11 @@ fun nip04DMRelays(
                 ?: emptyList()
 
         groupOutboxRelays.addAll(outbox)
-
-        val inbox =
-            authorHomeRelayEvent?.readRelaysNorm()?.ifEmpty { null }
-                ?: LocalCache.getUserIfExists(it)?.allUsedRelaysOrNull()
-                ?: LocalCache.relayHints.hintsForKey(it).ifEmpty { null }
-                ?: emptyList()
-
-        groupInboxRelays.addAll(inbox)
     }
 
     return Nip04DmRelays(
         toMeRelays = userInboxRelays + groupOutboxRelays,
-        fromMeRelays = userOutboxRelays + groupInboxRelays,
+        fromMeRelays = userOutboxRelays,
     )
 }
 
