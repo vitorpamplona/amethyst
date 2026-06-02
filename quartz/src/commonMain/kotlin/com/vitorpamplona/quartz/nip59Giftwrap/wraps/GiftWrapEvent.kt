@@ -85,7 +85,7 @@ open class GiftWrapEvent(
         try {
             unwrapThrowing(signer)
         } catch (_: Exception) {
-            Log.w("GiftWrapEvent", "Couldn't Decrypt the content " + this.toNostrUri())
+            Log.d("GiftWrapEvent") { "Couldn't Decrypt the content " + this.toNostrUri() }
             null
         }
 

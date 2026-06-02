@@ -85,9 +85,20 @@ class RelayUrlNormalizer {
         private fun norm(url: String) = NormalizedRelayUrl(Rfc3986.normalize(url))
 
         @OptIn(ExperimentalContracts::class)
-        fun fix(url: String): String? {
+        fun fix(rawUrl: String): String? {
+            if (rawUrl.length < 4) return null
+            if (rawUrl.contains("%00")) return null
+
+            // Trim trailing %20 (percent-encoded spaces from malformed event data)
+            val url =
+                rawUrl.trimEnd('%', '2', '0').let { trimmed ->
+                    // Only accept if we actually removed a trailing %20 pattern
+                    if (trimmed.length < rawUrl.length && rawUrl.endsWith("%20")) trimmed else rawUrl
+                }
             if (url.length < 4) return null
-            if (url.contains("%00") || url.contains("%20")) return null
+
+            // Reject URLs with %20 in the middle — these are garbage
+            if (url.contains("%20")) return null
 
             if (url.length > 50) {
                 // removes multiple urls in the same line

@@ -44,6 +44,9 @@ object CachedRobohash {
         msg: String,
         isLightTheme: Boolean,
     ): ImageVector {
+        // Guard: empty/blank keys produce meaningless robohash; use a fallback hex
+        val key = msg.ifBlank { "0000000000000000000000000000000000000000000000000000000000000000" }
+
         // resets cache on theme change
         if (cacheIsForLightTheme == null) {
             cacheIsForLightTheme = isLightTheme
@@ -52,13 +55,13 @@ object CachedRobohash {
             cache.evictAll()
         }
 
-        cache[msg]?.let {
+        cache[key]?.let {
             return it
         }
 
-        val vector = assembler.build(msg, isLightTheme)
+        val vector = assembler.build(key, isLightTheme)
 
-        cache.put(msg, vector)
+        cache.put(key, vector)
 
         return vector
     }

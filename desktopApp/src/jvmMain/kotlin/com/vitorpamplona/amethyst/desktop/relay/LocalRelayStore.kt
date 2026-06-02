@@ -106,13 +106,9 @@ class LocalRelayStore(
         if (!_enabled.value || _writesDisabled.value) return
         val s = store ?: return
         writeBundler.invalidateList(event) { batch ->
-            try {
-                s.transaction {
-                    batch.forEach { insert(it) }
-                }
-            } catch (e: Exception) {
-                Log.w("LocalRelayStore") { "Batch insert failed: ${e.message}" }
-            }
+            // batchInsert uses per-row savepoints — UNIQUE constraint
+            // violations skip that row instead of failing the whole batch
+            s.batchInsert(batch.toList())
         }
     }
 
