@@ -70,6 +70,31 @@ class WindowLoadTrackerSilenceTest {
         }
 
     @Test
+    fun aRelayStuckBeforeItsReqStopsBlockingButIsNotGivenUp() =
+        runBlocking {
+            val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+            val abandoned = AtomicReference<Set<NormalizedRelayUrl>>(emptySet())
+            val tracker =
+                WindowLoadTracker(
+                    name = "test",
+                    connectGrace = 50.milliseconds,
+                    onAbandoned = { abandoned.set(it) },
+                )
+
+            tracker.startLoading(scope)
+            tracker.setExpectedRelays(setOf(good, silent))
+            // `good` answers; `silent` is stuck connecting — it never even receives its REQ.
+            tracker.onReqSent(good.url)
+            tracker.onRelaySettled(good)
+
+            // The connect-grace backstop completes the load without the stuck relay...
+            withTimeout(3000) { tracker.loading.first { !it } }
+            // ...but it must NOT be given up: a slow connect deserves a retry next round.
+            assertEquals(emptySet<NormalizedRelayUrl>(), abandoned.get())
+            scope.cancel()
+        }
+
+    @Test
     fun aSilentRelayThatNeverGotAReqStillBlocksUntilItSettles() =
         runBlocking {
             val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())

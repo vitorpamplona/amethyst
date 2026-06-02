@@ -65,14 +65,18 @@ import kotlin.time.Duration.Companion.seconds
  * completely silent — no event, no EOSE, no CLOSED — for [silenceTimeout] is given up on: an
  * auth-walled relay (ditto, paid relays) commonly accepts the REQ and answers nothing, and measuring
  * from REQ-delivery (not window start) means a slow connect doesn't count against it. Such relays are
- * reported to [onAbandoned] so the owner can drop them from its pager too. And an [absoluteCap] bounds
- * a relay that hangs in the connect itself, before any REQ is even sent.
+ * reported to [onAbandoned] so the owner can drop them from its pager too. A relay that never even
+ * *receives* its REQ (stuck connecting / reconnecting, so it can neither settle nor go "silent") stops
+ * blocking the round after [connectGrace] from the load start — but it is NOT given up (it may be a
+ * genuinely slow connect), so the owner keeps it and retries it next round. And an [absoluteCap] is
+ * the final ceiling on a window that somehow defeats all of the above.
  */
 class WindowLoadTracker(
     // Short label for the DMPagination logs (e.g. "giftwrap", "rooms.nip04", "convo.nip04").
     private val name: String = "dm",
     private val idleTimeout: Duration = 3.seconds,
     private val silenceTimeout: Duration = 10.seconds,
+    private val connectGrace: Duration = 15.seconds,
     private val absoluteCap: Duration = 5.minutes,
     // Invoked with the relays that received a REQ but stayed silent past [silenceTimeout] when a load
     // finishes — the owner gives up on them in its pager so they stop blocking future rounds.
@@ -109,6 +113,10 @@ class WindowLoadTracker(
     @Volatile
     private var lastActivityMs = 0L
 
+    // Wall-clock the current window began; the connect-grace backstop measures from here.
+    @Volatile
+    private var loadStartMs = 0L
+
     /** Begins a fresh window load: clears the per-relay sets, raises [loading], and arms the watchdog. */
     @Synchronized
     fun startLoading(scope: CoroutineScope) {
@@ -117,7 +125,9 @@ class WindowLoadTracker(
         heardFrom.clear()
         settled.clear()
         reqSentAt.clear()
-        lastActivityMs = System.currentTimeMillis()
+        val nowMs = System.currentTimeMillis()
+        lastActivityMs = nowMs
+        loadStartMs = nowMs
         val wasLoading = _loading.value
         _loading.value = true
         Log.d(TAG) { "[$name] load start" + if (!wasLoading) "" else " (restart)" }
@@ -143,16 +153,15 @@ class WindowLoadTracker(
     ): Boolean {
         if (gen != generation || !_loading.value) return false
         if (expected.isNotEmpty()) {
-            // A relay is accounted for once it reached a terminal signal, or it received our REQ and
-            // then stayed completely silent past [silenceTimeout] (an auth-walled / dead relay). Once
-            // every relay is accounted for, nothing more is coming.
-            if (expected.all { settled.contains(it) || silencedOut(it, now) }) {
+            // Once every relay is accounted for — settled, gone silent after its REQ, or stuck before
+            // its REQ even went out — nothing more is coming for this round.
+            if (expected.all { accountedFor(it, now) }) {
                 finish("settled/silent")
                 return false
             }
             // Idle backstop: every relay we're still waiting on has at least streamed something (so this
-            // isn't a connection gap) and the stream has gone quiet. Silenced/settled relays don't count.
-            val stillWaiting = expected.filterNot { settled.contains(it) || silencedOut(it, now) }
+            // isn't a connection gap) and the stream has gone quiet. Accounted-for relays don't count.
+            val stillWaiting = expected.filterNot { accountedFor(it, now) }
             if (stillWaiting.all { heardFrom.contains(it) } && now - lastActivityMs >= idleTimeout.inWholeMilliseconds) {
                 finish("idle")
                 return false
@@ -165,13 +174,28 @@ class WindowLoadTracker(
         return true
     }
 
+    // A relay no longer worth waiting on this round: it reached a terminal signal, went silent after
+    // its REQ, or never even received its REQ within the connect grace.
+    private fun accountedFor(
+        relay: NormalizedRelayUrl,
+        now: Long,
+    ): Boolean = settled.contains(relay) || silencedOut(relay, now) || connectStalled(relay, now)
+
     // A relay that received its REQ but produced no signal at all for [silenceTimeout]. Measured from
-    // REQ-delivery so a slow connect (or a still-connecting relay, which has no [reqSentAt]) is never
-    // counted as silent.
+    // REQ-delivery so a slow connect (which has no [reqSentAt] yet) is never counted as silent. These
+    // relays ARE given up on — accepting a REQ and then answering nothing is an auth-walled / dead relay.
     private fun silencedOut(
         relay: NormalizedRelayUrl,
         now: Long,
     ): Boolean = relay !in heardFrom && (reqSentAt[relay]?.let { now - it >= silenceTimeout.inWholeMilliseconds } ?: false)
+
+    // A relay that is still expected but has neither been heard from nor even received its REQ within
+    // [connectGrace] of the load start — i.e. stuck connecting / reconnecting. It stops blocking the
+    // round, but is NOT given up (it may simply be a slow connect): the owner retries it next round.
+    private fun connectStalled(
+        relay: NormalizedRelayUrl,
+        now: Long,
+    ): Boolean = relay !in heardFrom && !reqSentAt.containsKey(relay) && now - loadStartMs >= connectGrace.inWholeMilliseconds
 
     /** Records which relays the current REQ was sent to. Completes immediately if there are none. */
     @Synchronized
