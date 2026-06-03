@@ -62,10 +62,11 @@ import kotlin.time.Duration.Companion.seconds
  * *heard from* (any event, EOSE, CLOSED, or cannot-connect) but one streamed events without ever
  * sending EOSE, an [idleTimeout] of quiet completes the load — the "heard from" gate is what keeps
  * this from firing in a connection gap. A relay that *received our REQ* ([onReqSent]) but then went
- * completely silent — no event, no EOSE, no CLOSED — for [silenceTimeout] is given up on: an
+ * completely silent — no event, no EOSE, no CLOSED — for [silenceTimeout] stops blocking the load: an
  * auth-walled relay (ditto, paid relays) commonly accepts the REQ and answers nothing, and measuring
  * from REQ-delivery (not window start) means a slow connect doesn't count against it. Such relays are
- * reported to [onAbandoned] so the owner can drop them from its pager too. A relay that never even
+ * reported to [onAbandoned] so the owner can react — drop them from its pager, or keep them and flag
+ * them stalled (the convo history keeps trying). A relay that never even
  * *receives* its REQ (stuck connecting / reconnecting, so it can neither settle nor go "silent") stops
  * blocking the round after [connectGrace] from the load start — but it is NOT given up (it may be a
  * genuinely slow connect), so the owner keeps it and retries it next round. And an [absoluteCap] is
@@ -87,8 +88,9 @@ class WindowLoadTracker(
     private val silenceTimeout: Duration = 10.seconds,
     private val connectGrace: Duration = 15.seconds,
     private val absoluteCap: Duration = 5.minutes,
-    // Invoked with the relays that received a REQ but stayed silent past [silenceTimeout] when a load
-    // finishes — the owner gives up on them in its pager so they stop blocking future rounds.
+    // Invoked when a load finishes with the relays that received a REQ but stayed silent past
+    // [silenceTimeout]. The owner decides what to do — drop them from its pager, or keep them open and
+    // flag them stalled. The tracker itself only stops waiting on them; it does not give them up.
     private val onAbandoned: (Set<NormalizedRelayUrl>) -> Unit = {},
 ) {
     private val _loading = MutableStateFlow(true)
@@ -192,7 +194,8 @@ class WindowLoadTracker(
 
     // A relay that received its REQ but produced no signal at all for [silenceTimeout]. Measured from
     // REQ-delivery so a slow connect (which has no [reqSentAt] yet) is never counted as silent. These
-    // relays ARE given up on — accepting a REQ and then answering nothing is an auth-walled / dead relay.
+    // are reported to [onAbandoned] on finish (accepting a REQ then answering nothing usually means an
+    // auth-walled / dead relay) — but whether to give them up is the owner's call, not the tracker's.
     private fun silencedOut(
         relay: NormalizedRelayUrl,
         now: Long,
@@ -251,10 +254,10 @@ class WindowLoadTracker(
         if (!_loading.value) return
         watchdog?.cancel()
         watchdog = null
-        // Give up the silent relays BEFORE flipping [loading]: the owner's round collector reacts to
-        // loading=false by recomputing exhaustion from its pager, so the give-up has to land first.
+        // Report the silent relays BEFORE flipping [loading]: the owner reacts to loading=false by
+        // recomputing state from its pager, so its reaction to these has to land first.
         val abandoned = expected.filterTo(mutableSetOf()) { silencedOut(it, System.currentTimeMillis()) }
-        Log.d(TAG) { "[$name] load done: $reason" + if (abandoned.isEmpty()) "" else " (gave up on silent ${abandoned.map { it.url }})" }
+        Log.d(TAG) { "[$name] load done: $reason" + if (abandoned.isEmpty()) "" else " (silent: ${abandoned.map { it.url }})" }
         if (abandoned.isNotEmpty()) onAbandoned(abandoned)
         _loading.value = false
     }

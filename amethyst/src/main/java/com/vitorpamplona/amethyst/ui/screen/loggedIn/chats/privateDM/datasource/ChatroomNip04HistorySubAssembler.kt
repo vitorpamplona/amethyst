@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource
 
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.UntilLimitPager
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.WindowLoadTracker
@@ -150,15 +151,14 @@ class ChatroomNip04HistorySubAssembler(
 
     /** Starts (or resumes) per-relay paging for every open conversation. Idempotent: safe to call again. */
     fun loadMore() {
-        val keys = allKeys()
         val fullRelays = mutableSetOf<NormalizedRelayUrl>()
         var anyActive = false
-        keys.forEach { key ->
+        allKeys().forEach { key ->
             val relays = nip04DMRelays(key.room.users, key.account) ?: return@forEach
-            val pk = convoKey(key)
-            started.add(pk)
+            started.add(convoKey(key))
             fullRelays.addAll(relays.all)
-            if (pager.activeRelays(pk, relays.all).isNotEmpty()) anyActive = true
+            if (pager.activeRelays(convoKey(key), relays.all).isNotEmpty()) anyActive = true
+            DmRelayLog.log("convo.nip04.history", key.account)
         }
         if (fullRelays.isEmpty()) return
         if (!anyActive) {
@@ -168,7 +168,6 @@ class ChatroomNip04HistorySubAssembler(
             return
         }
         _exhausted.value = false
-        _relayCount.value = fullRelays.size
         scope?.let {
             ensureDoneCollector(it)
             // One window spanning the whole per-relay pagination: it settles a relay only on that relay's
@@ -178,12 +177,9 @@ class ChatroomNip04HistorySubAssembler(
             windowLoad.setExpectedRelays(fullRelays)
         }
         publishProgress()
-        Log.d("DMPagination") { "[convo.nip04.history] paging ${fullRelays.size} relay(s) independently" }
+        Log.d("DMPagination") { "[convo.nip04.history] paging ${fullRelays.size} relay(s) independently: ${fullRelays.map { it.url }}" }
         invalidateFilters()
     }
-
-    /** Per-relay paging already runs to completion on its own, so loading everything is just [loadMore]. */
-    fun loadEverything() = loadMore()
 
     // Flips [exhausted] when the window settles (every relay done or stalled) and back to false when a
     // fresh page starts. Tied to the spinner so "nothing is advancing" and "caught up" stay consistent.
@@ -197,7 +193,7 @@ class ChatroomNip04HistorySubAssembler(
                         activeConvo?.let { exhaustedByConvo[it] = true }
                         _exhausted.value = true
                         publishProgress()
-                        Log.d("DMPagination") { "[convo.nip04.history] all relays settled (done or stalled)" }
+                        logSettleSummary()
                     }
                     wasLoading = loading
                 }
@@ -208,13 +204,26 @@ class ChatroomNip04HistorySubAssembler(
     // We do NOT give up on them (they may simply be slow and need to catch up) — we just record them as
     // stalled for the markers and let them keep their open subscription.
     private fun onRelaysStalled(relays: Set<NormalizedRelayUrl>) {
-        started.forEach { pk -> stalledRelays.getOrPut(pk) { ConcurrentHashMap.newKeySet() }.addAll(relays) }
+        started.forEach { pk -> relays.forEach { markStalled(pk, it, "no response (silence/connect timeout)") } }
         publishProgress()
     }
 
+    // Records [relay] as not currently advancing for [pk] and logs it once (the first time it stalls in
+    // this window). The relay is kept — it kept its subscription and keeps trying to catch up.
+    private fun markStalled(
+        pk: ConvoKey,
+        relay: NormalizedRelayUrl,
+        reason: String,
+    ) {
+        val firstTime = stalledRelays.getOrPut(pk) { ConcurrentHashMap.newKeySet() }.add(relay)
+        if (firstTime) Log.d("DMPagination") { "[convo.nip04.history] ${relay.url} stalled — $reason (kept open, still trying)" }
+    }
+
+    private fun relaysFor(pk: ConvoKey): Nip04DmRelays? = allKeys().firstOrNull { convoKey(it) == pk }?.let { nip04DMRelays(it.room.users, it.account) }
+
     private fun publishProgress() {
         val pk = activeConvo ?: return
-        val relays = allKeys().firstOrNull { convoKey(it) == pk }?.let { nip04DMRelays(it.room.users, it.account) } ?: return
+        val relays = relaysFor(pk) ?: return
         val stalled = stalledRelays[pk] ?: emptySet()
         val start = startUntil()
         _relayProgress.value =
@@ -225,7 +234,19 @@ class ChatroomNip04HistorySubAssembler(
                     stalled = relay in stalled && !pager.isDone(pk, relay),
                 )
             }
+        // "Asking N relays" on the status card: the ones still being paged (done relays have dropped out).
+        _relayCount.value = pager.activeRelays(pk, relays.all).size
         _reachedBack.value = pager.deepestUntil(pk, relays.all, start)
+    }
+
+    // A one-line breakdown of where each relay landed when the window settles — the snapshot to reach for
+    // when a conversation didn't load tomorrow: who reached the bottom vs. who is still being retried.
+    private fun logSettleSummary() {
+        val pk = activeConvo ?: return
+        val relays = relaysFor(pk) ?: return
+        val done = relays.all.filter { pager.isDone(pk, it) }.map { it.url }
+        val stillTrying = relays.all.filterNot { pager.isDone(pk, it) }.map { it.url }
+        Log.d("DMPagination") { "[convo.nip04.history] settled — done=$done still-trying=$stillTrying" }
     }
 
     override fun newSub(key: ChatroomQueryState): Subscription {
@@ -272,6 +293,7 @@ class ChatroomNip04HistorySubAssembler(
                 if (pager.isDone(pk, relay)) {
                     // Reached the bottom on this relay: settle it for the spinner, nothing more to ask.
                     windowLoad.onRelaySettled(relay)
+                    Log.d("DMPagination") { "[convo.nip04.history] ${relay.url} reached the bottom (done)" }
                 } else {
                     // This page had events: reset only this relay's tally and let it continue to its
                     // next page immediately, independent of every other relay.
@@ -291,7 +313,7 @@ class ChatroomNip04HistorySubAssembler(
                 // stalled, not done — keep its subscription so the pool can re-auth and it can catch up —
                 // but don't let it hold the spinner.
                 windowLoad.onRelaySettled(relay)
-                stalledRelays.getOrPut(pk) { ConcurrentHashMap.newKeySet() }.add(relay)
+                markStalled(pk, relay, "CLOSED: $message")
                 publishProgress()
             }
 
@@ -301,7 +323,7 @@ class ChatroomNip04HistorySubAssembler(
                 forFilters: List<Filter>?,
             ) {
                 windowLoad.onRelaySettled(relay)
-                stalledRelays.getOrPut(pk) { ConcurrentHashMap.newKeySet() }.add(relay)
+                markStalled(pk, relay, "cannot connect: $message")
                 publishProgress()
             }
         }

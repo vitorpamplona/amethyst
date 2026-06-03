@@ -55,9 +55,9 @@ data class RelayReach(
 
 /**
  * A thin divider drawn between two messages marking the point one or more relays have paged down to.
- * As a relay loads older history its [RelayReach.reachedUntil][reached cursor] drops, so the caller
- * places this marker further down (older) in the stream — relays that race ahead leave their marker
- * deep while slower relays' markers trail higher up, converging as they catch up.
+ * As a relay loads older history its reached cursor drops, so the caller places this marker further
+ * down (older) in the stream — relays that race ahead leave their marker deep while slower relays'
+ * markers trail higher up, converging as they catch up.
  */
 @Composable
 fun RelayReachMarker(entries: List<RelayReach>) {
