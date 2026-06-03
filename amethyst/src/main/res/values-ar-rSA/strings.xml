@@ -483,6 +483,10 @@
     <string name="community_no_descriptor">هذا المجتمع ليس لديه وصف أو قواعد.
  تحدث إلى المالك لإضافة مستخدم جديد</string>
     <string name="settings">الإعدادات</string>
+    <!-- Settings search -->
+    <!-- Settings search keywords: an English concept/protocol index that supplements the
+         (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
+         negentropy, …) stay searchable in every locale and aren't sent to translators. -->
     <string name="connectivity_type_always">دائماً</string>
     <string name="connectivity_type_wifi_only">الواي فاي فقط</string>
     <string name="connectivity_type_never">ابداً</string>

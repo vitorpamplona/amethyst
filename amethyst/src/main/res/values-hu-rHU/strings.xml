@@ -1344,6 +1344,10 @@
     <string name="settings">Beállítások</string>
     <string name="account_settings">Fiókbeállítások</string>
     <string name="app_settings">Alkalmazásbeállítások</string>
+    <!-- Settings search -->
+    <!-- Settings search keywords: an English concept/protocol index that supplements the
+         (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
+         negentropy, …) stay searchable in every locale and aren't sent to translators. -->
     <string name="danger_zone">Kritikus beállítások</string>
     <string name="reset_marmot_state">Marmot-állapot visszaállítása</string>
     <string name="reset_marmot_confirm_title">Visszaállítja a Marmot-állapotot?</string>

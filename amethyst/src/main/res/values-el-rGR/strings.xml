@@ -388,6 +388,10 @@
     <string name="add_sensitive_content_label">Ευαίσθητο Περιεχόμενο</string>
     <string name="add_sensitive_content_description">Προσθέτει προειδοποίηση ευαίσθητου περιεχομένου πριν εμφανιστεί αυτό το περιεχόμενο</string>
     <string name="settings">Ρυθμίσεις</string>
+    <!-- Settings search -->
+    <!-- Settings search keywords: an English concept/protocol index that supplements the
+         (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
+         negentropy, …) stay searchable in every locale and aren't sent to translators. -->
     <string name="connectivity_type_always">Πάντα</string>
     <string name="connectivity_type_wifi_only">Μόνο WiFi</string>
     <string name="connectivity_type_never">Ποτέ</string>

@@ -1321,6 +1321,10 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="settings">Nastavitve</string>
     <string name="account_settings">Nastavitve računa</string>
     <string name="app_settings">Nastavitve aplikacije</string>
+    <!-- Settings search -->
+    <!-- Settings search keywords: an English concept/protocol index that supplements the
+         (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
+         negentropy, …) stay searchable in every locale and aren't sent to translators. -->
     <string name="danger_zone">Nevarno območje</string>
     <string name="reset_marmot_state">Ponastavi Marmot stanje</string>
     <string name="reset_marmot_confirm_title">Ponastavim Marmot stanje?</string>

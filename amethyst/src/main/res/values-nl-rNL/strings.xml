@@ -1257,6 +1257,10 @@
     <string name="settings">Instellingen</string>
     <string name="account_settings">Accountinstellingen</string>
     <string name="app_settings">App-instellingen</string>
+    <!-- Settings search -->
+    <!-- Settings search keywords: an English concept/protocol index that supplements the
+         (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
+         negentropy, …) stay searchable in every locale and aren't sent to translators. -->
     <string name="danger_zone">Gevarenzone</string>
     <string name="reset_marmot_state">Marmot-status resetten</string>
     <string name="reset_marmot_confirm_title">Marmot-status resetten?</string>
