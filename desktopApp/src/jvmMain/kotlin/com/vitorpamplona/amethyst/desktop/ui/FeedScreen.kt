@@ -431,13 +431,39 @@ fun FeedScreen(
         }
     }
     var showRelayPicker by remember { mutableStateOf(false) }
-    var activeFeedId by remember { mutableStateOf(customFeedId) }
+
+    // Default tab on launch = the first PINNED feed (Following/Global/Custom),
+    // not whatever DesktopPreferences happened to save last. If a caller
+    // explicitly passes customFeedId/initialFeedMode, that always wins.
+    val feedRepo = com.vitorpamplona.amethyst.desktop.ui.deck.LocalFeedRepository.current
+    val firstPinned = remember { feedRepo.pinnedFeeds.value.firstOrNull() }
+    val firstPinnedCustomSource = firstPinned?.source as? com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Filter
+
+    var activeFeedId by remember {
+        mutableStateOf(
+            customFeedId
+                ?: firstPinned?.takeIf { firstPinnedCustomSource != null }?.id,
+        )
+    }
     var activeFeedSource by remember {
-        mutableStateOf(customFeedSource)
+        mutableStateOf(
+            customFeedSource ?: firstPinnedCustomSource,
+        )
     }
     var feedMode by remember {
         mutableStateOf(
-            if (customFeedSource != null) FeedMode.CUSTOM else (initialFeedMode ?: DesktopPreferences.feedMode),
+            when {
+                customFeedSource != null -> FeedMode.CUSTOM
+                initialFeedMode != null -> initialFeedMode
+                firstPinned != null ->
+                    when (firstPinned.source) {
+                        is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Following -> FeedMode.FOLLOWING
+                        is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Global -> FeedMode.GLOBAL
+                        is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Filter -> FeedMode.CUSTOM
+                        else -> DesktopPreferences.feedMode
+                    }
+                else -> DesktopPreferences.feedMode
+            },
         )
     }
 
