@@ -1,0 +1,67 @@
+name: Publish Quartz Snapshot
+
+# Publishes a -SNAPSHOT of :quartz to the Central Portal snapshots
+# repository on every push to main. Snapshots live in a separate,
+# mutable repo (https://central.sonatype.com/repository/maven-snapshots/)
+# and never touch the immutable release coordinates published by
+# create-release.yml on a `v*` tag.
+#
+# The version is the next-minor of the default release version declared
+# in quartz/build.gradle.kts (e.g. release default 1.11.0 -> 1.12.0-SNAPSHOT),
+# so it stays a single stable coordinate that each publish overwrites.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'quartz/**'
+      - 'gradle/libs.versions.toml'
+      - '.github/workflows/publish-quartz-snapshot.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quartz-snapshot
+  cancel-in-progress: true
+
+jobs:
+  publish-snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: 21
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: true
+
+      - name: Compute next-minor snapshot version
+        id: ver
+        run: |
+          set -euo pipefail
+          # Single source of truth: the getOrElse default in build.gradle.kts.
+          BASE=$(grep -oP 'getOrElse\("\K[0-9]+\.[0-9]+\.[0-9]+' quartz/build.gradle.kts | head -1)
+          if [[ -z "${BASE:-}" ]]; then
+            echo "::error::Could not parse the default quartz version from quartz/build.gradle.kts" >&2
+            exit 1
+          fi
+          IFS=. read -r MAJ MIN _ <<< "$BASE"
+          SNAP="${MAJ}.$((MIN + 1)).0-SNAPSHOT"
+          echo "version=$SNAP" >> "$GITHUB_OUTPUT"
+          echo "Release default is $BASE -> publishing snapshot $SNAP"
+
+      # Snapshots are not GPG-signed (Central Portal does not require it),
+      # so only the Sonatype credentials are passed here.
+      - name: Publish snapshot to Maven Central
+        run: ./gradlew :quartz:publishToMavenCentral -PquartzVersion=${{ steps.ver.outputs.version }} --no-configuration-cache
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_PASSWORD }}
