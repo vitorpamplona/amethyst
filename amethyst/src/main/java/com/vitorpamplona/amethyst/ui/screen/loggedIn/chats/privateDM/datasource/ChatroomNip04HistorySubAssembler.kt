@@ -131,7 +131,17 @@ class ChatroomNip04HistorySubAssembler(
     @Volatile
     private var windowActive = false
 
+    // The history floor (live-tail boundary) pinned for the current window. startUntil() is `now − 1w`,
+    // which drifts forward in real time — if it were recomputed per assembly, an un-advanced relay's
+    // filter (until = floor) would change every time ANY relay's EOSE triggers invalidateFilters,
+    // re-REQing relays that haven't moved. Pinning it per window keeps those filters stable so only a
+    // relay whose cursor genuinely advanced is re-REQed.
+    @Volatile
+    private var windowFloor = 0L
+
     private fun startUntil() = TimeUtils.now() - AccountGiftWrapsEoseManager.LIVE_TAIL_SECONDS
+
+    private fun floor() = windowFloor.takeIf { it != 0L } ?: startUntil()
 
     override fun user(key: ChatroomQueryState) = key.account.userProfile()
 
@@ -157,7 +167,7 @@ class ChatroomNip04HistorySubAssembler(
                 fromMeRelays = relays.fromMeRelays.filterKeys { it in active },
             )
         return filterNip04DMsHistory(key.account, scoped, PAGE_LIMIT) { relay ->
-            pager.untilFor(pk, relay, startUntil())
+            pager.untilFor(pk, relay, floor())
         }
     }
 
@@ -189,6 +199,7 @@ class ChatroomNip04HistorySubAssembler(
             // not reset the window and forget the relays that already finished.
             if (!windowActive) {
                 windowActive = true
+                windowFloor = startUntil()
                 _loadingMore.value = true
                 windowLoad.startLoading(it)
             }
@@ -246,7 +257,7 @@ class ChatroomNip04HistorySubAssembler(
         val pk = activeConvo ?: return
         val relays = relaysFor(pk) ?: return
         val stalled = stalledRelays[pk] ?: emptySet()
-        val start = startUntil()
+        val start = floor()
         _relayProgress.value =
             relays.all.associateWith { relay ->
                 RelayPagingProgress(
