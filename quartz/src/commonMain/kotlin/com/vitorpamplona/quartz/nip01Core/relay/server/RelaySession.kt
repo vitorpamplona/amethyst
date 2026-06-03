@@ -68,13 +68,6 @@ class RelaySession(
      * open/close of the same connection. Defaults to a fresh monotonic id.
      */
     val id: Long = nextConnectionId(),
-    /**
-     * Per-connection limits enforced here: the [RelayLimits.maxMessageLength]
-     * frame-size cap and the [RelayLimits.maxSubscriptions] cap. Per-command
-     * limits are enforced by [com.vitorpamplona.quartz.nip01Core.relay.server.policies.LimitsPolicy]
-     * in the policy chain, not here. Null disables session-level limits.
-     */
-    private val limits: RelayLimits? = null,
 ) : AutoCloseable {
     private val subscriptions = LargeCache<String, Job>()
 
@@ -117,11 +110,9 @@ class RelaySession(
      * Parses the message as a NIP-01 command and dispatches it.
      */
     suspend fun receive(command: String) {
-        limits?.maxMessageLength?.let { max ->
-            if (command.length > max) {
-                send(NoticeMessage("invalid: message too large (max $max)"))
-                return
-            }
+        policy.acceptMessage(command)?.let { reason ->
+            send(NoticeMessage(reason))
+            return
         }
 
         val cmd =
@@ -241,13 +232,14 @@ class RelaySession(
 
     // -- NIP-01: REQ ----------------------------------------------------------
     private fun handleReq(cmd: ReqCmd) {
-        // Enforce the per-connection subscription cap for *new* sub ids. A
-        // re-REQ on an existing id replaces it 1-for-1 (handled below) and so
-        // doesn't grow the count. Checked before the cancel so the existing
-        // subscription isn't dropped only to then reject its replacement.
-        limits?.maxSubscriptions?.let { max ->
-            if (!subscriptions.containsKey(cmd.subId) && subscriptions.size() >= max) {
-                send(ClosedMessage.of(cmd.subId, MachineReadablePrefix.RATE_LIMITED, "too many concurrent subscriptions (max $max)"))
+        // Ask the policy whether a *new* subscription may open (e.g. a
+        // max_subscriptions cap). A re-REQ on an existing id replaces it
+        // 1-for-1 and doesn't grow the count, so it's exempt. Checked before
+        // the cancel so the existing subscription isn't dropped only to then
+        // reject its replacement.
+        if (!subscriptions.containsKey(cmd.subId)) {
+            policy.acceptSubscription(cmd.subId, subscriptions.size())?.let { reason ->
+                send(ClosedMessage(cmd.subId, reason))
                 return
             }
         }

@@ -103,6 +103,32 @@ interface IRelayPolicy {
     fun onAuthenticationFailed(pubKey: HexKey) {}
 
     /**
+     * Inspects a raw inbound message before it is parsed. Return a reason
+     * string to reject it (the engine sends it as a `NOTICE`), or null to let
+     * it through. This is the only hook that sees the unparsed frame, so guards
+     * that must run before JSON parsing live here — e.g. a `max_message_length`
+     * cap (see [com.vitorpamplona.quartz.nip01Core.relay.server.policies.LimitsPolicy]).
+     *
+     * Called on every inbound message, so keep it cheap. Default: accept.
+     */
+    fun acceptMessage(message: String): String? = null
+
+    /**
+     * Decides whether a new subscription may open on this connection, given how
+     * many are already open ([openSubscriptions]). Called only for a genuinely
+     * new subscription id — a REQ that replaces an existing id does not grow the
+     * count. Return a reason string to reject it (the engine sends a `CLOSED`),
+     * or null to allow it. This is where a `max_subscriptions` cap lives, since
+     * a policy otherwise can't see the per-connection subscription count.
+     *
+     * Default: accept.
+     */
+    fun acceptSubscription(
+        subId: String,
+        openSubscriptions: Int,
+    ): String? = null
+
+    /**
      * Filters a live event before it is forwarded to a subscriber.
      *
      * Called for each event that matches a subscription's filters. Return

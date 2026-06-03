@@ -91,6 +91,29 @@ class RelayLimitsTest {
         assertTrue(policy.accept(EventCmd(event(createdAt = 150L))) is PolicyResult.Accepted)
     }
 
+    // -- LimitsPolicy: session-level hooks -------------------------------------
+
+    @Test
+    fun acceptMessageRejectsOversizedFrame() {
+        val policy = LimitsPolicy(RelayLimits(maxMessageLength = 10))
+        assertEquals(null, policy.acceptMessage("short"))
+        val reason = policy.acceptMessage("this is way too long")
+        assertTrue(reason != null && reason.startsWith("invalid:"))
+    }
+
+    @Test
+    fun acceptMessageIsNoopWhenUnset() {
+        assertEquals(null, LimitsPolicy(RelayLimits()).acceptMessage("anything at all, no cap"))
+    }
+
+    @Test
+    fun acceptSubscriptionRejectsAtCap() {
+        val policy = LimitsPolicy(RelayLimits(maxSubscriptions = 3))
+        assertEquals(null, policy.acceptSubscription("s", openSubscriptions = 2))
+        val reason = policy.acceptSubscription("s", openSubscriptions = 3)
+        assertTrue(reason != null && reason.startsWith("rate-limited:"))
+    }
+
     // -- LimitsPolicy: REQ / COUNT ---------------------------------------------
 
     @Test

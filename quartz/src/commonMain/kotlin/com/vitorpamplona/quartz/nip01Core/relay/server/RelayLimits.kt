@@ -35,14 +35,14 @@ import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation.RelayInform
  * Every field is optional; a null leaves that limit unset (not enforced, not
  * advertised). All fields map 1:1 to NIP-11's `limitation` object.
  *
- * Enforcement responsibility:
- * - Per-command ([LimitsPolicy]): [maxFilters], [maxLimit], [defaultLimit],
- *   [maxSubidLength], [maxEventTags], [maxContentLength], [createdAtLowerLimit],
- *   [createdAtUpperLimit].
- * - Per-connection ([RelaySession]): [maxMessageLength], [maxSubscriptions].
- * - Advertised only (enforced elsewhere or operationally): [minPowDifficulty]
- *   (NIP-13), [authRequired] (use a `FullAuthPolicy`), [paymentRequired],
- *   [restrictedWrites].
+ * All of these are enforced by a single [LimitsPolicy] in the policy chain — the
+ * per-command ones via `accept(...)`, and the per-connection ones
+ * ([maxMessageLength], [maxSubscriptions]) via the `acceptMessage` /
+ * `acceptSubscription` policy hooks — so limits compose like any other policy.
+ *
+ * Advertised only (enforced elsewhere or operationally): [minPowDifficulty]
+ * (NIP-13), [authRequired] (use a `FullAuthPolicy`), [paymentRequired],
+ * [restrictedWrites].
  */
 class RelayLimits(
     /** Max size of an incoming message; oversized frames get a NOTICE. Measured in UTF-16 chars. */
@@ -74,17 +74,6 @@ class RelayLimits(
     /** Reject events with `created_at` after this epoch-second. */
     val createdAtUpperLimit: Long? = null,
 ) {
-    /** Whether any of the per-command [LimitsPolicy] fields are set. */
-    fun hasCommandLimits(): Boolean =
-        maxFilters != null ||
-            maxLimit != null ||
-            defaultLimit != null ||
-            maxSubidLength != null ||
-            maxEventTags != null ||
-            maxContentLength != null ||
-            createdAtLowerLimit != null ||
-            createdAtUpperLimit != null
-
     /** Renders these limits as a NIP-11 `limitation` object for the relay info document. */
     fun toNip11Limitation(): RelayInformationLimitation =
         RelayInformationLimitation(

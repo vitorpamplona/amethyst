@@ -102,7 +102,7 @@ class NostrServer(
      */
     private fun buildPolicy(): IRelayPolicy {
         val base = policyBuilder()
-        return if (limits != null && limits.hasCommandLimits()) LimitsPolicy(limits) + base else base
+        return if (limits != null) LimitsPolicy(limits) + base else base
     }
 
     /**
@@ -118,7 +118,6 @@ class NostrServer(
                 store = subStore,
                 scope = scope,
                 onSend = send,
-                limits = limits,
                 onClose = { closed ->
                     // Idempotent: only account for the first teardown of a
                     // given connection so a double close() can't underflow

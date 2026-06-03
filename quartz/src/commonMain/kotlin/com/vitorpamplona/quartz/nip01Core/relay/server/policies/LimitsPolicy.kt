@@ -39,12 +39,30 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.RelayLimits
  * Compose it ahead of your own policy so requests are clamped/rejected before
  * the application logic runs — `LimitsPolicy(limits) + myPolicy`. The server
  * classes do this automatically when you pass them `limits`. The session-level
- * caps ([RelayLimits.maxMessageLength], [RelayLimits.maxSubscriptions]) are not
- * enforceable from a policy and live in `RelaySession`.
+ * caps ([RelayLimits.maxMessageLength], [RelayLimits.maxSubscriptions]) are
+ * enforced through the [acceptMessage] / [acceptSubscription] policy hooks, so
+ * everything limit-related composes uniformly across a [PolicyStack].
  */
 class LimitsPolicy(
     private val limits: RelayLimits,
 ) : PassThroughPolicy() {
+    override fun acceptMessage(message: String): String? {
+        val max = limits.maxMessageLength ?: return null
+        return if (message.length > max) MachineReadablePrefix.INVALID.format("message too large (max $max)") else null
+    }
+
+    override fun acceptSubscription(
+        subId: String,
+        openSubscriptions: Int,
+    ): String? {
+        val max = limits.maxSubscriptions ?: return null
+        return if (openSubscriptions >= max) {
+            MachineReadablePrefix.RATE_LIMITED.format("too many concurrent subscriptions (max $max)")
+        } else {
+            null
+        }
+    }
+
     override fun accept(cmd: EventCmd): PolicyResult<EventCmd> {
         val event = cmd.event
         limits.maxContentLength?.let {

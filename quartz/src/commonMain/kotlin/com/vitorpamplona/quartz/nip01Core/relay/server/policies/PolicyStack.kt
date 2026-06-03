@@ -60,6 +60,23 @@ class PolicyStack(
         policies.forEach { it.onAuthenticationFailed(pubKey) }
     }
 
+    override fun acceptMessage(message: String): String? {
+        for (policy in policies) {
+            policy.acceptMessage(message)?.let { return it }
+        }
+        return null
+    }
+
+    override fun acceptSubscription(
+        subId: String,
+        openSubscriptions: Int,
+    ): String? {
+        for (policy in policies) {
+            policy.acceptSubscription(subId, openSubscriptions)?.let { return it }
+        }
+        return null
+    }
+
     private inline fun <T : Command> runPolicies(
         initialCmd: T,
         operation: (IRelayPolicy, T) -> PolicyResult<T>,

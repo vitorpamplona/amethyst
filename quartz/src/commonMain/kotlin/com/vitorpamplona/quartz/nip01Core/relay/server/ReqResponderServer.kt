@@ -97,7 +97,7 @@ class ReqResponderServer(
 
     private fun buildPolicy(): IRelayPolicy {
         val base = policyBuilder()
-        return if (limits != null && limits.hasCommandLimits()) LimitsPolicy(limits) + base else base
+        return if (limits != null) LimitsPolicy(limits) + base else base
     }
 
     /**
@@ -113,7 +113,6 @@ class ReqResponderServer(
                 store = backend,
                 scope = scope,
                 onSend = send,
-                limits = limits,
                 onClose = { closed ->
                     // Idempotent teardown accounting (see NostrServer.connect).
                     if (connections.remove(closed.id) != null) {

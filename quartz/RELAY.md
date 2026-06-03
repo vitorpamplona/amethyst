@@ -333,16 +333,19 @@ val limits = RelayLimits(
 val server = NostrServer(store, policyBuilder = { FullAuthPolicy(relay) }, limits = limits)
 ```
 
-Enforcement is split by where each limit can be checked:
+All of it is enforced by a single `LimitsPolicy` (which the server prepends to
+your policy when you pass `limits`), so limits compose through a `PolicyStack`
+like any other policy — you can also split them across several policies:
 
-- **Per-command** (a `LimitsPolicy` the server prepends to your policy): rejects
-  EVENTs over `maxContentLength` / `maxEventTags` / outside the `createdAt`
-  bounds; rejects REQ/COUNT with too many filters or an over-long sub id; and
-  **clamps** each filter's `limit` to `maxLimit` (substituting `defaultLimit`
-  when none is given). Rejections use the `invalid:` machine-readable prefix.
-- **Per-connection** (`RelaySession`): oversized frames get a `NOTICE`
-  (`maxMessageLength`); a new subscription past `maxSubscriptions` is `CLOSED`
-  with `rate-limited:`.
+- **Per-command** (`accept(...)`): rejects EVENTs over `maxContentLength` /
+  `maxEventTags` / outside the `createdAt` bounds; rejects REQ/COUNT with too
+  many filters or an over-long sub id; and **clamps** each filter's `limit` to
+  `maxLimit` (substituting `defaultLimit` when none is given). Rejections use
+  the `invalid:` machine-readable prefix.
+- **Per-connection** (the `acceptMessage` / `acceptSubscription` policy hooks):
+  oversized frames get a `NOTICE` (`maxMessageLength`); a new subscription past
+  `maxSubscriptions` is `CLOSED` with `rate-limited:`. These hooks exist because
+  a policy otherwise can't see the raw frame or the live subscription count.
 - **Advertised only**: `minPowDifficulty` (enforce with a PoW policy),
   `authRequired` (use `FullAuthPolicy`), `paymentRequired`, `restrictedWrites`.
 
