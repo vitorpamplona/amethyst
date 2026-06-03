@@ -328,7 +328,12 @@ class AccountGiftWrapsHistoryEoseManager(
                 message: String,
                 forFilters: List<Filter>?,
             ) {
+                // Cannot-connect is also "no answer": count it toward give-up like a CLOSE, so a relay
+                // that's unreachable (down / blocked) doesn't keep exhaustion false forever — otherwise a
+                // cold, empty feed would retry it endlessly and stay on the spinner. Once it's given up,
+                // exhaustion can complete and the screen resolves (to the loaded rooms, or empty + retry).
                 windowLoad.onRelaySettled(relay)
+                if (pager.onClosed(user.pubkeyHex, relay)) markExhaustedIfAllDone(user)
             }
         }
 

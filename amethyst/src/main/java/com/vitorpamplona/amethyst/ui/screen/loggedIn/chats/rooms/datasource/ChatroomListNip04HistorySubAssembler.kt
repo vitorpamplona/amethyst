@@ -282,7 +282,11 @@ class ChatroomListNip04HistorySubAssembler(
                 message: String,
                 forFilters: List<Filter>?,
             ) {
+                // Count cannot-connect toward give-up like a CLOSE, so an unreachable relay doesn't keep
+                // exhaustion false forever (otherwise a cold, empty feed retries it endlessly and stays on
+                // the spinner). Once given up, exhaustion completes and the screen resolves.
                 windowLoad.onRelaySettled(relay)
+                if (pager.onClosed(user.pubkeyHex, relay)) markExhaustedIfAllDone(user)
             }
         }
 
