@@ -124,6 +124,16 @@ fun DmHistoryLoadingCard(
                             )
                         } else if (loading) {
                             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        } else {
+                            // Paused: not caught up, but not actively loading (the rooms-list auto-fill
+                            // stopped short of exhaustion, or we're between round-model pages). Show a
+                            // static "more" glyph so the icon slot is never blank — loading resumes on scroll.
+                            Text(
+                                "⋯",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                     }
                     Spacer(Modifier.width(14.dp))
