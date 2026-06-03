@@ -1369,6 +1369,8 @@
     <string name="account_settings">Kontoinställningar</string>
     <string name="app_settings">Appinställningar</string>
     <!-- Settings search -->
+    <string name="settings_search_placeholder">Sök inställningar</string>
+    <string name="settings_search_no_results">Inga inställningar hittades för ”%1$s”</string>
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
          negentropy, …) stay searchable in every locale and aren't sent to translators. -->
@@ -1499,6 +1501,9 @@
     <string name="copy_nprofile_to_clipboard">Kopiera nprofile till urklipp</string>
     <string name="copy_npub_to_clipboard">Kopiera npub till urklipp</string>
     <string name="share_or_save">Dela eller Spara</string>
+    <string name="share_target_as_dm">Skicka som DM</string>
+    <string name="share_to_dm_title">Skicka till…</string>
+    <string name="share_to_dm_start_new">Nytt meddelande</string>
     <string name="copy_url_to_clipboard">Kopiera URL till urklipp</string>
     <string name="copy_the_note_id_to_the_clipboard">Kopiera anteckningens ID till urklipp</string>
     <string name="add_media_to_gallery">Lägg till media i galleriet</string>

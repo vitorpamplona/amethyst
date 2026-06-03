@@ -31,6 +31,7 @@ data class Nip11RelayInformation(
     val id: String? = null,
     val name: String? = null,
     val description: String? = null,
+    val banner: String? = null,
     val icon: String? = null,
     val pubkey: HexKey? = null,
     val self: HexKey? = null,
@@ -53,7 +54,16 @@ data class Nip11RelayInformation(
     val nip50: List<String>? = null,
     val supported_grasps: List<String>? = null,
 ) {
+    /**
+     * Serializes this document to JSON for serving at the relay's root over the
+     * NIP-11 [CONTENT_TYPE]. Null fields are omitted.
+     */
+    fun toJson(): String = JsonMapper.toJson(this)
+
     companion object {
+        /** The `Content-Type` (and `Accept`) media type a relay serves its NIP-11 document with. */
+        const val CONTENT_TYPE = "application/nostr+json"
+
         fun fromJson(json: String): Nip11RelayInformation = JsonMapper.fromJson<Nip11RelayInformation>(json)
     }
 

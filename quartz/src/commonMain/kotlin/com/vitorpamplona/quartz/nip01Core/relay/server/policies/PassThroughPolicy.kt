@@ -26,8 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
-import com.vitorpamplona.quartz.nip01Core.relay.server.IRelayPolicy
-import com.vitorpamplona.quartz.nip01Core.relay.server.PolicyResult
 
 /**
  * Convenience base that accepts everything by default. Subclasses

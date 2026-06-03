@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.commands.toClient
 
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedSerializable
 import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.MessageKSerializer
 import kotlinx.serialization.Serializable
@@ -27,4 +28,12 @@ import kotlinx.serialization.Serializable
 @Serializable(with = MessageKSerializer::class)
 interface Message : OptimizedSerializable {
     fun label(): String
+
+    /** Serializes this message to its NIP-01 wire JSON, e.g. `["EVENT", "sub", {...}]`. */
+    fun toJson(): String = OptimizedJsonMapper.toJson(this)
+
+    companion object {
+        /** Parses a relay-to-client message from its NIP-01 wire JSON. */
+        fun fromJson(json: String): Message = OptimizedJsonMapper.fromJsonToMessage(json)
+    }
 }

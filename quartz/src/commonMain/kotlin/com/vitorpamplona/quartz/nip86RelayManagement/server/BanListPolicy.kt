@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.nip86RelayManagement.server
 
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
-import com.vitorpamplona.quartz.nip01Core.relay.server.PolicyResult
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PassThroughPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyResult
 
 /**
  * Reads the live [BanStore] on every EVENT and rejects events that

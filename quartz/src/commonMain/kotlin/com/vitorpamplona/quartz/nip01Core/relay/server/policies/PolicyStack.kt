@@ -21,14 +21,14 @@
 package com.vitorpamplona.quartz.nip01Core.relay.server.policies
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
-import com.vitorpamplona.quartz.nip01Core.relay.server.IRelayPolicy
-import com.vitorpamplona.quartz.nip01Core.relay.server.PolicyResult
+import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 
 class PolicyStack(
     vararg policies: IRelayPolicy,
@@ -46,6 +46,20 @@ class PolicyStack(
     override fun accept(cmd: CountCmd) = runPolicies(cmd) { p, c -> p.accept(c) }
 
     override fun accept(cmd: AuthCmd) = runPolicies(cmd) { p, c -> p.accept(c) }
+
+    override suspend fun onAuthenticated(
+        pubKey: HexKey,
+        event: RelayAuthEvent,
+    ) {
+        policies.forEach { it.onAuthenticated(pubKey, event) }
+    }
+
+    override fun acceptMessage(message: String): String? = policies.firstNotNullOfOrNull { it.acceptMessage(message) }
+
+    override fun acceptSubscription(
+        subId: String,
+        openSubscriptions: Int,
+    ): String? = policies.firstNotNullOfOrNull { it.acceptSubscription(subId, openSubscriptions) }
 
     private inline fun <T : Command> runPolicies(
         initialCmd: T,

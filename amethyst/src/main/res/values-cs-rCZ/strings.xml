@@ -1390,6 +1390,8 @@
     <string name="account_settings">Nastavení účtu</string>
     <string name="app_settings">Nastavení aplikace</string>
     <!-- Settings search -->
+    <string name="settings_search_placeholder">Hledat nastavení</string>
+    <string name="settings_search_no_results">Pro „%1$s“ nebyla nalezena žádná nastavení</string>
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
          negentropy, …) stay searchable in every locale and aren't sent to translators. -->
@@ -1524,6 +1526,9 @@
     <string name="copy_nprofile_to_clipboard">Zkopírovat nprofile do schránky</string>
     <string name="copy_npub_to_clipboard">Kopírovat npub do schránky</string>
     <string name="share_or_save">Sdílet nebo Uložit</string>
+    <string name="share_target_as_dm">Odeslat jako DM</string>
+    <string name="share_to_dm_title">Odeslat…</string>
+    <string name="share_to_dm_start_new">Nová zpráva</string>
     <string name="copy_url_to_clipboard">Kopírovat URL do schránky</string>
     <string name="copy_the_note_id_to_the_clipboard">Kopírovat ID poznámky do schránky</string>
     <string name="add_media_to_gallery">Přidat média do galerie</string>

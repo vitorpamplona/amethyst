@@ -27,8 +27,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
-import com.vitorpamplona.quartz.nip01Core.relay.server.IRelayPolicy
-import com.vitorpamplona.quartz.nip01Core.relay.server.PolicyResult
 
 /**
  * Verifies the Schnorr signature + id hash of every incoming
@@ -36,7 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.PolicyResult
  *
  * The default `VerifyPolicy` singleton verifies both. The
  * [VerifyAuthOnlyPolicy] singleton skips the EVENT path — use it
- * when the [com.vitorpamplona.quartz.nip01Core.relay.server.IngestQueue]
+ * when the [com.vitorpamplona.quartz.nip01Core.relay.server.backend.IngestQueue]
  * is doing parallel verify (Tier 3 of the event-ingestion plan)
  * so EVENTs aren't verified twice. AUTH is still verified inline
  * because the AUTH path bypasses the queue entirely; without it,

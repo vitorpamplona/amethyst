@@ -21,20 +21,22 @@
 package com.vitorpamplona.quartz.nip01Core.relay.server
 
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
+import com.vitorpamplona.quartz.nip01Core.relay.server.backend.IngestQueue
+import com.vitorpamplona.quartz.nip01Core.relay.server.backend.LiveEventStore
+import com.vitorpamplona.quartz.nip01Core.relay.server.backend.SessionBackend
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RelayLimits
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
-import com.vitorpamplona.quartz.utils.cache.LargeCache
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlin.coroutines.CoroutineContext
 
 /**
- * Represents a Nostr relay server that manages client connections, event storage, and verification.
- *
- * This class acts as the central coordinator for a relay server, handling the lifecycle of [RelaySession]s
- * and providing access to the underlying event store.
+ * Storage-backed Nostr relay server: a [RelayServerBase] whose [backend] is a
+ * [LiveEventStore] over [store] (historical replay + live tail after EOSE),
+ * fed through a group-commit [IngestQueue].
  *
  * @param store The [IEventStore] backing this relay.
  * @param policyBuilder Controls requirements for relay commands.
@@ -47,17 +49,22 @@ import kotlin.coroutines.CoroutineContext
  * @param negentropySettings NIP-77 server-side tuning (frame cap,
  *   snapshot cap, per-connection session cap). Defaults to strfry-
  *   parity values; see [NegentropySettings].
+ * @param listener Observability hook fired as connections open and close,
+ *   keyed by [RelaySession.id]. Defaults to a no-op.
+ * @param limits Operational limits enforced on every connection (per-command
+ *   via a composed [com.vitorpamplona.quartz.nip01Core.relay.server.policies.LimitsPolicy],
+ *   plus the session-level message-size and subscription caps) and advertised
+ *   via [RelayLimits.toNip11Limitation]. Null disables limit enforcement.
  */
 class NostrServer(
     private val store: IEventStore,
-    private val policyBuilder: () -> IRelayPolicy = { VerifyPolicy },
-    private val parentContext: CoroutineContext = SupervisorJob(),
+    policyBuilder: () -> IRelayPolicy = { VerifyPolicy },
+    parentContext: CoroutineContext = SupervisorJob(),
     parallelVerify: Boolean = false,
-    private val negentropySettings: NegentropySettings = NegentropySettings.Default,
-) : AutoCloseable {
-    /** Scope for all subscriptions. */
-    private val scope = CoroutineScope(parentContext + SupervisorJob())
-
+    negentropySettings: NegentropySettings = NegentropySettings.Default,
+    listener: RelayServerListener = RelayServerListener.None,
+    limits: RelayLimits? = null,
+) : RelayServerBase(policyBuilder, parentContext, negentropySettings, listener, limits) {
     /**
      * Group-commit writer shared across every connected session.
      * Sessions hand off EVENT publishes here instead of awaiting
@@ -72,57 +79,13 @@ class NostrServer(
             verify = if (parallelVerify) ({ it.verify() }) else null,
         )
 
-    private val subStore = LiveEventStore(store, ingest)
-
-    /** Active client sessions keyed by an opaque connection id. */
-    private val connections = LargeCache<Int, RelaySession>()
-
-    /**
-     * Registers a new client connection.
-     *
-     * @param send Callback the server uses to send JSON messages to this client.
-     *             Implementations must be safe to call from any coroutine.
-     */
-    fun connect(send: (String) -> Unit) =
-        RelaySession(
-            policy = policyBuilder(),
-            store = subStore,
-            scope = scope,
-            onSend = send,
-            onClose = { session ->
-                connections.remove(session.hashCode())
-            },
-            negentropySettings = negentropySettings,
-        ).also { session ->
-            connections.put(session.hashCode(), session)
-        }
-
-    /**
-     * Registers a new client connection and serves it for the duration of
-     * [incoming]. The session is automatically closed when [incoming] returns.
-     *
-     * @param send   Callback the server uses to send JSON messages to this client.
-     * @param incoming Suspend block that yields raw JSON strings from the client
-     *                 (e.g., reading WebSocket text frames in a loop).
-     */
-    suspend fun serve(
-        send: (String) -> Unit,
-        incoming: suspend (RelaySession) -> Unit,
-    ) {
-        val session = connect(send)
-        try {
-            incoming(session)
-        } finally {
-            session.close()
-        }
-    }
+    override val backend: SessionBackend = LiveEventStore(store, ingest)
 
     /**
      * Shuts down the server, cancelling all subscriptions and closing the store.
      */
     override fun close() {
-        connections.forEach { _, session -> session.cancelAllSubscriptions() }
-        connections.clear()
+        closeConnections()
         ingest.close()
         scope.cancel()
         store.close()

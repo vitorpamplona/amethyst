@@ -28,5 +28,15 @@ class ClosedMessage(
 
     companion object {
         const val LABEL = "CLOSED"
+
+        /**
+         * A `CLOSED` for [subId] whose reason carries a standardized
+         * [MachineReadablePrefix] (e.g. `auth-required: ...`).
+         */
+        fun of(
+            subId: String,
+            prefix: MachineReadablePrefix,
+            message: String,
+        ) = ClosedMessage(subId, prefix.format(message))
     }
 }

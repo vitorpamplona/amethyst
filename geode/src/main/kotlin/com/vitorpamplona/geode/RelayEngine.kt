@@ -26,9 +26,9 @@ import com.vitorpamplona.geode.config.seedInto
 import com.vitorpamplona.geode.config.snapshotOf
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.server.IRelayPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.NostrServer
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
@@ -45,7 +45,7 @@ import kotlin.coroutines.CoroutineContext
  *
  * Speaks NIP-01 (REQ/EVENT/EOSE/CLOSE), NIP-11 (relay info via [info]),
  * NIP-42 (AUTH — supply [policyBuilder] = `{ FullAuthPolicy(url) }` or
- * stack one with [com.vitorpamplona.quartz.nip01Core.relay.server.IRelayPolicy.plus]),
+ * stack one with [com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy.plus]),
  * NIP-45 (COUNT) and NIP-50 (search via the SQLite FTS index).
  *
  * Two transports:
@@ -81,7 +81,7 @@ class RelayEngine(
     parentContext: CoroutineContext = SupervisorJob(),
     /**
      * Run Schnorr signature verification in parallel inside the
-     * [com.vitorpamplona.quartz.nip01Core.relay.server.IngestQueue]
+     * [com.vitorpamplona.quartz.nip01Core.relay.server.backend.IngestQueue]
      * instead of serially in the policy chain. Enables the Tier-3
      * win in `geode/plans/2026-05-07-event-ingestion-batching.md`.
      *

@@ -31,5 +31,21 @@ class OkMessage(
 
     companion object {
         const val LABEL = "OK"
+
+        /** A successful `OK true` for [eventId], with an optional human-readable note. */
+        fun accepted(
+            eventId: HexKey,
+            message: String = "",
+        ) = OkMessage(eventId, true, message)
+
+        /**
+         * A rejecting `OK false` for [eventId] whose reason carries a
+         * standardized [MachineReadablePrefix] (e.g. `auth-required: ...`).
+         */
+        fun rejected(
+            eventId: HexKey,
+            prefix: MachineReadablePrefix,
+            message: String,
+        ) = OkMessage(eventId, false, prefix.format(message))
     }
 }

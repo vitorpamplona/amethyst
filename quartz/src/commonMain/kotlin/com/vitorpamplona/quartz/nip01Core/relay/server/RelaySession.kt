@@ -23,9 +23,9 @@ package com.vitorpamplona.quartz.nip01Core.relay.server
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountMessage
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountResult
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
@@ -34,6 +34,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CloseCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
+import com.vitorpamplona.quartz.nip01Core.relay.server.backend.SessionBackend
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyResult
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip77Negentropy.NegCloseCmd
 import com.vitorpamplona.quartz.nip77Negentropy.NegMsgCmd
@@ -46,18 +49,28 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.coroutines.launch
+import kotlin.concurrent.atomics.AtomicLong
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * Represents an active session between a Nostr client and the relay.
  * Each one of these is a connection that can hold many subscriptions
  */
+@OptIn(ExperimentalAtomicApi::class)
 class RelaySession(
-    private val store: LiveEventStore,
+    private val store: SessionBackend,
     val policy: IRelayPolicy,
     private val scope: CoroutineScope,
     private val onSend: (String) -> Unit,
     private val onClose: (RelaySession) -> Unit,
     negentropySettings: NegentropySettings = NegentropySettings.Default,
+    /**
+     * Stable, process-unique identifier for this connection. Used by the
+     * server classes to key their connection registry and by
+     * [RelayServerListener] callbacks so observers can correlate the
+     * open/close of the same connection. Defaults to a fresh monotonic id.
+     */
+    val id: Long = nextConnectionId(),
 ) : AutoCloseable {
     private val subscriptions = LargeCache<String, Job>()
 
@@ -100,6 +113,11 @@ class RelaySession(
      * Parses the message as a NIP-01 command and dispatches it.
      */
     suspend fun receive(command: String) {
+        policy.acceptMessage(command)?.let { reason ->
+            send(NoticeMessage(reason))
+            return
+        }
+
         val cmd =
             try {
                 OptimizedJsonMapper.fromJsonToCommand(command)
@@ -169,16 +187,37 @@ class RelaySession(
         // Policy may rewrite filters to match the user's access level.
         val filters = (result as PolicyResult.Accepted).cmd.filters
 
-        val total = store.count(filters)
+        val countResult =
+            try {
+                store.countResult(filters)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                send(ClosedMessage.of(cmd.queryId, MachineReadablePrefix.ERROR, e.message ?: "count failed"))
+                return
+            }
 
-        send(CountMessage(cmd.queryId, CountResult(total)))
+        send(CountMessage(cmd.queryId, countResult))
     }
 
     // -- NIP-42: AUTH ---------------------------------------------------------
-    private fun handleAuth(cmd: AuthCmd) {
+    private suspend fun handleAuth(cmd: AuthCmd) {
         val result = policy.accept(cmd)
         if (result is PolicyResult.Rejected) {
             send(OkMessage(cmd.event.id, false, result.reason))
+            return
+        }
+
+        // The whole policy chain validated the AUTH. onAuthenticated runs any
+        // post-verification I/O (e.g. exchanging the verified event for a
+        // backend token) AND is where a policy commits the authentication, so a
+        // throw here cleanly fails the login — nothing was committed to undo.
+        try {
+            policy.onAuthenticated(cmd.event.pubKey, cmd.event)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            send(OkMessage.rejected(cmd.event.id, MachineReadablePrefix.ERROR, e.message ?: "authentication failed"))
             return
         }
 
@@ -187,6 +226,18 @@ class RelaySession(
 
     // -- NIP-01: REQ ----------------------------------------------------------
     private fun handleReq(cmd: ReqCmd) {
+        // Ask the policy whether a *new* subscription may open (e.g. a
+        // max_subscriptions cap). A re-REQ on an existing id replaces it
+        // 1-for-1 and doesn't grow the count, so it's exempt. Checked before
+        // the cancel so the existing subscription isn't dropped only to then
+        // reject its replacement.
+        if (!subscriptions.containsKey(cmd.subId)) {
+            policy.acceptSubscription(cmd.subId, subscriptions.size())?.let { reason ->
+                send(ClosedMessage(cmd.subId, reason))
+                return
+            }
+        }
+
         // Cancel any existing subscription with the same id (NIP-01 spec).
         cancelSubscription(cmd.subId)
 
@@ -211,8 +262,14 @@ class RelaySession(
                         },
                         onEose = { send(EoseMessage(cmd.subId)) },
                     )
-                } catch (_: CancellationException) {
+                } catch (e: CancellationException) {
                     // Subscription was closed – this is expected.
+                    throw e
+                } catch (e: Exception) {
+                    // A backend failure (e.g. an event source's network I/O)
+                    // ends the subscription with a machine-readable CLOSED
+                    // rather than silently dropping the coroutine.
+                    send(ClosedMessage.of(cmd.subId, MachineReadablePrefix.ERROR, e.message ?: "query failed"))
                 }
             }
 
@@ -229,5 +286,12 @@ class RelaySession(
 
     init {
         policy.onConnect(::send)
+    }
+
+    companion object {
+        private val connectionIdSeq = AtomicLong(0L)
+
+        /** Allocates the next process-unique connection id. */
+        fun nextConnectionId(): Long = connectionIdSeq.fetchAndAdd(1L)
     }
 }
