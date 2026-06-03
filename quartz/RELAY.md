@@ -2,6 +2,8 @@
 
 Quartz provides a transport-agnostic relay engine. You provide a `send` callback per connection, and it gives you a `RelaySession` that accepts raw JSON strings. Plug it into Ktor or any WebSocket transport.
 
+There are two engines on the same `RelaySession` core: `NostrServer` for storage-backed relays (an `IEventStore` with a live tail after EOSE) and `ReqResponderServer` for non-storage relays (search, redirector, computed data — see [Non-Storage Relays](#non-storage-relays-search-redirector-computed)).
+
 Both `NostrServer` and `EventStore` implement `AutoCloseable`.
 
 ## Quick Start
@@ -79,6 +81,64 @@ val store = EventStore(
 ```
 
 By default, all single-letter tags with values are indexed. Override `shouldIndex(kind, tag)` for custom behavior. More indexes = faster queries but larger database.
+
+## Non-Storage Relays (search, redirector, computed)
+
+A relay's job is to *answer REQs*. When the answer doesn't come from a stored
+set — a NIP-50 search that forwards to an HTTP backend, a relay that emits
+computed/projected data — implement `ReqResponder` and serve it with
+`ReqResponderServer`. You supply a `Flow<Event>`; the engine owns the wire
+protocol (challenge/auth, command parsing, policy, `EVENT`/`EOSE`/`CLOSED`
+framing, subscription lifecycle), so there's no hand-written read loop.
+
+```kotlin
+class SearchResponder(private val backend: SearchApi) : ReqResponder {
+    override fun respond(filters: List<Filter>): Flow<Event> = flow {
+        filters.forEach { f ->
+            f.search?.let { raw ->
+                val q = SearchQuery.parse(raw)
+                backend.search(q.terms, domain = q.domain, language = q.language)
+                    .forEach { emit(it) }
+            }
+        }
+    }
+    // COUNT defaults to counting respond(); override for a cheaper backend count.
+}
+
+fun main() {
+    val server = ReqResponderServer(
+        responder = SearchResponder(searchApi),
+        policyBuilder = { FullAuthPolicy(relay) }, // optional NIP-42 gating
+    )
+
+    embeddedServer(Netty, port = 7777) {
+        install(WebSockets)
+        routing {
+            webSocket("/") {
+                server.serve(send = { json -> launch { send(Frame.Text(json)) } }) { session ->
+                    for (frame in incoming) {
+                        if (frame is Frame.Text) session.receive(frame.readText())
+                    }
+                }
+            }
+        }
+    }.start(wait = true)
+}
+```
+
+**EOSE = flow completion.** The engine sends `EOSE` when `respond(...)`
+completes, which is the natural shape for finite queries. Relays that need an
+open-ended live tail after EOSE should use the storage path (`NostrServer` +
+`IEventStore`) instead. EVENT publishes are rejected (`OK false` —
+`blocked: this relay does not accept events`) and negentropy is disabled, since
+there's no stored set. A failure thrown from the flow ends the subscription
+with `CLOSED` `error: <message>`.
+
+`ReqResponderServer` and `NostrServer` are the two concrete dispatch engines;
+both build on `RelaySession` and the shared `SessionBackend` seam (`LiveEventStore`
+is the storage-backed `SessionBackend`; `ReqResponderBackend` adapts a
+`ReqResponder`). Implement `SessionBackend` directly only if you need custom
+control over the EVENT/negentropy paths as well as REQ/COUNT.
 
 ## Policies
 
@@ -257,9 +317,12 @@ class MyRelayTest {
 ```
 quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/
 ├── relay/server/
-│   ├── NostrServer.kt          # Main entry point
+│   ├── NostrServer.kt          # Storage-backed engine (IEventStore)
+│   ├── ReqResponderServer.kt   # Non-storage engine (search/redirector/computed)
+│   ├── ReqResponder.kt         # Flow<Event> REQ-responder SPI
+│   ├── SessionBackend.kt       # Data-plane seam (LiveEventStore / ReqResponderBackend)
 │   ├── RelaySession.kt         # Per-connection handler
-│   ├── LiveEventStore.kt       # Reactive event streaming
+│   ├── LiveEventStore.kt       # Reactive event streaming (storage SessionBackend)
 │   ├── IRelayPolicy.kt         # Policy interface + PolicyResult + onAuthenticated
 │   └── policies/
 │       ├── EmptyPolicy.kt      # Accept everything

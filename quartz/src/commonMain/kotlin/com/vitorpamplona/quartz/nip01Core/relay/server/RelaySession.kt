@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountResult
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
@@ -52,7 +53,7 @@ import kotlinx.coroutines.launch
  * Each one of these is a connection that can hold many subscriptions
  */
 class RelaySession(
-    private val store: LiveEventStore,
+    private val store: SessionBackend,
     val policy: IRelayPolicy,
     private val scope: CoroutineScope,
     private val onSend: (String) -> Unit,
@@ -169,7 +170,15 @@ class RelaySession(
         // Policy may rewrite filters to match the user's access level.
         val filters = (result as PolicyResult.Accepted).cmd.filters
 
-        val total = store.count(filters)
+        val total =
+            try {
+                store.count(filters)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                send(ClosedMessage.of(cmd.queryId, MachineReadablePrefix.ERROR, e.message ?: "count failed"))
+                return
+            }
 
         send(CountMessage(cmd.queryId, CountResult(total)))
     }
@@ -225,8 +234,14 @@ class RelaySession(
                         },
                         onEose = { send(EoseMessage(cmd.subId)) },
                     )
-                } catch (_: CancellationException) {
+                } catch (e: CancellationException) {
                     // Subscription was closed – this is expected.
+                    throw e
+                } catch (e: Exception) {
+                    // A backend failure (e.g. a responder's network I/O)
+                    // ends the subscription with a machine-readable CLOSED
+                    // rather than silently dropping the coroutine.
+                    send(ClosedMessage.of(cmd.subId, MachineReadablePrefix.ERROR, e.message ?: "query failed"))
                 }
             }
 

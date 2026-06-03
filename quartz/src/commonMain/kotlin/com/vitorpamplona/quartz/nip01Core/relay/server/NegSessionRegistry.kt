@@ -47,7 +47,7 @@ import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
  * protections — see [NegentropySettings].
  */
 class NegSessionRegistry(
-    private val store: LiveEventStore,
+    private val store: SessionBackend,
     private val send: (Message) -> Unit,
     private val settings: NegentropySettings = NegentropySettings.Default,
 ) {

@@ -52,7 +52,7 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
 class LiveEventStore(
     private val store: IEventStore,
     private val ingest: IngestQueue,
-) {
+) : SessionBackend {
     private val index = FilterIndex<LiveSubscription>()
 
     /**
@@ -73,7 +73,7 @@ class LiveEventStore(
      * [FilterIndex] so subscribers see the event. Suspends only when
      * the ingest queue is full (backpressure).
      */
-    suspend fun submit(
+    override suspend fun submit(
         event: Event,
         onComplete: (IEventStore.InsertOutcome) -> Unit,
     ) {
@@ -125,7 +125,7 @@ class LiveEventStore(
         }
     }
 
-    suspend fun query(
+    override suspend fun query(
         filters: List<Filter>,
         onEach: (Event) -> Unit,
         onEose: () -> Unit,
@@ -191,7 +191,7 @@ class LiveEventStore(
         }
     }
 
-    suspend fun count(filters: List<Filter>) = store.count(filters)
+    override suspend fun count(filters: List<Filter>): Int = store.count(filters)
 
     /**
      * One-shot snapshot query. Used by NIP-77 negentropy: the server
@@ -228,8 +228,8 @@ class LiveEventStore(
      * caller distinguish "exactly at cap" from "exceeds cap" without
      * scanning past the cap.
      */
-    suspend fun snapshotIdsForNegentropy(
+    override suspend fun snapshotIdsForNegentropy(
         filters: List<Filter>,
-        maxEntries: Int? = null,
+        maxEntries: Int?,
     ): List<IdAndTime> = store.snapshotIdsForNegentropy(filters, maxEntries)
 }
