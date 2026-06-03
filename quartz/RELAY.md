@@ -312,6 +312,61 @@ class MyRelayTest {
 }
 ```
 
+## Limits (NIP-11) — enforce and advertise from one source
+
+`RelayLimits` is the single source of truth for the relay's operational limits.
+Pass it to the server and every limit is enforced; call `toNip11Limitation()`
+and the *same* numbers are advertised in your NIP-11 document — they can't drift.
+
+```kotlin
+val limits = RelayLimits(
+    maxMessageLength = 65_536,
+    maxSubscriptions = 20,
+    maxFilters = 10,
+    maxLimit = 500,
+    maxContentLength = 8_196,
+    maxEventTags = 2_000,
+    createdAtUpperLimit = TimeUtils.now() + 900,
+    authRequired = true,
+)
+
+val server = NostrServer(store, policyBuilder = { FullAuthPolicy(relay) }, limits = limits)
+```
+
+Enforcement is split by where each limit can be checked:
+
+- **Per-command** (a `LimitsPolicy` the server prepends to your policy): rejects
+  EVENTs over `maxContentLength` / `maxEventTags` / outside the `createdAt`
+  bounds; rejects REQ/COUNT with too many filters or an over-long sub id; and
+  **clamps** each filter's `limit` to `maxLimit` (substituting `defaultLimit`
+  when none is given). Rejections use the `invalid:` machine-readable prefix.
+- **Per-connection** (`RelaySession`): oversized frames get a `NOTICE`
+  (`maxMessageLength`); a new subscription past `maxSubscriptions` is `CLOSED`
+  with `rate-limited:`.
+- **Advertised only**: `minPowDifficulty` (enforce with a PoW policy),
+  `authRequired` (use `FullAuthPolicy`), `paymentRequired`, `restrictedWrites`.
+
+## Serving NIP-11
+
+Build a `Nip11RelayInformation`, fold in the same `limits`, and serve it at the
+relay root with the NIP-11 media type:
+
+```kotlin
+val info = Nip11RelayInformation(
+    name = "My Relay",
+    supported_nips = listOf("1", "11", "42", "45"),
+    limitation = server.limits?.toNip11Limitation(),
+)
+
+// Ktor: answer GET / when the client asks for application/nostr+json
+get("/") {
+    call.respondText(info.toJson(), ContentType.parse(Nip11RelayInformation.CONTENT_TYPE))
+}
+```
+
+`Nip11RelayInformation.fromJson` / `toJson` round-trip the document (null fields
+are omitted), and `CONTENT_TYPE` is `application/nostr+json`.
+
 ## Approximate COUNT (NIP-45 HyperLogLog)
 
 `COUNT` is answered by `SessionBackend.countResult(filters)` (and
@@ -371,10 +426,12 @@ quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/
 │   ├── RelaySession.kt         # Per-connection handler (stable .id)
 │   ├── LiveEventStore.kt       # Reactive event streaming (storage SessionBackend)
 │   ├── IRelayPolicy.kt         # Policy interface + PolicyResult + onAuthenticated
+│   ├── RelayLimits.kt          # Limits: enforced + NIP-11 limitation source of truth
 │   └── policies/
 │       ├── EmptyPolicy.kt      # Accept everything
 │       ├── VerifyPolicy.kt     # Signature verification (default)
 │       ├── FullAuthPolicy.kt   # NIP-42 auth required (override onAuthenticated to bridge)
+│       ├── LimitsPolicy.kt     # Per-command enforcement of RelayLimits
 │       └── PolicyStack.kt      # Chain multiple policies
 ├── relay/commands/
 │   ├── toRelay/Command.kt      # Command.fromJson / toJson

@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.server
 
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.LimitsPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
@@ -51,6 +52,10 @@ import kotlin.coroutines.CoroutineContext
  *   parity values; see [NegentropySettings].
  * @param listener Observability hook fired as connections open and close,
  *   keyed by [RelaySession.id]. Defaults to a no-op.
+ * @param limits Operational limits enforced on every connection (per-command
+ *   via a composed [LimitsPolicy], plus the session-level message-size and
+ *   subscription caps) and advertised via [RelayLimits.toNip11Limitation].
+ *   Null disables limit enforcement.
  */
 @OptIn(ExperimentalAtomicApi::class)
 class NostrServer(
@@ -60,6 +65,7 @@ class NostrServer(
     parallelVerify: Boolean = false,
     private val negentropySettings: NegentropySettings = NegentropySettings.Default,
     private val listener: RelayConnectionListener = RelayConnectionListener.None,
+    val limits: RelayLimits? = null,
 ) : AutoCloseable {
     /** Scope for all subscriptions. */
     private val scope = CoroutineScope(parentContext + SupervisorJob())
@@ -90,6 +96,16 @@ class NostrServer(
     val activeConnections: Long get() = activeCount.load()
 
     /**
+     * Builds the per-connection policy, prepending a [LimitsPolicy] when
+     * [limits] declares per-command caps so requests are clamped/rejected
+     * before the application policy runs.
+     */
+    private fun buildPolicy(): IRelayPolicy {
+        val base = policyBuilder()
+        return if (limits != null && limits.hasCommandLimits()) LimitsPolicy(limits) + base else base
+    }
+
+    /**
      * Registers a new client connection.
      *
      * @param send Callback the server uses to send JSON messages to this client.
@@ -98,10 +114,11 @@ class NostrServer(
     fun connect(send: (String) -> Unit): RelaySession {
         val session =
             RelaySession(
-                policy = policyBuilder(),
+                policy = buildPolicy(),
                 store = subStore,
                 scope = scope,
                 onSend = send,
+                limits = limits,
                 onClose = { closed ->
                     // Idempotent: only account for the first teardown of a
                     // given connection so a double close() can't underflow

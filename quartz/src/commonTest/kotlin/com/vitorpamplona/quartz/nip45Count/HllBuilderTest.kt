@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip45Count
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class HllBuilderTest {
@@ -68,9 +69,11 @@ class HllBuilderTest {
 
         val result = builder.toCountResult()
         assertTrue(result.approximate)
-        assertEquals(HyperLogLog.NUM_REGISTERS, result.hll?.size)
-        assertEquals(1, result.hll!![1].toInt() and 0xFF)
-        assertEquals(1, result.hll!![2].toInt() and 0xFF)
+        val hll = result.hll
+        assertNotNull(hll)
+        assertEquals(HyperLogLog.NUM_REGISTERS, hll.size)
+        assertEquals(1, hll[1].toInt() and 0xFF)
+        assertEquals(1, hll[2].toInt() and 0xFF)
     }
 
     @Test

@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.server
 
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.LimitsPolicy
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CoroutineScope
@@ -66,6 +67,10 @@ import kotlin.coroutines.CoroutineContext
  *   here (the snapshot is empty) but the setting is plumbed for symmetry.
  * @param listener Observability hook fired as connections open and close,
  *   keyed by [RelaySession.id]. Defaults to a no-op.
+ * @param limits Operational limits enforced on every connection (per-command
+ *   via a composed [LimitsPolicy], plus the session-level message-size and
+ *   subscription caps) and advertised via [RelayLimits.toNip11Limitation].
+ *   Null disables limit enforcement.
  */
 @OptIn(ExperimentalAtomicApi::class)
 class ReqResponderServer(
@@ -74,6 +79,7 @@ class ReqResponderServer(
     parentContext: CoroutineContext = SupervisorJob(),
     private val negentropySettings: NegentropySettings = NegentropySettings.Default,
     private val listener: RelayConnectionListener = RelayConnectionListener.None,
+    val limits: RelayLimits? = null,
 ) : AutoCloseable {
     /** Scope for all subscriptions. */
     private val scope = CoroutineScope(parentContext + SupervisorJob())
@@ -89,6 +95,11 @@ class ReqResponderServer(
     /** Number of connections currently registered with this server. */
     val activeConnections: Long get() = activeCount.load()
 
+    private fun buildPolicy(): IRelayPolicy {
+        val base = policyBuilder()
+        return if (limits != null && limits.hasCommandLimits()) LimitsPolicy(limits) + base else base
+    }
+
     /**
      * Registers a new client connection.
      *
@@ -98,10 +109,11 @@ class ReqResponderServer(
     fun connect(send: (String) -> Unit): RelaySession {
         val session =
             RelaySession(
-                policy = policyBuilder(),
+                policy = buildPolicy(),
                 store = backend,
                 scope = scope,
                 onSend = send,
+                limits = limits,
                 onClose = { closed ->
                     // Idempotent teardown accounting (see NostrServer.connect).
                     if (connections.remove(closed.id) != null) {
