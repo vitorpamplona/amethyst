@@ -1370,6 +1370,8 @@
     <string name="account_settings">Configurações da Conta</string>
     <string name="app_settings">Configurações do App</string>
     <!-- Settings search -->
+    <string name="settings_search_placeholder">Pesquisar configurações</string>
+    <string name="settings_search_no_results">Nenhuma configuração encontrada para \"%1$s\"</string>
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
          negentropy, …) stay searchable in every locale and aren't sent to translators. -->
@@ -1500,6 +1502,9 @@
     <string name="copy_nprofile_to_clipboard">Copiar nprofile para a área de transferência</string>
     <string name="copy_npub_to_clipboard">Copiar npub para a área de transferência</string>
     <string name="share_or_save">Compartilhar ou Salvar</string>
+    <string name="share_target_as_dm">Enviar como DM</string>
+    <string name="share_to_dm_title">Enviar para…</string>
+    <string name="share_to_dm_start_new">Nova mensagem</string>
     <string name="copy_url_to_clipboard">Copiar URL para a área de transferência</string>
     <string name="copy_the_note_id_to_the_clipboard">Copiar ID da nota para a área de transferência</string>
     <string name="add_media_to_gallery">Adicionar Mídia à Galeria</string>
@@ -2985,9 +2990,4 @@
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Arte</string>
     <string name="nowhere_link_card_forum">Nowhere Fórum</string>
-    <string name="settings_search_no_results">Nenhuma configuração encontrada para \"%1$s\"</string>
-    <string name="settings_search_placeholder">Pesquisar configurações</string>
-    <string name="share_target_as_dm">Enviar como DM</string>
-    <string name="share_to_dm_start_new">Nova mensagem</string>
-    <string name="share_to_dm_title">Enviar para…</string>
 </resources>

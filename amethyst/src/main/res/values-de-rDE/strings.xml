@@ -1375,6 +1375,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="account_settings">Kontoeinstellungen</string>
     <string name="app_settings">App-Einstellungen</string>
     <!-- Settings search -->
+    <string name="settings_search_placeholder">Einstellungen durchsuchen</string>
+    <string name="settings_search_no_results">Keine Einstellungen für „%1$s“ gefunden</string>
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
          negentropy, …) stay searchable in every locale and aren't sent to translators. -->
@@ -1505,6 +1507,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="copy_nprofile_to_clipboard">nprofile in die Zwischenablage kopieren</string>
     <string name="copy_npub_to_clipboard">Npub in Zwischenablage kopieren</string>
     <string name="share_or_save">Teilen oder Speichern</string>
+    <string name="share_target_as_dm">Als DM senden</string>
+    <string name="share_to_dm_title">Senden an…</string>
+    <string name="share_to_dm_start_new">Neue Nachricht</string>
     <string name="copy_url_to_clipboard">URL in die Zwischenablage kopieren</string>
     <string name="copy_the_note_id_to_the_clipboard">Notiz-ID in die Zwischenablage kopieren</string>
     <string name="add_media_to_gallery">Medien zur Galerie hinzufügen</string>
@@ -2990,9 +2995,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Kunst</string>
     <string name="nowhere_link_card_forum">Nowhere Forum</string>
-    <string name="settings_search_no_results">Keine Einstellungen für „%1$s“ gefunden</string>
-    <string name="settings_search_placeholder">Einstellungen durchsuchen</string>
-    <string name="share_target_as_dm">Als DM senden</string>
-    <string name="share_to_dm_start_new">Neue Nachricht</string>
-    <string name="share_to_dm_title">Senden an…</string>
 </resources>
