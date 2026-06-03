@@ -64,6 +64,10 @@ fun RefreshingChatroomFeedView(
     // Optional footer rendered at the oldest end of the thread (a "load more" / spinner affordance).
     // Null for callers that load their whole history at once (public chats / channels).
     olderBoundary: (@Composable () -> Unit)? = null,
+    // Optional per-gap hook: invoked between each message and its next-older neighbour with their
+    // createdAt bounds, so a caller (private DMs) can draw per-relay paging markers at the depth each
+    // relay has reached. No-op for callers without per-relay progress.
+    markersInGap: (@Composable (newerCreatedAt: Long?, olderCreatedAt: Long?) -> Unit)? = null,
 ) {
     SaveableFeedState(feedContentState, scrollStateKey) { listState ->
         listStateObserver(listState)
@@ -77,6 +81,7 @@ fun RefreshingChatroomFeedView(
             onWantsToEditDraft,
             avoidDraft,
             olderBoundary,
+            markersInGap,
         )
     }
 }
@@ -92,6 +97,7 @@ fun RenderChatFeedView(
     onWantsToEditDraft: (Note) -> Unit,
     avoidDraft: DraftTagState? = null,
     olderBoundary: (@Composable () -> Unit)? = null,
+    markersInGap: (@Composable (newerCreatedAt: Long?, olderCreatedAt: Long?) -> Unit)? = null,
 ) {
     val feedState by feed.feedContent.collectAsStateWithLifecycle()
 
@@ -120,6 +126,7 @@ fun RenderChatFeedView(
                     onWantsToEditDraft,
                     avoidDraft,
                     olderBoundary,
+                    markersInGap,
                 )
             }
         }
@@ -137,6 +144,7 @@ fun ChatFeedLoaded(
     onWantsToEditDraft: (Note) -> Unit,
     avoidDraft: DraftTagState? = null,
     olderBoundary: (@Composable () -> Unit)? = null,
+    markersInGap: (@Composable (newerCreatedAt: Long?, olderCreatedAt: Long?) -> Unit)? = null,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
@@ -180,6 +188,17 @@ fun ChatFeedLoaded(
                 )
 
                 NewDateOrSubjectDivisor(items.list.getOrNull(index + 1), item)
+
+                // Per-relay paging markers belonging in the gap toward the next-older message. With the
+                // reverse layout this draws just above the message (the older side), so a relay's marker
+                // appears right below the oldest message it has reached and slides down as it pages.
+                markersInGap?.invoke(
+                    item.event?.createdAt,
+                    items.list
+                        .getOrNull(index + 1)
+                        ?.event
+                        ?.createdAt,
+                )
             }
         }
 

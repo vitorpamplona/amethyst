@@ -50,12 +50,17 @@ import com.vitorpamplona.amethyst.ui.note.elements.ObserveRelayListForDMsAndDisp
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.DmHistoryLoadingCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.RelayReach
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.RelayReachMarker
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.RelayReachState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.dal.ChatroomFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource.ChatroomFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource.RelayPagingProgress
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.ChatNewMessageViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.PrivateMessageEditFieldRow
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.utils.Log
@@ -230,6 +235,7 @@ fun ChatroomViewUI(
     val giftWrapsReached by giftWrapsHistory.reachedBack.collectAsStateWithLifecycle()
     val nip04Relays by nip04History.relayCount.collectAsStateWithLifecycle()
     val nip04Reached by nip04History.reachedBack.collectAsStateWithLifecycle()
+    val nip04Progress by nip04History.relayProgress.collectAsStateWithLifecycle()
     val nip17Name = stringResource(R.string.chats_history_proto_nip17)
     val nip04Name = stringResource(R.string.chats_history_proto_nip04)
 
@@ -259,6 +265,15 @@ fun ChatroomViewUI(
                         DmHistoryLoadingCard(nip04Name, "NIP-04", loadingNip04, nip04Exhausted, nip04Relays, nip04Reached)
                     }
                 },
+                // While NIP-04 is still converging, drop a marker into each gap for every relay whose
+                // reached-back cursor falls there: it sits below the oldest message that relay has loaded
+                // and slides down as the relay pages older. Hidden once every relay is done or stalled.
+                markersInGap =
+                    if (nip04Exhausted) {
+                        null
+                    } else {
+                        { newer, older -> RelayReachMarkersInGap(nip04Progress, newer, older) }
+                    },
                 listStateObserver = { listState ->
                     LoadOlderMessagesWhenScrolling(listState, accountViewModel)
                 },
@@ -282,3 +297,44 @@ fun ChatroomViewUI(
         )
     }
 }
+
+/**
+ * Renders the NIP-04 paging markers that belong between a message (at [newerCreatedAt]) and its
+ * next-older neighbour (at [olderCreatedAt], null at the oldest end): every relay whose reached-back
+ * cursor falls in `(olderCreatedAt, newerCreatedAt]`. A relay sits below the oldest message it has
+ * loaded, so as it pages older its cursor drops and the marker moves down the stream toward the others.
+ */
+@Composable
+private fun RelayReachMarkersInGap(
+    progress: Map<NormalizedRelayUrl, RelayPagingProgress>,
+    newerCreatedAt: Long?,
+    olderCreatedAt: Long?,
+) {
+    val here =
+        remember(progress, newerCreatedAt, olderCreatedAt) {
+            progress.mapNotNull { (relay, p) ->
+                val reached = p.reachedUntil
+                val belongsHere = newerCreatedAt != null && newerCreatedAt > reached && (olderCreatedAt == null || olderCreatedAt <= reached)
+                if (!belongsHere) {
+                    null
+                } else {
+                    RelayReach(
+                        name = relayShortName(relay),
+                        state =
+                            when {
+                                p.done -> RelayReachState.DONE
+                                p.stalled -> RelayReachState.STALLED
+                                else -> RelayReachState.REACHING
+                            },
+                    )
+                }
+            }
+        }
+    RelayReachMarker(here)
+}
+
+private fun relayShortName(relay: NormalizedRelayUrl): String =
+    relay.url
+        .substringAfter("://")
+        .trimEnd('/')
+        .substringBefore('/')
