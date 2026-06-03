@@ -389,6 +389,10 @@
     <string name="add_sensitive_content_label">Чутливий контент</string>
     <string name="add_sensitive_content_description">Додає попередження про чутливий контент перед показом цього контенту</string>
     <string name="settings">Налаштування</string>
+    <!-- Settings search -->
+    <!-- Settings search keywords: an English concept/protocol index that supplements the
+         (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
+         negentropy, …) stay searchable in every locale and aren't sent to translators. -->
     <string name="connectivity_type_always">Завжди</string>
     <string name="connectivity_type_wifi_only">Тільки через Wi-Fi</string>
     <string name="connectivity_type_never">Ніколи</string>

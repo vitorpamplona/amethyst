@@ -1391,6 +1391,10 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="settings">Ustawienia</string>
     <string name="account_settings">Ustawienia konta</string>
     <string name="app_settings">Ustawienia aplikacji</string>
+    <!-- Settings search -->
+    <!-- Settings search keywords: an English concept/protocol index that supplements the
+         (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
+         negentropy, …) stay searchable in every locale and aren't sent to translators. -->
     <string name="danger_zone">Niebezpieczna strefa</string>
     <string name="reset_marmot_state">Zresetuj stan marmota</string>
     <string name="reset_marmot_confirm_title">Zresetować stan Marmota?</string>
@@ -1523,6 +1527,9 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="copy_nprofile_to_clipboard">Skopiuj nprofile do schowka</string>
     <string name="copy_npub_to_clipboard">Kopiuj npub do schowka</string>
     <string name="share_or_save">Udostępnij lub zapisz</string>
+    <string name="share_target_as_dm">Wyślij jako DM</string>
+    <string name="share_to_dm_title">Wyślij do…</string>
+    <string name="share_to_dm_start_new">Nowa wiadomość</string>
     <string name="copy_url_to_clipboard">Skopiuj adres do schowka</string>
     <string name="copy_the_note_id_to_the_clipboard">Kopiuj ID wpisu do schowka</string>
     <string name="add_media_to_gallery">Dodaj pliki do Galerii</string>

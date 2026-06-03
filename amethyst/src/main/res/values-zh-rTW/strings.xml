@@ -454,6 +454,10 @@
     <string name="add_sensitive_content_label">敏感內容</string>
     <string name="add_sensitive_content_description">在顯示此內容之前添加敏感內容警告</string>
     <string name="settings">設置</string>
+    <!-- Settings search -->
+    <!-- Settings search keywords: an English concept/protocol index that supplements the
+         (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
+         negentropy, …) stay searchable in every locale and aren't sent to translators. -->
     <string name="connectivity_type_always">始終</string>
     <string name="connectivity_type_wifi_only">僅限 WiFi</string>
     <string name="connectivity_type_unmetered_wifi_only">未計量的 WiFi</string>

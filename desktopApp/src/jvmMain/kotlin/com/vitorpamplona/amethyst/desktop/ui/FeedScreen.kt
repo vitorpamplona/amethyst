@@ -43,11 +43,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
@@ -98,6 +100,9 @@ import com.vitorpamplona.amethyst.commons.ui.components.LoadingState
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.ui.elements.BoostedMark
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.ui.feeds.NewPostsChip
+import com.vitorpamplona.amethyst.commons.ui.feeds.StickToTopOnPrepend
+import com.vitorpamplona.amethyst.commons.ui.feeds.rememberNewPostsChipState
 import com.vitorpamplona.amethyst.commons.ui.layouts.GenericRepostLayout
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.desktop.DesktopPreferences
@@ -426,13 +431,48 @@ fun FeedScreen(
         }
     }
     var showRelayPicker by remember { mutableStateOf(false) }
-    var activeFeedId by remember { mutableStateOf(customFeedId) }
+
+    // Default tab on launch = the first PINNED feed (Following/Global/Custom),
+    // not whatever DesktopPreferences happened to save last. If a caller
+    // explicitly passes customFeedId/initialFeedMode, that always wins.
+    val feedRepo = com.vitorpamplona.amethyst.desktop.ui.deck.LocalFeedRepository.current
+    // Read feeds.value (the source StateFlow that's loaded synchronously by
+    // FeedDefinitionRepository on construction) rather than pinnedFeeds.value —
+    // the latter is a stateIn-derived flow whose initial value is an empty list
+    // until the first flow emission propagates, which is too late for `remember`.
+    val firstPinned =
+        remember {
+            feedRepo.feeds.value
+                .filter { it.pinned }
+                .minByOrNull { it.pinOrder }
+        }
+    val firstPinnedCustomSource = firstPinned?.source as? com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Filter
+
+    var activeFeedId by remember {
+        mutableStateOf(
+            customFeedId
+                ?: firstPinned?.takeIf { firstPinnedCustomSource != null }?.id,
+        )
+    }
     var activeFeedSource by remember {
-        mutableStateOf(customFeedSource)
+        mutableStateOf(
+            customFeedSource ?: firstPinnedCustomSource,
+        )
     }
     var feedMode by remember {
         mutableStateOf(
-            if (customFeedSource != null) FeedMode.CUSTOM else (initialFeedMode ?: DesktopPreferences.feedMode),
+            when {
+                customFeedSource != null -> FeedMode.CUSTOM
+                initialFeedMode != null -> initialFeedMode
+                firstPinned != null ->
+                    when (firstPinned.source) {
+                        is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Following -> FeedMode.FOLLOWING
+                        is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Global -> FeedMode.GLOBAL
+                        is com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Filter -> FeedMode.CUSTOM
+                        else -> DesktopPreferences.feedMode
+                    }
+                else -> DesktopPreferences.feedMode
+            },
         )
     }
 
@@ -670,16 +710,26 @@ fun FeedScreen(
         )
     }
 
+    // Hoisted so the floating "New posts" chip can share the same scroll
+    // state as the LazyColumn and follow the animated header height.
+    val homeFeedLazyListState = rememberLazyListState()
+    val headerSpacerHeight by animateDpAsState(
+        targetValue = if (searchActive) 300.dp else 60.dp,
+        animationSpec = tween(200),
+    )
+
+    // Auto-snap to position 0 when fresh events prepend AND the user was
+    // already at the top. Without this, Compose's stable-key diff keeps
+    // the previously-visible top item anchored, pushing the new items
+    // silently above the viewport — the root cause of the "stale feed on
+    // launch" perception. Mutually exclusive with the NewPostsChip below,
+    // which handles the case where the user is scrolled away from top.
+    StickToTopOnPrepend(viewModel.feedState, homeFeedLazyListState)
+
     Box(modifier = Modifier.fillMaxSize()) {
         // Layer 1: Feed content (scrollable, behind scrim)
         ReadingColumn {
-            // Reserve space for the header card that floats above
-            // Reserve space for the header card that floats above.
-            // When search is expanded, the card grows — add more margin.
-            val headerSpacerHeight by animateDpAsState(
-                targetValue = if (searchActive) 300.dp else 60.dp,
-                animationSpec = tween(200),
-            )
+            // Reserve space for the header card that floats above the feed.
             Spacer(Modifier.height(headerSpacerHeight))
 
             // Feed content based on FeedState
@@ -720,9 +770,7 @@ fun FeedScreen(
 
                 is FeedState.Loaded -> {
                     val loadedState by state.feed.collectAsState()
-                    val lazyListState =
-                        androidx.compose.foundation.lazy
-                            .rememberLazyListState()
+                    val lazyListState = homeFeedLazyListState
 
                     // Viewport-aware scroll observation: fetch metadata for newly visible notes
                     LaunchedEffect(lazyListState, loadedState) {
@@ -810,6 +858,25 @@ fun FeedScreen(
                     }
                 }
             }
+        }
+
+        // Layer 1.5: "New posts" chip — floats below the header card,
+        // appears when fresh events prepend while the user is scrolled
+        // away from the top of the feed. Below the scrim in z-order so
+        // it dims along with the feed when search is expanded.
+        if (feedState is FeedState.Loaded) {
+            val chipState =
+                rememberNewPostsChipState(
+                    feedContentState = viewModel.feedState,
+                    listState = homeFeedLazyListState,
+                )
+            NewPostsChip(
+                state = chipState,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .offset(y = headerSpacerHeight + 16.dp),
+            )
         }
 
         // Reply dialog

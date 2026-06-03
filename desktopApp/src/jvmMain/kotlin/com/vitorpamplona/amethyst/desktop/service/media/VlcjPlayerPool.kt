@@ -115,7 +115,12 @@ object VlcjPlayerPool {
             }
 
             // Build factory args — add --plugin-path fallback if env var wasn't set
-            val factoryArgs = mutableListOf("--no-xlib")
+            val factoryArgs =
+                mutableListOf(
+                    "--no-xlib",
+                    "--avcodec-hw=none", // Disable VideoToolbox — avoids CVPN chroma failures on macOS
+                    "--reset-plugins-cache", // Rebuild stale plugins cache on startup
+                )
             if (!macOsDiscoverer.envVarSet) {
                 val pluginPath =
                     macOsDiscoverer.discoveredPluginPath

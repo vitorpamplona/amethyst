@@ -864,6 +864,10 @@
     <string name="settings">Configuración</string>
     <string name="account_settings">Configuraciones de la cuenta</string>
     <string name="app_settings">Configuraciones de la aplicación</string>
+    <!-- Settings search -->
+    <!-- Settings search keywords: an English concept/protocol index that supplements the
+         (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
+         negentropy, …) stay searchable in every locale and aren't sent to translators. -->
     <string name="danger_zone">Zona peligrosa</string>
     <string name="connectivity_type_always">Siempre</string>
     <string name="connectivity_type_wifi_only">Solo Wi-Fi</string>

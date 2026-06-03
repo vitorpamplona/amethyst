@@ -22,14 +22,21 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -39,15 +46,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.ui.components.OutlinedThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -77,11 +88,36 @@ fun AllSettingsScreen(
     nav: INav,
 ) {
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
     val scope = rememberCoroutineScope()
     var showResetMarmotDialog by remember { mutableStateOf(false) }
     var isResettingMarmot by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val hasPrivateKey = accountViewModel.account.settings.keyPair.privKey != null
+
+    val searchState = rememberTextFieldState()
+    val query = searchState.text.toString()
+
+    // The catalog is structurally stable for the screen's lifetime, so it is rebuilt only when
+    // an input actually changes — not on every keystroke. `onResetMarmot` reads the volatile
+    // `isResettingMarmot` through `rememberUpdatedState` so the memoized closure never goes stale.
+    val onResetMarmot by rememberUpdatedState(newValue = { if (!isResettingMarmot) showResetMarmotDialog = true })
+    val catalog =
+        remember(hasPrivateKey, nav, uriHandler) {
+            buildSettingsCatalog(
+                nav = nav,
+                uriHandler = uriHandler,
+                hasPrivateKey = hasPrivateKey,
+                onResetMarmot = { onResetMarmot() },
+            )
+        }
+
+    val filtered =
+        filterSettings(
+            catalog = catalog,
+            query = query,
+            stringLookup = { stringRes(context, it) },
+        )
 
     Scaffold(
         topBar = {
@@ -97,202 +133,31 @@ fun AllSettingsScreen(
             }
         },
     ) { padding ->
-        Column(
-            modifier =
-                Modifier
-                    .padding(padding)
-                    .verticalScroll(scrollState)
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            SettingsSection(R.string.account_settings) {
-                SettingsItem(
-                    title = R.string.relay_setup,
-                    iconPainter = R.drawable.relays,
-                    iconPainterRef = 4,
-                    onClick = { nav.nav(Route.EditRelays) },
-                )
-                SettingsDivider()
-                SettingsItem(
-                    title = R.string.event_sync_title,
-                    icon = MaterialSymbols.Sync,
-                    onClick = { nav.nav(Route.EventSync) },
-                )
-                SettingsDivider()
-                SettingsItem(
-                    title = R.string.route_import_follows,
-                    icon = MaterialSymbols.GroupAdd,
-                    onClick = { nav.nav(Route.ImportFollowsSelectUser) },
-                )
-                SettingsDivider()
-                SettingsItem(
-                    title = R.string.media_servers,
-                    icon = MaterialSymbols.CloudUpload,
-                    onClick = { nav.nav(Route.EditMediaServers) },
-                )
-                SettingsDivider()
-                SettingsItem(
-                    title = R.string.nests_servers_title,
-                    icon = MaterialSymbols.CloudUpload,
-                    onClick = { nav.nav(Route.EditNestsServers) },
-                )
-                SettingsDivider()
-                SettingsItem(
-                    title = R.string.profile_badges_title,
-                    icon = MaterialSymbols.MilitaryTech,
-                    onClick = { nav.nav(Route.ProfileBadges) },
-                )
-                SettingsDivider()
-                SettingsItem(
-                    title = R.string.favorite_dvms_title,
-                    icon = MaterialSymbols.AutoAwesome,
-                    onClick = { nav.nav(Route.EditFavoriteAlgoFeeds) },
-                )
-                SettingsDivider()
-                SettingsItem(
-                    title = R.string.reactions,
-                    icon = MaterialSymbols.FavoriteBorder,
-                    onClick = { nav.nav(Route.UpdateReactionType) },
-                )
-                SettingsDivider()
-                SettingsItem(
-                    title = R.string.video_player_settings,
-                    icon = MaterialSymbols.VideoSettings,
-                    onClick = { nav.nav(Route.VideoPlayerSettings) },
-                )
-                SettingsDivider()
-                SettingsItem(
-                    title = R.string.zaps,
-                    icon = MaterialSymbols.Bolt,
-                    onClick = { nav.nav(Route.UpdateZapAmount()) },
-                )
-                SettingsDivider()
-                SettingsItem(
-                    title = R.string.payment_targets,
-                    icon = MaterialSymbols.Payment,
-                    onClick = { nav.nav(Route.EditPaymentTargets) },
-                )
-                SettingsDivider()
-                SettingsItem(
-                    title = R.string.security_filters,
-                    icon = MaterialSymbols.Security,
-                    onClick = { nav.nav(Route.SecurityFilters) },
-                )
-                SettingsDivider()
-                SettingsItem(
-                    title = R.string.call_settings,
-                    icon = MaterialSymbols.Phone,
-                    onClick = { nav.nav(Route.CallSettings) },
-                )
-                SettingsDivider()
-                SettingsItem(
-                    title = R.string.translations,
-                    icon = MaterialSymbols.Translate,
-                    onClick = { nav.nav(Route.UserSettings) },
-                )
-            }
+        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+            SettingsSearchField(
+                state = searchState,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+            )
 
-            SettingsSection(R.string.app_settings) {
-                SettingsItem(
-                    title = R.string.privacy_options,
-                    iconPainter = R.drawable.ic_tor,
-                    iconPainterRef = 1,
-                    onClick = { nav.nav(Route.PrivacyOptions) },
+            if (filtered.isEmpty()) {
+                SettingsSearchEmptyState(
+                    query = query,
+                    modifier = Modifier.fillMaxSize(),
                 )
-                SettingsDivider()
-                SettingsItem(
-                    title = R.string.ots_explorer_settings,
-                    icon = MaterialSymbols.Search,
-                    onClick = { nav.nav(Route.OtsSettings) },
-                )
-                SettingsDivider()
-                SettingsItem(
-                    title = R.string.namecoin_settings,
-                    icon = MaterialSymbols.Security,
-                    onClick = { nav.nav(Route.NamecoinSettings) },
-                )
-                SettingsDivider()
-                SettingsItem(
-                    title = R.string.ui_preferences,
-                    icon = MaterialSymbols.Settings,
-                    onClick = { nav.nav(Route.Settings) },
-                )
-                SettingsDivider()
-                SettingsItem(
-                    title = R.string.notification_settings,
-                    icon = MaterialSymbols.Notifications,
-                    onClick = { nav.nav(Route.NotificationSettings) },
-                )
-                SettingsDivider()
-                SettingsItem(
-                    title = R.string.calendar_reminder_settings_title,
-                    icon = MaterialSymbols.CalendarMonth,
-                    onClick = { nav.nav(Route.CalendarReminderSettings) },
-                )
-                SettingsDivider()
-                SettingsItem(
-                    title = R.string.compose_settings,
-                    icon = MaterialSymbols.Edit,
-                    onClick = { nav.nav(Route.ComposeSettings) },
-                )
-                SettingsDivider()
-                SettingsItem(
-                    title = R.string.reactions_settings,
-                    icon = MaterialSymbols.ThumbUp,
-                    onClick = { nav.nav(Route.ReactionsSettings) },
-                )
-                SettingsDivider()
-                SettingsItem(
-                    title = R.string.bottom_bar_settings,
-                    icon = MaterialSymbols.Dashboard,
-                    onClick = { nav.nav(Route.BottomBarSettings) },
-                )
-                SettingsDivider()
-                SettingsItem(
-                    title = R.string.home_tabs_settings,
-                    icon = MaterialSymbols.Home,
-                    onClick = { nav.nav(Route.HomeTabsSettings) },
-                )
-                SettingsDivider()
-                SettingsItem(
-                    title = R.string.profile_ui_settings,
-                    icon = MaterialSymbols.AccountCircle,
-                    onClick = { nav.nav(Route.ProfileUiSettings) },
-                )
-            }
-
-            LegalSettingsSection()
-
-            SettingsSection(R.string.danger_zone, isDanger = true) {
-                if (hasPrivateKey) {
-                    SettingsItem(
-                        title = R.string.backup_keys,
-                        icon = MaterialSymbols.Key,
-                        isDanger = true,
-                        onClick = { nav.nav(Route.AccountBackup) },
-                    )
-                    SettingsDivider()
-                    SettingsItem(
-                        title = R.string.request_to_vanish,
-                        icon = MaterialSymbols.DeleteForever,
-                        isDanger = true,
-                        onClick = { nav.nav(Route.RequestToVanish) },
-                    )
-                    SettingsDivider()
+            } else {
+                Column(
+                    modifier =
+                        Modifier
+                            .verticalScroll(scrollState)
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp),
+                ) {
+                    filtered.forEach { category -> SettingsCategoryCard(category) }
                 }
-                SettingsItem(
-                    title = R.string.vanish_history,
-                    icon = MaterialSymbols.History,
-                    isDanger = true,
-                    onClick = { nav.nav(Route.VanishEvents) },
-                )
-                SettingsDivider()
-                SettingsItem(
-                    title = R.string.reset_marmot_state,
-                    icon = MaterialSymbols.DeleteSweep,
-                    isDanger = true,
-                    onClick = { if (!isResettingMarmot) showResetMarmotDialog = true },
-                )
             }
         }
     }
@@ -322,6 +187,89 @@ fun AllSettingsScreen(
             },
             onDismiss = { showResetMarmotDialog = false },
         )
+    }
+}
+
+@Composable
+private fun SettingsSearchField(
+    state: TextFieldState,
+    modifier: Modifier = Modifier,
+) {
+    OutlinedThinPaddingTextField(
+        state = state,
+        modifier = modifier,
+        singleLine = true,
+        placeholder = { Text(stringRes(R.string.settings_search_placeholder)) },
+        leadingIcon = {
+            Icon(
+                symbol = MaterialSymbols.Search,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+        trailingIcon =
+            if (state.text.isNotEmpty()) {
+                {
+                    IconButton(onClick = { state.clearText() }) {
+                        Icon(
+                            symbol = MaterialSymbols.Close,
+                            contentDescription = stringRes(R.string.clear),
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            } else {
+                null
+            },
+    )
+}
+
+@Composable
+private fun SettingsSearchEmptyState(
+    query: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Text(
+            text = stringRes(R.string.settings_search_no_results, query),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(32.dp),
+        )
+    }
+}
+
+@Composable
+private fun SettingsCategoryCard(category: SettingsCategory) {
+    SettingsSection(category.titleRes, category.isDanger) {
+        category.entries.forEachIndexed { index, entry ->
+            if (index > 0) SettingsDivider()
+            SettingsEntryRow(entry)
+        }
+    }
+}
+
+@Composable
+private fun SettingsEntryRow(entry: SettingsEntry) {
+    when (val icon = entry.icon) {
+        is SettingsIcon.Symbol ->
+            SettingsItem(
+                title = entry.titleRes,
+                icon = icon.symbol,
+                isDanger = entry.isDanger,
+                onClick = entry.onClick,
+            )
+        is SettingsIcon.Painter ->
+            SettingsItem(
+                title = entry.titleRes,
+                iconPainter = icon.iconPainter,
+                iconPainterRef = icon.iconPainterRef,
+                isDanger = entry.isDanger,
+                onClick = entry.onClick,
+            )
     }
 }
 

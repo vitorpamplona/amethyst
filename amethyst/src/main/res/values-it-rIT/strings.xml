@@ -369,6 +369,10 @@
     <string name="add_sensitive_content_label">Contenuto Sensibile</string>
     <string name="add_sensitive_content_description">Aggiunge un avviso di contenuto sensibile prima di mostrare questo contenuto</string>
     <string name="settings">Impostazioni</string>
+    <!-- Settings search -->
+    <!-- Settings search keywords: an English concept/protocol index that supplements the
+         (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
+         negentropy, …) stay searchable in every locale and aren't sent to translators. -->
     <string name="connectivity_type_always">Sempre</string>
     <string name="connectivity_type_wifi_only">Solo Wi-Fi</string>
     <string name="connectivity_type_never">Mai</string>

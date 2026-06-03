@@ -1389,6 +1389,10 @@
     <string name="settings">Nastavení</string>
     <string name="account_settings">Nastavení účtu</string>
     <string name="app_settings">Nastavení aplikace</string>
+    <!-- Settings search -->
+    <!-- Settings search keywords: an English concept/protocol index that supplements the
+         (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
+         negentropy, …) stay searchable in every locale and aren't sent to translators. -->
     <string name="danger_zone">Nebezpečná zóna</string>
     <string name="reset_marmot_state">Resetovat stav Marmot</string>
     <string name="reset_marmot_confirm_title">Resetovat stav Marmot?</string>

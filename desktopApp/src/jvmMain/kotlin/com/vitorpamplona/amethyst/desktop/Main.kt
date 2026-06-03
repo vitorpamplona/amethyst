@@ -713,6 +713,15 @@ fun App(
     val torStatus by torManager.status.collectAsState()
     val isTorExpected = torSettings.torType != com.vitorpamplona.amethyst.commons.tor.TorType.OFF
     if (isTorExpected && torStatus !is com.vitorpamplona.amethyst.commons.tor.TorServiceStatus.Active) {
+        val splashIcon =
+            remember {
+                val bytes = Unit::class.java.getResourceAsStream("/icon.png")!!.readBytes()
+                val bitmap =
+                    org.jetbrains.skia.Image
+                        .makeFromEncoded(bytes)
+                        .toComposeImageBitmap()
+                BitmapPainter(bitmap)
+            }
         androidx.compose.foundation.layout.Box(
             modifier =
                 androidx.compose.ui.Modifier
@@ -735,6 +744,19 @@ fun App(
                 } else {
                     androidx.compose.material3.Text("Connecting to Tor...")
                 }
+                androidx.compose.foundation.layout.Spacer(
+                    modifier =
+                        androidx.compose.ui.Modifier
+                            .height(24.dp),
+                )
+                androidx.compose.material3.Icon(
+                    painter = splashIcon,
+                    contentDescription = "Amethyst",
+                    modifier =
+                        androidx.compose.ui.Modifier
+                            .size(96.dp),
+                    tint = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                )
             }
         }
         return // Nothing below runs until Tor is Active
@@ -962,6 +984,15 @@ fun App(
                     when (accountState) {
                         is AccountState.Loading -> {
                             // Branded loading screen while accounts load from storage
+                            val loadingIcon =
+                                remember {
+                                    val bytes = Unit::class.java.getResourceAsStream("/icon.png")!!.readBytes()
+                                    val bitmap =
+                                        org.jetbrains.skia.Image
+                                            .makeFromEncoded(bytes)
+                                            .toComposeImageBitmap()
+                                    BitmapPainter(bitmap)
+                                }
                             Box(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center,
@@ -977,6 +1008,13 @@ fun App(
                                         "Amethyst",
                                         style = MaterialTheme.typography.headlineMedium,
                                         color = MaterialTheme.colorScheme.onBackground,
+                                    )
+                                    Spacer(Modifier.height(24.dp))
+                                    androidx.compose.material3.Icon(
+                                        painter = loadingIcon,
+                                        contentDescription = "Amethyst",
+                                        modifier = Modifier.size(96.dp),
+                                        tint = MaterialTheme.colorScheme.primary,
                                     )
                                 }
                             }

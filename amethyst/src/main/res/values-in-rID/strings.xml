@@ -386,6 +386,10 @@ Beri tahu kepada pemilik untuk menambahnya</string>
     <string name="add_sensitive_content_label">Konten Sensitif</string>
     <string name="add_sensitive_content_description">Memberi peringatan konten sebelum menampilkan konten ini</string>
     <string name="settings">Pengaturan</string>
+    <!-- Settings search -->
+    <!-- Settings search keywords: an English concept/protocol index that supplements the
+         (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
+         negentropy, …) stay searchable in every locale and aren't sent to translators. -->
     <string name="connectivity_type_always">Selalu</string>
     <string name="connectivity_type_wifi_only">Wifi-saja</string>
     <string name="connectivity_type_never">Jangan pernah</string>

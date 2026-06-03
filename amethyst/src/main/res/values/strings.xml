@@ -1516,6 +1516,46 @@
     <string name="settings">Settings</string>
     <string name="account_settings">Account Settings</string>
     <string name="app_settings">App Settings</string>
+
+    <!-- Settings search -->
+    <string name="settings_search_placeholder">Search settings</string>
+    <string name="settings_search_no_results">No settings found for \"%1$s\"</string>
+
+    <!-- Settings search keywords: an English concept/protocol index that supplements the
+         (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
+         negentropy, …) stay searchable in every locale and aren't sent to translators. -->
+    <string name="relay_setup_search_keywords" translatable="false">relays, inbox, outbox, connections, servers</string>
+    <string name="privacy_options_search_keywords" translatable="false">tor, orbot, proxy, privacy, anonymous</string>
+    <string name="ui_preferences_search_keywords" translatable="false">dark mode, light mode, theme, font size, language, appearance</string>
+    <string name="notification_settings_search_keywords" translatable="false">push, alerts, sounds, vibration</string>
+    <string name="security_filters_search_keywords" translatable="false">spam, block, mute, filter, warnings</string>
+    <string name="zaps_search_keywords" translatable="false">lightning, sats, tips, wallet, amount</string>
+    <string name="media_servers_search_keywords" translatable="false">blossom, uploads, images, photos, files, cdn, storage</string>
+    <string name="event_sync_search_keywords" translatable="false">negentropy, sync, reconcile, backfill</string>
+    <string name="import_follows_search_keywords" translatable="false">contacts, follows, follow list, import</string>
+    <string name="nests_servers_search_keywords" translatable="false">audio rooms, live, spaces, rooms</string>
+    <string name="profile_badges_search_keywords" translatable="false">badges, awards</string>
+    <string name="favorite_dvms_search_keywords" translatable="false">dvm, data vending machine, algo, algorithm, feeds</string>
+    <string name="reactions_search_keywords" translatable="false">emoji, like, reaction</string>
+    <string name="video_player_search_keywords" translatable="false">video, player, playback, autoplay, mute</string>
+    <string name="payment_targets_search_keywords" translatable="false">zap split, split, recipients, forward zaps</string>
+    <string name="call_settings_search_keywords" translatable="false">webrtc, video call, voice call, calls</string>
+    <string name="translations_search_keywords" translatable="false">language, translate, locale</string>
+    <string name="ots_explorer_search_keywords" translatable="false">opentimestamps, timestamp, ots, proof</string>
+    <string name="namecoin_search_keywords" translatable="false">namecoin, dns, identity, name</string>
+    <string name="calendar_reminder_search_keywords" translatable="false">calendar, events, reminders, rsvp</string>
+    <string name="compose_search_keywords" translatable="false">draft, posting, editor, auto-save</string>
+    <string name="reactions_settings_search_keywords" translatable="false">emoji, reactions, like</string>
+    <string name="bottom_bar_search_keywords" translatable="false">navigation, tabs, nav bar</string>
+    <string name="home_tabs_search_keywords" translatable="false">tabs, feeds, threads, conversations</string>
+    <string name="profile_ui_search_keywords" translatable="false">profile, layout</string>
+    <string name="backup_keys_search_keywords" translatable="false">nsec, private key, seed, mnemonic, export</string>
+    <string name="request_to_vanish_search_keywords" translatable="false">delete account, vanish, gdpr</string>
+    <string name="vanish_history_search_keywords" translatable="false">deletion, delete events</string>
+    <string name="reset_marmot_search_keywords" translatable="false">mls, group chat, messaging, reset</string>
+    <string name="privacy_policy_search_keywords" translatable="false">legal, terms, tos, policy, gdpr</string>
+    <string name="child_safety_search_keywords" translatable="false">legal, safety, abuse, csae, child protection</string>
+
     <string name="danger_zone">Danger Zone</string>
     <string name="reset_marmot_state">Reset Marmot State</string>
     <string name="reset_marmot_confirm_title">Reset Marmot State?</string>
