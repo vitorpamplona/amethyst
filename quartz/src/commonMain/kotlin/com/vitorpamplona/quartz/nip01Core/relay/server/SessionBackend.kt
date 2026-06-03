@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.server
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountResult
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
@@ -55,8 +56,16 @@ interface SessionBackend {
         onEose: () -> Unit,
     )
 
-    /** Answers a NIP-45 COUNT. */
+    /** Answers a NIP-45 COUNT with an exact cardinality. */
     suspend fun count(filters: List<Filter>): Int
+
+    /**
+     * Answers a NIP-45 COUNT, allowing an approximate result and/or a
+     * HyperLogLog register payload (see [com.vitorpamplona.quartz.nip45Count.HllBuilder]).
+     * The default returns the exact [count] with `approximate = false`; override
+     * to return `approximate`/`hll`.
+     */
+    suspend fun countResult(filters: List<Filter>): CountResult = CountResult(count(filters))
 
     /**
      * Handles an EVENT publish, reporting the per-event outcome through

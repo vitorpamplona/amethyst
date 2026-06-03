@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.server
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountResult
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.count
@@ -73,4 +74,12 @@ interface ReqResponder {
      * every event.
      */
     suspend fun count(filters: List<Filter>): Int = respond(filters).count()
+
+    /**
+     * Answers a NIP-45 COUNT, optionally approximate and/or carrying a
+     * HyperLogLog payload. The default wraps [count] as an exact result;
+     * override to return `approximate`/`hll` (see
+     * [com.vitorpamplona.quartz.nip45Count.HllBuilder]).
+     */
+    suspend fun countResult(filters: List<Filter>): CountResult = CountResult(count(filters))
 }

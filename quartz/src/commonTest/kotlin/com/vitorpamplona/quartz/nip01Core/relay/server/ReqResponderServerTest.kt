@@ -23,13 +23,16 @@ package com.vitorpamplona.quartz.nip01Core.relay.server
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.AuthMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountResult
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.FullAuthPolicy
+import com.vitorpamplona.quartz.nip45Count.HllBuilder
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -104,6 +107,33 @@ class ReqResponderServerTest {
                 val counts = collector.containing("COUNT")
                 assertEquals(1, counts.size)
                 assertTrue(counts[0].contains("\"count\":3"))
+            }
+        }
+
+    @Test
+    fun approximateCountWithHllReachesTheWire() =
+        runTest {
+            val dispatcher = UnconfinedTestDispatcher(testScheduler)
+            val responder =
+                object : ReqResponder {
+                    override fun respond(filters: List<Filter>): Flow<Event> = flowOf(event(1), event(2))
+
+                    override suspend fun countResult(filters: List<Filter>): CountResult {
+                        val hll = HllBuilder(offset = 8)
+                        respond(filters).collect { hll.add(it.pubKey) }
+                        return hll.toCountResult()
+                    }
+                }
+            ReqResponderServer(responder, parentContext = dispatcher).use { server ->
+                val collector = MessageCollector()
+                val session = server.connect(collector.send)
+
+                session.receive("""["COUNT","q1",{"kinds":[1]}]""")
+
+                val counts = collector.containing("COUNT")
+                assertEquals(1, counts.size)
+                assertTrue(counts[0].contains("\"hll\""))
+                assertTrue(counts[0].contains("\"approximate\":true"))
             }
         }
 

@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.nip01Core.relay.server
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountMessage
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountResult
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
@@ -180,9 +179,9 @@ class RelaySession(
         // Policy may rewrite filters to match the user's access level.
         val filters = (result as PolicyResult.Accepted).cmd.filters
 
-        val total =
+        val countResult =
             try {
-                store.count(filters)
+                store.countResult(filters)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -190,7 +189,7 @@ class RelaySession(
                 return
             }
 
-        send(CountMessage(cmd.queryId, CountResult(total)))
+        send(CountMessage(cmd.queryId, countResult))
     }
 
     // -- NIP-42: AUTH ---------------------------------------------------------

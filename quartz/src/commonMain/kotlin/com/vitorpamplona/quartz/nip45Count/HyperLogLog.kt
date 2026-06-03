@@ -116,6 +116,52 @@ object HyperLogLog {
     fun encode(registers: ByteArray): String = Hex.encode(registers)
 
     /**
+     * Folds one event's pubkey into [registers] per the NIP-45 construction
+     * algorithm: the byte at [offset] of the pubkey is the register index, and
+     * the value is the number of leading zero bits starting at byte `offset+1`
+     * plus one (kept only if larger than the register's current value).
+     *
+     * [registers] must be [NUM_REGISTERS] bytes; [pubKey] is the 32-byte event
+     * pubkey; [offset] comes from [computeOffset] (range 8..23). Pubkeys shorter
+     * than `offset+1` bytes are ignored.
+     */
+    fun addPubKey(
+        registers: ByteArray,
+        pubKey: ByteArray,
+        offset: Int,
+    ) {
+        if (offset < 0 || offset >= pubKey.size) return
+        val ri = pubKey[offset].toInt() and 0xFF
+        val value = (leadingZeroBits(pubKey, offset + 1) + 1).coerceAtMost(0xFF)
+        if (value > (registers[ri].toInt() and 0xFF)) registers[ri] = value.toByte()
+    }
+
+    /**
+     * Counts consecutive zero bits (MSB first) from byte [fromByteIndex] to the
+     * end of [bytes]. KMP-safe (no `Integer.numberOfLeadingZeros`).
+     */
+    private fun leadingZeroBits(
+        bytes: ByteArray,
+        fromByteIndex: Int,
+    ): Int {
+        var count = 0
+        for (i in fromByteIndex until bytes.size) {
+            val b = bytes[i].toInt() and 0xFF
+            if (b == 0) {
+                count += 8
+            } else {
+                var mask = 0x80
+                while (mask != 0 && (b and mask) == 0) {
+                    count++
+                    mask = mask shr 1
+                }
+                return count
+            }
+        }
+        return count
+    }
+
+    /**
      * Computes the deterministic offset for a given filter, as specified
      * by NIP-45. The offset determines which byte of event pubkeys is
      * used as the register index.
@@ -139,6 +185,12 @@ object HyperLogLog {
         val hexValue = charAtPos32.digitToIntOrNull(16) ?: return null
         return hexValue + 8
     }
+
+    /**
+     * Creates an [HllBuilder] for [filter], or null when the filter carries no
+     * tag attribute to derive an [computeOffset] from (i.e. HLL doesn't apply).
+     */
+    fun builderFor(filter: Filter): HllBuilder? = computeOffset(filter)?.let { HllBuilder(it) }
 
     /**
      * Extracts the first value from the first tag attribute in the filter.

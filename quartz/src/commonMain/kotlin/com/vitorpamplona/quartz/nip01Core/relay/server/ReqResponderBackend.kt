@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.server
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountResult
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import kotlinx.coroutines.flow.collect
 
@@ -44,4 +45,6 @@ class ReqResponderBackend(
     }
 
     override suspend fun count(filters: List<Filter>): Int = responder.count(filters)
+
+    override suspend fun countResult(filters: List<Filter>): CountResult = responder.countResult(filters)
 }

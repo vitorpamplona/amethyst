@@ -312,6 +312,28 @@ class MyRelayTest {
 }
 ```
 
+## Approximate COUNT (NIP-45 HyperLogLog)
+
+`COUNT` is answered by `SessionBackend.countResult(filters)` (and
+`ReqResponder.countResult`), which defaults to an exact count. To return a
+mergeable HyperLogLog estimate instead — for the six canonical NIP-45 queries
+(reaction/repost/quote/reply/comment/follower counts) — fold matching pubkeys
+into an `HllBuilder` and return its `CountResult`:
+
+```kotlin
+override suspend fun countResult(filters: List<Filter>): CountResult {
+    val filter = filters.first()
+    val hll = HyperLogLog.builderFor(filter) ?: return CountResult(count(filters))
+    store.query(filter) { event -> hll.add(event.pubKey) }
+    return hll.toCountResult() // count = estimate, approximate = true, hll = registers
+}
+```
+
+The engine frames `count`/`approximate`/`hll` onto the wire
+(`["COUNT", id, {"count":N,"hll":"<512-hex>"}]`). Register arrays built by two
+relays over the same corpus merge with `HyperLogLog.merge(...)` into a
+deduplicated cross-relay estimate.
+
 ## Observability
 
 Both servers take an optional `RelayConnectionListener` and expose a live
