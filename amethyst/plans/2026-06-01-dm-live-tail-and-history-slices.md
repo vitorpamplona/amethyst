@@ -41,6 +41,10 @@ timestamps, so its slices need no margin.
 
 ### Slice math (gift-wrap history window)
 
+> Superseded by the two updates below — kept for the history of the design. The
+> `TimeWindowPagination` class this described has been removed; the history
+> managers now page by `until`+`limit` per relay (`UntilLimitPager`).
+
 `TimeWindowPagination.since` starts at `now − 1week` (= the live-tail floor).
 
 - `loadMore`: `until = window.since` (current floor); `window.loadMore()` moves
@@ -92,3 +96,79 @@ at all. `limit` also caps per-request volume.
 Both NIP-04 history managers now paginate themselves (per relay) instead of
 following the gift-wrap slice; `loadEverything` pages to the end by auto-issuing
 the next round until exhausted. The live tail and stall-gate are unchanged.
+
+## Update 2: NIP-04 filters scoped per relay
+
+A conversation's NIP-04 filters named the whole participant set on every relay,
+so a relay that belongs to one correspondent was still asked about all of them
+(`{authors:[bob,charlie]}` sent to a relay that is only charlie's), and the
+`from-me` leg (`authors:[me]`) was sent to the correspondents' inbox relays —
+which auth-walled relays (ditto: "all authors must be authenticated") reject
+outright, stalling the load.
+
+`Nip04DmRelays` is now two **per-relay key maps** (`relay → which keys to name
+there`), built from the outbox model:
+
+- **to me** (`#p:[me]`) — my inbox carries the whole group; each correspondent's
+  outbox carries only that correspondent.
+- **from me** (`authors:[me]`) — my outbox carries the whole group; each
+  correspondent's inbox carries only that correspondent.
+
+Relays shared across roles union their key sets, so a relay only ever sees the
+keys that actually own it.
+
+## Update 3: per-relay independent paging + in-stream markers (convo only)
+
+The round model paced every relay at the slowest one: each `loadMore` issued one
+page to all active relays and waited for the slowest to settle before the next.
+Fast own-relays that hold the whole conversation were stuck behind a
+correspondent's 15 s timeout.
+
+`ChatroomNip04HistorySubAssembler` was rewritten to page **each relay
+independently, no rounds**. A relay continues to its next page the instant *it*
+EOSEs (the subscription layer diffs per relay, so re-issuing only re-REQs the
+relay whose cursor moved; the others' in-flight REQs are untouched). Fast relays
+race to the bottom in back-to-back pages; slow / auth-walled relays catch up at
+their own pace — **none are abandoned** (they keep their subscription open and
+keep trying), so every relay converges on the same window.
+
+- A relay is **done** on an empty page; one that won't answer (auth CLOSE,
+  unreachable, silent) is flagged **stalled** but kept open.
+- `loadingMore` reflects "is anything still advancing"; it clears once every
+  relay is done or stalled. It is exposed as a flow that **starts `false`** (not
+  `windowLoad.loading`, which starts `true` and would wedge the scroll loader's
+  `!loading` gate on first open), and the assembler tracks `windowActive` itself
+  so the first `loadMore` actually starts the window.
+- `relayProgress` (`relay → reached-back / done / stalled`) feeds **in-stream
+  markers** (`RelayReachMarker`, wired through `ChatFeedView.markersInGap`): a
+  thin divider per relay at the depth it has reached, sliding down as it pages
+  and converging — `↓` reaching, `…` stalled, `✓` done.
+
+The **rooms-list and gift-wrap** history managers still use the round model
+(`AccountGiftWrapsHistoryEoseManager`,
+`ChatroomListNip04HistorySubAssembler`) — they query only the account's own
+(fast, reachable) relays, so the lock-step never bites there. Only the
+conversation screen, which fans out to correspondents' relays, needed the
+per-relay rewrite.
+
+### Window completion backstops (`WindowLoadTracker`)
+
+The shared window tracker finishes when every relay reaches a terminal signal
+(EOSE / CLOSED / cannot-connect), with three backstops for misbehaving relays:
+**idle** (every still-waited relay was heard from and the stream went quiet),
+**silence** (a relay that got its REQ but answered nothing for 10 s), and
+**connect-grace** (a relay that never even received its REQ within 15 s, stuck
+connecting). The two REQ-aware backstops are gated behind `tracksReqSends`, set
+only by the convo manager — without it an always-empty `reqSentAt` would make
+every relay look connect-stalled and complete the window before its REQs even
+went out. Silent relays are reported via `onAbandoned`; the tracker only stops
+waiting, the owner decides what to do (the convo keeps them and flags stalled).
+
+## Diagnostics
+
+The whole path logs under one tag, **`DMPagination`** (debug builds):
+`DmRelayDiagnosticsLogger` folds the per-relay connection timeline (REQ sent,
+connect/disconnect, CLOSED/NOTICE/OK-fail) into it; `DmRelayLog` prints the
+"relays by source" breakdown per subscription; and each assembler logs its
+milestones (paging start, a relay reaching the bottom / stalling with the
+reason, the settle summary of done-vs-still-trying).
