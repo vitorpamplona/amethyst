@@ -445,6 +445,10 @@
     <string name="add_sensitive_content_label">সংবেদনশীল আধেয়</string>
     <string name="add_sensitive_content_description">সংবেদনশীল আধেয় দেখানোর আগে এ সম্পর্কিত সতর্কতা প্রদর্শন করে</string>
     <string name="settings">সেটিংস</string>
+    <!-- Settings search -->
+    <!-- Settings search keywords: an English concept/protocol index that supplements the
+         (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
+         negentropy, …) stay searchable in every locale and aren't sent to translators. -->
     <string name="connectivity_type_always">সবসময়</string>
     <string name="connectivity_type_wifi_only">শুধুমাত্র ওয়াইফাইতে</string>
     <string name="connectivity_type_never">কখনো না</string>

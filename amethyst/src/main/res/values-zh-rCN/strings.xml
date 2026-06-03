@@ -1363,6 +1363,10 @@
     <string name="settings">设置</string>
     <string name="account_settings">账户设置</string>
     <string name="app_settings">应用程序设置</string>
+    <!-- Settings search -->
+    <!-- Settings search keywords: an English concept/protocol index that supplements the
+         (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
+         negentropy, …) stay searchable in every locale and aren't sent to translators. -->
     <string name="danger_zone">危险区</string>
     <string name="reset_marmot_state">重置 Marmot 状态</string>
     <string name="reset_marmot_confirm_title">重置 Marmot 状态吗？</string>
@@ -1489,6 +1493,9 @@
     <string name="copy_nprofile_to_clipboard">复制 nprofile 到剪贴板</string>
     <string name="copy_npub_to_clipboard">复制 npub 到剪贴板</string>
     <string name="share_or_save">分享或保存</string>
+    <string name="share_target_as_dm">已私信形式发送</string>
+    <string name="share_to_dm_title">发送至…</string>
+    <string name="share_to_dm_start_new">新消息</string>
     <string name="copy_url_to_clipboard">复制链接到剪贴板</string>
     <string name="copy_the_note_id_to_the_clipboard">复制笔记 ID 到剪贴板</string>
     <string name="add_media_to_gallery">添加媒体到图库</string>

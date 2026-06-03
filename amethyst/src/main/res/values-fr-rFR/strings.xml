@@ -783,6 +783,10 @@
     <string name="settings">Paramètres</string>
     <string name="account_settings">Paramètres du compte</string>
     <string name="app_settings">Paramètres de l\'application</string>
+    <!-- Settings search -->
+    <!-- Settings search keywords: an English concept/protocol index that supplements the
+         (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
+         negentropy, …) stay searchable in every locale and aren't sent to translators. -->
     <string name="connectivity_type_always">Toujours</string>
     <string name="connectivity_type_wifi_only">Wifi uniquement</string>
     <string name="connectivity_type_unmetered_wifi_only">WiFi illimité</string>

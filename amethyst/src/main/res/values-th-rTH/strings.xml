@@ -463,6 +463,10 @@
     <string name="add_sensitive_content_label">เนื้อหาที่ละเอียดอ่อน</string>
     <string name="add_sensitive_content_description">เพิ่มการแจ้งเตือนเนื้อหาที่ละเอียดอ่อนก่อนโชว์เนื้อหานี้</string>
     <string name="settings">การตั้งค่า</string>
+    <!-- Settings search -->
+    <!-- Settings search keywords: an English concept/protocol index that supplements the
+         (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
+         negentropy, …) stay searchable in every locale and aren't sent to translators. -->
     <string name="connectivity_type_always">ตลอดเวลา</string>
     <string name="connectivity_type_wifi_only">Wifi เท่านั้น</string>
     <string name="connectivity_type_unmetered_wifi_only">Unmetered WiFi</string>

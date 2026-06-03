@@ -1374,6 +1374,10 @@ anz der Bedingungen ist erforderlich</string>
     <string name="settings">Einstellungen</string>
     <string name="account_settings">Kontoeinstellungen</string>
     <string name="app_settings">App-Einstellungen</string>
+    <!-- Settings search -->
+    <!-- Settings search keywords: an English concept/protocol index that supplements the
+         (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
+         negentropy, …) stay searchable in every locale and aren't sent to translators. -->
     <string name="danger_zone">Gefahrenzone</string>
     <string name="reset_marmot_state">Marmot-Status zurücksetzen</string>
     <string name="reset_marmot_confirm_title">Marmot-Status zurücksetzen?</string>

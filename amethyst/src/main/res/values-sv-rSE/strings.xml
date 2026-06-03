@@ -1368,6 +1368,10 @@
     <string name="settings">Inställningar</string>
     <string name="account_settings">Kontoinställningar</string>
     <string name="app_settings">Appinställningar</string>
+    <!-- Settings search -->
+    <!-- Settings search keywords: an English concept/protocol index that supplements the
+         (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
+         negentropy, …) stay searchable in every locale and aren't sent to translators. -->
     <string name="danger_zone">Riskzon</string>
     <string name="reset_marmot_state">Återställ Marmot-tillstånd</string>
     <string name="reset_marmot_confirm_title">Återställa Marmot-tillstånd?</string>

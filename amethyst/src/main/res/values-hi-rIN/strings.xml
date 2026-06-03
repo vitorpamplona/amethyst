@@ -1344,6 +1344,10 @@
     <string name="settings">स्थापना विकल्प</string>
     <string name="account_settings">लेखा स्थापना विकल्प</string>
     <string name="app_settings">क्रमक स्थापना विकल्प</string>
+    <!-- Settings search -->
+    <!-- Settings search keywords: an English concept/protocol index that supplements the
+         (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
+         negentropy, …) stay searchable in every locale and aren't sent to translators. -->
     <string name="danger_zone">संकट क्षेत्र</string>
     <string name="reset_marmot_state">मार्मोट॰ स्थिति पुनःस्थापित करें</string>
     <string name="reset_marmot_confirm_title">क्या मार्मोट॰ स्थिति पुनःस्थापित करें।</string>

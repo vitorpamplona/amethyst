@@ -387,6 +387,10 @@
     <string name="add_sensitive_content_label">Delikata Enhavo</string>
     <string name="add_sensitive_content_description">Aldonas averton de delikata enhavo antaŭ montri ĉi tiun enhavon</string>
     <string name="settings">Agordoj</string>
+    <!-- Settings search -->
+    <!-- Settings search keywords: an English concept/protocol index that supplements the
+         (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
+         negentropy, …) stay searchable in every locale and aren't sent to translators. -->
     <string name="connectivity_type_always">Ĉiam</string>
     <string name="connectivity_type_wifi_only">Nur-Wifi</string>
     <string name="connectivity_type_never">Neniam</string>

@@ -399,6 +399,10 @@
     <string name="add_sensitive_content_label">Herkkä sisältö</string>
     <string name="add_sensitive_content_description">Lisää herkän sisällön varoitus ennen tämän sisällön näyttämistä</string>
     <string name="settings">Asetukset</string>
+    <!-- Settings search -->
+    <!-- Settings search keywords: an English concept/protocol index that supplements the
+         (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
+         negentropy, …) stay searchable in every locale and aren't sent to translators. -->
     <string name="connectivity_type_always">Aina</string>
     <string name="connectivity_type_wifi_only">Vain WiFi</string>
     <string name="connectivity_type_never">Ei koskaan</string>

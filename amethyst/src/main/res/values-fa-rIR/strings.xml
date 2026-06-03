@@ -547,6 +547,10 @@
     <string name="add_sensitive_content_description">هشدار محتوای حساس پیش از نمایش محتوا اضافه می کند</string>
     <string name="preferences">ترجیحات اپ</string>
     <string name="settings">تنظیمات</string>
+    <!-- Settings search -->
+    <!-- Settings search keywords: an English concept/protocol index that supplements the
+         (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
+         negentropy, …) stay searchable in every locale and aren't sent to translators. -->
     <string name="connectivity_type_always">همیشه</string>
     <string name="connectivity_type_wifi_only">فقط Wifi</string>
     <string name="connectivity_type_unmetered_wifi_only">وای فای بی اندازه</string>
