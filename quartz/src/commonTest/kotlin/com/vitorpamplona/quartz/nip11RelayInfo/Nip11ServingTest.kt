@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip11RelayInfo
 
-import com.vitorpamplona.quartz.nip01Core.relay.server.RelayLimits
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RelayLimits
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

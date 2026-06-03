@@ -28,8 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
-import com.vitorpamplona.quartz.nip01Core.relay.server.IRelayPolicy
-import com.vitorpamplona.quartz.nip01Core.relay.server.PolicyResult
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 
 class PolicyStack(

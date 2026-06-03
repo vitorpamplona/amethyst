@@ -408,23 +408,29 @@ coroutine — keep them cheap and non-blocking.
 
 ```
 quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/
-├── relay/server/
+├── relay/server/                  # engine + entry points
 │   ├── RelayServerBase.kt      # Shared engine (connect/serve/policy/registry)
 │   ├── NostrServer.kt          # Storage-backed engine (IEventStore)
-│   ├── EventSourceServer.kt   # Non-storage engine (search/redirector/computed)
-│   ├── EventSource.kt         # Flow<Event> SPI for non-storage relays
-│   ├── SessionBackend.kt       # Data-plane seam (LiveEventStore / EventSourceBackend)
-│   ├── RelayServerListener.kt # Connection open/close observability hook
+│   ├── EventSourceServer.kt    # Non-storage engine (search/redirector/computed)
 │   ├── RelaySession.kt         # Per-connection handler (stable .id)
-│   ├── LiveEventStore.kt       # Reactive event streaming (storage SessionBackend)
-│   ├── IRelayPolicy.kt         # Policy interface + PolicyResult + onAuthenticated
-│   ├── RelayLimits.kt          # Limits: enforced + NIP-11 limitation source of truth
-│   └── policies/
-│       ├── EmptyPolicy.kt      # Accept everything
-│       ├── VerifyPolicy.kt     # Signature verification (default)
-│       ├── FullAuthPolicy.kt   # NIP-42 auth required (override authorize to bridge)
-│       ├── LimitsPolicy.kt     # Per-command enforcement of RelayLimits
-│       └── PolicyStack.kt      # Chain multiple policies
+│   ├── ConnectionRegistry.kt   # Live-connection bookkeeping + gauge
+│   ├── RelayServerListener.kt  # Connection open/close observability hook
+│   ├── NegSessionRegistry.kt   # NIP-77 negentropy per-connection state
+│   ├── backend/                # data plane (how REQ/COUNT/EVENT are answered)
+│   │   ├── SessionBackend.kt   # Data-plane seam (LiveEventStore / EventSourceBackend)
+│   │   ├── EventSource.kt      # Flow<Event> SPI for non-storage relays
+│   │   ├── EventSourceBackend.kt # Adapts an EventSource to SessionBackend
+│   │   ├── LiveEventStore.kt   # Reactive event streaming (storage SessionBackend)
+│   │   └── IngestQueue.kt      # Group-commit EVENT writer
+│   ├── policies/               # policy model + implementations
+│   │   ├── IRelayPolicy.kt     # Policy interface + PolicyResult + onAuthenticated
+│   │   ├── RelayLimits.kt      # Limits: enforced + NIP-11 limitation source of truth
+│   │   ├── EmptyPolicy.kt      # Accept everything
+│   │   ├── VerifyPolicy.kt     # Signature verification (default)
+│   │   ├── FullAuthPolicy.kt   # NIP-42 auth required (override authorize to bridge)
+│   │   ├── LimitsPolicy.kt     # Enforcement of RelayLimits (per-command + hooks)
+│   │   └── PolicyStack.kt      # Chain multiple policies
+│   └── inprocess/              # in-memory transport for tests
 ├── relay/commands/
 │   ├── toRelay/Command.kt      # Command.fromJson / toJson
 │   └── toClient/

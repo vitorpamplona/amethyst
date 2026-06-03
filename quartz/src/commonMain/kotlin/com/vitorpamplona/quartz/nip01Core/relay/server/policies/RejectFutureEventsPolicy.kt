@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip01Core.relay.server.policies
 
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
-import com.vitorpamplona.quartz.nip01Core.relay.server.PolicyResult
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**

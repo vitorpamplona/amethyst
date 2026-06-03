@@ -26,6 +26,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.LimitsPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyResult
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RelayLimits
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

@@ -26,8 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip01Core.relay.server.PolicyResult
-import com.vitorpamplona.quartz.nip01Core.relay.server.RelayLimits
 
 /**
  * Enforces the per-command fields of a [RelayLimits]: rejects EVENTs whose

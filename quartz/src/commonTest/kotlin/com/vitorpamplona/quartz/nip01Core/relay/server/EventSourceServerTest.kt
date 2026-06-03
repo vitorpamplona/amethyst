@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.server.backend.EventSource
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.FullAuthPolicy
 import com.vitorpamplona.quartz.nip45Count.HllBuilder
 import kotlinx.coroutines.ExperimentalCoroutinesApi

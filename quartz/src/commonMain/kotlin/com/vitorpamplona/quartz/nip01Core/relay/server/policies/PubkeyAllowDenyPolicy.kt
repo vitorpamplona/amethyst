@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.nip01Core.relay.server.policies
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
-import com.vitorpamplona.quartz.nip01Core.relay.server.PolicyResult
 
 /**
  * Operator-controlled author allow/deny list. Mirrors nostr-rs-relay's
