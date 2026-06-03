@@ -156,7 +156,9 @@ class ChatroomListNip04HistorySubAssembler(
         pager.beginRound(user.pubkeyHex, active)
         lastRoundUser = user
         _relayCount.value = active.size
-        _reachedBack.value = pager.deepestUntil(user.pubkeyHex, active, startUntil())
+        // Over ALL relays (incl. finished ones) so "reached back to X" stays monotonic and doesn't jump
+        // to a newer date when the deepest relay drops out of the active set.
+        _reachedBack.value = pager.deepestUntil(user.pubkeyHex, all, startUntil())
         Log.d("DMPagination") { "[rooms.nip04.history] loadMore → ${active.size} active relay(s)" }
         scope?.let {
             ensureRoundCollector(it)
@@ -191,7 +193,8 @@ class ChatroomListNip04HistorySubAssembler(
                             val exhaustedNow = allRelays.isNotEmpty() && pager.activeRelays(user.pubkeyHex, allRelays).isEmpty()
                             exhaustedByUser[user.pubkeyHex] = exhaustedNow
                             _exhausted.value = exhaustedNow
-                            _reachedBack.value = pager.deepestUntil(user.pubkeyHex, asked, startUntil())
+                            // Over ALL relays (incl. finished ones) so the "reached back" date is monotonic.
+                            _reachedBack.value = pager.deepestUntil(user.pubkeyHex, allRelays, startUntil())
                             Log.d("DMPagination") { "[rooms.nip04.history] round done: $count event(s), exhausted=$exhaustedNow" }
                             if (autoLoadAll && !exhaustedNow) {
                                 loadMore(user)

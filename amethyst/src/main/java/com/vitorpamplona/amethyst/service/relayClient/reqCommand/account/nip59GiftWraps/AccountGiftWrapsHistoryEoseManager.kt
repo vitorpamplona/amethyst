@@ -190,7 +190,10 @@ class AccountGiftWrapsHistoryEoseManager(
         pager.beginRound(user.pubkeyHex, active)
         lastRoundUser = user
         _relayCount.value = active.size
-        _reachedBack.value = pager.deepestUntil(user.pubkeyHex, active, startUntil())
+        // Over ALL relays, not just the still-active ones: a relay that finished keeps its deep cursor,
+        // so "reached back to X" stays monotonic instead of jumping back to a newer date when the
+        // deepest relay drops out of the active set.
+        _reachedBack.value = pager.deepestUntil(user.pubkeyHex, account.dmRelays.flow.value, startUntil())
         Log.d(TAG) { "[giftwrap.history] loadMore → ${active.size} active relay(s)" }
         scope?.let {
             ensureRoundCollector(it)
@@ -227,7 +230,8 @@ class AccountGiftWrapsHistoryEoseManager(
                             val exhaustedNow = allRelays.isNotEmpty() && pager.activeRelays(user.pubkeyHex, allRelays).isEmpty()
                             exhaustedByUser[user.pubkeyHex] = exhaustedNow
                             _exhausted.value = exhaustedNow
-                            _reachedBack.value = pager.deepestUntil(user.pubkeyHex, asked, startUntil())
+                            // Over ALL relays (incl. finished ones) so the "reached back" date is monotonic.
+                            _reachedBack.value = pager.deepestUntil(user.pubkeyHex, allRelays, startUntil())
                             Log.d(TAG) { "[giftwrap.history] round done: $count event(s), exhausted=$exhaustedNow" }
                             if (autoLoadAll && !exhaustedNow) {
                                 loadMore(user)
