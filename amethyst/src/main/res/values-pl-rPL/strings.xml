@@ -1392,6 +1392,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="account_settings">Ustawienia konta</string>
     <string name="app_settings">Ustawienia aplikacji</string>
     <!-- Settings search -->
+    <string name="settings_search_placeholder">Ustawienia wyszukiwania</string>
+    <string name="settings_search_no_results">Nie znaleziono ustawień dla \"%1$s\"</string>
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
          negentropy, …) stay searchable in every locale and aren't sent to translators. -->
