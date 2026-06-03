@@ -89,7 +89,9 @@ class RelayLimits(
             auth_required = authRequired,
             payment_required = paymentRequired,
             restricted_writes = restrictedWrites,
-            created_at_lower_limit = createdAtLowerLimit?.toInt(),
-            created_at_upper_limit = createdAtUpperLimit?.toInt(),
+            // Clamp to Int range (the NIP-11 field is conventionally an int) so a
+            // post-2038 epoch second can't silently wrap to a negative timestamp.
+            created_at_lower_limit = createdAtLowerLimit?.coerceIn(0L, Int.MAX_VALUE.toLong())?.toInt(),
+            created_at_upper_limit = createdAtUpperLimit?.coerceIn(0L, Int.MAX_VALUE.toLong())?.toInt(),
         )
 }

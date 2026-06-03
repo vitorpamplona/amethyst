@@ -394,7 +394,7 @@ deduplicated cross-relay estimate.
 
 ## Observability
 
-Both servers take an optional `RelayConnectionListener` and expose a live
+Both servers take an optional `RelayServerListener` and expose a live
 `activeConnections` gauge. Connections carry a stable, process-unique
 `RelaySession.id` (used to key the server's registry and the listener
 callbacks), so you can correlate the open/close of the same connection in logs
@@ -403,7 +403,7 @@ and metrics:
 ```kotlin
 val server = NostrServer(
     store = store,
-    listener = object : RelayConnectionListener {
+    listener = object : RelayServerListener {
         override fun onConnect(connectionId: Long) = metrics.connections.inc()
         override fun onDisconnect(connectionId: Long) = metrics.connections.dec()
     },
@@ -425,7 +425,7 @@ quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/
 │   ├── ReqResponderServer.kt   # Non-storage engine (search/redirector/computed)
 │   ├── ReqResponder.kt         # Flow<Event> REQ-responder SPI
 │   ├── SessionBackend.kt       # Data-plane seam (LiveEventStore / ReqResponderBackend)
-│   ├── RelayConnectionListener.kt # Connection open/close observability hook
+│   ├── RelayServerListener.kt # Connection open/close observability hook
 │   ├── RelaySession.kt         # Per-connection handler (stable .id)
 │   ├── LiveEventStore.kt       # Reactive event streaming (storage SessionBackend)
 │   ├── IRelayPolicy.kt         # Policy interface + PolicyResult + onAuthenticated

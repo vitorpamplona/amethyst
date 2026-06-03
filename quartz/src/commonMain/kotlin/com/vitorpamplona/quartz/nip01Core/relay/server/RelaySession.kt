@@ -64,7 +64,7 @@ class RelaySession(
     /**
      * Stable, process-unique identifier for this connection. Used by the
      * server classes to key their connection registry and by
-     * [RelayConnectionListener] callbacks so observers can correlate the
+     * [RelayServerListener] callbacks so observers can correlate the
      * open/close of the same connection. Defaults to a fresh monotonic id.
      */
     val id: Long = nextConnectionId(),
@@ -201,6 +201,10 @@ class RelaySession(
     private suspend fun handleAuth(cmd: AuthCmd) {
         val result = policy.accept(cmd)
         if (result is PolicyResult.Rejected) {
+            // A composed policy may have run *after* one that already committed
+            // the authentication (e.g. FullAuthPolicy) and then rejected. Roll
+            // back so a rejected AUTH never leaves the connection authenticated.
+            policy.onAuthenticationFailed(cmd.event.pubKey)
             send(OkMessage(cmd.event.id, false, result.reason))
             return
         }

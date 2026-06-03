@@ -34,8 +34,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class RelayConnectionListenerTest {
-    private class RecordingListener : RelayConnectionListener {
+class RelayServerListenerTest {
+    private class RecordingListener : RelayServerListener {
         val connected = mutableListOf<Long>()
         val disconnected = mutableListOf<Long>()
 

@@ -78,7 +78,7 @@ class ReqResponderServer(
     private val policyBuilder: () -> IRelayPolicy = { EmptyPolicy },
     parentContext: CoroutineContext = SupervisorJob(),
     private val negentropySettings: NegentropySettings = NegentropySettings.Default,
-    private val listener: RelayConnectionListener = RelayConnectionListener.None,
+    private val listener: RelayServerListener = RelayServerListener.None,
     val limits: RelayLimits? = null,
 ) : AutoCloseable {
     /** Scope for all subscriptions. */

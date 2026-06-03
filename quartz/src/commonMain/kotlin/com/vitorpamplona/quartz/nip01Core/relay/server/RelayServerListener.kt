@@ -33,7 +33,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.server
  * cheap — do not block (no synchronous I/O); hand off to your metrics/logging
  * pipeline and return.
  */
-interface RelayConnectionListener {
+interface RelayServerListener {
     /** A new connection was registered. [connectionId] is [RelaySession.id]. */
     fun onConnect(connectionId: Long) {}
 
@@ -45,6 +45,6 @@ interface RelayConnectionListener {
 
     companion object {
         /** Shared no-op listener used as the default. */
-        val None: RelayConnectionListener = object : RelayConnectionListener {}
+        val None: RelayServerListener = object : RelayServerListener {}
     }
 }

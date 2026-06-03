@@ -64,7 +64,7 @@ class NostrServer(
     private val parentContext: CoroutineContext = SupervisorJob(),
     parallelVerify: Boolean = false,
     private val negentropySettings: NegentropySettings = NegentropySettings.Default,
-    private val listener: RelayConnectionListener = RelayConnectionListener.None,
+    private val listener: RelayServerListener = RelayServerListener.None,
     val limits: RelayLimits? = null,
 ) : AutoCloseable {
     /** Scope for all subscriptions. */

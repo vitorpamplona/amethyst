@@ -57,6 +57,14 @@ open class FullAuthPolicy(
     /** Set of pubkeys that have successfully authenticated on this session. */
     val authenticatedUsers = mutableSetOf<HexKey>()
 
+    /**
+     * The pubkey, if any, that the most recent [accept] added to
+     * [authenticatedUsers] for the first time. Lets [onAuthenticationFailed]
+     * roll back exactly what the failing AUTH committed without dropping a
+     * pubkey that was already authenticated on this connection.
+     */
+    private var pendingNewlyAdded: HexKey? = null
+
     /** Returns true if at least one pubkey has authenticated. */
     fun isAuthenticated(): Boolean = authenticatedUsers.isNotEmpty()
 
@@ -66,6 +74,7 @@ open class FullAuthPolicy(
 
     override fun accept(cmd: AuthCmd): PolicyResult<AuthCmd> {
         val event = cmd.event
+        pendingNewlyAdded = null
 
         if (event.isExpired()) {
             return PolicyResult.Rejected("invalid: auth event expired")
@@ -83,7 +92,11 @@ open class FullAuthPolicy(
             return PolicyResult.Rejected("invalid: relay url does not match")
         }
 
-        authenticatedUsers.add(event.pubKey)
+        // add() returns true only when the pubkey wasn't already present, so a
+        // later rollback removes only this AUTH's contribution.
+        if (authenticatedUsers.add(event.pubKey)) {
+            pendingNewlyAdded = event.pubKey
+        }
 
         return PolicyResult.Accepted(cmd)
     }
@@ -110,7 +123,12 @@ open class FullAuthPolicy(
         }
 
     override fun onAuthenticationFailed(pubKey: HexKey) {
-        authenticatedUsers.remove(pubKey)
+        // Only undo a brand-new authentication this AUTH added; never drop a
+        // pubkey that was already authenticated before this attempt.
+        if (pendingNewlyAdded == pubKey) {
+            authenticatedUsers.remove(pubKey)
+        }
+        pendingNewlyAdded = null
     }
 
     override fun canSendToSession(event: Event) = true
