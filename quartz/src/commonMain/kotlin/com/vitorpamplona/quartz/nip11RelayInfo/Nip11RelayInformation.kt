@@ -31,6 +31,7 @@ data class Nip11RelayInformation(
     val id: String? = null,
     val name: String? = null,
     val description: String? = null,
+    val banner: String? = null,
     val icon: String? = null,
     val pubkey: HexKey? = null,
     val self: HexKey? = null,

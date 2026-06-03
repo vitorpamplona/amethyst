@@ -41,6 +41,14 @@ class Nip11ServingTest {
     }
 
     @Test
+    fun parsesAndEmitsBanner() {
+        val info = Nip11RelayInformation(name = "R", banner = "https://example.com/banner.png")
+        val json = info.toJson()
+        assertTrue(json.contains("\"banner\":\"https://example.com/banner.png\""))
+        assertEquals("https://example.com/banner.png", Nip11RelayInformation.fromJson(json).banner)
+    }
+
+    @Test
     fun documentRoundTripsCarryingTheEnforcedLimits() {
         // The same RelayLimits object that the server enforces feeds the document.
         val limits = RelayLimits(maxSubscriptions = 20, maxFilters = 10, maxLimit = 500, authRequired = true)
