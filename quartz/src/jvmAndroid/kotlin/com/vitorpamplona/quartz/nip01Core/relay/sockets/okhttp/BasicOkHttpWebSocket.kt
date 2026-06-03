@@ -40,8 +40,28 @@ import okhttp3.WebSocketListener as OkHttpWebSocketListener
 
 class BasicOkHttpWebSocket(
     val url: NormalizedRelayUrl,
-    val httpClient: (NormalizedRelayUrl) -> OkHttpClient,
     val out: WebSocketListener,
+    /**
+     * Optional URL rewriter invoked once per [connect] before the OkHttp
+     * `Request` is built. Returning a different URL routes the WebSocket
+     * handshake to that endpoint while keeping [url] as the canonical
+     * relay identifier (used by relay tags, UI, etc.).
+     *
+     * Defaults to identity (no rewrite). Throwing falls back to `url.url`.
+     */
+    val urlRewriter: (NormalizedRelayUrl) -> String = { it.url },
+    /**
+     * Optional per-connect decorator over the [httpClient]-resolved
+     * `OkHttpClient`. Runs AFTER [httpClient] and AFTER [urlRewriter] so
+     * any per-URL state populated by the rewriter (e.g. a TLSA-record
+     * cache hit) is visible when the decorator overlays its pinning /
+     * trust-manager configuration.
+     *
+     * Defaults to passthrough. Throwing falls back to the un-decorated
+     * client.
+     */
+    val clientDecorator: (NormalizedRelayUrl, OkHttpClient) -> OkHttpClient = { _, c -> c },
+    val httpClient: (NormalizedRelayUrl) -> OkHttpClient,
 ) : WebSocket {
     companion object {
         // Exists to avoid exceptions stopping the coroutine
@@ -56,7 +76,32 @@ class BasicOkHttpWebSocket(
     override fun needsReconnect() = socket == null
 
     override fun connect() {
-        val request = Request.Builder().url(url.url).build()
+        // Order matters here: the URL rewriter runs FIRST so any per-URL
+        // resolution side-effect (e.g. populating a `.bit` TLSA cache)
+        // has happened before the client decorator is asked to look up
+        // its pinning data.
+        val connectUrl =
+            try {
+                val rewritten = urlRewriter(url)
+                if (rewritten != url.url) {
+                    Log.d("BasicOkHttpWebSocket", "Rewriting connect URL ${url.url} -> $rewritten")
+                }
+                rewritten
+            } catch (t: Throwable) {
+                Log.w("BasicOkHttpWebSocket", "URL rewriter failed for ${url.url}: ${t.message}")
+                url.url
+            }
+
+        val baseClient = httpClient(url)
+        val client =
+            try {
+                clientDecorator(url, baseClient)
+            } catch (t: Throwable) {
+                Log.w("BasicOkHttpWebSocket", "Client decorator failed for ${url.url}: ${t.message}")
+                baseClient
+            }
+
+        val request = Request.Builder().url(connectUrl).build()
 
         val listener =
             object : OkHttpWebSocketListener() {
@@ -114,7 +159,7 @@ class BasicOkHttpWebSocket(
                 }
             }
 
-        socket = httpClient(url).newWebSocket(request, listener)
+        socket = client.newWebSocket(request, listener)
     }
 
     override fun disconnect() {
@@ -125,12 +170,24 @@ class BasicOkHttpWebSocket(
     override fun send(msg: String): Boolean = socket?.send(msg) ?: false
 
     class Builder(
+        /** Optional URL rewriter (e.g. for `.bit` relay resolution). */
+        val urlRewriter: (NormalizedRelayUrl) -> String = { it.url },
+        /**
+         * Optional client decorator (e.g. for `.bit` TLSA pinning). Runs
+         * AFTER [httpClient] and AFTER [urlRewriter] so per-URL state
+         * populated by the rewriter is visible by the time the decorator
+         * runs.
+         */
+        val clientDecorator: (NormalizedRelayUrl, OkHttpClient) -> OkHttpClient = { _, c -> c },
+        // [httpClient] is last so the existing trailing-lambda call
+        // pattern `BasicOkHttpWebSocket.Builder { url -> ... }` keeps
+        // working without changes across all current callers.
         val httpClient: (NormalizedRelayUrl) -> OkHttpClient,
     ) : WebsocketBuilder {
         // Called when connecting.
         override fun build(
             url: NormalizedRelayUrl,
             out: WebSocketListener,
-        ) = BasicOkHttpWebSocket(url, httpClient, out)
+        ) = BasicOkHttpWebSocket(url, out, urlRewriter, clientDecorator, httpClient)
     }
 }

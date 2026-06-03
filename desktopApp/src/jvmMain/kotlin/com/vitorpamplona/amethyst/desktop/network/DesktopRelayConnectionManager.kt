@@ -30,5 +30,5 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSoc
 class DesktopRelayConnectionManager(
     httpClient: DesktopHttpClient,
 ) : RelayConnectionManager(
-        websocketBuilder = BasicOkHttpWebSocket.Builder(httpClient::getHttpClient),
+        websocketBuilder = BasicOkHttpWebSocket.Builder(httpClient = httpClient::getHttpClient),
     )
