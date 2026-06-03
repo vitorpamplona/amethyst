@@ -20,10 +20,8 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
-import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.UriHandler
 
 // F-Droid distributes Amethyst as MIT-licensed free software; the build must
 // not surface links to external (e.g. GitHub-hosted) policy documents.
-@Composable
-fun LegalSettingsSection() {
-}
+fun legalSettingsCategory(uriHandler: UriHandler): SettingsCategory? = null
