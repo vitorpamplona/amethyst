@@ -110,14 +110,6 @@ class AccountGiftWrapsHistoryEoseManager(
     private val _reachedBack = MutableStateFlow<Long?>(null)
     val reachedBack: StateFlow<Long?> = _reachedBack.asStateFlow()
 
-    // Rooms-list auto-fill stall mark: the number of THIS protocol's distinct rooms shown the last
-    // time the list auto-widened it. The list stops widening once a step adds no new room of this
-    // protocol (widening only pulls older MESSAGES, which for a few busy correspondents can be
-    // thousands of events without a single new room). Kept here so the stall survives leaving and
-    // reopening the Messages screen.
-    @Volatile
-    var autoFillRoomMark: Int = Int.MIN_VALUE
-
     // Account scope for the watchdog / round collector. Volatile: written on IO (newSub), read on UI.
     @Volatile
     private var scope: CoroutineScope? = null
@@ -258,7 +250,6 @@ class AccountGiftWrapsHistoryEoseManager(
             _exhausted.value = exhaustedByUser[user.pubkeyHex] ?: false
             _relayCount.value = 0
             _reachedBack.value = null
-            autoFillRoomMark = Int.MIN_VALUE
             lastAskedActive = emptySet()
             lastRoundEventCount = -1
         }

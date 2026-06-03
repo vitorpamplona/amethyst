@@ -112,8 +112,6 @@ private fun CrossFadeState(
         giftWrapsHistory.loadingMore,
         giftWrapsHistory.exhausted,
         roomCount = null,
-        getMark = { 0 },
-        setMark = {},
         loadMore = { giftWrapsHistory.loadMore(user) },
     ) { feedState is FeedState.Empty }
     WidenHistoryWhen(
@@ -121,8 +119,6 @@ private fun CrossFadeState(
         nip04History.loadingMore,
         nip04History.exhausted,
         roomCount = null,
-        getMark = { 0 },
-        setMark = {},
         loadMore = { nip04History.loadMore(user) },
     ) { feedState is FeedState.Empty }
 
@@ -178,15 +174,14 @@ private fun FeedLoaded(
     // while NIP-17 is shallow), so each protocol gets its OWN trigger keyed to its OWN oldest loaded
     // room — otherwise the deeper protocol's tail pins the boundary to the bottom and the shallower
     // one never loads until the user scrolls all the way past it. Each is gated only on its own loader
-    // and its own room count (stall-gate), so they advance independently as the user scrolls. Public /
+    // and "is my oldest room near the bottom of the viewport", so while the boundary is in view it keeps
+    // paging to exhaustion (no stall-gate — a visible card means the user is waiting for more). Public /
     // group / ephemeral rooms are membership-based and excluded.
     WidenHistoryWhen(
         "scroll.nip17",
         giftWrapsHistory.loadingMore,
         giftWrapsHistory.exhausted,
         roomCount = { items.list.count { it.event is ChatroomKeyable && it.event !is PrivateDmEvent } },
-        getMark = { giftWrapsHistory.autoFillRoomMark },
-        setMark = { giftWrapsHistory.autoFillRoomMark = it },
         loadMore = { giftWrapsHistory.loadMore(user) },
     ) {
         val info = listState.layoutInfo
@@ -199,8 +194,6 @@ private fun FeedLoaded(
         nip04History.loadingMore,
         nip04History.exhausted,
         roomCount = { items.list.count { it.event is PrivateDmEvent } },
-        getMark = { nip04History.autoFillRoomMark },
-        setMark = { nip04History.autoFillRoomMark = it },
         loadMore = { nip04History.loadMore(user) },
     ) {
         val info = listState.layoutInfo
@@ -271,15 +264,16 @@ private fun FeedLoaded(
 private const val PREFETCH_PRIVATE_CHATS = 5
 
 /**
- * Drives ONE protocol's history paging from a scroll/empty trigger. When [wantMore] becomes true and
- * that protocol isn't already loading or [exhausted], it calls [loadMore].
+ * Drives ONE protocol's history paging from a scroll/empty trigger. While [wantMore] is true and that
+ * protocol isn't already loading or [exhausted], it keeps calling [loadMore] round after round until
+ * the history is genuinely exhausted (an empty `until`+`limit` page) — there is no stall-gate: if the
+ * boundary card is in view the user is waiting for more, so we don't stop just because a band of older
+ * messages surfaced no new conversation row. Paging naturally stops when [wantMore] goes false (the
+ * boundary scrolls out of view) or the protocol exhausts.
  *
  * [wantMore] and [roomCount] are read inside a snapshotFlow, so they may observe live Compose state
- * (scroll position, the feed list). [roomCount] (when non-null) feeds the stall-gate: widening only
- * pulls older MESSAGES, so a few busy correspondents can flood events without adding a single room —
- * paging therefore stops once a step brings in no new room of this protocol (tracked via [getMark] /
- * [setMark], which live on the history manager so the stall survives leaving/reopening the screen).
- * Pass `roomCount = null` to widen regardless of progress (the empty feed, hunting for the first room).
+ * (scroll position, the feed list). [roomCount] is only carried for the log line; pass `null` when the
+ * caller has no room measure (the empty feed, hunting for the first room).
  *
  * Each protocol gets its own instance, gated only on its own loader, so NIP-04 and NIP-17 — which have
  * very different histories — page independently as the user scrolls.
@@ -290,8 +284,6 @@ private fun WidenHistoryWhen(
     loadingMore: StateFlow<Boolean>,
     exhausted: StateFlow<Boolean>,
     roomCount: (() -> Int)?,
-    getMark: () -> Int,
-    setMark: (Int) -> Unit,
     loadMore: () -> Unit,
     wantMore: () -> Boolean,
 ) {
@@ -306,12 +298,6 @@ private fun WidenHistoryWhen(
         }.distinctUntilChanged()
             .collect { count ->
                 if (count == NOT_WANTED) return@collect
-                // Stop once a widen adds no new room of this protocol (but keep hunting while none loaded).
-                if (roomCount != null && count > 0 && count <= getMark()) {
-                    Log.d("DMPagination") { "rooms.list: widen ($trigger) stop — no new rooms (count=$count)" }
-                    return@collect
-                }
-                if (roomCount != null) setMark(count)
                 Log.d("DMPagination") { "rooms.list: widen ($trigger) → loadMore (rooms=$count)" }
                 loadMore()
             }
