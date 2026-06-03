@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.server
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
@@ -28,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyStack
+import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 
 /**
  * Defines custom behavior for this relay.
@@ -66,6 +68,28 @@ interface IRelayPolicy {
      * @return [PolicyResult.Accepted] to log in, or [PolicyResult.Rejected] with a reason string.
      */
     fun accept(cmd: AuthCmd): PolicyResult<AuthCmd>
+
+    /**
+     * Called after an AUTH command has been [accept]ed, before the success
+     * `OK` is sent. This is the place to run any post-authentication side
+     * effects that need network or disk I/O — for example, exchanging the
+     * verified NIP-42 event for a backend session token — without leaking
+     * that logic out of the policy and into the transport layer.
+     *
+     * The synchronous [accept] does the cheap, deterministic NIP-42 checks
+     * (challenge, relay, timestamp); this suspend hook does the expensive,
+     * external part. Throwing here turns the AUTH into a failing `OK false`,
+     * so a bridge can reject a verified-but-unauthorized user by throwing.
+     *
+     * The default implementation does nothing.
+     *
+     * @param pubKey The pubkey that just authenticated.
+     * @param event The verified NIP-42 auth event.
+     */
+    suspend fun onAuthenticated(
+        pubKey: HexKey,
+        event: RelayAuthEvent,
+    ) {}
 
     /**
      * Filters a live event before it is forwarded to a subscriber.

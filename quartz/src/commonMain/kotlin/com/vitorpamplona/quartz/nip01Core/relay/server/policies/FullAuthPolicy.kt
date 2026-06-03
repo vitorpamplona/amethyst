@@ -38,6 +38,15 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 /**
  * Requires authentication for all EVENT, REQ, and COUNT commands.
  * Replicates the previous `requireAuth = true` behavior.
+ *
+ * This class already implements the full NIP-42 challenge/verify handshake:
+ * [onConnect] sends the [challenge] and [accept] (AuthCmd) validates the
+ * returned event (expiration, freshness, challenge match, relay match) before
+ * recording the pubkey in [authenticatedUsers]. Subclasses generally should
+ * NOT re-implement that — to bridge to an external auth system, override
+ * [onAuthenticated] (a `suspend` hook) and do the post-verification I/O there,
+ * e.g. exchange the verified event for a backend session token. Throwing from
+ * that hook turns the AUTH into a failing `OK false`.
  */
 open class FullAuthPolicy(
     val relay: NormalizedRelayUrl,

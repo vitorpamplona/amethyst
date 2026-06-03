@@ -533,4 +533,66 @@ class NostrServerAuthTest {
 
             server.close()
         }
+
+    // -- NIP-42: onAuthenticated suspend hook ----------------------------------
+
+    @Test
+    fun onAuthenticatedHookRunsAfterSuccessfulAuth() =
+        runTest {
+            var hookPubkey: String? = null
+            val policy =
+                object : FullAuthPolicy(relayUrl) {
+                    override suspend fun onAuthenticated(
+                        pubKey: String,
+                        event: RelayAuthEvent,
+                    ) {
+                        hookPubkey = pubKey
+                    }
+                }
+
+            val dispatcher = UnconfinedTestDispatcher(testScheduler)
+            val server = createServer(dispatcher = dispatcher, policyBuilder = { policy })
+            val collector = MessageCollector()
+            val session = server.connect(collector.sendCallback)
+
+            val msg = OptimizedJsonMapper.fromJsonToMessage(collector.messages[0]) as AuthMessage
+            session.receive(authJson(authEvent(challenge = msg.challenge)))
+
+            val okMessages = collector.rawMessagesContaining("OK")
+            assertEquals(1, okMessages.size)
+            assertTrue(okMessages[0].contains(",true,"))
+            assertEquals(pubkey, hookPubkey)
+
+            server.close()
+        }
+
+    @Test
+    fun onAuthenticatedThrowTurnsAuthIntoFailingOk() =
+        runTest {
+            val policy =
+                object : FullAuthPolicy(relayUrl) {
+                    override suspend fun onAuthenticated(
+                        pubKey: String,
+                        event: RelayAuthEvent,
+                    ): Unit = throw IllegalStateException("backend rejected user")
+                }
+
+            val dispatcher = UnconfinedTestDispatcher(testScheduler)
+            val server = createServer(dispatcher = dispatcher, policyBuilder = { policy })
+            val collector = MessageCollector()
+            val session = server.connect(collector.sendCallback)
+
+            val msg = OptimizedJsonMapper.fromJsonToMessage(collector.messages[0]) as AuthMessage
+            session.receive(authJson(authEvent(challenge = msg.challenge)))
+
+            val okMessages = collector.rawMessagesContaining("OK")
+            assertEquals(1, okMessages.size)
+            assertTrue(okMessages[0].contains(",false,"))
+            assertTrue(okMessages[0].contains("backend rejected user"))
+            // The pubkey is still recorded by accept(); the hook governs the OK,
+            // not the authenticated-set membership.
+            assertTrue((session.policy as FullAuthPolicy).authenticatedUsers.contains(pubkey))
+
+            server.close()
+        }
 }

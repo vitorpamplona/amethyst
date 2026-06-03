@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay
 
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedSerializable
 import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.CommandKSerializer
 import kotlinx.serialization.Serializable
@@ -29,4 +30,12 @@ interface Command : OptimizedSerializable {
     fun label(): String
 
     fun isValid(): Boolean
+
+    /** Serializes this command to its NIP-01 wire JSON, e.g. `["REQ", "sub", {...}]`. */
+    fun toJson(): String = OptimizedJsonMapper.toJson(this)
+
+    companion object {
+        /** Parses a client-to-relay command from its NIP-01 wire JSON. */
+        fun fromJson(json: String): Command = OptimizedJsonMapper.fromJsonToCommand(json)
+    }
 }

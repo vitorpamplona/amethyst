@@ -109,6 +109,20 @@ val server = NostrServer(
 )
 ```
 
+`FullAuthPolicy` already implements the full NIP-42 challenge/verify handshake — you should not re-implement it. To bridge auth to an external system (e.g. exchange the verified event for a backend JWT), override the `suspend` `onAuthenticated` hook. It runs after the NIP-42 checks pass but before the success `OK` is sent, so it can do network/disk I/O; throwing from it turns the AUTH into a failing `OK false`:
+
+```kotlin
+class JwtAuthPolicy(
+    relay: NormalizedRelayUrl,
+    private val backend: AuthBackend,
+) : FullAuthPolicy(relay) {
+    override suspend fun onAuthenticated(pubKey: HexKey, event: RelayAuthEvent) {
+        // Suspends; a thrown exception rejects the login with OK false.
+        backend.exchangeForSession(pubKey, event)
+    }
+}
+```
+
 ### Composing Policies
 
 Chain policies with `+` or `PolicyStack`. All must approve; first rejection wins.
@@ -157,6 +171,58 @@ val server = NostrServer(
 )
 ```
 
+## NIP-50 Search Queries
+
+`Filter.search` is the raw NIP-50 string. `SearchQuery` parses it into the
+free-text terms plus the typed `key:value` extensions (`domain:`, `language:`,
+`sentiment:`, `nsfw:`, `include:spam`), so a search relay or redirector doesn't
+have to re-parse the string. Unknown extensions are preserved and readable via
+`extension(key)`; `toSearchString()` re-assembles a canonical query.
+
+```kotlin
+val q = SearchQuery.parse(filter.search) // "best apps domain:example.com nsfw:false"
+q.terms        // "best apps"
+q.domain       // "example.com"
+q.nsfwIncluded // false  (NIP-50 default is true when the token is absent)
+```
+
+A search/redirector relay is just a custom policy (or, for computed results, a
+custom `IEventStore` whose `query` answers the REQ) that reads the parsed query:
+
+```kotlin
+override fun accept(cmd: ReqCmd): PolicyResult<ReqCmd> {
+    cmd.filters.forEach { f ->
+        val q = SearchQuery.parse(f.search)
+        if (q.domain != null && q.domain !in allowedDomains) {
+            return PolicyResult.Rejected(
+                MachineReadablePrefix.RESTRICTED.format("domain not searchable"),
+            )
+        }
+    }
+    return PolicyResult.Accepted(cmd)
+}
+```
+
+## Wire Helpers
+
+`Command` and `Message` carry symmetric JSON helpers so you don't have to reach
+for the mapper directly:
+
+```kotlin
+val cmd = Command.fromJson(text)   // ["REQ", "sub", {...}] -> ReqCmd
+val json = EoseMessage("sub").toJson()
+val msg = Message.fromJson(json)
+```
+
+Build standardized OK/CLOSED reasons with `MachineReadablePrefix` instead of
+hand-writing the NIP-01 prefixes (`auth-required:`, `restricted:`, `error:`, …):
+
+```kotlin
+session.send(OkMessage.rejected(event.id, MachineReadablePrefix.AUTH_REQUIRED, "log in first"))
+session.send(ClosedMessage.of(subId, MachineReadablePrefix.RESTRICTED, "not allowed yet"))
+MachineReadablePrefix.parse("rate-limited: slow down") // -> RATE_LIMITED
+```
+
 ## Testing
 
 ```kotlin
@@ -194,19 +260,26 @@ quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/
 │   ├── NostrServer.kt          # Main entry point
 │   ├── RelaySession.kt         # Per-connection handler
 │   ├── LiveEventStore.kt       # Reactive event streaming
-│   ├── IRelayPolicy.kt         # Policy interface + PolicyResult
+│   ├── IRelayPolicy.kt         # Policy interface + PolicyResult + onAuthenticated
 │   └── policies/
 │       ├── EmptyPolicy.kt      # Accept everything
 │       ├── VerifyPolicy.kt     # Signature verification (default)
-│       ├── FullAuthPolicy.kt   # NIP-42 auth required
+│       ├── FullAuthPolicy.kt   # NIP-42 auth required (override onAuthenticated to bridge)
 │       └── PolicyStack.kt      # Chain multiple policies
+├── relay/commands/
+│   ├── toRelay/Command.kt      # Command.fromJson / toJson
+│   └── toClient/
+│       ├── Message.kt          # Message.fromJson / toJson
+│       └── MachineReadablePrefix.kt # Typed OK/CLOSED reason prefixes
 ├── store/
 │   ├── IEventStore.kt          # Storage interface
 │   └── sqlite/
 │       ├── EventStore.kt       # Public SQLite store wrapper
 │       ├── SQLiteEventStore.kt # Full implementation
 │       └── IndexingStrategy.kt # Index configuration
-└── relay/filters/
-    ├── Filter.kt               # NIP-01 subscription filters
-    └── FilterMatcher.kt        # Event-to-filter matching
+├── relay/filters/
+│   ├── Filter.kt               # NIP-01 subscription filters
+│   └── FilterMatcher.kt        # Event-to-filter matching
+└── ../nip50Search/
+    └── SearchQuery.kt          # NIP-50 search-string parser
 ```
