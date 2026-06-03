@@ -26,8 +26,12 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.TooltipArea
+import androidx.compose.foundation.TooltipPlacement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -40,11 +44,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -434,7 +440,7 @@ private fun SidebarAccountHeader(
 /**
  * A single navigation item row with icon + optional label.
  */
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun SidebarNavItem(
     icon: MaterialSymbol,
@@ -468,48 +474,88 @@ private fun SidebarNavItem(
             else -> MaterialTheme.colorScheme.onSurfaceVariant
         }
 
-    Row(
+    val itemRow: @Composable () -> Unit = {
+        Row(
+            modifier =
+                Modifier
+                    .then(if (expanded) Modifier.fillMaxWidth() else Modifier.size(40.dp))
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable(onClick = onClick)
+                    .background(backgroundColor)
+                    .onPointerEvent(PointerEventType.Enter) { isHovered = true }
+                    .onPointerEvent(PointerEventType.Exit) { isHovered = false }
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = if (expanded) Arrangement.Start else Arrangement.Center,
+        ) {
+            Icon(
+                icon,
+                contentDescription = if (!expanded) label else null,
+                tint = iconTint,
+                modifier = Modifier.size(24.dp),
+            )
+
+            AnimatedVisibility(
+                visible = expanded,
+                enter = fadeIn(tween(200, delayMillis = 100)),
+                exit = fadeOut(tween(100)),
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (isActive && !muted) FontWeight.SemiBold else FontWeight.Normal,
+                    color = textColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(start = 12.dp),
+                )
+            }
+        }
+    }
+
+    Box(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 2.dp)
-                .clip(MaterialTheme.shapes.small)
-                .clickable(onClick = onClick)
-                .background(backgroundColor)
-                .onPointerEvent(PointerEventType.Enter) { isHovered = true }
-                .onPointerEvent(PointerEventType.Exit) { isHovered = false }
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+                .padding(horizontal = 8.dp, vertical = 2.dp),
+        contentAlignment = if (expanded) Alignment.CenterStart else Alignment.Center,
     ) {
-        Icon(
-            icon,
-            contentDescription = if (!expanded) label else null,
-            tint = iconTint,
-            modifier = Modifier.size(24.dp),
-        )
-
-        AnimatedVisibility(
-            visible = expanded,
-            enter = fadeIn(tween(200, delayMillis = 100)),
-            exit = fadeOut(tween(100)),
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = if (isActive && !muted) FontWeight.SemiBold else FontWeight.Normal,
-                color = textColor,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 12.dp),
-            )
+        if (!expanded) {
+            TooltipArea(
+                tooltip = { SidebarTooltip(label) },
+                tooltipPlacement =
+                    TooltipPlacement.CursorPoint(
+                        alignment = Alignment.BottomEnd,
+                        offset = DpOffset(8.dp, 0.dp),
+                    ),
+            ) {
+                itemRow()
+            }
+        } else {
+            itemRow()
         }
+    }
+}
+
+@Composable
+private fun SidebarTooltip(text: String) {
+    Surface(
+        shape = RoundedCornerShape(4.dp),
+        color = MaterialTheme.colorScheme.inverseSurface,
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            color = MaterialTheme.colorScheme.inverseOnSurface,
+            style = MaterialTheme.typography.bodySmall,
+        )
     }
 }
 
 /**
  * A custom feed item in the sidebar.
  */
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun SidebarFeedItem(
     feed: FeedDefinition,
@@ -540,48 +586,73 @@ private fun SidebarFeedItem(
             MaterialTheme.colorScheme.onSurfaceVariant
         }
 
-    Row(
+    val itemRow: @Composable () -> Unit = {
+        Row(
+            modifier =
+                Modifier
+                    .then(if (expanded) Modifier.fillMaxWidth() else Modifier.size(40.dp))
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable(onClick = onClick)
+                    .background(backgroundColor)
+                    .onPointerEvent(PointerEventType.Enter) { isHovered = true }
+                    .onPointerEvent(PointerEventType.Exit) { isHovered = false }
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = if (expanded) Arrangement.Start else Arrangement.Center,
+        ) {
+            if (feed.emoji.isNotEmpty() && expanded) {
+                Text(
+                    text = feed.emoji,
+                    modifier = Modifier.size(24.dp),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            } else {
+                Icon(
+                    MaterialSymbols.AutoMirrored.Feed,
+                    contentDescription = if (!expanded) feed.name else null,
+                    tint = iconTint,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+
+            AnimatedVisibility(
+                visible = expanded,
+                enter = fadeIn(tween(200, delayMillis = 100)),
+                exit = fadeOut(tween(100)),
+            ) {
+                Text(
+                    text = feed.name.ifEmpty { "Feed" },
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
+                    color = textColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(start = 12.dp),
+                )
+            }
+        }
+    }
+
+    Box(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 2.dp)
-                .clip(MaterialTheme.shapes.small)
-                .clickable(onClick = onClick)
-                .background(backgroundColor)
-                .onPointerEvent(PointerEventType.Enter) { isHovered = true }
-                .onPointerEvent(PointerEventType.Exit) { isHovered = false }
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+                .padding(horizontal = 8.dp, vertical = 2.dp),
+        contentAlignment = if (expanded) Alignment.CenterStart else Alignment.Center,
     ) {
-        if (feed.emoji.isNotEmpty() && expanded) {
-            Text(
-                text = feed.emoji,
-                modifier = Modifier.size(24.dp),
-                style = MaterialTheme.typography.titleMedium,
-            )
+        if (!expanded) {
+            TooltipArea(
+                tooltip = { SidebarTooltip(feed.name.ifEmpty { "Feed" }) },
+                tooltipPlacement =
+                    TooltipPlacement.CursorPoint(
+                        alignment = Alignment.BottomEnd,
+                        offset = DpOffset(8.dp, 0.dp),
+                    ),
+            ) {
+                itemRow()
+            }
         } else {
-            Icon(
-                MaterialSymbols.AutoMirrored.Feed,
-                contentDescription = if (!expanded) feed.name else null,
-                tint = iconTint,
-                modifier = Modifier.size(24.dp),
-            )
-        }
-
-        AnimatedVisibility(
-            visible = expanded,
-            enter = fadeIn(tween(200, delayMillis = 100)),
-            exit = fadeOut(tween(100)),
-        ) {
-            Text(
-                text = feed.name.ifEmpty { "Feed" },
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
-                color = textColor,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 12.dp),
-            )
+            itemRow()
         }
     }
 }
