@@ -92,7 +92,13 @@ class ChatroomNip04HistorySubAssembler(
     private val stalledRelays = ConcurrentHashMap<ConvoKey, MutableSet<NormalizedRelayUrl>>()
 
     private val windowLoad = WindowLoadTracker("convo.nip04.history", tracksReqSends = true, onAbandoned = ::onRelaysStalled)
-    val loadingMore: StateFlow<Boolean> = windowLoad.loading
+
+    // Exposed instead of windowLoad.loading directly: that flow starts `true` (it assumes a load is in
+    // flight from construction). Wired straight through, its `true` would wedge the scroll-driven
+    // loader — whose gate is `!loading` — so the first loadMore could never fire. This starts false and
+    // only goes true once paging actually begins (mirrored from windowLoad by the done collector).
+    private val _loadingMore = MutableStateFlow(false)
+    val loadingMore: StateFlow<Boolean> = _loadingMore.asStateFlow()
 
     private val _exhausted = MutableStateFlow(false)
     val exhausted: StateFlow<Boolean> = _exhausted.asStateFlow()
@@ -118,6 +124,12 @@ class ChatroomNip04HistorySubAssembler(
 
     @Volatile
     private var doneJob: Job? = null
+
+    // Whether a paging window is currently running. We track it ourselves rather than reading
+    // windowLoad.loading (which starts `true` before any window exists), so the first loadMore actually
+    // starts the window instead of mistaking the construction-time `true` for an in-flight one.
+    @Volatile
+    private var windowActive = false
 
     private fun startUntil() = TimeUtils.now() - AccountGiftWrapsEoseManager.LIVE_TAIL_SECONDS
 
@@ -172,8 +184,14 @@ class ChatroomNip04HistorySubAssembler(
             ensureDoneCollector(it)
             // One window spanning the whole per-relay pagination: it settles a relay only on that relay's
             // empty-EOSE (done) or when it goes silent/stalled, never on a mid-history page, so the
-            // spinner tracks "is anything still advancing" rather than any single round.
-            if (!windowLoad.loading.value) windowLoad.startLoading(it)
+            // spinner tracks "is anything still advancing" rather than any single round. Start it only if
+            // none is running — a re-entrant loadMore (the scroll loader re-firing mid-pagination) must
+            // not reset the window and forget the relays that already finished.
+            if (!windowActive) {
+                windowActive = true
+                _loadingMore.value = true
+                windowLoad.startLoading(it)
+            }
             windowLoad.setExpectedRelays(fullRelays)
         }
         publishProgress()
@@ -181,15 +199,18 @@ class ChatroomNip04HistorySubAssembler(
         invalidateFilters()
     }
 
-    // Flips [exhausted] when the window settles (every relay done or stalled) and back to false when a
-    // fresh page starts. Tied to the spinner so "nothing is advancing" and "caught up" stay consistent.
+    // Mirrors the window's loading state into [_loadingMore] and, when it settles (every relay done or
+    // stalled), flips [exhausted] and clears [windowActive] so the next loadMore can start a fresh window.
     private fun ensureDoneCollector(scope: CoroutineScope) {
         if (doneJob?.isActive == true) return
         doneJob =
             scope.launch {
                 var wasLoading = false
                 windowLoad.loading.collect { loading ->
+                    _loadingMore.value = loading && windowActive
                     if (!loading && wasLoading) {
+                        windowActive = false
+                        _loadingMore.value = false
                         activeConvo?.let { exhaustedByConvo[it] = true }
                         _exhausted.value = true
                         publishProgress()
