@@ -101,6 +101,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.ui.elements.BoostedMark
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.feeds.NewPostsChip
+import com.vitorpamplona.amethyst.commons.ui.feeds.StickToTopOnPrepend
 import com.vitorpamplona.amethyst.commons.ui.feeds.rememberNewPostsChipState
 import com.vitorpamplona.amethyst.commons.ui.layouts.GenericRepostLayout
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
@@ -681,6 +682,14 @@ fun FeedScreen(
         targetValue = if (searchActive) 300.dp else 60.dp,
         animationSpec = tween(200),
     )
+
+    // Auto-snap to position 0 when fresh events prepend AND the user was
+    // already at the top. Without this, Compose's stable-key diff keeps
+    // the previously-visible top item anchored, pushing the new items
+    // silently above the viewport — the root cause of the "stale feed on
+    // launch" perception. Mutually exclusive with the NewPostsChip below,
+    // which handles the case where the user is scrolled away from top.
+    StickToTopOnPrepend(viewModel.feedState, homeFeedLazyListState)
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Layer 1: Feed content (scrollable, behind scrim)
