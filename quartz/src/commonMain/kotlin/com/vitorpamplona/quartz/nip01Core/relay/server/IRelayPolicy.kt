@@ -92,6 +92,17 @@ interface IRelayPolicy {
     ) {}
 
     /**
+     * Rolls back an authentication that [accept] granted but [onAuthenticated]
+     * then rejected by throwing. The engine calls this so the connection does
+     * not stay authenticated after a failing `OK` — preserving the invariant
+     * that a client treated as logged in is exactly one that received `OK true`.
+     *
+     * The default implementation does nothing; [com.vitorpamplona.quartz.nip01Core.relay.server.policies.FullAuthPolicy]
+     * overrides it to drop the pubkey from its authenticated set.
+     */
+    fun onAuthenticationFailed(pubKey: HexKey) {}
+
+    /**
      * Filters a live event before it is forwarded to a subscriber.
      *
      * Called for each event that matches a subscription's filters. Return

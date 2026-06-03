@@ -56,6 +56,10 @@ class PolicyStack(
         policies.forEach { it.onAuthenticated(pubKey, event) }
     }
 
+    override fun onAuthenticationFailed(pubKey: HexKey) {
+        policies.forEach { it.onAuthenticationFailed(pubKey) }
+    }
+
     private inline fun <T : Command> runPolicies(
         initialCmd: T,
         operation: (IRelayPolicy, T) -> PolicyResult<T>,

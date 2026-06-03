@@ -169,7 +169,7 @@ val server = NostrServer(
 )
 ```
 
-`FullAuthPolicy` already implements the full NIP-42 challenge/verify handshake — you should not re-implement it. To bridge auth to an external system (e.g. exchange the verified event for a backend JWT), override the `suspend` `onAuthenticated` hook. It runs after the NIP-42 checks pass but before the success `OK` is sent, so it can do network/disk I/O; throwing from it turns the AUTH into a failing `OK false`:
+`FullAuthPolicy` already implements the full NIP-42 challenge/verify handshake — you should not re-implement it. To bridge auth to an external system (e.g. exchange the verified event for a backend JWT), override the `suspend` `onAuthenticated` hook. It runs after the NIP-42 checks pass but before the success `OK` is sent, so it can do network/disk I/O; throwing from it turns the AUTH into a failing `OK false` **and rolls the authentication back** (the connection is not left logged in behind a false `OK`):
 
 ```kotlin
 class JwtAuthPolicy(

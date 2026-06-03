@@ -201,6 +201,14 @@ class RelaySession(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
+            // The hook rejected the login: undo whatever accept() committed
+            // so the connection isn't left authenticated behind a false OK.
+            // Guard the rollback so a misbehaving policy can't also swallow
+            // the failing OK and leave the client without a reply.
+            try {
+                policy.onAuthenticationFailed(cmd.event.pubKey)
+            } catch (_: Exception) {
+            }
             send(OkMessage(cmd.event.id, false, "error: ${e.message ?: "authentication failed"}"))
             return
         }

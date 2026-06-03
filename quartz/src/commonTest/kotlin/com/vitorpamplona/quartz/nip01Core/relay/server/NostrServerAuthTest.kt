@@ -589,9 +589,39 @@ class NostrServerAuthTest {
             assertEquals(1, okMessages.size)
             assertTrue(okMessages[0].contains(",false,"))
             assertTrue(okMessages[0].contains("backend rejected user"))
-            // The pubkey is still recorded by accept(); the hook governs the OK,
-            // not the authenticated-set membership.
-            assertTrue((session.policy as FullAuthPolicy).authenticatedUsers.contains(pubkey))
+            // A failing hook must roll back the authentication: a false OK and a
+            // still-authenticated connection would be an auth bypass.
+            val authPolicy = session.policy as FullAuthPolicy
+            assertFalse(authPolicy.isAuthenticated())
+            assertFalse(authPolicy.authenticatedUsers.contains(pubkey))
+
+            server.close()
+        }
+
+    @Test
+    fun commandsRejectedAfterFailedAuthHook() =
+        runTest {
+            val policy =
+                object : FullAuthPolicy(relayUrl) {
+                    override suspend fun onAuthenticated(
+                        pubKey: String,
+                        event: RelayAuthEvent,
+                    ): Unit = throw IllegalStateException("backend rejected user")
+                }
+
+            val dispatcher = UnconfinedTestDispatcher(testScheduler)
+            val server = createServer(dispatcher = dispatcher, policyBuilder = { policy })
+            val collector = MessageCollector()
+            val session = server.connect(collector.sendCallback)
+
+            val msg = OptimizedJsonMapper.fromJsonToMessage(collector.messages[0]) as AuthMessage
+            session.receive(authJson(authEvent(challenge = msg.challenge)))
+
+            // After a failed auth hook, a privileged REQ must still be gated.
+            session.receive("""["REQ","sub1",{"kinds":[1]}]""")
+            val closed = collector.rawMessagesContaining("CLOSED")
+            assertEquals(1, closed.size)
+            assertTrue(closed[0].contains("auth-required:"))
 
             server.close()
         }

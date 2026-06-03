@@ -109,5 +109,9 @@ open class FullAuthPolicy(
             PolicyResult.Rejected("auth-required: this relay requires authentication")
         }
 
+    override fun onAuthenticationFailed(pubKey: HexKey) {
+        authenticatedUsers.remove(pubKey)
+    }
+
     override fun canSendToSession(event: Event) = true
 }
