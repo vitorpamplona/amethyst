@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.server.policies
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
@@ -42,13 +42,16 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.RelayLimits
  * caps ([RelayLimits.maxMessageLength], [RelayLimits.maxSubscriptions]) are
  * enforced through the [acceptMessage] / [acceptSubscription] policy hooks, so
  * everything limit-related composes uniformly across a [PolicyStack].
+ *
+ * Each check is expressed as a "rejection reason or null" helper; the command
+ * `accept` overloads just wrap a non-null reason in [PolicyResult.Rejected].
  */
 class LimitsPolicy(
     private val limits: RelayLimits,
 ) : PassThroughPolicy() {
     override fun acceptMessage(message: String): String? {
         val max = limits.maxMessageLength ?: return null
-        return if (message.length > max) MachineReadablePrefix.INVALID.format("message too large (max $max)") else null
+        return if (message.length > max) invalid("message too large (max $max)") else null
     }
 
     override fun acceptSubscription(
@@ -63,48 +66,40 @@ class LimitsPolicy(
         }
     }
 
-    override fun accept(cmd: EventCmd): PolicyResult<EventCmd> {
-        val event = cmd.event
-        limits.maxContentLength?.let {
-            if (event.content.length > it) return reject("content too large (max $it)")
-        }
-        limits.maxEventTags?.let {
-            if (event.tags.size > it) return reject("too many tags (max $it)")
-        }
-        limits.createdAtLowerLimit?.let {
-            if (event.createdAt < it) return reject("created_at is before the relay's lower limit")
-        }
-        limits.createdAtUpperLimit?.let {
-            if (event.createdAt > it) return reject("created_at is after the relay's upper limit")
-        }
-        return PolicyResult.Accepted(cmd)
-    }
+    override fun accept(cmd: EventCmd): PolicyResult<EventCmd> = eventRejection(cmd.event)?.let { PolicyResult.Rejected(it) } ?: PolicyResult.Accepted(cmd)
 
     override fun accept(cmd: ReqCmd): PolicyResult<ReqCmd> {
-        rejectSubId<ReqCmd>(cmd.subId)?.let { return it }
-        rejectFilterCount<ReqCmd>(cmd.filters)?.let { return it }
+        subscriptionRejection(cmd.subId, cmd.filters)?.let { return PolicyResult.Rejected(it) }
         val clamped = clampLimits(cmd.filters)
         return PolicyResult.Accepted(if (clamped === cmd.filters) cmd else ReqCmd(cmd.subId, clamped))
     }
 
     override fun accept(cmd: CountCmd): PolicyResult<CountCmd> {
-        rejectSubId<CountCmd>(cmd.queryId)?.let { return it }
-        rejectFilterCount<CountCmd>(cmd.filters)?.let { return it }
+        subscriptionRejection(cmd.queryId, cmd.filters)?.let { return PolicyResult.Rejected(it) }
         val clamped = clampLimits(cmd.filters)
         return PolicyResult.Accepted(if (clamped === cmd.filters) cmd else CountCmd(cmd.queryId, clamped))
     }
 
-    private fun <T : Command> reject(message: String): PolicyResult<T> = PolicyResult.Rejected(MachineReadablePrefix.INVALID.format(message))
-
-    private fun <T : Command> rejectSubId(subId: String): PolicyResult<T>? {
-        val max = limits.maxSubidLength ?: return null
-        return if (subId.length > max) reject("subscription id too long (max $max)") else null
+    /** The reason an EVENT violates a limit, or null when it's within bounds. */
+    private fun eventRejection(event: Event): String? {
+        limits.maxContentLength?.let { if (event.content.length > it) return invalid("content too large (max $it)") }
+        limits.maxEventTags?.let { if (event.tags.size > it) return invalid("too many tags (max $it)") }
+        limits.createdAtLowerLimit?.let { if (event.createdAt < it) return invalid("created_at is before the relay's lower limit") }
+        limits.createdAtUpperLimit?.let { if (event.createdAt > it) return invalid("created_at is after the relay's upper limit") }
+        return null
     }
 
-    private fun <T : Command> rejectFilterCount(filters: List<Filter>): PolicyResult<T>? {
-        val max = limits.maxFilters ?: return null
-        return if (filters.size > max) reject("too many filters (max $max)") else null
+    /** The reason a REQ/COUNT violates a limit, or null when it's within bounds. */
+    private fun subscriptionRejection(
+        subId: String,
+        filters: List<Filter>,
+    ): String? {
+        limits.maxSubidLength?.let { if (subId.length > it) return invalid("subscription id too long (max $it)") }
+        limits.maxFilters?.let { if (filters.size > it) return invalid("too many filters (max $it)") }
+        return null
     }
+
+    private fun invalid(message: String): String = MachineReadablePrefix.INVALID.format(message)
 
     /** Returns the same list reference when nothing changes, so callers can skip rebuilding the command. */
     private fun clampLimits(filters: List<Filter>): List<Filter> {

@@ -25,12 +25,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.LimitsPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
-import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlin.concurrent.atomics.AtomicLong
-import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.coroutines.CoroutineContext
 
 /**
@@ -57,21 +54,17 @@ import kotlin.coroutines.CoroutineContext
  *   subscription caps) and advertised via [RelayLimits.toNip11Limitation].
  *   Null disables limit enforcement.
  */
-@OptIn(ExperimentalAtomicApi::class)
 class NostrServer(
     private val store: IEventStore,
     private val policyBuilder: () -> IRelayPolicy = { VerifyPolicy },
     private val parentContext: CoroutineContext = SupervisorJob(),
     parallelVerify: Boolean = false,
     private val negentropySettings: NegentropySettings = NegentropySettings.Default,
-    private val listener: RelayServerListener = RelayServerListener.None,
+    listener: RelayServerListener = RelayServerListener.None,
     val limits: RelayLimits? = null,
 ) : AutoCloseable {
     /** Scope for all subscriptions. */
     private val scope = CoroutineScope(parentContext + SupervisorJob())
-
-    /** Live count of registered connections; backs [activeConnections]. */
-    private val activeCount = AtomicLong(0L)
 
     /**
      * Group-commit writer shared across every connected session.
@@ -89,11 +82,10 @@ class NostrServer(
 
     private val subStore = LiveEventStore(store, ingest)
 
-    /** Active client sessions keyed by [RelaySession.id]. */
-    private val connections = LargeCache<Long, RelaySession>()
+    private val connections = ConnectionRegistry(listener)
 
     /** Number of connections currently registered with this server. */
-    val activeConnections: Long get() = activeCount.load()
+    val activeConnections: Long get() = connections.active
 
     /**
      * Builds the per-connection policy, prepending a [LimitsPolicy] when
@@ -111,29 +103,17 @@ class NostrServer(
      * @param send Callback the server uses to send JSON messages to this client.
      *             Implementations must be safe to call from any coroutine.
      */
-    fun connect(send: (String) -> Unit): RelaySession {
-        val session =
+    fun connect(send: (String) -> Unit): RelaySession =
+        connections.register(
             RelaySession(
                 policy = buildPolicy(),
                 store = subStore,
                 scope = scope,
                 onSend = send,
-                onClose = { closed ->
-                    // Idempotent: only account for the first teardown of a
-                    // given connection so a double close() can't underflow
-                    // the gauge or double-fire the listener.
-                    if (connections.remove(closed.id) != null) {
-                        activeCount.addAndFetch(-1L)
-                        listener.onDisconnect(closed.id)
-                    }
-                },
+                onClose = { connections.unregister(it.id) },
                 negentropySettings = negentropySettings,
-            )
-        connections.put(session.id, session)
-        activeCount.addAndFetch(1L)
-        listener.onConnect(session.id)
-        return session
-    }
+            ),
+        )
 
     /**
      * Registers a new client connection and serves it for the duration of
@@ -159,12 +139,7 @@ class NostrServer(
      * Shuts down the server, cancelling all subscriptions and closing the store.
      */
     override fun close() {
-        connections.forEach { _, session ->
-            session.cancelAllSubscriptions()
-            listener.onDisconnect(session.id)
-        }
-        connections.clear()
-        activeCount.store(0L)
+        connections.closeAll()
         ingest.close()
         scope.cancel()
         store.close()

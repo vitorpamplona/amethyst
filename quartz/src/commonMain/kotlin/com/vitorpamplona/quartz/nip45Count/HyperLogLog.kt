@@ -131,9 +131,9 @@ object HyperLogLog {
         offset: Int,
     ) {
         if (offset < 0 || offset >= pubKey.size) return
-        val ri = pubKey[offset].toInt() and 0xFF
+        val registerIndex = pubKey[offset].toInt() and 0xFF
         val value = (leadingZeroBits(pubKey, offset + 1) + 1).coerceAtMost(0xFF)
-        if (value > (registers[ri].toInt() and 0xFF)) registers[ri] = value.toByte()
+        if (value > (registers[registerIndex].toInt() and 0xFF)) registers[registerIndex] = value.toByte()
     }
 
     /**
