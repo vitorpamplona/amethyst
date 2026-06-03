@@ -438,7 +438,11 @@ mavenPublishing {
     coordinates(
         groupId = "com.vitorpamplona.quartz",
         artifactId = "quartz",
-        version = "1.11.0",
+        // Default is the production release version. Override with
+        // -PquartzVersion=1.12.0-SNAPSHOT to publish a snapshot; the
+        // Vanniktech plugin routes -SNAPSHOT builds to the separate
+        // Central Portal snapshots repository, never touching releases.
+        version = providers.gradleProperty("quartzVersion").getOrElse("1.11.0"),
     )
 
     // Configure publishing to Maven Central
