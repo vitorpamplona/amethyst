@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip01Core.relay.server.policies
 
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
-import com.vitorpamplona.quartz.nip01Core.relay.server.PolicyResult
 
 /**
  * Operator-controlled kind allow/deny list. Mirrors nostr-rs-relay's

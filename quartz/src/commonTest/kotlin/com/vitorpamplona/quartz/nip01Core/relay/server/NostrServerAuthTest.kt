@@ -31,6 +31,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.FullAuthPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PassThroughPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyResult
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
@@ -530,6 +533,165 @@ class NostrServerAuthTest {
             val events = collector.parsedEventMessages().filterIsInstance<EventMessage>()
             assertEquals(1, events.size)
             assertEquals(pubkey, events[0].event.pubKey)
+
+            server.close()
+        }
+
+    // -- NIP-42: onAuthenticated suspend hook ----------------------------------
+
+    @Test
+    fun authorizeHookRunsAfterSuccessfulAuth() =
+        runTest {
+            var hookPubkey: String? = null
+            val policy =
+                object : FullAuthPolicy(relayUrl) {
+                    override suspend fun authorize(
+                        pubKey: String,
+                        event: RelayAuthEvent,
+                    ) {
+                        hookPubkey = pubKey
+                    }
+                }
+
+            val dispatcher = UnconfinedTestDispatcher(testScheduler)
+            val server = createServer(dispatcher = dispatcher, policyBuilder = { policy })
+            val collector = MessageCollector()
+            val session = server.connect(collector.sendCallback)
+
+            val msg = OptimizedJsonMapper.fromJsonToMessage(collector.messages[0]) as AuthMessage
+            session.receive(authJson(authEvent(challenge = msg.challenge)))
+
+            val okMessages = collector.rawMessagesContaining("OK")
+            assertEquals(1, okMessages.size)
+            assertTrue(okMessages[0].contains(",true,"))
+            assertEquals(pubkey, hookPubkey)
+
+            server.close()
+        }
+
+    @Test
+    fun authorizeThrowTurnsAuthIntoFailingOk() =
+        runTest {
+            val policy =
+                object : FullAuthPolicy(relayUrl) {
+                    override suspend fun authorize(
+                        pubKey: String,
+                        event: RelayAuthEvent,
+                    ): Unit = throw IllegalStateException("backend rejected user")
+                }
+
+            val dispatcher = UnconfinedTestDispatcher(testScheduler)
+            val server = createServer(dispatcher = dispatcher, policyBuilder = { policy })
+            val collector = MessageCollector()
+            val session = server.connect(collector.sendCallback)
+
+            val msg = OptimizedJsonMapper.fromJsonToMessage(collector.messages[0]) as AuthMessage
+            session.receive(authJson(authEvent(challenge = msg.challenge)))
+
+            val okMessages = collector.rawMessagesContaining("OK")
+            assertEquals(1, okMessages.size)
+            assertTrue(okMessages[0].contains(",false,"))
+            assertTrue(okMessages[0].contains("backend rejected user"))
+            // A failing hook must roll back the authentication: a false OK and a
+            // still-authenticated connection would be an auth bypass.
+            val authPolicy = session.policy as FullAuthPolicy
+            assertFalse(authPolicy.isAuthenticated())
+            assertFalse(authPolicy.authenticatedUsers.contains(pubkey))
+
+            server.close()
+        }
+
+    @Test
+    fun commandsRejectedAfterFailedAuthHook() =
+        runTest {
+            val policy =
+                object : FullAuthPolicy(relayUrl) {
+                    override suspend fun authorize(
+                        pubKey: String,
+                        event: RelayAuthEvent,
+                    ): Unit = throw IllegalStateException("backend rejected user")
+                }
+
+            val dispatcher = UnconfinedTestDispatcher(testScheduler)
+            val server = createServer(dispatcher = dispatcher, policyBuilder = { policy })
+            val collector = MessageCollector()
+            val session = server.connect(collector.sendCallback)
+
+            val msg = OptimizedJsonMapper.fromJsonToMessage(collector.messages[0]) as AuthMessage
+            session.receive(authJson(authEvent(challenge = msg.challenge)))
+
+            // After a failed auth hook, a privileged REQ must still be gated.
+            session.receive("""["REQ","sub1",{"kinds":[1]}]""")
+            val closed = collector.rawMessagesContaining("CLOSED")
+            assertEquals(1, closed.size)
+            assertTrue(closed[0].contains("auth-required:"))
+
+            server.close()
+        }
+
+    @Test
+    fun policyRejectingAuthAfterFullAuthLeavesConnectionUnauthenticated() =
+        runTest {
+            // FullAuthPolicy commits the pubkey in accept(); a policy composed
+            // *after* it then rejects the AUTH. The connection must NOT end up
+            // authenticated behind the resulting OK false.
+            val auth = FullAuthPolicy(relayUrl)
+            val rejectAuth =
+                object : PassThroughPolicy() {
+                    override fun accept(cmd: AuthCmd): PolicyResult<AuthCmd> = PolicyResult.Rejected("blocked: auth denied downstream")
+                }
+
+            val dispatcher = UnconfinedTestDispatcher(testScheduler)
+            val server = createServer(dispatcher = dispatcher, policyBuilder = { auth + rejectAuth })
+            val collector = MessageCollector()
+            val session = server.connect(collector.sendCallback)
+
+            val msg = OptimizedJsonMapper.fromJsonToMessage(collector.messages[0]) as AuthMessage
+            session.receive(authJson(authEvent(challenge = msg.challenge)))
+
+            val ok = collector.rawMessagesContaining("OK")
+            assertEquals(1, ok.size)
+            assertTrue(ok[0].contains(",false,"))
+            assertFalse(auth.isAuthenticated())
+            assertFalse(auth.authenticatedUsers.contains(pubkey))
+
+            // And a privileged REQ is still gated.
+            session.receive("""["REQ","sub1",{"kinds":[1]}]""")
+            assertTrue(collector.rawMessagesContaining("CLOSED").any { it.contains("auth-required:") })
+
+            server.close()
+        }
+
+    @Test
+    fun failedReAuthKeepsPreviousValidAuthentication() =
+        runTest {
+            // The same pubkey authenticates successfully, then a second AUTH for
+            // it is rejected downstream. The rollback must not drop the still-valid
+            // authentication the first AUTH established.
+            val auth = FullAuthPolicy(relayUrl)
+            var authAttempts = 0
+            val gate =
+                object : PassThroughPolicy() {
+                    override fun accept(cmd: AuthCmd): PolicyResult<AuthCmd> {
+                        authAttempts++
+                        return if (authAttempts >= 2) PolicyResult.Rejected("blocked: second auth denied") else PolicyResult.Accepted(cmd)
+                    }
+                }
+
+            val dispatcher = UnconfinedTestDispatcher(testScheduler)
+            val server = createServer(dispatcher = dispatcher, policyBuilder = { auth + gate })
+            val collector = MessageCollector()
+            val session = server.connect(collector.sendCallback)
+
+            val msg = OptimizedJsonMapper.fromJsonToMessage(collector.messages[0]) as AuthMessage
+
+            session.receive(authJson(authEvent(challenge = msg.challenge)))
+            assertTrue(auth.authenticatedUsers.contains(pubkey))
+
+            // Second AUTH for the SAME pubkey, rejected downstream.
+            session.receive(authJson(authEvent(challenge = msg.challenge)))
+            assertTrue(auth.isAuthenticated())
+            assertTrue(auth.authenticatedUsers.contains(pubkey))
 
             server.close()
         }

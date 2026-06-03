@@ -18,26 +18,33 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.relay.commands.toClient
+package com.vitorpamplona.quartz.nip01Core.relay.server.backend
 
-import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.databind.SerializerProvider
-import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountResult
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import kotlinx.coroutines.flow.collect
 
-class CountResultSerializer : StdSerializer<CountResult>(CountResult::class.java) {
-    override fun serialize(
-        result: CountResult,
-        gen: JsonGenerator,
-        provider: SerializerProvider,
+/**
+ * Adapts an [EventSource] (the `Flow<Event>` SPI) into the [SessionBackend] the
+ * dispatch engine consumes. Drains the source's flow into the per-event
+ * callback and signals EOSE on completion. The EVENT and negentropy paths use
+ * the [SessionBackend] defaults (reject / empty), so a source relay neither
+ * stores events nor reconciles.
+ */
+class EventSourceBackend(
+    private val source: EventSource,
+) : SessionBackend {
+    override suspend fun query(
+        filters: List<Filter>,
+        onEach: (Event) -> Unit,
+        onEose: () -> Unit,
     ) {
-        // NIP-45 result object: { "count": <int>, "approximate": <bool>?, "hll": <512-hex>? }.
-        gen.writeStartObject()
-        gen.writeNumberField("count", result.count)
-        if (result.approximate) {
-            gen.writeBooleanField("approximate", true)
-        }
-        result.hll?.let { gen.writeStringField("hll", Hex.encode(it)) }
-        gen.writeEndObject()
+        source.events(filters).collect { onEach(it) }
+        onEose()
     }
+
+    override suspend fun count(filters: List<Filter>): Int = source.count(filters)
+
+    override suspend fun countResult(filters: List<Filter>): CountResult = source.countResult(filters)
 }

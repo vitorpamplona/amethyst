@@ -22,8 +22,8 @@ package com.vitorpamplona.geode.policies
 
 import com.vitorpamplona.geode.fixtures.SyntheticEvents
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
-import com.vitorpamplona.quartz.nip01Core.relay.server.PolicyResult
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.KindAllowDenyPolicy
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyResult
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PubkeyAllowDenyPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.RejectFutureEventsPolicy
 import kotlin.test.Test
@@ -156,7 +156,7 @@ class PoliciesTest {
     fun stackedPoliciesAllMustAccept() {
         val now = 1_000L
         val stack =
-            (KindAllowDenyPolicy(allow = setOf(1)) as com.vitorpamplona.quartz.nip01Core.relay.server.IRelayPolicy) +
+            (KindAllowDenyPolicy(allow = setOf(1)) as com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy) +
                 RejectFutureEventsPolicy(maxFutureSeconds = 10, now = { now })
 
         // Allowed kind, in window — accepted.

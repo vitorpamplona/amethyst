@@ -29,15 +29,27 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.server.IRelayPolicy
-import com.vitorpamplona.quartz.nip01Core.relay.server.PolicyResult
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
+import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * Requires authentication for all EVENT, REQ, and COUNT commands.
  * Replicates the previous `requireAuth = true` behavior.
+ *
+ * Implements the full NIP-42 challenge/verify handshake: [onConnect] sends the
+ * [challenge] and [accept] (AuthCmd) validates the returned event (expiration,
+ * freshness, challenge match, relay match). Crucially, [accept] does NOT mutate
+ * state — the pubkey is recorded in [authenticatedUsers] only by [onAuthenticated],
+ * which the engine calls once [accept] *and* the rest of the policy chain have
+ * approved the AUTH. That single, late commit is why there is no rollback to
+ * reason about: a rejected AUTH simply never reaches it.
+ *
+ * To bridge to an external auth system, override [authorize] (a `suspend` hook)
+ * and do the post-verification I/O there — e.g. exchange the verified event for
+ * a backend session token. Throwing from it rejects the login (`OK false`) and
+ * the pubkey is never recorded.
  */
 open class FullAuthPolicy(
     val relay: NormalizedRelayUrl,
@@ -74,10 +86,35 @@ open class FullAuthPolicy(
             return PolicyResult.Rejected("invalid: relay url does not match")
         }
 
-        authenticatedUsers.add(event.pubKey)
-
         return PolicyResult.Accepted(cmd)
     }
+
+    /**
+     * Commits the authentication. The engine calls this only after [accept] and
+     * the whole policy chain have approved the AUTH, so this is the single point
+     * where the pubkey is recorded. It runs [authorize] first (which may throw
+     * to reject) and records the pubkey only on success — the connection is
+     * never left authenticated behind a failing `OK`. `final`: override
+     * [authorize], not this.
+     */
+    final override suspend fun onAuthenticated(
+        pubKey: HexKey,
+        event: RelayAuthEvent,
+    ) {
+        authorize(pubKey, event)
+        authenticatedUsers.add(pubKey)
+    }
+
+    /**
+     * Hook for external authorization once the NIP-42 proof checks out — e.g.
+     * exchange [event] for a backend session token. Throw to reject the login
+     * (the AUTH becomes `OK false` and the pubkey is not recorded). Runs before
+     * the pubkey is committed. The default does nothing.
+     */
+    open suspend fun authorize(
+        pubKey: HexKey,
+        event: RelayAuthEvent,
+    ) {}
 
     override fun accept(cmd: EventCmd): PolicyResult<EventCmd> =
         if (isAuthenticated()) {

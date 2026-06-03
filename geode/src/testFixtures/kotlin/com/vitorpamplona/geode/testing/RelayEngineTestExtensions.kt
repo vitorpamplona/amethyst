@@ -46,7 +46,7 @@ suspend fun RelayEngine.preload(vararg events: Event) = preload(events.toList())
  * (mirrors what a real client would do via an `EVENT` command).
  *
  * Suspends until the relay's `OK` (or `NOTICE`) reply lands, i.e. until
- * the [com.vitorpamplona.quartz.nip01Core.relay.server.IngestQueue] drain
+ * the [com.vitorpamplona.quartz.nip01Core.relay.server.backend.IngestQueue] drain
  * loop has processed the event and fanned it out to active subscribers.
  * Tests that publish-then-subscribe rely on this ordering: otherwise the
  * fire-and-forget submit lets a subscription register *after* publish

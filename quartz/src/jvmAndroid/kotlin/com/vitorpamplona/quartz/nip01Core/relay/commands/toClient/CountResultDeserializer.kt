@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.commands.toClient
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.vitorpamplona.quartz.utils.Hex
 
 class CountResultDeserializer {
     companion object {
@@ -28,6 +29,14 @@ class CountResultDeserializer {
             CountResult(
                 count = jsonObject.get("count")?.asInt() ?: 0,
                 approximate = jsonObject.get("approximate")?.asBoolean() ?: false,
+                hll =
+                    jsonObject.get("hll")?.asText()?.let {
+                        try {
+                            Hex.decode(it)
+                        } catch (_: Exception) {
+                            null
+                        }
+                    },
             )
     }
 }
