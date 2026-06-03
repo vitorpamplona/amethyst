@@ -161,8 +161,10 @@ private const val PREFETCH_OLDER_MESSAGES = 3
  * room, so this advances the shared account-wide history window and the conversation's messages
  * surface as its pages are decrypted.
  *
- * Both protocols advance via their history managers' `loadMore`; the step is gated on BOTH loaders
- * being idle, so it never outruns the slower one, and stops once both report exhausted.
+ * Each protocol advances via its own history manager's `loadMore`, gated only on ITS OWN loader/
+ * exhausted state — so a slow protocol (e.g. NIP-04 waiting on a sluggish correspondent relay) never
+ * holds back the other. NIP-04 then pages every relay independently to completion on its own; gift
+ * wraps stay round-driven and re-step here as the oldest end stays in view.
  */
 @Composable
 private fun LoadOlderMessagesWhenScrolling(
@@ -173,7 +175,7 @@ private fun LoadOlderMessagesWhenScrolling(
     val nip04History = remember(accountViewModel) { accountViewModel.dataSources().chatroom.nip04History }
 
     LaunchedEffect(listState, giftWrapsHistory, nip04History) {
-        combine(
+        val wantMore =
             snapshotFlow {
                 val info = listState.layoutInfo
                 val total = info.totalItemsCount
@@ -181,21 +183,24 @@ private fun LoadOlderMessagesWhenScrolling(
                 // The oldest end is in view (no overflow requirement, so a one-message thread that
                 // can't scroll still qualifies and walks history to its start).
                 total > 0 && lastVisible >= total - PREFETCH_OLDER_MESSAGES
-            },
-            giftWrapsHistory.loadingMore,
-            nip04History.loadingMore,
-            giftWrapsHistory.exhausted,
-            nip04History.exhausted,
-        ) { wantMore, loadingGiftWraps, loadingNip04, giftWrapsExhausted, nip04Exhausted ->
-            // Keep paging while either protocol still has older history to reach.
-            wantMore && !loadingGiftWraps && !loadingNip04 && !(giftWrapsExhausted && nip04Exhausted)
-        }.distinctUntilChanged()
-            .filter { it }
-            .collect {
-                Log.d("DMPagination") { "convo: widen (oldest in view) → loadMore" }
+            }.distinctUntilChanged()
+
+        launch {
+            combine(wantMore, giftWrapsHistory.loadingMore, giftWrapsHistory.exhausted) { want, loading, exhausted ->
+                want && !loading && !exhausted
+            }.distinctUntilChanged().filter { it }.collect {
+                Log.d("DMPagination") { "convo: widen (oldest in view) → giftwrap loadMore" }
                 giftWrapsHistory.loadMore(accountViewModel.userProfile())
+            }
+        }
+        launch {
+            combine(wantMore, nip04History.loadingMore, nip04History.exhausted) { want, loading, exhausted ->
+                want && !loading && !exhausted
+            }.distinctUntilChanged().filter { it }.collect {
+                Log.d("DMPagination") { "convo: widen (oldest in view) → nip04 loadMore" }
                 nip04History.loadMore()
             }
+        }
     }
 }
 
