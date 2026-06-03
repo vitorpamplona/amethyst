@@ -56,22 +56,12 @@ class PolicyStack(
         policies.forEach { it.onAuthenticated(pubKey, event) }
     }
 
-    override fun acceptMessage(message: String): String? {
-        for (policy in policies) {
-            policy.acceptMessage(message)?.let { return it }
-        }
-        return null
-    }
+    override fun acceptMessage(message: String): String? = policies.firstNotNullOfOrNull { it.acceptMessage(message) }
 
     override fun acceptSubscription(
         subId: String,
         openSubscriptions: Int,
-    ): String? {
-        for (policy in policies) {
-            policy.acceptSubscription(subId, openSubscriptions)?.let { return it }
-        }
-        return null
-    }
+    ): String? = policies.firstNotNullOfOrNull { it.acceptSubscription(subId, openSubscriptions) }
 
     private inline fun <T : Command> runPolicies(
         initialCmd: T,

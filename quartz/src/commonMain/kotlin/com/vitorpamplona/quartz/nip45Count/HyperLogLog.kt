@@ -138,7 +138,8 @@ object HyperLogLog {
 
     /**
      * Counts consecutive zero bits (MSB first) from byte [fromByteIndex] to the
-     * end of [bytes]. KMP-safe (no `Integer.numberOfLeadingZeros`).
+     * end of [bytes]. A byte value in 0..255 occupies the low 8 bits of an Int,
+     * so its in-byte leading zeros are `countLeadingZeroBits() - 24`.
      */
     private fun leadingZeroBits(
         bytes: ByteArray,
@@ -150,12 +151,7 @@ object HyperLogLog {
             if (b == 0) {
                 count += 8
             } else {
-                var mask = 0x80
-                while (mask != 0 && (b and mask) == 0) {
-                    count++
-                    mask = mask shr 1
-                }
-                return count
+                return count + b.countLeadingZeroBits() - 24
             }
         }
         return count

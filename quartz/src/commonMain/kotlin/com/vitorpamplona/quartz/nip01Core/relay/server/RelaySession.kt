@@ -214,7 +214,7 @@ class RelaySession(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            send(OkMessage(cmd.event.id, false, "error: ${e.message ?: "authentication failed"}"))
+            send(OkMessage.rejected(cmd.event.id, MachineReadablePrefix.ERROR, e.message ?: "authentication failed"))
             return
         }
 

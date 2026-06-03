@@ -21,11 +21,8 @@
 package com.vitorpamplona.quartz.nip01Core.relay.server
 
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
-import com.vitorpamplona.quartz.nip01Core.relay.server.policies.LimitsPolicy
 import com.vitorpamplona.quartz.nip77Negentropy.NegentropySettings
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlin.coroutines.CoroutineContext
 
 /**
@@ -71,68 +68,11 @@ import kotlin.coroutines.CoroutineContext
  */
 class ReqResponderServer(
     responder: ReqResponder,
-    private val policyBuilder: () -> IRelayPolicy = { EmptyPolicy },
+    policyBuilder: () -> IRelayPolicy = { EmptyPolicy },
     parentContext: CoroutineContext = SupervisorJob(),
-    private val negentropySettings: NegentropySettings = NegentropySettings.Default,
+    negentropySettings: NegentropySettings = NegentropySettings.Default,
     listener: RelayServerListener = RelayServerListener.None,
-    val limits: RelayLimits? = null,
-) : AutoCloseable {
-    /** Scope for all subscriptions. */
-    private val scope = CoroutineScope(parentContext + SupervisorJob())
-
-    private val backend = ReqResponderBackend(responder)
-
-    private val connections = ConnectionRegistry(listener)
-
-    /** Number of connections currently registered with this server. */
-    val activeConnections: Long get() = connections.active
-
-    private fun buildPolicy(): IRelayPolicy {
-        val base = policyBuilder()
-        return if (limits != null) LimitsPolicy(limits) + base else base
-    }
-
-    /**
-     * Registers a new client connection.
-     *
-     * @param send Callback the server uses to send JSON messages to this client.
-     *             Implementations must be safe to call from any coroutine.
-     */
-    fun connect(send: (String) -> Unit): RelaySession =
-        connections.register(
-            RelaySession(
-                policy = buildPolicy(),
-                store = backend,
-                scope = scope,
-                onSend = send,
-                onClose = { connections.unregister(it.id) },
-                negentropySettings = negentropySettings,
-            ),
-        )
-
-    /**
-     * Registers a new client connection and serves it for the duration of
-     * [incoming]. The session is automatically closed when [incoming] returns.
-     *
-     * @param send Callback the server uses to send JSON messages to this client.
-     * @param incoming Suspend block that yields raw JSON strings from the client
-     *                 (e.g., reading WebSocket text frames in a loop).
-     */
-    suspend fun serve(
-        send: (String) -> Unit,
-        incoming: suspend (RelaySession) -> Unit,
-    ) {
-        val session = connect(send)
-        try {
-            incoming(session)
-        } finally {
-            session.close()
-        }
-    }
-
-    /** Shuts down the server, cancelling all subscriptions. */
-    override fun close() {
-        connections.closeAll()
-        scope.cancel()
-    }
+    limits: RelayLimits? = null,
+) : RelayServerBase(policyBuilder, parentContext, negentropySettings, listener, limits) {
+    override val backend: SessionBackend = ReqResponderBackend(responder)
 }

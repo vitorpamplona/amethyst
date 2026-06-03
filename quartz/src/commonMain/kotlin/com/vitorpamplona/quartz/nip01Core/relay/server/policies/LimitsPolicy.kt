@@ -101,21 +101,11 @@ class LimitsPolicy(
 
     private fun invalid(message: String): String = MachineReadablePrefix.INVALID.format(message)
 
-    /** Returns the same list reference when nothing changes, so callers can skip rebuilding the command. */
+    /** Returns the same list reference (no allocation) when no filter needs clamping. */
     private fun clampLimits(filters: List<Filter>): List<Filter> {
         if (limits.maxLimit == null && limits.defaultLimit == null) return filters
-        var changed = false
-        val out =
-            filters.map { f ->
-                val target = targetLimit(f.limit)
-                if (target != f.limit) {
-                    changed = true
-                    f.copy(limit = target)
-                } else {
-                    f
-                }
-            }
-        return if (changed) out else filters
+        if (filters.none { targetLimit(it.limit) != it.limit }) return filters
+        return filters.map { it.copy(limit = targetLimit(it.limit)) }
     }
 
     private fun targetLimit(current: Int?): Int? =
