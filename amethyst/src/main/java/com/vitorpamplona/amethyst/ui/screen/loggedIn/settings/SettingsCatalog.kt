@@ -35,8 +35,12 @@ sealed interface SettingsIcon {
     ) : SettingsIcon
 }
 
-/** One row on the settings screen. [keywordsRes] is an optional comma-separated
- *  list of localized search terms describing the destination sub-screen. */
+/**
+ * One row on the settings screen. [keywordsRes] is an optional resource of extra search
+ * terms for the destination sub-screen (English, non-translated). The value is split into
+ * words on any whitespace/punctuation run and each word is independently prefix-matched, so
+ * separators are interchangeable and multi-word phrases ("zap split") carry no phrase grouping.
+ */
 data class SettingsEntry(
     @StringRes val titleRes: Int,
     val icon: SettingsIcon,

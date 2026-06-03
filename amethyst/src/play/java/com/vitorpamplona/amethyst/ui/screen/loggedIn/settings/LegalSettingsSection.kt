@@ -33,6 +33,7 @@ fun legalSettingsCategory(uriHandler: UriHandler): SettingsCategory? =
                 SettingsEntry(
                     titleRes = R.string.privacy_policy,
                     icon = SettingsIcon.Symbol(MaterialSymbols.Lock),
+                    keywordsRes = R.string.privacy_policy_search_keywords,
                     onClick = {
                         runCatching {
                             uriHandler.openUri(
@@ -44,6 +45,7 @@ fun legalSettingsCategory(uriHandler: UriHandler): SettingsCategory? =
                 SettingsEntry(
                     titleRes = R.string.child_safety_standards,
                     icon = SettingsIcon.Symbol(MaterialSymbols.Shield),
+                    keywordsRes = R.string.child_safety_search_keywords,
                     onClick = {
                         runCatching {
                             uriHandler.openUri(
