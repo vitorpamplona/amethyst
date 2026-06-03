@@ -538,12 +538,12 @@ class NostrServerAuthTest {
     // -- NIP-42: onAuthenticated suspend hook ----------------------------------
 
     @Test
-    fun onAuthenticatedHookRunsAfterSuccessfulAuth() =
+    fun authorizeHookRunsAfterSuccessfulAuth() =
         runTest {
             var hookPubkey: String? = null
             val policy =
                 object : FullAuthPolicy(relayUrl) {
-                    override suspend fun onAuthenticated(
+                    override suspend fun authorize(
                         pubKey: String,
                         event: RelayAuthEvent,
                     ) {
@@ -568,11 +568,11 @@ class NostrServerAuthTest {
         }
 
     @Test
-    fun onAuthenticatedThrowTurnsAuthIntoFailingOk() =
+    fun authorizeThrowTurnsAuthIntoFailingOk() =
         runTest {
             val policy =
                 object : FullAuthPolicy(relayUrl) {
-                    override suspend fun onAuthenticated(
+                    override suspend fun authorize(
                         pubKey: String,
                         event: RelayAuthEvent,
                     ): Unit = throw IllegalStateException("backend rejected user")
@@ -604,7 +604,7 @@ class NostrServerAuthTest {
         runTest {
             val policy =
                 object : FullAuthPolicy(relayUrl) {
-                    override suspend fun onAuthenticated(
+                    override suspend fun authorize(
                         pubKey: String,
                         event: RelayAuthEvent,
                     ): Unit = throw IllegalStateException("backend rejected user")

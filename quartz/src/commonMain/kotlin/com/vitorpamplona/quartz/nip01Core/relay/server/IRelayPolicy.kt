@@ -70,37 +70,25 @@ interface IRelayPolicy {
     fun accept(cmd: AuthCmd): PolicyResult<AuthCmd>
 
     /**
-     * Called after an AUTH command has been [accept]ed, before the success
-     * `OK` is sent. This is the place to run any post-authentication side
-     * effects that need network or disk I/O — for example, exchanging the
-     * verified NIP-42 event for a backend session token — without leaking
-     * that logic out of the policy and into the transport layer.
+     * Called once an AUTH command has been [accept]ed by this policy *and* the
+     * rest of the policy chain, before the success `OK` is sent. This is where
+     * a policy commits the authentication and/or runs post-verification side
+     * effects that need network or disk I/O — e.g. exchanging the verified
+     * NIP-42 event for a backend session token — without leaking that logic into
+     * the transport layer.
      *
-     * The synchronous [accept] does the cheap, deterministic NIP-42 checks
-     * (challenge, relay, timestamp); this suspend hook does the expensive,
-     * external part. Throwing here turns the AUTH into a failing `OK false`,
-     * so a bridge can reject a verified-but-unauthorized user by throwing.
+     * Because it runs only after the whole chain approved the AUTH, throwing
+     * here cleanly fails the login: the AUTH becomes `OK false` and, since the
+     * commit lives here too, the connection is never left authenticated. The
+     * default implementation does nothing.
      *
-     * The default implementation does nothing.
-     *
-     * @param pubKey The pubkey that just authenticated.
+     * @param pubKey The pubkey being authenticated.
      * @param event The verified NIP-42 auth event.
      */
     suspend fun onAuthenticated(
         pubKey: HexKey,
         event: RelayAuthEvent,
     ) {}
-
-    /**
-     * Rolls back an authentication that [accept] granted but [onAuthenticated]
-     * then rejected by throwing. The engine calls this so the connection does
-     * not stay authenticated after a failing `OK` — preserving the invariant
-     * that a client treated as logged in is exactly one that received `OK true`.
-     *
-     * The default implementation does nothing; [com.vitorpamplona.quartz.nip01Core.relay.server.policies.FullAuthPolicy]
-     * overrides it to drop the pubkey from its authenticated set.
-     */
-    fun onAuthenticationFailed(pubKey: HexKey) {}
 
     /**
      * Inspects a raw inbound message before it is parsed. Return a reason

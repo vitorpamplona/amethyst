@@ -56,10 +56,6 @@ class PolicyStack(
         policies.forEach { it.onAuthenticated(pubKey, event) }
     }
 
-    override fun onAuthenticationFailed(pubKey: HexKey) {
-        policies.forEach { it.onAuthenticationFailed(pubKey) }
-    }
-
     override fun acceptMessage(message: String): String? {
         for (policy in policies) {
             policy.acceptMessage(message)?.let { return it }

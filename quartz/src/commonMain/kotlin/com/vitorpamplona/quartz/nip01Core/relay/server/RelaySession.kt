@@ -201,32 +201,19 @@ class RelaySession(
     private suspend fun handleAuth(cmd: AuthCmd) {
         val result = policy.accept(cmd)
         if (result is PolicyResult.Rejected) {
-            // A composed policy may have run *after* one that already committed
-            // the authentication (e.g. FullAuthPolicy) and then rejected. Roll
-            // back so a rejected AUTH never leaves the connection authenticated.
-            policy.onAuthenticationFailed(cmd.event.pubKey)
             send(OkMessage(cmd.event.id, false, result.reason))
             return
         }
 
-        // Cheap NIP-42 checks passed. Run the policy's post-auth hook
-        // (which may do network/disk I/O, e.g. exchange the verified
-        // event for a backend session token) before confirming. A
-        // throw turns the AUTH into a failing OK so the client knows
-        // the login did not complete.
+        // The whole policy chain validated the AUTH. onAuthenticated runs any
+        // post-verification I/O (e.g. exchanging the verified event for a
+        // backend token) AND is where a policy commits the authentication, so a
+        // throw here cleanly fails the login — nothing was committed to undo.
         try {
             policy.onAuthenticated(cmd.event.pubKey, cmd.event)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            // The hook rejected the login: undo whatever accept() committed
-            // so the connection isn't left authenticated behind a false OK.
-            // Guard the rollback so a misbehaving policy can't also swallow
-            // the failing OK and leave the client without a reply.
-            try {
-                policy.onAuthenticationFailed(cmd.event.pubKey)
-            } catch (_: Exception) {
-            }
             send(OkMessage(cmd.event.id, false, "error: ${e.message ?: "authentication failed"}"))
             return
         }
