@@ -831,7 +831,7 @@ fun FeedScreen(
                 modifier =
                     Modifier
                         .align(Alignment.TopCenter)
-                        .offset(y = headerSpacerHeight + 8.dp),
+                        .offset(y = headerSpacerHeight + 16.dp),
             )
         }
 
