@@ -200,6 +200,9 @@ class ChatroomNip04HistorySubAssembler(
             if (!windowActive) {
                 windowActive = true
                 windowFloor = startUntil()
+                // Populate the relay count BEFORE raising the spinner, so the status card never renders
+                // a "loading from 0 relays" frame between loadingMore flipping true and the first progress.
+                publishProgress()
                 _loadingMore.value = true
                 windowLoad.startLoading(it)
             }

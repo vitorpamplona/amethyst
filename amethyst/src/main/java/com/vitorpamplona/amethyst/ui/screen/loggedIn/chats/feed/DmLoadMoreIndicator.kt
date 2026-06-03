@@ -162,6 +162,9 @@ private fun historySubtitle(
     relayCount: Int,
     reachedBack: Long?,
 ): String {
+    // A transient frame can carry loading=true with relayCount=0 (the count updates a beat after the
+    // spinner flips, and again as the last relay settles); don't render a nonsensical "0 relays".
+    if (relayCount <= 0) return protocolTag
     val backLabel =
         remember(reachedBack) {
             reachedBack?.let { SimpleDateFormat("MMM yyyy", Locale.getDefault()).format(Date(it * 1000)) }

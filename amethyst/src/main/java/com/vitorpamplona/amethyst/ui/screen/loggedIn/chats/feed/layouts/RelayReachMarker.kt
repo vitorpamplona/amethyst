@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -58,6 +59,11 @@ data class RelayReach(
  * As a relay loads older history its reached cursor drops, so the caller places this marker further
  * down (older) in the stream — relays that race ahead leave their marker deep while slower relays'
  * markers trail higher up, converging as they catch up.
+ *
+ * Each state in the gap renders one compact label: a relay's host name when it is the only one of its
+ * state there (the usual converged case, where each relay sits at its own depth), or just a count when
+ * several pile up at the same depth (e.g. all nine clustered at the live-tail floor on first open) so
+ * the line can't grow into an unreadable comma list.
  */
 @Composable
 fun RelayReachMarker(entries: List<RelayReach>) {
@@ -65,20 +71,21 @@ fun RelayReachMarker(entries: List<RelayReach>) {
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
         modifier = HalfPadding,
     ) {
         HorizontalDivider(modifier = Modifier.weight(1f), thickness = DividerThickness)
-        // Group by state so a gap shared by several relays reads as e.g. "✓ vitor, nos.lol   ↓ wine".
         entries
             .groupBy { it.state }
             .toSortedMap(compareBy { it.ordinal })
             .forEach { (state, list) ->
                 Text(
-                    text = glyph(state) + " " + list.joinToString(", ") { it.name },
+                    text = glyph(state) + " " + if (list.size == 1) list.first().name else list.size.toString(),
                     color = color(state),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         HorizontalDivider(modifier = Modifier.weight(1f), thickness = DividerThickness)
