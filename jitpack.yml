@@ -1,4 +1,6 @@
 jdk:
   - openjdk21
+before_install:
+  - echo 'allprojects { tasks.matching { it.name.toLowerCase().startsWith("sign") }.configureEach { it.enabled = false } }' > nosign.init.gradle
 install:
-  - ./gradlew :quartz:publishToMavenLocal
+  - ./gradlew :quartz:publishKotlinMultiplatformPublicationToMavenLocal :quartz:publishJvmPublicationToMavenLocal --init-script nosign.init.gradle
