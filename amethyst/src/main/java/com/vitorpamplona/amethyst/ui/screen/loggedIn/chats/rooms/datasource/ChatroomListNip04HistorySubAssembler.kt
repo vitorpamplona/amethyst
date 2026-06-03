@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -93,6 +94,11 @@ class ChatroomListNip04HistorySubAssembler(
 
     @Volatile
     private var roundJob: Job? = null
+
+    // Backoff retry after a no-progress, not-exhausted round (relays failed to answer cleanly rather
+    // than empty-EOSE'ing), so a transient connect-storm failure recovers instead of stalling forever.
+    @Volatile
+    private var retryJob: Job? = null
 
     @Volatile
     private var lastRoundUser: User? = null
@@ -187,7 +193,23 @@ class ChatroomListNip04HistorySubAssembler(
                             _exhausted.value = exhaustedNow
                             _reachedBack.value = pager.deepestUntil(user.pubkeyHex, asked, startUntil())
                             Log.d("DMPagination") { "[rooms.nip04.history] round done: $count event(s), exhausted=$exhaustedNow" }
-                            if (autoLoadAll && !exhaustedNow) loadMore(user)
+                            if (autoLoadAll && !exhaustedNow) {
+                                loadMore(user)
+                            } else if (!exhaustedNow && count == 0) {
+                                // No progress and not exhausted: relays failed to answer cleanly rather
+                                // than empty-EOSE'ing. Retry after a backoff so a transient failure
+                                // recovers, paced so a rate-limited relay isn't hammered.
+                                retryJob?.cancel()
+                                retryJob =
+                                    scope.launch {
+                                        delay(NO_PROGRESS_RETRY_MS)
+                                        if (!_exhausted.value && !windowLoad.loading.value) {
+                                            lastAskedActive = emptySet()
+                                            Log.d("DMPagination") { "[rooms.nip04.history] retry after no-progress round" }
+                                            loadMore(user)
+                                        }
+                                    }
+                            }
                         }
                     }
                     wasLoading = loading
@@ -266,5 +288,8 @@ class ChatroomListNip04HistorySubAssembler(
 
     companion object {
         private const val PAGE_LIMIT = 10000
+
+        // Backoff before retrying a no-progress, not-exhausted round (transient relay failure).
+        private const val NO_PROGRESS_RETRY_MS = 5_000L
     }
 }

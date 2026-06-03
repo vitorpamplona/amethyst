@@ -41,6 +41,7 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -116,6 +117,12 @@ class AccountGiftWrapsHistoryEoseManager(
 
     @Volatile
     private var roundJob: Job? = null
+
+    // Backoff retry after a round that made no progress but isn't exhausted (relays failed to answer
+    // cleanly — cannot-connect / CLOSE during a connect storm — rather than empty-EOSE'ing). Without it
+    // the no-progress guard would never re-fire and a cold, empty feed would stay on the spinner forever.
+    @Volatile
+    private var retryJob: Job? = null
 
     // The user whose round is in flight, read by the round collector on completion.
     @Volatile
@@ -222,7 +229,24 @@ class AccountGiftWrapsHistoryEoseManager(
                             _exhausted.value = exhaustedNow
                             _reachedBack.value = pager.deepestUntil(user.pubkeyHex, asked, startUntil())
                             Log.d(TAG) { "[giftwrap.history] round done: $count event(s), exhausted=$exhaustedNow" }
-                            if (autoLoadAll && !exhaustedNow) loadMore(user)
+                            if (autoLoadAll && !exhaustedNow) {
+                                loadMore(user)
+                            } else if (!exhaustedNow && count == 0) {
+                                // No progress and not exhausted: the relays failed to answer cleanly
+                                // (cannot-connect / CLOSE) rather than empty-EOSE'ing. Retry after a
+                                // backoff so a transient failure recovers — paced so a fast-CLOSE
+                                // (rate-limited) relay isn't hammered. Stops once exhausted or loading.
+                                retryJob?.cancel()
+                                retryJob =
+                                    scope.launch {
+                                        delay(NO_PROGRESS_RETRY_MS)
+                                        if (!_exhausted.value && !windowLoad.loading.value) {
+                                            lastAskedActive = emptySet()
+                                            Log.d(TAG) { "[giftwrap.history] retry after no-progress round" }
+                                            loadMore(user)
+                                        }
+                                    }
+                            }
                         }
                     }
                     wasLoading = loading
@@ -315,5 +339,8 @@ class AccountGiftWrapsHistoryEoseManager(
         // relay allows it. A relay returning fewer is treated as its own cap, NOT as "nothing more" —
         // only an empty page + EOSE ends a relay.
         private const val PAGE_LIMIT = 10000
+
+        // Backoff before retrying a no-progress, not-exhausted round (transient relay failure).
+        private const val NO_PROGRESS_RETRY_MS = 5_000L
     }
 }
