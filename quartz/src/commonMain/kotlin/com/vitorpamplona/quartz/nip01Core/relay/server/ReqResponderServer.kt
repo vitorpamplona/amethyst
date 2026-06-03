@@ -26,6 +26,8 @@ import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlin.concurrent.atomics.AtomicLong
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.coroutines.CoroutineContext
 
 /**
@@ -62,20 +64,30 @@ import kotlin.coroutines.CoroutineContext
  * @param parentContext Parent coroutine context for all subscriptions.
  * @param negentropySettings NIP-77 tuning. Negentropy is effectively a no-op
  *   here (the snapshot is empty) but the setting is plumbed for symmetry.
+ * @param listener Observability hook fired as connections open and close,
+ *   keyed by [RelaySession.id]. Defaults to a no-op.
  */
+@OptIn(ExperimentalAtomicApi::class)
 class ReqResponderServer(
     responder: ReqResponder,
     private val policyBuilder: () -> IRelayPolicy = { EmptyPolicy },
     parentContext: CoroutineContext = SupervisorJob(),
     private val negentropySettings: NegentropySettings = NegentropySettings.Default,
+    private val listener: RelayConnectionListener = RelayConnectionListener.None,
 ) : AutoCloseable {
     /** Scope for all subscriptions. */
     private val scope = CoroutineScope(parentContext + SupervisorJob())
 
     private val backend = ReqResponderBackend(responder)
 
-    /** Active client sessions keyed by an opaque connection id. */
-    private val connections = LargeCache<Int, RelaySession>()
+    /** Live count of registered connections; backs [activeConnections]. */
+    private val activeCount = AtomicLong(0L)
+
+    /** Active client sessions keyed by [RelaySession.id]. */
+    private val connections = LargeCache<Long, RelaySession>()
+
+    /** Number of connections currently registered with this server. */
+    val activeConnections: Long get() = activeCount.load()
 
     /**
      * Registers a new client connection.
@@ -83,19 +95,27 @@ class ReqResponderServer(
      * @param send Callback the server uses to send JSON messages to this client.
      *             Implementations must be safe to call from any coroutine.
      */
-    fun connect(send: (String) -> Unit) =
-        RelaySession(
-            policy = policyBuilder(),
-            store = backend,
-            scope = scope,
-            onSend = send,
-            onClose = { session ->
-                connections.remove(session.hashCode())
-            },
-            negentropySettings = negentropySettings,
-        ).also { session ->
-            connections.put(session.hashCode(), session)
-        }
+    fun connect(send: (String) -> Unit): RelaySession {
+        val session =
+            RelaySession(
+                policy = policyBuilder(),
+                store = backend,
+                scope = scope,
+                onSend = send,
+                onClose = { closed ->
+                    // Idempotent teardown accounting (see NostrServer.connect).
+                    if (connections.remove(closed.id) != null) {
+                        activeCount.addAndFetch(-1L)
+                        listener.onDisconnect(closed.id)
+                    }
+                },
+                negentropySettings = negentropySettings,
+            )
+        connections.put(session.id, session)
+        activeCount.addAndFetch(1L)
+        listener.onConnect(session.id)
+        return session
+    }
 
     /**
      * Registers a new client connection and serves it for the duration of
@@ -119,8 +139,12 @@ class ReqResponderServer(
 
     /** Shuts down the server, cancelling all subscriptions. */
     override fun close() {
-        connections.forEach { _, session -> session.cancelAllSubscriptions() }
+        connections.forEach { _, session ->
+            session.cancelAllSubscriptions()
+            listener.onDisconnect(session.id)
+        }
         connections.clear()
+        activeCount.store(0L)
         scope.cancel()
     }
 }

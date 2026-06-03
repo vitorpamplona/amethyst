@@ -312,6 +312,30 @@ class MyRelayTest {
 }
 ```
 
+## Observability
+
+Both servers take an optional `RelayConnectionListener` and expose a live
+`activeConnections` gauge. Connections carry a stable, process-unique
+`RelaySession.id` (used to key the server's registry and the listener
+callbacks), so you can correlate the open/close of the same connection in logs
+and metrics:
+
+```kotlin
+val server = NostrServer(
+    store = store,
+    listener = object : RelayConnectionListener {
+        override fun onConnect(connectionId: Long) = metrics.connections.inc()
+        override fun onDisconnect(connectionId: Long) = metrics.connections.dec()
+    },
+)
+server.activeConnections // Long, current count
+```
+
+`onConnect`/`onDisconnect` fire at most once per connection (a double `close()`
+is accounted once) and `onDisconnect` is also fired for any connections still
+open when the server itself is closed. Callbacks can run on any transport
+coroutine — keep them cheap and non-blocking.
+
 ## Key Source Files
 
 ```
@@ -321,7 +345,8 @@ quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/
 │   ├── ReqResponderServer.kt   # Non-storage engine (search/redirector/computed)
 │   ├── ReqResponder.kt         # Flow<Event> REQ-responder SPI
 │   ├── SessionBackend.kt       # Data-plane seam (LiveEventStore / ReqResponderBackend)
-│   ├── RelaySession.kt         # Per-connection handler
+│   ├── RelayConnectionListener.kt # Connection open/close observability hook
+│   ├── RelaySession.kt         # Per-connection handler (stable .id)
 │   ├── LiveEventStore.kt       # Reactive event streaming (storage SessionBackend)
 │   ├── IRelayPolicy.kt         # Policy interface + PolicyResult + onAuthenticated
 │   └── policies/

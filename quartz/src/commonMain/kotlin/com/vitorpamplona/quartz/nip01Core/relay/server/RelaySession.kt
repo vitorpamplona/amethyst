@@ -47,11 +47,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.coroutines.launch
+import kotlin.concurrent.atomics.AtomicLong
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * Represents an active session between a Nostr client and the relay.
  * Each one of these is a connection that can hold many subscriptions
  */
+@OptIn(ExperimentalAtomicApi::class)
 class RelaySession(
     private val store: SessionBackend,
     val policy: IRelayPolicy,
@@ -59,6 +62,13 @@ class RelaySession(
     private val onSend: (String) -> Unit,
     private val onClose: (RelaySession) -> Unit,
     negentropySettings: NegentropySettings = NegentropySettings.Default,
+    /**
+     * Stable, process-unique identifier for this connection. Used by the
+     * server classes to key their connection registry and by
+     * [RelayConnectionListener] callbacks so observers can correlate the
+     * open/close of the same connection. Defaults to a fresh monotonic id.
+     */
+    val id: Long = nextConnectionId(),
 ) : AutoCloseable {
     private val subscriptions = LargeCache<String, Job>()
 
@@ -266,5 +276,12 @@ class RelaySession(
 
     init {
         policy.onConnect(::send)
+    }
+
+    companion object {
+        private val connectionIdSeq = AtomicLong(0L)
+
+        /** Allocates the next process-unique connection id. */
+        fun nextConnectionId(): Long = connectionIdSeq.fetchAndAdd(1L)
     }
 }
