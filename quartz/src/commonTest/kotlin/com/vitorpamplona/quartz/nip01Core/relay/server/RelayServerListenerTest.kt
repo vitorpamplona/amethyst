@@ -48,9 +48,9 @@ class RelayServerListenerTest {
         }
     }
 
-    private val emptyResponder =
-        object : ReqResponder {
-            override fun respond(filters: List<Filter>): Flow<Event> = emptyFlow()
+    private val emptySource =
+        object : EventSource {
+            override fun events(filters: List<Filter>): Flow<Event> = emptyFlow()
         }
 
     @Test
@@ -58,7 +58,7 @@ class RelayServerListenerTest {
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val listener = RecordingListener()
-            val server = ReqResponderServer(emptyResponder, parentContext = dispatcher, listener = listener)
+            val server = EventSourceServer(emptySource, parentContext = dispatcher, listener = listener)
 
             val a = server.connect {}
             val b = server.connect {}
@@ -83,7 +83,7 @@ class RelayServerListenerTest {
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val listener = RecordingListener()
-            val server = ReqResponderServer(emptyResponder, parentContext = dispatcher, listener = listener)
+            val server = EventSourceServer(emptySource, parentContext = dispatcher, listener = listener)
 
             val s = server.connect {}
             s.close()
@@ -100,7 +100,7 @@ class RelayServerListenerTest {
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val listener = RecordingListener()
-            val server = ReqResponderServer(emptyResponder, parentContext = dispatcher, listener = listener)
+            val server = EventSourceServer(emptySource, parentContext = dispatcher, listener = listener)
 
             val s = server.connect {}
             assertEquals(1L, server.activeConnections)

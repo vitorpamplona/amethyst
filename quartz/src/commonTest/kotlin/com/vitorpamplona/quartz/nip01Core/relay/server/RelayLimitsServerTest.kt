@@ -40,9 +40,9 @@ class RelayLimitsServerTest {
 
     private fun hexId(n: Int): String = n.toString().padStart(64, '0')
 
-    private val emptyResponder =
-        object : ReqResponder {
-            override fun respond(filters: List<Filter>): Flow<Event> = emptyFlow()
+    private val emptySource =
+        object : EventSource {
+            override fun events(filters: List<Filter>): Flow<Event> = emptyFlow()
         }
 
     private class Collector {
@@ -56,7 +56,7 @@ class RelayLimitsServerTest {
     fun rejectsOversizedMessageWithNotice() =
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
-            val server = ReqResponderServer(emptyResponder, parentContext = dispatcher, limits = RelayLimits(maxMessageLength = 30))
+            val server = EventSourceServer(emptySource, parentContext = dispatcher, limits = RelayLimits(maxMessageLength = 30))
             val collector = Collector()
             val session = server.connect(collector.send)
 
@@ -74,12 +74,12 @@ class RelayLimitsServerTest {
     fun enforcesMaxSubscriptions() =
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
-            // FixedResponder-style: respond stays open is not needed; emptyFlow EOSEs.
-            val responder =
-                object : ReqResponder {
-                    override fun respond(filters: List<Filter>): Flow<Event> = emptyFlow()
+            // An empty flow EOSEs immediately; no need to keep it open.
+            val source =
+                object : EventSource {
+                    override fun events(filters: List<Filter>): Flow<Event> = emptyFlow()
                 }
-            val server = ReqResponderServer(responder, parentContext = dispatcher, limits = RelayLimits(maxSubscriptions = 2))
+            val server = EventSourceServer(source, parentContext = dispatcher, limits = RelayLimits(maxSubscriptions = 2))
             val collector = Collector()
             val session = server.connect(collector.send)
 
@@ -100,20 +100,20 @@ class RelayLimitsServerTest {
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val seen = mutableListOf<Int?>()
-            val responder =
-                object : ReqResponder {
-                    override fun respond(filters: List<Filter>): Flow<Event> {
+            val source =
+                object : EventSource {
+                    override fun events(filters: List<Filter>): Flow<Event> {
                         seen.add(filters.single().limit)
                         return emptyFlow()
                     }
                 }
-            val server = ReqResponderServer(responder, parentContext = dispatcher, limits = RelayLimits(maxLimit = 100))
+            val server = EventSourceServer(source, parentContext = dispatcher, limits = RelayLimits(maxLimit = 100))
             val collector = Collector()
             val session = server.connect(collector.send)
 
             session.receive("""["REQ","s",{"kinds":[1],"limit":9999}]""")
 
-            assertEquals(listOf<Int?>(100), seen) // the responder saw the clamped limit
+            assertEquals(listOf<Int?>(100), seen) // the source saw the clamped limit
             server.close()
         }
 

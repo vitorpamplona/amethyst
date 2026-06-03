@@ -35,10 +35,10 @@ import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
  *
  * - [LiveEventStore] — the storage-backed path: replays stored events, signals
  *   EOSE, then keeps streaming live inserts. Used by [NostrServer].
- * - [ReqResponderBackend] — adapts a [ReqResponder] for non-storage relays
- *   (search, redirector, computed/projected data). Used by [ReqResponderServer].
+ * - [EventSourceBackend] — adapts a [EventSource] for non-storage relays
+ *   (search, redirector, computed/projected data). Used by [EventSourceServer].
  *
- * Most non-storage relays should implement the higher-level [ReqResponder]
+ * Most non-storage relays should implement the higher-level [EventSource]
  * (a `Flow<Event>` SPI) rather than this interface directly. Implement
  * [SessionBackend] only when you need control over the write path or negentropy
  * snapshots; [query] and [count] are the only members without a default.
@@ -48,7 +48,7 @@ interface SessionBackend {
      * Answers a REQ. Calls [onEach] for every matching event, then [onEose]
      * once the stored set is exhausted. A storage backend keeps suspending
      * after [onEose] to stream live events until the subscription is
-     * cancelled; a finite responder returns after [onEose].
+     * cancelled; a finite source returns after [onEose].
      */
     suspend fun query(
         filters: List<Filter>,

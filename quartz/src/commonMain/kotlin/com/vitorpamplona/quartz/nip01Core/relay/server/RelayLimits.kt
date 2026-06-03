@@ -26,7 +26,7 @@ import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation.RelayInform
  * The relay's operational limits — the single source of truth that is both
  * **enforced** and **advertised**.
  *
- * Hand this to [NostrServer] / [ReqResponderServer] and it is applied to every
+ * Hand this to [NostrServer] / [EventSourceServer] and it is applied to every
  * connection (per-command checks via [LimitsPolicy], plus the session-level
  * message-size and subscription-count caps in [RelaySession]); call
  * [toNip11Limitation] to advertise the very same numbers in the relay's NIP-11

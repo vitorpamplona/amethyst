@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.server
 
 /**
  * Observability hook for the relay server connection lifecycle. Both
- * [NostrServer] and [ReqResponderServer] accept one and invoke it as
+ * [NostrServer] and [EventSourceServer] accept one and invoke it as
  * connections open and close, keyed by the stable per-connection
  * [RelaySession.id], so an operator can drive metrics (active-connection
  * gauges, churn counters) and per-connection logging without patching the

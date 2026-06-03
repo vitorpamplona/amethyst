@@ -27,7 +27,7 @@ import kotlin.coroutines.CoroutineContext
 
 /**
  * A transport-agnostic relay engine for relays that answer REQs from a
- * [ReqResponder] instead of an event store — search relays, redirectors that
+ * [EventSource] instead of an event store — search relays, redirectors that
  * forward to an HTTP backend, and relays that emit computed/projected data.
  *
  * This is the storage-free sibling of [NostrServer]. It owns the full NIP-01
@@ -35,11 +35,11 @@ import kotlin.coroutines.CoroutineContext
  * EOSE/CLOSED framing, and subscription lifecycle — so callers only provide a
  * per-connection `send` callback and feed it raw JSON frames, exactly like
  * [NostrServer]. EVENT publishes are rejected (there is nothing to store) and
- * negentropy is disabled, per [ReqResponderBackend] / [SessionBackend].
+ * negentropy is disabled, per [EventSourceBackend] / [SessionBackend].
  *
  * ```
- * val server = ReqResponderServer(
- *     responder = SearchResponder(searchApi),
+ * val server = EventSourceServer(
+ *     source = SearchEventSource(searchApi),
  *     policyBuilder = { FullAuthPolicy(relay) }, // optional NIP-42 gating
  * )
  *
@@ -51,7 +51,7 @@ import kotlin.coroutines.CoroutineContext
  *
  * Both this class and [RelaySession] implement [AutoCloseable].
  *
- * @param responder Produces the events that answer each REQ.
+ * @param source Produces the events that answer each REQ.
  * @param policyBuilder Builds a fresh [IRelayPolicy] per connection. Defaults to
  *   [EmptyPolicy] (accept REQ/COUNT, no signature verification — appropriate for
  *   a read-only relay). Pass a [com.vitorpamplona.quartz.nip01Core.relay.server.policies.FullAuthPolicy]
@@ -66,13 +66,13 @@ import kotlin.coroutines.CoroutineContext
  *   subscription caps) and advertised via [RelayLimits.toNip11Limitation].
  *   Null disables limit enforcement.
  */
-class ReqResponderServer(
-    responder: ReqResponder,
+class EventSourceServer(
+    source: EventSource,
     policyBuilder: () -> IRelayPolicy = { EmptyPolicy },
     parentContext: CoroutineContext = SupervisorJob(),
     negentropySettings: NegentropySettings = NegentropySettings.Default,
     listener: RelayServerListener = RelayServerListener.None,
     limits: RelayLimits? = null,
 ) : RelayServerBase(policyBuilder, parentContext, negentropySettings, listener, limits) {
-    override val backend: SessionBackend = ReqResponderBackend(responder)
+    override val backend: SessionBackend = EventSourceBackend(source)
 }

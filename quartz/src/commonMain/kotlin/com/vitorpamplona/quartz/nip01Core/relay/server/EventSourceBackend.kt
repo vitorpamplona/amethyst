@@ -26,25 +26,25 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import kotlinx.coroutines.flow.collect
 
 /**
- * Adapts a [ReqResponder] (the `Flow<Event>` SPI) into the [SessionBackend] the
- * dispatch engine consumes. Drains the responder's flow into the per-event
+ * Adapts an [EventSource] (the `Flow<Event>` SPI) into the [SessionBackend] the
+ * dispatch engine consumes. Drains the source's flow into the per-event
  * callback and signals EOSE on completion. The EVENT and negentropy paths use
- * the [SessionBackend] defaults (reject / empty), so a responder relay neither
+ * the [SessionBackend] defaults (reject / empty), so a source relay neither
  * stores events nor reconciles.
  */
-class ReqResponderBackend(
-    private val responder: ReqResponder,
+class EventSourceBackend(
+    private val source: EventSource,
 ) : SessionBackend {
     override suspend fun query(
         filters: List<Filter>,
         onEach: (Event) -> Unit,
         onEose: () -> Unit,
     ) {
-        responder.respond(filters).collect { onEach(it) }
+        source.events(filters).collect { onEach(it) }
         onEose()
     }
 
-    override suspend fun count(filters: List<Filter>): Int = responder.count(filters)
+    override suspend fun count(filters: List<Filter>): Int = source.count(filters)
 
-    override suspend fun countResult(filters: List<Filter>): CountResult = responder.countResult(filters)
+    override suspend fun countResult(filters: List<Filter>): CountResult = source.countResult(filters)
 }

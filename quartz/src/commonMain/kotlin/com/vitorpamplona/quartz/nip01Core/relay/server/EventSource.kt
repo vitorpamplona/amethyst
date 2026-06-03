@@ -31,13 +31,13 @@ import kotlinx.coroutines.flow.count
  * not backed by an event store — search relays, redirectors that forward to an
  * HTTP backend, and relays that emit computed/projected data.
  *
- * The dispatch engine ([ReqResponderServer]) owns the wire protocol — reading
+ * The dispatch engine ([EventSourceServer]) owns the wire protocol — reading
  * frames, parsing commands, running the [IRelayPolicy], framing `EVENT`/`EOSE`/
  * `CLOSED`, and managing subscriptions. You only supply the events:
  *
  * ```
- * class SearchResponder(private val backend: SearchApi) : ReqResponder {
- *     override fun respond(filters: List<Filter>): Flow<Event> = flow {
+ * class SearchEventSource(private val backend: SearchApi) : EventSource {
+ *     override fun events(filters: List<Filter>): Flow<Event> = flow {
  *         for (f in filters) {
  *             f.search?.let { raw ->
  *                 val query = SearchQuery.parse(raw)
@@ -50,7 +50,7 @@ import kotlinx.coroutines.flow.count
  *
  * ## EOSE semantics
  *
- * The engine sends `EOSE` when the returned [Flow] **completes**. A responder
+ * The engine sends `EOSE` when the returned [Flow] **completes**. A source
  * therefore emits its full result set and then completes — the natural shape
  * for finite queries like search and counts. Relays that need an open-ended
  * live tail after EOSE should use the storage path ([NostrServer] with an
@@ -58,22 +58,22 @@ import kotlinx.coroutines.flow.count
  *
  * Cancellation of the subscription (NIP-01 `CLOSE` or a dropped connection)
  * cancels collection of the flow, so respect coroutine cancellation in
- * [respond].
+ * [events].
  */
-interface ReqResponder {
+interface EventSource {
     /**
      * Returns the events matching [filters]. Emit each match and then let the
      * flow complete; completion is what triggers `EOSE`. The [filters] are the
      * (possibly policy-rewritten) filters from the REQ.
      */
-    fun respond(filters: List<Filter>): Flow<Event>
+    fun events(filters: List<Filter>): Flow<Event>
 
     /**
      * Answers a NIP-45 COUNT. The default counts the events produced by
-     * [respond]; override it when the backend can count without materializing
+     * [events]; override it when the backend can count without materializing
      * every event.
      */
-    suspend fun count(filters: List<Filter>): Int = respond(filters).count()
+    suspend fun count(filters: List<Filter>): Int = events(filters).count()
 
     /**
      * Answers a NIP-45 COUNT, optionally approximate and/or carrying a

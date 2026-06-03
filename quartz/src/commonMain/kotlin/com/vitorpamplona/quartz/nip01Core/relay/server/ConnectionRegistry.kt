@@ -27,7 +27,7 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
 /**
  * Tracks the live [RelaySession]s of one relay server and fires the
  * [RelayServerListener] as they come and go. Shared by [NostrServer] and
- * [ReqResponderServer] so the connection bookkeeping — the stable-id keying,
+ * [EventSourceServer] so the connection bookkeeping — the stable-id keying,
  * the [active] gauge, and the once-only teardown accounting — lives in exactly
  * one place.
  */

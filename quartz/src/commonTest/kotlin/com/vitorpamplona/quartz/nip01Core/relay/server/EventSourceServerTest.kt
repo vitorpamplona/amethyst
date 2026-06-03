@@ -42,7 +42,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class ReqResponderServerTest {
+class EventSourceServerTest {
     private val pubkey = "46fcbe3065eaf1ae7811465924e48923363ff3f526bd6f73d7c184b16bd8ce4d"
     private val sig = "4aa5264965018fa12a326686ad3d3bd8beae3218dcc83689b19ca1e6baeb791531943c15363aa6707c7c0c8b2d601deca1f20c32078b2872d356cdca03b04cce"
 
@@ -65,19 +65,19 @@ class ReqResponderServerTest {
         fun containing(label: String) = messages.filter { it.contains("\"$label\"") }
     }
 
-    /** A responder that returns a fixed list of events for any REQ. */
-    private class FixedResponder(
+    /** A source that returns a fixed list of events for any REQ. */
+    private class FixedSource(
         private val events: List<Event>,
-    ) : ReqResponder {
-        override fun respond(filters: List<Filter>): Flow<Event> = flowOf(*events.toTypedArray())
+    ) : EventSource {
+        override fun events(filters: List<Filter>): Flow<Event> = flowOf(*events.toTypedArray())
     }
 
     @Test
     fun reqStreamsEventsThenEose() =
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
-            val responder = FixedResponder(listOf(event(1), event(2)))
-            ReqResponderServer(responder, parentContext = dispatcher).use { server ->
+            val source = FixedSource(listOf(event(1), event(2)))
+            EventSourceServer(source, parentContext = dispatcher).use { server ->
                 val collector = MessageCollector()
                 val session = server.connect(collector.send)
 
@@ -94,11 +94,11 @@ class ReqResponderServerTest {
         }
 
     @Test
-    fun countUsesResponder() =
+    fun countUsesSource() =
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
-            val responder = FixedResponder(listOf(event(1), event(2), event(3)))
-            ReqResponderServer(responder, parentContext = dispatcher).use { server ->
+            val source = FixedSource(listOf(event(1), event(2), event(3)))
+            EventSourceServer(source, parentContext = dispatcher).use { server ->
                 val collector = MessageCollector()
                 val session = server.connect(collector.send)
 
@@ -114,17 +114,17 @@ class ReqResponderServerTest {
     fun approximateCountWithHllReachesTheWire() =
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
-            val responder =
-                object : ReqResponder {
-                    override fun respond(filters: List<Filter>): Flow<Event> = flowOf(event(1), event(2))
+            val source =
+                object : EventSource {
+                    override fun events(filters: List<Filter>): Flow<Event> = flowOf(event(1), event(2))
 
                     override suspend fun countResult(filters: List<Filter>): CountResult {
                         val hll = HllBuilder(offset = 8)
-                        respond(filters).collect { hll.add(it.pubKey) }
+                        events(filters).collect { hll.add(it.pubKey) }
                         return hll.toCountResult()
                     }
                 }
-            ReqResponderServer(responder, parentContext = dispatcher).use { server ->
+            EventSourceServer(source, parentContext = dispatcher).use { server ->
                 val collector = MessageCollector()
                 val session = server.connect(collector.send)
 
@@ -141,7 +141,7 @@ class ReqResponderServerTest {
     fun eventPublishIsRejected() =
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
-            ReqResponderServer(FixedResponder(emptyList()), parentContext = dispatcher).use { server ->
+            EventSourceServer(FixedSource(emptyList()), parentContext = dispatcher).use { server ->
                 val collector = MessageCollector()
                 val session = server.connect(collector.send)
 
@@ -155,14 +155,14 @@ class ReqResponderServerTest {
         }
 
     @Test
-    fun responderErrorBecomesClosed() =
+    fun sourceErrorBecomesClosed() =
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
-            val responder =
-                object : ReqResponder {
-                    override fun respond(filters: List<Filter>): Flow<Event> = flow { throw RuntimeException("backend down") }
+            val source =
+                object : EventSource {
+                    override fun events(filters: List<Filter>): Flow<Event> = flow { throw RuntimeException("backend down") }
                 }
-            ReqResponderServer(responder, parentContext = dispatcher).use { server ->
+            EventSourceServer(source, parentContext = dispatcher).use { server ->
                 val collector = MessageCollector()
                 val session = server.connect(collector.send)
 
@@ -176,13 +176,13 @@ class ReqResponderServerTest {
         }
 
     @Test
-    fun policyGatesTheResponder() =
+    fun policyGatesTheSource() =
         runTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val relay = NormalizedRelayUrl("wss://search.example.com/")
-            val responder = FixedResponder(listOf(event(1)))
-            ReqResponderServer(
-                responder,
+            val source = FixedSource(listOf(event(1)))
+            EventSourceServer(
+                source,
                 policyBuilder = { FullAuthPolicy(relay) },
                 parentContext = dispatcher,
             ).use { server ->
@@ -193,7 +193,7 @@ class ReqResponderServerTest {
                 assertTrue(collector.messages[0].contains("\"AUTH\""))
                 assertTrue(OptimizedJsonMapper.fromJsonToMessage(collector.messages[0]) is AuthMessage)
 
-                // A REQ before auth is rejected by the policy, not the responder.
+                // A REQ before auth is rejected by the policy, not the source.
                 session.receive("""["REQ","sub1",{"kinds":[1]}]""")
                 val closed = collector.containing("CLOSED")
                 assertEquals(1, closed.size)

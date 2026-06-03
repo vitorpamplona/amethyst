@@ -263,7 +263,7 @@ class RelaySession(
                     // Subscription was closed – this is expected.
                     throw e
                 } catch (e: Exception) {
-                    // A backend failure (e.g. a responder's network I/O)
+                    // A backend failure (e.g. an event source's network I/O)
                     // ends the subscription with a machine-readable CLOSED
                     // rather than silently dropping the coroutine.
                     send(ClosedMessage.of(cmd.subId, MachineReadablePrefix.ERROR, e.message ?: "query failed"))

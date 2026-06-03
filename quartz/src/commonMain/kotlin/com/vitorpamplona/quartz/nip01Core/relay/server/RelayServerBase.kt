@@ -28,7 +28,7 @@ import kotlinx.coroutines.cancel
 import kotlin.coroutines.CoroutineContext
 
 /**
- * Shared engine behind [NostrServer] and [ReqResponderServer]. Owns the
+ * Shared engine behind [NostrServer] and [EventSourceServer]. Owns the
  * per-connection coroutine [scope], the [ConnectionRegistry] (and the
  * [activeConnections] gauge / [RelayServerListener] dispatch it drives), the
  * policy composition, and the connect/serve plumbing — so the two concrete

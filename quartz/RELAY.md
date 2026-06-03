@@ -2,7 +2,7 @@
 
 Quartz provides a transport-agnostic relay engine. You provide a `send` callback per connection, and it gives you a `RelaySession` that accepts raw JSON strings. Plug it into Ktor or any WebSocket transport.
 
-There are two engines on the same `RelaySession` core: `NostrServer` for storage-backed relays (an `IEventStore` with a live tail after EOSE) and `ReqResponderServer` for non-storage relays (search, redirector, computed data — see [Non-Storage Relays](#non-storage-relays-search-redirector-computed)).
+There are two engines on the same `RelaySession` core: `NostrServer` for storage-backed relays (an `IEventStore` with a live tail after EOSE) and `EventSourceServer` for non-storage relays (search, redirector, computed data — see [Non-Storage Relays](#non-storage-relays-search-redirector-computed)).
 
 Both `NostrServer` and `EventStore` implement `AutoCloseable`.
 
@@ -86,14 +86,14 @@ By default, all single-letter tags with values are indexed. Override `shouldInde
 
 A relay's job is to *answer REQs*. When the answer doesn't come from a stored
 set — a NIP-50 search that forwards to an HTTP backend, a relay that emits
-computed/projected data — implement `ReqResponder` and serve it with
-`ReqResponderServer`. You supply a `Flow<Event>`; the engine owns the wire
+computed/projected data — implement `EventSource` and serve it with
+`EventSourceServer`. You supply a `Flow<Event>`; the engine owns the wire
 protocol (challenge/auth, command parsing, policy, `EVENT`/`EOSE`/`CLOSED`
 framing, subscription lifecycle), so there's no hand-written read loop.
 
 ```kotlin
-class SearchResponder(private val backend: SearchApi) : ReqResponder {
-    override fun respond(filters: List<Filter>): Flow<Event> = flow {
+class SearchEventSource(private val backend: SearchApi) : EventSource {
+    override fun events(filters: List<Filter>): Flow<Event> = flow {
         filters.forEach { f ->
             f.search?.let { raw ->
                 val q = SearchQuery.parse(raw)
@@ -102,12 +102,12 @@ class SearchResponder(private val backend: SearchApi) : ReqResponder {
             }
         }
     }
-    // COUNT defaults to counting respond(); override for a cheaper backend count.
+    // COUNT defaults to counting events(); override for a cheaper backend count.
 }
 
 fun main() {
-    val server = ReqResponderServer(
-        responder = SearchResponder(searchApi),
+    val server = EventSourceServer(
+        source = SearchEventSource(searchApi),
         policyBuilder = { FullAuthPolicy(relay) }, // optional NIP-42 gating
     )
 
@@ -126,7 +126,7 @@ fun main() {
 }
 ```
 
-**EOSE = flow completion.** The engine sends `EOSE` when `respond(...)`
+**EOSE = flow completion.** The engine sends `EOSE` when `events(...)`
 completes, which is the natural shape for finite queries. Relays that need an
 open-ended live tail after EOSE should use the storage path (`NostrServer` +
 `IEventStore`) instead. EVENT publishes are rejected (`OK false` —
@@ -134,10 +134,10 @@ open-ended live tail after EOSE should use the storage path (`NostrServer` +
 there's no stored set. A failure thrown from the flow ends the subscription
 with `CLOSED` `error: <message>`.
 
-`ReqResponderServer` and `NostrServer` are the two concrete dispatch engines;
+`EventSourceServer` and `NostrServer` are the two concrete dispatch engines;
 both build on `RelaySession` and the shared `SessionBackend` seam (`LiveEventStore`
-is the storage-backed `SessionBackend`; `ReqResponderBackend` adapts a
-`ReqResponder`). Implement `SessionBackend` directly only if you need custom
+is the storage-backed `SessionBackend`; `EventSourceBackend` adapts a
+`EventSource`). Implement `SessionBackend` directly only if you need custom
 control over the EVENT/negentropy paths as well as REQ/COUNT.
 
 ## Policies
@@ -169,19 +169,7 @@ val server = NostrServer(
 )
 ```
 
-`FullAuthPolicy` already implements the full NIP-42 challenge/verify handshake — you should not re-implement it. To bridge auth to an external system (e.g. exchange the verified event for a backend JWT), override the `suspend` `authorize` hook. It runs after the NIP-42 checks pass (and after the rest of the policy chain approves), and the pubkey is recorded only once it returns — so it can do network/disk I/O, and throwing from it rejects the login (`OK false`) with the connection left unauthenticated (nothing was committed):
-
-```kotlin
-class JwtAuthPolicy(
-    relay: NormalizedRelayUrl,
-    private val backend: AuthBackend,
-) : FullAuthPolicy(relay) {
-    override suspend fun authorize(pubKey: HexKey, event: RelayAuthEvent) {
-        // Suspends; a thrown exception rejects the login with OK false.
-        backend.exchangeForSession(pubKey, event)
-    }
-}
-```
+`FullAuthPolicy` already implements the full NIP-42 challenge/verify handshake — you should not re-implement it. To bridge auth to an external system (e.g. exchange the verified event for a backend JWT), override the `suspend` `authorize` hook. It runs after the NIP-42 checks pass (and after the rest of the policy chain approves), and the pubkey is recorded only once it returns — so it can do network/disk I/O, and throwing from it rejects the login (`OK false`) with the connection left unauthenticated (nothing was committed).
 
 ### Composing Policies
 
@@ -373,7 +361,7 @@ are omitted), and `CONTENT_TYPE` is `application/nostr+json`.
 ## Approximate COUNT (NIP-45 HyperLogLog)
 
 `COUNT` is answered by `SessionBackend.countResult(filters)` (and
-`ReqResponder.countResult`), which defaults to an exact count. To return a
+`EventSource.countResult`), which defaults to an exact count. To return a
 mergeable HyperLogLog estimate instead — for the six canonical NIP-45 queries
 (reaction/repost/quote/reply/comment/follower counts) — fold matching pubkeys
 into an `HllBuilder` and return its `CountResult`:
@@ -421,10 +409,11 @@ coroutine — keep them cheap and non-blocking.
 ```
 quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/
 ├── relay/server/
+│   ├── RelayServerBase.kt      # Shared engine (connect/serve/policy/registry)
 │   ├── NostrServer.kt          # Storage-backed engine (IEventStore)
-│   ├── ReqResponderServer.kt   # Non-storage engine (search/redirector/computed)
-│   ├── ReqResponder.kt         # Flow<Event> REQ-responder SPI
-│   ├── SessionBackend.kt       # Data-plane seam (LiveEventStore / ReqResponderBackend)
+│   ├── EventSourceServer.kt   # Non-storage engine (search/redirector/computed)
+│   ├── EventSource.kt         # Flow<Event> SPI for non-storage relays
+│   ├── SessionBackend.kt       # Data-plane seam (LiveEventStore / EventSourceBackend)
 │   ├── RelayServerListener.kt # Connection open/close observability hook
 │   ├── RelaySession.kt         # Per-connection handler (stable .id)
 │   ├── LiveEventStore.kt       # Reactive event streaming (storage SessionBackend)
@@ -433,7 +422,7 @@ quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/
 │   └── policies/
 │       ├── EmptyPolicy.kt      # Accept everything
 │       ├── VerifyPolicy.kt     # Signature verification (default)
-│       ├── FullAuthPolicy.kt   # NIP-42 auth required (override onAuthenticated to bridge)
+│       ├── FullAuthPolicy.kt   # NIP-42 auth required (override authorize to bridge)
 │       ├── LimitsPolicy.kt     # Per-command enforcement of RelayLimits
 │       └── PolicyStack.kt      # Chain multiple policies
 ├── relay/commands/
