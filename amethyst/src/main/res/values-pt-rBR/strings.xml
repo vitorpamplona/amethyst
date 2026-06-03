@@ -2985,4 +2985,9 @@
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Arte</string>
     <string name="nowhere_link_card_forum">Nowhere Fórum</string>
+    <string name="settings_search_no_results">Nenhuma configuração encontrada para \"%1$s\"</string>
+    <string name="settings_search_placeholder">Pesquisar configurações</string>
+    <string name="share_target_as_dm">Enviar como DM</string>
+    <string name="share_to_dm_start_new">Nova mensagem</string>
+    <string name="share_to_dm_title">Enviar para…</string>
 </resources>

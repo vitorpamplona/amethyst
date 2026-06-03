@@ -2984,4 +2984,9 @@
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Konst</string>
     <string name="nowhere_link_card_forum">Nowhere Forum</string>
+    <string name="settings_search_no_results">Inga inställningar hittades för ”%1$s”</string>
+    <string name="settings_search_placeholder">Sök inställningar</string>
+    <string name="share_target_as_dm">Skicka som DM</string>
+    <string name="share_to_dm_start_new">Nytt meddelande</string>
+    <string name="share_to_dm_title">Skicka till…</string>
 </resources>

@@ -3037,4 +3037,9 @@
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Umění</string>
     <string name="nowhere_link_card_forum">Nowhere Fórum</string>
+    <string name="settings_search_no_results">Pro „%1$s“ nebyla nalezena žádná nastavení</string>
+    <string name="settings_search_placeholder">Hledat nastavení</string>
+    <string name="share_target_as_dm">Odeslat jako DM</string>
+    <string name="share_to_dm_start_new">Nová zpráva</string>
+    <string name="share_to_dm_title">Odeslat…</string>
 </resources>

@@ -2990,4 +2990,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Kunst</string>
     <string name="nowhere_link_card_forum">Nowhere Forum</string>
+    <string name="settings_search_no_results">Keine Einstellungen für „%1$s“ gefunden</string>
+    <string name="settings_search_placeholder">Einstellungen durchsuchen</string>
+    <string name="share_target_as_dm">Als DM senden</string>
+    <string name="share_to_dm_start_new">Neue Nachricht</string>
+    <string name="share_to_dm_title">Senden an…</string>
 </resources>
