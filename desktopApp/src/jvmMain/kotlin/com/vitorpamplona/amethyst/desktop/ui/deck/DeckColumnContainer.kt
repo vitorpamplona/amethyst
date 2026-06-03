@@ -327,6 +327,8 @@ internal fun RootContent(
 
     when (columnType) {
         DeckColumnType.HomeFeed -> {
+            // Don't hardcode initialFeedMode — let FeedScreen pick the first
+            // pinned feed (Following/Global/Custom) as the default tab.
             FeedScreen(
                 relayManager = relayManager,
                 localCache = localCache,
@@ -334,7 +336,6 @@ internal fun RootContent(
                 iAccount = iAccount,
                 nwcConnection = nwcConnection,
                 subscriptionsCoordinator = subscriptionsCoordinator,
-                initialFeedMode = FeedMode.FOLLOWING,
                 onCompose = onShowComposeDialog,
                 onNavigateToProfile = onNavigateToProfile,
                 onNavigateToThread = onNavigateToThread,

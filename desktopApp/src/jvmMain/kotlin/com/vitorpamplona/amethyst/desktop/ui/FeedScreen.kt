@@ -436,7 +436,16 @@ fun FeedScreen(
     // not whatever DesktopPreferences happened to save last. If a caller
     // explicitly passes customFeedId/initialFeedMode, that always wins.
     val feedRepo = com.vitorpamplona.amethyst.desktop.ui.deck.LocalFeedRepository.current
-    val firstPinned = remember { feedRepo.pinnedFeeds.value.firstOrNull() }
+    // Read feeds.value (the source StateFlow that's loaded synchronously by
+    // FeedDefinitionRepository on construction) rather than pinnedFeeds.value —
+    // the latter is a stateIn-derived flow whose initial value is an empty list
+    // until the first flow emission propagates, which is too late for `remember`.
+    val firstPinned =
+        remember {
+            feedRepo.feeds.value
+                .filter { it.pinned }
+                .minByOrNull { it.pinOrder }
+        }
     val firstPinnedCustomSource = firstPinned?.source as? com.vitorpamplona.amethyst.commons.feeds.custom.FeedSource.Filter
 
     var activeFeedId by remember {
