@@ -29,10 +29,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 
@@ -60,10 +62,11 @@ data class RelayReach(
  * down (older) in the stream — relays that race ahead leave their marker deep while slower relays'
  * markers trail higher up, converging as they catch up.
  *
- * Each state in the gap renders one compact label: a relay's host name when it is the only one of its
- * state there (the usual converged case, where each relay sits at its own depth), or just a count when
- * several pile up at the same depth (e.g. all nine clustered at the live-tail floor on first open) so
- * the line can't grow into an unreadable comma list.
+ * A leading "Relay sync:" label gives the glyphs context; then each state renders one compact label:
+ * a relay's host name when it is the only one of its state there (the usual converged case, where each
+ * relay sits at its own depth), or just a count when several pile up at the same depth (e.g. all nine
+ * clustered at the live-tail floor on first open) so the line can't grow into an unreadable comma list.
+ * Reads e.g. "Relay sync: ✓ 8 · ↓ 1" or "Relay sync: ↓ nostr.wine".
  */
 @Composable
 fun RelayReachMarker(entries: List<RelayReach>) {
@@ -71,14 +74,25 @@ fun RelayReachMarker(entries: List<RelayReach>) {
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         modifier = HalfPadding,
     ) {
         HorizontalDivider(modifier = Modifier.weight(1f), thickness = DividerThickness)
+        Text(
+            text = stringResource(R.string.chats_history_relay_sync),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+        )
         entries
             .groupBy { it.state }
             .toSortedMap(compareBy { it.ordinal })
-            .forEach { (state, list) ->
+            .entries
+            .forEachIndexed { index, (state, list) ->
+                if (index > 0) {
+                    Text("·", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+                }
                 Text(
                     text = glyph(state) + " " + if (list.size == 1) list.first().name else list.size.toString(),
                     color = color(state),
