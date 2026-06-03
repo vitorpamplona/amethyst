@@ -217,6 +217,7 @@ import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesEvent
 import com.vitorpamplona.quartz.nip75ZapGoals.GoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppDataEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
@@ -400,6 +401,7 @@ class EventFactory {
                 CommunityDefinitionEvent.KIND -> CommunityDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
                 CommunityListEvent.KIND -> CommunityListEvent(id, pubKey, createdAt, tags, content, sig)
                 CommunityPostApprovalEvent.KIND -> CommunityPostApprovalEvent(id, pubKey, createdAt, tags, content, sig)
+                CommunityRulesEvent.KIND -> CommunityRulesEvent(id, pubKey, createdAt, tags, content, sig)
                 ContactListEvent.KIND -> ContactListEvent(id, pubKey, createdAt, tags, content, sig)
                 DeletionEvent.KIND -> DeletionEvent(id, pubKey, createdAt, tags, content, sig)
                 DraftWrapEvent.KIND -> DraftWrapEvent(id, pubKey, createdAt, tags, content, sig)
