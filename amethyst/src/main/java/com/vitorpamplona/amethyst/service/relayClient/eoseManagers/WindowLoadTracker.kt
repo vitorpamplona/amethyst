@@ -70,10 +70,19 @@ import kotlin.time.Duration.Companion.seconds
  * blocking the round after [connectGrace] from the load start — but it is NOT given up (it may be a
  * genuinely slow connect), so the owner keeps it and retries it next round. And an [absoluteCap] is
  * the final ceiling on a window that somehow defeats all of the above.
+ *
+ * The two REQ-aware backstops (silence + connect-grace) only make sense when the owner actually feeds
+ * [onReqSent], so they are gated behind [tracksReqSends]. A tracker that does NOT track REQ sends keeps
+ * the plain settle / idle / cap behavior — otherwise, with an always-empty [reqSentAt], EVERY relay
+ * would look "connect-stalled" after [connectGrace] and the window would complete before its REQs even
+ * went out (e.g. during a slow connect storm), prematurely declaring an empty round done.
  */
 class WindowLoadTracker(
     // Short label for the DMPagination logs (e.g. "giftwrap", "rooms.nip04", "convo.nip04").
     private val name: String = "dm",
+    // Whether the owner feeds [onReqSent]; enables the silence + connect-grace backstops. Off by
+    // default so trackers that don't track REQ sends are unaffected by them.
+    private val tracksReqSends: Boolean = false,
     private val idleTimeout: Duration = 3.seconds,
     private val silenceTimeout: Duration = 10.seconds,
     private val connectGrace: Duration = 15.seconds,
@@ -187,7 +196,7 @@ class WindowLoadTracker(
     private fun silencedOut(
         relay: NormalizedRelayUrl,
         now: Long,
-    ): Boolean = relay !in heardFrom && (reqSentAt[relay]?.let { now - it >= silenceTimeout.inWholeMilliseconds } ?: false)
+    ): Boolean = tracksReqSends && relay !in heardFrom && (reqSentAt[relay]?.let { now - it >= silenceTimeout.inWholeMilliseconds } ?: false)
 
     // A relay that is still expected but has neither been heard from nor even received its REQ within
     // [connectGrace] of the load start — i.e. stuck connecting / reconnecting. It stops blocking the
@@ -195,7 +204,7 @@ class WindowLoadTracker(
     private fun connectStalled(
         relay: NormalizedRelayUrl,
         now: Long,
-    ): Boolean = relay !in heardFrom && !reqSentAt.containsKey(relay) && now - loadStartMs >= connectGrace.inWholeMilliseconds
+    ): Boolean = tracksReqSends && relay !in heardFrom && !reqSentAt.containsKey(relay) && now - loadStartMs >= connectGrace.inWholeMilliseconds
 
     /** Records which relays the current REQ was sent to. Completes immediately if there are none. */
     @Synchronized

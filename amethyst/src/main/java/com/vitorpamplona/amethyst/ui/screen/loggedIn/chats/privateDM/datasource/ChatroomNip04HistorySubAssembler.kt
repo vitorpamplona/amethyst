@@ -69,7 +69,7 @@ class ChatroomNip04HistorySubAssembler(
     private val started = ConcurrentHashMap.newKeySet<ConvoKey>()
     private val askedRelays = ConcurrentHashMap<ConvoKey, Set<NormalizedRelayUrl>>()
 
-    private val windowLoad = WindowLoadTracker("convo.nip04.history", onAbandoned = ::onRelaysAbandoned)
+    private val windowLoad = WindowLoadTracker("convo.nip04.history", tracksReqSends = true, onAbandoned = ::onRelaysAbandoned)
     val loadingMore: StateFlow<Boolean> = windowLoad.loading
 
     private val _exhausted = MutableStateFlow(false)

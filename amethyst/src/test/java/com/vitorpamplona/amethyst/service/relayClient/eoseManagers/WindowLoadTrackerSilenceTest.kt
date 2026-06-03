@@ -50,6 +50,7 @@ class WindowLoadTrackerSilenceTest {
             val tracker =
                 WindowLoadTracker(
                     name = "test",
+                    tracksReqSends = true,
                     silenceTimeout = 50.milliseconds,
                     onAbandoned = { abandoned.set(it) },
                 )
@@ -77,6 +78,7 @@ class WindowLoadTrackerSilenceTest {
             val tracker =
                 WindowLoadTracker(
                     name = "test",
+                    tracksReqSends = true,
                     connectGrace = 50.milliseconds,
                     onAbandoned = { abandoned.set(it) },
                 )
@@ -95,10 +97,40 @@ class WindowLoadTrackerSilenceTest {
         }
 
     @Test
+    fun withoutReqTrackingAStalledRelayKeepsBlockingUntilItSettles() =
+        runBlocking {
+            val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+            // A tracker that does NOT feed onReqSent (giftwrap / rooms): the REQ-aware backstops must
+            // stay off, or every never-heard-from relay would look stalled and the window would finish
+            // before its REQs even went out (the connect-storm regression).
+            val tracker =
+                WindowLoadTracker(
+                    name = "test",
+                    tracksReqSends = false,
+                    silenceTimeout = 50.milliseconds,
+                    connectGrace = 50.milliseconds,
+                )
+
+            tracker.startLoading(scope)
+            tracker.setExpectedRelays(setOf(good, silent))
+            tracker.onRelaySettled(good)
+
+            // `silent` was never heard from and never got a REQ; well past both short backstops it must
+            // STILL block, because this tracker doesn't track REQ sends.
+            Thread.sleep(400)
+            assertTrue("non-req-tracking tracker must not abandon a stalled relay", tracker.loading.value)
+
+            // Only an actual terminal signal completes it.
+            tracker.onRelaySettled(silent)
+            withTimeout(3000) { tracker.loading.first { !it } }
+            scope.cancel()
+        }
+
+    @Test
     fun aSilentRelayThatNeverGotAReqStillBlocksUntilItSettles() =
         runBlocking {
             val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            val tracker = WindowLoadTracker(name = "test", silenceTimeout = 50.milliseconds)
+            val tracker = WindowLoadTracker(name = "test", tracksReqSends = true, silenceTimeout = 50.milliseconds)
 
             tracker.startLoading(scope)
             tracker.setExpectedRelays(setOf(good, silent))
