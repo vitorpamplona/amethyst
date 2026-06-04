@@ -168,7 +168,7 @@ class NostrServerAuthTest {
             assertEquals(1, okMessages.size)
             assertTrue(okMessages[0].contains(",true,"))
             assertTrue((session.policy as FullAuthPolicy).isAuthenticated())
-            assertTrue(session.policy.authenticatedUsers.contains(pubkey))
+            assertTrue(session.requestContext.authenticatedUsers.contains(pubkey))
 
             server.close()
         }
@@ -313,10 +313,38 @@ class NostrServerAuthTest {
             assertTrue(okMessages[0].contains(",true,"))
             assertTrue(okMessages[1].contains(",true,"))
 
-            val authedPubkeys = (session.policy as FullAuthPolicy).authenticatedUsers
+            val authedPubkeys = session.requestContext.authenticatedUsers
             assertEquals(2, authedPubkeys.size)
             assertTrue(authedPubkeys.contains(pubkey))
             assertTrue(authedPubkeys.contains(pubkey2))
+
+            server.close()
+        }
+
+    @Test
+    fun authenticationIsScopedPerConnection() =
+        runTest {
+            // Two connections on the SAME server. Each must see only the pubkey
+            // that authenticated on it — never the union across the relay.
+            val dispatcher = UnconfinedTestDispatcher(testScheduler)
+            val server = createServer(dispatcher = dispatcher)
+
+            val c1 = MessageCollector()
+            val s1 = server.connect(c1.sendCallback)
+            val ch1 = (OptimizedJsonMapper.fromJsonToMessage(c1.messages[0]) as AuthMessage).challenge
+            s1.receive(authJson(authEvent(challenge = ch1, pubKey = pubkey)))
+
+            val c2 = MessageCollector()
+            val s2 = server.connect(c2.sendCallback)
+            val ch2 = (OptimizedJsonMapper.fromJsonToMessage(c2.messages[0]) as AuthMessage).challenge
+            s2.receive(authJson(authEvent(challenge = ch2, pubKey = pubkey2)))
+
+            // Each connection's scope holds exactly its own authenticated user.
+            assertEquals(setOf(pubkey), s1.requestContext.authenticatedUsers)
+            assertEquals(setOf(pubkey2), s2.requestContext.authenticatedUsers)
+            // Cross-check: neither leaks the other's identity.
+            assertFalse(s1.requestContext.authenticatedUsers.contains(pubkey2))
+            assertFalse(s2.requestContext.authenticatedUsers.contains(pubkey))
 
             server.close()
         }
@@ -545,11 +573,8 @@ class NostrServerAuthTest {
             var hookPubkey: String? = null
             val policy =
                 object : FullAuthPolicy(relayUrl) {
-                    override suspend fun authorize(
-                        pubKey: String,
-                        event: RelayAuthEvent,
-                    ) {
-                        hookPubkey = pubKey
+                    override suspend fun authorize(event: RelayAuthEvent) {
+                        hookPubkey = event.pubKey
                     }
                 }
 
@@ -574,10 +599,7 @@ class NostrServerAuthTest {
         runTest {
             val policy =
                 object : FullAuthPolicy(relayUrl) {
-                    override suspend fun authorize(
-                        pubKey: String,
-                        event: RelayAuthEvent,
-                    ): Unit = throw IllegalStateException("backend rejected user")
+                    override suspend fun authorize(event: RelayAuthEvent): Unit = throw IllegalStateException("backend rejected user")
                 }
 
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
@@ -596,7 +618,7 @@ class NostrServerAuthTest {
             // still-authenticated connection would be an auth bypass.
             val authPolicy = session.policy as FullAuthPolicy
             assertFalse(authPolicy.isAuthenticated())
-            assertFalse(authPolicy.authenticatedUsers.contains(pubkey))
+            assertFalse(session.requestContext.authenticatedUsers.contains(pubkey))
 
             server.close()
         }
@@ -606,10 +628,7 @@ class NostrServerAuthTest {
         runTest {
             val policy =
                 object : FullAuthPolicy(relayUrl) {
-                    override suspend fun authorize(
-                        pubKey: String,
-                        event: RelayAuthEvent,
-                    ): Unit = throw IllegalStateException("backend rejected user")
+                    override suspend fun authorize(event: RelayAuthEvent): Unit = throw IllegalStateException("backend rejected user")
                 }
 
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
@@ -653,7 +672,7 @@ class NostrServerAuthTest {
             assertEquals(1, ok.size)
             assertTrue(ok[0].contains(",false,"))
             assertFalse(auth.isAuthenticated())
-            assertFalse(auth.authenticatedUsers.contains(pubkey))
+            assertFalse(session.requestContext.authenticatedUsers.contains(pubkey))
 
             // And a privileged REQ is still gated.
             session.receive("""["REQ","sub1",{"kinds":[1]}]""")
@@ -686,12 +705,12 @@ class NostrServerAuthTest {
             val msg = OptimizedJsonMapper.fromJsonToMessage(collector.messages[0]) as AuthMessage
 
             session.receive(authJson(authEvent(challenge = msg.challenge)))
-            assertTrue(auth.authenticatedUsers.contains(pubkey))
+            assertTrue(session.requestContext.authenticatedUsers.contains(pubkey))
 
             // Second AUTH for the SAME pubkey, rejected downstream.
             session.receive(authJson(authEvent(challenge = msg.challenge)))
             assertTrue(auth.isAuthenticated())
-            assertTrue(auth.authenticatedUsers.contains(pubkey))
+            assertTrue(session.requestContext.authenticatedUsers.contains(pubkey))
 
             server.close()
         }

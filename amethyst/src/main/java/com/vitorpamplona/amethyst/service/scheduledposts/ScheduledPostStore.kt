@@ -257,7 +257,7 @@ class ScheduledPostStore(
                     Log.w(TAG) { "Failed to delete existing $storageFile before rename retry" }
                 }
                 if (!tmp.renameTo(storageFile)) {
-                    Log.e(TAG, "Failed to rename $tmp to $storageFile")
+                    Log.e(TAG) { "Failed to rename $tmp to $storageFile" }
                     if (!tmp.delete()) {
                         Log.w(TAG) { "Failed to clean up temp file $tmp after rename failure" }
                     }

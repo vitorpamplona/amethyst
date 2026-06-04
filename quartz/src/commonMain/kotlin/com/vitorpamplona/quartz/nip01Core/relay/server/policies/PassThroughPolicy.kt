@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
+import com.vitorpamplona.quartz.nip01Core.relay.server.backend.RequestContext
 
 /**
  * Convenience base that accepts everything by default. Subclasses
@@ -37,7 +38,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
  * instantiate this directly.
  */
 open class PassThroughPolicy : IRelayPolicy {
-    override fun onConnect(send: (Message) -> Unit) {}
+    override fun onConnect(
+        scope: RequestContext,
+        send: (Message) -> Unit,
+    ) {}
 
     override fun accept(cmd: EventCmd): PolicyResult<EventCmd> = PolicyResult.Accepted(cmd)
 

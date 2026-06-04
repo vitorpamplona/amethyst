@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.server
 
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountMessage
@@ -34,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CloseCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
+import com.vitorpamplona.quartz.nip01Core.relay.server.backend.RequestContext
 import com.vitorpamplona.quartz.nip01Core.relay.server.backend.SessionBackend
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyResult
@@ -73,6 +75,27 @@ class RelaySession(
     val id: Long = nextConnectionId(),
 ) : AutoCloseable {
     private val subscriptions = LargeCache<String, Job>()
+
+    /**
+     * The authenticated-identity store for this connection. The engine is the
+     * only writer (committed in [handleAuth] on a successful NIP-42 AUTH); the
+     * policy and the data plane read it through [requestContext].
+     */
+    private val authenticatedUsers = mutableSetOf<HexKey>()
+
+    /**
+     * The per-connection scope. Handed to the [policy] at connect (so gating
+     * policies can read the authenticated users) and to the [store] on every
+     * REQ/COUNT (so a source can see who is asking). [RequestContext.authenticatedUsers]
+     * is a live view of [authenticatedUsers], so a REQ after a NIP-42 AUTH sees
+     * the freshly recorded pubkey(s).
+     */
+    val requestContext: RequestContext =
+        object : RequestContext {
+            override val connectionId = id
+            override val policy = this@RelaySession.policy
+            override val authenticatedUsers: Set<HexKey> get() = this@RelaySession.authenticatedUsers
+        }
 
     /** NIP-77 negentropy state for this connection. */
     private val negentropy = NegSessionRegistry(store, ::send, negentropySettings)
@@ -189,7 +212,7 @@ class RelaySession(
 
         val countResult =
             try {
-                store.countResult(filters)
+                store.countResult(requestContext, filters)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -210,16 +233,21 @@ class RelaySession(
 
         // The whole policy chain validated the AUTH. onAuthenticated runs any
         // post-verification I/O (e.g. exchanging the verified event for a
-        // backend token) AND is where a policy commits the authentication, so a
-        // throw here cleanly fails the login — nothing was committed to undo.
-        try {
-            policy.onAuthenticated(cmd.event.pubKey, cmd.event)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            send(OkMessage.rejected(cmd.event.id, MachineReadablePrefix.ERROR, e.message ?: "authentication failed"))
-            return
-        }
+        // backend token) and votes on whether to record the identity. A throw
+        // here cleanly fails the login — the engine records nothing.
+        val record =
+            try {
+                policy.onAuthenticated(cmd.event)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                send(OkMessage.rejected(cmd.event.id, MachineReadablePrefix.ERROR, e.message ?: "authentication failed"))
+                return
+            }
+
+        // Single, engine-side commit into the connection scope — after the full
+        // chain approved and a verifying policy voted to record.
+        if (record) authenticatedUsers.add(cmd.event.pubKey)
 
         send(OkMessage(cmd.event.id, true, ""))
     }
@@ -254,6 +282,7 @@ class RelaySession(
             scope.launch {
                 try {
                     store.query(
+                        ctx = requestContext,
                         filters = filters,
                         onEach = { event ->
                             if (policy.canSendToSession(event)) {
@@ -285,7 +314,7 @@ class RelaySession(
     }
 
     init {
-        policy.onConnect(::send)
+        policy.onConnect(requestContext, ::send)
     }
 
     companion object {

@@ -37,16 +37,26 @@ import kotlinx.coroutines.flow.count
  *
  * ```
  * class SearchEventSource(private val backend: SearchApi) : EventSource {
- *     override fun events(filters: List<Filter>): Flow<Event> = flow {
+ *     override fun events(ctx: RequestContext, filters: List<Filter>): Flow<Event> = flow {
+ *         // Tailor the answer to the caller: NIP-42 already told us who they are.
+ *         val viewer = ctx.authenticatedUsers.firstOrNull()
  *         for (f in filters) {
  *             f.search?.let { raw ->
  *                 val query = SearchQuery.parse(raw)
- *                 backend.search(query.terms, query.language).forEach { emit(it) }
+ *                 backend.search(query.terms, query.language, viewer).forEach { emit(it) }
  *             }
  *         }
  *     }
  * }
  * ```
+ *
+ * ## Who is asking
+ *
+ * Every call receives a [RequestContext] carrying the connection's
+ * [RequestContext.authenticatedUsers] (and [RequestContext.connectionId]). A
+ * single shared [EventSource] instance can therefore serve caller-relative
+ * results, restricted content, or per-connection tenancy without smuggling auth
+ * state in through a side channel — see [RequestContext].
  *
  * ## EOSE semantics
  *
@@ -62,18 +72,25 @@ import kotlinx.coroutines.flow.count
  */
 interface EventSource {
     /**
-     * Returns the events matching [filters]. Emit each match and then let the
-     * flow complete; completion is what triggers `EOSE`. The [filters] are the
-     * (possibly policy-rewritten) filters from the REQ.
+     * Returns the events matching [filters] for the caller described by [ctx].
+     * Emit each match and then let the flow complete; completion is what
+     * triggers `EOSE`. The [filters] are the (possibly policy-rewritten) filters
+     * from the REQ; [ctx] carries the connection's authenticated identity.
      */
-    fun events(filters: List<Filter>): Flow<Event>
+    fun events(
+        ctx: RequestContext,
+        filters: List<Filter>,
+    ): Flow<Event>
 
     /**
-     * Answers a NIP-45 COUNT. The default counts the events produced by
-     * [events]; override it when the backend can count without materializing
-     * every event.
+     * Answers a NIP-45 COUNT for the caller described by [ctx]. The default
+     * counts the events produced by [events]; override it when the backend can
+     * count without materializing every event.
      */
-    suspend fun count(filters: List<Filter>): Int = events(filters).count()
+    suspend fun count(
+        ctx: RequestContext,
+        filters: List<Filter>,
+    ): Int = events(ctx, filters).count()
 
     /**
      * Answers a NIP-45 COUNT, optionally approximate and/or carrying a
@@ -81,5 +98,8 @@ interface EventSource {
      * override to return `approximate`/`hll` (see
      * [com.vitorpamplona.quartz.nip45Count.HllBuilder]).
      */
-    suspend fun countResult(filters: List<Filter>): CountResult = CountResult(count(filters))
+    suspend fun countResult(
+        ctx: RequestContext,
+        filters: List<Filter>,
+    ): CountResult = CountResult(count(ctx, filters))
 }

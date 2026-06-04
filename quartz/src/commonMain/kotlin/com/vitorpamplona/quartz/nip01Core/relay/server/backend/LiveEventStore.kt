@@ -126,6 +126,7 @@ class LiveEventStore(
     }
 
     override suspend fun query(
+        ctx: RequestContext,
         filters: List<Filter>,
         onEach: (Event) -> Unit,
         onEose: () -> Unit,
@@ -191,7 +192,10 @@ class LiveEventStore(
         }
     }
 
-    override suspend fun count(filters: List<Filter>): Int = store.count(filters)
+    override suspend fun count(
+        ctx: RequestContext,
+        filters: List<Filter>,
+    ): Int = store.count(filters)
 
     /**
      * One-shot snapshot query. Used by NIP-77 negentropy: the server
