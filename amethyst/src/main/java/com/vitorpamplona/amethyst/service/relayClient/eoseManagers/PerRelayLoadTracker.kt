@@ -61,6 +61,10 @@ class PerRelayLoadTracker(
     @Volatile
     private var watchdog: Job? = null
 
+    // Delays dropping the spinner so back-to-back pages don't flicker it off between each one.
+    @Volatile
+    private var clearJob: Job? = null
+
     @Volatile
     private var scope: CoroutineScope? = null
 
@@ -75,6 +79,8 @@ class PerRelayLoadTracker(
     /** A relay's next page was just requested. Raises the spinner and (re)arms the silence watchdog. */
     @Synchronized
     fun onAdvance(relay: NormalizedRelayUrl) {
+        clearJob?.cancel() // a new page is starting — keep the spinner up, no flicker
+        clearJob = null
         inFlight.add(relay)
         lastActivityMs = System.currentTimeMillis()
         _loading.value = true
@@ -86,17 +92,41 @@ class PerRelayLoadTracker(
         lastActivityMs = System.currentTimeMillis()
     }
 
-    /** A relay answered (EOSE / CLOSED / cannot-connect). Drops it from in-flight; clears the spinner if last. */
+    /**
+     * A relay answered (EOSE / CLOSED / cannot-connect). Drops it from in-flight. When the last one
+     * settles, the spinner is dropped after a short linger rather than immediately, so a relay paging
+     * page-after-page (each page settles then the marker fires the next) keeps a steady spinner instead
+     * of flickering it off for the few ms between pages. The linger is cancelled the moment a new page
+     * starts ([onAdvance]).
+     */
     @Synchronized
     fun onSettled(relay: NormalizedRelayUrl) {
         lastActivityMs = System.currentTimeMillis()
-        if (inFlight.remove(relay) && inFlight.isEmpty()) _loading.value = false
+        if (inFlight.remove(relay) && inFlight.isEmpty()) scheduleClear()
+    }
+
+    private fun scheduleClear() {
+        clearJob?.cancel()
+        val s = scope
+        if (s == null) {
+            _loading.value = false
+            return
+        }
+        clearJob =
+            s.launch {
+                delay(LOADING_LINGER_MS)
+                synchronized(this@PerRelayLoadTracker) {
+                    if (inFlight.isEmpty()) _loading.value = false
+                }
+            }
     }
 
     /** Drops everything (e.g. account/conversation switched). */
     @Synchronized
     fun reset() {
         inFlight.clear()
+        clearJob?.cancel()
+        clearJob = null
         _loading.value = false
         watchdog?.cancel()
         watchdog = null
@@ -132,5 +162,9 @@ class PerRelayLoadTracker(
     companion object {
         private const val TAG = "DMPagination"
         private const val WATCHDOG_TICK_MS = 1_000L
+
+        // How long to keep the spinner up after the last page settles, to bridge the gap to the next
+        // back-to-back page so the card doesn't flicker between every page.
+        private const val LOADING_LINGER_MS = 600L
     }
 }
