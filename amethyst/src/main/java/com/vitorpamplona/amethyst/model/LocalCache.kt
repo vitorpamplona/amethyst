@@ -2785,6 +2785,13 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         note.inGatherers?.forEach { it.removeNote(note) }
 
+        // Mirror deleteNote(): inGatherers is normally authoritative for channel
+        // membership (Channel.addNote always calls note.addGatherer), but resolve
+        // the channel from the event as a belt-and-suspenders detach so a note can
+        // never linger in a channel's notes map after it leaves the cache — that
+        // would leak the note and let a relay echo mint a duplicate with the same id.
+        getAnyChannel(note)?.removeNote(note)
+
         val noteEvent = note.event
 
         if (noteEvent is ReportEvent) {
