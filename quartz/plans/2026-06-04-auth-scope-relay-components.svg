@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1010" viewBox="0 0 1200 1010" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#334155"/>
+    </marker>
+    <marker id="arrowDash" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#0e7490"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1200" height="1010" fill="#f7f8fa"/>
+  <text x="600" y="38" text-anchor="middle" font-size="24" font-weight="700" fill="#0f172a">Building a Relay with Quartz — components &amp; data flow</text>
+  <text x="600" y="62" text-anchor="middle" font-size="14" fill="#475569">after the plan: auth identity lives in the connection scope, not in a policy</text>
+
+  <!-- ============ TRANSPORT ============ -->
+  <rect x="40" y="86" width="360" height="66" rx="10" fill="#eef0f3" stroke="#6b7280" stroke-width="1.6"/>
+  <text x="56" y="108" font-size="12" font-weight="700" fill="#6b7280">[ TRANSPORT — you provide ]</text>
+  <text x="56" y="128" font-size="13.5" font-weight="700" fill="#1f2937">WebSocket server (Ktor / any)</text>
+  <text x="56" y="146" font-size="12" fill="#374151">feeds raw JSON frames • supplies send(json)</text>
+
+  <!-- ============ ENGINE: RelayServerBase ============ -->
+  <rect x="450" y="86" width="380" height="86" rx="10" fill="#e8f0fe" stroke="#2563eb" stroke-width="1.6"/>
+  <text x="466" y="108" font-size="12" font-weight="700" fill="#2563eb">[ ENGINE ]</text>
+  <text x="466" y="128" font-size="13.5" font-weight="700" fill="#1f2937">RelayServerBase  ·  EventSourceServer | NostrServer</text>
+  <text x="466" y="147" font-size="12" fill="#374151">builds per-connection policy + scope · connection</text>
+  <text x="466" y="163" font-size="12" fill="#374151">registry · limits · NIP-11 advertising</text>
+
+  <!-- ============ ENGINE: RelaySession ============ -->
+  <rect x="450" y="226" width="380" height="92" rx="10" fill="#e8f0fe" stroke="#2563eb" stroke-width="2"/>
+  <text x="466" y="248" font-size="12" font-weight="700" fill="#2563eb">[ ENGINE — per connection ]</text>
+  <text x="466" y="268" font-size="13.5" font-weight="700" fill="#1f2937">RelaySession</text>
+  <text x="466" y="286" font-size="12" fill="#374151">parses NIP-01 cmds, dispatches REQ/COUNT/AUTH</text>
+  <text x="466" y="303" font-size="12" fill="#374151">★ single AUTH commit point (engine-side write)</text>
+
+  <!-- ============ SCOPE ============ -->
+  <rect x="450" y="372" width="380" height="150" rx="10" fill="#e6f7ef" stroke="#059669" stroke-width="3"/>
+  <text x="466" y="394" font-size="12" font-weight="700" fill="#059669">[ CONNECTION SCOPE — owned by RelaySession ]</text>
+  <text x="466" y="415" font-size="13.5" font-weight="700" fill="#065f46">authenticatedUsers : MutableSet&lt;HexKey&gt;</text>
+  <text x="466" y="432" font-size="12.5" fill="#065f46">connectionId : Long</text>
+  <line x1="466" y1="444" x2="814" y2="444" stroke="#a7d8c4" stroke-width="1.2"/>
+  <text x="466" y="464" font-size="13" font-weight="700" fill="#065f46">RequestContext  =  read-only view</text>
+  <text x="466" y="481" font-size="12" fill="#065f46">(connectionId · authenticatedUsers · policy)</text>
+  <text x="466" y="505" font-size="12" font-style="italic" fill="#0f766e">handed to the data plane as `ctx` on every REQ/COUNT</text>
+
+  <!-- ============ POLICY ============ -->
+  <rect x="40" y="226" width="380" height="222" rx="10" fill="#fdf2e2" stroke="#d97706" stroke-width="1.8"/>
+  <text x="56" y="248" font-size="12" font-weight="700" fill="#b45309">[ POLICY — pure DECISIONS · IRelayPolicy ]</text>
+  <text x="56" y="269" font-size="12.5" font-weight="700" fill="#1f2937">PolicyStack</text>
+  <text x="56" y="286" font-size="12" fill="#374151">LimitsPolicy + VerifyPolicy + FullAuthPolicy</text>
+  <line x1="56" y1="298" x2="404" y2="298" stroke="#eecfa3" stroke-width="1.2"/>
+  <text x="56" y="318" font-size="12" fill="#374151">accept(EVENT/REQ/COUNT/AUTH)</text>
+  <text x="56" y="334" font-size="12" fill="#374151">→ allow · reject · rewrite filters</text>
+  <text x="56" y="356" font-size="12" fill="#374151">onConnect(scope, send)  ← reads scope to gate</text>
+  <text x="56" y="372" font-size="12" fill="#374151">onAuthenticated() : Boolean  → "record this id?"</text>
+  <line x1="56" y1="384" x2="404" y2="384" stroke="#eecfa3" stroke-width="1.2"/>
+  <text x="56" y="404" font-size="11.5" font-style="italic" fill="#92600a">FullAuthPolicy: per-connection — may hold scope ref</text>
+  <text x="56" y="420" font-size="11.5" font-style="italic" fill="#92600a">VerifyPolicy / EmptyPolicy: shared singletons —</text>
+  <text x="56" y="435" font-size="11.5" font-style="italic" fill="#92600a">stateless, ignore the injected scope</text>
+
+  <!-- ============ DATA PLANE: SessionBackend ============ -->
+  <rect x="860" y="226" width="300" height="84" rx="10" fill="#f2e9fc" stroke="#7c3aed" stroke-width="1.8"/>
+  <text x="876" y="248" font-size="12" font-weight="700" fill="#6d28d9">[ DATA PLANE — the seam ]</text>
+  <text x="876" y="268" font-size="13.5" font-weight="700" fill="#1f2937">SessionBackend</text>
+  <text x="876" y="286" font-size="12" fill="#374151">query(ctx, filters)</text>
+  <text x="876" y="302" font-size="12" fill="#374151">count / countResult(ctx, filters)</text>
+
+  <!-- ============ DATA PLANE: implementations ============ -->
+  <rect x="860" y="350" width="300" height="172" rx="10" fill="#f7f1fe" stroke="#7c3aed" stroke-width="1.4"/>
+  <text x="876" y="372" font-size="12" font-weight="700" fill="#6d28d9">[ two implementations ]</text>
+  <text x="876" y="392" font-size="12.5" font-weight="700" fill="#1f2937">EventSourceBackend → EventSource</text>
+  <text x="876" y="409" font-size="12" fill="#374151">you implement events(ctx, filters): Flow&lt;Event&gt;</text>
+  <text x="876" y="425" font-size="12" fill="#374151">search · redirector · computed data</text>
+  <text x="876" y="442" font-size="11.5" font-weight="700" fill="#0e7490">reads ctx.authenticatedUsers → caller-aware</text>
+  <line x1="876" y1="454" x2="1144" y2="454" stroke="#ddd0f3" stroke-width="1.2"/>
+  <text x="876" y="474" font-size="12.5" font-weight="700" fill="#1f2937">LiveEventStore → IEventStore</text>
+  <text x="876" y="491" font-size="12" fill="#374151">stored replay + live tail after EOSE</text>
+  <text x="876" y="508" font-size="12" fill="#374151">used by NostrServer</text>
+
+  <!-- ============ PROTOCOL band ============ -->
+  <rect x="40" y="560" width="1120" height="50" rx="10" fill="#eef2f6" stroke="#475569" stroke-width="1.6"/>
+  <text x="600" y="583" text-anchor="middle" font-size="12" font-weight="700" fill="#475569">[ QUARTZ PROTOCOL — used throughout ]</text>
+  <text x="600" y="600" text-anchor="middle" font-size="12.5" fill="#1f2937">Event · Filter · RelayAuthEvent · OK/EOSE/CLOSED/COUNT framing   (NIP-01 / NIP-42 / NIP-45 / NIP-50)</text>
+
+  <!-- ===================== ARROWS ===================== -->
+  <!-- Transport -> RelayServerBase -->
+  <line x1="400" y1="119" x2="446" y2="119" stroke="#334155" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <text x="423" y="111" text-anchor="middle" font-size="10.5" fill="#334155">frames</text>
+
+  <!-- RelayServerBase -> RelaySession -->
+  <line x1="640" y1="172" x2="640" y2="222" stroke="#334155" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <text x="650" y="200" font-size="11" fill="#334155">per connection</text>
+
+  <!-- RelaySession -> Scope (create + commit write) -->
+  <line x1="600" y1="318" x2="600" y2="368" stroke="#059669" stroke-width="2.2" marker-end="url(#arrow)"/>
+  <text x="590" y="346" text-anchor="end" font-size="10.8" font-weight="700" fill="#047857">creates &amp; owns</text>
+  <line x1="690" y1="318" x2="690" y2="368" stroke="#059669" stroke-width="2.2" marker-end="url(#arrow)"/>
+  <text x="700" y="340" font-size="10.8" font-weight="700" fill="#047857">WRITE: add(pubkey)</text>
+  <text x="700" y="354" font-size="10" fill="#047857">on verified AUTH</text>
+
+  <!-- RelaySession <-> Policy (decisions) -->
+  <line x1="446" y1="258" x2="424" y2="258" stroke="#334155" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <line x1="424" y1="276" x2="446" y2="276" stroke="#334155" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <text x="435" y="240" text-anchor="middle" font-size="10.5" fill="#334155">accept(cmd)</text>
+  <text x="435" y="296" text-anchor="middle" font-size="10.5" fill="#334155">onAuthenticated()→Bool</text>
+
+  <!-- Scope -> Policy (READ: gate) -->
+  <line x1="446" y1="430" x2="424" y2="392" stroke="#0e7490" stroke-width="1.8" stroke-dasharray="5 3" marker-end="url(#arrowDash)"/>
+  <text x="430" y="420" text-anchor="end" font-size="10.5" font-weight="700" fill="#0e7490">READ: gate</text>
+  <text x="430" y="433" text-anchor="end" font-size="9.6" fill="#0e7490">scope injected at onConnect</text>
+
+  <!-- RelaySession -> SessionBackend -->
+  <line x1="830" y1="262" x2="856" y2="262" stroke="#334155" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <text x="843" y="254" text-anchor="middle" font-size="10.5" fill="#334155">query(ctx,…)</text>
+
+  <!-- SessionBackend -> impls -->
+  <line x1="1010" y1="310" x2="1010" y2="346" stroke="#334155" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <text x="1020" y="332" font-size="10.5" fill="#334155">dispatch</text>
+
+  <!-- Scope (ctx) -> impls : the read view flows as ctx -->
+  <path d="M 830 470 C 845 470, 845 432, 856 432" fill="none" stroke="#0e7490" stroke-width="1.8" stroke-dasharray="5 3" marker-end="url(#arrowDash)"/>
+  <text x="843" y="488" text-anchor="middle" font-size="10.2" font-weight="700" fill="#0e7490">ctx = RequestContext</text>
+
+  <!-- impls -> protocol (emits events) -->
+  <line x1="1010" y1="522" x2="1010" y2="556" stroke="#334155" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <text x="1020" y="544" font-size="10.5" fill="#334155">Flow&lt;Event&gt;</text>
+
+  <!-- ===================== PLAN CALLOUT ===================== -->
+  <rect x="40" y="636" width="1120" height="350" rx="12" fill="#fff8e1" stroke="#f59e0b" stroke-width="1.8"/>
+  <text x="60" y="664" font-size="15" font-weight="700" fill="#92600a">What the plan changes (vs. the shipped branch)</text>
+
+  <text x="60" y="694" font-size="13" font-weight="700" fill="#065f46">Ownership moves: auth identity is SCOPE, not POLICY</text>
+  <text x="60" y="714" font-size="12.5" fill="#374151">• the connection scope (engine-owned) now holds authenticatedUsers — it was a field on FullAuthPolicy.</text>
+  <text x="60" y="733" font-size="12.5" fill="#374151">• RequestContext.authenticatedUsers reads that backing set directly (no policy involved).</text>
+
+  <text x="60" y="763" font-size="13" font-weight="700" fill="#047857">WRITE path (green): engine-side, single commit</text>
+  <text x="60" y="783" font-size="12.5" fill="#374151">• RelaySession.handleAuth: policy.accept(AuthCmd) verifies → onAuthenticated() returns Boolean →</text>
+  <text x="60" y="802" font-size="12.5" fill="#374151">  only on true does the engine add(pubkey). PassThrough/Empty return false → unverified ids never recorded.</text>
+
+  <text x="60" y="832" font-size="13" font-weight="700" fill="#0e7490">READ path (teal): policy reads, source reads</text>
+  <text x="60" y="852" font-size="12.5" fill="#374151">• gating policies read scope.authenticatedUsers (scope injected via onConnect(scope, send)).</text>
+  <text x="60" y="871" font-size="12.5" fill="#374151">• EventSource reads ctx.authenticatedUsers for caller-relative results.</text>
+
+  <text x="60" y="901" font-size="13" font-weight="700" fill="#b91c1c">Deleted</text>
+  <text x="60" y="921" font-size="12.5" fill="#374151">• AuthScopedPolicy marker   • PolicyStack.authenticatedUsers union   • RequestContext `as? AuthScopedPolicy` downcast</text>
+
+  <text x="60" y="951" font-size="13" font-weight="700" fill="#92600a">Signature changes (source-breaking, in-tree SPI)</text>
+  <text x="60" y="971" font-size="12.5" fill="#374151">• IRelayPolicy.onConnect(send) → onConnect(scope, send)      • IRelayPolicy.onAuthenticated(...) → returns Boolean</text>
+</svg>
