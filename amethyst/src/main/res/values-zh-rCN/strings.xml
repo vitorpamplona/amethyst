@@ -1364,6 +1364,8 @@
     <string name="account_settings">账户设置</string>
     <string name="app_settings">应用程序设置</string>
     <!-- Settings search -->
+    <string name="settings_search_placeholder">搜索设置</string>
+    <string name="settings_search_no_results">找不到 \"%1$s \" 的设置</string>
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
          negentropy, …) stay searchable in every locale and aren't sent to translators. -->
