@@ -1873,11 +1873,11 @@ object LocalCache : ILocalCache, ICacheProvider {
             if (result is LnZapReceiptValidator.Result.Invalid &&
                 result.reason != LnZapReceiptValidator.Result.Reason.MISMATCHED_LNURL
             ) {
-                Log.w("ZP", "dropping zap receipt ${event.id}: ${result.reason} ${result.detail ?: ""}")
+                Log.w("ZP") { "dropping zap receipt ${event.id}: ${result.reason} ${result.detail ?: ""}" }
                 return false
             }
             if (result is LnZapReceiptValidator.Result.Invalid) {
-                Log.w("ZP", "zap receipt ${event.id} has mismatched lnurl tag (accepting per SHOULD)")
+                Log.w("ZP") { "zap receipt ${event.id} has mismatched lnurl tag (accepting per SHOULD)" }
             }
 
             note.loadEvent(event, author, repliesTo)
@@ -1908,7 +1908,7 @@ object LocalCache : ILocalCache, ICacheProvider {
             try {
                 val info = resolver.resolve(recipientLnurlpUrl)
                 if (info == null) {
-                    Log.w("ZP", "could not fetch lnurlp for ${event.id}; not crediting")
+                    Log.w("ZP") { "could not fetch lnurlp for ${event.id}; not crediting" }
                     return@launch
                 }
                 val result =
@@ -1920,11 +1920,11 @@ object LocalCache : ILocalCache, ICacheProvider {
                 if (result is LnZapReceiptValidator.Result.Invalid &&
                     result.reason != LnZapReceiptValidator.Result.Reason.MISMATCHED_LNURL
                 ) {
-                    Log.w("ZP", "dropping zap receipt ${event.id}: ${result.reason} ${result.detail ?: ""}")
+                    Log.w("ZP") { "dropping zap receipt ${event.id}: ${result.reason} ${result.detail ?: ""}" }
                     return@launch
                 }
                 if (result is LnZapReceiptValidator.Result.Invalid) {
-                    Log.w("ZP", "zap receipt ${event.id} has mismatched lnurl tag (accepting per SHOULD)")
+                    Log.w("ZP") { "zap receipt ${event.id} has mismatched lnurl tag (accepting per SHOULD)" }
                 }
                 repliesTo.forEach { it.addZap(zapRequest, note) }
             } catch (t: Throwable) {
@@ -2221,7 +2221,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         if (wasVerified || justVerify(event)) {
             val expectedServicePubkey =
                 event.walletServicePubKey() ?: run {
-                    Log.w("LocalCache", "NWC request ${event.id} has no `p` tag; cannot register for response.")
+                    Log.w("LocalCache") { "NWC request ${event.id} has no `p` tag; cannot register for response." }
                     return false
                 }
 

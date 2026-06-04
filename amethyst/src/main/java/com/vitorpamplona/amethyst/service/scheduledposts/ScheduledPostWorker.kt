@@ -141,7 +141,7 @@ class ScheduledPostWorker(
                 }
                 val account = appModules.accountsCache.accounts.value[post.accountPubkey]
                 if (account == null) {
-                    Log.w(TAG, "Account ${post.accountPubkey} not loaded; releasing ${post.id} for retry")
+                    Log.w(TAG) { "Account ${post.accountPubkey} not loaded; releasing ${post.id} for retry" }
                     store.releaseClaim(post.id)
                     continue
                 }
@@ -164,7 +164,7 @@ class ScheduledPostWorker(
                         val msg = "no relay acknowledged within ${OK_TIMEOUT_SEC}s"
                         store.markFailed(post.id, msg)
                         ScheduledPostNotifier.notifyFailed(applicationContext, post, msg)
-                        Log.w(TAG, "client.publish(${post.id}) failed: $msg")
+                        Log.w(TAG) { "client.publish(${post.id}) failed: $msg" }
                     }
                 } catch (e: CancellationException) {
                     throw e

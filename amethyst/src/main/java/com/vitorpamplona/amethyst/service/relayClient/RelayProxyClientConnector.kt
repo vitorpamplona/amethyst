@@ -111,7 +111,7 @@ class RelayProxyClientConnector(
                         lastTorConnection = it.torConnection
                         lastClearConnection = it.clearConnection
 
-                        Log.d("ManageRelayServices", "Relay Services have changed, reconnecting relays that need to (transportChanged=$transportChanged)")
+                        Log.d("ManageRelayServices") { "Relay Services have changed, reconnecting relays that need to (transportChanged=$transportChanged)" }
                         client.reconnect(
                             onlyIfChanged = true,
                             ignoreRetryDelays = transportChanged,
