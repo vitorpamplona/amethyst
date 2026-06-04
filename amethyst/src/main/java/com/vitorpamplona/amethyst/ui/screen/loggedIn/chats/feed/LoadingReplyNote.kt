@@ -21,12 +21,18 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
 import androidx.compose.animation.Crossfade
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,7 +40,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -111,27 +117,47 @@ fun LoadingReplyNote(
             }
     }
 
-    Crossfade(targetState = exhausted, label = "loadingReplyState") { isExhausted ->
-        Row(
-            modifier = modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            if (!isExhausted) {
-                CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp, color = Color.Gray)
-            }
-            Text(
-                text =
+    // Same chrome as DmHistoryLoadingCard (the older-history status card at the oldest end) so an
+    // unloaded reply reads as the same kind of "reaching back into history" state, just inline in the
+    // quote: rounded translucent surface, a spinner-in-a-box, then the status line.
+    Surface(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+        tonalElevation = 2.dp,
+    ) {
+        Crossfade(targetState = exhausted, animationSpec = tween(500), label = "loadingReplyState") { isExhausted ->
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(Modifier.size(22.dp), contentAlignment = Alignment.Center) {
                     if (isExhausted) {
-                        stringRes(R.string.post_not_found_short)
+                        Text(
+                            "⋯",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     } else {
-                        stringRes(R.string.chats_reply_searching_history)
-                    },
-                color = Color.Gray,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    }
+                }
+                Spacer(Modifier.width(14.dp))
+                Text(
+                    text =
+                        if (isExhausted) {
+                            stringRes(R.string.post_not_found_short)
+                        } else {
+                            stringRes(R.string.chats_reply_searching_history)
+                        },
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
