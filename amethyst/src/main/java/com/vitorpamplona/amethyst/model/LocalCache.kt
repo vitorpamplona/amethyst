@@ -1379,6 +1379,12 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         getAnyChannel(deleteNote)?.removeNote(deleteNote)
 
+        // Sever the back-references from this note's children before it leaves the
+        // map. Otherwise each child keeps the removed shell alive through its replyTo
+        // (a partial deletion / leak) and a reply resolved later via computeReplyTo
+        // would resurrect a second Note for the same id.
+        deleteNote.detachFromChildren()
+
         notes.remove(deleteNote.idHex)
 
         deleteNote.clearFlow()

@@ -162,4 +162,52 @@ class NotePruningReferenceTest {
         assertTrue(newer.labels["nostr"]?.contains(labelNote) == true, "label must move to the newer version")
         assertSame(newer, labelNote.replyTo?.single())
     }
+
+    // ── Fix 4: deleteNote severs child back-references (no partial deletion) ──
+
+    @Test
+    fun detachFromChildrenSeversReplyToAndClearsCollections() {
+        val parent = note("a1".repeat(32))
+        val reply = note("b1".repeat(32)).apply { replyTo = listOf(parent) }
+        parent.addReply(reply)
+
+        val detached = parent.detachFromChildren()
+
+        assertTrue(reply in detached, "the child must be returned as detached")
+        assertTrue(parent.replies.isEmpty(), "parent must release its forward child references")
+        assertTrue(
+            reply.replyTo?.contains(parent) != true,
+            "child must no longer point back at the removed parent",
+        )
+    }
+
+    @Test
+    fun detachFromChildrenKeepsOtherParents() {
+        val deleted = note("a2".repeat(32))
+        val survivor = note("c2".repeat(32))
+        val reply = note("b2".repeat(32)).apply { replyTo = listOf(deleted, survivor) }
+        deleted.addReply(reply)
+        survivor.addReply(reply)
+
+        deleted.detachFromChildren()
+
+        assertEquals(listOf(survivor), reply.replyTo, "only the removed parent must be dropped from replyTo")
+    }
+
+    @Test
+    fun detachFromChildrenSeversReactionAndZapSources() {
+        val parent = note("a3".repeat(32))
+        val reaction = sourceNote("31".repeat(32)).apply { replyTo = listOf(parent) }
+        val zapSource = sourceNote("32".repeat(32)).apply { replyTo = listOf(parent) }
+
+        parent.addOnchainZap(zapSource, "tx1", claimedSats = 1L, verifiedSats = 1L, status = OnchainZapStatus.CONFIRMED)
+        parent.addBoost(reaction)
+
+        parent.detachFromChildren()
+
+        assertTrue(parent.boosts.isEmpty())
+        assertTrue(parent.onchainZaps.isEmpty())
+        assertTrue(reaction.replyTo?.contains(parent) != true)
+        assertTrue(zapSource.replyTo?.contains(parent) != true)
+    }
 }

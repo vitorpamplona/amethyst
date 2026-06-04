@@ -417,6 +417,31 @@ open class Note(
         return toBeRemoved
     }
 
+    /**
+     * Fully detach this note from the notes below it in the graph so it can be
+     * removed from the cache without leaving a partial deletion behind. It both
+     * clears this note's own child collections (via [removeAllChildNotes]) and
+     * drops this note from every child's [replyTo], so once this note leaves the
+     * cache map nothing keeps the dead shell alive.
+     *
+     * This matters for the NIP-09 delete path: without severing the child →
+     * parent `replyTo` links, the removed note leaks (held by each child) and a
+     * later reply resolved through `computeReplyTo` would `getOrCreateNote` a
+     * *second* Note for the same id — breaking the one-Note-per-id invariant.
+     *
+     * Returns the now-orphaned children (their other parents, if any, are kept).
+     */
+    fun detachFromChildren(): List<Note> {
+        val children = removeAllChildNotes()
+        children.forEach { child ->
+            val parents = child.replyTo
+            if (parents != null && this in parents) {
+                child.replyTo = parents - this
+            }
+        }
+        return children
+    }
+
     fun removeReaction(note: Note) {
         val tags = note.event?.tags ?: emptyArray()
         val reaction = note.event?.content?.firstFullCharOrEmoji(ImmutableListOfLists(tags)) ?: "+"
