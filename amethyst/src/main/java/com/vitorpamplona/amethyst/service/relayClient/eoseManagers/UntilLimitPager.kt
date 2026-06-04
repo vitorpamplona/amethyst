@@ -147,7 +147,16 @@ class UntilLimitPager<K> {
         if (c.pageCount == 0) {
             c.done = true
         } else {
-            c.reachedUntil = c.pageOldest
+            // The reached cursor must move strictly older every page (the next page asks `until =
+            // reached - 1`). A relay that returns events but none older than we already have — a
+            // misbehaving relay echoing the same newest events — would otherwise pin the cursor and the
+            // on-screen sentinel would re-request the same window forever. Treat that as the bottom.
+            val prev = c.reachedUntil
+            if (prev == null || c.pageOldest < prev) {
+                c.reachedUntil = c.pageOldest
+            } else {
+                c.done = true
+            }
         }
     }
 

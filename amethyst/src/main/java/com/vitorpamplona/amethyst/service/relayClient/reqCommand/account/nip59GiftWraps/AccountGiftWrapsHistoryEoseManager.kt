@@ -185,6 +185,9 @@ class AccountGiftWrapsHistoryEoseManager(
     }
 
     private fun updateStatus(user: User) {
+        // The display flows are singletons shown for the foreground account; a background account's late
+        // EOSE must not overwrite them (its cursors still advance in the pager).
+        if (activeUser != user.pubkeyHex) return
         val relays = accounts[user.pubkeyHex]?.dmRelays?.flow?.value ?: emptySet()
         _relayCount.value = loadTracker.count()
         val start = startUntil()
