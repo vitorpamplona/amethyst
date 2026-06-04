@@ -77,6 +77,7 @@ fun DmHistoryLoadingCard(
     loading: Boolean,
     exhausted: Boolean,
     relayCount: Int,
+    stalledCount: Int,
     reachedBack: Long?,
     modifier: Modifier = Modifier,
 ) {
@@ -154,7 +155,7 @@ fun DmHistoryLoadingCard(
                                 if (done) {
                                     stringResource(R.string.chats_history_reached_start, protocolName)
                                 } else {
-                                    historySubtitle(protocolTag, relayCount, reachedBack)
+                                    historySubtitle(protocolTag, relayCount, stalledCount, reachedBack)
                                 },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -170,19 +171,29 @@ fun DmHistoryLoadingCard(
 internal fun historySubtitle(
     protocolTag: String,
     relayCount: Int,
+    stalledCount: Int,
     reachedBack: Long?,
 ): String {
-    // A transient frame can carry loading=true with relayCount=0 (the count updates a beat after the
-    // spinner flips, and again as the last relay settles); don't render a nonsensical "0 relays".
-    if (relayCount <= 0) return protocolTag
     val backLabel =
         remember(reachedBack) {
             reachedBack?.let { SimpleDateFormat("MMM yyyy", Locale.getDefault()).format(Date(it * 1000)) }
         }
-    val relays = pluralStringResource(R.plurals.chats_history_relays, relayCount, relayCount)
+    // Middle segment: the relays actively fetching ("N relays"), or — when none are in flight but some
+    // can't be reached — what we're waiting on ("waiting on N relays"). With neither, just the tag, since
+    // a paged-out-but-parked protocol isn't waiting on anything (it resumes on scroll).
+    val middle =
+        when {
+            relayCount > 0 -> pluralStringResource(R.plurals.chats_history_relays, relayCount, relayCount)
+            stalledCount > 0 ->
+                stringResource(
+                    R.string.chats_history_waiting,
+                    pluralStringResource(R.plurals.chats_history_relays, stalledCount, stalledCount),
+                )
+            else -> return protocolTag
+        }
     return if (backLabel != null) {
-        stringResource(R.string.chats_history_subtitle, protocolTag, relays, backLabel)
+        stringResource(R.string.chats_history_subtitle, protocolTag, middle, backLabel)
     } else {
-        stringResource(R.string.chats_history_subtitle_no_date, protocolTag, relays)
+        stringResource(R.string.chats_history_subtitle_no_date, protocolTag, middle)
     }
 }

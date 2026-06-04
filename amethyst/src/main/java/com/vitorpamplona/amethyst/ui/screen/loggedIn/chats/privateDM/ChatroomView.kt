@@ -219,8 +219,10 @@ fun ChatroomViewUI(
     val giftWrapsExhausted by giftWrapsHistory.exhausted.collectAsStateWithLifecycle()
     val nip04Exhausted by nip04History.exhausted.collectAsStateWithLifecycle()
     val giftWrapsRelays by giftWrapsHistory.relayCount.collectAsStateWithLifecycle()
+    val giftWrapsStalled by giftWrapsHistory.stalledCount.collectAsStateWithLifecycle()
     val giftWrapsReached by giftWrapsHistory.reachedBack.collectAsStateWithLifecycle()
     val nip04Relays by nip04History.relayCount.collectAsStateWithLifecycle()
+    val nip04Stalled by nip04History.stalledCount.collectAsStateWithLifecycle()
     val nip04Reached by nip04History.reachedBack.collectAsStateWithLifecycle()
     val nip04Progress by nip04History.relayProgress.collectAsStateWithLifecycle()
     val giftWrapsProgress by giftWrapsHistory.relayProgress.collectAsStateWithLifecycle()
@@ -271,8 +273,8 @@ fun ChatroomViewUI(
                 // while it pages and crossfades to "All caught up" when that protocol runs dry.
                 olderBoundary = {
                     Column {
-                        DmHistoryLoadingCard(nip17Name, "NIP-17", loadingGiftWraps, giftWrapsExhausted, giftWrapsRelays, giftWrapsReached)
-                        DmHistoryLoadingCard(nip04Name, "NIP-04", loadingNip04, nip04Exhausted, nip04Relays, nip04Reached)
+                        DmHistoryLoadingCard(nip17Name, "NIP-17", loadingGiftWraps, giftWrapsExhausted, giftWrapsRelays, giftWrapsStalled, giftWrapsReached)
+                        DmHistoryLoadingCard(nip04Name, "NIP-04", loadingNip04, nip04Exhausted, nip04Relays, nip04Stalled, nip04Reached)
                     }
                 },
                 // Each relay's window-limit marker, placed at its reached cursor (pure UI). Hidden once

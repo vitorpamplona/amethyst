@@ -104,6 +104,11 @@ fun LoadingReplyNote(
             DmReplyProtocol.NIP17 -> giftWrapsHistory.relayCount
             DmReplyProtocol.NIP04 -> nip04History.relayCount
         }
+    val stalledCountFlow: StateFlow<Int> =
+        when (protocol) {
+            DmReplyProtocol.NIP17 -> giftWrapsHistory.stalledCount
+            DmReplyProtocol.NIP04 -> nip04History.stalledCount
+        }
     val reachedBackFlow: StateFlow<Long?> =
         when (protocol) {
             DmReplyProtocol.NIP17 -> giftWrapsHistory.reachedBack
@@ -117,6 +122,7 @@ fun LoadingReplyNote(
 
     val exhausted by exhaustedFlow.collectAsStateWithLifecycle()
     val relayCount by relayCountFlow.collectAsStateWithLifecycle()
+    val stalledCount by stalledCountFlow.collectAsStateWithLifecycle()
     val reachedBack by reachedBackFlow.collectAsStateWithLifecycle()
 
     LaunchedEffect(protocol, loadingFlow, exhaustedFlow) {
@@ -180,7 +186,7 @@ fun LoadingReplyNote(
                     // still asking, and how far back it has paged. Hidden once history runs dry.
                     if (!isExhausted) {
                         Text(
-                            text = historySubtitle(protocolTag, relayCount, reachedBack),
+                            text = historySubtitle(protocolTag, relayCount, stalledCount, reachedBack),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,

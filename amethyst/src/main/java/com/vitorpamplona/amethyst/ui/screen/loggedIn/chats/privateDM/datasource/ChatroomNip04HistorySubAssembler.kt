@@ -79,6 +79,10 @@ class ChatroomNip04HistorySubAssembler(
     private val _relayCount = MutableStateFlow(0)
     val relayCount: StateFlow<Int> = _relayCount.asStateFlow()
 
+    // Not-done relays that can't be reached right now — shown as "waiting on N relays" on the paused card.
+    private val _stalledCount = MutableStateFlow(0)
+    val stalledCount: StateFlow<Int> = _stalledCount.asStateFlow()
+
     private val _reachedBack = MutableStateFlow<Long?>(null)
     val reachedBack: StateFlow<Long?> = _reachedBack.asStateFlow()
 
@@ -190,6 +194,7 @@ class ChatroomNip04HistorySubAssembler(
         val start = startUntil(pk)
         _reachedBack.value = pager.deepestReached(pk, relays.all, start)
         val stalled = stalledRelays[pk] ?: emptySet()
+        _stalledCount.value = relays.all.count { it in stalled && !pager.isDone(pk, it) }
         _relayProgress.value =
             relays.all.associateWith { relay ->
                 RelayPagingProgress(
@@ -225,6 +230,7 @@ class ChatroomNip04HistorySubAssembler(
             loadTracker.reset()
             _exhausted.value = exhaustedByConvo[pk] ?: false
             _relayCount.value = 0
+            _stalledCount.value = 0
             _reachedBack.value = null
             _relayProgress.value = emptyMap()
         }

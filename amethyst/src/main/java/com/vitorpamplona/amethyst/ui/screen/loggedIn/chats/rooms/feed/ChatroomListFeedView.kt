@@ -171,8 +171,10 @@ private fun FeedLoaded(
     // reaching for (relays + how far back it has paged) while it loads, then crossfades to "All caught
     // up" and collapses when it runs dry.
     val giftWrapsRelays by giftWrapsHistory.relayCount.collectAsStateWithLifecycle()
+    val giftWrapsStalled by giftWrapsHistory.stalledCount.collectAsStateWithLifecycle()
     val giftWrapsReached by giftWrapsHistory.reachedBack.collectAsStateWithLifecycle()
     val nip04Relays by nip04History.relayCount.collectAsStateWithLifecycle()
+    val nip04Stalled by nip04History.stalledCount.collectAsStateWithLifecycle()
     val nip04Reached by nip04History.reachedBack.collectAsStateWithLifecycle()
     val giftWrapsProgress by giftWrapsHistory.relayProgress.collectAsStateWithLifecycle()
     val nip04Progress by nip04History.relayProgress.collectAsStateWithLifecycle()
@@ -228,10 +230,10 @@ private fun FeedLoaded(
             // Rendered unconditionally at the protocol's oldest room so the card can run its own
             // "All caught up" crossfade-and-collapse when that protocol exhausts.
             if (index == oldestNip17Index) {
-                DmHistoryLoadingCard(nip17Name, "NIP-17", loadingGiftWraps, giftWrapsExhausted, giftWrapsRelays, giftWrapsReached)
+                DmHistoryLoadingCard(nip17Name, "NIP-17", loadingGiftWraps, giftWrapsExhausted, giftWrapsRelays, giftWrapsStalled, giftWrapsReached)
             }
             if (index == oldestNip04Index) {
-                DmHistoryLoadingCard(nip04Name, "NIP-04", loadingNip04, nip04Exhausted, nip04Relays, nip04Reached)
+                DmHistoryLoadingCard(nip04Name, "NIP-04", loadingNip04, nip04Exhausted, nip04Relays, nip04Stalled, nip04Reached)
             }
 
             // Per-relay window-limit markers/sentinels belonging in the gap toward the next-older room:
