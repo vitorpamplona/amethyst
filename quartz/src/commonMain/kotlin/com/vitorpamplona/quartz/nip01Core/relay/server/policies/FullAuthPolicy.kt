@@ -58,7 +58,7 @@ open class FullAuthPolicy(
     val challenge: String = RandomInstance.randomChars(32)
 
     /** Set of pubkeys that have successfully authenticated on this session. */
-    val authenticatedUsers = mutableSetOf<HexKey>()
+    override val authenticatedUsers = mutableSetOf<HexKey>()
 
     /** Returns true if at least one pubkey has authenticated. */
     fun isAuthenticated(): Boolean = authenticatedUsers.isNotEmpty()

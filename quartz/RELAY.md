@@ -93,11 +93,13 @@ framing, subscription lifecycle), so there's no hand-written read loop.
 
 ```kotlin
 class SearchEventSource(private val backend: SearchApi) : EventSource {
-    override fun events(filters: List<Filter>): Flow<Event> = flow {
+    override fun events(ctx: RequestContext, filters: List<Filter>): Flow<Event> = flow {
+        // ctx says who is asking — score/restrict results from their perspective.
+        val viewer = ctx.authenticatedUsers.firstOrNull()
         filters.forEach { f ->
             f.search?.let { raw ->
                 val q = SearchQuery.parse(raw)
-                backend.search(q.terms, domain = q.domain, language = q.language)
+                backend.search(q.terms, domain = q.domain, language = q.language, viewer = viewer)
                     .forEach { emit(it) }
             }
         }
@@ -139,6 +141,22 @@ both build on `RelaySession` and the shared `SessionBackend` seam (`LiveEventSto
 is the storage-backed `SessionBackend`; `EventSourceBackend` adapts a
 `EventSource`). Implement `SessionBackend` directly only if you need custom
 control over the EVENT/negentropy paths as well as REQ/COUNT.
+
+### Caller-aware sources (who is asking)
+
+Every `events`/`count`/`countResult` call receives a `RequestContext` carrying
+the connection's `authenticatedUsers` (the pubkeys that completed NIP-42 on this
+socket) and a stable `connectionId`. That is what makes NIP-42 useful on a
+non-storage relay: a single shared `EventSource` instance can serve
+caller-relative results (trust/relevance scored from the viewer's perspective,
+"for-you" feeds), restricted content (a pubkey's DMs returned only to that
+pubkey), or per-connection tenancy — without smuggling auth state through a
+side channel. `ctx.authenticatedUsers` reads live from the connection's policy,
+so a REQ that arrives after the AUTH sees the freshly authenticated pubkey(s).
+
+For per-connection state richer than the pubkey (e.g. a backend session token
+minted in `FullAuthPolicy.authorize`), downcast `ctx.policy` to your own policy
+subclass and read a typed field — the policy instance is itself per-connection.
 
 ## Policies
 
@@ -360,16 +378,16 @@ are omitted), and `CONTENT_TYPE` is `application/nostr+json`.
 
 ## Approximate COUNT (NIP-45 HyperLogLog)
 
-`COUNT` is answered by `SessionBackend.countResult(filters)` (and
+`COUNT` is answered by `SessionBackend.countResult(ctx, filters)` (and
 `EventSource.countResult`), which defaults to an exact count. To return a
 mergeable HyperLogLog estimate instead — for the six canonical NIP-45 queries
 (reaction/repost/quote/reply/comment/follower counts) — fold matching pubkeys
 into an `HllBuilder` and return its `CountResult`:
 
 ```kotlin
-override suspend fun countResult(filters: List<Filter>): CountResult {
+override suspend fun countResult(ctx: RequestContext, filters: List<Filter>): CountResult {
     val filter = filters.first()
-    val hll = HyperLogLog.builderFor(filter) ?: return CountResult(count(filters))
+    val hll = HyperLogLog.builderFor(filter) ?: return CountResult(count(ctx, filters))
     store.query(filter) { event -> hll.add(event.pubKey) }
     return hll.toCountResult() // count = estimate, approximate = true, hll = registers
 }

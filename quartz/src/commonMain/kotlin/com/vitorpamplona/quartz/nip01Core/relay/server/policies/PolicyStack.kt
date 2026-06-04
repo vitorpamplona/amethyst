@@ -35,6 +35,10 @@ class PolicyStack(
 ) : IRelayPolicy {
     val policies = policies.toList()
 
+    /** Union of the authenticated pubkeys across every composed policy. */
+    override val authenticatedUsers: Set<HexKey>
+        get() = policies.flatMapTo(mutableSetOf()) { it.authenticatedUsers }
+
     override fun onConnect(send: (Message) -> Unit) {
         policies.forEach { it.onConnect(send) }
     }

@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CloseCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
+import com.vitorpamplona.quartz.nip01Core.relay.server.backend.RequestContext
 import com.vitorpamplona.quartz.nip01Core.relay.server.backend.SessionBackend
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyResult
@@ -73,6 +74,18 @@ class RelaySession(
     val id: Long = nextConnectionId(),
 ) : AutoCloseable {
     private val subscriptions = LargeCache<String, Job>()
+
+    /**
+     * The per-connection context handed to the [store] on every REQ/COUNT so a
+     * source can see who is asking. [RequestContext.authenticatedUsers] reads
+     * live from [policy], so a REQ that arrives after a NIP-42 AUTH sees the
+     * freshly authenticated pubkey(s).
+     */
+    private val requestContext =
+        object : RequestContext {
+            override val connectionId = id
+            override val policy = this@RelaySession.policy
+        }
 
     /** NIP-77 negentropy state for this connection. */
     private val negentropy = NegSessionRegistry(store, ::send, negentropySettings)
@@ -189,7 +202,7 @@ class RelaySession(
 
         val countResult =
             try {
-                store.countResult(filters)
+                store.countResult(requestContext, filters)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -254,6 +267,7 @@ class RelaySession(
             scope.launch {
                 try {
                     store.query(
+                        ctx = requestContext,
                         filters = filters,
                         onEach = { event ->
                             if (policy.canSendToSession(event)) {

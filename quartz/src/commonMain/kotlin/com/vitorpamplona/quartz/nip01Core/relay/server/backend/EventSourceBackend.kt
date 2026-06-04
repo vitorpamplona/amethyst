@@ -36,15 +36,22 @@ class EventSourceBackend(
     private val source: EventSource,
 ) : SessionBackend {
     override suspend fun query(
+        ctx: RequestContext,
         filters: List<Filter>,
         onEach: (Event) -> Unit,
         onEose: () -> Unit,
     ) {
-        source.events(filters).collect { onEach(it) }
+        source.events(ctx, filters).collect { onEach(it) }
         onEose()
     }
 
-    override suspend fun count(filters: List<Filter>): Int = source.count(filters)
+    override suspend fun count(
+        ctx: RequestContext,
+        filters: List<Filter>,
+    ): Int = source.count(ctx, filters)
 
-    override suspend fun countResult(filters: List<Filter>): CountResult = source.countResult(filters)
+    override suspend fun countResult(
+        ctx: RequestContext,
+        filters: List<Filter>,
+    ): CountResult = source.countResult(ctx, filters)
 }
