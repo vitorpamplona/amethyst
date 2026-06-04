@@ -1,0 +1,137 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
+
+import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+
+/** Which DM history pager backs the conversation an unloaded reply belongs to. */
+enum class DmReplyProtocol {
+    // NIP-17 gift wraps. The rumor id of the reply target is NOT queryable on relays (only the outer
+    // 1059 wrap id is), so the only way to surface it is to keep paging gift-wrap history until the wrap
+    // carrying it is decrypted — hence we drive the account-wide gift-wrap history pager.
+    NIP17,
+
+    // NIP-04 legacy DMs (kind 4). Paged per relay for the open conversation.
+    NIP04,
+}
+
+/**
+ * The inner-quote placeholder for a reply whose target message has not been paged in yet — used in
+ * place of the generic [com.vitorpamplona.amethyst.ui.note.BlankNote] ("post not found") that the main
+ * feeds show. A reply target inside a conversation isn't *missing*, it's simply older than the window
+ * loaded so far; for gift wraps it can't even be fetched by id. So instead of declaring it lost, this
+ * card actively walks the conversation's history backward — kicking the protocol's `loadMore` each time
+ * the previous page settles — until either the target decrypts (the surrounding
+ * [com.vitorpamplona.amethyst.ui.note.WatchNoteEvent] crossfades the real message in and disposes this)
+ * or that protocol's history runs dry, at which point it settles into the terminal "not found" text.
+ *
+ * It runs regardless of scroll position (no oldest-end gate like the scroll-driven loader) precisely so
+ * that opening a thread and seeing a reply to something off-screen pulls that something in on its own.
+ * The drive loop is idempotent and gated on the pager's own `loadingMore`/`exhausted`, so several
+ * unloaded replies on screen — and the scroll loader — all coalesce onto the same paging window.
+ */
+@Composable
+fun LoadingReplyNote(
+    protocol: DmReplyProtocol,
+    accountViewModel: AccountViewModel,
+    modifier: Modifier = Modifier,
+) {
+    val giftWrapsHistory = remember(accountViewModel) { accountViewModel.dataSources().account.giftWrapsHistory }
+    val nip04History = remember(accountViewModel) { accountViewModel.dataSources().chatroom.nip04History }
+
+    val loadingFlow: StateFlow<Boolean> =
+        when (protocol) {
+            DmReplyProtocol.NIP17 -> giftWrapsHistory.loadingMore
+            DmReplyProtocol.NIP04 -> nip04History.loadingMore
+        }
+    val exhaustedFlow: StateFlow<Boolean> =
+        when (protocol) {
+            DmReplyProtocol.NIP17 -> giftWrapsHistory.exhausted
+            DmReplyProtocol.NIP04 -> nip04History.exhausted
+        }
+
+    val exhausted by exhaustedFlow.collectAsStateWithLifecycle()
+
+    LaunchedEffect(protocol, loadingFlow, exhaustedFlow) {
+        // Step the next, older page whenever the previous one has settled and history isn't exhausted.
+        // The target may surface mid-page (this composable then leaves composition and cancels us); if
+        // not, we keep walking until the protocol bottoms out and the filter stops passing.
+        combine(loadingFlow, exhaustedFlow) { loading, exhaustedNow -> !loading && !exhaustedNow }
+            .distinctUntilChanged()
+            .filter { it }
+            .collect {
+                Log.d("DMPagination") { "reply blank: widen → $protocol loadMore (searching for unloaded reply)" }
+                when (protocol) {
+                    DmReplyProtocol.NIP17 -> giftWrapsHistory.loadMore(accountViewModel.userProfile())
+                    DmReplyProtocol.NIP04 -> nip04History.loadMore()
+                }
+            }
+    }
+
+    Crossfade(targetState = exhausted, label = "loadingReplyState") { isExhausted ->
+        Row(
+            modifier = modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (!isExhausted) {
+                CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp, color = Color.Gray)
+            }
+            Text(
+                text =
+                    if (isExhausted) {
+                        stringRes(R.string.post_not_found_short)
+                    } else {
+                        stringRes(R.string.chats_reply_searching_history)
+                    },
+                color = Color.Gray,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}

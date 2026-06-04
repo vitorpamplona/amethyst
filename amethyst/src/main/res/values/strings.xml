@@ -281,6 +281,7 @@
     <string name="chats_history_proto_nip17">encrypted</string>
     <string name="chats_history_proto_nip04">legacy</string>
     <string name="chats_history_relay_sync">Relay sync:</string>
+    <string name="chats_reply_searching_history">Looking for the original message…</string>
     <string name="chats_history_subtitle">%1$s · %2$s · back to %3$s</string>
     <string name="chats_history_subtitle_no_date">%1$s · %2$s</string>
     <plurals name="chats_history_relays">
