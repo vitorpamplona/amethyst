@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.relay.server.backend
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.server.policies.AuthScopedPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
 
 /**
@@ -61,7 +62,8 @@ interface RequestContext {
     /**
      * The pubkeys that have authenticated on this connection via NIP-42, read
      * live from [policy]. Empty when the connection is unauthenticated or the
-     * policy does not implement auth.
+     * policy does not track auth (i.e. is not an [AuthScopedPolicy]). This
+     * accessor encapsulates that downcast so a source needn't repeat it.
      */
-    val authenticatedUsers: Set<HexKey> get() = policy.authenticatedUsers
+    val authenticatedUsers: Set<HexKey> get() = (policy as? AuthScopedPolicy)?.authenticatedUsers ?: emptySet()
 }

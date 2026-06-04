@@ -53,7 +53,8 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  */
 open class FullAuthPolicy(
     val relay: NormalizedRelayUrl,
-) : IRelayPolicy {
+) : IRelayPolicy,
+    AuthScopedPolicy {
     /** The challenge string sent to this client for NIP-42 authentication. */
     val challenge: String = RandomInstance.randomChars(32)
 

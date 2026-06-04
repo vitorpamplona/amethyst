@@ -34,16 +34,6 @@ import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
  * Defines custom behavior for this relay.
  */
 interface IRelayPolicy {
-    /**
-     * The pubkeys this connection has authenticated as via NIP-42. The engine
-     * surfaces this to the data plane through
-     * [com.vitorpamplona.quartz.nip01Core.relay.server.backend.RequestContext.authenticatedUsers]
-     * so a source can tailor results to the caller. The default is empty — a
-     * policy that does no auth (e.g. [EmptyPolicy]) never authenticates anyone;
-     * [FullAuthPolicy] overrides it with the set it commits on a successful AUTH.
-     */
-    val authenticatedUsers: Set<HexKey> get() = emptySet()
-
     fun onConnect(send: (Message) -> Unit)
 
     /**

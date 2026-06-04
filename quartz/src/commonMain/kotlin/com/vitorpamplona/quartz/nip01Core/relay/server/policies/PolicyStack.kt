@@ -32,12 +32,13 @@ import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 
 class PolicyStack(
     vararg policies: IRelayPolicy,
-) : IRelayPolicy {
+) : IRelayPolicy,
+    AuthScopedPolicy {
     val policies = policies.toList()
 
-    /** Union of the authenticated pubkeys across every composed policy. */
+    /** Union of the authenticated pubkeys across the auth-tracking members. */
     override val authenticatedUsers: Set<HexKey>
-        get() = policies.flatMapTo(mutableSetOf()) { it.authenticatedUsers }
+        get() = policies.filterIsInstance<AuthScopedPolicy>().flatMapTo(mutableSetOf()) { it.authenticatedUsers }
 
     override fun onConnect(send: (Message) -> Unit) {
         policies.forEach { it.onConnect(send) }
