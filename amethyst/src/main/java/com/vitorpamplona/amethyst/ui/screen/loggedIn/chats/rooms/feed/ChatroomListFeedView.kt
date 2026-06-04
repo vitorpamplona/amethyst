@@ -230,10 +230,10 @@ private fun FeedLoaded(
             // Rendered unconditionally at the protocol's oldest room so the card can run its own
             // "All caught up" crossfade-and-collapse when that protocol exhausts.
             if (index == oldestNip17Index) {
-                DmHistoryLoadingCard(nip17Name, "NIP-17", loadingGiftWraps, giftWrapsExhausted, giftWrapsRelays, giftWrapsStalled, giftWrapsReached)
+                DmHistoryLoadingCard(nip17Name, "NIP-17", loadingGiftWraps, giftWrapsExhausted, giftWrapsRelays, giftWrapsStalled, giftWrapsReached, giftWrapsProgress)
             }
             if (index == oldestNip04Index) {
-                DmHistoryLoadingCard(nip04Name, "NIP-04", loadingNip04, nip04Exhausted, nip04Relays, nip04Stalled, nip04Reached)
+                DmHistoryLoadingCard(nip04Name, "NIP-04", loadingNip04, nip04Exhausted, nip04Relays, nip04Stalled, nip04Reached, nip04Progress)
             }
 
             // Per-relay window-limit markers/sentinels belonging in the gap toward the next-older room:

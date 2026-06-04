@@ -285,6 +285,8 @@
     <string name="chats_history_subtitle">%1$s · %2$s · back to %3$s</string>
     <string name="chats_history_subtitle_no_date">%1$s · %2$s</string>
     <string name="chats_history_waiting">waiting on %1$s</string>
+    <string name="chats_history_relays_title">%1$s · history by relay</string>
+    <string name="chats_history_relay_back">back to %1$s</string>
     <plurals name="chats_history_relays">
         <item quantity="one">%1$d relay</item>
         <item quantity="other">%1$d relays</item>

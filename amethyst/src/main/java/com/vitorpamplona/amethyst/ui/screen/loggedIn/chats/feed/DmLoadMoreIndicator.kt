@@ -26,19 +26,25 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,11 +53,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.RelayPagingProgress
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -69,6 +79,8 @@ private const val ALL_DONE_VISIBLE_MS = 2200L
  * @param protocolName human label woven into sentences, e.g. "encrypted" / "legacy".
  * @param protocolTag  short technical tag for the subtitle, e.g. "NIP-17" / "NIP-04".
  * @param reachedBack  epoch seconds of the oldest point reached so far (the deepest `until` cursor).
+ * @param relayProgress per-relay reach (where each relay's window is, done/stalled). Tapping the card
+ *   opens a popup listing them; pass empty to make the card non-interactive.
  */
 @Composable
 fun DmHistoryLoadingCard(
@@ -79,6 +91,7 @@ fun DmHistoryLoadingCard(
     relayCount: Int,
     stalledCount: Int,
     reachedBack: Long?,
+    relayProgress: Map<NormalizedRelayUrl, RelayPagingProgress> = emptyMap(),
     modifier: Modifier = Modifier,
 ) {
     // Once exhausted, show "All caught up" for a beat, then collapse. Reset if it un-exhausts.
@@ -93,6 +106,11 @@ fun DmHistoryLoadingCard(
             }
     }
 
+    var showRelays by remember { mutableStateOf(false) }
+    if (showRelays) {
+        DmHistoryRelayDialog(protocolTag, relayProgress) { showRelays = false }
+    }
+
     AnimatedVisibility(
         visible = !collapsed,
         modifier = modifier,
@@ -103,7 +121,8 @@ fun DmHistoryLoadingCard(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .then(if (relayProgress.isNotEmpty()) Modifier.clickable { showRelays = true } else Modifier),
             shape = RoundedCornerShape(14.dp),
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
             tonalElevation = 2.dp,
@@ -197,3 +216,82 @@ internal fun historySubtitle(
         stringResource(R.string.chats_history_subtitle_no_date, protocolTag, middle)
     }
 }
+
+/**
+ * Popup shown when the history card is tapped: one row per relay with its state glyph (✓ done, … stalled,
+ * ↓ still reaching) and how far back it has paged ("back to <date>"), deepest-reaching first.
+ */
+@Composable
+private fun DmHistoryRelayDialog(
+    protocolTag: String,
+    relayProgress: Map<NormalizedRelayUrl, RelayPagingProgress>,
+    onDismiss: () -> Unit,
+) {
+    val df = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
+    val rows = remember(relayProgress) { relayProgress.entries.sortedBy { it.value.reachedUntil } }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dismiss)) }
+        },
+        title = { Text(stringResource(R.string.chats_history_relays_title, protocolTag)) },
+        text = {
+            Column(
+                Modifier
+                    .heightIn(max = 360.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                rows.forEach { (relay, p) ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = relayStateGlyph(p),
+                            color = relayStateColor(p),
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.width(22.dp),
+                        )
+                        Text(
+                            text = relayShortName(relay),
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.chats_history_relay_back, df.format(Date(p.reachedUntil * 1000))),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
+        },
+    )
+}
+
+private fun relayStateGlyph(p: RelayPagingProgress) =
+    when {
+        p.done -> "✓"
+        p.stalled -> "…"
+        else -> "↓"
+    }
+
+@Composable
+private fun relayStateColor(p: RelayPagingProgress): Color =
+    when {
+        p.done -> MaterialTheme.colorScheme.primary
+        p.stalled -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+private fun relayShortName(relay: NormalizedRelayUrl): String =
+    relay.url
+        .substringAfter("://")
+        .trimEnd('/')
+        .substringBefore('/')

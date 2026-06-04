@@ -273,8 +273,8 @@ fun ChatroomViewUI(
                 // while it pages and crossfades to "All caught up" when that protocol runs dry.
                 olderBoundary = {
                     Column {
-                        DmHistoryLoadingCard(nip17Name, "NIP-17", loadingGiftWraps, giftWrapsExhausted, giftWrapsRelays, giftWrapsStalled, giftWrapsReached)
-                        DmHistoryLoadingCard(nip04Name, "NIP-04", loadingNip04, nip04Exhausted, nip04Relays, nip04Stalled, nip04Reached)
+                        DmHistoryLoadingCard(nip17Name, "NIP-17", loadingGiftWraps, giftWrapsExhausted, giftWrapsRelays, giftWrapsStalled, giftWrapsReached, giftWrapsProgress)
+                        DmHistoryLoadingCard(nip04Name, "NIP-04", loadingNip04, nip04Exhausted, nip04Relays, nip04Stalled, nip04Reached, nip04Progress)
                     }
                 },
                 // Each relay's window-limit marker, placed at its reached cursor (pure UI). Hidden once
