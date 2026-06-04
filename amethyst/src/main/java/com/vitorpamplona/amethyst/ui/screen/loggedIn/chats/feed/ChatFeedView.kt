@@ -68,6 +68,10 @@ fun RefreshingChatroomFeedView(
     // createdAt bounds, so a caller (private DMs) can draw per-relay paging markers at the depth each
     // relay has reached. No-op for callers without per-relay progress.
     markersInGap: (@Composable (newerCreatedAt: Long?, olderCreatedAt: Long?) -> Unit)? = null,
+    // Optional hoisted load driver: handed the loaded message list and its scroll state once (above the
+    // LazyColumn), so a caller (private DMs) can drive demand-driven paging off viewport visibility
+    // rather than per-row composition. No-op for callers that don't paginate.
+    sentinels: (@Composable (items: List<Note>, listState: LazyListState) -> Unit)? = null,
 ) {
     SaveableFeedState(feedContentState, scrollStateKey) { listState ->
         listStateObserver(listState)
@@ -82,6 +86,7 @@ fun RefreshingChatroomFeedView(
             avoidDraft,
             olderBoundary,
             markersInGap,
+            sentinels,
         )
     }
 }
@@ -98,6 +103,7 @@ fun RenderChatFeedView(
     avoidDraft: DraftTagState? = null,
     olderBoundary: (@Composable () -> Unit)? = null,
     markersInGap: (@Composable (newerCreatedAt: Long?, olderCreatedAt: Long?) -> Unit)? = null,
+    sentinels: (@Composable (items: List<Note>, listState: LazyListState) -> Unit)? = null,
 ) {
     val feedState by feed.feedContent.collectAsStateWithLifecycle()
 
@@ -127,6 +133,7 @@ fun RenderChatFeedView(
                     avoidDraft,
                     olderBoundary,
                     markersInGap,
+                    sentinels,
                 )
             }
         }
@@ -145,8 +152,13 @@ fun ChatFeedLoaded(
     avoidDraft: DraftTagState? = null,
     olderBoundary: (@Composable () -> Unit)? = null,
     markersInGap: (@Composable (newerCreatedAt: Long?, olderCreatedAt: Long?) -> Unit)? = null,
+    sentinels: (@Composable (items: List<Note>, listState: LazyListState) -> Unit)? = null,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
+
+    // Hoisted load driver (above the LazyColumn): pages each relay off viewport visibility, so feed
+    // reorders no longer re-fire paging. The per-gap markers below are pure UI.
+    sentinels?.invoke(items.list, listState)
 
     LaunchedEffect(items.list.firstOrNull()) {
         if (listState.firstVisibleItemIndex <= 1) {

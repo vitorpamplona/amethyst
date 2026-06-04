@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatro
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.RelayReachState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.RelayWindowLimit
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.RelayWindowLimitMarkers
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.RelayWindowLimitSentinels
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.dal.ChatroomFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource.ChatroomFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.ChatNewMessageViewModel
@@ -274,14 +275,23 @@ fun ChatroomViewUI(
                         DmHistoryLoadingCard(nip04Name, "NIP-04", loadingNip04, nip04Exhausted, nip04Relays, nip04Reached)
                     }
                 },
-                // Each relay's window-limit marker, placed at its reached cursor, doubles as the load
-                // sentinel that pulls that relay's next page while it's on screen (see
-                // RelayWindowLimitMarkers). Hidden once both protocols are exhausted.
+                // Each relay's window-limit marker, placed at its reached cursor (pure UI). Hidden once
+                // both protocols are exhausted.
                 markersInGap =
                     if (limits.isEmpty()) {
                         null
                     } else {
                         { newer, older -> RelayWindowLimitMarkers(limits, newer, older) }
+                    },
+                // The hoisted load driver that pulls each relay's next page while its marker is on screen,
+                // off viewport visibility (see RelayWindowLimitSentinels) so feed reorders don't re-page.
+                sentinels =
+                    if (limits.isEmpty()) {
+                        null
+                    } else {
+                        { items, listState ->
+                            RelayWindowLimitSentinels(limits, listState) { index -> items.getOrNull(index)?.event?.createdAt }
+                        }
                     },
             )
         }

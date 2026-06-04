@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.DmHistoryLoading
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.RelayReachState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.RelayWindowLimit
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.RelayWindowLimitMarkers
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.RelayWindowLimitSentinels
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChatroomHeaderCompose
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
@@ -199,6 +200,10 @@ private fun FeedLoaded(
                 }
             }
         }
+
+    // Hoisted load driver: pulls each relay's next page off viewport visibility, so feed reorders
+    // (a live DM bumping a room) no longer re-fire paging. The markers below are pure UI.
+    RelayWindowLimitSentinels(limits, listState) { index -> items.list.getOrNull(index)?.createdAt() }
 
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),

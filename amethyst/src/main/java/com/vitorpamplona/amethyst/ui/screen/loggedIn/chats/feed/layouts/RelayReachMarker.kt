@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -29,6 +30,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,6 +44,8 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 /** How far one relay has paged into the conversation, for an in-stream progress marker. */
 enum class RelayReachState {
@@ -61,10 +66,10 @@ data class RelayReach(
 )
 
 /**
- * One relay's window-limit, used to both place a marker and act as the load sentinel for that relay.
- * The marker sits at [reachedUntil] (the oldest point the relay has paged to). [advance] pulls that
- * relay's next, older page; the renderer fires it while the marker is on screen (see
- * [RelayWindowLimitMarkers]).
+ * One relay's window-limit: places a marker and carries the [advance] that pulls that relay's next,
+ * older page. The marker sits at [reachedUntil] (the oldest point the relay has paged to);
+ * [RelayWindowLimitMarkers] draws it and [RelayWindowLimitSentinels] fires [advance] while it is on
+ * screen.
  *
  * @param key stable identity (protocol tag + relay url) so the sentinel survives list reorders.
  */
@@ -77,17 +82,74 @@ data class RelayWindowLimit(
 )
 
 /**
- * Renders the window-limit markers for the relays whose limit falls in the gap between a newer message
- * (at [newerCreatedAt]) and its next-older neighbour (at [olderCreatedAt], null at the oldest end), and
- * — this is the load driver — makes each one a **sentinel**: while this gap is composed (i.e. on/near
- * screen), it pulls that relay's next page and keeps pulling as each page lands, so a relay pages on
- * while its marker stays on screen and stops when a page pushes it off or the user scrolls away.
+ * Drives demand-driven paging for every limit, **hoisted above the list** so its identity does not ride
+ * on which row currently hosts the marker. Each non-done limit gets one stable effect (keyed by
+ * [RelayWindowLimit.key]) that watches the [listState] and pulls that relay's next page when its marker
+ * is on screen.
  *
- * The sentinel keys on the reached cursor ALONE — never on the relay's reach state. Keying on state
- * would re-fire on every `REACHING ⇄ STALLED` flip, so a flaky/auth relay's connection churn would
- * re-page the window on a completely static screen. A stalled relay therefore parks until the cursor
- * moves or the marker is scrolled back into view (a single retry, not a loop). A done relay shows ✓ and
- * drives nothing.
+ * Why hoisted: the marker for a limit lives in exactly one gap (between the two rows straddling its
+ * reached cursor). Placing the sentinel *inside* that row made its effect's identity ride the hosting
+ * row — so any feed reorder (a live DM, or a slow relay dribbling a history page) moved the gap to a
+ * different row, tore the effect down and recreated it, and re-fired `advance()` on a static screen.
+ * That re-armed stalled/auth relays into a silence-watchdog storm and could walk a delivering relay
+ * back a window with no scroll. Hoisting the effect and driving it off **viewport visibility** instead
+ * of composition presence removes that coupling.
+ *
+ * Fires `advance()` when (and only when) the marker's gap is among the currently visible rows AND either
+ * it just scrolled into view OR its reached cursor moved (a page landed — keep paging while visible).
+ * A reorder that keeps the marker on the same side of the fold changes neither, so it no longer re-fires.
+ * A done relay drives nothing.
+ *
+ * @param createdAtAt createdAt of the list item at an index (null past the ends / for non-message rows),
+ *   so the visible-gap test mirrors [RelayWindowLimitMarkers]'s placement against only the on-screen rows.
+ */
+@Composable
+fun RelayWindowLimitSentinels(
+    limits: List<RelayWindowLimit>,
+    listState: LazyListState,
+    createdAtAt: (index: Int) -> Long?,
+) {
+    limits.forEach { lim ->
+        if (lim.state == RelayReachState.DONE) return@forEach
+        key(lim.key) {
+            val reached = rememberUpdatedState(lim.reachedUntil)
+            val advance = rememberUpdatedState(lim.advance)
+            val getAt = rememberUpdatedState(createdAtAt)
+            LaunchedEffect(Unit) {
+                snapshotFlow {
+                    val r = reached.value
+                    val at = getAt.value
+                    // Visible if any on-screen row is the "newer" side of the gap holding this cursor —
+                    // the same predicate RelayWindowLimitMarkers uses to place the marker, but over the
+                    // visible rows only.
+                    val onScreen =
+                        listState.layoutInfo.visibleItemsInfo.any { info ->
+                            val newer = at(info.index) ?: return@any false
+                            val older = at(info.index + 1)
+                            newer > r && (older == null || older <= r)
+                        }
+                    // Pair so distinctUntilChanged also lets a landed page (r moved) re-fire while visible,
+                    // not just the off→on-screen transition.
+                    onScreen to r
+                }.distinctUntilChanged()
+                    .collect { (onScreen, r) ->
+                        if (onScreen) {
+                            // One line per sentinel fire — a re-fire LOOP would show the same key firing
+                            // over and over (and whether its reached cursor is drifting).
+                            Log.d("DMPagination") { "marker fire ${lim.key} reachedUntil=$r" }
+                            advance.value()
+                        }
+                    }
+            }
+        }
+    }
+}
+
+/**
+ * Renders the window-limit markers for the relays whose limit falls in the gap between a newer message
+ * (at [newerCreatedAt]) and its next-older neighbour (at [olderCreatedAt], null at the oldest end). Pure
+ * UI: the load driving lives in [RelayWindowLimitSentinels], so this can be (re)placed freely per row on
+ * every feed reorder without triggering any paging.
  */
 @Composable
 fun RelayWindowLimitMarkers(
@@ -104,21 +166,6 @@ fun RelayWindowLimitMarkers(
             }
         }
     if (here.isEmpty()) return
-
-    here.forEach { lim ->
-        if (lim.state != RelayReachState.DONE) {
-            // Keyed identity so the effect isn't torn down on reorder; keyed on the reached cursor ONLY so
-            // it re-fires per landed page (continue while visible) but NOT on stall/unstall churn.
-            key(lim.key) {
-                LaunchedEffect(lim.reachedUntil) {
-                    // One line per sentinel fire — a re-fire LOOP shows the same key firing over and over
-                    // (and whether its reached cursor is drifting, which would point at a non-pinned floor).
-                    Log.d("DMPagination") { "marker fire ${lim.key} reachedUntil=${lim.reachedUntil}" }
-                    lim.advance()
-                }
-            }
-        }
-    }
 
     RelayReachMarker(here.map { RelayReach(it.name, it.state) })
 }
