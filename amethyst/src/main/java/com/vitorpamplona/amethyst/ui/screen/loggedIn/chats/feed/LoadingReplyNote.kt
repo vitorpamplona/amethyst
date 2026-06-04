@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -98,8 +99,25 @@ fun LoadingReplyNote(
             DmReplyProtocol.NIP17 -> giftWrapsHistory.exhausted
             DmReplyProtocol.NIP04 -> nip04History.exhausted
         }
+    val relayCountFlow: StateFlow<Int> =
+        when (protocol) {
+            DmReplyProtocol.NIP17 -> giftWrapsHistory.relayCount
+            DmReplyProtocol.NIP04 -> nip04History.relayCount
+        }
+    val reachedBackFlow: StateFlow<Long?> =
+        when (protocol) {
+            DmReplyProtocol.NIP17 -> giftWrapsHistory.reachedBack
+            DmReplyProtocol.NIP04 -> nip04History.reachedBack
+        }
+    val protocolTag =
+        when (protocol) {
+            DmReplyProtocol.NIP17 -> "NIP-17"
+            DmReplyProtocol.NIP04 -> "NIP-04"
+        }
 
     val exhausted by exhaustedFlow.collectAsStateWithLifecycle()
+    val relayCount by relayCountFlow.collectAsStateWithLifecycle()
+    val reachedBack by reachedBackFlow.collectAsStateWithLifecycle()
 
     LaunchedEffect(protocol, loadingFlow, exhaustedFlow) {
         // Step the next, older page whenever the previous one has settled and history isn't exhausted.
@@ -144,19 +162,32 @@ fun LoadingReplyNote(
                     }
                 }
                 Spacer(Modifier.width(14.dp))
-                Text(
-                    text =
-                        if (isExhausted) {
-                            stringRes(R.string.post_not_found_short)
-                        } else {
-                            stringRes(R.string.chats_reply_searching_history)
-                        },
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text =
+                            if (isExhausted) {
+                                stringRes(R.string.post_not_found_short)
+                            } else {
+                                stringRes(R.string.chats_reply_searching_history)
+                            },
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    // Same status line as the oldest-end card: which protocol, how many relays it's
+                    // still asking, and how far back it has paged. Hidden once history runs dry.
+                    if (!isExhausted) {
+                        Text(
+                            text = historySubtitle(protocolTag, relayCount, reachedBack),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
             }
         }
     }

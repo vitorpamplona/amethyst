@@ -167,7 +167,7 @@ fun DmHistoryLoadingCard(
 }
 
 @Composable
-private fun historySubtitle(
+internal fun historySubtitle(
     protocolTag: String,
     relayCount: Int,
     reachedBack: Long?,
