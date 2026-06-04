@@ -321,6 +321,34 @@ class NostrServerAuthTest {
             server.close()
         }
 
+    @Test
+    fun authenticationIsScopedPerConnection() =
+        runTest {
+            // Two connections on the SAME server. Each must see only the pubkey
+            // that authenticated on it — never the union across the relay.
+            val dispatcher = UnconfinedTestDispatcher(testScheduler)
+            val server = createServer(dispatcher = dispatcher)
+
+            val c1 = MessageCollector()
+            val s1 = server.connect(c1.sendCallback)
+            val ch1 = (OptimizedJsonMapper.fromJsonToMessage(c1.messages[0]) as AuthMessage).challenge
+            s1.receive(authJson(authEvent(challenge = ch1, pubKey = pubkey)))
+
+            val c2 = MessageCollector()
+            val s2 = server.connect(c2.sendCallback)
+            val ch2 = (OptimizedJsonMapper.fromJsonToMessage(c2.messages[0]) as AuthMessage).challenge
+            s2.receive(authJson(authEvent(challenge = ch2, pubKey = pubkey2)))
+
+            // Each connection's scope holds exactly its own authenticated user.
+            assertEquals(setOf(pubkey), s1.requestContext.authenticatedUsers)
+            assertEquals(setOf(pubkey2), s2.requestContext.authenticatedUsers)
+            // Cross-check: neither leaks the other's identity.
+            assertFalse(s1.requestContext.authenticatedUsers.contains(pubkey2))
+            assertFalse(s2.requestContext.authenticatedUsers.contains(pubkey))
+
+            server.close()
+        }
+
     // -- NIP-42: requireAuth ---------------------------------------------------
 
     @Test
