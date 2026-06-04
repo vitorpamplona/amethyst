@@ -21,10 +21,10 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource
 
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.DmRelayLog
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerRelayLoadTracker
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.RelayPagingProgress
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.UntilLimitPager
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.WindowLoadTracker
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -38,34 +38,27 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Loads older NIP-04 DMs (kind 4) for one conversation by `until`+`limit` paging — **per relay,
- * independently**. There are no lock-step rounds: every relay drives its own pages off its own cursor,
- * continuing the instant it EOSEs (the subscription layer diffs per relay, so re-issuing only re-REQs
- * the relay whose cursor moved; the others' in-flight REQs are untouched). Fast relays race to the
- * bottom of the conversation in a few back-to-back pages while slow / auth-walled relays catch up at
- * their own pace in the background — none are abandoned, so they all converge on the same window.
+ * Loads older NIP-04 DMs (kind 4) for one conversation by **`until`+`limit` paging, per relay, on
+ * demand**. Each relay advances exactly one page when the conversation's on-screen window-limit marker
+ * for that relay asks ([advance]); otherwise it parks. Nothing is walked proactively — a relay pages
+ * only while its marker is visible and keeps paging while it stays visible.
  *
- * A relay is *done* once it answers an empty page (nothing older). A relay that won't answer (auth
- * CLOSE, unreachable, silent) is marked *stalled* for the markers but keeps its subscription open and
- * keeps trying. The [loadingMore] spinner reflects whether anything is still actively advancing; it
- * clears once every relay is either done or stalled, without waiting on the slow ones beyond that.
+ * A relay is *done* once it answers an empty page; one that won't answer (auth CLOSE, unreachable, or
+ * silent past the load tracker's window) is flagged *stalled* but kept. [exhausted] flips once every
+ * relay is either done or stalled.
  */
 class ChatroomNip04HistorySubAssembler(
     client: INostrClient,
     allKeys: () -> Set<ChatroomQueryState>,
 ) : PerUserAndFollowListEoseManager<ChatroomQueryState, String>(client, allKeys) {
     // Keyed by (account, conversation) so each thread paginates independently — and so the same
-    // correspondent opened from two logged-in accounts doesn't share a cursor. ChatroomKey is a data
-    // class over the participant set, so it's a collision-free key (unlike its 32-bit hashCode/listId).
+    // correspondent opened from two logged-in accounts doesn't share a cursor.
     private data class ConvoKey(
         val account: HexKey,
         val room: ChatroomKey,
@@ -74,20 +67,11 @@ class ChatroomNip04HistorySubAssembler(
     private fun convoKey(key: ChatroomQueryState) = ConvoKey(user(key).pubkeyHex, key.room)
 
     private val pager = UntilLimitPager<ConvoKey>()
-    private val started = ConcurrentHashMap.newKeySet<ConvoKey>()
 
-    // Relays currently not advancing for a conversation (auth CLOSE / unreachable / silent). Tracked for
-    // the progress markers; these relays are NOT given up — they keep their subscription and keep trying.
     private val stalledRelays = ConcurrentHashMap<ConvoKey, MutableSet<NormalizedRelayUrl>>()
 
-    private val windowLoad = WindowLoadTracker("convo.nip04.history", tracksReqSends = true, onAbandoned = ::onRelaysStalled)
-
-    // Exposed instead of windowLoad.loading directly: that flow starts `true` (it assumes a load is in
-    // flight from construction). Wired straight through, its `true` would wedge the scroll-driven
-    // loader — whose gate is `!loading` — so the first loadMore could never fire. This starts false and
-    // only goes true once paging actually begins (mirrored from windowLoad by the done collector).
-    private val _loadingMore = MutableStateFlow(false)
-    val loadingMore: StateFlow<Boolean> = _loadingMore.asStateFlow()
+    private val loadTracker = PerRelayLoadTracker("convo.nip04.history", onSilenced = ::onRelaysSilenced)
+    val loadingMore: StateFlow<Boolean> = loadTracker.loading
 
     private val _exhausted = MutableStateFlow(false)
     val exhausted: StateFlow<Boolean> = _exhausted.asStateFlow()
@@ -98,43 +82,22 @@ class ChatroomNip04HistorySubAssembler(
     private val _reachedBack = MutableStateFlow<Long?>(null)
     val reachedBack: StateFlow<Long?> = _reachedBack.asStateFlow()
 
-    // Per-relay paging progress for the conversation on screen — the data the in-stream markers render.
     private val _relayProgress = MutableStateFlow<Map<NormalizedRelayUrl, RelayPagingProgress>>(emptyMap())
     val relayProgress: StateFlow<Map<NormalizedRelayUrl, RelayPagingProgress>> = _relayProgress.asStateFlow()
 
     // Shared across accounts/conversations (singleton coordinator): repoint the display flows to the
-    // conversation now on screen instead of leaking the previous one's state. Cursors live in [pager].
+    // conversation now on screen. Cursors live in [pager].
     @Volatile
     private var activeConvo: ConvoKey? = null
     private val exhaustedByConvo = ConcurrentHashMap<ConvoKey, Boolean>()
 
-    @Volatile
-    private var scope: CoroutineScope? = null
-
-    @Volatile
-    private var doneJob: Job? = null
-
-    // Whether a paging window is currently running. We track it ourselves rather than reading
-    // windowLoad.loading (which starts `true` before any window exists), so the first loadMore actually
-    // starts the window instead of mistaking the construction-time `true` for an in-flight one.
-    @Volatile
-    private var windowActive = false
-
-    // The history floor (live-tail boundary) pinned for the current window. startUntil() is `now − 1w`,
-    // which drifts forward in real time — if it were recomputed per assembly, an un-advanced relay's
-    // filter (until = floor) would change every time ANY relay's EOSE triggers invalidateFilters,
-    // re-REQing relays that haven't moved. Pinning it per window keeps those filters stable so only a
-    // relay whose cursor genuinely advanced is re-REQed.
-    @Volatile
-    private var windowFloor = 0L
-
     private fun startUntil() = TimeUtils.now() - AccountGiftWrapsEoseManager.LIVE_TAIL_SECONDS
-
-    private fun floor() = windowFloor.takeIf { it != 0L } ?: startUntil()
 
     override fun user(key: ChatroomQueryState) = key.account.userProfile()
 
     override fun list(key: ChatroomQueryState) = key.listId
+
+    private fun relaysFor(pk: ConvoKey): Nip04DmRelays? = allKeys().firstOrNull { convoKey(it) == pk }?.let { nip04DMRelays(it.room.users, it.account) }
 
     override fun updateFilter(
         key: ChatroomQueryState,
@@ -142,168 +105,134 @@ class ChatroomNip04HistorySubAssembler(
     ): List<RelayBasedFilter>? {
         val pk = convoKey(key)
         val relays = nip04DMRelays(key.room.users, key.account)
-        if (!key.account.isWriteable() || pk !in started || relays == null) return emptyList()
+        if (!key.account.isWriteable() || relays == null) return emptyList()
 
-        // Every relay that still has older history to ask for, each at its own cursor. A relay whose
-        // cursor advanced since the last assembly re-REQs its next page; one still mid-page keeps its
-        // open REQ; a done relay drops out (its REQ closes). This is what lets relays run independently.
-        val active = pager.activeRelays(pk, relays.all).toSet()
-        if (active.isEmpty()) return emptyList()
-
+        // Only armed (advanced, not done) relays carry a REQ, each at its own requested cursor. A parked
+        // relay keeps the same filter here, so re-assembly (another relay advancing) doesn't re-REQ it.
+        val armed = pager.armedRelays(pk, relays.all).toSet()
+        if (armed.isEmpty()) return emptyList()
+        DmRelayLog.log("convo.nip04.history", key.account)
         val scoped =
             Nip04DmRelays(
-                toMeRelays = relays.toMeRelays.filterKeys { it in active },
-                fromMeRelays = relays.fromMeRelays.filterKeys { it in active },
+                toMeRelays = relays.toMeRelays.filterKeys { it in armed },
+                fromMeRelays = relays.fromMeRelays.filterKeys { it in armed },
             )
         return filterNip04DMsHistory(key.account, scoped, PAGE_LIMIT) { relay ->
-            pager.untilFor(pk, relay, floor())
+            pager.requestedUntilFor(pk, relay)
         }
     }
 
-    /** Starts (or resumes) per-relay paging for every open conversation. Idempotent: safe to call again. */
-    fun loadMore() {
-        val fullRelays = mutableSetOf<NormalizedRelayUrl>()
-        var anyActive = false
+    /** Steps a single [relay] to its next, older page for the open conversation(s). Driven by its marker. */
+    fun advance(relay: NormalizedRelayUrl) {
+        var any = false
+        allKeys().forEach { if (arm(it, relay)) any = true }
+        if (any) {
+            _exhausted.value = false
+            updateStatus()
+            invalidateFilters()
+        }
+    }
+
+    /** Steps every not-done, not-in-flight relay one page. For a thread too short to scroll. */
+    fun advanceAll() {
+        var any = false
         allKeys().forEach { key ->
             val relays = nip04DMRelays(key.room.users, key.account) ?: return@forEach
-            started.add(convoKey(key))
-            fullRelays.addAll(relays.all)
-            if (pager.activeRelays(convoKey(key), relays.all).isNotEmpty()) anyActive = true
-            DmRelayLog.log("convo.nip04.history", key.account)
+            relays.all.forEach { if (arm(key, it)) any = true }
         }
-        if (fullRelays.isEmpty()) return
-        if (!anyActive) {
-            // Everything already paged to the bottom.
-            activeConvo?.let { exhaustedByConvo[it] = true }
-            _exhausted.value = true
-            return
+        if (any) {
+            _exhausted.value = false
+            updateStatus()
+            invalidateFilters()
         }
-        _exhausted.value = false
-        scope?.let {
-            ensureDoneCollector(it)
-            // One window spanning the whole per-relay pagination: it settles a relay only on that relay's
-            // empty-EOSE (done) or when it goes silent/stalled, never on a mid-history page, so the
-            // spinner tracks "is anything still advancing" rather than any single round. Start it only if
-            // none is running — a re-entrant loadMore (the scroll loader re-firing mid-pagination) must
-            // not reset the window and forget the relays that already finished.
-            if (!windowActive) {
-                windowActive = true
-                windowFloor = startUntil()
-                // Populate the relay count BEFORE raising the spinner, so the status card never renders
-                // a "loading from 0 relays" frame between loadingMore flipping true and the first progress.
-                publishProgress()
-                _loadingMore.value = true
-                windowLoad.startLoading(it)
-            }
-            windowLoad.setExpectedRelays(fullRelays)
-        }
-        publishProgress()
-        Log.d("DMPagination") { "[convo.nip04.history] paging ${fullRelays.size} relay(s) independently: ${fullRelays.map { it.url }}" }
-        invalidateFilters()
     }
 
-    // Mirrors the window's loading state into [_loadingMore] and, when it settles (every relay done or
-    // stalled), flips [exhausted] and clears [windowActive] so the next loadMore can start a fresh window.
-    private fun ensureDoneCollector(scope: CoroutineScope) {
-        if (doneJob?.isActive == true) return
-        doneJob =
-            scope.launch {
-                var wasLoading = false
-                windowLoad.loading.collect { loading ->
-                    _loadingMore.value = loading && windowActive
-                    if (!loading && wasLoading) {
-                        windowActive = false
-                        _loadingMore.value = false
-                        activeConvo?.let { exhaustedByConvo[it] = true }
-                        _exhausted.value = true
-                        publishProgress()
-                        logSettleSummary()
-                    }
-                    wasLoading = loading
-                }
-            }
+    private fun arm(
+        key: ChatroomQueryState,
+        relay: NormalizedRelayUrl,
+    ): Boolean {
+        val relays = nip04DMRelays(key.room.users, key.account) ?: return false
+        if (relay !in relays.all) return false
+        val pk = convoKey(key)
+        if (loadTracker.isInFlight(relay)) return false
+        if (!pager.advance(pk, relay, startUntil())) return false
+        stalledRelays[pk]?.remove(relay)
+        loadTracker.bind(key.account.scope)
+        loadTracker.onAdvance(relay)
+        return true
     }
 
-    // WindowLoadTracker reports relays that accepted a REQ then went silent, or never got their REQ out.
-    // We do NOT give up on them (they may simply be slow and need to catch up) — we just record them as
-    // stalled for the markers and let them keep their open subscription.
-    private fun onRelaysStalled(relays: Set<NormalizedRelayUrl>) {
-        started.forEach { pk -> relays.forEach { markStalled(pk, it, "no response (silence/connect timeout)") } }
-        publishProgress()
+    private fun onRelaysSilenced(relays: Set<NormalizedRelayUrl>) {
+        val pk = activeConvo ?: return
+        relays.forEach { markStalled(pk, it, "no response (silence timeout)") }
+        updateStatus()
+        recomputeExhausted()
     }
 
-    // Records [relay] as not currently advancing for [pk] and logs it once (the first time it stalls in
-    // this window). The relay is kept — it kept its subscription and keeps trying to catch up.
     private fun markStalled(
         pk: ConvoKey,
         relay: NormalizedRelayUrl,
         reason: String,
     ) {
         val firstTime = stalledRelays.getOrPut(pk) { ConcurrentHashMap.newKeySet() }.add(relay)
-        if (firstTime) Log.d("DMPagination") { "[convo.nip04.history] ${relay.url} stalled — $reason (kept open, still trying)" }
+        if (firstTime) Log.d("DMPagination") { "[convo.nip04.history] ${relay.url} stalled — $reason (kept, advance to retry)" }
     }
 
-    private fun relaysFor(pk: ConvoKey): Nip04DmRelays? = allKeys().firstOrNull { convoKey(it) == pk }?.let { nip04DMRelays(it.room.users, it.account) }
-
-    private fun publishProgress() {
+    private fun updateStatus() {
         val pk = activeConvo ?: return
         val relays = relaysFor(pk) ?: return
+        _relayCount.value = loadTracker.count()
+        val start = startUntil()
+        _reachedBack.value = pager.deepestReached(pk, relays.all, start)
         val stalled = stalledRelays[pk] ?: emptySet()
-        val start = floor()
         _relayProgress.value =
             relays.all.associateWith { relay ->
                 RelayPagingProgress(
-                    reachedUntil = pager.untilFor(pk, relay, start),
+                    reachedUntil = pager.reachedUntilFor(pk, relay, start),
                     done = pager.isDone(pk, relay),
                     stalled = relay in stalled && !pager.isDone(pk, relay),
                 )
             }
-        // "Asking N relays" on the status card: the ones still being paged (done relays have dropped out).
-        _relayCount.value = pager.activeRelays(pk, relays.all).size
-        _reachedBack.value = pager.deepestUntil(pk, relays.all, start)
     }
 
-    // A one-line breakdown of where each relay landed when the window settles — the snapshot to reach for
-    // when a conversation didn't load tomorrow: who reached the bottom vs. who is still being retried.
-    private fun logSettleSummary() {
+    private fun recomputeExhausted() {
         val pk = activeConvo ?: return
         val relays = relaysFor(pk) ?: return
-        val done = relays.all.filter { pager.isDone(pk, it) }.map { it.url }
-        val stillTrying = relays.all.filterNot { pager.isDone(pk, it) }.map { it.url }
-        Log.d("DMPagination") { "[convo.nip04.history] settled — done=$done still-trying=$stillTrying" }
+        if (relays.all.isEmpty()) return
+        val stalled = stalledRelays[pk] ?: emptySet()
+        val pending = relays.all.any { !pager.isDone(pk, it) && it !in stalled }
+        val ex = !pending
+        exhaustedByConvo[pk] = ex
+        if (activeConvo == pk) _exhausted.value = ex
     }
 
     override fun newSub(key: ChatroomQueryState): Subscription {
-        scope = key.account.scope
         val pk = convoKey(key)
+        loadTracker.bind(key.account.scope)
         if (activeConvo != pk) {
             activeConvo = pk
-            // A different conversation (or account) is on screen: repoint the display flows to it.
+            loadTracker.reset()
             _exhausted.value = exhaustedByConvo[pk] ?: false
             _relayCount.value = 0
             _reachedBack.value = null
             _relayProgress.value = emptyMap()
         }
+        // Populate the per-relay markers (all relays at the floor, not done) so the UI can render their
+        // window-limit sentinels and pull the first page when they come into view.
+        updateStatus()
         return requestNewSubscription(historyListener(key))
     }
 
     private fun historyListener(key: ChatroomQueryState): SubscriptionListener {
         val pk = convoKey(key)
         return object : SubscriptionListener {
-            override fun onSubscriptionStarted(
-                relay: String,
-                forFilters: List<Filter>,
-            ) {
-                windowLoad.onReqSent(relay)
-            }
-
             override fun onEvent(
                 event: Event,
                 isLive: Boolean,
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                windowLoad.onRelayEvent(relay)
+                loadTracker.onActivity()
                 pager.onEvent(pk, relay, event.createdAt)
                 stalledRelays[pk]?.remove(relay)
             }
@@ -314,18 +243,13 @@ class ChatroomNip04HistorySubAssembler(
             ) {
                 stalledRelays[pk]?.remove(relay)
                 pager.onEose(pk, relay)
+                loadTracker.onSettled(relay)
                 if (pager.isDone(pk, relay)) {
-                    // Reached the bottom on this relay: settle it for the spinner, nothing more to ask.
-                    windowLoad.onRelaySettled(relay)
                     Log.d("DMPagination") { "[convo.nip04.history] ${relay.url} reached the bottom (done)" }
-                } else {
-                    // This page had events: reset only this relay's tally and let it continue to its
-                    // next page immediately, independent of every other relay.
-                    pager.beginRound(pk, listOf(relay))
                 }
                 newEose(key, relay, TimeUtils.now(), forFilters)
-                publishProgress()
-                invalidateFilters()
+                updateStatus()
+                recomputeExhausted()
             }
 
             override fun onClosed(
@@ -333,12 +257,10 @@ class ChatroomNip04HistorySubAssembler(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                // A relay (e.g. the correspondent's) may demand auth we can't satisfy and CLOSE. It's
-                // stalled, not done — keep its subscription so the pool can re-auth and it can catch up —
-                // but don't let it hold the spinner.
-                windowLoad.onRelaySettled(relay)
+                loadTracker.onSettled(relay)
                 markStalled(pk, relay, "CLOSED: $message")
-                publishProgress()
+                updateStatus()
+                recomputeExhausted()
             }
 
             override fun onCannotConnect(
@@ -346,9 +268,10 @@ class ChatroomNip04HistorySubAssembler(
                 message: String,
                 forFilters: List<Filter>?,
             ) {
-                windowLoad.onRelaySettled(relay)
+                loadTracker.onSettled(relay)
                 markStalled(pk, relay, "cannot connect: $message")
-                publishProgress()
+                updateStatus()
+                recomputeExhausted()
             }
         }
     }

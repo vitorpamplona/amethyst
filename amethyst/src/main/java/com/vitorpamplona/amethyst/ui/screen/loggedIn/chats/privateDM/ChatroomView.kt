@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -33,7 +32,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -41,6 +39,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.RelayPagingProgress
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.uploads.resolveSharedMedia
@@ -51,9 +51,9 @@ import com.vitorpamplona.amethyst.ui.note.elements.ObserveRelayListForDMsAndDisp
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.DmHistoryLoadingCard
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.RelayReach
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.RelayReachMarker
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.RelayReachState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.RelayWindowLimit
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.RelayWindowLimitMarkers
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.dal.ChatroomFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource.ChatroomFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.ChatNewMessageViewModel
@@ -153,59 +153,37 @@ fun ChatroomView(
     )
 }
 
-// Rows from the oldest loaded message at which to prefetch the next, older window.
-private const val PREFETCH_OLDER_MESSAGES = 3
-
 /**
- * Scroll-driven history loader for a conversation. The thread is reverse-laid-out (newest at the
- * bottom, index 0), so older messages (and the load-more boundary) live at the highest indices. It
- * loads the next, older page whenever the oldest end is in view — including a thread too short to
- * scroll, so sitting at the start of a one-message chat keeps walking history back to its real
- * beginning (or until both protocols are exhausted). Each step is a bounded `until`+`limit` page that
- * never re-downloads, so walking a short thread is cheap per step — gift wraps can't be filtered per
- * room, so this advances the shared account-wide history window and the conversation's messages
- * surface as its pages are decrypted.
- *
- * Each protocol advances via its own history manager's `loadMore`, gated only on ITS OWN loader/
- * exhausted state — so a slow protocol (e.g. NIP-04 waiting on a sluggish correspondent relay) never
- * holds back the other. NIP-04 then pages every relay independently to completion on its own; gift
- * wraps stay round-driven and re-step here as the oldest end stays in view.
+ * Bootstraps history when the conversation has no messages yet (the live tail came back empty for a
+ * thread whose newest message is older than a week). There's nothing on screen to host the per-relay
+ * window-limit markers that normally drive paging, so while the feed is empty we step every relay one
+ * page at a time (each protocol independently, gated on its own loader) until messages appear — at which
+ * point the on-screen markers take over — or the protocol is exhausted. Once the feed is Loaded this
+ * does nothing; paging is then purely demand-driven by the markers' visibility.
  */
 @Composable
-private fun LoadOlderMessagesWhenScrolling(
-    listState: LazyListState,
+private fun BootstrapHistoryWhenEmpty(
+    feedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
 ) {
     val giftWrapsHistory = remember(accountViewModel) { accountViewModel.dataSources().account.giftWrapsHistory }
     val nip04History = remember(accountViewModel) { accountViewModel.dataSources().chatroom.nip04History }
+    val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
+    val needsBootstrap = feedState is FeedState.Empty || feedState is FeedState.Loading
 
-    LaunchedEffect(listState, giftWrapsHistory, nip04History) {
-        val wantMore =
-            snapshotFlow {
-                val info = listState.layoutInfo
-                val total = info.totalItemsCount
-                val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: -1
-                // The oldest end is in view (no overflow requirement, so a one-message thread that
-                // can't scroll still qualifies and walks history to its start).
-                total > 0 && lastVisible >= total - PREFETCH_OLDER_MESSAGES
-            }.distinctUntilChanged()
-
-        launch {
-            combine(wantMore, giftWrapsHistory.loadingMore, giftWrapsHistory.exhausted) { want, loading, exhausted ->
-                want && !loading && !exhausted
-            }.distinctUntilChanged().filter { it }.collect {
-                Log.d("DMPagination") { "convo: widen (oldest in view) → giftwrap loadMore" }
-                giftWrapsHistory.loadMore(accountViewModel.userProfile())
-            }
-        }
-        launch {
-            combine(wantMore, nip04History.loadingMore, nip04History.exhausted) { want, loading, exhausted ->
-                want && !loading && !exhausted
-            }.distinctUntilChanged().filter { it }.collect {
-                Log.d("DMPagination") { "convo: widen (oldest in view) → nip04 loadMore" }
-                nip04History.loadMore()
-            }
-        }
+    LaunchedEffect(needsBootstrap, giftWrapsHistory) {
+        if (!needsBootstrap) return@LaunchedEffect
+        combine(giftWrapsHistory.loadingMore, giftWrapsHistory.exhausted) { loading, exhausted -> !loading && !exhausted }
+            .distinctUntilChanged()
+            .filter { it }
+            .collect { giftWrapsHistory.advanceAll(accountViewModel.userProfile()) }
+    }
+    LaunchedEffect(needsBootstrap, nip04History) {
+        if (!needsBootstrap) return@LaunchedEffect
+        combine(nip04History.loadingMore, nip04History.exhausted) { loading, exhausted -> !loading && !exhausted }
+            .distinctUntilChanged()
+            .filter { it }
+            .collect { nip04History.advanceAll() }
     }
 }
 
@@ -237,20 +215,30 @@ fun ChatroomViewUI(
     val nip04Reached by nip04History.reachedBack.collectAsStateWithLifecycle()
     val nip04Progress by nip04History.relayProgress.collectAsStateWithLifecycle()
     val giftWrapsProgress by giftWrapsHistory.relayProgress.collectAsStateWithLifecycle()
+    val user = accountViewModel.userProfile()
 
-    // Both protocols' per-relay reach in one map for the in-stream markers: each contributes only while
-    // it's still paging (drops out once that protocol is exhausted). A relay that serves both (the DM
-    // inbox relays do) collapses to one marker — NIP-04's, since it's the per-conversation reach — which
-    // is close enough as a "how far back is this relay" cue.
-    val relayProgress =
-        remember(nip04Progress, giftWrapsProgress, nip04Exhausted, giftWrapsExhausted) {
-            buildMap {
-                if (!giftWrapsExhausted) putAll(giftWrapsProgress)
-                if (!nip04Exhausted) putAll(nip04Progress)
+    // Both protocols' per-relay window limits, each carrying the advance() that pulls its own next page.
+    // Placed in the stream as sentinels (see RelayWindowLimitMarkers): a relay pages only while its
+    // marker is on screen, and keeps paging while it stays there. A protocol drops out once exhausted.
+    val limits =
+        remember(nip04Progress, giftWrapsProgress, nip04Exhausted, giftWrapsExhausted, user) {
+            buildList {
+                if (!giftWrapsExhausted) {
+                    giftWrapsProgress.forEach { (relay, p) ->
+                        add(RelayWindowLimit("17:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p)) { giftWrapsHistory.advance(user, relay) })
+                    }
+                }
+                if (!nip04Exhausted) {
+                    nip04Progress.forEach { (relay, p) ->
+                        add(RelayWindowLimit("04:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p)) { nip04History.advance(relay) })
+                    }
+                }
             }
         }
     val nip17Name = stringResource(R.string.chats_history_proto_nip17)
     val nip04Name = stringResource(R.string.chats_history_proto_nip04)
+
+    BootstrapHistoryWhenEmpty(feedViewModel.feedState, accountViewModel)
 
     Column(Modifier.fillMaxHeight()) {
         ObserveRelayListForDMsAndDisplayIfNotFound(accountViewModel, nav)
@@ -278,18 +266,15 @@ fun ChatroomViewUI(
                         DmHistoryLoadingCard(nip04Name, "NIP-04", loadingNip04, nip04Exhausted, nip04Relays, nip04Reached)
                     }
                 },
-                // While either protocol is still converging, drop a marker into each gap for every relay
-                // whose reached-back cursor falls there: it sits below the oldest message that relay has
-                // loaded and slides down as the relay pages older. Hidden once both protocols are done.
+                // Each relay's window-limit marker, placed at its reached cursor, doubles as the load
+                // sentinel that pulls that relay's next page while it's on screen (see
+                // RelayWindowLimitMarkers). Hidden once both protocols are exhausted.
                 markersInGap =
-                    if (relayProgress.isEmpty()) {
+                    if (limits.isEmpty()) {
                         null
                     } else {
-                        { newer, older -> RelayReachMarkersInGap(relayProgress, newer, older) }
+                        { newer, older -> RelayWindowLimitMarkers(limits, newer, older) }
                     },
-                listStateObserver = { listState ->
-                    LoadOlderMessagesWhenScrolling(listState, accountViewModel)
-                },
             )
         }
 
@@ -311,40 +296,12 @@ fun ChatroomViewUI(
     }
 }
 
-/**
- * Renders the NIP-04 paging markers that belong between a message (at [newerCreatedAt]) and its
- * next-older neighbour (at [olderCreatedAt], null at the oldest end): every relay whose reached-back
- * cursor falls in `(olderCreatedAt, newerCreatedAt]`. A relay sits below the oldest message it has
- * loaded, so as it pages older its cursor drops and the marker moves down the stream toward the others.
- */
-@Composable
-private fun RelayReachMarkersInGap(
-    progress: Map<NormalizedRelayUrl, RelayPagingProgress>,
-    newerCreatedAt: Long?,
-    olderCreatedAt: Long?,
-) {
-    val here =
-        remember(progress, newerCreatedAt, olderCreatedAt) {
-            progress.mapNotNull { (relay, p) ->
-                val reached = p.reachedUntil
-                val belongsHere = newerCreatedAt != null && newerCreatedAt > reached && (olderCreatedAt == null || olderCreatedAt <= reached)
-                if (!belongsHere) {
-                    null
-                } else {
-                    RelayReach(
-                        name = relayShortName(relay),
-                        state =
-                            when {
-                                p.done -> RelayReachState.DONE
-                                p.stalled -> RelayReachState.STALLED
-                                else -> RelayReachState.REACHING
-                            },
-                    )
-                }
-            }
-        }
-    RelayReachMarker(here)
-}
+private fun reachState(p: RelayPagingProgress): RelayReachState =
+    when {
+        p.done -> RelayReachState.DONE
+        p.stalled -> RelayReachState.STALLED
+        else -> RelayReachState.REACHING
+    }
 
 private fun relayShortName(relay: NormalizedRelayUrl): String =
     relay.url

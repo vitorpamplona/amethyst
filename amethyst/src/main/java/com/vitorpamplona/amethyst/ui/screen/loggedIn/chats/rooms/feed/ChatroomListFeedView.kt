@@ -32,7 +32,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -41,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.RelayPagingProgress
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
 import com.vitorpamplona.amethyst.ui.feeds.FeedError
@@ -51,11 +51,15 @@ import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.DmHistoryLoadingCard
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.RelayReachState
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.RelayWindowLimit
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.RelayWindowLimitMarkers
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.ChatroomHeaderCompose
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
@@ -65,6 +69,7 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import java.io.Serializable
 
 @Composable
@@ -103,24 +108,14 @@ private fun CrossFadeState(
     val nip04Exhausted by nip04History.exhausted.collectAsStateWithLifecycle()
     val historyExhausted = giftWrapsExhausted && nip04Exhausted
 
-    // While the whole list is empty there is no LazyColumn to scroll, so hunt BOTH protocols for the
-    // first rooms (no stall-gate while searching) until they appear or each is exhausted. The two run
-    // independently — NIP-04 and NIP-17 have very different histories and depths.
+    // While the whole list is empty there is no LazyColumn to host the per-relay window-limit markers
+    // that normally drive paging, so we step every relay one page at a time (each protocol independently)
+    // to hunt for the first rooms until they appear or the protocol is exhausted. Once rooms load the
+    // markers take over and paging becomes demand-driven by their visibility.
     val user = accountViewModel.userProfile()
-    WidenHistoryWhen(
-        "empty.nip17",
-        giftWrapsHistory.loadingMore,
-        giftWrapsHistory.exhausted,
-        roomCount = null,
-        loadMore = { giftWrapsHistory.loadMore(user) },
-    ) { feedState is FeedState.Empty }
-    WidenHistoryWhen(
-        "empty.nip04",
-        nip04History.loadingMore,
-        nip04History.exhausted,
-        roomCount = null,
-        loadMore = { nip04History.loadMore(user) },
-    ) { feedState is FeedState.Empty }
+    val bootstrap = feedState is FeedState.Empty || feedState is FeedState.Loading
+    BootstrapHistoryWhenEmpty(bootstrap, giftWrapsHistory.loadingMore, giftWrapsHistory.exhausted) { giftWrapsHistory.advanceAll(user) }
+    BootstrapHistoryWhenEmpty(bootstrap, nip04History.loadingMore, nip04History.exhausted) { nip04History.advanceAll(user) }
 
     CrossfadeIfEnabled(
         targetState = feedState,
@@ -170,50 +165,39 @@ private fun FeedLoaded(
     val nip04Exhausted by nip04History.exhausted.collectAsStateWithLifecycle()
     val user = accountViewModel.userProfile()
 
-    // NIP-17 and NIP-04 have very different histories and depths (e.g. NIP-04 reaching back to 2023
-    // while NIP-17 is shallow), so each protocol gets its OWN trigger keyed to its OWN oldest loaded
-    // room — otherwise the deeper protocol's tail pins the boundary to the bottom and the shallower
-    // one never loads until the user scrolls all the way past it. Each is gated only on its own loader
-    // and "is my oldest room near the bottom of the viewport", so while the boundary is in view it keeps
-    // paging to exhaustion (no stall-gate — a visible card means the user is waiting for more). Public /
-    // group / ephemeral rooms are membership-based and excluded.
-    WidenHistoryWhen(
-        "scroll.nip17",
-        giftWrapsHistory.loadingMore,
-        giftWrapsHistory.exhausted,
-        roomCount = { items.list.count { it.event is ChatroomKeyable && it.event !is PrivateDmEvent } },
-        loadMore = { giftWrapsHistory.loadMore(user) },
-    ) {
-        val info = listState.layoutInfo
-        val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: -1
-        val oldest = items.list.indexOfLast { it.event is ChatroomKeyable && it.event !is PrivateDmEvent }
-        info.totalItemsCount > 0 && (oldest < 0 || lastVisible >= oldest - PREFETCH_PRIVATE_CHATS)
-    }
-    WidenHistoryWhen(
-        "scroll.nip04",
-        nip04History.loadingMore,
-        nip04History.exhausted,
-        roomCount = { items.list.count { it.event is PrivateDmEvent } },
-        loadMore = { nip04History.loadMore(user) },
-    ) {
-        val info = listState.layoutInfo
-        val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: -1
-        val oldest = items.list.indexOfLast { it.event is PrivateDmEvent }
-        info.totalItemsCount > 0 && (oldest < 0 || lastVisible >= oldest - PREFETCH_PRIVATE_CHATS)
-    }
-
     // One status card PER protocol, at that protocol's oldest loaded room: it shows what the app is
     // reaching for (relays + how far back it has paged) while it loads, then crossfades to "All caught
-    // up" and collapses when it runs dry. The two sit at different depths (NIP-04's typically deeper),
-    // so the user sees each protocol load where its own history actually ends.
+    // up" and collapses when it runs dry.
     val giftWrapsRelays by giftWrapsHistory.relayCount.collectAsStateWithLifecycle()
     val giftWrapsReached by giftWrapsHistory.reachedBack.collectAsStateWithLifecycle()
     val nip04Relays by nip04History.relayCount.collectAsStateWithLifecycle()
     val nip04Reached by nip04History.reachedBack.collectAsStateWithLifecycle()
+    val giftWrapsProgress by giftWrapsHistory.relayProgress.collectAsStateWithLifecycle()
+    val nip04Progress by nip04History.relayProgress.collectAsStateWithLifecycle()
     val nip17Name = stringResource(R.string.chats_history_proto_nip17)
     val nip04Name = stringResource(R.string.chats_history_proto_nip04)
     val oldestNip17Index = items.list.indexOfLast { it.event is ChatroomKeyable && it.event !is PrivateDmEvent }
     val oldestNip04Index = items.list.indexOfLast { it.event is PrivateDmEvent }
+
+    // Each relay's window limit, carrying the advance() that pulls its OWN next page. Placed in the list
+    // at its reached depth as a sentinel (see RelayWindowLimitMarkers): a relay pages only while its
+    // marker is on screen and keeps paging while it stays there, so a spam-dense relay never floods —
+    // you have to scroll through its messages to pull more. A protocol drops out once exhausted.
+    val limits =
+        remember(giftWrapsProgress, nip04Progress, giftWrapsExhausted, nip04Exhausted, user) {
+            buildList {
+                if (!giftWrapsExhausted) {
+                    giftWrapsProgress.forEach { (relay, p) ->
+                        add(RelayWindowLimit("17:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p)) { giftWrapsHistory.advance(user, relay) })
+                    }
+                }
+                if (!nip04Exhausted) {
+                    nip04Progress.forEach { (relay, p) ->
+                        add(RelayWindowLimit("04:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p)) { nip04History.advance(user, relay) })
+                    }
+                }
+            }
+        }
 
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),
@@ -243,71 +227,52 @@ private fun FeedLoaded(
             if (index == oldestNip04Index) {
                 DmHistoryLoadingCard(nip04Name, "NIP-04", loadingNip04, nip04Exhausted, nip04Relays, nip04Reached)
             }
-        }
 
-        // Protocols with no room loaded yet (e.g. only public rooms so far): show their card at the end.
-        if (oldestNip17Index < 0 && (loadingGiftWraps || !giftWrapsExhausted)) {
-            item(key = "nip17Footer") {
-                DmHistoryLoadingCard(nip17Name, "NIP-17", loadingGiftWraps, giftWrapsExhausted, giftWrapsRelays, giftWrapsReached)
-            }
-        }
-        if (oldestNip04Index < 0 && (loadingNip04 || !nip04Exhausted)) {
-            item(key = "nip04Footer") {
-                DmHistoryLoadingCard(nip04Name, "NIP-04", loadingNip04, nip04Exhausted, nip04Relays, nip04Reached)
-            }
+            // Per-relay window-limit markers/sentinels belonging in the gap toward the next-older room:
+            // each pulls its relay's next page while it's on screen. olderCreatedAt is null past the
+            // oldest loaded room, so relays that have reached the bottom of the list sit there.
+            RelayWindowLimitMarkers(
+                limits,
+                item.createdAt(),
+                items.list.getOrNull(index + 1)?.createdAt(),
+            )
         }
     }
 }
-
-// How many rows ahead of the oldest loaded private chat to start widening, so older private
-// history lands before the user scrolls into the (membership-based) public/group rooms below it.
-private const val PREFETCH_PRIVATE_CHATS = 5
 
 /**
- * Drives ONE protocol's history paging from a scroll/empty trigger. While [wantMore] is true and that
- * protocol isn't already loading or [exhausted], it keeps calling [loadMore] round after round until
- * the history is genuinely exhausted (an empty `until`+`limit` page) — there is no stall-gate: if the
- * boundary card is in view the user is waiting for more, so we don't stop just because a band of older
- * messages surfaced no new conversation row. Paging naturally stops when [wantMore] goes false (the
- * boundary scrolls out of view) or the protocol exhausts.
- *
- * [wantMore] and [roomCount] are read inside a snapshotFlow, so they may observe live Compose state
- * (scroll position, the feed list). [roomCount] is only carried for the log line; pass `null` when the
- * caller has no room measure (the empty feed, hunting for the first room).
- *
- * Each protocol gets its own instance, gated only on its own loader, so NIP-04 and NIP-17 — which have
- * very different histories — page independently as the user scrolls.
+ * Bootstraps history while the rooms list has nothing to scroll (empty / still loading): steps every
+ * relay one page at a time, gated only on its own loader, until rooms appear or the protocol exhausts.
+ * Once rooms load this stops and the per-relay window-limit markers drive paging on demand.
  */
 @Composable
-private fun WidenHistoryWhen(
-    trigger: String,
+private fun BootstrapHistoryWhenEmpty(
+    active: Boolean,
     loadingMore: StateFlow<Boolean>,
     exhausted: StateFlow<Boolean>,
-    roomCount: (() -> Int)?,
-    loadMore: () -> Unit,
-    wantMore: () -> Boolean,
+    advanceAll: () -> Unit,
 ) {
-    LaunchedEffect(loadingMore, exhausted) {
-        combine(
-            // Carries this protocol's room count (>= 0) while a widen is wanted, or NOT_WANTED otherwise.
-            snapshotFlow { if (wantMore()) (roomCount?.invoke() ?: STILL_SEARCHING) else NOT_WANTED },
-            loadingMore,
-            exhausted,
-        ) { count, loading, exhaustedNow ->
-            if (count != NOT_WANTED && !loading && !exhaustedNow) count else NOT_WANTED
-        }.distinctUntilChanged()
-            .collect { count ->
-                if (count == NOT_WANTED) return@collect
-                Log.d("DMPagination") { "rooms.list: widen ($trigger) → loadMore (rooms=$count)" }
-                loadMore()
-            }
+    LaunchedEffect(active, loadingMore, exhausted) {
+        if (!active) return@LaunchedEffect
+        combine(loadingMore, exhausted) { loading, exhaustedNow -> !loading && !exhaustedNow }
+            .distinctUntilChanged()
+            .filter { it }
+            .collect { advanceAll() }
     }
 }
 
-// Sentinels for the widen-trigger flow: NOT_WANTED suppresses widening; STILL_SEARCHING is the count a
-// caller without a private-room measure reports while it wants to keep widening (e.g. the empty feed).
-private const val NOT_WANTED = -1
-private const val STILL_SEARCHING = 0
+private fun reachState(p: RelayPagingProgress) =
+    when {
+        p.done -> RelayReachState.DONE
+        p.stalled -> RelayReachState.STALLED
+        else -> RelayReachState.REACHING
+    }
+
+private fun relayShortName(relay: NormalizedRelayUrl): String =
+    relay.url
+        .substringAfter("://")
+        .trimEnd('/')
+        .substringBefore('/')
 
 // Stable per-chatroom key — derived from chatroom identity, not the latest
 // message id, so reorders move the row instead of recreating it. Compose

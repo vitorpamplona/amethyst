@@ -26,6 +26,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -55,6 +58,61 @@ data class RelayReach(
     val name: String,
     val state: RelayReachState,
 )
+
+/**
+ * One relay's window-limit, used to both place a marker and act as the load sentinel for that relay.
+ * The marker sits at [reachedUntil] (the oldest point the relay has paged to). [advance] pulls that
+ * relay's next, older page; the renderer fires it while the marker is on screen (see
+ * [RelayWindowLimitMarkers]).
+ *
+ * @param key stable identity (protocol tag + relay url) so the sentinel survives list reorders.
+ */
+data class RelayWindowLimit(
+    val key: String,
+    val name: String,
+    val reachedUntil: Long,
+    val state: RelayReachState,
+    val advance: () -> Unit,
+)
+
+/**
+ * Renders the window-limit markers for the relays whose limit falls in the gap between a newer message
+ * (at [newerCreatedAt]) and its next-older neighbour (at [olderCreatedAt], null at the oldest end), and
+ * — this is the load driver — makes each one a **sentinel**: while this gap is composed (i.e. on/near
+ * screen), it pulls that relay's next page, and keeps pulling as each page lands ([LaunchedEffect] keyed
+ * on the relay's reached cursor) for as long as the marker stays visible. When a page fills enough to
+ * push the marker off screen, or the user scrolls away, the gap is disposed and paging stops on its own.
+ * A done relay just shows its ✓ and drives nothing.
+ */
+@Composable
+fun RelayWindowLimitMarkers(
+    limits: List<RelayWindowLimit>,
+    newerCreatedAt: Long?,
+    olderCreatedAt: Long?,
+) {
+    val here =
+        remember(limits, newerCreatedAt, olderCreatedAt) {
+            limits.filter { lim ->
+                newerCreatedAt != null &&
+                    newerCreatedAt > lim.reachedUntil &&
+                    (olderCreatedAt == null || olderCreatedAt <= lim.reachedUntil)
+            }
+        }
+    if (here.isEmpty()) return
+
+    here.forEach { lim ->
+        if (lim.state != RelayReachState.DONE) {
+            // Keyed identity so the effect isn't torn down on reorder; keyed on the reached cursor so each
+            // returned page re-fires it (continue while visible). A stalled relay re-fires only on
+            // re-composition (scroll back into view) — a single retry, not a busy loop.
+            key(lim.key) {
+                LaunchedEffect(lim.reachedUntil, lim.state) { lim.advance() }
+            }
+        }
+    }
+
+    RelayReachMarker(here.map { RelayReach(it.name, it.state) })
+}
 
 /**
  * A thin divider drawn between two messages marking the point one or more relays have paged down to.
