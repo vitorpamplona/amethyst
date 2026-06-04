@@ -207,7 +207,13 @@ class ChatroomNip04HistorySubAssembler(
         val stalled = stalledRelays[pk] ?: emptySet()
         val pending = relays.all.any { !pager.isDone(pk, it) && it !in stalled }
         val ex = !pending
+        val was = exhaustedByConvo[pk] ?: false
         exhaustedByConvo[pk] = ex
+        if (ex && !was) {
+            val done = relays.all.filter { pager.isDone(pk, it) }.map { it.url }
+            val stuck = relays.all.filter { it in stalled && !pager.isDone(pk, it) }.map { it.url }
+            Log.d("DMPagination") { "[convo.nip04.history] window settled (nothing more reachable) — done=$done stalled=$stuck" }
+        }
         if (activeConvo == pk) _exhausted.value = ex
     }
 

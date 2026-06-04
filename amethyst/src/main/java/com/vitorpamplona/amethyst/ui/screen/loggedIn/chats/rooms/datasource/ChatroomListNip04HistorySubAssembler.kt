@@ -193,7 +193,13 @@ class ChatroomListNip04HistorySubAssembler(
         val stalled = stalledRelays[user.pubkeyHex] ?: emptySet()
         val pending = relays.any { !pager.isDone(user.pubkeyHex, it) && it !in stalled }
         val ex = !pending
+        val was = exhaustedByUser[user.pubkeyHex] ?: false
         exhaustedByUser[user.pubkeyHex] = ex
+        if (ex && !was) {
+            val done = relays.filter { pager.isDone(user.pubkeyHex, it) }.map { it.url }
+            val stuck = relays.filter { it in stalled && !pager.isDone(user.pubkeyHex, it) }.map { it.url }
+            Log.d("DMPagination") { "[rooms.nip04.history] window settled (nothing more reachable) — done=$done stalled=$stuck" }
+        }
         if (activeUser == user.pubkeyHex) _exhausted.value = ex
     }
 
