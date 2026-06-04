@@ -43,6 +43,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -54,6 +55,8 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlin.math.roundToInt
 
 enum class SwipeAxis { Brightness, Volume }
 
@@ -81,6 +84,16 @@ class FullscreenSwipeControlsState {
     private var dragStartLevel = 0f
     private var accumulatedDragPx = 0f
 
+    // Max volume is device-invariant; cache it at drag start so the per-frame drag path doesn't
+    // re-query AudioManager on every pointer event.
+    private var maxVolume = 0
+
+    // Last discrete value actually pushed to the device this drag. Continuous finger movement maps
+    // to the same volume index / brightness step across several frames; skipping unchanged writes
+    // avoids redundant AudioManager calls and window-attribute relayouts with no visible effect.
+    private var lastVolumeIndex = -1
+    private var lastBrightnessStep = -1
+
     fun startDrag(
         axis: SwipeAxis,
         audioManager: AudioManager?,
@@ -89,11 +102,17 @@ class FullscreenSwipeControlsState {
     ) {
         this.axis = axis
         accumulatedDragPx = 0f
-        dragStartLevel =
-            when (axis) {
-                SwipeAxis.Volume -> currentVolumeFraction(audioManager)
-                SwipeAxis.Brightness -> currentBrightnessFraction(window, resolver)
+        when (axis) {
+            SwipeAxis.Volume -> {
+                maxVolume = audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 0
+                lastVolumeIndex = -1
+                dragStartLevel = currentVolumeFraction(audioManager, maxVolume)
             }
+            SwipeAxis.Brightness -> {
+                lastBrightnessStep = -1
+                dragStartLevel = currentBrightnessFraction(window, resolver)
+            }
+        }
         level = dragStartLevel
         visible = true
         interactionId++
@@ -108,11 +127,30 @@ class FullscreenSwipeControlsState {
         accumulatedDragPx += dragAmountPx
         level = computeLevel(dragStartLevel, accumulatedDragPx, heightPx)
         when (axis) {
-            SwipeAxis.Volume -> audioManager?.let { applyVolume(it, level) }
-            SwipeAxis.Brightness -> window?.let { applyBrightness(it, level) }
+            SwipeAxis.Volume -> audioManager?.let { applyVolumeIfChanged(it) }
+            SwipeAxis.Brightness -> window?.let { applyBrightnessIfChanged(it) }
             null -> Unit
         }
         interactionId++
+    }
+
+    private fun applyVolumeIfChanged(audioManager: AudioManager) {
+        if (maxVolume <= 0) return
+        val index = levelToVolumeIndex(level, maxVolume)
+        if (index == lastVolumeIndex) return
+        lastVolumeIndex = index
+        // Flag 0 = no system volume UI; we draw our own ring.
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, index, 0)
+    }
+
+    private fun applyBrightnessIfChanged(window: Window) {
+        val target = level.coerceIn(BRIGHTNESS_FLOOR, 1f)
+        // Quantize to the panel's 0..255 range; sub-step movement is imperceptible and would
+        // otherwise reassign window.attributes (a relayout) every frame for no visible change.
+        val step = (target * 255f).roundToInt()
+        if (step == lastBrightnessStep) return
+        lastBrightnessStep = step
+        applyBrightness(window, target)
     }
 
     fun endDrag() {
@@ -133,9 +171,11 @@ class FullscreenSwipeControlsState {
     }
 }
 
-private fun currentVolumeFraction(audioManager: AudioManager?): Float {
+private fun currentVolumeFraction(
+    audioManager: AudioManager?,
+    max: Int,
+): Float {
     audioManager ?: return 0f
-    val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
     if (max <= 0) return 0f
     return audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat() / max
 }
@@ -155,22 +195,12 @@ private fun currentBrightnessFraction(
     return (system / 255f).coerceIn(0f, 1f)
 }
 
-private fun applyVolume(
-    audioManager: AudioManager,
-    level: Float,
-) {
-    val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-    if (max <= 0) return
-    // Flag 0 = no system volume UI; we draw our own ring.
-    audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, levelToVolumeIndex(level, max), 0)
-}
-
 private fun applyBrightness(
     window: Window,
-    level: Float,
+    brightness: Float,
 ) {
     val params = window.attributes
-    params.screenBrightness = level.coerceIn(BRIGHTNESS_FLOOR, 1f)
+    params.screenBrightness = brightness
     window.attributes = params
 }
 
@@ -208,11 +238,19 @@ fun Modifier.fullscreenSwipeControls(
 /** Centered ring + glyph that appears while swiping and fades out shortly after the drag ends. */
 @Composable
 fun BoxScope.FullscreenSwipeLevelIndicator(state: FullscreenSwipeControlsState) {
-    LaunchedEffect(state.interactionId) {
-        if (state.visible) {
-            delay(AUTO_HIDE_MILLIS)
-            state.hide()
-        }
+    // Launch once on the stable state and watch interactionId via a snapshotFlow instead of keying
+    // the effect on it: collectLatest restarts the auto-hide delay on each drag event, and reading
+    // interactionId here (not as a composition key) avoids re-keying the effect every frame. The
+    // indicator still recomposes per frame to redraw the arc as level changes — fine for a transient
+    // drag overlay.
+    LaunchedEffect(state) {
+        snapshotFlow { state.interactionId }
+            .collectLatest {
+                if (state.visible) {
+                    delay(AUTO_HIDE_MILLIS)
+                    state.hide()
+                }
+            }
     }
 
     val alpha by animateFloatAsState(if (state.visible) 1f else 0f, label = "swipeIndicatorAlpha")
