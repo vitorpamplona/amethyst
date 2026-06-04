@@ -123,15 +123,34 @@ class FullscreenSwipeControlsState {
         heightPx: Float,
         audioManager: AudioManager?,
         window: Window?,
+        isMuted: () -> Boolean,
+        setMuted: (Boolean) -> Unit,
     ) {
         accumulatedDragPx += dragAmountPx
         level = computeLevel(dragStartLevel, accumulatedDragPx, heightPx)
         when (axis) {
-            SwipeAxis.Volume -> audioManager?.let { applyVolumeIfChanged(it) }
+            SwipeAxis.Volume -> {
+                audioManager?.let { applyVolumeIfChanged(it) }
+                applyMuteSync(isMuted, setMuted)
+            }
             SwipeAxis.Brightness -> window?.let { applyBrightnessIfChanged(it) }
             null -> Unit
         }
         interactionId++
+    }
+
+    // Directional mute sync: dragging up unmutes a muted video; reaching zero mutes it. Kept outside
+    // the AudioManager branch so per-video mute still tracks the gesture even if device volume is
+    // unavailable.
+    private fun applyMuteSync(
+        isMuted: () -> Boolean,
+        setMuted: (Boolean) -> Unit,
+    ) {
+        when (muteActionFor(level, movedUp = accumulatedDragPx < 0f, isMuted = isMuted())) {
+            MuteAction.Mute -> setMuted(true)
+            MuteAction.Unmute -> setMuted(false)
+            MuteAction.None -> Unit
+        }
     }
 
     private fun applyVolumeIfChanged(audioManager: AudioManager) {
@@ -220,7 +239,11 @@ fun Modifier.fullscreenSwipeControls(
     audioManager: AudioManager?,
     window: Window?,
     resolver: ContentResolver,
+    isMuted: () -> Boolean,
+    setMuted: (Boolean) -> Unit,
 ): Modifier =
+    // isMuted/setMuted are intentionally not pointerInput keys: they change identity every
+    // recomposition but read live state, so adding them would restart the gesture for no reason.
     pointerInput(state, audioManager, window, resolver) {
         detectVerticalDragGestures(
             onDragStart = { offset ->
@@ -228,7 +251,7 @@ fun Modifier.fullscreenSwipeControls(
                 state.startDrag(axis, audioManager, window, resolver)
             },
             onVerticalDrag = { _, dragAmount ->
-                state.onDrag(dragAmount, size.height.toFloat(), audioManager, window)
+                state.onDrag(dragAmount, size.height.toFloat(), audioManager, window, isMuted, setMuted)
             },
             onDragEnd = { state.endDrag() },
             onDragCancel = { state.endDrag() },
@@ -237,7 +260,10 @@ fun Modifier.fullscreenSwipeControls(
 
 /** Centered ring + glyph that appears while swiping and fades out shortly after the drag ends. */
 @Composable
-fun BoxScope.FullscreenSwipeLevelIndicator(state: FullscreenSwipeControlsState) {
+fun BoxScope.FullscreenSwipeLevelIndicator(
+    state: FullscreenSwipeControlsState,
+    isMuted: () -> Boolean,
+) {
     // Launch once on the stable state and watch interactionId via a snapshotFlow instead of keying
     // the effect on it: collectLatest restarts the auto-hide delay on each drag event, and reading
     // interactionId here (not as a composition key) avoids re-keying the effect every frame. The
@@ -294,7 +320,7 @@ fun BoxScope.FullscreenSwipeLevelIndicator(state: FullscreenSwipeControlsState) 
             when (axis) {
                 SwipeAxis.Brightness -> MaterialSymbols.BrightnessMedium
                 SwipeAxis.Volume ->
-                    if (level <= 0f) MaterialSymbols.AutoMirrored.VolumeOff else MaterialSymbols.AutoMirrored.VolumeUp
+                    if (isMuted() || level <= 0f) MaterialSymbols.AutoMirrored.VolumeOff else MaterialSymbols.AutoMirrored.VolumeUp
             }
         Icon(
             symbol = symbol,

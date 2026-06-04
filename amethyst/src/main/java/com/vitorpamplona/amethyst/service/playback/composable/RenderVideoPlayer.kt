@@ -111,6 +111,15 @@ fun RenderVideoPlayer(
     // Returns null for the inline feed player (not inside a dialog) — fine, gated by isFullscreen below.
     val dialogWindow = getDialogWindow()
 
+    // Sync the per-video mute (Media3 player volume) with the volume swipe. Mirrors the mute
+    // button's handler exactly, so its listener-driven icon flips when the swipe mutes/unmutes,
+    // and the global default carries to the next video.
+    val isVideoMuted = { controllerState.controller.volume < 0.001f }
+    val setVideoMuted = { mute: Boolean ->
+        DEFAULT_MUTED_SETTING.value = mute
+        controllerState.controller.volume = if (mute) 0f else 1f
+    }
+
     // Belt-and-suspenders: clear any brightness override when this player leaves composition, so
     // exiting fullscreen never leaves the screen dimmed. releaseBrightness no-ops when dialogWindow
     // is null (the inline feed path) or when no override was applied, so this is safe unconditionally.
@@ -145,6 +154,8 @@ fun RenderVideoPlayer(
                             audioManager = audioManager,
                             window = dialogWindow,
                             resolver = context.contentResolver,
+                            isMuted = isVideoMuted,
+                            setMuted = setVideoMuted,
                         )
                     } else {
                         Modifier
@@ -208,7 +219,7 @@ fun RenderVideoPlayer(
         }
 
         if (isFullscreen) {
-            FullscreenSwipeLevelIndicator(swipeState)
+            FullscreenSwipeLevelIndicator(swipeState, isMuted = isVideoMuted)
         }
     }
 }

@@ -75,4 +75,35 @@ class FullscreenSwipeMathTest {
     fun volumeIndexZeroMaxGuard() {
         assertEquals(0, levelToVolumeIndex(0.5f, 0))
     }
+
+    @Test
+    fun reachingZeroWhileUnmutedMutes() {
+        assertEquals(MuteAction.Mute, muteActionFor(level = 0f, movedUp = false, isMuted = false))
+    }
+
+    @Test
+    fun reachingZeroWhileMutedIsNoop() {
+        assertEquals(MuteAction.None, muteActionFor(level = 0f, movedUp = false, isMuted = true))
+    }
+
+    @Test
+    fun movingUpWhileMutedUnmutes() {
+        assertEquals(MuteAction.Unmute, muteActionFor(level = 0.5f, movedUp = true, isMuted = true))
+    }
+
+    @Test
+    fun movingUpAtMaxWhileMutedStillUnmutes() {
+        // Device volume pinned at 1.0 can't rise, but the upward drag still expresses intent.
+        assertEquals(MuteAction.Unmute, muteActionFor(level = 1f, movedUp = true, isMuted = true))
+    }
+
+    @Test
+    fun movingUpWhileUnmutedIsNoop() {
+        assertEquals(MuteAction.None, muteActionFor(level = 0.5f, movedUp = true, isMuted = false))
+    }
+
+    @Test
+    fun movingDownAboveZeroWhileMutedIsNoop() {
+        assertEquals(MuteAction.None, muteActionFor(level = 0.5f, movedUp = false, isMuted = true))
+    }
 }

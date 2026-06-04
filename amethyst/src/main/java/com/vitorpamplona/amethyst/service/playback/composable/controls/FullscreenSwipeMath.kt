@@ -44,3 +44,28 @@ fun levelToVolumeIndex(
     if (max <= 0) return 0
     return (level.coerceIn(0f, 1f) * max).roundToInt()
 }
+
+/** The mute change a volume swipe should trigger on the per-video player. */
+enum class MuteAction { Mute, Unmute, None }
+
+/**
+ * Directional mute sync for the volume swipe.
+ *
+ * - Reaching zero mutes the video (no-op if already muted).
+ * - Dragging the finger up ([movedUp], i.e. net upward from where the drag started) unmutes a muted
+ *   video — so a muted video pinned at max device volume still unmutes even though [level] can't rise.
+ * - A downward swipe that stays above zero leaves the mute state untouched.
+ *
+ * [movedUp] is the drag direction, not a level comparison, so the clamp at level 1.0 doesn't swallow
+ * the unmute intent.
+ */
+fun muteActionFor(
+    level: Float,
+    movedUp: Boolean,
+    isMuted: Boolean,
+): MuteAction =
+    when {
+        level <= 0f -> if (isMuted) MuteAction.None else MuteAction.Mute
+        isMuted && movedUp -> MuteAction.Unmute
+        else -> MuteAction.None
+    }
