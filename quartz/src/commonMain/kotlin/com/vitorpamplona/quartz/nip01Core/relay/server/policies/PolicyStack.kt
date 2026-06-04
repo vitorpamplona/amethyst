@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip01Core.relay.server.policies
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
@@ -51,13 +50,10 @@ class PolicyStack(
 
     override fun accept(cmd: AuthCmd) = runPolicies(cmd) { p, c -> p.accept(c) }
 
-    override suspend fun onAuthenticated(
-        pubKey: HexKey,
-        event: RelayAuthEvent,
-    ): Boolean {
+    override suspend fun onAuthenticated(event: RelayAuthEvent): Boolean {
         // Run every member (side effects) and record iff any one verified the
         // identity. `fold` keeps the call on the left so no member is skipped.
-        return policies.fold(false) { recorded, p -> p.onAuthenticated(pubKey, event) || recorded }
+        return policies.fold(false) { recorded, p -> p.onAuthenticated(event) || recorded }
     }
 
     override fun acceptMessage(message: String): String? = policies.firstNotNullOfOrNull { it.acceptMessage(message) }

@@ -113,27 +113,21 @@ open class FullAuthPolicy(
      * Votes to record the authentication. The engine calls this only after
      * [accept] and the whole policy chain have approved the AUTH. It runs
      * [authorize] first (which may throw to reject — the engine then records
-     * nothing) and returns `true` so the engine records [pubKey] into the
+     * nothing) and returns `true` so the engine records `event.pubKey` into the
      * connection scope. `final`: override [authorize], not this.
      */
-    final override suspend fun onAuthenticated(
-        pubKey: HexKey,
-        event: RelayAuthEvent,
-    ): Boolean {
-        authorize(pubKey, event)
+    final override suspend fun onAuthenticated(event: RelayAuthEvent): Boolean {
+        authorize(event)
         return true
     }
 
     /**
      * Hook for external authorization once the NIP-42 proof checks out — e.g.
      * exchange [event] for a backend session token. Throw to reject the login
-     * (the AUTH becomes `OK false` and the pubkey is not recorded). Runs before
-     * the pubkey is committed. The default does nothing.
+     * (the AUTH becomes `OK false` and `event.pubKey` is not recorded). Runs
+     * before the pubkey is committed. The default does nothing.
      */
-    open suspend fun authorize(
-        pubKey: HexKey,
-        event: RelayAuthEvent,
-    ) {}
+    open suspend fun authorize(event: RelayAuthEvent) {}
 
     override fun accept(cmd: EventCmd): PolicyResult<EventCmd> =
         if (isAuthenticated()) {

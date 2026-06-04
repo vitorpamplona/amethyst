@@ -545,11 +545,8 @@ class NostrServerAuthTest {
             var hookPubkey: String? = null
             val policy =
                 object : FullAuthPolicy(relayUrl) {
-                    override suspend fun authorize(
-                        pubKey: String,
-                        event: RelayAuthEvent,
-                    ) {
-                        hookPubkey = pubKey
+                    override suspend fun authorize(event: RelayAuthEvent) {
+                        hookPubkey = event.pubKey
                     }
                 }
 
@@ -574,10 +571,7 @@ class NostrServerAuthTest {
         runTest {
             val policy =
                 object : FullAuthPolicy(relayUrl) {
-                    override suspend fun authorize(
-                        pubKey: String,
-                        event: RelayAuthEvent,
-                    ): Unit = throw IllegalStateException("backend rejected user")
+                    override suspend fun authorize(event: RelayAuthEvent): Unit = throw IllegalStateException("backend rejected user")
                 }
 
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
@@ -606,10 +600,7 @@ class NostrServerAuthTest {
         runTest {
             val policy =
                 object : FullAuthPolicy(relayUrl) {
-                    override suspend fun authorize(
-                        pubKey: String,
-                        event: RelayAuthEvent,
-                    ): Unit = throw IllegalStateException("backend rejected user")
+                    override suspend fun authorize(event: RelayAuthEvent): Unit = throw IllegalStateException("backend rejected user")
                 }
 
             val dispatcher = UnconfinedTestDispatcher(testScheduler)

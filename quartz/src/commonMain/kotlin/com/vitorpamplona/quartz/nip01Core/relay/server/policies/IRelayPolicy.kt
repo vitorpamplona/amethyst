@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip01Core.relay.server.policies
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
@@ -87,24 +86,20 @@ interface IRelayPolicy {
      * leaking that logic into the transport layer.
      *
      * The engine — not the policy — owns the authenticated-identity store. The
-     * return value is this policy's vote on whether [pubKey] should be recorded
-     * as authenticated on the connection: return `true` only if this policy
-     * actually verified the identity. The default returns `false`, so a policy
-     * that does not authenticate (e.g. a pass-through or a blind-accept) never
-     * causes an unverified pubkey to be recorded.
+     * return value is this policy's vote on whether `event.pubKey` should be
+     * recorded as authenticated on the connection: return `true` only if this
+     * policy actually verified the identity. The default returns `false`, so a
+     * policy that does not authenticate (e.g. a pass-through or a blind-accept)
+     * never causes an unverified pubkey to be recorded.
      *
      * Because it runs only after the whole chain approved the AUTH, throwing
      * here cleanly fails the login: the AUTH becomes `OK false` and the engine
      * records nothing.
      *
-     * @param pubKey The pubkey being authenticated.
-     * @param event The verified NIP-42 auth event.
-     * @return `true` to have the engine record [pubKey] as authenticated.
+     * @param event The verified NIP-42 auth event (its signer is the identity).
+     * @return `true` to have the engine record `event.pubKey` as authenticated.
      */
-    suspend fun onAuthenticated(
-        pubKey: HexKey,
-        event: RelayAuthEvent,
-    ): Boolean = false
+    suspend fun onAuthenticated(event: RelayAuthEvent): Boolean = false
 
     /**
      * Inspects a raw inbound message before it is parsed. Return a reason

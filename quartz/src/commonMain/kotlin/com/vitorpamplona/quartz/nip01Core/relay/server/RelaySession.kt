@@ -237,7 +237,7 @@ class RelaySession(
         // here cleanly fails the login — the engine records nothing.
         val record =
             try {
-                policy.onAuthenticated(cmd.event.pubKey, cmd.event)
+                policy.onAuthenticated(cmd.event)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
