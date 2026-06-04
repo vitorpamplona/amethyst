@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.server
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.server.backend.EventSource
+import com.vitorpamplona.quartz.nip01Core.relay.server.backend.RequestContext
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.EmptyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -51,7 +52,10 @@ class RelayServerListenerTest {
 
     private val emptySource =
         object : EventSource {
-            override fun events(filters: List<Filter>): Flow<Event> = emptyFlow()
+            override fun events(
+                ctx: RequestContext,
+                filters: List<Filter>,
+            ): Flow<Event> = emptyFlow()
         }
 
     @Test

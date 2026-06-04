@@ -21,13 +21,13 @@
 package com.vitorpamplona.quartz.nip01Core.relay.server.policies
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
+import com.vitorpamplona.quartz.nip01Core.relay.server.backend.RequestContext
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 
 class PolicyStack(
@@ -35,8 +35,11 @@ class PolicyStack(
 ) : IRelayPolicy {
     val policies = policies.toList()
 
-    override fun onConnect(send: (Message) -> Unit) {
-        policies.forEach { it.onConnect(send) }
+    override fun onConnect(
+        scope: RequestContext,
+        send: (Message) -> Unit,
+    ) {
+        policies.forEach { it.onConnect(scope, send) }
     }
 
     override fun accept(cmd: EventCmd) = runPolicies(cmd) { p, c -> p.accept(c) }
@@ -47,11 +50,10 @@ class PolicyStack(
 
     override fun accept(cmd: AuthCmd) = runPolicies(cmd) { p, c -> p.accept(c) }
 
-    override suspend fun onAuthenticated(
-        pubKey: HexKey,
-        event: RelayAuthEvent,
-    ) {
-        policies.forEach { it.onAuthenticated(pubKey, event) }
+    override suspend fun onAuthenticated(event: RelayAuthEvent): Boolean {
+        // Run every member (side effects) and record iff any one verified the
+        // identity. `fold` keeps the call on the left so no member is skipped.
+        return policies.fold(false) { recorded, p -> p.onAuthenticated(event) || recorded }
     }
 
     override fun acceptMessage(message: String): String? = policies.firstNotNullOfOrNull { it.acceptMessage(message) }

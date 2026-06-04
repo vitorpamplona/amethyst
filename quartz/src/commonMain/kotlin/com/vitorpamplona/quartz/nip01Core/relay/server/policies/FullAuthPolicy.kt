@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.server.backend.RequestContext
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.RandomInstance
@@ -40,11 +41,13 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  *
  * Implements the full NIP-42 challenge/verify handshake: [onConnect] sends the
  * [challenge] and [accept] (AuthCmd) validates the returned event (expiration,
- * freshness, challenge match, relay match). Crucially, [accept] does NOT mutate
- * state — the pubkey is recorded in [authenticatedUsers] only by [onAuthenticated],
- * which the engine calls once [accept] *and* the rest of the policy chain have
- * approved the AUTH. That single, late commit is why there is no rollback to
- * reason about: a rejected AUTH simply never reaches it.
+ * freshness, challenge match, relay match). This policy runs the auth *logic*
+ * but does not *own* the authenticated-identity store: the engine-owned
+ * connection [scope] holds it. [accept] does NOT mutate state, and
+ * [onAuthenticated] only votes `true` (after [authorize]) — the engine performs
+ * the single recording into the scope once the whole chain has approved. Gating
+ * decisions read [scope].`authenticatedUsers`. A rejected AUTH simply never
+ * reaches [onAuthenticated], so there is no rollback to reason about.
  *
  * To bridge to an external auth system, override [authorize] (a `suspend` hook)
  * and do the post-verification I/O there — e.g. exchange the verified event for
@@ -57,13 +60,30 @@ open class FullAuthPolicy(
     /** The challenge string sent to this client for NIP-42 authentication. */
     val challenge: String = RandomInstance.randomChars(32)
 
-    /** Set of pubkeys that have successfully authenticated on this session. */
-    val authenticatedUsers = mutableSetOf<HexKey>()
+    /**
+     * The engine-owned connection scope, captured at [onConnect]. Read-only
+     * here: this policy reads [RequestContext.authenticatedUsers] to gate, while
+     * the engine is the only writer. Held safely because a [FullAuthPolicy] is
+     * built fresh per connection.
+     */
+    private lateinit var scope: RequestContext
 
-    /** Returns true if at least one pubkey has authenticated. */
+    /**
+     * The pubkeys authenticated on this connection, read from the engine-owned
+     * scope. Exposed to subclasses so they can gate or rewrite on the caller's
+     * identity (restricted content, caller-relative filters) — the same set the
+     * data plane sees via [RequestContext.authenticatedUsers].
+     */
+    protected val authenticatedUsers: Set<HexKey> get() = scope.authenticatedUsers
+
+    /** Returns true if at least one pubkey has authenticated on this connection. */
     fun isAuthenticated(): Boolean = authenticatedUsers.isNotEmpty()
 
-    override fun onConnect(send: (Message) -> Unit) {
+    override fun onConnect(
+        scope: RequestContext,
+        send: (Message) -> Unit,
+    ) {
+        this.scope = scope
         send(AuthMessage(challenge))
     }
 
@@ -90,31 +110,24 @@ open class FullAuthPolicy(
     }
 
     /**
-     * Commits the authentication. The engine calls this only after [accept] and
-     * the whole policy chain have approved the AUTH, so this is the single point
-     * where the pubkey is recorded. It runs [authorize] first (which may throw
-     * to reject) and records the pubkey only on success — the connection is
-     * never left authenticated behind a failing `OK`. `final`: override
-     * [authorize], not this.
+     * Votes to record the authentication. The engine calls this only after
+     * [accept] and the whole policy chain have approved the AUTH. It runs
+     * [authorize] first (which may throw to reject — the engine then records
+     * nothing) and returns `true` so the engine records `event.pubKey` into the
+     * connection scope. `final`: override [authorize], not this.
      */
-    final override suspend fun onAuthenticated(
-        pubKey: HexKey,
-        event: RelayAuthEvent,
-    ) {
-        authorize(pubKey, event)
-        authenticatedUsers.add(pubKey)
+    final override suspend fun onAuthenticated(event: RelayAuthEvent): Boolean {
+        authorize(event)
+        return true
     }
 
     /**
      * Hook for external authorization once the NIP-42 proof checks out — e.g.
      * exchange [event] for a backend session token. Throw to reject the login
-     * (the AUTH becomes `OK false` and the pubkey is not recorded). Runs before
-     * the pubkey is committed. The default does nothing.
+     * (the AUTH becomes `OK false` and `event.pubKey` is not recorded). Runs
+     * before the pubkey is committed. The default does nothing.
      */
-    open suspend fun authorize(
-        pubKey: HexKey,
-        event: RelayAuthEvent,
-    ) {}
+    open suspend fun authorize(event: RelayAuthEvent) {}
 
     override fun accept(cmd: EventCmd): PolicyResult<EventCmd> =
         if (isAuthenticated()) {

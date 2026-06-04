@@ -21,20 +21,30 @@
 package com.vitorpamplona.quartz.nip01Core.relay.server.policies
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
+import com.vitorpamplona.quartz.nip01Core.relay.server.backend.RequestContext
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 
 /**
  * Defines custom behavior for this relay.
  */
 interface IRelayPolicy {
-    fun onConnect(send: (Message) -> Unit)
+    /**
+     * Called once when the connection opens. [scope] is the engine-owned,
+     * read-only connection scope (id + authenticated users) — a per-connection
+     * policy may retain it to make later auth-aware decisions; shared singleton
+     * policies must ignore it and stay stateless. [send] pushes a message to the
+     * client (e.g. a NIP-42 AUTH challenge).
+     */
+    fun onConnect(
+        scope: RequestContext,
+        send: (Message) -> Unit,
+    )
 
     /**
      * Evaluates whether an incoming EVENT command should be accepted.
@@ -70,24 +80,26 @@ interface IRelayPolicy {
 
     /**
      * Called once an AUTH command has been [accept]ed by this policy *and* the
-     * rest of the policy chain, before the success `OK` is sent. This is where
-     * a policy commits the authentication and/or runs post-verification side
-     * effects that need network or disk I/O — e.g. exchanging the verified
-     * NIP-42 event for a backend session token — without leaking that logic into
-     * the transport layer.
+     * rest of the policy chain, before the success `OK` is sent. Run any
+     * post-verification side effects that need network or disk I/O here — e.g.
+     * exchanging the verified NIP-42 event for a backend session token — without
+     * leaking that logic into the transport layer.
+     *
+     * The engine — not the policy — owns the authenticated-identity store. The
+     * return value is this policy's vote on whether `event.pubKey` should be
+     * recorded as authenticated on the connection: return `true` only if this
+     * policy actually verified the identity. The default returns `false`, so a
+     * policy that does not authenticate (e.g. a pass-through or a blind-accept)
+     * never causes an unverified pubkey to be recorded.
      *
      * Because it runs only after the whole chain approved the AUTH, throwing
-     * here cleanly fails the login: the AUTH becomes `OK false` and, since the
-     * commit lives here too, the connection is never left authenticated. The
-     * default implementation does nothing.
+     * here cleanly fails the login: the AUTH becomes `OK false` and the engine
+     * records nothing.
      *
-     * @param pubKey The pubkey being authenticated.
-     * @param event The verified NIP-42 auth event.
+     * @param event The verified NIP-42 auth event (its signer is the identity).
+     * @return `true` to have the engine record `event.pubKey` as authenticated.
      */
-    suspend fun onAuthenticated(
-        pubKey: HexKey,
-        event: RelayAuthEvent,
-    ) {}
+    suspend fun onAuthenticated(event: RelayAuthEvent): Boolean = false
 
     /**
      * Inspects a raw inbound message before it is parsed. Return a reason

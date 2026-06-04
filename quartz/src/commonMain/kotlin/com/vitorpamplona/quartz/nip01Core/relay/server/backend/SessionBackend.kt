@@ -45,19 +45,24 @@ import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
  */
 interface SessionBackend {
     /**
-     * Answers a REQ. Calls [onEach] for every matching event, then [onEose]
-     * once the stored set is exhausted. A storage backend keeps suspending
-     * after [onEose] to stream live events until the subscription is
-     * cancelled; a finite source returns after [onEose].
+     * Answers a REQ on behalf of the caller described by [ctx]. Calls [onEach]
+     * for every matching event, then [onEose] once the stored set is exhausted.
+     * A storage backend keeps suspending after [onEose] to stream live events
+     * until the subscription is cancelled; a finite source returns after
+     * [onEose].
      */
     suspend fun query(
+        ctx: RequestContext,
         filters: List<Filter>,
         onEach: (Event) -> Unit,
         onEose: () -> Unit,
     )
 
-    /** Answers a NIP-45 COUNT with an exact cardinality. */
-    suspend fun count(filters: List<Filter>): Int
+    /** Answers a NIP-45 COUNT with an exact cardinality for the caller in [ctx]. */
+    suspend fun count(
+        ctx: RequestContext,
+        filters: List<Filter>,
+    ): Int
 
     /**
      * Answers a NIP-45 COUNT, allowing an approximate result and/or a
@@ -65,7 +70,10 @@ interface SessionBackend {
      * The default returns the exact [count] with `approximate = false`; override
      * to return `approximate`/`hll`.
      */
-    suspend fun countResult(filters: List<Filter>): CountResult = CountResult(count(filters))
+    suspend fun countResult(
+        ctx: RequestContext,
+        filters: List<Filter>,
+    ): CountResult = CountResult(count(ctx, filters))
 
     /**
      * Handles an EVENT publish, reporting the per-event outcome through

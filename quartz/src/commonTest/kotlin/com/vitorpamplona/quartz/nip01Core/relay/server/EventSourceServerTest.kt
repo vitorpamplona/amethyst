@@ -26,11 +26,15 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.AuthMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountResult
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.backend.EventSource
+import com.vitorpamplona.quartz.nip01Core.relay.server.backend.RequestContext
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.FullAuthPolicy
+import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip45Count.HllBuilder
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
@@ -70,7 +74,10 @@ class EventSourceServerTest {
     private class FixedSource(
         private val events: List<Event>,
     ) : EventSource {
-        override fun events(filters: List<Filter>): Flow<Event> = flowOf(*events.toTypedArray())
+        override fun events(
+            ctx: RequestContext,
+            filters: List<Filter>,
+        ): Flow<Event> = flowOf(*events.toTypedArray())
     }
 
     @Test
@@ -117,11 +124,17 @@ class EventSourceServerTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val source =
                 object : EventSource {
-                    override fun events(filters: List<Filter>): Flow<Event> = flowOf(event(1), event(2))
+                    override fun events(
+                        ctx: RequestContext,
+                        filters: List<Filter>,
+                    ): Flow<Event> = flowOf(event(1), event(2))
 
-                    override suspend fun countResult(filters: List<Filter>): CountResult {
+                    override suspend fun countResult(
+                        ctx: RequestContext,
+                        filters: List<Filter>,
+                    ): CountResult {
                         val hll = HllBuilder(offset = 8)
-                        events(filters).collect { hll.add(it.pubKey) }
+                        events(ctx, filters).collect { hll.add(it.pubKey) }
                         return hll.toCountResult()
                     }
                 }
@@ -161,7 +174,10 @@ class EventSourceServerTest {
             val dispatcher = UnconfinedTestDispatcher(testScheduler)
             val source =
                 object : EventSource {
-                    override fun events(filters: List<Filter>): Flow<Event> = flow { throw RuntimeException("backend down") }
+                    override fun events(
+                        ctx: RequestContext,
+                        filters: List<Filter>,
+                    ): Flow<Event> = flow { throw RuntimeException("backend down") }
                 }
             EventSourceServer(source, parentContext = dispatcher).use { server ->
                 val collector = MessageCollector()
@@ -199,6 +215,65 @@ class EventSourceServerTest {
                 val closed = collector.containing("CLOSED")
                 assertEquals(1, closed.size)
                 assertTrue(closed[0].contains("auth-required:"))
+            }
+        }
+
+    /** Builds a kind 22242 auth event; FullAuthPolicy checks challenge/relay/time, not the signature. */
+    private fun authEvent(
+        challenge: String,
+        relay: String,
+    ) = RelayAuthEvent(
+        id = hexId(99),
+        pubKey = pubkey,
+        createdAt = TimeUtils.now(),
+        tags =
+            arrayOf(
+                arrayOf("relay", relay),
+                arrayOf("challenge", challenge),
+            ),
+        content = "",
+        sig = sig,
+    )
+
+    private fun authJson(event: RelayAuthEvent) = OptimizedJsonMapper.toJson(AuthCmd(event))
+
+    @Test
+    fun sourceSeesAuthenticatedUserInContext() =
+        runTest {
+            val dispatcher = UnconfinedTestDispatcher(testScheduler)
+            val relay = NormalizedRelayUrl("wss://search.example.com/")
+
+            // A caller-aware source: it records who the engine says is asking.
+            var seenViewers: Set<String>? = null
+            val source =
+                object : EventSource {
+                    override fun events(
+                        ctx: RequestContext,
+                        filters: List<Filter>,
+                    ): Flow<Event> {
+                        seenViewers = ctx.authenticatedUsers
+                        return flowOf(event(1))
+                    }
+                }
+
+            EventSourceServer(
+                source,
+                policyBuilder = { FullAuthPolicy(relay) },
+                parentContext = dispatcher,
+            ).use { server ->
+                val collector = MessageCollector()
+                val session = server.connect(collector.send)
+
+                // Complete the NIP-42 handshake using the engine's challenge.
+                val challenge = (OptimizedJsonMapper.fromJsonToMessage(collector.messages[0]) as AuthMessage).challenge
+                session.receive(authJson(authEvent(challenge, relay.url)))
+
+                // A REQ after auth must hand the authenticated pubkey to the source.
+                session.receive("""["REQ","sub1",{"kinds":[1]}]""")
+
+                assertEquals(setOf(pubkey), seenViewers)
+                val events = collector.parsed().filterIsInstance<EventMessage>()
+                assertEquals(1, events.size)
             }
         }
 }
