@@ -1336,60 +1336,28 @@ object LocalCache : ILocalCache, ICacheProvider {
             else -> null
         }
 
-    @Suppress("DEPRECATION")
+    /**
+     * NIP-09 delete of a single targeted event.
+     *
+     * Removal has two halves: unlinking the note from everything that points AT it
+     * (its parents, channels, and the per-user report/card/status/poll indexes —
+     * all handled by [removeFromCache]); and dealing with the note's OWN children
+     * (the notes that point at IT). The delete path and the prune path share the
+     * first half and differ only on the second:
+     *  - delete (here): the children are independent events and stay in the cache;
+     *    [Note.detachFromChildren] only severs their back-reference so the removed
+     *    shell can neither leak (held alive by a child's `replyTo`) nor be later
+     *    resurrected by `computeReplyTo` as a second Note for the same id.
+     *  - prune (see [removeFromCache] callers): the whole child subtree is removed.
+     *
+     * Gift-wrapped events additionally drop their decrypted inner host.
+     */
     private fun deleteNote(deleteNote: Note) {
-        val deletedEvent = deleteNote.event
+        (deleteNote.event as? WrappedEvent)?.let { deleteWraps(it) }
 
-        if (deletedEvent is ReportEvent) {
-            deletedEvent.reportedAuthor().forEach {
-                getUserIfExists(it.pubkey)?.reportsOrNull()?.removeReport(deleteNote)
-            }
-        }
-
-        if (deleteNote is AddressableNote && deletedEvent is ContactCardEvent) {
-            getUserIfExists(deletedEvent.aboutUser())?.cardsOrNull()?.removeCard(deleteNote)
-        }
-
-        if (deleteNote is AddressableNote && deletedEvent is StatusEvent) {
-            deleteNote.author?.statusStateOrNull()?.removeStatus(deleteNote)
-        }
-
-        if (deletedEvent is PollResponseEvent) {
-            deletedEvent.poll()?.eventId?.let {
-                getNoteIfExists(it)?.pollStateOrNull()?.removeResponse(deleteNote)
-            }
-        }
-
-        if (deletedEvent is TorrentCommentEvent) {
-            deletedEvent.torrentIds()?.let {
-                getNoteIfExists(it)?.removeReply(deleteNote)
-            }
-        }
-
-        if (deletedEvent is WrappedEvent) {
-            deleteWraps(deletedEvent)
-        }
-
-        // Counts the replies
-        deleteNote.replyTo?.forEach { masterNote ->
-            masterNote.removeNote(deleteNote)
-        }
-
-        deleteNote.inGatherers?.forEach { it.removeNote(deleteNote) }
-
-        getAnyChannel(deleteNote)?.removeNote(deleteNote)
-
-        // Sever the back-references from this note's children before it leaves the
-        // map. Otherwise each child keeps the removed shell alive through its replyTo
-        // (a partial deletion / leak) and a reply resolved later via computeReplyTo
-        // would resurrect a second Note for the same id.
         deleteNote.detachFromChildren()
 
-        notes.remove(deleteNote.idHex)
-
-        deleteNote.clearFlow()
-
-        refreshDeletedNoteObservers(deleteNote)
+        removeFromCache(deleteNote)
     }
 
     fun deleteWraps(event: WrappedEvent) {
@@ -2784,6 +2752,28 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
     }
 
+    /**
+     * Unlinks [note] from everything in the cache that references it, then drops it
+     * from the [notes] map and notifies observers. This is the shared "unlink from
+     * above" half of removal, used by both the prune callers and [deleteNote].
+     *
+     * It detaches the note from:
+     *  - its parent notes (their replies/reactions/zaps/boosts/reports/labels maps);
+     *    because event-level reports and torrent comments both carry the target in
+     *    `replyTo`, [Note.removeNote] cleans those up here too;
+     *  - its channels/gatherers (`inGatherers` is authoritative — `Channel.addNote`
+     *    always registers the gatherer — and `getAnyChannel` is a belt-and-suspenders
+     *    resolve so a note can never linger in a channel after leaving the cache);
+     *  - the per-target indexes `replyTo` does NOT reach: user-level reports and
+     *    reported addresses, contact cards, statuses, and poll responses.
+     *
+     * It deliberately does NOT touch the note's own children: prune callers collect
+     * them via [Note.removeAllChildNotes] and remove the subtree, while [deleteNote]
+     * keeps them and severs only their back-reference. Every per-target removal is
+     * idempotent, so the overlap between `replyTo` and the explicit indexes (e.g. an
+     * event-level report reachable both ways) is harmless. Addressable notes are
+     * dropped from the [addressables] map by the caller; this only removes from [notes].
+     */
     private fun removeFromCache(note: Note) {
         note.replyTo?.forEach { masterNote ->
             masterNote.removeNote(note)
@@ -2791,11 +2781,6 @@ object LocalCache : ILocalCache, ICacheProvider {
 
         note.inGatherers?.forEach { it.removeNote(note) }
 
-        // Mirror deleteNote(): inGatherers is normally authoritative for channel
-        // membership (Channel.addNote always calls note.addGatherer), but resolve
-        // the channel from the event as a belt-and-suspenders detach so a note can
-        // never linger in a channel's notes map after it leaves the cache — that
-        // would leak the note and let a relay echo mint a duplicate with the same id.
         getAnyChannel(note)?.removeNote(note)
 
         val noteEvent = note.event
