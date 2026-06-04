@@ -55,13 +55,38 @@ jobs:
           fi
           IFS=. read -r MAJ MIN _ <<< "$BASE"
           SNAP="${MAJ}.$((MIN + 1)).0-SNAPSHOT"
+          # Hard guard: this job must NEVER publish a production release.
+          # The Vanniktech plugin routes non-SNAPSHOT versions to the
+          # immutable release pipeline (and auto-releases them, since the
+          # build sets automaticRelease = true). Fail loudly if the version
+          # we computed is not a snapshot, before anything is published.
+          case "$SNAP" in
+            *-SNAPSHOT) ;;
+            *)
+              echo "::error::Refusing to publish non-snapshot version '$SNAP' from the snapshot workflow" >&2
+              exit 1
+              ;;
+          esac
           echo "version=$SNAP" >> "$GITHUB_OUTPUT"
           echo "Release default is $BASE -> publishing snapshot $SNAP"
 
       # Snapshots are not GPG-signed (Central Portal does not require it),
-      # so only the Sonatype credentials are passed here.
+      # so only the Sonatype credentials are passed here. The signing key is
+      # deliberately withheld: an unsigned non-snapshot would be rejected by
+      # Central, a second backstop behind the guard above.
       - name: Publish snapshot to Maven Central
-        run: ./gradlew :quartz:publishToMavenCentral -PquartzVersion=${{ steps.ver.outputs.version }} --no-configuration-cache
+        run: |
+          set -euo pipefail
+          # Belt-and-suspenders: re-assert the suffix at the publish step too,
+          # in case the version is ever sourced differently in the future.
+          case "${{ steps.ver.outputs.version }}" in
+            *-SNAPSHOT) ;;
+            *)
+              echo "::error::Publish step received non-snapshot version '${{ steps.ver.outputs.version }}'" >&2
+              exit 1
+              ;;
+          esac
+          ./gradlew :quartz:publishToMavenCentral -PquartzVersion=${{ steps.ver.outputs.version }} --no-configuration-cache
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_PASSWORD }}
