@@ -191,12 +191,18 @@ fun ZoomableImageDialog(
         val dialogWindow = getDialogWindow()
 
         if (activityWindow != null && dialogWindow != null) {
+            // Preserve any brightness override already applied to the dialog window (e.g. by the
+            // fullscreen swipe controls). This block re-runs on recomposition (orientation change
+            // re-reads `orientation` above), and copying the activity attributes would otherwise
+            // reset screenBrightness and snap the user's brightness back mid-session.
+            val currentBrightness = dialogWindow.attributes.screenBrightness
             val attributes = WindowManager.LayoutParams()
             attributes.copyFrom(activityWindow.attributes)
             attributes.type = dialogWindow.attributes.type
             // Disable the system dim so the thumbnail stays visible behind the growing dialog.
             attributes.dimAmount = 0f
             attributes.flags = attributes.flags and WindowManager.LayoutParams.FLAG_DIM_BEHIND.inv()
+            attributes.screenBrightness = currentBrightness
             dialogWindow.attributes = attributes
         }
 
