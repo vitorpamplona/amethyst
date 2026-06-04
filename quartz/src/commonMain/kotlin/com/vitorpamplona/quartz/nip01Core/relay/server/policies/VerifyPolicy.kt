@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
+import com.vitorpamplona.quartz.nip01Core.relay.server.backend.RequestContext
 
 /**
  * Verifies the Schnorr signature + id hash of every incoming
@@ -43,7 +44,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 open class VerifyEventsAndAuthPolicy(
     private val verifyEvents: Boolean,
 ) : IRelayPolicy {
-    override fun onConnect(send: (Message) -> Unit) { }
+    override fun onConnect(
+        scope: RequestContext,
+        send: (Message) -> Unit,
+    ) { }
 
     override fun accept(cmd: EventCmd) =
         if (!verifyEvents || cmd.event.verify()) {

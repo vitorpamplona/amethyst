@@ -151,8 +151,10 @@ non-storage relay: a single shared `EventSource` instance can serve
 caller-relative results (trust/relevance scored from the viewer's perspective,
 "for-you" feeds), restricted content (a pubkey's DMs returned only to that
 pubkey), or per-connection tenancy — without smuggling auth state through a
-side channel. `ctx.authenticatedUsers` reads live from the connection's policy,
-so a REQ that arrives after the AUTH sees the freshly authenticated pubkey(s).
+side channel. `ctx.authenticatedUsers` is a live view of the engine-owned
+connection scope, so a REQ that arrives after the AUTH sees the freshly
+recorded pubkey(s). (The engine records them on a successful NIP-42 AUTH; the
+policy reads the same scope to gate.)
 
 For per-connection state richer than the pubkey (e.g. a backend session token
 minted in `FullAuthPolicy.authorize`), downcast `ctx.policy` to your own policy

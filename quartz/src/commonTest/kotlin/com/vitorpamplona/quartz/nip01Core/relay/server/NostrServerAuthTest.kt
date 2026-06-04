@@ -168,7 +168,7 @@ class NostrServerAuthTest {
             assertEquals(1, okMessages.size)
             assertTrue(okMessages[0].contains(",true,"))
             assertTrue((session.policy as FullAuthPolicy).isAuthenticated())
-            assertTrue(session.policy.authenticatedUsers.contains(pubkey))
+            assertTrue(session.requestContext.authenticatedUsers.contains(pubkey))
 
             server.close()
         }
@@ -313,7 +313,7 @@ class NostrServerAuthTest {
             assertTrue(okMessages[0].contains(",true,"))
             assertTrue(okMessages[1].contains(",true,"))
 
-            val authedPubkeys = (session.policy as FullAuthPolicy).authenticatedUsers
+            val authedPubkeys = session.requestContext.authenticatedUsers
             assertEquals(2, authedPubkeys.size)
             assertTrue(authedPubkeys.contains(pubkey))
             assertTrue(authedPubkeys.contains(pubkey2))
@@ -596,7 +596,7 @@ class NostrServerAuthTest {
             // still-authenticated connection would be an auth bypass.
             val authPolicy = session.policy as FullAuthPolicy
             assertFalse(authPolicy.isAuthenticated())
-            assertFalse(authPolicy.authenticatedUsers.contains(pubkey))
+            assertFalse(session.requestContext.authenticatedUsers.contains(pubkey))
 
             server.close()
         }
@@ -653,7 +653,7 @@ class NostrServerAuthTest {
             assertEquals(1, ok.size)
             assertTrue(ok[0].contains(",false,"))
             assertFalse(auth.isAuthenticated())
-            assertFalse(auth.authenticatedUsers.contains(pubkey))
+            assertFalse(session.requestContext.authenticatedUsers.contains(pubkey))
 
             // And a privileged REQ is still gated.
             session.receive("""["REQ","sub1",{"kinds":[1]}]""")
@@ -686,12 +686,12 @@ class NostrServerAuthTest {
             val msg = OptimizedJsonMapper.fromJsonToMessage(collector.messages[0]) as AuthMessage
 
             session.receive(authJson(authEvent(challenge = msg.challenge)))
-            assertTrue(auth.authenticatedUsers.contains(pubkey))
+            assertTrue(session.requestContext.authenticatedUsers.contains(pubkey))
 
             // Second AUTH for the SAME pubkey, rejected downstream.
             session.receive(authJson(authEvent(challenge = msg.challenge)))
             assertTrue(auth.isAuthenticated())
-            assertTrue(auth.authenticatedUsers.contains(pubkey))
+            assertTrue(session.requestContext.authenticatedUsers.contains(pubkey))
 
             server.close()
         }

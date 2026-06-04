@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip01Core.relay.server.backend
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.server.policies.AuthScopedPolicy
 import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
 
 /**
@@ -30,11 +29,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.IRelayPolicy
  * shared source can tailor its answer to the caller without smuggling state in
  * through a side channel.
  *
- * This is what makes NIP-42 useful on a non-storage relay: the engine already
- * knows the authenticated pubkey(s) (the connection's [IRelayPolicy] records
- * them), and [RequestContext] is the path that carries them to the code that
- * actually produces the events. With it, the same `EventSource` instance can
- * serve:
+ * This is the connection scope: the engine owns it (one per
+ * [com.vitorpamplona.quartz.nip01Core.relay.server.RelaySession]) and records
+ * the authenticated pubkey(s) into it on a successful NIP-42 AUTH. That is what
+ * makes NIP-42 useful on a non-storage relay — [RequestContext] is the path
+ * that carries the caller's identity to the code that produces the events. With
+ * it, the same `EventSource` instance can serve:
  *
  *  - **caller-relative results** — trust/relevance scored from
  *    [authenticatedUsers]'s perspective ("for-you" feeds, follow-aware search);
@@ -60,10 +60,10 @@ interface RequestContext {
     val policy: IRelayPolicy
 
     /**
-     * The pubkeys that have authenticated on this connection via NIP-42, read
-     * live from [policy]. Empty when the connection is unauthenticated or the
-     * policy does not track auth (i.e. is not an [AuthScopedPolicy]). This
-     * accessor encapsulates that downcast so a source needn't repeat it.
+     * The pubkeys that have authenticated on this connection via NIP-42. Empty
+     * when the connection is unauthenticated. Backed by the engine-owned scope
+     * and read live, so a REQ that arrives after a successful AUTH sees the
+     * freshly recorded pubkey(s).
      */
-    val authenticatedUsers: Set<HexKey> get() = (policy as? AuthScopedPolicy)?.authenticatedUsers ?: emptySet()
+    val authenticatedUsers: Set<HexKey>
 }
