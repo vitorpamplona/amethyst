@@ -66,6 +66,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -108,12 +109,12 @@ private fun CrossFadeState(
     val nip04Exhausted by nip04History.exhausted.collectAsStateWithLifecycle()
     val historyExhausted = giftWrapsExhausted && nip04Exhausted
 
-    // While the whole list is empty there is no LazyColumn to host the per-relay window-limit markers
-    // that normally drive paging, so we step every relay one page at a time (each protocol independently)
-    // to hunt for the first rooms until they appear or the protocol is exhausted. Once rooms load the
-    // markers take over and paging becomes demand-driven by their visibility.
+    // A *genuinely* empty list has no rows to host the per-relay window-limit markers, so we step every
+    // relay one page at a time to hunt for the first rooms. Gated on FeedState.Empty only (never the
+    // transient Loading that navigation flashes through) and debounced, so re-opening Messages with rooms
+    // already loaded does NOT kick a hunt. Once rooms appear the markers take over, demand-driven.
     val user = accountViewModel.userProfile()
-    val bootstrap = feedState is FeedState.Empty || feedState is FeedState.Loading
+    val bootstrap = feedState is FeedState.Empty
     BootstrapHistoryWhenEmpty(bootstrap, giftWrapsHistory.loadingMore, giftWrapsHistory.exhausted) { giftWrapsHistory.advanceAll(user) }
     BootstrapHistoryWhenEmpty(bootstrap, nip04History.loadingMore, nip04History.exhausted) { nip04History.advanceAll(user) }
 
@@ -241,9 +242,12 @@ private fun FeedLoaded(
 }
 
 /**
- * Bootstraps history while the rooms list has nothing to scroll (empty / still loading): steps every
- * relay one page at a time, gated only on its own loader, until rooms appear or the protocol exhausts.
- * Once rooms load this stops and the per-relay window-limit markers drive paging on demand.
+ * Bootstraps history while the rooms list is genuinely empty: steps every relay one page at a time,
+ * gated only on its own loader, until rooms appear or the protocol exhausts. Once rooms load this stops
+ * and the per-relay window-limit markers drive paging on demand.
+ *
+ * Leads with a debounce so the brief Empty/Loading flash that navigation passes through does NOT trigger
+ * a hunt; if [active] drops before it elapses (rooms loaded) the effect cancels and nothing pages.
  */
 @Composable
 private fun BootstrapHistoryWhenEmpty(
@@ -254,12 +258,16 @@ private fun BootstrapHistoryWhenEmpty(
 ) {
     LaunchedEffect(active, loadingMore, exhausted) {
         if (!active) return@LaunchedEffect
+        delay(BOOTSTRAP_DEBOUNCE_MS)
         combine(loadingMore, exhausted) { loading, exhaustedNow -> !loading && !exhaustedNow }
             .distinctUntilChanged()
             .filter { it }
             .collect { advanceAll() }
     }
 }
+
+// Ignore the transient empty feed that navigation flashes through before the rooms re-appear.
+private const val BOOTSTRAP_DEBOUNCE_MS = 1200L
 
 private fun reachState(p: RelayPagingProgress) =
     when {

@@ -79,10 +79,14 @@ data class RelayWindowLimit(
  * Renders the window-limit markers for the relays whose limit falls in the gap between a newer message
  * (at [newerCreatedAt]) and its next-older neighbour (at [olderCreatedAt], null at the oldest end), and
  * — this is the load driver — makes each one a **sentinel**: while this gap is composed (i.e. on/near
- * screen), it pulls that relay's next page, and keeps pulling as each page lands ([LaunchedEffect] keyed
- * on the relay's reached cursor) for as long as the marker stays visible. When a page fills enough to
- * push the marker off screen, or the user scrolls away, the gap is disposed and paging stops on its own.
- * A done relay just shows its ✓ and drives nothing.
+ * screen), it pulls that relay's next page and keeps pulling as each page lands, so a relay pages on
+ * while its marker stays on screen and stops when a page pushes it off or the user scrolls away.
+ *
+ * The sentinel keys on the reached cursor ALONE — never on the relay's reach state. Keying on state
+ * would re-fire on every `REACHING ⇄ STALLED` flip, so a flaky/auth relay's connection churn would
+ * re-page the window on a completely static screen. A stalled relay therefore parks until the cursor
+ * moves or the marker is scrolled back into view (a single retry, not a loop). A done relay shows ✓ and
+ * drives nothing.
  */
 @Composable
 fun RelayWindowLimitMarkers(
@@ -102,11 +106,10 @@ fun RelayWindowLimitMarkers(
 
     here.forEach { lim ->
         if (lim.state != RelayReachState.DONE) {
-            // Keyed identity so the effect isn't torn down on reorder; keyed on the reached cursor so each
-            // returned page re-fires it (continue while visible). A stalled relay re-fires only on
-            // re-composition (scroll back into view) — a single retry, not a busy loop.
+            // Keyed identity so the effect isn't torn down on reorder; keyed on the reached cursor ONLY so
+            // it re-fires per landed page (continue while visible) but NOT on stall/unstall churn.
             key(lim.key) {
-                LaunchedEffect(lim.reachedUntil, lim.state) { lim.advance() }
+                LaunchedEffect(lim.reachedUntil) { lim.advance() }
             }
         }
     }

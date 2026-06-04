@@ -65,6 +65,7 @@ import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -169,10 +170,13 @@ private fun BootstrapHistoryWhenEmpty(
     val giftWrapsHistory = remember(accountViewModel) { accountViewModel.dataSources().account.giftWrapsHistory }
     val nip04History = remember(accountViewModel) { accountViewModel.dataSources().chatroom.nip04History }
     val feedState by feedContentState.feedContent.collectAsStateWithLifecycle()
-    val needsBootstrap = feedState is FeedState.Empty || feedState is FeedState.Loading
+    // Empty only (never the transient Loading navigation flashes through), and debounced below, so
+    // re-opening a conversation that has messages doesn't kick a hunt.
+    val needsBootstrap = feedState is FeedState.Empty
 
     LaunchedEffect(needsBootstrap, giftWrapsHistory) {
         if (!needsBootstrap) return@LaunchedEffect
+        delay(BOOTSTRAP_DEBOUNCE_MS)
         combine(giftWrapsHistory.loadingMore, giftWrapsHistory.exhausted) { loading, exhausted -> !loading && !exhausted }
             .distinctUntilChanged()
             .filter { it }
@@ -180,12 +184,16 @@ private fun BootstrapHistoryWhenEmpty(
     }
     LaunchedEffect(needsBootstrap, nip04History) {
         if (!needsBootstrap) return@LaunchedEffect
+        delay(BOOTSTRAP_DEBOUNCE_MS)
         combine(nip04History.loadingMore, nip04History.exhausted) { loading, exhausted -> !loading && !exhausted }
             .distinctUntilChanged()
             .filter { it }
             .collect { nip04History.advanceAll() }
     }
 }
+
+// Ignore the transient empty feed that navigation flashes through before messages re-appear.
+private const val BOOTSTRAP_DEBOUNCE_MS = 1200L
 
 @Composable
 fun ChatroomViewUI(
