@@ -349,15 +349,15 @@ class NoteOnchainZapTest {
     }
 
     @Test
-    fun removeAllChildNotesClearsOnchainZapResolvedFlag() {
-        // `removeAllChildNotes()` runs on delete-event handling and during cache
+    fun clearChildLinksResetsOnchainZapResolvedFlag() {
+        // `clearChildLinks()` runs on delete-event handling and during cache
         // pressure; the resolved flag must travel with the cleared state so a
         // re-arrival of the same event gets re-verified instead of being silently
         // skipped against stale state.
         val src = sourceNote("ee".repeat(32))
         src.onchainZapResolved = true
 
-        src.removeAllChildNotes()
+        src.clearChildLinks()
 
         assertFalse(src.onchainZapResolved)
     }

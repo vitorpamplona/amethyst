@@ -147,7 +147,7 @@ open class Note(
         removeReport(note)
         removeLabel(note)
         removeNutzap(note)
-        removeOnchainZap(note)
+        removeOnchainZapBySource(note)
     }
 
     var poll: PollResponsesCache? = null
@@ -373,7 +373,7 @@ open class Note(
         }
     }
 
-    fun removeAllChildNotes(): List<Note> {
+    fun clearChildLinks(): List<Note> {
         val repliesChanged = replies.isNotEmpty()
         val reactionsChanged = reactions.isNotEmpty()
         val zapsChanged = zaps.isNotEmpty() || zapPayments.isNotEmpty() || onchainZaps.isNotEmpty() || nutzaps.isNotEmpty()
@@ -420,7 +420,7 @@ open class Note(
     /**
      * Fully detach this note from the notes below it in the graph so it can be
      * removed from the cache without leaving a partial deletion behind. It both
-     * clears this note's own child collections (via [removeAllChildNotes]) and
+     * clears this note's own child collections (via [clearChildLinks]) and
      * drops this note from every child's [replyTo], so once this note leaves the
      * cache map nothing keeps the dead shell alive.
      *
@@ -432,7 +432,7 @@ open class Note(
      * Returns the now-orphaned children (their other parents, if any, are kept).
      */
     fun detachFromChildren(): List<Note> {
-        val children = removeAllChildNotes()
+        val children = clearChildLinks()
         children.forEach { child ->
             val parents = child.replyTo
             if (parents != null && this in parents) {
@@ -631,7 +631,7 @@ open class Note(
      * cache-removal that must drop the strong reference no matter the status,
      * otherwise the pruned source Note leaks through this map.
      */
-    fun removeOnchainZap(source: Note) {
+    fun removeOnchainZapBySource(source: Note) {
         if (innerRemoveOnchainZapBySource(source)) {
             updateZapTotal()
             flowSet?.zaps?.invalidateData()

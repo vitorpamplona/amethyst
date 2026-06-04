@@ -33,7 +33,7 @@ import kotlin.test.assertTrue
  * every other Note that referenced it must drop that strong reference. Onchain
  * zaps (NIP-BC) and nutzaps (NIP-61) were added to [Note] after the original
  * removal/migration routines were written, so these tests pin that
- * [Note.removeNote], [Note.removeAllChildNotes], and [Note.moveAllReferencesTo]
+ * [Note.removeNote], [Note.clearChildLinks], and [Note.moveAllReferencesTo]
  * all account for them — otherwise a pruned source Note leaks through the
  * target's `onchainZaps` / `nutzaps` map and a duplicate Note with the same id
  * gets minted on the next relay echo.
@@ -99,16 +99,16 @@ class NotePruningReferenceTest {
         assertTrue(target.onchainZaps.containsKey("tx1"), "removing an unrelated note must not drop the entry")
     }
 
-    // ── Fix 2: removeAllChildNotes returns onchain-zap sources ──────────────
+    // ── Fix 2: clearChildLinks returns onchain-zap sources ──────────────
 
     @Test
-    fun removeAllChildNotesReturnsAndClearsOnchainZapSources() {
+    fun clearChildLinksReturnsAndClearsOnchainZapSources() {
         val target = note("e".repeat(64))
         val src = sourceNote("55".repeat(32))
 
         target.addOnchainZap(src, "tx1", claimedSats = 1000L, verifiedSats = 1000L, status = OnchainZapStatus.CONFIRMED)
 
-        val removed = target.removeAllChildNotes()
+        val removed = target.clearChildLinks()
 
         assertTrue(src in removed, "onchain zap source must be returned for removal from the cache map")
         assertTrue(target.onchainZaps.isEmpty())
