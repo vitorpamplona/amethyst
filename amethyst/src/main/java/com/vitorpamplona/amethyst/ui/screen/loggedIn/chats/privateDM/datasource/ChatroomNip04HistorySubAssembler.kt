@@ -91,7 +91,11 @@ class ChatroomNip04HistorySubAssembler(
     private var activeConvo: ConvoKey? = null
     private val exhaustedByConvo = ConcurrentHashMap<ConvoKey, Boolean>()
 
-    private fun startUntil() = TimeUtils.now() - AccountGiftWrapsEoseManager.LIVE_TAIL_SECONDS
+    // Pinned per conversation for the session — must not drift forward, or an un-delivered relay's marker
+    // would keep moving and re-trigger its sentinel. See AccountGiftWrapsHistoryEoseManager.
+    private val pinnedFloor = ConcurrentHashMap<ConvoKey, Long>()
+
+    private fun startUntil(pk: ConvoKey) = pinnedFloor.getOrPut(pk) { TimeUtils.now() - AccountGiftWrapsEoseManager.LIVE_TAIL_SECONDS }
 
     override fun user(key: ChatroomQueryState) = key.account.userProfile()
 
@@ -141,6 +145,7 @@ class ChatroomNip04HistorySubAssembler(
             relays.all.forEach { if (arm(key, it)) any = true }
         }
         if (any) {
+            Log.d("DMPagination") { "[convo.nip04.history] advanceAll (empty-thread bootstrap)" }
             _exhausted.value = false
             updateStatus()
             invalidateFilters()
@@ -155,7 +160,7 @@ class ChatroomNip04HistorySubAssembler(
         if (relay !in relays.all) return false
         val pk = convoKey(key)
         if (loadTracker.isInFlight(relay)) return false
-        if (!pager.advance(pk, relay, startUntil())) return false
+        if (!pager.advance(pk, relay, startUntil(pk))) return false
         stalledRelays[pk]?.remove(relay)
         loadTracker.bind(key.account.scope)
         loadTracker.onAdvance(relay)
@@ -182,7 +187,7 @@ class ChatroomNip04HistorySubAssembler(
         val pk = activeConvo ?: return
         val relays = relaysFor(pk) ?: return
         _relayCount.value = loadTracker.count()
-        val start = startUntil()
+        val start = startUntil(pk)
         _reachedBack.value = pager.deepestReached(pk, relays.all, start)
         val stalled = stalledRelays[pk] ?: emptySet()
         _relayProgress.value =

@@ -79,7 +79,11 @@ class ChatroomListNip04HistorySubAssembler(
     private val _relayProgress = MutableStateFlow<Map<NormalizedRelayUrl, RelayPagingProgress>>(emptyMap())
     val relayProgress: StateFlow<Map<NormalizedRelayUrl, RelayPagingProgress>> = _relayProgress.asStateFlow()
 
-    private fun startUntil() = TimeUtils.now() - AccountGiftWrapsEoseManager.LIVE_TAIL_SECONDS
+    // Pinned per account for the session — must not drift forward, or an un-delivered relay's marker
+    // would keep moving and re-trigger its sentinel. See AccountGiftWrapsHistoryEoseManager.
+    private val pinnedFloor = ConcurrentHashMap<HexKey, Long>()
+
+    private fun startUntil(pk: HexKey) = pinnedFloor.getOrPut(pk) { TimeUtils.now() - AccountGiftWrapsEoseManager.LIVE_TAIL_SECONDS }
 
     override fun user(key: ChatroomListState) = key.account.userProfile()
 
@@ -123,6 +127,7 @@ class ChatroomListNip04HistorySubAssembler(
         var any = false
         allRelays(account).forEach { if (arm(user, it)) any = true }
         if (any) {
+            Log.d("DMPagination") { "[rooms.nip04.history] advanceAll (empty-feed bootstrap)" }
             _exhausted.value = false
             updateStatus(user)
             invalidateFilters()
@@ -136,7 +141,7 @@ class ChatroomListNip04HistorySubAssembler(
         val account = accounts[user.pubkeyHex] ?: return false
         if (relay !in allRelays(account)) return false
         if (loadTracker.isInFlight(relay)) return false
-        if (!pager.advance(user.pubkeyHex, relay, startUntil())) return false
+        if (!pager.advance(user.pubkeyHex, relay, startUntil(user.pubkeyHex))) return false
         stalledRelays[user.pubkeyHex]?.remove(relay)
         loadTracker.bind(account.scope)
         loadTracker.onAdvance(relay)
@@ -168,7 +173,7 @@ class ChatroomListNip04HistorySubAssembler(
         val account = accounts[user.pubkeyHex]
         val relays = account?.let { allRelays(it) } ?: emptySet()
         _relayCount.value = loadTracker.count()
-        val start = startUntil()
+        val start = startUntil(user.pubkeyHex)
         _reachedBack.value = pager.deepestReached(user.pubkeyHex, relays, start)
         val stalled = stalledRelays[user.pubkeyHex] ?: emptySet()
         _relayProgress.value =

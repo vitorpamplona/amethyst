@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.HalfPadding
+import com.vitorpamplona.quartz.utils.Log
 
 /** How far one relay has paged into the conversation, for an in-stream progress marker. */
 enum class RelayReachState {
@@ -109,7 +110,12 @@ fun RelayWindowLimitMarkers(
             // Keyed identity so the effect isn't torn down on reorder; keyed on the reached cursor ONLY so
             // it re-fires per landed page (continue while visible) but NOT on stall/unstall churn.
             key(lim.key) {
-                LaunchedEffect(lim.reachedUntil) { lim.advance() }
+                LaunchedEffect(lim.reachedUntil) {
+                    // One line per sentinel fire — a re-fire LOOP shows the same key firing over and over
+                    // (and whether its reached cursor is drifting, which would point at a non-pinned floor).
+                    Log.d("DMPagination") { "marker fire ${lim.key} reachedUntil=${lim.reachedUntil}" }
+                    lim.advance()
+                }
             }
         }
     }

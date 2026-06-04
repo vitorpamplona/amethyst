@@ -100,8 +100,13 @@ class AccountGiftWrapsHistoryEoseManager(
     private val _relayProgress = MutableStateFlow<Map<NormalizedRelayUrl, RelayPagingProgress>>(emptyMap())
     val relayProgress: StateFlow<Map<NormalizedRelayUrl, RelayPagingProgress>> = _relayProgress.asStateFlow()
 
-    // History starts just below the live tail's one-week floor and pages backward from there.
-    private fun startUntil() = TimeUtils.now() - AccountGiftWrapsEoseManager.LIVE_TAIL_SECONDS
+    // History starts just below the live tail's one-week floor and pages backward from there. Pinned per
+    // account for the session: it must NOT drift forward on every recompute, or an un-delivered relay's
+    // marker (which sits at this floor) would keep changing and re-trigger its on-screen sentinel. The
+    // live tail covers everything newer than the floor.
+    private val pinnedFloor = ConcurrentHashMap<HexKey, Long>()
+
+    private fun startUntil(pk: HexKey) = pinnedFloor.getOrPut(pk) { TimeUtils.now() - AccountGiftWrapsEoseManager.LIVE_TAIL_SECONDS }
 
     private fun daysAgo(epochSeconds: Long) = (TimeUtils.now() - epochSeconds) / TimeUtils.ONE_DAY
 
@@ -144,6 +149,7 @@ class AccountGiftWrapsHistoryEoseManager(
         account.dmRelays.flow.value
             .forEach { if (arm(user, it)) any = true }
         if (any) {
+            Log.d(TAG) { "[giftwrap.history] advanceAll (empty-feed bootstrap)" }
             _exhausted.value = false
             updateStatus(user)
             invalidateFilters()
@@ -159,7 +165,7 @@ class AccountGiftWrapsHistoryEoseManager(
         val account = accounts[user.pubkeyHex] ?: return false
         if (relay !in account.dmRelays.flow.value) return false
         if (loadTracker.isInFlight(relay)) return false
-        if (!pager.advance(user.pubkeyHex, relay, startUntil())) return false
+        if (!pager.advance(user.pubkeyHex, relay, startUntil(user.pubkeyHex))) return false
         stalledRelays[user.pubkeyHex]?.remove(relay)
         loadTracker.bind(account.scope)
         loadTracker.onAdvance(relay)
@@ -190,7 +196,7 @@ class AccountGiftWrapsHistoryEoseManager(
         if (activeUser != user.pubkeyHex) return
         val relays = accounts[user.pubkeyHex]?.dmRelays?.flow?.value ?: emptySet()
         _relayCount.value = loadTracker.count()
-        val start = startUntil()
+        val start = startUntil(user.pubkeyHex)
         _reachedBack.value = pager.deepestReached(user.pubkeyHex, relays, start)
         val stalled = stalledRelays[user.pubkeyHex] ?: emptySet()
         _relayProgress.value =
