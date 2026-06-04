@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.RelayPagingProgress
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.uploads.resolveSharedMedia
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
@@ -55,7 +56,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.RelayRea
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts.RelayReachState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.dal.ChatroomFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource.ChatroomFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource.RelayPagingProgress
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.ChatNewMessageViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.send.PrivateMessageEditFieldRow
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -236,6 +236,19 @@ fun ChatroomViewUI(
     val nip04Relays by nip04History.relayCount.collectAsStateWithLifecycle()
     val nip04Reached by nip04History.reachedBack.collectAsStateWithLifecycle()
     val nip04Progress by nip04History.relayProgress.collectAsStateWithLifecycle()
+    val giftWrapsProgress by giftWrapsHistory.relayProgress.collectAsStateWithLifecycle()
+
+    // Both protocols' per-relay reach in one map for the in-stream markers: each contributes only while
+    // it's still paging (drops out once that protocol is exhausted). A relay that serves both (the DM
+    // inbox relays do) collapses to one marker — NIP-04's, since it's the per-conversation reach — which
+    // is close enough as a "how far back is this relay" cue.
+    val relayProgress =
+        remember(nip04Progress, giftWrapsProgress, nip04Exhausted, giftWrapsExhausted) {
+            buildMap {
+                if (!giftWrapsExhausted) putAll(giftWrapsProgress)
+                if (!nip04Exhausted) putAll(nip04Progress)
+            }
+        }
     val nip17Name = stringResource(R.string.chats_history_proto_nip17)
     val nip04Name = stringResource(R.string.chats_history_proto_nip04)
 
@@ -265,14 +278,14 @@ fun ChatroomViewUI(
                         DmHistoryLoadingCard(nip04Name, "NIP-04", loadingNip04, nip04Exhausted, nip04Relays, nip04Reached)
                     }
                 },
-                // While NIP-04 is still converging, drop a marker into each gap for every relay whose
-                // reached-back cursor falls there: it sits below the oldest message that relay has loaded
-                // and slides down as the relay pages older. Hidden once every relay is done or stalled.
+                // While either protocol is still converging, drop a marker into each gap for every relay
+                // whose reached-back cursor falls there: it sits below the oldest message that relay has
+                // loaded and slides down as the relay pages older. Hidden once both protocols are done.
                 markersInGap =
-                    if (nip04Exhausted) {
+                    if (relayProgress.isEmpty()) {
                         null
                     } else {
-                        { newer, older -> RelayReachMarkersInGap(nip04Progress, newer, older) }
+                        { newer, older -> RelayReachMarkersInGap(relayProgress, newer, older) }
                     },
                 listStateObserver = { listState ->
                     LoadOlderMessagesWhenScrolling(listState, accountViewModel)

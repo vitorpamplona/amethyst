@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.RelayPagingProgress
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.UntilLimitPager
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.WindowLoadTracker
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
@@ -114,6 +115,12 @@ class AccountGiftWrapsHistoryEoseManager(
 
     private val _reachedBack = MutableStateFlow<Long?>(null)
     val reachedBack: StateFlow<Long?> = _reachedBack.asStateFlow()
+
+    // Per-relay paging progress for the active account — the data the in-stream markers render, same as
+    // the per-conversation NIP-04 loader. Account-wide (gift wraps can't be filtered per room), so a
+    // marker shows how far back THIS relay has paged the account's gift-wrap history.
+    private val _relayProgress = MutableStateFlow<Map<NormalizedRelayUrl, RelayPagingProgress>>(emptyMap())
+    val relayProgress: StateFlow<Map<NormalizedRelayUrl, RelayPagingProgress>> = _relayProgress.asStateFlow()
 
     // Account scope for the done collector. Volatile: written on IO (newSub), read on UI.
     @Volatile
@@ -240,6 +247,7 @@ class AccountGiftWrapsHistoryEoseManager(
     // stalled for the logs and let them keep their open subscription.
     private fun onRelaysStalled(relays: Set<NormalizedRelayUrl>) {
         started.forEach { pk -> relays.forEach { markStalled(pk, it, "no response (silence/connect timeout)") } }
+        windowUser?.let { updateStatus(it) }
     }
 
     // Records [relay] as not currently advancing for [pk] and logs it once (the first time it stalls in
@@ -260,7 +268,18 @@ class AccountGiftWrapsHistoryEoseManager(
         // Over ALL relays, not just the still-active ones: a relay that finished keeps its deep cursor, so
         // "reached back to X" stays monotonic instead of jumping back to a newer date when the deepest
         // relay drops out of the active set.
-        _reachedBack.value = pager.deepestUntil(user.pubkeyHex, relays, floor())
+        val start = floor()
+        _reachedBack.value = pager.deepestUntil(user.pubkeyHex, relays, start)
+        // Per-relay markers: where each relay's cursor sits and whether it's done / stalled.
+        val stalled = stalledRelays[user.pubkeyHex] ?: emptySet()
+        _relayProgress.value =
+            relays.associateWith { relay ->
+                RelayPagingProgress(
+                    reachedUntil = pager.untilFor(user.pubkeyHex, relay, start),
+                    done = pager.isDone(user.pubkeyHex, relay),
+                    stalled = relay in stalled && !pager.isDone(user.pubkeyHex, relay),
+                )
+            }
     }
 
     // A one-line breakdown of where each relay landed when the window settles — the snapshot to reach for
@@ -282,6 +301,7 @@ class AccountGiftWrapsHistoryEoseManager(
             _exhausted.value = exhaustedByUser[user.pubkeyHex] ?: false
             _relayCount.value = 0
             _reachedBack.value = null
+            _relayProgress.value = emptyMap()
         }
         return requestNewSubscription(historyListener(user, key))
     }
@@ -339,6 +359,7 @@ class AccountGiftWrapsHistoryEoseManager(
                 // it hold the spinner.
                 windowLoad.onRelaySettled(relay)
                 markStalled(user.pubkeyHex, relay, "CLOSED: $message")
+                updateStatus(user)
             }
 
             override fun onCannotConnect(
@@ -348,6 +369,7 @@ class AccountGiftWrapsHistoryEoseManager(
             ) {
                 windowLoad.onRelaySettled(relay)
                 markStalled(user.pubkeyHex, relay, "cannot connect: $message")
+                updateStatus(user)
             }
         }
 

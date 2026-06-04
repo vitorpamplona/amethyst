@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource
 
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.RelayPagingProgress
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.UntilLimitPager
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.WindowLoadTracker
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
@@ -44,18 +45,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
-
-/** How far back one relay has paged a conversation, for the per-relay progress markers. */
-data class RelayPagingProgress(
-    // The oldest createdAt this relay has loaded down to (its `until` cursor). The marker sits here and
-    // slides down (older) as the relay pages further back.
-    val reachedUntil: Long,
-    // The relay answered an empty page: it has nothing older, it has reached the bottom of its window.
-    val done: Boolean,
-    // The relay isn't answering right now (auth-walled CLOSE / unreachable / slow). It is NOT abandoned
-    // — its subscription stays open and it keeps trying to catch up — but it isn't currently advancing.
-    val stalled: Boolean,
-)
 
 /**
  * Loads older NIP-04 DMs (kind 4) for one conversation by `until`+`limit` paging — **per relay,
