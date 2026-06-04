@@ -1336,54 +1336,28 @@ object LocalCache : ILocalCache, ICacheProvider {
             else -> null
         }
 
-    @Suppress("DEPRECATION")
+    /**
+     * NIP-09 delete of a single targeted event.
+     *
+     * Removal has two halves: unlinking the note from everything that points AT it
+     * (its parents, channels, and the per-user report/card/status/poll indexes —
+     * all handled by [unlinkAndRemove]); and dealing with the note's OWN children
+     * (the notes that point at IT). The delete path and the prune path share the
+     * first half and differ only on the second:
+     *  - delete (here): the children are independent events and stay in the cache;
+     *    [Note.detachFromChildren] only severs their back-reference so the removed
+     *    shell can neither leak (held alive by a child's `replyTo`) nor be later
+     *    resurrected by `computeReplyTo` as a second Note for the same id.
+     *  - prune (see [unlinkAndRemove] callers): the whole child subtree is removed.
+     *
+     * Gift-wrapped events additionally drop their decrypted inner host.
+     */
     private fun deleteNote(deleteNote: Note) {
-        val deletedEvent = deleteNote.event
+        (deleteNote.event as? WrappedEvent)?.let { deleteWraps(it) }
 
-        if (deletedEvent is ReportEvent) {
-            deletedEvent.reportedAuthor().forEach {
-                getUserIfExists(it.pubkey)?.reportsOrNull()?.removeReport(deleteNote)
-            }
-        }
+        deleteNote.detachFromChildren()
 
-        if (deleteNote is AddressableNote && deletedEvent is ContactCardEvent) {
-            getUserIfExists(deletedEvent.aboutUser())?.cardsOrNull()?.removeCard(deleteNote)
-        }
-
-        if (deleteNote is AddressableNote && deletedEvent is StatusEvent) {
-            deleteNote.author?.statusStateOrNull()?.removeStatus(deleteNote)
-        }
-
-        if (deletedEvent is PollResponseEvent) {
-            deletedEvent.poll()?.eventId?.let {
-                getNoteIfExists(it)?.pollStateOrNull()?.removeResponse(deleteNote)
-            }
-        }
-
-        if (deletedEvent is TorrentCommentEvent) {
-            deletedEvent.torrentIds()?.let {
-                getNoteIfExists(it)?.removeReply(deleteNote)
-            }
-        }
-
-        if (deletedEvent is WrappedEvent) {
-            deleteWraps(deletedEvent)
-        }
-
-        // Counts the replies
-        deleteNote.replyTo?.forEach { masterNote ->
-            masterNote.removeNote(deleteNote)
-        }
-
-        deleteNote.inGatherers?.forEach { it.removeNote(deleteNote) }
-
-        getAnyChannel(deleteNote)?.removeNote(deleteNote)
-
-        notes.remove(deleteNote.idHex)
-
-        deleteNote.clearFlow()
-
-        refreshDeletedNoteObservers(deleteNote)
+        unlinkAndRemove(deleteNote)
     }
 
     fun deleteWraps(event: WrappedEvent) {
@@ -2592,12 +2566,12 @@ object LocalCache : ILocalCache, ICacheProvider {
         val childrenToBeRemoved = mutableListOf<Note>()
 
         toBeRemoved.forEach {
-            removeFromCache(it)
+            unlinkAndRemove(it)
 
-            childrenToBeRemoved.addAll(it.removeAllChildNotes())
+            childrenToBeRemoved.addAll(it.clearChildLinks())
         }
 
-        removeFromCache(childrenToBeRemoved)
+        unlinkAndRemove(childrenToBeRemoved)
 
         if (toBeRemoved.size > 100 || channel.notes.size() > 100) {
             println(
@@ -2631,12 +2605,12 @@ object LocalCache : ILocalCache, ICacheProvider {
         val childrenToBeRemoved = mutableListOf<Note>()
 
         toBeRemoved.forEach {
-            removeFromCache(it)
+            unlinkAndRemove(it)
 
-            childrenToBeRemoved.addAll(it.removeAllChildNotes())
+            childrenToBeRemoved.addAll(it.clearChildLinks())
         }
 
-        removeFromCache(childrenToBeRemoved)
+        unlinkAndRemove(childrenToBeRemoved)
 
         // Audio-room presence is keyed separately from `notes` and
         // never gets reaped by the top-N rule. Drop entries older
@@ -2676,12 +2650,12 @@ object LocalCache : ILocalCache, ICacheProvider {
 
                 toBeRemoved.forEach {
                     childrenToBeRemoved.addAll(removeIfWrap(it))
-                    removeFromCache(it)
+                    unlinkAndRemove(it)
 
-                    childrenToBeRemoved.addAll(it.removeAllChildNotes())
+                    childrenToBeRemoved.addAll(it.clearChildLinks())
                 }
 
-                removeFromCache(childrenToBeRemoved)
+                unlinkAndRemove(childrenToBeRemoved)
 
                 if (toBeRemoved.size > 1) {
                     println(
@@ -2699,8 +2673,8 @@ object LocalCache : ILocalCache, ICacheProvider {
             if (noteEvent is WrappedEvent) {
                 noteEvent.host?.id?.let {
                     getNoteIfExists(it)?.let { it2 ->
-                        removeFromCache(it2)
-                        it2.removeAllChildNotes()
+                        unlinkAndRemove(it2)
+                        it2.clearChildLinks()
                     }
                 }
             } else {
@@ -2730,11 +2704,11 @@ object LocalCache : ILocalCache, ICacheProvider {
                 it.moveAllReferencesTo(newerVersion)
             }
 
-            removeFromCache(it)
-            childrenToBeRemoved.addAll(it.removeAllChildNotes())
+            unlinkAndRemove(it)
+            childrenToBeRemoved.addAll(it.clearChildLinks())
         }
 
-        removeFromCache(childrenToBeRemoved)
+        unlinkAndRemove(childrenToBeRemoved)
 
         if (toBeRemoved.size > 1) {
             println("PRUNE: ${toBeRemoved.size} old version of addressables removed.")
@@ -2767,23 +2741,47 @@ object LocalCache : ILocalCache, ICacheProvider {
         val childrenToBeRemoved = mutableListOf<Note>()
 
         toBeRemoved.forEach {
-            removeFromCache(it)
-            childrenToBeRemoved.addAll(it.removeAllChildNotes())
+            unlinkAndRemove(it)
+            childrenToBeRemoved.addAll(it.clearChildLinks())
         }
 
-        removeFromCache(childrenToBeRemoved)
+        unlinkAndRemove(childrenToBeRemoved)
 
         if (toBeRemoved.size > 1) {
             println("PRUNE: ${toBeRemoved.size} thread replies removed.")
         }
     }
 
-    private fun removeFromCache(note: Note) {
+    /**
+     * Unlinks [note] from everything in the cache that references it, then drops it
+     * from the [notes] map and notifies observers. This is the shared "unlink from
+     * above" half of removal, used by both the prune callers and [deleteNote].
+     *
+     * It detaches the note from:
+     *  - its parent notes (their replies/reactions/zaps/boosts/reports/labels maps);
+     *    because event-level reports and torrent comments both carry the target in
+     *    `replyTo`, [Note.removeNote] cleans those up here too;
+     *  - its channels/gatherers (`inGatherers` is authoritative — `Channel.addNote`
+     *    always registers the gatherer — and `getAnyChannel` is a belt-and-suspenders
+     *    resolve so a note can never linger in a channel after leaving the cache);
+     *  - the per-target indexes `replyTo` does NOT reach: user-level reports and
+     *    reported addresses, contact cards, statuses, and poll responses.
+     *
+     * It deliberately does NOT touch the note's own children: prune callers collect
+     * them via [Note.clearChildLinks] and remove the subtree, while [deleteNote]
+     * keeps them and severs only their back-reference. Every per-target removal is
+     * idempotent, so the overlap between `replyTo` and the explicit indexes (e.g. an
+     * event-level report reachable both ways) is harmless. Addressable notes are
+     * dropped from the [addressables] map by the caller; this only removes from [notes].
+     */
+    private fun unlinkAndRemove(note: Note) {
         note.replyTo?.forEach { masterNote ->
             masterNote.removeNote(note)
         }
 
         note.inGatherers?.forEach { it.removeNote(note) }
+
+        getAnyChannel(note)?.removeNote(note)
 
         val noteEvent = note.event
 
@@ -2822,8 +2820,8 @@ object LocalCache : ILocalCache, ICacheProvider {
         refreshDeletedNoteObservers(note)
     }
 
-    fun removeFromCache(nextToBeRemoved: List<Note>) {
-        nextToBeRemoved.forEach { note -> removeFromCache(note) }
+    fun unlinkAndRemove(nextToBeRemoved: List<Note>) {
+        nextToBeRemoved.forEach { note -> unlinkAndRemove(note) }
     }
 
     fun pruneExpiredEvents() {
@@ -2836,16 +2834,16 @@ object LocalCache : ILocalCache, ICacheProvider {
         val childrenToBeRemoved = mutableListOf<Note>()
 
         versionsToBeRemoved.forEach {
-            removeFromCache(it)
-            childrenToBeRemoved.addAll(it.removeAllChildNotes())
+            unlinkAndRemove(it)
+            childrenToBeRemoved.addAll(it.clearChildLinks())
         }
 
         addressesToBeRemoved.forEach {
-            removeFromCache(it)
-            childrenToBeRemoved.addAll(it.removeAllChildNotes())
+            unlinkAndRemove(it)
+            childrenToBeRemoved.addAll(it.clearChildLinks())
         }
 
-        removeFromCache(childrenToBeRemoved)
+        unlinkAndRemove(childrenToBeRemoved)
 
         if (versionsToBeRemoved.size > 1 || addressesToBeRemoved.size > 1) {
             println("PRUNE: ${versionsToBeRemoved.size} events and ${addressesToBeRemoved.size} expired.")
@@ -2863,11 +2861,11 @@ object LocalCache : ILocalCache, ICacheProvider {
             }
 
         toBeRemoved.forEach {
-            removeFromCache(it)
-            childrenToBeRemoved.addAll(it.removeAllChildNotes())
+            unlinkAndRemove(it)
+            childrenToBeRemoved.addAll(it.clearChildLinks())
         }
 
-        removeFromCache(childrenToBeRemoved)
+        unlinkAndRemove(childrenToBeRemoved)
 
         println("PRUNE: ${toBeRemoved.size} messages removed because they were Hidden")
     }

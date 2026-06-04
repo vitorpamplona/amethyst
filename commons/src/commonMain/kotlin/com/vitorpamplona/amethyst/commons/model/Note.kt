@@ -146,6 +146,8 @@ open class Note(
         removeZapPayment(note)
         removeReport(note)
         removeLabel(note)
+        removeNutzap(note)
+        removeOnchainZapBySource(note)
     }
 
     var poll: PollResponsesCache? = null
@@ -371,7 +373,7 @@ open class Note(
         }
     }
 
-    fun removeAllChildNotes(): List<Note> {
+    fun clearChildLinks(): List<Note> {
         val repliesChanged = replies.isNotEmpty()
         val reactionsChanged = reactions.isNotEmpty()
         val zapsChanged = zaps.isNotEmpty() || zapPayments.isNotEmpty() || onchainZaps.isNotEmpty() || nutzaps.isNotEmpty()
@@ -389,7 +391,8 @@ open class Note(
                 zaps.values.filterNotNull() +
                 zapPayments.keys +
                 zapPayments.values.filterNotNull() +
-                nutzaps.values.map { it.source }
+                nutzaps.values.map { it.source } +
+                onchainZaps.values.map { it.source }
 
         replies = listOf()
         reactions = mapOf()
@@ -412,6 +415,31 @@ open class Note(
         if (zapsChanged) flowSet?.zaps?.invalidateData()
 
         return toBeRemoved
+    }
+
+    /**
+     * Fully detach this note from the notes below it in the graph so it can be
+     * removed from the cache without leaving a partial deletion behind. It both
+     * clears this note's own child collections (via [clearChildLinks]) and
+     * drops this note from every child's [replyTo], so once this note leaves the
+     * cache map nothing keeps the dead shell alive.
+     *
+     * This matters for the NIP-09 delete path: without severing the child →
+     * parent `replyTo` links, the removed note leaks (held by each child) and a
+     * later reply resolved through `computeReplyTo` would `getOrCreateNote` a
+     * *second* Note for the same id — breaking the one-Note-per-id invariant.
+     *
+     * Returns the now-orphaned children (their other parents, if any, are kept).
+     */
+    fun detachFromChildren(): List<Note> {
+        val children = clearChildLinks()
+        children.forEach { child ->
+            val parents = child.replyTo
+            if (parents != null && this in parents) {
+                child.replyTo = parents - this
+            }
+        }
+        return children
     }
 
     fun removeReaction(note: Note) {
@@ -582,6 +610,29 @@ open class Note(
     ) {
         val removed = innerRemoveOnchainZapForSource(txid, sourceAuthorPubKey)
         if (removed) {
+            updateZapTotal()
+            flowSet?.zaps?.invalidateData()
+        }
+    }
+
+    private fun innerRemoveOnchainZapBySource(source: Note): Boolean =
+        syncLock.withLock {
+            val newMap = onchainZaps.filterValues { it.source != source }
+            if (newMap.size == onchainZaps.size) return@withLock false
+            onchainZaps = newMap
+            return@withLock true
+        }
+
+    /**
+     * Detach every onchain-zap entry whose source is [source] — used when the
+     * source OnchainZapEvent note is being pruned from `LocalCache`. Unlike
+     * [removeOnchainZapForSource] (a verification verdict that respects the
+     * anti-spoof / no-CONFIRMED-downgrade guards), this is an unconditional
+     * cache-removal that must drop the strong reference no matter the status,
+     * otherwise the pruned source Note leaks through this map.
+     */
+    fun removeOnchainZapBySource(source: Note) {
+        if (innerRemoveOnchainZapBySource(source)) {
             updateZapTotal()
             flowSet?.zaps?.invalidateData()
         }
@@ -1165,6 +1216,21 @@ open class Note(
             note.addNutzap(it.source, it.claimedSats)
             it.source.replyTo = it.source.replyTo?.replace(this, note)
         }
+        onchainZaps.forEach { (txid, entry) ->
+            note.addOnchainZap(entry.source, txid, entry.claimedSats, entry.verifiedSats, entry.status)
+            entry.source.replyTo = entry.source.replyTo?.replace(this, note)
+        }
+        zapPayments.forEach {
+            note.addZapPayment(it.key, it.value)
+            it.key.replyTo = it.key.replyTo?.replace(this, note)
+            it.value?.replyTo = it.value?.replyTo?.replace(this, note)
+        }
+        labels.forEach { (hashtag, labelNotes) ->
+            labelNotes.forEach {
+                note.addLabel(hashtag, it)
+                it.replyTo = it.replyTo?.replace(this, note)
+            }
+        }
 
         replyTo = null
         replies = emptyList()
@@ -1173,6 +1239,9 @@ open class Note(
         reports = emptyMap()
         zaps = emptyMap()
         nutzaps = emptyMap()
+        onchainZaps = emptyMap()
+        zapPayments = emptyMap()
+        labels = emptyMap()
         zapsAmount = BigDecimal(0)
     }
 
