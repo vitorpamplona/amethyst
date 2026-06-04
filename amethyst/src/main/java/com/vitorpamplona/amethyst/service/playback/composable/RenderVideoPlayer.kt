@@ -20,11 +20,14 @@
  */
 package com.vitorpamplona.amethyst.service.playback.composable
 
+import android.content.Context
+import android.media.AudioManager
 import androidx.annotation.OptIn
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,18 +37,23 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
 import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
 import com.vitorpamplona.amethyst.service.playback.composable.controls.BottomGradientOverlay
+import com.vitorpamplona.amethyst.service.playback.composable.controls.FullscreenSwipeControlsState
+import com.vitorpamplona.amethyst.service.playback.composable.controls.FullscreenSwipeLevelIndicator
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderAnimatedBottomInfo
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderCenterButtons
 import com.vitorpamplona.amethyst.service.playback.composable.controls.RenderTopButtons
 import com.vitorpamplona.amethyst.service.playback.composable.controls.TopGradientOverlay
+import com.vitorpamplona.amethyst.service.playback.composable.controls.fullscreenSwipeControls
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.AudioPlayingAnimation
 import com.vitorpamplona.amethyst.service.playback.diskCache.isLiveStreaming
+import com.vitorpamplona.amethyst.ui.components.getDialogWindow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 internal const val SKIP_SECONDS = 10
@@ -87,6 +95,7 @@ fun RenderVideoPlayer(
     onDialog: (() -> Unit)? = null,
     controllerVisible: MutableState<Boolean> = remember { mutableStateOf(false) },
     hasBlurhash: Boolean = false,
+    isFullscreen: Boolean = false,
     accountViewModel: AccountViewModel,
 ) {
     // Hold the container size in a non-state holder so layout passes don't trigger an
@@ -94,6 +103,20 @@ fun RenderVideoPlayer(
     // ever read inside the onDoubleTap callback below.
     val containerWidth = remember { intArrayOf(0) }
     val isLive = remember(mediaItem.src.videoUri) { isLiveStreaming(mediaItem.src.videoUri) }
+
+    val swipeState = remember { FullscreenSwipeControlsState() }
+    val context = LocalContext.current
+    val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager }
+    // Brightness is applied to the fullscreen dialog window so it auto-reverts on dismiss.
+    // Returns null for the inline feed player (not inside a dialog) — fine, gated by isFullscreen below.
+    val dialogWindow = getDialogWindow()
+
+    // Belt-and-suspenders: clear any brightness override when this player leaves composition, so
+    // exiting fullscreen never leaves the screen dimmed. releaseBrightness no-ops when dialogWindow
+    // is null (the inline feed path) or when no override was applied, so this is safe unconditionally.
+    DisposableEffect(Unit) {
+        onDispose { swipeState.releaseBrightness(dialogWindow) }
+    }
 
     WatchPlaybackErrors(controllerState)
 
@@ -115,7 +138,18 @@ fun RenderVideoPlayer(
                             }
                         },
                     )
-                },
+                }.then(
+                    if (isFullscreen) {
+                        Modifier.fullscreenSwipeControls(
+                            state = swipeState,
+                            audioManager = audioManager,
+                            window = dialogWindow,
+                            resolver = context.contentResolver,
+                        )
+                    } else {
+                        Modifier
+                    },
+                ),
     ) {
         ContentFrame(
             player = controllerState.controller,
@@ -171,6 +205,10 @@ fun RenderVideoPlayer(
                 modifier = Modifier.align(Alignment.Center),
                 isLiveStream = isLive,
             )
+        }
+
+        if (isFullscreen) {
+            FullscreenSwipeLevelIndicator(swipeState)
         }
     }
 }

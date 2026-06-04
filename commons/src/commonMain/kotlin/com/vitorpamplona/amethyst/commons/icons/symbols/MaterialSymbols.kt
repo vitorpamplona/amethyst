@@ -46,6 +46,7 @@ object MaterialSymbols {
     val BookmarkAdd = MaterialSymbol("\uE598")
     val BookmarkBorder = MaterialSymbol("\uE8E7")
     val BookmarkRemove = MaterialSymbol("\uE59A")
+    val BrightnessMedium = MaterialSymbol("\uE1AE")
     val Forward10 = MaterialSymbol("\uE056")
     val Replay10 = MaterialSymbol("\uE059")
     val CalendarMonth = MaterialSymbol("\uEBCC")
