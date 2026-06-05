@@ -247,14 +247,22 @@ source set (uses `java.util.concurrent`), visible to amethyst + desktop + quartz
 - `FilterNip04DMs.kt` (per-relay `Nip04DmRelays`, live + history builders), `FilterNip04DMsFromMe/ToMe.kt`, `FilterGiftWrapsToPubkey.kt` — `until`/`limit` added.
 - `AccountFilterAssembler`, `ChatroomFilterAssembler`, `ChatroomListFilterAssembler` — wire the new managers.
 
-**UI (`ui/screen/loggedIn/chats/`)**
-- `feed/DmLoadMoreIndicator.kt` — `DmHistoryLoadingCard` + per-relay dialog.
-- `feed/LoadingReplyNote.kt` — history-walking reply placeholder.
-- `feed/layouts/RelayReachMarker.kt` — `RelayWindowLimit` + sentinels (driver) + markers (UI).
+**Shared UI (commons, `commons/ui/feeds/`)** — extracted from amethyst so Android +
+Desktop (and any per-relay feed) render the same widgets; CMP `composeResources`
+strings, no app-theme / `java.time` deps.
+- `RelayReachMarker.kt` — `RelayWindowLimit` + sentinels (the hoisted, visibility-driven
+  paging driver) + markers (pure UI) + `RelayReachMarker`/`RelayReachState`.
+- `DmHistoryLoadingCard.kt` — the boundary status card + per-relay tap dialog +
+  `historySubtitle`/`incompleteSubtitle`. Takes a `formatReachDate: (epochSeconds) -> String`
+  so each platform supplies its locale date formatter.
+
+**Android UI (`amethyst/ui/screen/loggedIn/chats/`)**
+- `feed/LoadingReplyNote.kt` — history-walking reply placeholder (uses the shared subtitle helpers/dialog).
+- `feed/HistoryDateFormat.kt` — `formatHistoryReachDate`, the Android locale formatter passed into the shared card.
 - `feed/ChatFeedView.kt` — `markersInGap` + `sentinels` slots.
 - `feed/ChatMessageCompose.kt` — reply `onBlank` wiring.
 - `privateDM/ChatroomView.kt`, `rooms/feed/ChatroomListFeedView.kt` — assemble cards/markers/sentinels, `BootstrapHistoryWhenEmpty`.
-- `res/values/strings.xml` — `chats_history_*` / `chats_reply_*`.
+- `res/values/strings.xml` — `chats_reply_*` (the card's `chats_history_*` now live in commons).
 
 ---
 
