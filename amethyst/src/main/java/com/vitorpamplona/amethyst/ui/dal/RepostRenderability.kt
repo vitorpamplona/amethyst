@@ -21,8 +21,7 @@
 package com.vitorpamplona.amethyst.ui.dal
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
-import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.BaseRepostEvent
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
@@ -30,10 +29,10 @@ import kotlin.contracts.contract
 /**
  * A repost (kind 6 / kind 16) wraps another event. When that inner kind has no
  * typed Quartz class — e.g. a Ditto kind-16767 profile theme wrapped in a
- * generic repost — Amethyst can neither store nor render it, so the repost would
- * show as a permanently blank card. Feeds use this predicate to drop such
- * reposts, matching how unsupported events are already discarded at the storage
- * (`LocalCache`) and feed-acceptance layers.
+ * generic repost — Amethyst can neither parse nor render it, so the repost would
+ * show as a permanently blank card. Feeds use this predicate in their acceptance
+ * allow-list to drop such reposts, mirroring how regular unknown-kind events are
+ * never displayed (no UI component renders a bare [Event]).
  *
  * Returns true only for reposts whose boosted content is displayable, so it can
  * replace the `is RepostEvent || is GenericRepostEvent` clause in a feed's
@@ -43,18 +42,14 @@ import kotlin.contracts.contract
  * Conservative: a repost that declares no boosted `k` kind is assumed renderable
  * — we only hide when we can positively prove the inner kind is unknown.
  *
- * A `true` result implies a non-null receiver, so this can replace the
- * `is RepostEvent || is GenericRepostEvent` clause in an allow-list without
- * losing the chain's non-null smart-cast on the event.
+ * The `returns(true) implies non-null` contract lets it stand in for the two
+ * `is` checks in an allow-list without losing the chain's non-null smart-cast
+ * (the `&& filterParams.match(noteEvent, …)` tail relies on it).
  */
 @OptIn(ExperimentalContracts::class)
 fun Event?.isRenderableRepost(): Boolean {
     contract { returns(true) implies (this@isRenderableRepost != null) }
-    return when (this) {
-        is RepostEvent -> isBoostedKindRenderable(boostedKind())
-        is GenericRepostEvent -> isBoostedKindRenderable(boostedKind())
-        else -> false
-    }
+    if (this !is BaseRepostEvent) return false
+    val boostedKind = boostedKind()
+    return boostedKind == null || EventFactory.isKnownKind(boostedKind)
 }
-
-private fun isBoostedKindRenderable(boostedKind: Int?): Boolean = boostedKind == null || EventFactory.isKnownKind(boostedKind)

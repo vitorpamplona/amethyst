@@ -78,8 +78,7 @@ class GenericRepostEvent(
 
     fun boostedAddressIds() = tags.lastNotNullOfOrNull(ATag::parseAddressId)
 
-    /** The kind of the reposted (boosted) event, as declared in the `k` tag. */
-    fun boostedKind() = tags.lastNotNullOfOrNull(KindTag::parse)
+    override fun boostedKind() = tags.lastNotNullOfOrNull(KindTag::parse)
 
     fun originalAuthors() = tags.mapNotNull(PTag::parse)
 
