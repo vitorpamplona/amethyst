@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.aTag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.eTag
+import com.vitorpamplona.quartz.nip01Core.tags.kinds.KindTag
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kind
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
@@ -76,6 +77,8 @@ class RepostEvent(
     override fun boostedEventId() = tags.lastNotNullOfOrNull(ETag::parseId)
 
     fun boostedAddressIds() = tags.lastNotNullOfOrNull(ATag::parseAddressId)
+
+    override fun boostedKind() = tags.lastNotNullOfOrNull(KindTag::parse)
 
     fun originalAuthors() = tags.mapNotNull(PTag::parse)
 

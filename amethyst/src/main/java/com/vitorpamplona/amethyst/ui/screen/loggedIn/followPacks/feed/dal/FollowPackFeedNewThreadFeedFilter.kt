@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.dal
 
+import com.vitorpamplona.amethyst.commons.ui.feeds.isRenderableRepost
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -133,8 +134,7 @@ class FollowPackFeedNewThreadFeedFilter(
         return (
             noteEvent is TextNoteEvent ||
                 noteEvent is ClassifiedsEvent ||
-                noteEvent is RepostEvent ||
-                noteEvent is GenericRepostEvent ||
+                noteEvent.isRenderableRepost() ||
                 (noteEvent is LongTextNoteEvent && noteEvent.content.isNotEmpty()) ||
                 (noteEvent is WikiNoteEvent && noteEvent.content.isNotEmpty()) ||
                 noteEvent is ZapPollEvent ||

@@ -18,16 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip18Reposts
+package com.vitorpamplona.quartz.utils
 
-import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import kotlin.test.Test
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
-interface BaseRepostEvent {
-    fun boostedEventId(): HexKey?
+class EventFactoryIsKnownKindTest {
+    @Test
+    fun knownForTypedKinds() {
+        assertTrue(EventFactory.isKnownKind(TextNoteEvent.KIND), "kind ${TextNoteEvent.KIND} (text note) should be known")
+        assertTrue(EventFactory.isKnownKind(RepostEvent.KIND), "kind ${RepostEvent.KIND} (repost) should be known")
+        assertTrue(EventFactory.isKnownKind(GenericRepostEvent.KIND), "kind ${GenericRepostEvent.KIND} (generic repost) should be known")
+    }
 
-    fun boostedAddress(): Address?
-
-    /** The kind of the reposted (boosted) event, as declared in the `k` tag. */
-    fun boostedKind(): Int?
+    @Test
+    fun unknownForUntypedKind() {
+        // 16767 is a Ditto-proprietary "Active profile theme" event with no Quartz class,
+        // so it is parsed as a bare Event and reported as not known.
+        assertFalse(EventFactory.isKnownKind(16767), "kind 16767 has no Quartz class and should be unknown")
+    }
 }

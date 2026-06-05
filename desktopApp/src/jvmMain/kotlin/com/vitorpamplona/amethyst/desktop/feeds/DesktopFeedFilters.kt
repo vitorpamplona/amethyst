@@ -25,7 +25,9 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.feeds.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.commons.ui.feeds.DefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedFilter
+import com.vitorpamplona.amethyst.commons.ui.feeds.isRenderableRepost
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -35,10 +37,9 @@ import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 
-private fun isFeedNote(event: com.vitorpamplona.quartz.nip01Core.core.Event?): Boolean =
+private fun isFeedNote(event: Event?): Boolean =
     event is TextNoteEvent ||
-        event is RepostEvent ||
-        event is GenericRepostEvent
+        event.isRenderableRepost()
 
 private fun List<Note>.deduplicateReposts(): List<Note> =
     distinctBy { note ->
