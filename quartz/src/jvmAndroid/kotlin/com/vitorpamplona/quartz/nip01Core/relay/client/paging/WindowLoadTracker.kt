@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -104,17 +105,17 @@ class WindowLoadTracker(
         expected = emptySet()
         heardFrom.clear()
         settled.clear()
-        lastActivityMs = System.currentTimeMillis()
+        lastActivityMs = TimeUtils.nowMillis()
         val wasLoading = _loading.value
         _loading.value = true
         Log.d(TAG) { "[$name] load start" + if (!wasLoading) "" else " (restart)" }
         watchdog?.cancel()
         watchdog =
             scope.launch {
-                val deadline = System.currentTimeMillis() + absoluteCap.inWholeMilliseconds
+                val deadline = TimeUtils.nowMillis() + absoluteCap.inWholeMilliseconds
                 while (isActive) {
                     delay(IDLE_CHECK_MS)
-                    if (!tick(gen, System.currentTimeMillis(), deadline)) break
+                    if (!tick(gen, TimeUtils.nowMillis(), deadline)) break
                 }
             }
     }
@@ -164,7 +165,7 @@ class WindowLoadTracker(
     /** A non-terminal sign of life from [relay] (a stored or live event). Keeps the idle timer alive. */
     fun onRelayEvent(relay: NormalizedRelayUrl) {
         heardFrom.add(relay)
-        lastActivityMs = System.currentTimeMillis()
+        lastActivityMs = TimeUtils.nowMillis()
     }
 
     /**
@@ -173,7 +174,7 @@ class WindowLoadTracker(
      */
     @Synchronized
     fun onRelaySettled(relay: NormalizedRelayUrl) {
-        lastActivityMs = System.currentTimeMillis()
+        lastActivityMs = TimeUtils.nowMillis()
         heardFrom.add(relay)
         settled.add(relay)
         if (expected.isNotEmpty() && settled.containsAll(expected)) finish("all relays")

@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.paging
 
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -82,14 +83,14 @@ class PerRelayLoadTracker(
         clearJob?.cancel() // a new page is starting — keep the spinner up, no flicker
         clearJob = null
         inFlight.add(relay)
-        lastActivityMs = System.currentTimeMillis()
+        lastActivityMs = TimeUtils.nowMillis()
         _loading.value = true
         ensureWatchdog()
     }
 
     /** A sign of life from a relay (an event). Keeps the silence watchdog from firing. */
     fun onActivity() {
-        lastActivityMs = System.currentTimeMillis()
+        lastActivityMs = TimeUtils.nowMillis()
     }
 
     /**
@@ -101,7 +102,7 @@ class PerRelayLoadTracker(
      */
     @Synchronized
     fun onSettled(relay: NormalizedRelayUrl) {
-        lastActivityMs = System.currentTimeMillis()
+        lastActivityMs = TimeUtils.nowMillis()
         if (inFlight.remove(relay) && inFlight.isEmpty()) scheduleClear()
     }
 
@@ -141,7 +142,7 @@ class PerRelayLoadTracker(
                     delay(WATCHDOG_TICK_MS)
                     val silenced =
                         synchronized(this@PerRelayLoadTracker) {
-                            if (inFlight.isNotEmpty() && System.currentTimeMillis() - lastActivityMs > silenceMs) {
+                            if (inFlight.isNotEmpty() && TimeUtils.nowMillis() - lastActivityMs > silenceMs) {
                                 val pending = inFlight.toSet()
                                 inFlight.clear()
                                 _loading.value = false

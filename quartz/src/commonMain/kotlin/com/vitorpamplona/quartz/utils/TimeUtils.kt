@@ -36,6 +36,8 @@ object TimeUtils {
 
     fun now() = currentTimeSeconds()
 
+    fun nowMillis() = currentTimeMillis()
+
     fun tenSecondsFromNow() = now() + TEN_SECONDS
 
     fun tenSecondsAgo() = now() - TEN_SECONDS
