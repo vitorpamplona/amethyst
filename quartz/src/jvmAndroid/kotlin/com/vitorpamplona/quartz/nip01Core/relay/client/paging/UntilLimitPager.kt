@@ -75,13 +75,7 @@ class UntilLimitPager<K> {
         relay: NormalizedRelayUrl,
     ) = cursorsFor(key).getOrPut(relay) { RelayCursor() }
 
-    /** True once [relay] has been [advance]d at least once (so its REQ should be issued). */
-    fun isArmed(
-        key: K,
-        relay: NormalizedRelayUrl,
-    ): Boolean = cursor(key, relay).requestedUntil != null
-
-    /** The `until` [relay]'s REQ currently carries. Only meaningful once [isArmed]. */
+    /** The `until` [relay]'s REQ currently carries. Only meaningful once it has been [advance]d. */
     fun requestedUntilFor(
         key: K,
         relay: NormalizedRelayUrl,
@@ -159,12 +153,6 @@ class UntilLimitPager<K> {
             }
         }
     }
-
-    /** Relays from [all] that still have older history to ask for: not yet empty-EOSE'd ([done]). */
-    fun activeRelays(
-        key: K,
-        all: Collection<NormalizedRelayUrl>,
-    ): List<NormalizedRelayUrl> = all.filterNot { cursor(key, it).done }
 
     /** Relays from [all] that have been armed (advanced at least once) and are not yet [done]. */
     fun armedRelays(

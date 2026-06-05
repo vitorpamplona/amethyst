@@ -274,7 +274,6 @@
     <string name="generate_a_new_key">Generate a new key</string>
     <string name="loading_feed">Loading feed</string>
     <string name="loading_account">Loading account</string>
-    <string name="chats_load_entire_history">Load entire history</string>
     <string name="chats_history_proto_nip17">encrypted</string>
     <string name="chats_history_proto_nip04">legacy</string>
     <string name="chats_reply_searching_history">Looking for the original message…</string>

@@ -58,40 +58,17 @@ import kotlin.time.Duration.Companion.seconds
  * mistakes a half-loaded window for a finished one, which is exactly how a load reports "1 event"
  * when a hundred are still on the way.
  *
- * Three backstops cover misbehaving relays. If every relay we're still waiting on has at least been
+ * Two backstops cover misbehaving relays. If every relay we're still waiting on has at least been
  * *heard from* (any event, EOSE, CLOSED, or cannot-connect) but one streamed events without ever
  * sending EOSE, an [idleTimeout] of quiet completes the load — the "heard from" gate is what keeps
- * this from firing in a connection gap. A relay that *received our REQ* ([onReqSent]) but then went
- * completely silent — no event, no EOSE, no CLOSED — for [silenceTimeout] stops blocking the load: an
- * auth-walled relay (ditto, paid relays) commonly accepts the REQ and answers nothing, and measuring
- * from REQ-delivery (not window start) means a slow connect doesn't count against it. Such relays are
- * reported to [onAbandoned] so the owner can react — drop them from its pager, or keep them and flag
- * them stalled (the convo history keeps trying). A relay that never even
- * *receives* its REQ (stuck connecting / reconnecting, so it can neither settle nor go "silent") stops
- * blocking the round after [connectGrace] from the load start — but it is NOT given up (it may be a
- * genuinely slow connect), so the owner keeps it and retries it next round. And an [absoluteCap] is
- * the final ceiling on a window that somehow defeats all of the above.
- *
- * The two REQ-aware backstops (silence + connect-grace) only make sense when the owner actually feeds
- * [onReqSent], so they are gated behind [tracksReqSends]. A tracker that does NOT track REQ sends keeps
- * the plain settle / idle / cap behavior — otherwise, with an always-empty [reqSentAt], EVERY relay
- * would look "connect-stalled" after [connectGrace] and the window would complete before its REQs even
- * went out (e.g. during a slow connect storm), prematurely declaring an empty round done.
+ * this from firing in a connection gap. And an [absoluteCap] is the final ceiling on a window that
+ * somehow defeats the above.
  */
 class WindowLoadTracker(
     // Short label for the DMPagination logs (e.g. "giftwrap", "rooms.nip04", "convo.nip04").
     private val name: String = "dm",
-    // Whether the owner feeds [onReqSent]; enables the silence + connect-grace backstops. Off by
-    // default so trackers that don't track REQ sends are unaffected by them.
-    private val tracksReqSends: Boolean = false,
     private val idleTimeout: Duration = 3.seconds,
-    private val silenceTimeout: Duration = 10.seconds,
-    private val connectGrace: Duration = 15.seconds,
     private val absoluteCap: Duration = 5.minutes,
-    // Invoked when a load finishes with the relays that received a REQ but stayed silent past
-    // [silenceTimeout]. The owner decides what to do — drop them from its pager, or keep them open and
-    // flag them stalled. The tracker itself only stops waiting on them; it does not give them up.
-    private val onAbandoned: (Set<NormalizedRelayUrl>) -> Unit = {},
 ) {
     private val _loading = MutableStateFlow(true)
     val loading: StateFlow<Boolean> = _loading.asStateFlow()
@@ -109,10 +86,6 @@ class WindowLoadTracker(
     // [expected] the stored backfill is complete on every relay and the load is done.
     private val settled = ConcurrentHashMap.newKeySet<NormalizedRelayUrl>()
 
-    // When the REQ was actually delivered to each relay (post-connect). The silence backstop measures
-    // from here, not window start, so a slow connect isn't mistaken for a dead relay.
-    private val reqSentAt = ConcurrentHashMap<NormalizedRelayUrl, Long>()
-
     private var watchdog: Job? = null
 
     // Incremented on every (re)start so a stale watchdog that wakes right as a new load begins
@@ -124,10 +97,6 @@ class WindowLoadTracker(
     @Volatile
     private var lastActivityMs = 0L
 
-    // Wall-clock the current window began; the connect-grace backstop measures from here.
-    @Volatile
-    private var loadStartMs = 0L
-
     /** Begins a fresh window load: clears the per-relay sets, raises [loading], and arms the watchdog. */
     @Synchronized
     fun startLoading(scope: CoroutineScope) {
@@ -135,10 +104,7 @@ class WindowLoadTracker(
         expected = emptySet()
         heardFrom.clear()
         settled.clear()
-        reqSentAt.clear()
-        val nowMs = System.currentTimeMillis()
-        lastActivityMs = nowMs
-        loadStartMs = nowMs
+        lastActivityMs = System.currentTimeMillis()
         val wasLoading = _loading.value
         _loading.value = true
         Log.d(TAG) { "[$name] load start" + if (!wasLoading) "" else " (restart)" }
@@ -164,15 +130,14 @@ class WindowLoadTracker(
     ): Boolean {
         if (gen != generation || !_loading.value) return false
         if (expected.isNotEmpty()) {
-            // Once every relay is accounted for — settled, gone silent after its REQ, or stuck before
-            // its REQ even went out — nothing more is coming for this round.
-            if (expected.all { accountedFor(it, now) }) {
-                finish("settled/silent")
+            // Once every relay has reached a terminal signal, nothing more is coming for this round.
+            if (settled.containsAll(expected)) {
+                finish("settled")
                 return false
             }
             // Idle backstop: every relay we're still waiting on has at least streamed something (so this
-            // isn't a connection gap) and the stream has gone quiet. Accounted-for relays don't count.
-            val stillWaiting = expected.filterNot { accountedFor(it, now) }
+            // isn't a connection gap) and the stream has gone quiet. Settled relays don't count.
+            val stillWaiting = expected.filterNot { settled.contains(it) }
             if (stillWaiting.all { heardFrom.contains(it) } && now - lastActivityMs >= idleTimeout.inWholeMilliseconds) {
                 finish("idle")
                 return false
@@ -185,30 +150,6 @@ class WindowLoadTracker(
         return true
     }
 
-    // A relay no longer worth waiting on this round: it reached a terminal signal, went silent after
-    // its REQ, or never even received its REQ within the connect grace.
-    private fun accountedFor(
-        relay: NormalizedRelayUrl,
-        now: Long,
-    ): Boolean = settled.contains(relay) || silencedOut(relay, now) || connectStalled(relay, now)
-
-    // A relay that received its REQ but produced no signal at all for [silenceTimeout]. Measured from
-    // REQ-delivery so a slow connect (which has no [reqSentAt] yet) is never counted as silent. These
-    // are reported to [onAbandoned] on finish (accepting a REQ then answering nothing usually means an
-    // auth-walled / dead relay) — but whether to give them up is the owner's call, not the tracker's.
-    private fun silencedOut(
-        relay: NormalizedRelayUrl,
-        now: Long,
-    ): Boolean = tracksReqSends && relay !in heardFrom && (reqSentAt[relay]?.let { now - it >= silenceTimeout.inWholeMilliseconds } ?: false)
-
-    // A relay that is still expected but has neither been heard from nor even received its REQ within
-    // [connectGrace] of the load start — i.e. stuck connecting / reconnecting. It stops blocking the
-    // round, but is NOT given up (it may simply be a slow connect): the owner retries it next round.
-    private fun connectStalled(
-        relay: NormalizedRelayUrl,
-        now: Long,
-    ): Boolean = tracksReqSends && relay !in heardFrom && !reqSentAt.containsKey(relay) && now - loadStartMs >= connectGrace.inWholeMilliseconds
-
     /** Records which relays the current REQ was sent to. Completes immediately if there are none. */
     @Synchronized
     fun setExpectedRelays(relays: Set<NormalizedRelayUrl>) {
@@ -218,16 +159,6 @@ class WindowLoadTracker(
         } else if (settled.containsAll(relays)) {
             finish("all relays")
         }
-    }
-
-    /**
-     * Records that the REQ was delivered to [relayUrl] (post-connect). Starts that relay's silence clock.
-     * Ignored for relays outside the current [expected] set (or before it is known).
-     */
-    @Synchronized
-    fun onReqSent(relayUrl: String) {
-        val relay = expected.firstOrNull { it.url == relayUrl } ?: return
-        reqSentAt.putIfAbsent(relay, System.currentTimeMillis())
     }
 
     /** A non-terminal sign of life from [relay] (a stored or live event). Keeps the idle timer alive. */
@@ -254,11 +185,7 @@ class WindowLoadTracker(
         if (!_loading.value) return
         watchdog?.cancel()
         watchdog = null
-        // Report the silent relays BEFORE flipping [loading]: the owner reacts to loading=false by
-        // recomputing state from its pager, so its reaction to these has to land first.
-        val abandoned = expected.filterTo(mutableSetOf()) { silencedOut(it, System.currentTimeMillis()) }
-        Log.d(TAG) { "[$name] load done: $reason" + if (abandoned.isEmpty()) "" else " (silent: ${abandoned.map { it.url }})" }
-        if (abandoned.isNotEmpty()) onAbandoned(abandoned)
+        Log.d(TAG) { "[$name] load done: $reason" }
         _loading.value = false
     }
 
@@ -271,14 +198,10 @@ class WindowLoadTracker(
 /**
  * Builds the standard [SubscriptionListener] that feeds this tracker. Every event (stored backfill
  * included) is a non-terminal sign of life from its relay; an EOSE, CLOSED, or cannot-connect settles
- * that relay. [onEachEvent] is invoked for every event (stored or live) for optional instrumentation;
- * [forward] carries the EOSE / live-event signal so the owning EOSE manager can record the relay's
- * timestamp (its usual `newEose`).
+ * that relay. [forward] carries the EOSE / live-event signal so the owning EOSE manager can record the
+ * relay's timestamp (its usual `newEose`).
  */
-fun WindowLoadTracker.trackingListener(
-    onEachEvent: (Event) -> Unit = {},
-    forward: (NormalizedRelayUrl, List<Filter>?) -> Unit,
-): SubscriptionListener =
+fun WindowLoadTracker.trackingListener(forward: (NormalizedRelayUrl, List<Filter>?) -> Unit): SubscriptionListener =
     object : SubscriptionListener {
         override fun onEose(
             relay: NormalizedRelayUrl,
@@ -295,7 +218,6 @@ fun WindowLoadTracker.trackingListener(
             forFilters: List<Filter>?,
         ) {
             onRelayEvent(relay)
-            onEachEvent(event)
             if (isLive) {
                 forward(relay, forFilters)
             }

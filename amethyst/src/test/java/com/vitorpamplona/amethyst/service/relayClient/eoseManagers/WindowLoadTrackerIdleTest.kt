@@ -66,8 +66,7 @@ class WindowLoadTrackerIdleTest {
     fun idleBackstopWaitsUntilEveryPendingRelayHasBeenHeardFrom() =
         runBlocking {
             val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-            // tracksReqSends = false so the silence/connect-grace backstops are OFF and only idle is in play.
-            val tracker = WindowLoadTracker(name = "test", tracksReqSends = false, idleTimeout = 50.milliseconds)
+            val tracker = WindowLoadTracker(name = "test", idleTimeout = 50.milliseconds)
 
             tracker.startLoading(scope)
             tracker.setExpectedRelays(setOf(good, streamer))

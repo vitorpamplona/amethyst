@@ -34,12 +34,10 @@ class UntilLimitPagerTest {
     private val start = 1_000L
 
     @Test
-    fun unarmedRelayIsNotRequestedButCountsAsActive() {
+    fun unarmedRelayIsNotRequestedAndSitsAtTheFloor() {
         val pager = UntilLimitPager<String>()
-        assertFalse(pager.isArmed(key, relayA))
+        // never advanced, so it carries no REQ
         assertEquals(emptyList<Any>(), pager.armedRelays(key, listOf(relayA)))
-        // not done, so still "active" (there is history to ask for once advanced)
-        assertEquals(listOf(relayA), pager.activeRelays(key, listOf(relayA)))
         // marker sits at the floor until it delivers
         assertEquals(start, pager.reachedUntilFor(key, relayA, start))
     }
@@ -49,7 +47,6 @@ class UntilLimitPagerTest {
         val pager = UntilLimitPager<String>()
 
         assertTrue(pager.advance(key, relayA, start))
-        assertTrue(pager.isArmed(key, relayA))
         assertEquals(start, pager.requestedUntilFor(key, relayA))
 
         // page returns events; oldest seen = 800
@@ -72,7 +69,6 @@ class UntilLimitPagerTest {
         pager.onEose(key, relayA) // no events
         assertTrue(pager.isDone(key, relayA))
         assertFalse(pager.advance(key, relayA, start))
-        assertEquals(emptyList<Any>(), pager.activeRelays(key, listOf(relayA)))
         assertEquals(emptyList<Any>(), pager.armedRelays(key, listOf(relayA)))
     }
 
