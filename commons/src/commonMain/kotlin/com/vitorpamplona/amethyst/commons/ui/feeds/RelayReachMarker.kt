@@ -50,6 +50,22 @@ import org.jetbrains.compose.resources.stringResource
 // A relay-reach divider is hair-thin; inlined here so the shared component carries no app-theme dep.
 private val DividerThickness = 0.25.dp
 
+/**
+ * True when [reachedUntil] falls in the gap between a newer message (at [newerCreatedAt]) and its
+ * next-older neighbour (at [olderCreatedAt], null past the oldest end): the newer side is strictly
+ * newer than the cursor and the older side is at or below it (or absent). This single predicate both
+ * places the marker ([RelayWindowLimitMarkers]) and decides when its paging sentinel is on screen
+ * ([RelayWindowLimitSentinels]), so the two can never disagree about which gap a cursor lives in.
+ */
+internal fun reachedFallsInGap(
+    reachedUntil: Long,
+    newerCreatedAt: Long?,
+    olderCreatedAt: Long?,
+): Boolean =
+    newerCreatedAt != null &&
+        newerCreatedAt > reachedUntil &&
+        (olderCreatedAt == null || olderCreatedAt <= reachedUntil)
+
 /** How far one relay has paged into a feed's history, for an in-stream progress marker. */
 enum class RelayReachState {
     // Still paging older — its marker slides down (older) as it advances.
@@ -127,9 +143,7 @@ fun RelayWindowLimitSentinels(
                     // visible rows only.
                     val onScreen =
                         listState.layoutInfo.visibleItemsInfo.any { info ->
-                            val newer = at(info.index) ?: return@any false
-                            val older = at(info.index + 1)
-                            newer > r && (older == null || older <= r)
+                            reachedFallsInGap(r, at(info.index), at(info.index + 1))
                         }
                     // Pair so distinctUntilChanged also lets a landed page (r moved) re-fire while visible,
                     // not just the off→on-screen transition.
@@ -162,11 +176,7 @@ fun RelayWindowLimitMarkers(
 ) {
     val here =
         remember(limits, newerCreatedAt, olderCreatedAt) {
-            limits.filter { lim ->
-                newerCreatedAt != null &&
-                    newerCreatedAt > lim.reachedUntil &&
-                    (olderCreatedAt == null || olderCreatedAt <= lim.reachedUntil)
-            }
+            limits.filter { reachedFallsInGap(it.reachedUntil, newerCreatedAt, olderCreatedAt) }
         }
     if (here.isEmpty()) return
 

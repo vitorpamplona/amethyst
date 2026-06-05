@@ -245,8 +245,8 @@ class BackwardRelayPager<K>(
         recomputeExhausted(key)
     }
 
-    // The tracker's silence watchdog fired: the still-pending relays went quiet after their REQ. Flag the
-    // active key's of them stalled (kept) so the window can settle instead of hanging on a dead relay.
+    // The tracker's silence watchdog fired: the still-pending relays went quiet after their REQ. Flag them
+    // (for the active key) stalled but kept, so the window can settle instead of hanging on a dead relay.
     private fun onSilenced(relays: Set<NormalizedRelayUrl>) {
         val key = activeKey ?: return
         relays.forEach { markStalled(key, it, "no response (silence timeout)") }
