@@ -1,4 +1,10 @@
-# DM loading: live tail + bounded history slices
+# DM loading: live tail + per-relay history paging
+
+> **Status:** authoritative as of 2026-06-05. The "Current architecture"
+> section below describes the code as it actually stands. The original
+> time-slice design and the round-model history are kept at the bottom under
+> **Design evolution (historical)** — they are superseded and no longer match
+> the code; don't trust them for how it works today.
 
 ## Problem
 
@@ -14,161 +20,279 @@ re-streamed the entire history from the new floor. Traces showed this directly:
 ```
 
 Each step re-downloaded everything it already had plus the new slice — the
-"getting all events over and over again" the window owner reported. It also
-cascaded: a few pixels of scroll walked the window to the 10-year backstop,
-because widening pulls older *messages* but the rooms list is keyed by
-*conversation*, so a handful of busy correspondents flood thousands of events
-without adding a single new row, and the "scrolled near the oldest room" trigger
-never clears.
+"getting all events over and over again" the owner reported. It also cascaded:
+a few pixels of scroll walked the window to the 10-year backstop, because
+widening pulls older *messages* but the rooms list is keyed by *conversation*,
+so a handful of busy correspondents flood thousands of events without adding a
+single new row, and the "scrolled near the oldest room" trigger never clears.
 
-## Design (owner's call)
+---
 
-Split each DM protocol into two responsibilities:
+## Current architecture
 
-1. **Live tail** — keep the existing filters at a fixed ~1-week floor with **no
-   `until`** (open to the future). Never widens. New messages always arrive.
-2. **History slices** — new assemblers that load *the past* in **bounded
-   `since`+`until` slices**, each fetched once. Widening fetches only the new
-   band `[newFloor, previousFloor]`; the data already held in `[previousFloor,
-   now]` is never re-requested.
+### Two layers per protocol
 
-Because consecutive slices are disjoint, re-issuing the (advanced) historical
-filter does not re-stream earlier slices — they live in `LocalCache`. The
-NIP-17 ±2-day wrapper-timestamp margin is applied to the slice `since` (via
-`filterGiftWrapsToPubkey`), giving a 2-day overlap between adjacent slices so no
-gap can open from a randomized outer timestamp. NIP-04 (kind 4) uses exact
-timestamps, so its slices need no margin.
+Each DM protocol — **NIP-17** gift wraps (kind 1059) and **NIP-04** legacy DMs
+(kind 4) — is split into two independent responsibilities:
 
-### Slice math (gift-wrap history window)
+1. **Live tail** — a fixed ~1-week floor with **no `until`**, open to the
+   future. Never widens. New messages always arrive here. Backed by the
+   **round model** (`WindowLoadTracker`): one REQ fanned to every relay, "done"
+   when all settle, drives the boot spinner.
+2. **History** — everything *older* than the week floor, paged **backward by
+   `until`+`limit`, per relay, on demand**. Backed by the **per-relay model**
+   (`UntilLimitPager` + `PerRelayLoadTracker`), driven by on-screen markers.
 
-> Superseded by the two updates below — kept for the history of the design. The
-> `TimeWindowPagination` class this described has been removed; the history
-> managers now page by `until`+`limit` per relay (`UntilLimitPager`).
+The two are disjoint in time, so re-issuing a history page never re-streams the
+live tail, and consecutive history pages never re-stream each other.
 
-`TimeWindowPagination.since` starts at `now − 1week` (= the live-tail floor).
+| Surface | Live-tail manager (round) | History manager (per-relay) |
+|---|---|---|
+| Account gift wraps (NIP-17) | `AccountGiftWrapsEoseManager` | `AccountGiftWrapsHistoryEoseManager` |
+| Conversation NIP-04 | `ChatroomNip04SubAssembler` | `ChatroomNip04HistorySubAssembler` |
+| Rooms-list NIP-04 | `ChatroomListNip04SubAssembler` | `ChatroomListNip04HistorySubAssembler` |
 
-- `loadMore`: `until = window.since` (current floor); `window.loadMore()` moves
-  `since` back geometrically; new slice = `[window.since, until]`.
-- `loadEverything`: `until = window.since`; `window.loadAll()` → `since = floor`;
-  slice = `[floor, until]` — one request for the remaining past.
-- `updateFilter` returns the **current slice** only (or empty before the first
-  `loadMore`), so the manager is idle until the user asks for older history.
+Accessed from the UI via `accountViewModel.dataSources()` as
+`.account.giftWrapsHistory`, `.chatroom.nip04History`,
+`.chatroomList.nip04History`.
 
-### Rooms-list cascade stop (stall-gate)
+### The history paging primitive: `UntilLimitPager`
 
-The rooms list auto-fill widens only while it makes progress: it remembers the
-private-room count at the last widen and stops once a widen brings in no new
-private room (kept on the history manager so it survives leaving/reopening the
-screen). "Fill until full **or nothing new found**", instead of walking to the
-10-year backstop.
+The time-window model can't tell "this relay is empty" from "this is a gap" — a
+`since`/`until` slice that returns nothing might just be a quiet stretch above
+older messages. Paging by `until`+`limit` removes that ambiguity: a relay
+returns up to `limit` (**10000**) of its newest events older than the cursor,
+**skipping gaps**, so an **empty page + EOSE is a gap-proof "nothing older"**.
 
-## Touch list
+Per relay, two cursors are kept deliberately decoupled:
 
-- `commons/.../FilterGiftWrapsToPubkey.kt`, `amethyst/.../FilterNip04DMsToMe.kt`,
-  `FilterNip04DMsFromMe.kt` — add optional `until`.
-- `AccountGiftWrapsEoseManager` — becomes the live tail (fixed week, no until).
-- `AccountGiftWrapsHistoryEoseManager` (new) — owns the window, bounded slices,
-  `loadMore`/`loadEverything`/`exhausted`, per-load instrumentation.
-- `ChatroomListNip04SubAssembler` / `ChatroomNip04SubAssembler` — live tail.
-- `ChatroomListNip04HistorySubAssembler` / `ChatroomNip04HistorySubAssembler`
-  (new) — follow the gift-wrap history slice bounds.
-- `AccountFilterAssembler`, `ChatroomListFilterAssembler`,
-  `ChatroomFilterAssembler`, `RelaySubscriptionsCoordinator` — wire the new
-  managers.
-- `ChatroomListFeedView`, `ChatroomView` — point "load older" at the history
-  managers; combine live+history `loadingMore` for spinners; add the stall-gate.
+- `requestedUntil` — the `until` the REQ carries. Moves **only** in `advance()`.
+  Leaving it untouched on EOSE is what makes paging demand-driven: a relay that
+  finished a page just **parks** at the same filter (no re-REQ) until advanced.
+- `reachedUntil` — the oldest `created_at` actually delivered. Moves on EOSE.
+  The in-stream markers sit here; the next page starts at `reachedUntil − 1`.
 
-## Update: time-slices → `until`+`limit` paging
+Stop signals: an empty page marks the relay **`done`**. A relay returning fewer
+than `limit` is treated as its own cap, **not** exhaustion. A misbehaving relay
+that returns events but none older than already reached (echoing its newest
+events) is also treated as the bottom, so its marker can't re-request the same
+window forever. Tested in `UntilLimitPagerTest.kt`.
 
-The time-slice history (above) bounded re-downloads but still couldn't tell
-"this relay is empty" from "this is a gap" — an empty slice might sit above
-older messages, so the only stop was the 10-year `maxLookback`, and a wide late
-slice could pull a 20k-event firehose.
+### The two completion models (and where each lives)
 
-The history managers now page **backward by `until`+`limit`, per relay**
-(`UntilLimitPager`). A relay returns up to `limit` (10000) events older than its
-cursor, **skipping gaps**, so an empty page + EOSE is a gap-proof "nothing older"
-signal. A relay returning fewer is treated as its own cap, not exhaustion (only
-empty ends it). A relay answering CLOSED isn't "empty" (it may answer post-auth),
-so the **global** exhausted flag flips only when a whole round advances no relay
-at all. `limit` also caps per-request volume.
+**Round model — `WindowLoadTracker` (live tail only).** One REQ is fanned to all
+relays; the window is "done" only when **every** expected relay reaches a
+terminal signal (`settled ⊇ expected`), with backstops for stragglers (idle /
+silence / connect-grace / absolute cap). `loading` starts **`true`**. This is a
+*barrier*: nobody moves on until the cohort answers. It is the right shape for
+the one-shot fixed-window backfill the live tail does.
 
-Both NIP-04 history managers now paginate themselves (per relay) instead of
-following the gift-wrap slice; `loadEverything` pages to the end by auto-issuing
-the next round until exhausted. The live tail and stall-gate are unchanged.
+> Note: the silence + connect-grace backstops are gated behind `tracksReqSends`,
+> and **none of the three live-tail managers pass `tracksReqSends = true`**, so
+> in current use only the settle / idle / cap paths ever fire. The REQ-aware
+> machinery is dormant in production — see "Things to scrutinize".
 
-## Update 2: NIP-04 filters scoped per relay
+**Per-relay model — `UntilLimitPager` + `PerRelayLoadTracker` (all history).**
+Each relay advances to its next page the instant *it* EOSEs, independent of the
+others; the subscription layer diffs per relay, so re-issuing only re-REQs the
+relay whose cursor moved. `loading` starts **`false`** (a `true` start would
+wedge the scroll loader's `!loading` gate on first open). Fast relays race to
+the bottom in back-to-back pages; slow / auth-walled relays catch up at their
+own pace and **none are abandoned** — a stalled relay keeps its subscription
+open and resumes when re-advanced. This removes the round model's
+slowest-relay coupling, which matters most on the conversation screen where the
+fan-out includes correspondents' (often auth-walled, slow) relays.
 
-A conversation's NIP-04 filters named the whole participant set on every relay,
-so a relay that belongs to one correspondent was still asked about all of them
-(`{authors:[bob,charlie]}` sent to a relay that is only charlie's), and the
-`from-me` leg (`authors:[me]`) was sent to the correspondents' inbox relays —
-which auth-walled relays (ditto: "all authors must be authenticated") reject
-outright, stalling the load.
+`exhausted` (per history manager) flips true when **every relay is `done` OR
+`stalled`** — "nothing more reachable right now". A merely *parked* relay (more
+to load, just not advancing) keeps it false.
 
-`Nip04DmRelays` is now two **per-relay key maps** (`relay → which keys to name
-there`), built from the outbox model:
+> All three history managers (`AccountGiftWrapsHistoryEoseManager`,
+> `ChatroomNip04HistorySubAssembler`, `ChatroomListNip04HistorySubAssembler`)
+> are structurally the same per-relay loader. The earlier round-model history
+> (and the rooms-list "stall-gate") was fully removed — see Design evolution.
+
+### What drives `advance()`: on-screen markers, off viewport visibility
+
+History paging is demand-driven by **per-relay window-limit markers** placed in
+the message stream, not by a scroll-position trigger:
+
+- **`RelayWindowLimit`** — one per (protocol, relay): its `reachedUntil` depth,
+  its `RelayReachState` (`REACHING ↓` / `STALLED …` / `DONE ✓`), and the
+  `advance()` that pulls *that relay's* next page. Built in the feed views from
+  each history manager's `relayProgress` map (gift wraps + NIP-04 combined; a
+  protocol drops out of the list once `exhausted`).
+- **`RelayWindowLimitSentinels`** — the load *driver*, **hoisted above the
+  `LazyColumn`** (via `ChatFeedView`'s `sentinels` slot). Each non-done limit
+  gets one stable effect (keyed by `protocol:url`) that watches `listState` and
+  fires `advance()` when its gap is among the **currently visible rows** AND
+  either it just scrolled into view OR its `reachedUntil` moved (a page landed —
+  keep paging while visible). Driving off **viewport visibility** instead of row
+  composition is deliberate: an earlier version placed the sentinel *inside* the
+  hosting row, so any feed reorder (a live DM, a slow relay dribbling a page)
+  tore the effect down and re-fired `advance()` on a static screen — re-arming
+  stalled relays into a silence-watchdog storm. (commit `0394ec2a`)
+- **`RelayWindowLimitMarkers` / `RelayReachMarker`** — pure UI (via the
+  `markersInGap` slot): the "Relay sync: ✓ 8 · ↓ 1" divider at each relay's
+  reached depth. Can be re-placed on every reorder without triggering paging.
+- **`BootstrapHistoryWhenEmpty`** — when the feed is genuinely `Empty` (the live
+  tail came back empty for a thread/list whose newest message is older than a
+  week) there are no rows to host markers, so this steps every relay one page at
+  a time (debounced 1200ms, gated per loader on `!loading && !exhausted`) until
+  messages appear and the markers take over, or the protocol exhausts.
+
+### NIP-04 per-relay filter scoping (`Nip04DmRelays`)
+
+A conversation's NIP-04 filters previously named the whole participant set on
+every relay, so a relay belonging to one correspondent was asked about all of
+them, and the `from-me` leg (`authors:[me]`) was sent to correspondents' inbox
+relays — which auth-walled relays reject outright ("all authors must be
+authenticated"), stalling the load.
+
+`Nip04DmRelays` (in `FilterNip04DMs.kt`) is now two **per-relay key maps**
+(`relay → which keys to name there`), built from the outbox model:
 
 - **to me** (`#p:[me]`) — my inbox carries the whole group; each correspondent's
   outbox carries only that correspondent.
 - **from me** (`authors:[me]`) — my outbox carries the whole group; each
   correspondent's inbox carries only that correspondent.
 
-Relays shared across roles union their key sets, so a relay only ever sees the
-keys that actually own it.
+So a relay only ever sees the keys that actually own it. The **conversation**
+history manager scopes its REQ to the armed relays' key sets this way; the
+**rooms-list** and **gift-wrap** history managers query only the account's *own*
+relays (home outbox `from-me` + DM inbox `to-me`, via `filterNip04DMsFromMe` /
+`filterNip04DMsToMe` and `filterGiftWrapsToPubkey`), which is why their fan-out
+stays fast and reachable.
 
-## Update 3: per-relay independent paging + in-stream markers (convo only)
+### Status card terminal states (`DmHistoryLoadingCard`)
 
-The round model paced every relay at the slowest one: each `loadMore` issued one
-page to all active relays and waited for the slowest to settle before the next.
-Fast own-relays that hold the whole conversation were stuck behind a
-correspondent's 15 s timeout.
+One card per protocol at its oldest-loaded boundary. While paging it shows the
+protocol tag, "N relays" being asked, and the reach-back date; it is tappable
+into a per-relay popup (`DmHistoryRelayDialog`) listing every relay with
+`✓` done / `…` stalled / `↓` reaching and how far back each paged.
 
-`ChatroomNip04HistorySubAssembler` was rewritten to page **each relay
-independently, no rounds**. A relay continues to its next page the instant *it*
-EOSEs (the subscription layer diffs per relay, so re-issuing only re-REQs the
-relay whose cursor moved; the others' in-flight REQs are untouched). Fast relays
-race to the bottom in back-to-back pages; slow / auth-walled relays catch up at
-their own pace — **none are abandoned** (they keep their subscription open and
-keep trying), so every relay converges on the same window.
+Because `exhausted` conflates `done` and `stalled`, the terminal state is split
+on `stalledCount` so it can't overclaim (commit `813110cc`):
 
-- A relay is **done** on an empty page; one that won't answer (auth CLOSE,
-  unreachable, silent) is flagged **stalled** but kept open.
-- `loadingMore` reflects "is anything still advancing"; it clears once every
-  relay is done or stalled. It is exposed as a flow that **starts `false`** (not
-  `windowLoad.loading`, which starts `true` and would wedge the scroll loader's
-  `!loading` gate on first open), and the assembler tracks `windowActive` itself
-  so the first `loadMore` actually starts the window.
-- `relayProgress` (`relay → reached-back / done / stalled`) feeds **in-stream
-  markers** (`RelayReachMarker`, wired through `ChatFeedView.markersInGap`): a
-  thin divider per relay at the depth it has reached, sliding down as it pages
-  and converging — `↓` reaching, `…` stalled, `✓` done.
+- **caught up** (every relay `done`, `stalledCount == 0`) → "All caught up",
+  lingers ~2.2s then collapses.
+- **incomplete** (≥1 stalled) → "Some relays didn't respond · N unreachable",
+  error-coloured `…`, **stays put** (no collapse), tappable to see which.
 
-The **rooms-list and gift-wrap** history managers still use the round model
-(`AccountGiftWrapsHistoryEoseManager`,
-`ChatroomListNip04HistorySubAssembler`) — they query only the account's own
-(fast, reachable) relays, so the lock-step never bites there. Only the
-conversation screen, which fans out to correspondents' relays, needed the
-per-relay rewrite.
+### Reply placeholder (`LoadingReplyNote`)
 
-### Window completion backstops (`WindowLoadTracker`)
+A reply whose target message hasn't been paged in yet isn't *missing*, it's
+older than the loaded window (and for gift wraps the rumor id isn't even
+queryable — only the outer 1059 wrap is). Instead of the generic `BlankNote`
+("post not found"), `LoadingReplyNote` actively walks the relevant protocol's
+history backward (kicking `advanceAll` each time a page settles) until the
+target decrypts (the surrounding `WatchNoteEvent` crossfades the real message in
+and disposes this) or the protocol exhausts. Its terminal state mirrors the
+card: "Couldn't find this message" + an honest subtitle ("N relays unreachable ·
+tap to see which" when stalled, "Searched every relay · tap to see" when
+genuinely done), tappable into the same per-relay popup. Wired via
+`ChatMessageCompose.RenderReply` → `WatchNoteEvent(onBlank = …)`, with the pager
+chosen by the parent event's protocol (`DmReplyProtocol.NIP17` / `NIP04`).
 
-The shared window tracker finishes when every relay reaches a terminal signal
-(EOSE / CLOSED / cannot-connect), with three backstops for misbehaving relays:
-**idle** (every still-waited relay was heard from and the stream went quiet),
-**silence** (a relay that got its REQ but answered nothing for 10 s), and
-**connect-grace** (a relay that never even received its REQ within 15 s, stuck
-connecting). The two REQ-aware backstops are gated behind `tracksReqSends`, set
-only by the convo manager — without it an always-empty `reqSentAt` would make
-every relay look connect-stalled and complete the window before its REQs even
-went out. Silent relays are reported via `onAbandoned`; the tracker only stops
-waiting, the owner decides what to do (the convo keeps them and flags stalled).
+### Diagnostics
 
-## Diagnostics
-
-The whole path logs under one tag, **`DMPagination`** (debug builds):
+Everything logs under one tag, **`DMPagination`** (debug builds):
 `DmRelayDiagnosticsLogger` folds the per-relay connection timeline (REQ sent,
 connect/disconnect, CLOSED/NOTICE/OK-fail) into it; `DmRelayLog` prints the
-"relays by source" breakdown per subscription; and each assembler logs its
-milestones (paging start, a relay reaching the bottom / stalling with the
-reason, the settle summary of done-vs-still-trying).
+"relays by source" breakdown (NIP-65 in/out, DM list, private storage, local)
+per subscription so an unexpected relay can be traced to the list it leaks in
+from; and each assembler logs its milestones (paging start, a relay reaching
+the bottom / stalling with the reason, the "window settled" summary of
+done-vs-still-trying, each marker fire).
+
+### Related fix: Tor guard-sample self-heal
+
+`TorService` gained a `noUsableGuards()` check that, on init, inspects Arti's
+persisted `guards.json` and wipes the on-disk state if a non-empty guard set has
+**zero** usable guards (all `disabled` / `unlisted`). This recovers the
+long-standing "can't connect to Tor → relays permanently unreachable" wedge
+(Arti disables guards past a 0.7 indeterminate-failure ratio, never re-enables
+them, and can't replenish once the 60-slot sample is full). Orthogonal to
+pagination, but it lived here because unreachable relays were part of the same
+"DM history stuck / relays never answer" symptom this branch chased.
+
+---
+
+## Component map (vs `origin/main`)
+
+**New, transport-agnostic (`service/relayClient/eoseManagers/`)**
+- `UntilLimitPager.kt` — per-relay `until`+`limit` cursor. *(+ test)*
+- `PerRelayLoadTracker.kt` — per-relay in-flight tracker + silence watchdog.
+- `WindowLoadTracker.kt` — round/barrier completion tracker (live tail). *(+ silence test)*
+- `RelayPagingProgress.kt` — `(reachedUntil, done, stalled)` per relay.
+- `DmRelayLog.kt`, diagnostics/`DmRelayDiagnosticsLogger.kt` — `DMPagination` logs.
+
+**Managers / assemblers**
+- `AccountGiftWrapsEoseManager.kt` (live tail) + `AccountGiftWrapsHistoryEoseManager.kt` (new, history).
+- `ChatroomNip04SubAssembler.kt` (live tail) + `ChatroomNip04HistorySubAssembler.kt` (new, history).
+- `ChatroomListNip04SubAssembler.kt` (live tail) + `ChatroomListNip04HistorySubAssembler.kt` (new, history).
+- `FilterNip04DMs.kt` (per-relay `Nip04DmRelays`, live + history builders), `FilterNip04DMsFromMe/ToMe.kt`, `FilterGiftWrapsToPubkey.kt` — `until`/`limit` added.
+- `AccountFilterAssembler`, `ChatroomFilterAssembler`, `ChatroomListFilterAssembler` — wire the new managers.
+
+**UI (`ui/screen/loggedIn/chats/`)**
+- `feed/DmLoadMoreIndicator.kt` — `DmHistoryLoadingCard` + per-relay dialog.
+- `feed/LoadingReplyNote.kt` — history-walking reply placeholder.
+- `feed/layouts/RelayReachMarker.kt` — `RelayWindowLimit` + sentinels (driver) + markers (UI).
+- `feed/ChatFeedView.kt` — `markersInGap` + `sentinels` slots.
+- `feed/ChatMessageCompose.kt` — reply `onBlank` wiring.
+- `privateDM/ChatroomView.kt`, `rooms/feed/ChatroomListFeedView.kt` — assemble cards/markers/sentinels, `BootstrapHistoryWhenEmpty`.
+- `res/values/strings.xml` — `chats_history_*` / `chats_reply_*`.
+
+---
+
+## Things to scrutinize (review notes)
+
+1. **`exhausted` conflates `done` + `stalled`** at the manager level. The cards
+   now distinguish them via `stalledCount`, but other consumers (the scroll
+   `!loading` gates, `LoadingReplyNote`'s advance loop) treat stalled as
+   terminal. Intentional (don't hammer dead relays), but confirm it's desired.
+2. **`PerRelayLoadTracker.lastActivityMs` is global, not per-relay** — once the
+   chatty relays finish, a legitimately-slow relay gets the full 15s silence
+   window and can be marked stalled mid-delivery of a 10000-event page.
+3. **"All caught up" can still be technically-true-but-misleading** when
+   `stalledCount == 0` yet a chat's messages live on a relay *not in the
+   account's NIP-17 inbox list* — an outbox-coverage gap the card can't detect.
+4. **`WindowLoadTracker`'s REQ-aware backstops are dormant** in production
+   (no live-tail manager sets `tracksReqSends`). Either the live tail should
+   adopt them or the round model could be slimmer for its current role.
+5. **`PAGE_LIMIT = 10000`** caps per-request volume but a single page can still
+   be a large payload on a dense relay.
+
+---
+
+## Design evolution (historical — superseded, do not trust for current behavior)
+
+These sections describe earlier iterations, kept for context. The code has
+moved past all of them.
+
+### v1 — time-slice history (superseded by `UntilLimitPager`)
+
+History was first loaded in bounded `since`+`until` **time slices**
+(`TimeWindowPagination`, now deleted): `loadMore` fetched only the new band
+`[newFloor, previousFloor]`, with a NIP-17 ±2-day wrapper-timestamp margin on
+the slice `since` for gift wraps. This bounded re-downloads but still couldn't
+tell an empty relay from a gap (an empty slice might sit above older messages),
+so the only stop was a 10-year `maxLookback`, and a wide late slice could pull a
+20k-event firehose. Replaced by per-relay `until`+`limit` paging.
+
+### v2 — round-model history + rooms-list "stall-gate" (both removed)
+
+History paging once used the **round model** (`WindowLoadTracker`): each
+`loadMore` issued one page to all active relays and waited for the slowest to
+settle before the next — pacing every relay at the slowest one. The rooms list
+additionally had a **stall-gate**: an auto-fill loop that widened only while it
+brought in new private rooms, stopping once a widen added none (to avoid the
+conversation-keyed cascade).
+
+Both are gone. All history paging is now per-relay independent
+(`PerRelayLoadTracker`), and the rooms list pages to exhaustion off marker
+visibility like the conversation (commit `98fb8720` dropped the stall-gate;
+`60b8629a` / `9f0ecd54` moved gift-wrap and rooms-list history onto the per-relay
+model). `WindowLoadTracker` survives **only** as the live-tail completion
+barrier. An earlier revision of this doc ("Update 3") still claimed rooms-list
+and gift-wrap history used the round model — that is no longer true.
