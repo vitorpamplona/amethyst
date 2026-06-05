@@ -28,21 +28,22 @@ import kotlin.concurrent.Volatile
  * Per-relay `until`+`limit` pagination cursors for **one scope** (one account, or one conversation):
  * how far back each relay has been *asked* to load, and how far it has actually *delivered*.
  *
- * Pure state, no orchestration — the spinner / stall / exhaustion / live flows are the orchestrator's
- * job (`BackwardRelayPager`). It lives on the owning domain object (a `Chatroom`, or a `ChatroomList`
- * for the account-level feeds), so it shares the lifetime of the cached messages it describes and needs
- * no key: the object graph *is* the partition.
+ * Pure paging state, no orchestration — the loading / stall / exhaustion / live status a caller shows
+ * around paging is a separate concern, layered on top by a driver (in this library, `BackwardRelayPager`).
+ * It carries no key on purpose: the caller holds one instance per scope on whatever object owns that
+ * scope, so the cursors share that object's lifetime and the object graph is the partition — not a map
+ * kept in here.
  *
  * Why `until`+`limit` and not a time window: a `since`/`until` slice that comes back empty can't tell
  * "nothing older here" from "just a quiet gap". `until`+`limit` returns the N newest events older than
  * `until`, skipping gaps — so an **empty page + EOSE is the gap-proof stop** ([isDone]). (A short page,
- * fewer than the limit, is the relay capping us, not the bottom.)
+ * fewer than the limit, is the relay capping the response, not the bottom.)
  *
  * Two cursors per relay, kept apart so a relay never pages past what it was asked:
  *  - [requestedUntilFor] — the `until` its REQ carries; moves only in [advance]. Untouched on EOSE, so a
  *    finished page just parks (no re-REQ) until advanced again — this is what makes paging demand-driven.
- *  - reached ([reachedUntilFor]) — the oldest `created_at` it has delivered; moves on EOSE. The in-stream
- *    marker sits here, and the next [advance] starts just below it.
+ *  - reached ([reachedUntilFor]) — the oldest `created_at` it has delivered; moves on EOSE. This is the
+ *    "loaded back to here" point, and the next [advance] starts just below it.
  *
  * No locks of its own: each relay's callbacks are serialized, the cursor fields are `@Volatile`, and the
  * relay map is the thread-safe [LargeCache] (keyed by [NormalizedRelayUrl], which orders consistently
@@ -54,7 +55,7 @@ class RelayLoadingCursors {
         @Volatile var requestedUntil: Long? = null
 
         // The oldest created_at this relay has delivered; null until its first non-empty page. Moves on
-        // EOSE. The marker sits here and the next page starts just below it.
+        // EOSE. This is the "loaded back to here" point; the next page starts just below it.
         @Volatile var reachedUntil: Long? = null
 
         // Set once the relay answered an empty page with EOSE: there is nothing older on it.
@@ -69,9 +70,10 @@ class RelayLoadingCursors {
     private val cursors = LargeCache<NormalizedRelayUrl, RelayCursor>()
 
     /**
-     * The history floor this scope pages down from (`now − liveTail`, pinned by the owner on first
-     * advance). Kept here so it persists with the scope and doesn't drift on recompute — an undelivered
-     * relay's marker sits at this floor, and a moving floor would re-fire its sentinel.
+     * The history floor this scope pages down from (e.g. `now − liveTail`, pinned by the owner on first
+     * advance). Kept here so it persists with the scope and doesn't drift on recompute — a relay that
+     * hasn't delivered yet reports this floor as its reached point, and a moving floor would make a
+     * demand-driven loader re-fire on it.
      */
     @Volatile
     var floor: Long? = null
@@ -81,7 +83,7 @@ class RelayLoadingCursors {
     /** The `until` [relay]'s REQ currently carries. Only meaningful once it has been [advance]d. */
     fun requestedUntilFor(relay: NormalizedRelayUrl): Long? = cursor(relay).requestedUntil
 
-    /** The oldest point [relay] has reached (its marker depth), or [start] if it hasn't delivered yet. */
+    /** The oldest point [relay] has reached, or [start] if it hasn't delivered yet. */
     fun reachedUntilFor(
         relay: NormalizedRelayUrl,
         start: Long,
@@ -93,7 +95,7 @@ class RelayLoadingCursors {
     /**
      * Steps [relay] to its next, older page: points its REQ just below the oldest event it has delivered
      * (or [start] for its very first page) and clears the page tally. No-op (returns false) if the relay
-     * has already paged to the bottom ([isDone]). The owner re-issues the REQ after this (invalidateFilters).
+     * has already paged to the bottom ([isDone]). The owner re-issues the relay's REQ after this.
      */
     fun advance(
         relay: NormalizedRelayUrl,
@@ -134,8 +136,8 @@ class RelayLoadingCursors {
         } else {
             // The reached cursor must move strictly older every page (the next page asks `until =
             // reached - 1`). A relay that returns events but none older than we already have — a
-            // misbehaving relay echoing the same newest events — would otherwise pin the cursor and the
-            // on-screen sentinel would re-request the same window forever. Treat that as the bottom.
+            // misbehaving relay echoing the same newest events — would otherwise pin the cursor and a
+            // demand-driven loader would re-request the same window forever. Treat that as the bottom.
             val prev = c.reachedUntil
             if (prev == null || c.pageOldest < prev) {
                 c.reachedUntil = c.pageOldest
