@@ -204,6 +204,26 @@ fun UserProfileScreen(
         } else {
             kotlinx.collections.immutable.persistentListOf()
         }
+
+    // User's replies — separate VM, same cache. Predicate inside the filter.
+    val repliesViewModel =
+        remember(pubKeyHex) {
+            DesktopFeedViewModel(
+                DesktopProfileFeedFilter(pubKeyHex, localCache, repliesOnly = true),
+                localCache,
+            )
+        }
+    DisposableEffect(repliesViewModel) {
+        onDispose { repliesViewModel.destroy() }
+    }
+    val repliesFeedState by repliesViewModel.feedState.feedContent.collectAsState()
+    val repliesLoadedNotes =
+        if (repliesFeedState is FeedState.Loaded) {
+            val loaded by (repliesFeedState as FeedState.Loaded).feed.collectAsState()
+            loaded.list
+        } else {
+            kotlinx.collections.immutable.persistentListOf()
+        }
     var retryTrigger by remember { mutableStateOf(0) }
 
     // Subscribe to profile user's text notes (kind 1) — populates cache for DesktopFeedViewModel
@@ -831,15 +851,18 @@ fun UserProfileScreen(
                                 Text("Notes", modifier = Modifier.padding(12.dp))
                             }
                             Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
+                                Text("Replies", modifier = Modifier.padding(12.dp))
+                            }
+                            Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }) {
                                 Text(
                                     "Reads${if (articleEvents.isNotEmpty()) " (${articleEvents.size})" else ""}",
                                     modifier = Modifier.padding(12.dp),
                                 )
                             }
-                            Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }) {
+                            Tab(selected = selectedTab == 3, onClick = { selectedTab = 3 }) {
                                 Text("Gallery", modifier = Modifier.padding(12.dp))
                             }
-                            Tab(selected = selectedTab == 3, onClick = { selectedTab = 3 }) {
+                            Tab(selected = selectedTab == 4, onClick = { selectedTab = 4 }) {
                                 Text(
                                     "Highlights${if (highlightEvents.isNotEmpty()) " (${highlightEvents.size})" else ""}",
                                     modifier = Modifier.padding(12.dp),
@@ -942,6 +965,96 @@ fun UserProfileScreen(
                         }
 
                         1 -> {
+                            when (repliesFeedState) {
+                                is FeedState.Loading -> {
+                                    item(key = "replies-loading") {
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                androidx.compose.material3.CircularProgressIndicator()
+                                                Spacer(Modifier.height(16.dp))
+                                                Text(
+                                                    "Loading replies...",
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                is FeedState.Empty -> {
+                                    item(key = "replies-empty") {
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Text(
+                                                "No replies yet",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                    }
+                                }
+
+                                is FeedState.FeedError -> {
+                                    item(key = "replies-error") {
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth().padding(32.dp),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Text(
+                                                    "Failed to load replies",
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    color = MaterialTheme.colorScheme.error,
+                                                )
+                                                Spacer(Modifier.height(8.dp))
+                                                Text(
+                                                    (repliesFeedState as FeedState.FeedError).errorMessage,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                                Spacer(Modifier.height(16.dp))
+                                                OutlinedButton(onClick = { retryTrigger++ }) {
+                                                    Text("Retry")
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                is FeedState.Loaded -> {
+                                    items(repliesLoadedNotes, key = { "reply-${it.idHex}" }) { note ->
+                                        FeedNoteCard(
+                                            note = note,
+                                            relayManager = relayManager,
+                                            localCache = localCache,
+                                            account = account,
+                                            nwcConnection = nwcConnection,
+                                            onReply = onCompose,
+                                            onZapFeedback = onZapFeedback,
+                                            onNavigateToProfile = onNavigateToProfile,
+                                            onNavigateToThread = onNavigateToThread,
+                                            onImageClick = { urls, index ->
+                                                lightboxState = LightboxState(urls, index)
+                                            },
+                                            onMediaClick = { urls, index, seekPos ->
+                                                com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                                    .playVideo(urls[index], seekPos)
+                                                com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+                                                    .toggleFullscreen()
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        2 -> {
                             if (articleEvents.isEmpty()) {
                                 item(key = "no-articles") {
                                     Box(
@@ -973,7 +1086,7 @@ fun UserProfileScreen(
                             }
                         }
 
-                        2 -> {
+                        3 -> {
                             item(key = "gallery") {
                                 GalleryTab(
                                     pictureEvents = pictureEvents,
@@ -983,7 +1096,7 @@ fun UserProfileScreen(
                             }
                         }
 
-                        3 -> {
+                        4 -> {
                             if (highlightEvents.isEmpty()) {
                                 item(key = "no-highlights") {
                                     Box(

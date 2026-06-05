@@ -192,16 +192,28 @@ class DesktopThreadFilter(
 
 /**
  * Profile feed: text notes + reposts by a specific pubkey.
+ *
+ * When [repliesOnly] is true, the filter switches to "Replies" mode:
+ * only the pubkey's NIP-10 reply posts (kind 1 with a parent tag) — no
+ * reposts, no top-level notes, no channel/live messages.
  */
 class DesktopProfileFeedFilter(
     private val pubkey: HexKey,
     private val cache: DesktopLocalCache,
+    private val repliesOnly: Boolean = false,
 ) : AdditiveFeedFilter<Note>() {
-    override fun feedKey(): String = "profile-$pubkey"
+    override fun feedKey(): String = if (repliesOnly) "profile-$pubkey-replies" else "profile-$pubkey"
 
     private fun isProfileNote(note: Note): Boolean {
         val event = note.event ?: return false
-        return note.author?.pubkeyHex == pubkey && isFeedNote(event)
+        if (note.author?.pubkeyHex != pubkey) return false
+        return if (repliesOnly) {
+            // event is TextNoteEvent excludes reposts AND chat-message types
+            // that !isNewThread() would otherwise let through.
+            event is TextNoteEvent && !note.isNewThread()
+        } else {
+            isFeedNote(event)
+        }
     }
 
     override fun feed(): List<Note> =
