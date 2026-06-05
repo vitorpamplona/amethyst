@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.service.playback.service.PlaybackServiceClient
 import com.vitorpamplona.amethyst.service.relayClient.CacheClientConnector
 import com.vitorpamplona.amethyst.service.relayClient.RelayProxyClientConnector
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.AuthCoordinator
+import com.vitorpamplona.amethyst.service.relayClient.dupLogger.RelayDuplicateDownloadLogger
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
@@ -510,6 +511,10 @@ class AppModules(
     val detailedLogger = if (isDebug) RelayLogger(client, debugSending = false, debugReceiving = false) else null
     val relayReqStats = if (isDebug) RelayReqStats(client) else null
     val logger = if (isDebug) RelaySpeedLogger(client) else null
+
+    // Detects events downloaded more than once from the same relay so we can
+    // refine which filter/assembler is requesting redundant data.
+    val duplicateDownloadLogger = if (isDebug) RelayDuplicateDownloadLogger(client) else null
 
     // Coordinates all subscriptions for the Nostr Client
     val sources: RelaySubscriptionsCoordinator =
