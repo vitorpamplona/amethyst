@@ -30,9 +30,8 @@ import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.paging.PerRelayLoadTracker
+import com.vitorpamplona.quartz.nip01Core.relay.client.paging.BackwardRelayPager
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayPagingProgress
-import com.vitorpamplona.quartz.nip01Core.relay.client.paging.UntilLimitPager
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
@@ -40,9 +39,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -55,9 +52,10 @@ import java.util.concurrent.ConcurrentHashMap
  * (see the rooms-list / conversation feed views). So a spam-dense relay never floods: the user has to
  * scroll through its messages to pull more, and nothing is fetched while its marker is off screen.
  *
- * A relay is *done* once it answers an empty page; one that won't answer (auth CLOSE, unreachable, or
- * silent past the load tracker's window) is flagged *stalled* but kept. [exhausted] flips once every
- * relay is either done or stalled — nothing more is reachable right now.
+ * The per-relay cursor / stall / exhaustion bookkeeping lives in the shared [BackwardRelayPager]; this
+ * class only builds the gift-wrap REQ filters and forwards relay callbacks into the pager. A relay is
+ * *done* once it answers an empty page; one that won't answer (auth CLOSE, unreachable, or silent) is
+ * flagged *stalled* but kept. [exhausted] flips once every relay is either done or stalled.
  */
 class AccountGiftWrapsHistoryEoseManager(
     client: INostrClient,
@@ -65,53 +63,22 @@ class AccountGiftWrapsHistoryEoseManager(
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
     override fun user(key: AccountQueryState) = key.account.userProfile()
 
-    // Per-relay demand-driven cursors, keyed by account pubkey so switching accounts preserves progress.
-    private val pager = UntilLimitPager<HexKey>()
-
-    // The account behind each user pubkey, captured on subscribe so the UI-thread API can read the DM
-    // relay list without the key.
+    // The account behind each user pubkey, captured on subscribe so the pager's relaysFor lookup and the
+    // advance() API can read the DM relay list (and the account scope) without the key.
     private val accounts = ConcurrentHashMap<HexKey, Account>()
 
-    // Relays not currently advancing for a user (auth CLOSE / unreachable / silent). Kept (not given up)
-    // and surfaced as stalled in the markers; they resume if the user re-advances them.
-    private val stalledRelays = ConcurrentHashMap<HexKey, MutableSet<NormalizedRelayUrl>>()
+    // Per-relay demand-driven paging, keyed by account pubkey so switching accounts preserves progress.
+    private val pager =
+        BackwardRelayPager<HexKey>("giftwrap.history") { pk ->
+            accounts[pk]?.dmRelays?.flow?.value
+        }
 
-    // Shared across accounts (singleton coordinator): repoint the display flows to the active account on
-    // switch instead of leaking the previous one's state. Cursors live in [pager].
-    @Volatile
-    private var activeUser: HexKey? = null
-    private val exhaustedByUser = ConcurrentHashMap<HexKey, Boolean>()
-
-    private val loadTracker = PerRelayLoadTracker("giftwrap.history", onSilenced = ::onRelaysSilenced)
-    val loadingMore: StateFlow<Boolean> = loadTracker.loading
-
-    private val _exhausted = MutableStateFlow(false)
-    val exhausted: StateFlow<Boolean> = _exhausted.asStateFlow()
-
-    // Relays currently fetching a page (for the "asking N relays" status line).
-    private val _relayCount = MutableStateFlow(0)
-    val relayCount: StateFlow<Int> = _relayCount.asStateFlow()
-
-    // Relays that aren't done but can't be reached right now (auth CLOSE / unreachable / silent). Surfaced
-    // on the paused card as "waiting on N relays" — they aren't in-flight, so [relayCount] wouldn't show them.
-    private val _stalledCount = MutableStateFlow(0)
-    val stalledCount: StateFlow<Int> = _stalledCount.asStateFlow()
-
-    private val _reachedBack = MutableStateFlow<Long?>(null)
-    val reachedBack: StateFlow<Long?> = _reachedBack.asStateFlow()
-
-    // Per-relay window limits — where each relay has paged to, done/stalled — the data the on-screen
-    // markers render and drive their advance from.
-    private val _relayProgress = MutableStateFlow<Map<NormalizedRelayUrl, RelayPagingProgress>>(emptyMap())
-    val relayProgress: StateFlow<Map<NormalizedRelayUrl, RelayPagingProgress>> = _relayProgress.asStateFlow()
-
-    // History starts just below the live tail's one-week floor and pages backward from there. Pinned per
-    // account for the session: it must NOT drift forward on every recompute, or an un-delivered relay's
-    // marker (which sits at this floor) would keep changing and re-trigger its on-screen sentinel. The
-    // live tail covers everything newer than the floor.
-    private val pinnedFloor = ConcurrentHashMap<HexKey, Long>()
-
-    private fun startUntil(pk: HexKey) = pinnedFloor.getOrPut(pk) { TimeUtils.now() - AccountGiftWrapsEoseManager.LIVE_TAIL_SECONDS }
+    val loadingMore: StateFlow<Boolean> = pager.loadingMore
+    val exhausted: StateFlow<Boolean> = pager.exhausted
+    val relayCount: StateFlow<Int> = pager.relayCount
+    val stalledCount: StateFlow<Int> = pager.stalledCount
+    val reachedBack: StateFlow<Long?> = pager.reachedBack
+    val relayProgress: StateFlow<Map<NormalizedRelayUrl, RelayPagingProgress>> = pager.relayProgress
 
     private fun daysAgo(epochSeconds: Long) = (TimeUtils.now() - epochSeconds) / TimeUtils.ONE_DAY
 
@@ -130,8 +97,8 @@ class AccountGiftWrapsHistoryEoseManager(
         DmRelayLog.log("giftwrap.history", key.account)
         return armed.flatMap { relay ->
             val until = pager.requestedUntilFor(user.pubkeyHex, relay) ?: return@flatMap emptyList()
-            Log.d(TAG) { "[giftwrap.history] REQ ${relay.url} until ${daysAgo(until)}d, limit=$PAGE_LIMIT" }
-            filterGiftWrapsToPubkey(relay = relay, pubkey = user.pubkeyHex, since = null, until = until, limit = PAGE_LIMIT)
+            Log.d(TAG) { "[giftwrap.history] REQ ${relay.url} until ${daysAgo(until)}d, limit=${pager.pageLimit}" }
+            filterGiftWrapsToPubkey(relay = relay, pubkey = user.pubkeyHex, since = null, until = until, limit = pager.pageLimit)
         }
     }
 
@@ -140,116 +107,25 @@ class AccountGiftWrapsHistoryEoseManager(
         user: User,
         relay: NormalizedRelayUrl,
     ) {
-        if (arm(user, relay)) {
-            _exhausted.value = false
-            updateStatus(user)
-            invalidateFilters()
-        }
+        val account = accounts[user.pubkeyHex] ?: return
+        if (pager.advance(user.pubkeyHex, relay, account.scope)) invalidateFilters()
     }
 
     /** Steps every not-done, not-in-flight relay one page. For the empty/initial boundary (nothing to scroll). */
     fun advanceAll(user: User) {
         val account = accounts[user.pubkeyHex] ?: return
-        var any = false
-        account.dmRelays.flow.value
-            .forEach { if (arm(user, it)) any = true }
-        if (any) {
+        if (pager.advanceAll(user.pubkeyHex, account.scope)) {
             Log.d(TAG) { "[giftwrap.history] advanceAll (empty-feed bootstrap)" }
-            _exhausted.value = false
-            updateStatus(user)
             invalidateFilters()
         }
-    }
-
-    // Moves one relay's cursor to its next page and marks it in-flight. Returns false if it can't advance
-    // (unknown relay, already fetching, or already done). Does NOT invalidate — the caller batches that.
-    private fun arm(
-        user: User,
-        relay: NormalizedRelayUrl,
-    ): Boolean {
-        val account = accounts[user.pubkeyHex] ?: return false
-        if (relay !in account.dmRelays.flow.value) return false
-        if (loadTracker.isInFlight(relay)) return false
-        if (!pager.advance(user.pubkeyHex, relay, startUntil(user.pubkeyHex))) return false
-        stalledRelays[user.pubkeyHex]?.remove(relay)
-        loadTracker.bind(account.scope)
-        loadTracker.onAdvance(relay)
-        return true
-    }
-
-    private fun onRelaysSilenced(relays: Set<NormalizedRelayUrl>) {
-        val pk = activeUser ?: return
-        relays.forEach { markStalled(pk, it, "no response (silence timeout)") }
-        accounts[pk]?.userProfile()?.let {
-            updateStatus(it)
-            recomputeExhausted(it)
-        }
-    }
-
-    private fun markStalled(
-        pk: HexKey,
-        relay: NormalizedRelayUrl,
-        reason: String,
-    ) {
-        val firstTime = stalledRelays.getOrPut(pk) { ConcurrentHashMap.newKeySet() }.add(relay)
-        if (firstTime) Log.d(TAG) { "[giftwrap.history] ${relay.url} stalled — $reason (kept, advance to retry)" }
-    }
-
-    private fun updateStatus(user: User) {
-        // The display flows are singletons shown for the foreground account; a background account's late
-        // EOSE must not overwrite them (its cursors still advance in the pager).
-        if (activeUser != user.pubkeyHex) return
-        val relays = accounts[user.pubkeyHex]?.dmRelays?.flow?.value ?: emptySet()
-        _relayCount.value = loadTracker.count()
-        val start = startUntil(user.pubkeyHex)
-        _reachedBack.value = pager.deepestReached(user.pubkeyHex, relays, start)
-        val stalled = stalledRelays[user.pubkeyHex] ?: emptySet()
-        _stalledCount.value = relays.count { it in stalled && !pager.isDone(user.pubkeyHex, it) }
-        _relayProgress.value =
-            relays.associateWith { relay ->
-                RelayPagingProgress(
-                    reachedUntil = pager.reachedUntilFor(user.pubkeyHex, relay, start),
-                    done = pager.isDone(user.pubkeyHex, relay),
-                    stalled = relay in stalled && !pager.isDone(user.pubkeyHex, relay),
-                )
-            }
-    }
-
-    // Exhausted once every relay is either done (empty page) or stalled (unreachable) — nothing more is
-    // reachable right now. A merely parked relay (more to load, just not advancing) keeps this false.
-    private fun recomputeExhausted(user: User) {
-        val relays = accounts[user.pubkeyHex]?.dmRelays?.flow?.value ?: return
-        if (relays.isEmpty()) return
-        val stalled = stalledRelays[user.pubkeyHex] ?: emptySet()
-        val pending = relays.any { !pager.isDone(user.pubkeyHex, it) && it !in stalled }
-        val ex = !pending
-        val was = exhaustedByUser[user.pubkeyHex] ?: false
-        exhaustedByUser[user.pubkeyHex] = ex
-        if (ex && !was) {
-            val done = relays.filter { pager.isDone(user.pubkeyHex, it) }.map { it.url }
-            val stuck = relays.filter { it in stalled && !pager.isDone(user.pubkeyHex, it) }.map { it.url }
-            Log.d(TAG) { "[giftwrap.history] window settled (nothing more reachable) — done=$done stalled=$stuck" }
-        }
-        if (activeUser == user.pubkeyHex) _exhausted.value = ex
     }
 
     override fun newSub(key: AccountQueryState): Subscription {
         val user = user(key)
         accounts[user.pubkeyHex] = key.account
-        loadTracker.bind(key.account.scope)
-        if (activeUser != user.pubkeyHex) {
-            activeUser = user.pubkeyHex
-            // Account switched: repoint the shared display flows to this account's own state.
-            loadTracker.reset()
-            _exhausted.value = exhaustedByUser[user.pubkeyHex] ?: false
-            _relayCount.value = 0
-            _stalledCount.value = 0
-            _reachedBack.value = null
-            _relayProgress.value = emptyMap()
-        }
-        // Populate the per-relay markers (all relays at the floor, not done) so the UI can render their
-        // window-limit sentinels and pull the first page when they come into view.
-        updateStatus(user)
+        // Repoint the shared display flows to this account and populate the per-relay markers (all relays
+        // at the floor, not done) so the UI can render their sentinels and pull the first page on view.
+        pager.activate(user.pubkeyHex)
         return requestNewSubscription(historyListener(user, key))
     }
 
@@ -264,25 +140,18 @@ class AccountGiftWrapsHistoryEoseManager(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                loadTracker.onActivity()
                 pager.onEvent(user.pubkeyHex, relay, event.createdAt)
-                stalledRelays[user.pubkeyHex]?.remove(relay)
             }
 
             override fun onEose(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                stalledRelays[user.pubkeyHex]?.remove(relay)
-                pager.onEose(user.pubkeyHex, relay)
-                loadTracker.onSettled(relay)
-                if (pager.isDone(user.pubkeyHex, relay)) {
+                if (pager.onEose(user.pubkeyHex, relay)) {
                     Log.d(TAG) { "[giftwrap.history] ${relay.url} reached the bottom (done)" }
                 }
                 // No auto-advance: the relay parks here until its marker asks for the next page.
                 newEose(key, relay, TimeUtils.now(), forFilters)
-                updateStatus(user)
-                recomputeExhausted(user)
             }
 
             override fun onClosed(
@@ -290,10 +159,7 @@ class AccountGiftWrapsHistoryEoseManager(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                loadTracker.onSettled(relay)
-                markStalled(user.pubkeyHex, relay, "CLOSED: $message")
-                updateStatus(user)
-                recomputeExhausted(user)
+                pager.onClosed(user.pubkeyHex, relay, message)
             }
 
             override fun onCannotConnect(
@@ -301,19 +167,11 @@ class AccountGiftWrapsHistoryEoseManager(
                 message: String,
                 forFilters: List<Filter>?,
             ) {
-                loadTracker.onSettled(relay)
-                markStalled(user.pubkeyHex, relay, "cannot connect: $message")
-                updateStatus(user)
-                recomputeExhausted(user)
+                pager.onCannotConnect(user.pubkeyHex, relay, message)
             }
         }
 
     companion object {
         private const val TAG = "DMPagination"
-
-        // Asked of every relay per page. Large on purpose: we want a whole band in one page where the
-        // relay allows it. A relay returning fewer is treated as its own cap, NOT as "nothing more" —
-        // only an empty page + EOSE ends a relay.
-        private const val PAGE_LIMIT = 10000
     }
 }

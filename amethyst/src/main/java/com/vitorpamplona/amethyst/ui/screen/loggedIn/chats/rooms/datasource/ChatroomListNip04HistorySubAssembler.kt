@@ -24,14 +24,12 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.paging.PerRelayLoadTracker
+import com.vitorpamplona.quartz.nip01Core.relay.client.paging.BackwardRelayPager
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayPagingProgress
-import com.vitorpamplona.quartz.nip01Core.relay.client.paging.UntilLimitPager
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
@@ -39,9 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -50,48 +46,30 @@ import java.util.concurrent.ConcurrentHashMap
  * ([com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsHistoryEoseManager]),
  * across the account's home (outbox, *from me*) + DM (inbox, *to me*) relays. Each relay advances one
  * page when its on-screen window-limit marker asks ([advance]); otherwise it parks. Nothing is walked
- * proactively.
+ * proactively. The per-relay cursor / stall / exhaustion bookkeeping lives in [BackwardRelayPager].
  */
 class ChatroomListNip04HistorySubAssembler(
     client: INostrClient,
     allKeys: () -> Set<ChatroomListState>,
 ) : PerUserEoseManager<ChatroomListState>(client, allKeys) {
-    private val pager = UntilLimitPager<HexKey>()
     private val accounts = ConcurrentHashMap<HexKey, Account>()
-    private val stalledRelays = ConcurrentHashMap<HexKey, MutableSet<NormalizedRelayUrl>>()
-
-    @Volatile
-    private var activeUser: HexKey? = null
-    private val exhaustedByUser = ConcurrentHashMap<HexKey, Boolean>()
-
-    private val loadTracker = PerRelayLoadTracker("rooms.nip04.history", onSilenced = ::onRelaysSilenced)
-    val loadingMore: StateFlow<Boolean> = loadTracker.loading
-
-    private val _exhausted = MutableStateFlow(false)
-    val exhausted: StateFlow<Boolean> = _exhausted.asStateFlow()
-
-    private val _relayCount = MutableStateFlow(0)
-    val relayCount: StateFlow<Int> = _relayCount.asStateFlow()
-
-    // Not-done relays that can't be reached right now — shown as "waiting on N relays" on the paused card.
-    private val _stalledCount = MutableStateFlow(0)
-    val stalledCount: StateFlow<Int> = _stalledCount.asStateFlow()
-
-    private val _reachedBack = MutableStateFlow<Long?>(null)
-    val reachedBack: StateFlow<Long?> = _reachedBack.asStateFlow()
-
-    private val _relayProgress = MutableStateFlow<Map<NormalizedRelayUrl, RelayPagingProgress>>(emptyMap())
-    val relayProgress: StateFlow<Map<NormalizedRelayUrl, RelayPagingProgress>> = _relayProgress.asStateFlow()
-
-    // Pinned per account for the session — must not drift forward, or an un-delivered relay's marker
-    // would keep moving and re-trigger its sentinel. See AccountGiftWrapsHistoryEoseManager.
-    private val pinnedFloor = ConcurrentHashMap<HexKey, Long>()
-
-    private fun startUntil(pk: HexKey) = pinnedFloor.getOrPut(pk) { TimeUtils.now() - AccountGiftWrapsEoseManager.LIVE_TAIL_SECONDS }
-
-    override fun user(key: ChatroomListState) = key.account.userProfile()
 
     private fun allRelays(account: Account) = (account.homeRelays.flow.value + account.dmRelays.flow.value).toSet()
+
+    // Paged across the account's own home (outbox) + DM (inbox) relays, keyed by account pubkey.
+    private val pager =
+        BackwardRelayPager<HexKey>("rooms.nip04.history") { pk ->
+            accounts[pk]?.let { allRelays(it) }
+        }
+
+    val loadingMore: StateFlow<Boolean> = pager.loadingMore
+    val exhausted: StateFlow<Boolean> = pager.exhausted
+    val relayCount: StateFlow<Int> = pager.relayCount
+    val stalledCount: StateFlow<Int> = pager.stalledCount
+    val reachedBack: StateFlow<Long?> = pager.reachedBack
+    val relayProgress: StateFlow<Map<NormalizedRelayUrl, RelayPagingProgress>> = pager.relayProgress
+
+    override fun user(key: ChatroomListState) = key.account.userProfile()
 
     override fun updateFilter(
         key: ChatroomListState,
@@ -107,8 +85,8 @@ class ChatroomListNip04HistorySubAssembler(
         return armed.flatMap { relay ->
             val until = pager.requestedUntilFor(user.pubkeyHex, relay) ?: return@flatMap emptyList()
             buildList {
-                if (relay in homeRelays) add(filterNip04DMsFromMe(user, relay, since = null, until = until, limit = PAGE_LIMIT))
-                if (relay in dmRelays) add(filterNip04DMsToMe(user, relay, since = null, until = until, limit = PAGE_LIMIT))
+                if (relay in homeRelays) add(filterNip04DMsFromMe(user, relay, since = null, until = until, limit = pager.pageLimit))
+                if (relay in dmRelays) add(filterNip04DMsToMe(user, relay, since = null, until = until, limit = pager.pageLimit))
             }
         }
     }
@@ -118,112 +96,25 @@ class ChatroomListNip04HistorySubAssembler(
         user: User,
         relay: NormalizedRelayUrl,
     ) {
-        if (arm(user, relay)) {
-            _exhausted.value = false
-            updateStatus(user)
-            invalidateFilters()
-        }
+        val account = accounts[user.pubkeyHex] ?: return
+        if (pager.advance(user.pubkeyHex, relay, account.scope)) invalidateFilters()
     }
 
     /** Steps every not-done, not-in-flight relay one page. For the empty/initial boundary (nothing to scroll). */
     fun advanceAll(user: User) {
         val account = accounts[user.pubkeyHex] ?: return
-        var any = false
-        allRelays(account).forEach { if (arm(user, it)) any = true }
-        if (any) {
+        if (pager.advanceAll(user.pubkeyHex, account.scope)) {
             Log.d("DMPagination") { "[rooms.nip04.history] advanceAll (empty-feed bootstrap)" }
-            _exhausted.value = false
-            updateStatus(user)
             invalidateFilters()
         }
-    }
-
-    private fun arm(
-        user: User,
-        relay: NormalizedRelayUrl,
-    ): Boolean {
-        val account = accounts[user.pubkeyHex] ?: return false
-        if (relay !in allRelays(account)) return false
-        if (loadTracker.isInFlight(relay)) return false
-        if (!pager.advance(user.pubkeyHex, relay, startUntil(user.pubkeyHex))) return false
-        stalledRelays[user.pubkeyHex]?.remove(relay)
-        loadTracker.bind(account.scope)
-        loadTracker.onAdvance(relay)
-        return true
-    }
-
-    private fun onRelaysSilenced(relays: Set<NormalizedRelayUrl>) {
-        val pk = activeUser ?: return
-        relays.forEach { markStalled(pk, it, "no response (silence timeout)") }
-        accounts[pk]?.userProfile()?.let {
-            updateStatus(it)
-            recomputeExhausted(it)
-        }
-    }
-
-    private fun markStalled(
-        pk: HexKey,
-        relay: NormalizedRelayUrl,
-        reason: String,
-    ) {
-        val firstTime = stalledRelays.getOrPut(pk) { ConcurrentHashMap.newKeySet() }.add(relay)
-        if (firstTime) Log.d("DMPagination") { "[rooms.nip04.history] ${relay.url} stalled — $reason (kept, advance to retry)" }
-    }
-
-    private fun updateStatus(user: User) {
-        // The display flows are singletons shown for the foreground account; a background account's late
-        // EOSE must not overwrite them (its cursors still advance in the pager).
-        if (activeUser != user.pubkeyHex) return
-        val account = accounts[user.pubkeyHex]
-        val relays = account?.let { allRelays(it) } ?: emptySet()
-        _relayCount.value = loadTracker.count()
-        val start = startUntil(user.pubkeyHex)
-        _reachedBack.value = pager.deepestReached(user.pubkeyHex, relays, start)
-        val stalled = stalledRelays[user.pubkeyHex] ?: emptySet()
-        _stalledCount.value = relays.count { it in stalled && !pager.isDone(user.pubkeyHex, it) }
-        _relayProgress.value =
-            relays.associateWith { relay ->
-                RelayPagingProgress(
-                    reachedUntil = pager.reachedUntilFor(user.pubkeyHex, relay, start),
-                    done = pager.isDone(user.pubkeyHex, relay),
-                    stalled = relay in stalled && !pager.isDone(user.pubkeyHex, relay),
-                )
-            }
-    }
-
-    private fun recomputeExhausted(user: User) {
-        val account = accounts[user.pubkeyHex] ?: return
-        val relays = allRelays(account)
-        if (relays.isEmpty()) return
-        val stalled = stalledRelays[user.pubkeyHex] ?: emptySet()
-        val pending = relays.any { !pager.isDone(user.pubkeyHex, it) && it !in stalled }
-        val ex = !pending
-        val was = exhaustedByUser[user.pubkeyHex] ?: false
-        exhaustedByUser[user.pubkeyHex] = ex
-        if (ex && !was) {
-            val done = relays.filter { pager.isDone(user.pubkeyHex, it) }.map { it.url }
-            val stuck = relays.filter { it in stalled && !pager.isDone(user.pubkeyHex, it) }.map { it.url }
-            Log.d("DMPagination") { "[rooms.nip04.history] window settled (nothing more reachable) — done=$done stalled=$stuck" }
-        }
-        if (activeUser == user.pubkeyHex) _exhausted.value = ex
     }
 
     override fun newSub(key: ChatroomListState): Subscription {
         val user = user(key)
         accounts[user.pubkeyHex] = key.account
-        loadTracker.bind(key.account.scope)
-        if (activeUser != user.pubkeyHex) {
-            activeUser = user.pubkeyHex
-            loadTracker.reset()
-            _exhausted.value = exhaustedByUser[user.pubkeyHex] ?: false
-            _relayCount.value = 0
-            _stalledCount.value = 0
-            _reachedBack.value = null
-            _relayProgress.value = emptyMap()
-        }
-        // Populate the per-relay markers (all relays at the floor, not done) so the UI can render their
-        // window-limit sentinels and pull the first page when they come into view.
-        updateStatus(user)
+        // Repoint the shared display flows to this account and populate the per-relay markers (all relays
+        // at the floor, not done) so the UI can render their sentinels and pull the first page on view.
+        pager.activate(user.pubkeyHex)
         return requestNewSubscription(historyListener(user, key))
     }
 
@@ -238,24 +129,17 @@ class ChatroomListNip04HistorySubAssembler(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                loadTracker.onActivity()
                 pager.onEvent(user.pubkeyHex, relay, event.createdAt)
-                stalledRelays[user.pubkeyHex]?.remove(relay)
             }
 
             override fun onEose(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                stalledRelays[user.pubkeyHex]?.remove(relay)
-                pager.onEose(user.pubkeyHex, relay)
-                loadTracker.onSettled(relay)
-                if (pager.isDone(user.pubkeyHex, relay)) {
+                if (pager.onEose(user.pubkeyHex, relay)) {
                     Log.d("DMPagination") { "[rooms.nip04.history] ${relay.url} reached the bottom (done)" }
                 }
                 newEose(key, relay, TimeUtils.now(), forFilters)
-                updateStatus(user)
-                recomputeExhausted(user)
             }
 
             override fun onClosed(
@@ -263,10 +147,7 @@ class ChatroomListNip04HistorySubAssembler(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                loadTracker.onSettled(relay)
-                markStalled(user.pubkeyHex, relay, "CLOSED: $message")
-                updateStatus(user)
-                recomputeExhausted(user)
+                pager.onClosed(user.pubkeyHex, relay, message)
             }
 
             override fun onCannotConnect(
@@ -274,14 +155,7 @@ class ChatroomListNip04HistorySubAssembler(
                 message: String,
                 forFilters: List<Filter>?,
             ) {
-                loadTracker.onSettled(relay)
-                markStalled(user.pubkeyHex, relay, "cannot connect: $message")
-                updateStatus(user)
-                recomputeExhausted(user)
+                pager.onCannotConnect(user.pubkeyHex, relay, message)
             }
         }
-
-    companion object {
-        private const val PAGE_LIMIT = 10000
-    }
 }
