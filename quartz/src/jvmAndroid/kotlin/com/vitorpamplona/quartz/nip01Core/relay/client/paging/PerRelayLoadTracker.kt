@@ -34,11 +34,10 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Tracks which relays currently have a demand-driven history page **in flight**, so the loading card
- * can show a spinner while any relay is fetching and clear it the moment they've all answered (or
- * parked). Unlike [WindowLoadTracker] this has no notion of a "window" or "round" — relays are advanced
- * one page at a time, independently, by their on-screen markers, so completion is simply "nothing in
- * flight."
+ * Tracks which relays currently have a demand-driven history page **in flight**, so a caller can show a
+ * spinner while any relay is fetching and clear it the moment they've all answered (or parked). Unlike
+ * [WindowLoadTracker] this has no notion of a "window" or "round" — relays are advanced one page at a
+ * time, independently, on demand by the caller, so completion is simply "nothing in flight."
  *
  * A single backstop covers a relay that accepts a REQ and then goes silent (auth-walled / dead): if
  * nothing has been heard from ANY in-flight relay for [silenceMs], the still-pending relays are dropped
@@ -96,7 +95,7 @@ class PerRelayLoadTracker(
     /**
      * A relay answered (EOSE / CLOSED / cannot-connect). Drops it from in-flight. When the last one
      * settles, the spinner is dropped after a short linger rather than immediately, so a relay paging
-     * page-after-page (each page settles then the marker fires the next) keeps a steady spinner instead
+     * page-after-page (each page settles, then the caller advances the next) keeps a steady spinner instead
      * of flickering it off for the few ms between pages. The linger is cancelled the moment a new page
      * starts ([onAdvance]).
      */
@@ -122,7 +121,7 @@ class PerRelayLoadTracker(
             }
     }
 
-    /** Drops everything (e.g. account/conversation switched). */
+    /** Drops everything (e.g. the bound scope switched). */
     @Synchronized
     fun reset() {
         inFlight.clear()

@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.paging
 
-/** How far back one relay has paged a DM history, for the per-relay progress markers. */
+/** How far back one relay has paged through its history, for a per-relay progress display. */
 data class RelayPagingProgress(
-    // The oldest createdAt this relay has loaded down to (its `until` cursor). The marker sits here and
-    // slides down (older) as the relay pages further back.
+    // The oldest createdAt this relay has loaded down to (its `until` cursor). This is the "loaded back
+    // to" point; it slides down (older) as the relay pages further back.
     val reachedUntil: Long,
     // The relay answered an empty page: it has nothing older, it has reached the bottom of its window.
     val done: Boolean,

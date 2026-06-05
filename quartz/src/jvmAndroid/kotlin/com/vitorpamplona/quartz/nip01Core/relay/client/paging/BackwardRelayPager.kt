@@ -35,11 +35,10 @@ import java.util.concurrent.ConcurrentHashMap
  * relay advancing independently the moment *it* settles, never paced by the slowest one.
  *
  * This is the **single-active orchestrator** around the paging state. The state itself (the per-relay
- * [RelayLoadingCursors] cursors) does NOT live here — it lives on the owning domain object (a `Chatroom`
- * for a conversation, a `ChatroomList` for the account-level feeds), so its lifetime matches the cached
- * messages it describes. One orchestrator drives whichever scope is on screen; calling [bind] repoints
- * it at that scope's cursors. This is safe because history relays only ever arm while their on-screen
- * markers are visible, so a backgrounded scope produces no callbacks to mis-route.
+ * [RelayLoadingCursors]) does NOT live here — the caller holds it on whatever object owns the scope, so
+ * its lifetime matches that object. One orchestrator drives whichever scope is currently bound; calling
+ * [bind] repoints it at that scope's cursors. This is safe as long as the caller only advances the bound
+ * scope (e.g. the one the user is viewing), so a backgrounded scope produces no callbacks to mis-route.
  *
  * What it owns (all transient, recomputed on each [bind]): the in-flight + silence tracking
  * ([PerRelayLoadTracker]), the stalled-relay set, and the display [StateFlow]s ([relayProgress],
@@ -48,10 +47,10 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * What it does NOT own (the caller supplies these — they are protocol- and framework-specific):
  *  - **Building the actual REQ filters.** The caller reads [armedRelays] + [requestedUntilFor] and
- *    assembles its own `RelayBasedFilter`s (the kinds / authors / `#p` tags differ per feed).
+ *    assembles its own `RelayBasedFilter`s (the kinds / authors / `#p` tags differ per query).
  *  - **The subscription lifecycle.** The caller wires its `INostrClient` subscription and forwards
  *    relay callbacks here via [onEvent] / [onEose] / [onClosed] / [onCannotConnect], then re-issues
- *    its filter (e.g. `invalidateFilters()`) after [advance] / [advanceAll] return true.
+ *    its filter after [advance] / [advanceAll] return true.
  *  - **Which scope's cursors + which relays.** Supplied together by [bind].
  *
  * ### Done vs stalled (read [exhausted] with care)
@@ -115,19 +114,19 @@ class BackwardRelayPager(
 
     private val _relayProgress = MutableStateFlow<Map<NormalizedRelayUrl, RelayPagingProgress>>(emptyMap())
 
-    /** Per-relay window position (reached / done / stalled) — the data on-screen reach markers render. */
+    /** Per-relay window position (reached / done / stalled) — what a caller's per-relay progress UI renders. */
     val relayProgress: StateFlow<Map<NormalizedRelayUrl, RelayPagingProgress>> = _relayProgress.asStateFlow()
 
     // The session-pinned floor for the active scope — kept on its cursors so it persists with the scope
-    // and does not drift forward on recompute (which would re-trigger an undelivered relay's sentinel).
+    // and does not drift forward on recompute (which would re-trigger an undelivered relay's loader).
     private fun floor(): Long {
         val c = cursors ?: return TimeUtils.now() - liveTailSeconds
         return c.floor ?: (TimeUtils.now() - liveTailSeconds).also { c.floor = it }
     }
 
     /**
-     * Repoints to a scope (call on subscribe / when the on-screen scope changes): its persistent
-     * [scopeCursors] (held on the owning model object), the [scope] for the silence watchdog, and the
+     * Repoints to a scope (call on subscribe / when the active scope changes): its persistent
+     * [scopeCursors] (held on the caller's scope object), the [scope] for the silence watchdog, and the
      * [relaysForScope] lookup. Resets the transient orchestration (in-flight, stalled) and recomputes
      * the display flows from the bound cursors — so a previously-paged scope restores its progress
      * instead of restarting.

@@ -40,15 +40,15 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * Tracks when one relay-subscription "window" has finished loading, so callers (the rooms-screen
- * auto-fill loop) can wait for the WHOLE response instead of declaring victory on the first EOSE.
+ * Tracks when one relay-subscription "window" has finished loading, so a caller (e.g. an auto-fill /
+ * pagination loop) can wait for the WHOLE response instead of declaring victory on the first EOSE.
  *
  * A subscription fans a single REQ out to several relays. The first EOSE is a misleading "done"
  * signal: a fast but near-empty relay can EOSE in milliseconds while the relay that actually holds
  * the data is still connecting, stuck in an auth handshake, or busy streaming thousands of stored
  * events. An auto-fill loop driven by the first EOSE — or by a fixed wall-clock timeout — would
- * widen the window again mid-stream, before the events were even decrypted into rooms, re-issuing
- * an ever-wider REQ that re-downloads the whole history over and over.
+ * widen the window again mid-stream, before the events were even processed, re-issuing an ever-wider
+ * REQ that re-downloads the whole history over and over.
  *
  * Completion is therefore **per-relay terminal-state** based, not wall-clock based. A relay is
  * *settled* once it answers with a terminal signal — an EOSE (stored backfill done), a CLOSED (it
