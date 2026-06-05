@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
+package com.vitorpamplona.amethyst.commons.ui.feeds
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -54,33 +54,48 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.action_dismiss
+import com.vitorpamplona.amethyst.commons.resources.chats_history_all_caught_up
+import com.vitorpamplona.amethyst.commons.resources.chats_history_incomplete
+import com.vitorpamplona.amethyst.commons.resources.chats_history_incomplete_sub
+import com.vitorpamplona.amethyst.commons.resources.chats_history_older
+import com.vitorpamplona.amethyst.commons.resources.chats_history_reached_start
+import com.vitorpamplona.amethyst.commons.resources.chats_history_relay_back
+import com.vitorpamplona.amethyst.commons.resources.chats_history_relays
+import com.vitorpamplona.amethyst.commons.resources.chats_history_relays_title
+import com.vitorpamplona.amethyst.commons.resources.chats_history_subtitle
+import com.vitorpamplona.amethyst.commons.resources.chats_history_subtitle_no_date
+import com.vitorpamplona.amethyst.commons.resources.chats_history_waiting
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayPagingProgress
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.delay
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 
 // How long the "All caught up" state lingers before the card collapses away.
 private const val ALL_DONE_VISIBLE_MS = 2200L
 
 /**
- * The DM "older history" status card, shown at one protocol's oldest-loaded boundary (rooms list and
- * conversation). It tells the user exactly what the app is reaching for: which protocol, how many
- * relays it is asking, and how far back it has paged. When that protocol runs dry it does NOT just
- * vanish — it crossfades to an "All caught up" state, holds for a beat, then collapses away.
+ * The "older history" status card for a per-relay [BackwardRelayPager]-backed feed, shown at one
+ * protocol's oldest-loaded boundary (rooms list and conversation). It tells the user exactly what the
+ * app is reaching for: which protocol, how many relays it is asking, and how far back it has paged.
+ * When that protocol runs dry it does NOT just vanish — it crossfades to an "All caught up" state,
+ * holds for a beat, then collapses away. When it stops short because relays stalled it says so and
+ * stays put (an *incomplete* window — messages may still be out there).
+ *
+ * Shared across front ends; pass the platform's locale date formatter as [formatReachDate] so the card
+ * carries no `java.time` / `NSDateFormatter` dependency.
  *
  * @param protocolName human label woven into sentences, e.g. "encrypted" / "legacy".
  * @param protocolTag  short technical tag for the subtitle, e.g. "NIP-17" / "NIP-04".
  * @param reachedBack  epoch seconds of the oldest point reached so far (the deepest `until` cursor).
  * @param relayProgress per-relay reach (where each relay's window is, done/stalled). Tapping the card
  *   opens a popup listing them; pass empty to make the card non-interactive.
+ * @param formatReachDate formats an epoch-seconds reach point to a short label (e.g. "Jun 2026").
  */
 @Composable
 fun DmHistoryLoadingCard(
@@ -92,6 +107,7 @@ fun DmHistoryLoadingCard(
     stalledCount: Int,
     reachedBack: Long?,
     relayProgress: Map<NormalizedRelayUrl, RelayPagingProgress> = emptyMap(),
+    formatReachDate: (epochSeconds: Long) -> String,
     modifier: Modifier = Modifier,
 ) {
     // Exhausted ("nothing more reachable right now") splits two ways and must NOT read the same:
@@ -115,7 +131,7 @@ fun DmHistoryLoadingCard(
 
     var showRelays by remember { mutableStateOf(false) }
     if (showRelays) {
-        DmHistoryRelayDialog(protocolTag, relayProgress) { showRelays = false }
+        DmHistoryRelayDialog(protocolTag, relayProgress, formatReachDate) { showRelays = false }
     }
 
     AnimatedVisibility(
@@ -169,9 +185,9 @@ fun DmHistoryLoadingCard(
                                 if (loading) {
                                     CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                                 } else {
-                                    // Paused: not caught up, but not actively loading (the rooms-list auto-fill
-                                    // stopped short of exhaustion, or we're between round-model pages). Show a
-                                    // static "more" glyph so the icon slot is never blank — resumes on scroll.
+                                    // Paused: not caught up, but not actively loading (the auto-fill stopped short
+                                    // of exhaustion, or we're between pages). Show a static "more" glyph so the
+                                    // icon slot is never blank — resumes on scroll.
                                     Text(
                                         "⋯",
                                         style = MaterialTheme.typography.titleMedium,
@@ -186,9 +202,9 @@ fun DmHistoryLoadingCard(
                         Text(
                             text =
                                 when (state) {
-                                    HistoryPhase.CaughtUp -> stringResource(R.string.chats_history_all_caught_up)
-                                    HistoryPhase.Incomplete -> stringResource(R.string.chats_history_incomplete)
-                                    HistoryPhase.Loading -> stringResource(R.string.chats_history_older, protocolName)
+                                    HistoryPhase.CaughtUp -> stringResource(Res.string.chats_history_all_caught_up)
+                                    HistoryPhase.Incomplete -> stringResource(Res.string.chats_history_incomplete)
+                                    HistoryPhase.Loading -> stringResource(Res.string.chats_history_older, protocolName)
                                 },
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
@@ -197,9 +213,9 @@ fun DmHistoryLoadingCard(
                         Text(
                             text =
                                 when (state) {
-                                    HistoryPhase.CaughtUp -> stringResource(R.string.chats_history_reached_start, protocolName)
+                                    HistoryPhase.CaughtUp -> stringResource(Res.string.chats_history_reached_start, protocolName)
                                     HistoryPhase.Incomplete -> incompleteSubtitle(stalledCount)
-                                    HistoryPhase.Loading -> historySubtitle(protocolTag, relayCount, stalledCount, reachedBack)
+                                    HistoryPhase.Loading -> historySubtitle(protocolTag, relayCount, stalledCount, reachedBack, formatReachDate)
                                 },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -218,40 +234,38 @@ private enum class HistoryPhase { Loading, CaughtUp, Incomplete }
 /** Subtitle for the "stopped early" state: how many relays we couldn't reach, with a hint to tap for the list.
  * Shared with the reply placeholder so both read identically. */
 @Composable
-internal fun incompleteSubtitle(stalledCount: Int): String =
+fun incompleteSubtitle(stalledCount: Int): String =
     stringResource(
-        R.string.chats_history_incomplete_sub,
-        pluralStringResource(R.plurals.chats_history_relays, stalledCount, stalledCount),
+        Res.string.chats_history_incomplete_sub,
+        pluralStringResource(Res.plurals.chats_history_relays, stalledCount, stalledCount),
     )
 
 @Composable
-internal fun historySubtitle(
+fun historySubtitle(
     protocolTag: String,
     relayCount: Int,
     stalledCount: Int,
     reachedBack: Long?,
+    formatReachDate: (epochSeconds: Long) -> String,
 ): String {
-    val backLabel =
-        remember(reachedBack) {
-            reachedBack?.let { SimpleDateFormat("MMM yyyy", Locale.getDefault()).format(Date(it * 1000)) }
-        }
+    val backLabel = remember(reachedBack) { reachedBack?.let(formatReachDate) }
     // Middle segment: the relays actively fetching ("N relays"), or — when none are in flight but some
     // can't be reached — what we're waiting on ("waiting on N relays"). With neither, just the tag, since
     // a paged-out-but-parked protocol isn't waiting on anything (it resumes on scroll).
     val middle =
         when {
-            relayCount > 0 -> pluralStringResource(R.plurals.chats_history_relays, relayCount, relayCount)
+            relayCount > 0 -> pluralStringResource(Res.plurals.chats_history_relays, relayCount, relayCount)
             stalledCount > 0 ->
                 stringResource(
-                    R.string.chats_history_waiting,
-                    pluralStringResource(R.plurals.chats_history_relays, stalledCount, stalledCount),
+                    Res.string.chats_history_waiting,
+                    pluralStringResource(Res.plurals.chats_history_relays, stalledCount, stalledCount),
                 )
             else -> return protocolTag
         }
     return if (backLabel != null) {
-        stringResource(R.string.chats_history_subtitle, protocolTag, middle, backLabel)
+        stringResource(Res.string.chats_history_subtitle, protocolTag, middle, backLabel)
     } else {
-        stringResource(R.string.chats_history_subtitle_no_date, protocolTag, middle)
+        stringResource(Res.string.chats_history_subtitle_no_date, protocolTag, middle)
     }
 }
 
@@ -260,19 +274,19 @@ internal fun historySubtitle(
  * ↓ still reaching) and how far back it has paged ("back to <date>"), deepest-reaching first.
  */
 @Composable
-internal fun DmHistoryRelayDialog(
+fun DmHistoryRelayDialog(
     protocolTag: String,
     relayProgress: Map<NormalizedRelayUrl, RelayPagingProgress>,
+    formatReachDate: (epochSeconds: Long) -> String,
     onDismiss: () -> Unit,
 ) {
-    val df = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
     val rows = remember(relayProgress) { relayProgress.entries.sortedBy { it.value.reachedUntil } }
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dismiss)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_dismiss)) }
         },
-        title = { Text(stringResource(R.string.chats_history_relays_title, protocolTag)) },
+        title = { Text(stringResource(Res.string.chats_history_relays_title, protocolTag)) },
         text = {
             Column(
                 Modifier
@@ -301,7 +315,7 @@ internal fun DmHistoryRelayDialog(
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = stringResource(R.string.chats_history_relay_back, df.format(Date(p.reachedUntil * 1000))),
+                            text = stringResource(Res.string.chats_history_relay_back, formatReachDate(p.reachedUntil)),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,

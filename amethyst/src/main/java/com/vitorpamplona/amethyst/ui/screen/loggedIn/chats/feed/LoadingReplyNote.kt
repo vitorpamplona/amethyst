@@ -49,6 +49,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryRelayDialog
+import com.vitorpamplona.amethyst.commons.ui.feeds.historySubtitle
+import com.vitorpamplona.amethyst.commons.ui.feeds.incompleteSubtitle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayPagingProgress
@@ -156,7 +159,7 @@ fun LoadingReplyNote(
     // can see exactly which relays were reached and which stalled. Empty progress keeps it non-interactive.
     var showRelays by remember { mutableStateOf(false) }
     if (showRelays) {
-        DmHistoryRelayDialog(protocolTag, relayProgress) { showRelays = false }
+        DmHistoryRelayDialog(protocolTag, relayProgress, ::formatHistoryReachDate) { showRelays = false }
     }
 
     // Same chrome as DmHistoryLoadingCard (the older-history status card at the oldest end) so an
@@ -224,7 +227,7 @@ fun LoadingReplyNote(
                             when {
                                 stalledOut -> incompleteSubtitle(stalledCount)
                                 isExhausted -> stringRes(R.string.chats_reply_searched)
-                                else -> historySubtitle(protocolTag, relayCount, stalledCount, reachedBack)
+                                else -> historySubtitle(protocolTag, relayCount, stalledCount, reachedBack, ::formatHistoryReachDate)
                             },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
