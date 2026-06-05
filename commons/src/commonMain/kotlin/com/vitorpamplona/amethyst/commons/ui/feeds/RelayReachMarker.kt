@@ -212,11 +212,17 @@ private fun RelayReachMarker(entries: List<RelayReach>) {
             fontWeight = FontWeight.Medium,
             maxLines = 1,
         )
+        // Present states in enum order. Written with an explicit `sortedBy` + `entry.key`/`entry.value`
+        // (not `toSortedMap(compareBy { it.ordinal })` + a destructured `(state, list)`) because
+        // Kotlin/Native's Compose compiler can't infer those inside this inline @Composable lambda
+        // (commons iOS).
         entries
             .groupBy { it.state }
-            .toSortedMap(compareBy { it.ordinal })
             .entries
-            .forEachIndexed { index, (state, list) ->
+            .sortedBy { it.key.ordinal }
+            .forEachIndexed { index, entry ->
+                val state = entry.key
+                val list = entry.value
                 if (index > 0) {
                     Text("·", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
                 }
