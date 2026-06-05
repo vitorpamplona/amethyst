@@ -124,12 +124,12 @@ to load, just not advancing) keeps it false.
 History paging is demand-driven by **per-relay window-limit markers** placed in
 the message stream, not by a scroll-position trigger:
 
-- **`RelayWindowLimit`** — one per (protocol, relay): its `reachedUntil` depth,
+- **`RelayReachCursor`** — one per (protocol, relay): its `reachedUntil` depth,
   its `RelayReachState` (`REACHING ↓` / `STALLED …` / `DONE ✓`), and the
   `advance()` that pulls *that relay's* next page. Built in the feed views from
   each history manager's `relayProgress` map (gift wraps + NIP-04 combined; a
   protocol drops out of the list once `exhausted`).
-- **`RelayWindowLimitSentinels`** — the load *driver*, **hoisted above the
+- **`RelayReachSentinels`** — the load *driver*, **hoisted above the
   `LazyColumn`** (via `ChatFeedView`'s `sentinels` slot). Each non-done limit
   gets one stable effect (keyed by `protocol:url`) that watches `listState` and
   fires `advance()` when its gap is among the **currently visible rows** AND
@@ -139,7 +139,7 @@ the message stream, not by a scroll-position trigger:
   hosting row, so any feed reorder (a live DM, a slow relay dribbling a page)
   tore the effect down and re-fired `advance()` on a static screen — re-arming
   stalled relays into a silence-watchdog storm. (commit `0394ec2a`)
-- **`RelayWindowLimitMarkers` / `RelayReachMarker`** — pure UI (via the
+- **`RelayReachMarkers` / `RelayReachMarker`** — pure UI (via the
   `markersInGap` slot): the "Relay sync: ✓ 8 · ↓ 1" divider at each relay's
   reached depth. Can be re-placed on every reorder without triggering paging.
 - **`BootstrapHistoryWhenEmpty`** — when the feed is genuinely `Empty` (the live
@@ -148,7 +148,7 @@ the message stream, not by a scroll-position trigger:
   a time (debounced 1200ms, gated per loader on `!loading && !exhausted`) until
   messages appear and the markers take over, or the protocol exhausts.
 
-### NIP-04 per-relay filter scoping (`Nip04DmRelays`)
+### NIP-04 per-relay filter scoping (`Nip04DmRelayRouting`)
 
 A conversation's NIP-04 filters previously named the whole participant set on
 every relay, so a relay belonging to one correspondent was asked about all of
@@ -156,7 +156,7 @@ them, and the `from-me` leg (`authors:[me]`) was sent to correspondents' inbox
 relays — which auth-walled relays reject outright ("all authors must be
 authenticated"), stalling the load.
 
-`Nip04DmRelays` (in `FilterNip04DMs.kt`) is now two **per-relay key maps**
+`Nip04DmRelayRouting` (in `FilterNip04DMs.kt`) is now two **per-relay key maps**
 (`relay → which keys to name there`), built from the outbox model:
 
 - **to me** (`#p:[me]`) — my inbox carries the whole group; each correspondent's
@@ -244,13 +244,13 @@ source set (uses `java.util.concurrent`), visible to amethyst + desktop + quartz
 - `AccountGiftWrapsEoseManager.kt` (live tail) + `AccountGiftWrapsHistoryEoseManager.kt` (new, history).
 - `ChatroomNip04SubAssembler.kt` (live tail) + `ChatroomNip04HistorySubAssembler.kt` (new, history).
 - `ChatroomListNip04SubAssembler.kt` (live tail) + `ChatroomListNip04HistorySubAssembler.kt` (new, history).
-- `FilterNip04DMs.kt` (per-relay `Nip04DmRelays`, live + history builders), `FilterNip04DMsFromMe/ToMe.kt`, `FilterGiftWrapsToPubkey.kt` — `until`/`limit` added.
+- `FilterNip04DMs.kt` (per-relay `Nip04DmRelayRouting`, live + history builders), `FilterNip04DMsFromMe/ToMe.kt`, `FilterGiftWrapsToPubkey.kt` — `until`/`limit` added.
 - `AccountFilterAssembler`, `ChatroomFilterAssembler`, `ChatroomListFilterAssembler` — wire the new managers.
 
 **Shared UI (commons, `commons/ui/feeds/`)** — extracted from amethyst so Android +
 Desktop (and any per-relay feed) render the same widgets; CMP `composeResources`
 strings, no app-theme / `java.time` deps.
-- `RelayReachMarker.kt` — `RelayWindowLimit` + sentinels (the hoisted, visibility-driven
+- `RelayReachMarker.kt` — `RelayReachCursor` + sentinels (the hoisted, visibility-driven
   paging driver) + markers (pure UI) + `RelayReachMarker`/`RelayReachState`.
 - `DmHistoryLoadingCard.kt` — the boundary status card + per-relay tap dialog +
   `historySubtitle`/`incompleteSubtitle`. Takes a `formatReachDate: (epochSeconds) -> String`

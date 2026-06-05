@@ -40,10 +40,10 @@ import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryLoadingCard
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachCursor
+import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachMarkers
+import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachSentinels
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachState
-import com.vitorpamplona.amethyst.commons.ui.feeds.RelayWindowLimit
-import com.vitorpamplona.amethyst.commons.ui.feeds.RelayWindowLimitMarkers
-import com.vitorpamplona.amethyst.commons.ui.feeds.RelayWindowLimitSentinels
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.feeds.FeedEmpty
@@ -185,7 +185,7 @@ private fun FeedLoaded(
     val oldestNip04Index = items.list.indexOfLast { it.event is PrivateDmEvent }
 
     // Each relay's window limit, carrying the advance() that pulls its OWN next page. Placed in the list
-    // at its reached depth as a sentinel (see RelayWindowLimitMarkers): a relay pages only while its
+    // at its reached depth as a sentinel (see RelayReachMarkers): a relay pages only while its
     // marker is on screen and keeps paging while it stays there, so a spam-dense relay never floods —
     // you have to scroll through its messages to pull more. A protocol drops out once exhausted.
     val limits =
@@ -193,12 +193,12 @@ private fun FeedLoaded(
             buildList {
                 if (!giftWrapsExhausted) {
                     giftWrapsProgress.forEach { (relay, p) ->
-                        add(RelayWindowLimit("17:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p)) { giftWrapsHistory.advance(user, relay) })
+                        add(RelayReachCursor("17:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p)) { giftWrapsHistory.advance(user, relay) })
                     }
                 }
                 if (!nip04Exhausted) {
                     nip04Progress.forEach { (relay, p) ->
-                        add(RelayWindowLimit("04:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p)) { nip04History.advance(user, relay) })
+                        add(RelayReachCursor("04:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p)) { nip04History.advance(user, relay) })
                     }
                 }
             }
@@ -206,7 +206,7 @@ private fun FeedLoaded(
 
     // Hoisted load driver: pulls each relay's next page off viewport visibility, so feed reorders
     // (a live DM bumping a room) no longer re-fire paging. The markers below are pure UI.
-    RelayWindowLimitSentinels(limits, listState) { index -> items.list.getOrNull(index)?.createdAt() }
+    RelayReachSentinels(limits, listState) { index -> items.list.getOrNull(index)?.createdAt() }
 
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),
@@ -240,7 +240,7 @@ private fun FeedLoaded(
             // Per-relay window-limit markers/sentinels belonging in the gap toward the next-older room:
             // each pulls its relay's next page while it's on screen. olderCreatedAt is null past the
             // oldest loaded room, so relays that have reached the bottom of the list sit there.
-            RelayWindowLimitMarkers(
+            RelayReachMarkers(
                 limits,
                 item.createdAt(),
                 items.list.getOrNull(index + 1)?.createdAt(),

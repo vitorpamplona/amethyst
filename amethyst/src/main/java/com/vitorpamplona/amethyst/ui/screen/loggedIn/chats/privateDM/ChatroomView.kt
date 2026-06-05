@@ -42,10 +42,10 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryLoadingCard
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachCursor
+import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachMarkers
+import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachSentinels
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachState
-import com.vitorpamplona.amethyst.commons.ui.feeds.RelayWindowLimit
-import com.vitorpamplona.amethyst.commons.ui.feeds.RelayWindowLimitMarkers
-import com.vitorpamplona.amethyst.commons.ui.feeds.RelayWindowLimitSentinels
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.actions.uploads.resolveSharedMedia
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
@@ -230,19 +230,19 @@ fun ChatroomViewUI(
     val user = accountViewModel.userProfile()
 
     // Both protocols' per-relay window limits, each carrying the advance() that pulls its own next page.
-    // Placed in the stream as sentinels (see RelayWindowLimitMarkers): a relay pages only while its
+    // Placed in the stream as sentinels (see RelayReachMarkers): a relay pages only while its
     // marker is on screen, and keeps paging while it stays there. A protocol drops out once exhausted.
     val limits =
         remember(nip04Progress, giftWrapsProgress, nip04Exhausted, giftWrapsExhausted, user) {
             buildList {
                 if (!giftWrapsExhausted) {
                     giftWrapsProgress.forEach { (relay, p) ->
-                        add(RelayWindowLimit("17:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p)) { giftWrapsHistory.advance(user, relay) })
+                        add(RelayReachCursor("17:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p)) { giftWrapsHistory.advance(user, relay) })
                     }
                 }
                 if (!nip04Exhausted) {
                     nip04Progress.forEach { (relay, p) ->
-                        add(RelayWindowLimit("04:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p)) { nip04History.advance(relay) })
+                        add(RelayReachCursor("04:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p)) { nip04History.advance(relay) })
                     }
                 }
             }
@@ -284,16 +284,16 @@ fun ChatroomViewUI(
                     if (limits.isEmpty()) {
                         null
                     } else {
-                        { newer, older -> RelayWindowLimitMarkers(limits, newer, older) }
+                        { newer, older -> RelayReachMarkers(limits, newer, older) }
                     },
                 // The hoisted load driver that pulls each relay's next page while its marker is on screen,
-                // off viewport visibility (see RelayWindowLimitSentinels) so feed reorders don't re-page.
+                // off viewport visibility (see RelayReachSentinels) so feed reorders don't re-page.
                 sentinels =
                     if (limits.isEmpty()) {
                         null
                     } else {
                         { items, listState ->
-                            RelayWindowLimitSentinels(limits, listState) { index -> items.getOrNull(index)?.event?.createdAt }
+                            RelayReachSentinels(limits, listState) { index -> items.getOrNull(index)?.event?.createdAt }
                         }
                     },
             )

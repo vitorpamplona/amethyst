@@ -63,7 +63,7 @@ class ChatroomNip04HistorySubAssembler(
     private fun convoKey(key: ChatroomQueryState) = ConvoKey(user(key).pubkeyHex, key.room)
 
     // The conversation's relay set for a key, resolved via the outbox model (per-relay scoped).
-    private fun relaysFor(pk: ConvoKey): Collection<NormalizedRelayUrl>? = allKeys().firstOrNull { convoKey(it) == pk }?.let { nip04DMRelays(it.room.users, it.account)?.all }
+    private fun relaysFor(pk: ConvoKey): Collection<NormalizedRelayUrl>? = allKeys().firstOrNull { convoKey(it) == pk }?.let { nip04DmRelayRouting(it.room.users, it.account)?.all }
 
     private val pager = BackwardRelayPager<ConvoKey>("convo.nip04.history", relaysFor = ::relaysFor)
 
@@ -83,7 +83,7 @@ class ChatroomNip04HistorySubAssembler(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
         val pk = convoKey(key)
-        val relays = nip04DMRelays(key.room.users, key.account)
+        val relays = nip04DmRelayRouting(key.room.users, key.account)
         if (!key.account.isWriteable() || relays == null) return emptyList()
 
         // Only armed (advanced, not done) relays carry a REQ, each at its own requested cursor. A parked
@@ -92,7 +92,7 @@ class ChatroomNip04HistorySubAssembler(
         if (armed.isEmpty()) return emptyList()
         DmRelayLog.log("convo.nip04.history", key.account)
         val scoped =
-            Nip04DmRelays(
+            Nip04DmRelayRouting(
                 toMeRelays = relays.toMeRelays.filterKeys { it in armed },
                 fromMeRelays = relays.fromMeRelays.filterKeys { it in armed },
             )

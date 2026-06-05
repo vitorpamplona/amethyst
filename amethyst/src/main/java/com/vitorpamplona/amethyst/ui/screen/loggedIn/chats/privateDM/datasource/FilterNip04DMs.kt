@@ -44,7 +44,7 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
  * Scoping the key set per relay is what keeps us from sending, e.g., `authors=[bob]` to a relay that
  * is only charlie's — a filter that relay has no reason to serve.
  */
-class Nip04DmRelays(
+class Nip04DmRelayRouting(
     val toMeRelays: Map<NormalizedRelayUrl, Set<HexKey>>,
     val fromMeRelays: Map<NormalizedRelayUrl, Set<HexKey>>,
 ) {
@@ -57,10 +57,10 @@ private fun addAll(
     keys: Collection<HexKey>,
 ) = relays.forEach { map.getOrPut(it) { mutableSetOf() }.addAll(keys) }
 
-fun nip04DMRelays(
+fun nip04DmRelayRouting(
     group: Set<HexKey>?,
     account: Account?,
-): Nip04DmRelays? {
+): Nip04DmRelayRouting? {
     if (group.isNullOrEmpty() || account == null) return null
 
     val userOutboxRelays = account.homeRelays.flow.value
@@ -98,7 +98,7 @@ fun nip04DMRelays(
         addAll(fromMe, inbox, listOf(it))
     }
 
-    return Nip04DmRelays(toMe, fromMe)
+    return Nip04DmRelayRouting(toMe, fromMe)
 }
 
 private fun toMeFilter(
@@ -148,7 +148,7 @@ fun filterNip04DMs(
     windowStart: Long,
 ): List<RelayBasedFilter>? {
     if (group.isNullOrEmpty() || account == null) return null
-    val relays = nip04DMRelays(group, account) ?: return null
+    val relays = nip04DmRelayRouting(group, account) ?: return null
     return relays.toMeRelays.map { (relay, authors) -> toMeFilter(relay, authors, account, since = windowStart, until = null, limit = null) } +
         relays.fromMeRelays.map { (relay, pTags) -> fromMeFilter(relay, pTags, account, since = windowStart, until = null, limit = null) }
 }
@@ -160,7 +160,7 @@ fun filterNip04DMs(
  */
 fun filterNip04DMsHistory(
     account: Account,
-    relays: Nip04DmRelays,
+    relays: Nip04DmRelayRouting,
     limit: Int,
     untilFor: (NormalizedRelayUrl) -> Long?,
 ): List<RelayBasedFilter> =

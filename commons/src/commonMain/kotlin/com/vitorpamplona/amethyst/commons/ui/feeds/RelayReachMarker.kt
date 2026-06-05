@@ -54,8 +54,8 @@ private val DividerThickness = 0.25.dp
  * True when [reachedUntil] falls in the gap between a newer message (at [newerCreatedAt]) and its
  * next-older neighbour (at [olderCreatedAt], null past the oldest end): the newer side is strictly
  * newer than the cursor and the older side is at or below it (or absent). This single predicate both
- * places the marker ([RelayWindowLimitMarkers]) and decides when its paging sentinel is on screen
- * ([RelayWindowLimitSentinels]), so the two can never disagree about which gap a cursor lives in.
+ * places the marker ([RelayReachMarkers]) and decides when its paging sentinel is on screen
+ * ([RelayReachSentinels]), so the two can never disagree about which gap a cursor lives in.
  */
 internal fun reachedFallsInGap(
     reachedUntil: Long,
@@ -87,12 +87,12 @@ data class RelayReach(
 /**
  * One relay's window-limit: places a marker and carries the [advance] that pulls that relay's next,
  * older page. The marker sits at [reachedUntil] (the oldest point the relay has paged to);
- * [RelayWindowLimitMarkers] draws it and [RelayWindowLimitSentinels] fires [advance] while it is on
+ * [RelayReachMarkers] draws it and [RelayReachSentinels] fires [advance] while it is on
  * screen.
  *
  * @param key stable identity (protocol tag + relay url) so the sentinel survives list reorders.
  */
-data class RelayWindowLimit(
+data class RelayReachCursor(
     val key: String,
     val name: String,
     val reachedUntil: Long,
@@ -103,7 +103,7 @@ data class RelayWindowLimit(
 /**
  * Drives demand-driven paging for every limit, **hoisted above the list** so its identity does not ride
  * on which row currently hosts the marker. Each non-done limit gets one stable effect (keyed by
- * [RelayWindowLimit.key]) that watches the [listState] and pulls that relay's next page when its marker
+ * [RelayReachCursor.key]) that watches the [listState] and pulls that relay's next page when its marker
  * is on screen.
  *
  * Why hoisted: the marker for a limit lives in exactly one gap (between the two rows straddling its
@@ -120,11 +120,11 @@ data class RelayWindowLimit(
  * A done relay drives nothing.
  *
  * @param createdAtAt createdAt of the list item at an index (null past the ends / for non-message rows),
- *   so the visible-gap test mirrors [RelayWindowLimitMarkers]'s placement against only the on-screen rows.
+ *   so the visible-gap test mirrors [RelayReachMarkers]'s placement against only the on-screen rows.
  */
 @Composable
-fun RelayWindowLimitSentinels(
-    limits: List<RelayWindowLimit>,
+fun RelayReachSentinels(
+    limits: List<RelayReachCursor>,
     listState: LazyListState,
     createdAtAt: (index: Int) -> Long?,
 ) {
@@ -139,7 +139,7 @@ fun RelayWindowLimitSentinels(
                     val r = reached.value
                     val at = getAt.value
                     // Visible if any on-screen row is the "newer" side of the gap holding this cursor —
-                    // the same predicate RelayWindowLimitMarkers uses to place the marker, but over the
+                    // the same predicate RelayReachMarkers uses to place the marker, but over the
                     // visible rows only.
                     val onScreen =
                         listState.layoutInfo.visibleItemsInfo.any { info ->
@@ -165,12 +165,12 @@ fun RelayWindowLimitSentinels(
 /**
  * Renders the window-limit markers for the relays whose limit falls in the gap between a newer message
  * (at [newerCreatedAt]) and its next-older neighbour (at [olderCreatedAt], null at the oldest end). Pure
- * UI: the load driving lives in [RelayWindowLimitSentinels], so this can be (re)placed freely per row on
+ * UI: the load driving lives in [RelayReachSentinels], so this can be (re)placed freely per row on
  * every feed reorder without triggering any paging.
  */
 @Composable
-fun RelayWindowLimitMarkers(
-    limits: List<RelayWindowLimit>,
+fun RelayReachMarkers(
+    limits: List<RelayReachCursor>,
     newerCreatedAt: Long?,
     olderCreatedAt: Long?,
 ) {
