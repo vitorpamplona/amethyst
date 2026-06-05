@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource
 
+import com.vitorpamplona.amethyst.commons.relayClient.paging.BackwardRelayPager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.paging.BackwardRelayPager
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayPagingProgress
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener

@@ -21,13 +21,13 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps
 
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.filterGiftWrapsToPubkey
+import com.vitorpamplona.amethyst.commons.relayClient.paging.BackwardRelayPager
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.paging.BackwardRelayPager
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayPagingProgress
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
