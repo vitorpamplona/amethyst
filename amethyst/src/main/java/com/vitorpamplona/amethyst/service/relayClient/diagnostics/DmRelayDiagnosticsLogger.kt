@@ -23,10 +23,12 @@ package com.vitorpamplona.amethyst.service.relayClient.diagnostics
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.AuthMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.NoticeMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
@@ -42,8 +44,10 @@ import com.vitorpamplona.quartz.utils.Log
  * rejection and OK failures — into the single `DMPagination` log tag with an
  * elapsed-time prefix, so a slow cold boot can be attributed (connection? relay
  * response?) and a silent failure to load (e.g. a relay answering CLOSED
- * "auth-required" / "restricted") becomes visible. Per-event and auth-challenge
- * lines are intentionally omitted to keep the trail readable.
+ * "auth-required" / "restricted") becomes visible. Per-event lines are omitted to
+ * keep the trail readable, but the NIP-42 AUTH handshake (challenge in, AUTH out,
+ * accept/reject) IS logged: an auth-walled relay's whole load hinges on whether
+ * that round-trip closes and a re-REQ follows, so it has to be attributable here.
  *
  * The connection listener fires for EVERY relay the app talks to (hundreds, under
  * the outbox model). To keep this readable we only log relays that are part of the
@@ -63,6 +67,11 @@ class DmRelayDiagnosticsLogger(
     // Relays we've seen on the DM path, so connect/auth/notice noise from the
     // hundreds of unrelated follow/outbox relays is filtered out.
     private val dmPathRelays = mutableSetOf<NormalizedRelayUrl>()
+
+    // Ids of the AUTH events we've sent to DM relays, so the relay's OK can be tagged "AUTH accepted /
+    // REJECTED" (the OK that decides whether the post-auth re-REQ will actually be served) instead of
+    // being lost among ordinary event OKs.
+    private val authEventIds = mutableSetOf<String>()
 
     private fun isDmRelay(relay: IRelayClient) = relay.url in dmPathRelays
 
@@ -88,6 +97,15 @@ class DmRelayDiagnosticsLogger(
                 cmd: Command,
                 success: Boolean,
             ) {
+                if (cmd is AuthCmd) {
+                    // Our reply to a relay's NIP-42 challenge. Remember the id so the relay's OK can be
+                    // tagged as the auth result below. Only for relays already on the DM path.
+                    if (isDmRelay(relay)) {
+                        authEventIds.add(cmd.event.id)
+                        Log.d(TAG) { "[+${at()}ms] AUTH -> ${relay.url.url} success=$success (id ${cmd.event.id.take(8)})" }
+                    }
+                    return
+                }
                 if (!isDmReq(cmdStr)) return
                 dmPathRelays.add(relay.url)
                 reqSubId(cmdStr)?.let { dmSubIds.add(it) }
@@ -100,6 +118,11 @@ class DmRelayDiagnosticsLogger(
                 msg: Message,
             ) {
                 when (msg) {
+                    is AuthMessage ->
+                        // The relay's NIP-42 challenge. Without it (and the AUTH/OK that follow) an
+                        // auth-walled relay can never serve, so it's the first link to look for.
+                        if (isDmRelay(relay)) Log.d(TAG) { "[+${at()}ms] AUTH challenge <- ${relay.url.url} '${msg.challenge.take(40)}'" }
+
                     is NoticeMessage ->
                         if (isDmRelay(relay)) Log.d(TAG) { "[+${at()}ms] NOTICE <- ${relay.url.url} '${msg.message}'" }
 
@@ -109,7 +132,11 @@ class DmRelayDiagnosticsLogger(
                         }
 
                     is OkMessage ->
-                        if (!msg.success && isDmRelay(relay)) {
+                        if (msg.eventId in authEventIds) {
+                            // The auth result: "accepted" means a syncFilters re-REQ should now be served;
+                            // "REJECTED" means this relay will keep refusing and never serve our DMs.
+                            Log.d(TAG) { "[+${at()}ms] AUTH ${if (msg.success) "accepted" else "REJECTED"} <- ${relay.url.url} '${msg.message}'" }
+                        } else if (!msg.success && isDmRelay(relay)) {
                             Log.d(TAG) { "[+${at()}ms] OK(fail) <- ${relay.url.url} '${msg.message}'" }
                         }
 
