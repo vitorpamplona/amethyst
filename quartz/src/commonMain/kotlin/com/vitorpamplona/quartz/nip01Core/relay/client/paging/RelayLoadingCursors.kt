@@ -25,38 +25,28 @@ import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlin.concurrent.Volatile
 
 /**
- * Backward `until`+`limit` pagination cursors for **one scope** (one account, or one conversation),
- * tracked **independently per relay** and advanced **on demand** — one page at a time, only when the
- * owner calls [advance].
+ * Per-relay `until`+`limit` pagination cursors for **one scope** (one account, or one conversation):
+ * how far back each relay has been *asked* to load, and how far it has actually *delivered*.
  *
- * This is pure per-relay paging *state*, with no orchestration (no spinner / stall / exhaustion / live
- * flows — those are the orchestrator's job; see `BackwardRelayPager`). It is meant to live on the owning domain object (a
- * `Chatroom` for a conversation, a `ChatroomList` for the account-level feeds), so the "how far each
- * relay has paged" it records shares the lifetime of the cached messages it describes and is dropped
- * with them. That is why it carries no key: the object graph *is* the partition.
+ * Pure state, no orchestration — the spinner / stall / exhaustion / live flows are the orchestrator's
+ * job (`BackwardRelayPager`). It lives on the owning domain object (a `Chatroom`, or a `ChatroomList`
+ * for the account-level feeds), so it shares the lifetime of the cached messages it describes and needs
+ * no key: the object graph *is* the partition.
  *
- * The time-window model can't tell "this relay is empty" from "this is a gap" — a `since`/`until`
- * slice that returns nothing might just be a quiet stretch with older messages beneath it. Paging by
- * `until`+`limit` removes that ambiguity: a relay returns its N newest events older than `until`,
- * **skipping gaps**, so an empty page can only mean there is nothing older.
+ * Why `until`+`limit` and not a time window: a `since`/`until` slice that comes back empty can't tell
+ * "nothing older here" from "just a quiet gap". `until`+`limit` returns the N newest events older than
+ * `until`, skipping gaps — so an **empty page + EOSE is the gap-proof stop** ([isDone]). (A short page,
+ * fewer than the limit, is the relay capping us, not the bottom.)
  *
- * Two cursors are kept per relay, deliberately decoupled so a relay never pages further than it was
- * asked to:
- *  - [requestedUntilFor] — the `until` the relay's REQ currently carries. Moves **only** in [advance].
- *    Leaving it untouched on EOSE is what makes paging demand-driven: a relay that finished a page just
- *    parks at the same filter (no re-REQ) until the owner advances it again.
- *  - reached (see [reachedUntilFor]) — the oldest `created_at` the relay has actually delivered. Moves
- *    on EOSE. This is what the in-stream markers sit at; [advance] starts the next page just below it.
+ * Two cursors per relay, kept apart so a relay never pages past what it was asked:
+ *  - [requestedUntilFor] — the `until` its REQ carries; moves only in [advance]. Untouched on EOSE, so a
+ *    finished page just parks (no re-REQ) until advanced again — this is what makes paging demand-driven.
+ *  - reached ([reachedUntilFor]) — the oldest `created_at` it has delivered; moves on EOSE. The in-stream
+ *    marker sits here, and the next [advance] starts just below it.
  *
- * Stop signal (per relay): an **empty page followed by EOSE** ([onEose] with no events) marks that
- * relay [done][isDone]. A relay that returns anything — even fewer than the requested limit, since a
- * relay may cap results below what we asked — is not done.
- *
- * No locking of its own — it leans on cheaper guarantees instead: a cursor's per-page counters are
- * mutated on the relay IO threads, where one relay's callbacks are serialized (so its read-modify-write
- * can't race itself), and read on the owning scope; the cursor fields are `@Volatile`, and the relay
- * map is the thread-safe [LargeCache]. That map is keyed only by [NormalizedRelayUrl], which is
- * `Comparable` and consistent with `equals`, so the sorted cache identifies relays correctly.
+ * No locks of its own: each relay's callbacks are serialized, the cursor fields are `@Volatile`, and the
+ * relay map is the thread-safe [LargeCache] (keyed by [NormalizedRelayUrl], which orders consistently
+ * with `equals`).
  */
 class RelayLoadingCursors {
     private class RelayCursor {
@@ -79,10 +69,9 @@ class RelayLoadingCursors {
     private val cursors = LargeCache<NormalizedRelayUrl, RelayCursor>()
 
     /**
-     * The session-pinned history floor this scope pages down from (typically `now − liveTail`, set by the
-     * owner on first advance). Kept here so it persists with the scope and does not drift forward on
-     * recompute — an undelivered relay's marker sits at this floor, and a moving floor would re-trigger
-     * its on-screen sentinel.
+     * The history floor this scope pages down from (`now − liveTail`, pinned by the owner on first
+     * advance). Kept here so it persists with the scope and doesn't drift on recompute — an undelivered
+     * relay's marker sits at this floor, and a moving floor would re-fire its sentinel.
      */
     @Volatile
     var floor: Long? = null
