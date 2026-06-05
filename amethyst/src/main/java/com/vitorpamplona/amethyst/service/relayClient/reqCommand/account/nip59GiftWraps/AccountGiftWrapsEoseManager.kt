@@ -24,11 +24,11 @@ import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.filterGiftWrapsToP
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.WindowLoadTracker
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.trackingListener
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.paging.WindowLoadTracker
+import com.vitorpamplona.quartz.nip01Core.relay.client.paging.trackingListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import com.vitorpamplona.quartz.utils.Log

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
+import com.vitorpamplona.quartz.nip01Core.relay.client.paging.UntilLimitPager
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
