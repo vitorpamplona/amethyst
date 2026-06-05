@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.allUserFollows.AllUserFollow
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
+import com.vitorpamplona.amethyst.ui.dal.isRenderableRepost
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
@@ -133,8 +134,7 @@ class FollowPackFeedNewThreadFeedFilter(
         return (
             noteEvent is TextNoteEvent ||
                 noteEvent is ClassifiedsEvent ||
-                noteEvent is RepostEvent ||
-                noteEvent is GenericRepostEvent ||
+                noteEvent.isRenderableRepost() ||
                 (noteEvent is LongTextNoteEvent && noteEvent.content.isNotEmpty()) ||
                 (noteEvent is WikiNoteEvent && noteEvent.content.isNotEmpty()) ||
                 noteEvent is ZapPollEvent ||

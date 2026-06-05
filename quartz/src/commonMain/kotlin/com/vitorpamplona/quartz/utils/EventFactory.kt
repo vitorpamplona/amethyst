@@ -598,5 +598,16 @@ class EventFactory {
                 WikiNoteEvent.KIND -> WikiNoteEvent(id, pubKey, createdAt, tags, content, sig)
                 else -> factories[kind]?.build(id, pubKey, createdAt, tags, content, sig) ?: Event(id, pubKey, createdAt, kind, tags, content, sig)
             } as T
+
+        /**
+         * True when [kind] maps to a typed Quartz event class — either a
+         * compiled-in branch above or a registered [factories] builder. Unknown
+         * kinds are parsed as a bare [Event], so a probe instance's runtime type
+         * equals [Event] exactly when the kind has no dedicated class.
+         *
+         * Used to decide whether a repost's inner (boosted) kind is something
+         * Amethyst can parse and render at all.
+         */
+        fun isKnownKind(kind: Int): Boolean = create<Event>("", "", 0L, kind, emptyArray(), "", "")::class != Event::class
     }
 }

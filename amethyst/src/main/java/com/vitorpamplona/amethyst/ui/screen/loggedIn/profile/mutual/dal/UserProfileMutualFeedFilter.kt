@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
+import com.vitorpamplona.amethyst.ui.dal.isRenderableRepost
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
@@ -37,8 +38,6 @@ import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
-import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiNoteEvent
@@ -77,8 +76,7 @@ class UserProfileMutualFeedFilter(
             (
                 it.event is TextNoteEvent ||
                     it.event is ClassifiedsEvent ||
-                    it.event is RepostEvent ||
-                    it.event is GenericRepostEvent ||
+                    it.event.isRenderableRepost() ||
                     it.event is LongTextNoteEvent ||
                     it.event is WikiNoteEvent ||
                     it.event is NipTextEvent ||
