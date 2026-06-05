@@ -196,7 +196,7 @@ fun RelayWindowLimitMarkers(
  * Reads e.g. "Relay sync: ✓ 8 · ↓ 1" or "Relay sync: ↓ nostr.wine".
  */
 @Composable
-fun RelayReachMarker(entries: List<RelayReach>) {
+private fun RelayReachMarker(entries: List<RelayReach>) {
     if (entries.isEmpty()) return
 
     Row(

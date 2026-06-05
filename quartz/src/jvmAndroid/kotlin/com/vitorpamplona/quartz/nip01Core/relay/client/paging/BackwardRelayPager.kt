@@ -132,7 +132,7 @@ class BackwardRelayPager<K>(
     val relayProgress: StateFlow<Map<NormalizedRelayUrl, RelayPagingProgress>> = _relayProgress.asStateFlow()
 
     /** The session-pinned floor for [key] — where its paging starts (just below the live tail). */
-    fun floorFor(key: K): Long = pinnedFloor.getOrPut(key) { TimeUtils.now() - liveTailSeconds }
+    internal fun floorFor(key: K): Long = pinnedFloor.getOrPut(key) { TimeUtils.now() - liveTailSeconds }
 
     // --- Filter building support: the caller assembles the actual REQ from these. ---
 
