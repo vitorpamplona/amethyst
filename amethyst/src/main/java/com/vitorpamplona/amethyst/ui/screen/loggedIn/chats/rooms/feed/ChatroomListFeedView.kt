@@ -117,8 +117,8 @@ private fun CrossFadeState(
     // already loaded does NOT kick a hunt. Once rooms appear the markers take over, demand-driven.
     val user = accountViewModel.userProfile()
     val bootstrap = feedState is FeedState.Empty
-    BootstrapHistoryWhenEmpty(bootstrap, giftWrapsHistory.loadingMore, giftWrapsHistory.exhausted) { giftWrapsHistory.advanceAll(user) }
-    BootstrapHistoryWhenEmpty(bootstrap, nip04History.loadingMore, nip04History.exhausted) { nip04History.advanceAll(user) }
+    BootstrapHistoryWhenEmpty(bootstrap, giftWrapsHistory.loadingMore, giftWrapsHistory.exhausted) { giftWrapsHistory.advanceAll() }
+    BootstrapHistoryWhenEmpty(bootstrap, nip04History.loadingMore, nip04History.exhausted) { nip04History.advanceAll() }
 
     CrossfadeIfEnabled(
         targetState = feedState,
@@ -193,12 +193,12 @@ private fun FeedLoaded(
             buildList {
                 if (!giftWrapsExhausted) {
                     giftWrapsProgress.forEach { (relay, p) ->
-                        add(RelayReachCursor("17:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p)) { giftWrapsHistory.advance(user, relay) })
+                        add(RelayReachCursor("17:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p)) { giftWrapsHistory.advance(relay) })
                     }
                 }
                 if (!nip04Exhausted) {
                     nip04Progress.forEach { (relay, p) ->
-                        add(RelayReachCursor("04:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p)) { nip04History.advance(user, relay) })
+                        add(RelayReachCursor("04:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p)) { nip04History.advance(relay) })
                     }
                 }
             }

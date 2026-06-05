@@ -149,7 +149,7 @@ fun LoadingReplyNote(
             .collect {
                 Log.d("DMPagination") { "reply blank: widen → $protocol advanceAll (searching for unloaded reply)" }
                 when (protocol) {
-                    DmReplyProtocol.NIP17 -> giftWrapsHistory.advanceAll(accountViewModel.userProfile())
+                    DmReplyProtocol.NIP17 -> giftWrapsHistory.advanceAll()
                     DmReplyProtocol.NIP04 -> nip04History.advanceAll()
                 }
             }

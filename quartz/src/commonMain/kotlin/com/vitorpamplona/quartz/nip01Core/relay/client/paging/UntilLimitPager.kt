@@ -21,12 +21,19 @@
 package com.vitorpamplona.quartz.nip01Core.relay.client.paging
 
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import java.util.concurrent.ConcurrentHashMap
+import com.vitorpamplona.quartz.utils.cache.LargeCache
+import kotlin.concurrent.Volatile
 
 /**
- * Backward `until`+`limit` pagination cursor, tracked **independently per relay** (and per [K], e.g.
- * per account or per conversation), and advanced **on demand** — one page at a time, only when the
+ * Backward `until`+`limit` pagination cursors for **one scope** (one account, or one conversation),
+ * tracked **independently per relay** and advanced **on demand** — one page at a time, only when the
  * owner calls [advance].
+ *
+ * This is pure per-relay paging *state*, with no orchestration (no spinner / stall / exhaustion / live
+ * flows — those are [BackwardRelayPager]'s job). It is meant to live on the owning domain object (a
+ * `Chatroom` for a conversation, a `ChatroomList` for the account-level feeds), so the "how far each
+ * relay has paged" it records shares the lifetime of the cached messages it describes and is dropped
+ * with them. That is why it carries no key: the object graph *is* the partition.
  *
  * The time-window model can't tell "this relay is empty" from "this is a gap" — a `since`/`until`
  * slice that returns nothing might just be a quiet stretch with older messages beneath it. Paging by
@@ -46,9 +53,11 @@ import java.util.concurrent.ConcurrentHashMap
  * relay may cap results below what we asked — is not done.
  *
  * Not internally synchronized: per-relay counters are touched on the relay IO threads (one relay's
- * callbacks are serialized) and read on the owning scope; fields are volatile.
+ * callbacks are serialized) and read on the owning scope; fields are volatile and the relay map is a
+ * thread-safe [LargeCache]. Keyed only by [NormalizedRelayUrl], which is `Comparable` and consistent
+ * with `equals`, so the sorted cache identifies relays correctly.
  */
-class UntilLimitPager<K> {
+class UntilLimitPager {
     private class RelayCursor {
         // The `until` the REQ carries; null until the relay is first advanced. Moves only in advance().
         @Volatile var requestedUntil: Long? = null
@@ -66,33 +75,30 @@ class UntilLimitPager<K> {
         @Volatile var pageOldest: Long = Long.MAX_VALUE
     }
 
-    private val perKey = ConcurrentHashMap<K, ConcurrentHashMap<NormalizedRelayUrl, RelayCursor>>()
+    private val cursors = LargeCache<NormalizedRelayUrl, RelayCursor>()
 
-    private fun cursorsFor(key: K) = perKey.getOrPut(key) { ConcurrentHashMap() }
+    /**
+     * The session-pinned history floor this scope pages down from (typically `now − liveTail`, set by the
+     * owner on first advance). Kept here so it persists with the scope and does not drift forward on
+     * recompute — an undelivered relay's marker sits at this floor, and a moving floor would re-trigger
+     * its on-screen sentinel.
+     */
+    @Volatile
+    var floor: Long? = null
 
-    private fun cursor(
-        key: K,
-        relay: NormalizedRelayUrl,
-    ) = cursorsFor(key).getOrPut(relay) { RelayCursor() }
+    private fun cursor(relay: NormalizedRelayUrl) = cursors.getOrCreate(relay) { RelayCursor() }
 
     /** The `until` [relay]'s REQ currently carries. Only meaningful once it has been [advance]d. */
-    fun requestedUntilFor(
-        key: K,
-        relay: NormalizedRelayUrl,
-    ): Long? = cursor(key, relay).requestedUntil
+    fun requestedUntilFor(relay: NormalizedRelayUrl): Long? = cursor(relay).requestedUntil
 
     /** The oldest point [relay] has reached (its marker depth), or [start] if it hasn't delivered yet. */
     fun reachedUntilFor(
-        key: K,
         relay: NormalizedRelayUrl,
         start: Long,
-    ): Long = cursor(key, relay).reachedUntil ?: start
+    ): Long = cursor(relay).reachedUntil ?: start
 
     /** True once [relay] answered an empty page with EOSE — nothing older to ask it for. */
-    fun isDone(
-        key: K,
-        relay: NormalizedRelayUrl,
-    ): Boolean = cursor(key, relay).done
+    fun isDone(relay: NormalizedRelayUrl): Boolean = cursor(relay).done
 
     /**
      * Steps [relay] to its next, older page: points its REQ just below the oldest event it has delivered
@@ -100,11 +106,10 @@ class UntilLimitPager<K> {
      * has already paged to the bottom ([done]). The owner re-issues the REQ after this (invalidateFilters).
      */
     fun advance(
-        key: K,
         relay: NormalizedRelayUrl,
         start: Long,
     ): Boolean {
-        val c = cursor(key, relay)
+        val c = cursor(relay)
         if (c.done) return false
         c.requestedUntil =
             if (c.requestedUntil == null) {
@@ -119,11 +124,10 @@ class UntilLimitPager<K> {
 
     /** Records one event for [relay] in the current page. */
     fun onEvent(
-        key: K,
         relay: NormalizedRelayUrl,
         createdAt: Long,
     ) {
-        val c = cursor(key, relay)
+        val c = cursor(relay)
         c.pageCount++
         if (createdAt < c.pageOldest) c.pageOldest = createdAt
     }
@@ -133,11 +137,8 @@ class UntilLimitPager<K> {
      * cursor drops to the oldest event the page returned. The requested cursor is left alone so the relay
      * parks until [advance] is called again.
      */
-    fun onEose(
-        key: K,
-        relay: NormalizedRelayUrl,
-    ) {
-        val c = cursor(key, relay)
+    fun onEose(relay: NormalizedRelayUrl) {
+        val c = cursor(relay)
         if (c.pageCount == 0) {
             c.done = true
         } else {
@@ -155,12 +156,9 @@ class UntilLimitPager<K> {
     }
 
     /** Relays from [all] that have been armed (advanced at least once) and are not yet [done]. */
-    fun armedRelays(
-        key: K,
-        all: Collection<NormalizedRelayUrl>,
-    ): List<NormalizedRelayUrl> =
+    fun armedRelays(all: Collection<NormalizedRelayUrl>): List<NormalizedRelayUrl> =
         all.filter {
-            val c = cursor(key, it)
+            val c = cursor(it)
             c.requestedUntil != null && !c.done
         }
 
@@ -169,8 +167,7 @@ class UntilLimitPager<K> {
      * gone). Relays that haven't delivered count as [start]. Null when [relays] is empty.
      */
     fun deepestReached(
-        key: K,
         relays: Collection<NormalizedRelayUrl>,
         start: Long,
-    ): Long? = relays.takeIf { it.isNotEmpty() }?.minOf { cursor(key, it).reachedUntil ?: start }
+    ): Long? = relays.takeIf { it.isNotEmpty() }?.minOf { cursor(it).reachedUntil ?: start }
 }

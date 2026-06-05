@@ -28,83 +28,82 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class UntilLimitPagerTest {
-    private val key = "acct"
     private val relayA = RelayUrlNormalizer.normalizeOrNull("wss://a.relay")!!
     private val relayB = RelayUrlNormalizer.normalizeOrNull("wss://b.relay")!!
     private val start = 1_000L
 
     @Test
     fun unarmedRelayIsNotRequestedAndSitsAtTheFloor() {
-        val pager = UntilLimitPager<String>()
+        val pager = UntilLimitPager()
         // never advanced, so it carries no REQ
-        assertEquals(emptyList<Any>(), pager.armedRelays(key, listOf(relayA)))
+        assertEquals(emptyList<Any>(), pager.armedRelays(listOf(relayA)))
         // marker sits at the floor until it delivers
-        assertEquals(start, pager.reachedUntilFor(key, relayA, start))
+        assertEquals(start, pager.reachedUntilFor(relayA, start))
     }
 
     @Test
     fun firstAdvanceRequestsTheFloorThenSubsequentPagesStepBelowReached() {
-        val pager = UntilLimitPager<String>()
+        val pager = UntilLimitPager()
 
-        assertTrue(pager.advance(key, relayA, start))
-        assertEquals(start, pager.requestedUntilFor(key, relayA))
+        assertTrue(pager.advance(relayA, start))
+        assertEquals(start, pager.requestedUntilFor(relayA))
 
         // page returns events; oldest seen = 800
-        pager.onEvent(key, relayA, 900)
-        pager.onEvent(key, relayA, 800)
-        pager.onEose(key, relayA)
-        assertEquals(800L, pager.reachedUntilFor(key, relayA, start))
+        pager.onEvent(relayA, 900)
+        pager.onEvent(relayA, 800)
+        pager.onEose(relayA)
+        assertEquals(800L, pager.reachedUntilFor(relayA, start))
         // EOSE does NOT move the requested cursor — the relay parks at the same filter
-        assertEquals(start, pager.requestedUntilFor(key, relayA))
+        assertEquals(start, pager.requestedUntilFor(relayA))
 
         // next advance steps to reached - 1
-        assertTrue(pager.advance(key, relayA, start))
-        assertEquals(799L, pager.requestedUntilFor(key, relayA))
+        assertTrue(pager.advance(relayA, start))
+        assertEquals(799L, pager.requestedUntilFor(relayA))
     }
 
     @Test
     fun emptyPageMarksRelayDoneAndBlocksFurtherAdvance() {
-        val pager = UntilLimitPager<String>()
-        pager.advance(key, relayA, start)
-        pager.onEose(key, relayA) // no events
-        assertTrue(pager.isDone(key, relayA))
-        assertFalse(pager.advance(key, relayA, start))
-        assertEquals(emptyList<Any>(), pager.armedRelays(key, listOf(relayA)))
+        val pager = UntilLimitPager()
+        pager.advance(relayA, start)
+        pager.onEose(relayA) // no events
+        assertTrue(pager.isDone(relayA))
+        assertFalse(pager.advance(relayA, start))
+        assertEquals(emptyList<Any>(), pager.armedRelays(listOf(relayA)))
     }
 
     @Test
     fun aPageThatDoesNotStepOlderEndsTheRelayInsteadOfLooping() {
-        val pager = UntilLimitPager<String>()
-        pager.advance(key, relayA, start)
-        pager.onEvent(key, relayA, 800)
-        pager.onEose(key, relayA)
-        assertEquals(800L, pager.reachedUntilFor(key, relayA, start))
+        val pager = UntilLimitPager()
+        pager.advance(relayA, start)
+        pager.onEvent(relayA, 800)
+        pager.onEose(relayA)
+        assertEquals(800L, pager.reachedUntilFor(relayA, start))
 
         // misbehaving relay: next page echoes an event no older than what we already reached
-        pager.advance(key, relayA, start) // requested = 799
-        pager.onEvent(key, relayA, 900) // newer than reached(800) — not strictly older
-        pager.onEose(key, relayA)
-        assertTrue("a non-advancing page should end the relay, not re-loop", pager.isDone(key, relayA))
-        assertEquals(800L, pager.reachedUntilFor(key, relayA, start))
+        pager.advance(relayA, start) // requested = 799
+        pager.onEvent(relayA, 900) // newer than reached(800) — not strictly older
+        pager.onEose(relayA)
+        assertTrue("a non-advancing page should end the relay, not re-loop", pager.isDone(relayA))
+        assertEquals(800L, pager.reachedUntilFor(relayA, start))
     }
 
     @Test
     fun relaysAreTrackedIndependently() {
-        val pager = UntilLimitPager<String>()
-        pager.advance(key, relayA, start)
-        pager.onEvent(key, relayA, 500)
-        pager.onEose(key, relayA)
+        val pager = UntilLimitPager()
+        pager.advance(relayA, start)
+        pager.onEvent(relayA, 500)
+        pager.onEose(relayA)
         // B never advanced
-        assertEquals(listOf(relayA), pager.armedRelays(key, listOf(relayA, relayB)))
-        assertEquals(500L, pager.reachedUntilFor(key, relayA, start))
-        assertEquals(start, pager.reachedUntilFor(key, relayB, start))
+        assertEquals(listOf(relayA), pager.armedRelays(listOf(relayA, relayB)))
+        assertEquals(500L, pager.reachedUntilFor(relayA, start))
+        assertEquals(start, pager.reachedUntilFor(relayB, start))
         // deepest reached across both = A's 500 (B counts as the floor)
-        assertEquals(500L, pager.deepestReached(key, listOf(relayA, relayB), start))
+        assertEquals(500L, pager.deepestReached(listOf(relayA, relayB), start))
     }
 
     @Test
     fun deepestReachedIsNullWhenNoRelays() {
-        val pager = UntilLimitPager<String>()
-        assertEquals(null, pager.deepestReached(key, emptyList(), start))
+        val pager = UntilLimitPager()
+        assertEquals(null, pager.deepestReached(emptyList(), start))
     }
 }

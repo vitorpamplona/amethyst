@@ -182,7 +182,7 @@ private fun BootstrapHistoryWhenEmpty(
         combine(giftWrapsHistory.loadingMore, giftWrapsHistory.exhausted) { loading, exhausted -> !loading && !exhausted }
             .distinctUntilChanged()
             .filter { it }
-            .collect { giftWrapsHistory.advanceAll(accountViewModel.userProfile()) }
+            .collect { giftWrapsHistory.advanceAll() }
     }
     LaunchedEffect(needsBootstrap, nip04History) {
         if (!needsBootstrap) return@LaunchedEffect
@@ -237,7 +237,7 @@ fun ChatroomViewUI(
             buildList {
                 if (!giftWrapsExhausted) {
                     giftWrapsProgress.forEach { (relay, p) ->
-                        add(RelayReachCursor("17:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p)) { giftWrapsHistory.advance(user, relay) })
+                        add(RelayReachCursor("17:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p)) { giftWrapsHistory.advance(relay) })
                     }
                 }
                 if (!nip04Exhausted) {

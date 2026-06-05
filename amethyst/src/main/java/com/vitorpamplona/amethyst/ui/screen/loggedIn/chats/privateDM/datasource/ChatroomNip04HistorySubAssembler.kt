@@ -24,7 +24,6 @@ import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.BackwardRelayPager
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayPagingProgress
@@ -33,7 +32,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.StateFlow
@@ -44,28 +42,18 @@ import kotlinx.coroutines.flow.StateFlow
  * for that relay asks ([advance]); otherwise it parks. Nothing is walked proactively — a relay pages
  * only while its marker is visible and keeps paging while it stays visible.
  *
- * The per-relay cursor / stall / exhaustion bookkeeping lives in the shared [BackwardRelayPager]; this
- * class only builds the (per-relay scoped) NIP-04 REQ filters and forwards relay callbacks into it. A
- * relay is *done* once it answers an empty page; one that won't answer (auth CLOSE, unreachable, or
- * silent) is flagged *stalled* but kept. [exhausted] flips once every relay is either done or stalled.
+ * The per-relay cursors live on the conversation's [Chatroom][com.vitorpamplona.amethyst.commons.model.privateChats.Chatroom]
+ * (so reopening the room keeps its progress); this class binds the single-active [BackwardRelayPager]
+ * orchestrator to the open room's cursors on [newSub], builds the (per-relay scoped) NIP-04 REQ
+ * filters, and forwards relay callbacks into the pager. A relay is *done* once it answers an empty page;
+ * one that won't answer (auth CLOSE, unreachable, or silent) is flagged *stalled* but kept. [exhausted]
+ * flips once every relay is either done or stalled.
  */
 class ChatroomNip04HistorySubAssembler(
     client: INostrClient,
     allKeys: () -> Set<ChatroomQueryState>,
 ) : PerUserAndFollowListEoseManager<ChatroomQueryState, String>(client, allKeys) {
-    // Keyed by (account, conversation) so each thread paginates independently — and so the same
-    // correspondent opened from two logged-in accounts doesn't share a cursor.
-    private data class ConvoKey(
-        val account: HexKey,
-        val room: ChatroomKey,
-    )
-
-    private fun convoKey(key: ChatroomQueryState) = ConvoKey(user(key).pubkeyHex, key.room)
-
-    // The conversation's relay set for a key, resolved via the outbox model (per-relay scoped).
-    private fun relaysFor(pk: ConvoKey): Collection<NormalizedRelayUrl>? = allKeys().firstOrNull { convoKey(it) == pk }?.let { nip04DmRelayRouting(it.room.users, it.account)?.all }
-
-    private val pager = BackwardRelayPager<ConvoKey>("convo.nip04.history", relaysFor = ::relaysFor)
+    private val pager = BackwardRelayPager("convo.nip04.history")
 
     val loadingMore: StateFlow<Boolean> = pager.loadingMore
     val exhausted: StateFlow<Boolean> = pager.exhausted
@@ -78,17 +66,22 @@ class ChatroomNip04HistorySubAssembler(
 
     override fun list(key: ChatroomQueryState) = key.listId
 
+    // This conversation's persistent paging cursors, held on its Chatroom (per account + room).
+    private fun cursorsFor(key: ChatroomQueryState) =
+        key.account.chatroomList
+            .getOrCreatePrivateChatroom(key.room)
+            .nip04History
+
     override fun updateFilter(
         key: ChatroomQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
-        val pk = convoKey(key)
         val relays = nip04DmRelayRouting(key.room.users, key.account)
         if (!key.account.isWriteable() || relays == null) return emptyList()
 
         // Only armed (advanced, not done) relays carry a REQ, each at its own requested cursor. A parked
         // relay keeps the same filter here, so re-assembly (another relay advancing) doesn't re-REQ it.
-        val armed = pager.armedRelays(pk, relays.all).toSet()
+        val armed = pager.armedRelays(relays.all).toSet()
         if (armed.isEmpty()) return emptyList()
         DmRelayLog.log("convo.nip04.history", key.account)
         val scoped =
@@ -97,51 +90,46 @@ class ChatroomNip04HistorySubAssembler(
                 fromMeRelays = relays.fromMeRelays.filterKeys { it in armed },
             )
         return filterNip04DMsHistory(key.account, scoped, pager.pageLimit) { relay ->
-            pager.requestedUntilFor(pk, relay)
+            pager.requestedUntilFor(relay)
         }
     }
 
-    /** Steps a single [relay] to its next, older page for the open conversation(s). Driven by its marker. */
+    /** Steps a single [relay] to its next, older page for the open conversation. Driven by its marker. */
     fun advance(relay: NormalizedRelayUrl) {
-        var any = false
-        allKeys().forEach { if (pager.advance(convoKey(it), relay, it.account.scope)) any = true }
-        if (any) invalidateFilters()
+        if (pager.advance(relay)) invalidateFilters()
     }
 
     /** Steps every not-done, not-in-flight relay one page. For a thread too short to scroll. */
     fun advanceAll() {
-        var any = false
-        allKeys().forEach { if (pager.advanceAll(convoKey(it), it.account.scope)) any = true }
-        if (any) {
+        if (pager.advanceAll()) {
             Log.d("DMPagination") { "[convo.nip04.history] advanceAll (empty-thread bootstrap)" }
             invalidateFilters()
         }
     }
 
     override fun newSub(key: ChatroomQueryState): Subscription {
-        // Repoint the shared display flows to this conversation and populate the per-relay markers (all
-        // relays at the floor, not done) so the UI can render their sentinels and pull the first page.
-        pager.activate(convoKey(key))
+        // Repoint the single-active orchestrator at this conversation's cursors (on its Chatroom) and the
+        // relays it fans out to, refreshing the display flows from the restored progress.
+        pager.bind(cursorsFor(key), key.account.scope) { nip04DmRelayRouting(key.room.users, key.account)?.all }
         return requestNewSubscription(historyListener(key))
     }
 
-    private fun historyListener(key: ChatroomQueryState): SubscriptionListener {
-        val pk = convoKey(key)
-        return object : SubscriptionListener {
+    private fun historyListener(key: ChatroomQueryState): SubscriptionListener =
+        object : SubscriptionListener {
             override fun onEvent(
                 event: Event,
                 isLive: Boolean,
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                pager.onEvent(pk, relay, event.createdAt)
+                pager.onEvent(relay, event.createdAt)
             }
 
             override fun onEose(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                if (pager.onEose(pk, relay)) {
+                if (pager.onEose(relay)) {
                     Log.d("DMPagination") { "[convo.nip04.history] ${relay.url} reached the bottom (done)" }
                 }
                 newEose(key, relay, TimeUtils.now(), forFilters)
@@ -152,7 +140,7 @@ class ChatroomNip04HistorySubAssembler(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                pager.onClosed(pk, relay, message)
+                pager.onClosed(relay, message)
             }
 
             override fun onCannotConnect(
@@ -160,8 +148,7 @@ class ChatroomNip04HistorySubAssembler(
                 message: String,
                 forFilters: List<Filter>?,
             ) {
-                pager.onCannotConnect(pk, relay, message)
+                pager.onCannotConnect(relay, message)
             }
         }
-    }
 }

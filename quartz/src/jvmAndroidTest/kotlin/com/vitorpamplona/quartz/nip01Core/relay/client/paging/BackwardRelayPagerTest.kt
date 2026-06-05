@@ -36,12 +36,16 @@ import kotlin.test.assertTrue
  * assert the cursor / done / stalled / exhausted bookkeeping — the logic that backed the "All caught up
  * while messages missing" and the stalled-vs-done bugs. The relay's own `until`+`limit`+EOSE wire
  * behaviour is covered separately against the in-process relay in `UntilLimitPagingRelayTest`.
+ *
+ * The pager is the **single-active orchestrator**: its per-relay cursors live on a separate
+ * [UntilLimitPager] (in production, on a `Chatroom` / `ChatroomList`), bound in via [bind]. These tests
+ * supply their own cursor object so they can rebind a previously-paged scope and assert what persists
+ * (the cursors) versus what is transient and recomputed (the stalled set, the live flows).
  */
 class BackwardRelayPagerTest {
     private val r1 = NormalizedRelayUrl("wss://r1.example/")
     private val r2 = NormalizedRelayUrl("wss://r2.example/")
     private val r3 = NormalizedRelayUrl("wss://r3.example/")
-    private val key = "acct"
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
@@ -50,19 +54,25 @@ class BackwardRelayPagerTest {
         scope.cancel()
     }
 
-    private fun pagerOf(vararg relays: NormalizedRelayUrl): BackwardRelayPager<String> = BackwardRelayPager<String>("test") { relays.toList() }.also { it.activate(key) }
+    // A pager bound to a fresh scope of [relays]; returns both so tests can read the pinned cursor floor.
+    private fun pagerOf(vararg relays: NormalizedRelayUrl): Pair<BackwardRelayPager, UntilLimitPager> {
+        val cursors = UntilLimitPager()
+        val p = BackwardRelayPager("test")
+        p.bind(cursors, scope) { relays.toList() }
+        return p to cursors
+    }
 
     @Test
     fun firstPageRequestsTheFloorAndAnEmptyPageIsCaughtUp() {
-        val p = pagerOf(r1)
+        val (p, cursors) = pagerOf(r1)
         assertFalse(p.exhausted.value)
 
-        assertTrue(p.advance(key, r1, scope))
-        // The very first page asks `until = floor`.
-        assertEquals(p.floorFor(key), p.requestedUntilFor(key, r1))
+        assertTrue(p.advance(r1))
+        // The very first page asks `until = floor` (pinned on the bound cursors).
+        assertEquals(cursors.floor, p.requestedUntilFor(r1))
 
         // Empty page + EOSE → that relay is done; the only relay is done → genuinely caught up.
-        assertTrue(p.onEose(key, r1))
+        assertTrue(p.onEose(r1))
         assertTrue(
             p.relayProgress.value
                 .getValue(r1)
@@ -74,14 +84,14 @@ class BackwardRelayPagerTest {
 
     @Test
     fun nonEmptyPageMovesTheCursorThenBottomsOut() {
-        val p = pagerOf(r1)
-        p.advance(key, r1, scope)
+        val (p, _) = pagerOf(r1)
+        p.advance(r1)
 
         // A page of three events; the oldest is 80, so the reached cursor drops to 80 (not done).
-        p.onEvent(key, r1, 100)
-        p.onEvent(key, r1, 80)
-        p.onEvent(key, r1, 90)
-        assertFalse(p.onEose(key, r1))
+        p.onEvent(r1, 100)
+        p.onEvent(r1, 80)
+        p.onEvent(r1, 90)
+        assertFalse(p.onEose(r1))
         assertFalse(
             p.relayProgress.value
                 .getValue(r1)
@@ -91,27 +101,27 @@ class BackwardRelayPagerTest {
         assertFalse(p.exhausted.value)
 
         // The next page must start strictly below the oldest reached (80 → until 79).
-        assertTrue(p.advance(key, r1, scope))
-        assertEquals(79L, p.requestedUntilFor(key, r1))
+        assertTrue(p.advance(r1))
+        assertEquals(79L, p.requestedUntilFor(r1))
 
         // Empty page now → done → caught up.
-        assertTrue(p.onEose(key, r1))
+        assertTrue(p.onEose(r1))
         assertTrue(p.exhausted.value)
         assertEquals(0, p.stalledCount.value)
     }
 
     @Test
     fun aStalledRelayMakesExhaustionIncompleteNotCaughtUp() {
-        val p = pagerOf(r1, r2)
-        p.advance(key, r1, scope)
-        p.advance(key, r2, scope)
+        val (p, _) = pagerOf(r1, r2)
+        p.advance(r1)
+        p.advance(r2)
 
         // r1 genuinely bottoms out; r2 is still pending, so not exhausted yet.
-        p.onEose(key, r1)
+        p.onEose(r1)
         assertFalse(p.exhausted.value)
 
         // r2 auth-walls the REQ → stalled (kept, not done).
-        p.onClosed(key, r2, "auth-required")
+        p.onClosed(r2, "auth-required")
         assertTrue(
             p.relayProgress.value
                 .getValue(r2)
@@ -130,9 +140,9 @@ class BackwardRelayPagerTest {
 
     @Test
     fun cannotConnectAlsoStalls() {
-        val p = pagerOf(r1)
-        p.advance(key, r1, scope)
-        p.onCannotConnect(key, r1, "offline")
+        val (p, _) = pagerOf(r1)
+        p.advance(r1)
+        p.onCannotConnect(r1, "offline")
         assertTrue(
             p.relayProgress.value
                 .getValue(r1)
@@ -144,14 +154,14 @@ class BackwardRelayPagerTest {
 
     @Test
     fun reAdvancingAStalledRelayClearsTheStallAndUnExhausts() {
-        val p = pagerOf(r1)
-        p.advance(key, r1, scope)
-        p.onClosed(key, r1, "auth-required")
+        val (p, _) = pagerOf(r1)
+        p.advance(r1)
+        p.onClosed(r1, "auth-required")
         assertTrue(p.exhausted.value)
         assertEquals(1, p.stalledCount.value)
 
         // Retrying it re-arms the relay: no longer stalled, no longer exhausted.
-        assertTrue(p.advance(key, r1, scope))
+        assertTrue(p.advance(r1))
         assertFalse(
             p.relayProgress.value
                 .getValue(r1)
@@ -163,15 +173,15 @@ class BackwardRelayPagerTest {
 
     @Test
     fun reachedBackIsTheDeepestCursorAcrossRelays() {
-        val p = pagerOf(r1, r2)
-        p.advance(key, r1, scope)
-        p.advance(key, r2, scope)
+        val (p, _) = pagerOf(r1, r2)
+        p.advance(r1)
+        p.advance(r2)
 
-        p.onEvent(key, r1, 500)
-        p.onEose(key, r1) // r1 reached 500
+        p.onEvent(r1, 500)
+        p.onEose(r1) // r1 reached 500
 
-        p.onEvent(key, r2, 300)
-        p.onEose(key, r2) // r2 reached 300
+        p.onEvent(r2, 300)
+        p.onEose(r2) // r2 reached 300
 
         // Deepest = the oldest point any relay has reached.
         assertEquals(300L, p.reachedBack.value)
@@ -179,46 +189,54 @@ class BackwardRelayPagerTest {
 
     @Test
     fun aDoneRelayWillNotAdvanceAgain() {
-        val p = pagerOf(r1)
-        p.advance(key, r1, scope)
-        p.onEose(key, r1) // empty → done
-        assertFalse(p.advance(key, r1, scope))
+        val (p, _) = pagerOf(r1)
+        p.advance(r1)
+        p.onEose(r1) // empty → done
+        assertFalse(p.advance(r1))
     }
 
     @Test
     fun advanceAllArmsEveryNotDoneRelay() {
-        val p = pagerOf(r1, r2, r3)
+        val (p, _) = pagerOf(r1, r2, r3)
         // r2 already finished; advanceAll should arm only r1 and r3.
-        p.advance(key, r2, scope)
-        p.onEose(key, r2)
+        p.advance(r2)
+        p.onEose(r2)
 
-        assertTrue(p.advanceAll(key, scope))
-        assertEquals(setOf(r1, r3), p.armedRelays(key, listOf(r1, r2, r3)).toSet())
+        assertTrue(p.advanceAll())
+        assertEquals(setOf(r1, r3), p.armedRelays(listOf(r1, r2, r3)).toSet())
     }
 
     @Test
-    fun switchingActiveKeyRepointsTheDisplayFlows() {
-        val keyA = "a"
-        val keyB = "b"
-        val relaysByKey = mapOf(keyA to listOf(r1), keyB to listOf(r2))
-        val p = BackwardRelayPager<String>("test") { relaysByKey[it] }
+    fun rebindingRepointsFlowsKeepingDoneCursorsButDroppingTransientStalls() {
+        val cursorsA = UntilLimitPager()
+        val cursorsB = UntilLimitPager()
+        val p = BackwardRelayPager("test")
 
-        p.activate(keyA)
-        p.advance(keyA, r1, scope)
-        p.onClosed(keyA, r1, "auth-required") // A: exhausted + 1 stalled
+        // Scope A: r1 bottoms out (done — a persistent cursor fact); r2 auth-walls (stalled — transient).
+        p.bind(cursorsA, scope) { listOf(r1, r2) }
+        p.advance(r1)
+        p.advance(r2)
+        p.onEose(r1)
+        p.onClosed(r2, "auth-required")
         assertTrue(p.exhausted.value)
         assertEquals(1, p.stalledCount.value)
 
-        // Switching to a fresh key B repoints the flows to B's own state: nothing stalled, and its
-        // reach sits at B's floor (no history fetched yet — the markers start at the live-tail boundary).
-        p.activate(keyB)
+        // Bind to a fresh scope B: the flows reflect B's own (empty) state — nothing stalled, and its
+        // reach sits at B's floor (no history fetched yet — markers start at the live-tail boundary).
+        p.bind(cursorsB, scope) { listOf(r3) }
         assertFalse(p.exhausted.value)
         assertEquals(0, p.stalledCount.value)
-        assertEquals(p.floorFor(keyB), p.reachedBack.value)
+        assertEquals(cursorsB.floor, p.reachedBack.value)
 
-        // Switching back to A restores its remembered terminal state.
-        p.activate(keyA)
-        assertTrue(p.exhausted.value)
-        assertEquals(1, p.stalledCount.value)
+        // Rebind to A: r1 is still DONE (its cursor persisted on cursorsA), but r2's stall is gone — stall
+        // is transient, so r2 is pending again and A is no longer exhausted (it will retry the auth relay).
+        p.bind(cursorsA, scope) { listOf(r1, r2) }
+        assertTrue(
+            p.relayProgress.value
+                .getValue(r1)
+                .done,
+        )
+        assertEquals(0, p.stalledCount.value)
+        assertFalse(p.exhausted.value)
     }
 }

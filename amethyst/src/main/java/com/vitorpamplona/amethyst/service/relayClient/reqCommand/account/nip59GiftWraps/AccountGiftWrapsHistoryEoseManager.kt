@@ -21,14 +21,11 @@
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps
 
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.filterGiftWrapsToPubkey
-import com.vitorpamplona.amethyst.model.Account
-import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.BackwardRelayPager
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayPagingProgress
@@ -40,7 +37,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.StateFlow
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Loads the account's NIP-17 gift-wrap **history** — everything older than the one-week live tail
@@ -52,10 +48,12 @@ import java.util.concurrent.ConcurrentHashMap
  * (see the rooms-list / conversation feed views). So a spam-dense relay never floods: the user has to
  * scroll through its messages to pull more, and nothing is fetched while its marker is off screen.
  *
- * The per-relay cursor / stall / exhaustion bookkeeping lives in the shared [BackwardRelayPager]; this
- * class only builds the gift-wrap REQ filters and forwards relay callbacks into the pager. A relay is
- * *done* once it answers an empty page; one that won't answer (auth CLOSE, unreachable, or silent) is
- * flagged *stalled* but kept. [exhausted] flips once every relay is either done or stalled.
+ * The per-relay cursors live on the account's [ChatroomList][com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList]
+ * (so they share the lifetime of the cached gift-wraps); this class binds the single-active
+ * [BackwardRelayPager] orchestrator to them on [newSub], builds the gift-wrap REQ filters, and forwards
+ * relay callbacks into the pager. A relay is *done* once it answers an empty page; one that won't answer
+ * (auth CLOSE, unreachable, or silent) is flagged *stalled* but kept. [exhausted] flips once every relay
+ * is either done or stalled.
  */
 class AccountGiftWrapsHistoryEoseManager(
     client: INostrClient,
@@ -63,15 +61,7 @@ class AccountGiftWrapsHistoryEoseManager(
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
     override fun user(key: AccountQueryState) = key.account.userProfile()
 
-    // The account behind each user pubkey, captured on subscribe so the pager's relaysFor lookup and the
-    // advance() API can read the DM relay list (and the account scope) without the key.
-    private val accounts = ConcurrentHashMap<HexKey, Account>()
-
-    // Per-relay demand-driven paging, keyed by account pubkey so switching accounts preserves progress.
-    private val pager =
-        BackwardRelayPager<HexKey>("giftwrap.history") { pk ->
-            accounts[pk]?.dmRelays?.flow?.value
-        }
+    private val pager = BackwardRelayPager("giftwrap.history")
 
     val loadingMore: StateFlow<Boolean> = pager.loadingMore
     val exhausted: StateFlow<Boolean> = pager.exhausted
@@ -86,53 +76,42 @@ class AccountGiftWrapsHistoryEoseManager(
         key: AccountQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
-        val user = user(key)
         if (!key.account.isWriteable()) return emptyList()
         // Only relays that have been advanced (armed) and aren't done carry a REQ. A relay that finished a
         // page keeps the same `until` here, so re-assembly (triggered when ANOTHER relay advances) doesn't
         // re-REQ it — it stays parked until the UI advances it again.
         val relays = key.account.dmRelays.flow.value
-        val armed = pager.armedRelays(user.pubkeyHex, relays)
+        val armed = pager.armedRelays(relays)
         if (armed.isEmpty()) return emptyList()
         DmRelayLog.log("giftwrap.history", key.account)
         return armed.flatMap { relay ->
-            val until = pager.requestedUntilFor(user.pubkeyHex, relay) ?: return@flatMap emptyList()
+            val until = pager.requestedUntilFor(relay) ?: return@flatMap emptyList()
             Log.d(TAG) { "[giftwrap.history] REQ ${relay.url} until ${daysAgo(until)}d, limit=${pager.pageLimit}" }
-            filterGiftWrapsToPubkey(relay = relay, pubkey = user.pubkeyHex, since = null, until = until, limit = pager.pageLimit)
+            filterGiftWrapsToPubkey(relay = relay, pubkey = key.account.userProfile().pubkeyHex, since = null, until = until, limit = pager.pageLimit)
         }
     }
 
     /** Steps a single [relay] to its next, older page. Driven by that relay's on-screen window-limit marker. */
-    fun advance(
-        user: User,
-        relay: NormalizedRelayUrl,
-    ) {
-        val account = accounts[user.pubkeyHex] ?: return
-        if (pager.advance(user.pubkeyHex, relay, account.scope)) invalidateFilters()
+    fun advance(relay: NormalizedRelayUrl) {
+        if (pager.advance(relay)) invalidateFilters()
     }
 
     /** Steps every not-done, not-in-flight relay one page. For the empty/initial boundary (nothing to scroll). */
-    fun advanceAll(user: User) {
-        val account = accounts[user.pubkeyHex] ?: return
-        if (pager.advanceAll(user.pubkeyHex, account.scope)) {
+    fun advanceAll() {
+        if (pager.advanceAll()) {
             Log.d(TAG) { "[giftwrap.history] advanceAll (empty-feed bootstrap)" }
             invalidateFilters()
         }
     }
 
     override fun newSub(key: AccountQueryState): Subscription {
-        val user = user(key)
-        accounts[user.pubkeyHex] = key.account
-        // Repoint the shared display flows to this account and populate the per-relay markers (all relays
-        // at the floor, not done) so the UI can render their sentinels and pull the first page on view.
-        pager.activate(user.pubkeyHex)
-        return requestNewSubscription(historyListener(user, key))
+        // Repoint the single-active orchestrator at this account's gift-wrap cursors (on its ChatroomList)
+        // and the relays it fans out to, refreshing the display flows from the restored progress.
+        pager.bind(key.account.chatroomList.giftWrapHistory, key.account.scope) { key.account.dmRelays.flow.value }
+        return requestNewSubscription(historyListener(key))
     }
 
-    private fun historyListener(
-        user: User,
-        key: AccountQueryState,
-    ): SubscriptionListener =
+    private fun historyListener(key: AccountQueryState): SubscriptionListener =
         object : SubscriptionListener {
             override fun onEvent(
                 event: Event,
@@ -140,14 +119,14 @@ class AccountGiftWrapsHistoryEoseManager(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                pager.onEvent(user.pubkeyHex, relay, event.createdAt)
+                pager.onEvent(relay, event.createdAt)
             }
 
             override fun onEose(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                if (pager.onEose(user.pubkeyHex, relay)) {
+                if (pager.onEose(relay)) {
                     Log.d(TAG) { "[giftwrap.history] ${relay.url} reached the bottom (done)" }
                 }
                 // No auto-advance: the relay parks here until its marker asks for the next page.
@@ -159,7 +138,7 @@ class AccountGiftWrapsHistoryEoseManager(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                pager.onClosed(user.pubkeyHex, relay, message)
+                pager.onClosed(relay, message)
             }
 
             override fun onCannotConnect(
@@ -167,7 +146,7 @@ class AccountGiftWrapsHistoryEoseManager(
                 message: String,
                 forFilters: List<Filter>?,
             ) {
-                pager.onCannotConnect(user.pubkeyHex, relay, message)
+                pager.onCannotConnect(relay, message)
             }
         }
 

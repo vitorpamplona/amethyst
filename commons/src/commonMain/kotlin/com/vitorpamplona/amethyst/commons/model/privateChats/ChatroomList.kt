@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model.privateChats
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.paging.UntilLimitPager
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.utils.cache.LargeCache
@@ -33,6 +34,13 @@ class ChatroomList(
 ) {
     var rooms = LargeCache<ChatroomKey, Chatroom>()
         private set
+
+    // Account-level DM history paging cursors (one scope per account), held here so they share the
+    // lifetime of the cached messages and are dropped when the cache prunes them. The account-level
+    // history loaders bind their orchestrator to these. (Per-conversation NIP-04 cursors live on the
+    // individual [Chatroom] instead.)
+    val giftWrapHistory = UntilLimitPager()
+    val nip04History = UntilLimitPager()
 
     private fun getOrCreatePrivateChatroomSync(key: ChatroomKey): Chatroom = rooms.getOrCreate(key) { Chatroom() }
 
