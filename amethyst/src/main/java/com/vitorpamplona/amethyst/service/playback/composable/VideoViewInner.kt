@@ -107,6 +107,7 @@ fun VideoViewInner(
                     controllerVisible = controllerVisible,
                     onDialog = onZoom,
                     hasBlurhash = hasBlurhash,
+                    isFullscreen = isFullscreen,
                     accountViewModel = accountViewModel,
                 )
             }
