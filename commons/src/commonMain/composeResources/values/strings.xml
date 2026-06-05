@@ -54,4 +54,7 @@
     <!-- Accessibility -->
     <string name="accessibility_user_avatar">User avatar</string>
     <string name="accessibility_navigate">Navigate</string>
+
+    <!-- Notes & Replies -->
+    <string name="replying_to">replying to </string>
 </resources>

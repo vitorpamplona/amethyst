@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.ui.note
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -55,6 +56,8 @@ import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
+import com.vitorpamplona.amethyst.commons.ui.note.ReplyContext
+import com.vitorpamplona.amethyst.commons.ui.note.ReplyToLabel
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.service.DesktopCachedRichTextParser
 import com.vitorpamplona.amethyst.desktop.ui.components.ToggleableTimeAgoText
@@ -103,6 +106,8 @@ fun NoteCard(
     onPayInvoice: ((String) -> Unit)? = null,
     bottomContent: (@Composable ColumnScope.() -> Unit)? = null,
     headerTrailingContent: (@Composable () -> Unit)? = null,
+    replyContext: ReplyContext? = null,
+    onNavigateToThread: ((String) -> Unit)? = null,
 ) {
     val urls = remember(note.content) { UrlParser().parseValidUrls(note.content) }
     val imageUrls =
@@ -160,6 +165,36 @@ fun NoteCard(
     val cardShape = MaterialTheme.shapes.medium
     val cardBody: @Composable ColumnScope.() -> Unit = {
         Column(modifier = Modifier.padding(16.dp)) {
+            // Reply context — embedded parent + "Replying to @X" label.
+            // Rendered above the standard author/timestamp row.
+            replyContext?.let { ctx ->
+                val parentNoteId = ctx.parentNoteId
+                if (parentNoteId != null) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .border(
+                                    width = 1.dp,
+                                    color = MaterialTheme.colorScheme.outlineVariant,
+                                    shape = RoundedCornerShape(8.dp),
+                                ),
+                    ) {
+                        QuotedNoteEmbed(
+                            noteId = parentNoteId,
+                            localCache = localCache,
+                            onMentionClick = onMentionClick,
+                            onNavigateToThread = onNavigateToThread,
+                        )
+                    }
+                }
+                ReplyToLabel(
+                    parentAuthorDisplay = ctx.parentAuthorDisplay,
+                    onClick = { onAuthorClick?.invoke(ctx.parentAuthorPubKey) },
+                    modifier = Modifier.padding(vertical = 4.dp),
+                )
+            }
+
             Column {
                 Row(
                     modifier = Modifier.fillMaxWidth(),

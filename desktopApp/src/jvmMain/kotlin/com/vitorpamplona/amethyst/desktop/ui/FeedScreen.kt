@@ -104,6 +104,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.NewPostsChip
 import com.vitorpamplona.amethyst.commons.ui.feeds.StickToTopOnPrepend
 import com.vitorpamplona.amethyst.commons.ui.feeds.rememberNewPostsChipState
 import com.vitorpamplona.amethyst.commons.ui.layouts.GenericRepostLayout
+import com.vitorpamplona.amethyst.commons.ui.note.ReplyContext
 import com.vitorpamplona.amethyst.commons.util.toTimeAgo
 import com.vitorpamplona.amethyst.desktop.DesktopPreferences
 import com.vitorpamplona.amethyst.desktop.SearchHistoryStore
@@ -143,6 +144,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
+import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -257,6 +259,7 @@ fun FeedNoteCard(
                     onFollow != null &&
                     originalEvent.pubKey != myPubKeyHex &&
                     originalEvent.pubKey !in followedUsers
+            val innerReplyContext = rememberReplyContext(originalEvent, localCache)
             NoteCard(
                 note = displayData,
                 modifier = Modifier.fillMaxWidth(),
@@ -301,6 +304,8 @@ fun FeedNoteCard(
                     } else {
                         null
                     },
+                replyContext = innerReplyContext,
+                onNavigateToThread = onNavigateToThread,
             )
         }
     } else {
@@ -326,6 +331,7 @@ fun FeedNoteCard(
                 onFollow != null &&
                 event.pubKey != myPubKeyHex &&
                 event.pubKey !in followedUsers
+        val replyContext = rememberReplyContext(event, localCache)
         NoteCard(
             note = displayData,
             modifier = Modifier.fillMaxWidth(),
@@ -370,7 +376,50 @@ fun FeedNoteCard(
                 } else {
                     null
                 },
+            replyContext = replyContext,
+            onNavigateToThread = onNavigateToThread,
         )
+    }
+}
+
+/**
+ * Detects whether [event] is a reply (NIP-10 or NIP-22), observes the
+ * parent's metadata flow so the embed and label pop in once it arrives,
+ * and returns a [ReplyContext] (or null for non-replies).
+ *
+ * For addressable parents (`a` coord), the embed is skipped and only the
+ * "Replying to @X" label renders — see ReplyContext.from semantics.
+ */
+@Composable
+private fun rememberReplyContext(
+    event: Event,
+    localCache: DesktopLocalCache,
+): ReplyContext? {
+    val threaded = event as? BaseThreadedEvent ?: return null
+
+    val replyTargetEventId =
+        remember(event) {
+            threaded
+                .replyingToAddressOrEvent()
+                ?.takeUnless { it.contains(":") }
+        }
+
+    // Observe parent metadata so recomposition picks up the parent event /
+    // author when it arrives via relay subscription.
+    val parentNote =
+        replyTargetEventId?.let {
+            remember(it) { localCache.getOrCreateNote(it) }
+        }
+    val parentFlow = parentNote?.let { remember(it) { it.flow() } }
+    val parentMetaState = parentFlow?.metadata?.stateFlow?.collectAsState()
+    val parentMetaValue = parentMetaState?.value
+
+    DisposableEffect(parentNote) {
+        onDispose { parentNote?.clearFlow() }
+    }
+
+    return remember(event, parentMetaValue) {
+        ReplyContext.from(threaded, localCache)
     }
 }
 
