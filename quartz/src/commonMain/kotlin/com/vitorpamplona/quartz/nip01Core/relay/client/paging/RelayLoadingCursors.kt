@@ -30,7 +30,7 @@ import kotlin.concurrent.Volatile
  * owner calls [advance].
  *
  * This is pure per-relay paging *state*, with no orchestration (no spinner / stall / exhaustion / live
- * flows — those are [BackwardRelayPager]'s job). It is meant to live on the owning domain object (a
+ * flows — those are the orchestrator's job; see `BackwardRelayPager`). It is meant to live on the owning domain object (a
  * `Chatroom` for a conversation, a `ChatroomList` for the account-level feeds), so the "how far each
  * relay has paged" it records shares the lifetime of the cached messages it describes and is dropped
  * with them. That is why it carries no key: the object graph *is* the partition.
@@ -52,10 +52,11 @@ import kotlin.concurrent.Volatile
  * relay [done][isDone]. A relay that returns anything — even fewer than the requested limit, since a
  * relay may cap results below what we asked — is not done.
  *
- * Not internally synchronized: per-relay counters are touched on the relay IO threads (one relay's
- * callbacks are serialized) and read on the owning scope; fields are volatile and the relay map is a
- * thread-safe [LargeCache]. Keyed only by [NormalizedRelayUrl], which is `Comparable` and consistent
- * with `equals`, so the sorted cache identifies relays correctly.
+ * No locking of its own — it leans on cheaper guarantees instead: a cursor's per-page counters are
+ * mutated on the relay IO threads, where one relay's callbacks are serialized (so its read-modify-write
+ * can't race itself), and read on the owning scope; the cursor fields are `@Volatile`, and the relay
+ * map is the thread-safe [LargeCache]. That map is keyed only by [NormalizedRelayUrl], which is
+ * `Comparable` and consistent with `equals`, so the sorted cache identifies relays correctly.
  */
 class RelayLoadingCursors {
     private class RelayCursor {
@@ -103,7 +104,7 @@ class RelayLoadingCursors {
     /**
      * Steps [relay] to its next, older page: points its REQ just below the oldest event it has delivered
      * (or [start] for its very first page) and clears the page tally. No-op (returns false) if the relay
-     * has already paged to the bottom ([done]). The owner re-issues the REQ after this (invalidateFilters).
+     * has already paged to the bottom ([isDone]). The owner re-issues the REQ after this (invalidateFilters).
      */
     fun advance(
         relay: NormalizedRelayUrl,
@@ -133,7 +134,7 @@ class RelayLoadingCursors {
     }
 
     /**
-     * Finalizes [relay] for the page on its EOSE: an empty page marks it [done]; otherwise the reached
+     * Finalizes [relay] for the page on its EOSE: an empty page marks it [isDone]; otherwise the reached
      * cursor drops to the oldest event the page returned. The requested cursor is left alone so the relay
      * parks until [advance] is called again.
      */
@@ -155,7 +156,7 @@ class RelayLoadingCursors {
         }
     }
 
-    /** Relays from [all] that have been armed (advanced at least once) and are not yet [done]. */
+    /** Relays from [all] that have been armed (advanced at least once) and are not yet [isDone]. */
     fun armedRelays(all: Collection<NormalizedRelayUrl>): List<NormalizedRelayUrl> =
         all.filter {
             val c = cursor(it)
