@@ -54,4 +54,7 @@
     <!-- Accessibility -->
     <string name="accessibility_user_avatar">User avatar</string>
     <string name="accessibility_navigate">Navigate</string>
+
+    <!-- Relay history paging (shared feed markers) -->
+    <string name="chats_history_relay_sync">Relay sync:</string>
 </resources>

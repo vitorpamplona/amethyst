@@ -18,10 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.layouts
+package com.vitorpamplona.amethyst.commons.ui.feeds
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -35,19 +36,21 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.ui.theme.DividerThickness
-import com.vitorpamplona.amethyst.ui.theme.HalfPadding
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chats_history_relay_sync
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
+import org.jetbrains.compose.resources.stringResource
 
-/** How far one relay has paged into the conversation, for an in-stream progress marker. */
+// A relay-reach divider is hair-thin; inlined here so the shared component carries no app-theme dep.
+private val DividerThickness = 0.25.dp
+
+/** How far one relay has paged into a feed's history, for an in-stream progress marker. */
 enum class RelayReachState {
     // Still paging older — its marker slides down (older) as it advances.
     REACHING,
@@ -89,7 +92,7 @@ data class RelayWindowLimit(
  *
  * Why hoisted: the marker for a limit lives in exactly one gap (between the two rows straddling its
  * reached cursor). Placing the sentinel *inside* that row made its effect's identity ride the hosting
- * row — so any feed reorder (a live DM, or a slow relay dribbling a history page) moved the gap to a
+ * row — so any feed reorder (a live message, or a slow relay dribbling a history page) moved the gap to a
  * different row, tore the effect down and recreated it, and re-fired `advance()` on a static screen.
  * That re-armed stalled/auth relays into a silence-watchdog storm and could walk a delivering relay
  * back a window with no scroll. Hoisting the effect and driving it off **viewport visibility** instead
@@ -189,11 +192,11 @@ fun RelayReachMarker(entries: List<RelayReach>) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
-        modifier = HalfPadding,
+        modifier = Modifier.padding(5.dp),
     ) {
         HorizontalDivider(modifier = Modifier.weight(1f), thickness = DividerThickness)
         Text(
-            text = stringResource(R.string.chats_history_relay_sync),
+            text = stringResource(Res.string.chats_history_relay_sync),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
