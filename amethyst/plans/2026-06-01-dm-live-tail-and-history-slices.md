@@ -109,8 +109,15 @@ to load, just not advancing) keeps it false.
 
 > All three history managers (`AccountGiftWrapsHistoryEoseManager`,
 > `ChatroomNip04HistorySubAssembler`, `ChatroomListNip04HistorySubAssembler`)
-> are structurally the same per-relay loader. The earlier round-model history
-> (and the rooms-list "stall-gate") was fully removed — see Design evolution.
+> were structurally the same per-relay loader, so that bookkeeping is now a
+> single reusable engine — **`BackwardRelayPager<K>`** (in quartz,
+> `nip01Core/relay/client/paging/`). It owns the cursors, in-flight + silence
+> tracking, stalled set, pinned floor, and the display flows; each manager
+> supplies only its REQ-filter builder, a `relaysFor(key)` lookup, and the
+> subscription wiring (it forwards relay callbacks via
+> `onEvent`/`onEose`/`onClosed`/`onCannotConnect` and re-issues filters after
+> `advance`/`advanceAll`). The earlier round-model history (and the rooms-list
+> "stall-gate") was fully removed — see Design evolution.
 
 ### What drives `advance()`: on-screen markers, off viewport visibility
 
@@ -220,11 +227,17 @@ pagination, but it lived here because unreachable relays were part of the same
 
 ## Component map (vs `origin/main`)
 
-**New, transport-agnostic (`service/relayClient/eoseManagers/`)**
-- `UntilLimitPager.kt` — per-relay `until`+`limit` cursor. *(+ test)*
+**Reusable paging toolkit (quartz, `nip01Core/relay/client/paging/`)** — moved
+out of amethyst so desktop / CLI / any feed can reuse it; in the `jvmAndroid`
+source set (uses `java.util.concurrent`), visible to amethyst + desktop + quartz's
+`jvmAndroidTest` (geode in-process relay).
+- `UntilLimitPager.kt` — per-relay `until`+`limit` cursor. *(+ `UntilLimitPagerTest` in amethyst)*
 - `PerRelayLoadTracker.kt` — per-relay in-flight tracker + silence watchdog.
-- `WindowLoadTracker.kt` — round/barrier completion tracker (live tail). *(+ silence test)*
+- `WindowLoadTracker.kt` — round/barrier completion tracker (live tail). *(+ silence test in amethyst)*
 - `RelayPagingProgress.kt` — `(reachedUntil, done, stalled)` per relay.
+- `BackwardRelayPager.kt` — the generic per-relay backward-pagination engine the
+  three history managers delegate to. *(+ `BackwardRelayPagerTest` state-machine
+  + `UntilLimitPagingRelayTest` geode wire-contract test)*
 - `DmRelayLog.kt`, diagnostics/`DmRelayDiagnosticsLogger.kt` — `DMPagination` logs.
 
 **Managers / assemblers**
