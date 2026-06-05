@@ -41,7 +41,7 @@ Each DM protocol — **NIP-17** gift wraps (kind 1059) and **NIP-04** legacy DMs
    when all settle, drives the boot spinner.
 2. **History** — everything *older* than the week floor, paged **backward by
    `until`+`limit`, per relay, on demand**. Backed by the **per-relay model**
-   (`UntilLimitPager` + `PerRelayLoadTracker`), driven by on-screen markers.
+   (`RelayLoadingCursors` + `PerRelayLoadTracker`), driven by on-screen markers.
 
 The two are disjoint in time, so re-issuing a history page never re-streams the
 live tail, and consecutive history pages never re-stream each other.
@@ -56,7 +56,7 @@ Accessed from the UI via `accountViewModel.dataSources()` as
 `.account.giftWrapsHistory`, `.chatroom.nip04History`,
 `.chatroomList.nip04History`.
 
-### The history paging primitive: `UntilLimitPager`
+### The history paging primitive: `RelayLoadingCursors`
 
 The time-window model can't tell "this relay is empty" from "this is a gap" — a
 `since`/`until` slice that returns nothing might just be a quiet stretch above
@@ -76,7 +76,7 @@ Stop signals: an empty page marks the relay **`done`**. A relay returning fewer
 than `limit` is treated as its own cap, **not** exhaustion. A misbehaving relay
 that returns events but none older than already reached (echoing its newest
 events) is also treated as the bottom, so its marker can't re-request the same
-window forever. Tested in `UntilLimitPagerTest.kt`.
+window forever. Tested in `RelayLoadingCursorsTest.kt`.
 
 ### The two completion models (and where each lives)
 
@@ -92,7 +92,7 @@ the one-shot fixed-window backfill the live tail does.
 > in current use only the settle / idle / cap paths ever fire. The REQ-aware
 > machinery is dormant in production — see "Things to scrutinize".
 
-**Per-relay model — `UntilLimitPager` + `PerRelayLoadTracker` (all history).**
+**Per-relay model — `RelayLoadingCursors` + `PerRelayLoadTracker` (all history).**
 Each relay advances to its next page the instant *it* EOSEs, independent of the
 others; the subscription layer diffs per relay, so re-issuing only re-REQs the
 relay whose cursor moved. `loading` starts **`false`** (a `true` start would
@@ -231,7 +231,7 @@ pagination, but it lived here because unreachable relays were part of the same
 out of amethyst so desktop / CLI / any feed can reuse it; in the `jvmAndroid`
 source set (uses `java.util.concurrent`), visible to amethyst + desktop + quartz's
 `jvmAndroidTest` (geode in-process relay).
-- `UntilLimitPager.kt` — per-relay `until`+`limit` cursor. *(+ `UntilLimitPagerTest` in amethyst)*
+- `RelayLoadingCursors.kt` — per-relay `until`+`limit` cursor. *(+ `RelayLoadingCursorsTest` in amethyst)*
 - `PerRelayLoadTracker.kt` — per-relay in-flight tracker + silence watchdog.
 - `WindowLoadTracker.kt` — round/barrier completion tracker (live tail). *(+ silence test in amethyst)*
 - `RelayPagingProgress.kt` — `(reachedUntil, done, stalled)` per relay.
@@ -291,7 +291,7 @@ strings, no app-theme / `java.time` deps.
 These sections describe earlier iterations, kept for context. The code has
 moved past all of them.
 
-### v1 — time-slice history (superseded by `UntilLimitPager`)
+### v1 — time-slice history (superseded by `RelayLoadingCursors`)
 
 History was first loaded in bounded `since`+`until` **time slices**
 (`TimeWindowPagination`, now deleted): `loadMore` fetched only the new band

@@ -30,7 +30,7 @@ import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.WeakReference
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.client.paging.UntilLimitPager
+import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -51,7 +51,7 @@ class Chatroom : NotesGatherer {
     // progress and the cursors share the lifetime of the cached messages. The conversation history
     // loader binds its (single-active) orchestrator to this. Lazy — most rooms in the rooms list are
     // never opened for history paging, so they never allocate it.
-    val nip04History by lazy { UntilLimitPager() }
+    val nip04History by lazy { RelayLoadingCursors() }
 
     // Per-instance lock shared by previously @Synchronized methods.
     private val syncLock = KmpLock()

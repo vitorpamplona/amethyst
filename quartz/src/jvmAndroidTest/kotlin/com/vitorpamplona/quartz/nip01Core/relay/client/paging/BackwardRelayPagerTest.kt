@@ -38,7 +38,7 @@ import kotlin.test.assertTrue
  * behaviour is covered separately against the in-process relay in `UntilLimitPagingRelayTest`.
  *
  * The pager is the **single-active orchestrator**: its per-relay cursors live on a separate
- * [UntilLimitPager] (in production, on a `Chatroom` / `ChatroomList`), bound in via [bind]. These tests
+ * [RelayLoadingCursors] (in production, on a `Chatroom` / `ChatroomList`), bound in via [bind]. These tests
  * supply their own cursor object so they can rebind a previously-paged scope and assert what persists
  * (the cursors) versus what is transient and recomputed (the stalled set, the live flows).
  */
@@ -55,8 +55,8 @@ class BackwardRelayPagerTest {
     }
 
     // A pager bound to a fresh scope of [relays]; returns both so tests can read the pinned cursor floor.
-    private fun pagerOf(vararg relays: NormalizedRelayUrl): Pair<BackwardRelayPager, UntilLimitPager> {
-        val cursors = UntilLimitPager()
+    private fun pagerOf(vararg relays: NormalizedRelayUrl): Pair<BackwardRelayPager, RelayLoadingCursors> {
+        val cursors = RelayLoadingCursors()
         val p = BackwardRelayPager("test")
         p.bind(cursors, scope) { relays.toList() }
         return p to cursors
@@ -208,8 +208,8 @@ class BackwardRelayPagerTest {
 
     @Test
     fun rebindingRepointsFlowsKeepingDoneCursorsButDroppingTransientStalls() {
-        val cursorsA = UntilLimitPager()
-        val cursorsB = UntilLimitPager()
+        val cursorsA = RelayLoadingCursors()
+        val cursorsB = RelayLoadingCursors()
         val p = BackwardRelayPager("test")
 
         // Scope A: r1 bottoms out (done — a persistent cursor fact); r2 auth-walls (stalled — transient).

@@ -32,7 +32,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Pins down the relay-side contract the whole [UntilLimitPager] / [BackwardRelayPager] design rests on,
+ * Pins down the relay-side contract the whole [RelayLoadingCursors] / [BackwardRelayPager] design rests on,
  * against the in-process relay: a backward `until`+`limit` walk returns each event **exactly once**
  * (no re-download), in **newest-first** capped pages, and an **empty page + EOSE** is the gap-proof
  * stop. If a relay ever stopped honouring this (e.g. oldest-first, or ignoring `until`), these break —

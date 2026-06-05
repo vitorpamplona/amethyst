@@ -20,90 +20,90 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.eoseManagers
 
-import com.vitorpamplona.quartz.nip01Core.relay.client.paging.UntilLimitPager
+import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class UntilLimitPagerTest {
+class RelayLoadingCursorsTest {
     private val relayA = RelayUrlNormalizer.normalizeOrNull("wss://a.relay")!!
     private val relayB = RelayUrlNormalizer.normalizeOrNull("wss://b.relay")!!
     private val start = 1_000L
 
     @Test
     fun unarmedRelayIsNotRequestedAndSitsAtTheFloor() {
-        val pager = UntilLimitPager()
+        val cursors = RelayLoadingCursors()
         // never advanced, so it carries no REQ
-        assertEquals(emptyList<Any>(), pager.armedRelays(listOf(relayA)))
+        assertEquals(emptyList<Any>(), cursors.armedRelays(listOf(relayA)))
         // marker sits at the floor until it delivers
-        assertEquals(start, pager.reachedUntilFor(relayA, start))
+        assertEquals(start, cursors.reachedUntilFor(relayA, start))
     }
 
     @Test
     fun firstAdvanceRequestsTheFloorThenSubsequentPagesStepBelowReached() {
-        val pager = UntilLimitPager()
+        val cursors = RelayLoadingCursors()
 
-        assertTrue(pager.advance(relayA, start))
-        assertEquals(start, pager.requestedUntilFor(relayA))
+        assertTrue(cursors.advance(relayA, start))
+        assertEquals(start, cursors.requestedUntilFor(relayA))
 
         // page returns events; oldest seen = 800
-        pager.onEvent(relayA, 900)
-        pager.onEvent(relayA, 800)
-        pager.onEose(relayA)
-        assertEquals(800L, pager.reachedUntilFor(relayA, start))
+        cursors.onEvent(relayA, 900)
+        cursors.onEvent(relayA, 800)
+        cursors.onEose(relayA)
+        assertEquals(800L, cursors.reachedUntilFor(relayA, start))
         // EOSE does NOT move the requested cursor — the relay parks at the same filter
-        assertEquals(start, pager.requestedUntilFor(relayA))
+        assertEquals(start, cursors.requestedUntilFor(relayA))
 
         // next advance steps to reached - 1
-        assertTrue(pager.advance(relayA, start))
-        assertEquals(799L, pager.requestedUntilFor(relayA))
+        assertTrue(cursors.advance(relayA, start))
+        assertEquals(799L, cursors.requestedUntilFor(relayA))
     }
 
     @Test
     fun emptyPageMarksRelayDoneAndBlocksFurtherAdvance() {
-        val pager = UntilLimitPager()
-        pager.advance(relayA, start)
-        pager.onEose(relayA) // no events
-        assertTrue(pager.isDone(relayA))
-        assertFalse(pager.advance(relayA, start))
-        assertEquals(emptyList<Any>(), pager.armedRelays(listOf(relayA)))
+        val cursors = RelayLoadingCursors()
+        cursors.advance(relayA, start)
+        cursors.onEose(relayA) // no events
+        assertTrue(cursors.isDone(relayA))
+        assertFalse(cursors.advance(relayA, start))
+        assertEquals(emptyList<Any>(), cursors.armedRelays(listOf(relayA)))
     }
 
     @Test
     fun aPageThatDoesNotStepOlderEndsTheRelayInsteadOfLooping() {
-        val pager = UntilLimitPager()
-        pager.advance(relayA, start)
-        pager.onEvent(relayA, 800)
-        pager.onEose(relayA)
-        assertEquals(800L, pager.reachedUntilFor(relayA, start))
+        val cursors = RelayLoadingCursors()
+        cursors.advance(relayA, start)
+        cursors.onEvent(relayA, 800)
+        cursors.onEose(relayA)
+        assertEquals(800L, cursors.reachedUntilFor(relayA, start))
 
         // misbehaving relay: next page echoes an event no older than what we already reached
-        pager.advance(relayA, start) // requested = 799
-        pager.onEvent(relayA, 900) // newer than reached(800) — not strictly older
-        pager.onEose(relayA)
-        assertTrue("a non-advancing page should end the relay, not re-loop", pager.isDone(relayA))
-        assertEquals(800L, pager.reachedUntilFor(relayA, start))
+        cursors.advance(relayA, start) // requested = 799
+        cursors.onEvent(relayA, 900) // newer than reached(800) — not strictly older
+        cursors.onEose(relayA)
+        assertTrue("a non-advancing page should end the relay, not re-loop", cursors.isDone(relayA))
+        assertEquals(800L, cursors.reachedUntilFor(relayA, start))
     }
 
     @Test
     fun relaysAreTrackedIndependently() {
-        val pager = UntilLimitPager()
-        pager.advance(relayA, start)
-        pager.onEvent(relayA, 500)
-        pager.onEose(relayA)
+        val cursors = RelayLoadingCursors()
+        cursors.advance(relayA, start)
+        cursors.onEvent(relayA, 500)
+        cursors.onEose(relayA)
         // B never advanced
-        assertEquals(listOf(relayA), pager.armedRelays(listOf(relayA, relayB)))
-        assertEquals(500L, pager.reachedUntilFor(relayA, start))
-        assertEquals(start, pager.reachedUntilFor(relayB, start))
+        assertEquals(listOf(relayA), cursors.armedRelays(listOf(relayA, relayB)))
+        assertEquals(500L, cursors.reachedUntilFor(relayA, start))
+        assertEquals(start, cursors.reachedUntilFor(relayB, start))
         // deepest reached across both = A's 500 (B counts as the floor)
-        assertEquals(500L, pager.deepestReached(listOf(relayA, relayB), start))
+        assertEquals(500L, cursors.deepestReached(listOf(relayA, relayB), start))
     }
 
     @Test
     fun deepestReachedIsNullWhenNoRelays() {
-        val pager = UntilLimitPager()
-        assertEquals(null, pager.deepestReached(emptyList(), start))
+        val cursors = RelayLoadingCursors()
+        assertEquals(null, cursors.deepestReached(emptyList(), start))
     }
 }

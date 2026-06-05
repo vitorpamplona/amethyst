@@ -31,11 +31,11 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Reusable **per-relay backward pagination** engine: pages a set of relays back through history,
- * **one page at a time, per relay, on demand**, by `until`+`limit` ([UntilLimitPager]) — with each
+ * **one page at a time, per relay, on demand**, by `until`+`limit` ([RelayLoadingCursors]) — with each
  * relay advancing independently the moment *it* settles, never paced by the slowest one.
  *
  * This is the **single-active orchestrator** around the paging state. The state itself (the per-relay
- * [UntilLimitPager] cursors) does NOT live here — it lives on the owning domain object (a `Chatroom`
+ * [RelayLoadingCursors] cursors) does NOT live here — it lives on the owning domain object (a `Chatroom`
  * for a conversation, a `ChatroomList` for the account-level feeds), so its lifetime matches the cached
  * messages it describes. One orchestrator drives whichever scope is on screen; calling [bind] repoints
  * it at that scope's cursors. This is safe because history relays only ever arm while their on-screen
@@ -44,7 +44,7 @@ import java.util.concurrent.ConcurrentHashMap
  * What it owns (all transient, recomputed on each [bind]): the in-flight + silence tracking
  * ([PerRelayLoadTracker]), the stalled-relay set, and the display [StateFlow]s ([relayProgress],
  * [exhausted], [reachedBack], [relayCount], [stalledCount]). The persistent cursors and the pinned
- * history floor live on the bound [UntilLimitPager].
+ * history floor live on the bound [RelayLoadingCursors].
  *
  * What it does NOT own (the caller supplies these — they are protocol- and framework-specific):
  *  - **Building the actual REQ filters.** The caller reads [armedRelays] + [requestedUntilFor] and
@@ -81,7 +81,7 @@ class BackwardRelayPager(
     // The active scope, set by [bind]: its persistent per-relay cursors (which live on the owning domain
     // object) and the lookup for the relay set it fans out to.
     @Volatile
-    private var cursors: UntilLimitPager? = null
+    private var cursors: RelayLoadingCursors? = null
 
     @Volatile
     private var relaysFor: () -> Collection<NormalizedRelayUrl>? = { null }
@@ -133,7 +133,7 @@ class BackwardRelayPager(
      * instead of restarting.
      */
     fun bind(
-        scopeCursors: UntilLimitPager,
+        scopeCursors: RelayLoadingCursors,
         scope: CoroutineScope,
         relaysForScope: () -> Collection<NormalizedRelayUrl>?,
     ) {

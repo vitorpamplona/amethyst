@@ -57,7 +57,7 @@ import kotlin.concurrent.Volatile
  * thread-safe [LargeCache]. Keyed only by [NormalizedRelayUrl], which is `Comparable` and consistent
  * with `equals`, so the sorted cache identifies relays correctly.
  */
-class UntilLimitPager {
+class RelayLoadingCursors {
     private class RelayCursor {
         // The `until` the REQ carries; null until the relay is first advanced. Moves only in advance().
         @Volatile var requestedUntil: Long? = null
