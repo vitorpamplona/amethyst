@@ -94,11 +94,18 @@ fun DmHistoryLoadingCard(
     relayProgress: Map<NormalizedRelayUrl, RelayPagingProgress> = emptyMap(),
     modifier: Modifier = Modifier,
 ) {
-    // Once exhausted, show "All caught up" for a beat, then collapse. Reset if it un-exhausts.
+    // Exhausted ("nothing more reachable right now") splits two ways and must NOT read the same:
+    //  - caughtUp: every relay genuinely bottomed out (empty page). This is the real "all caught up".
+    //  - incomplete: we stopped only because some relays are stalled (auth-walled / offline / silent),
+    //    so messages may still be out there. It must say so, stay put, and let the user tap to see which.
+    val caughtUp = exhausted && stalledCount <= 0
+    val incomplete = exhausted && stalledCount > 0
+
+    // Only the genuine caught-up state lingers then collapses; an incomplete window stays so it can be acted on.
     var collapsed by remember { mutableStateOf(false) }
-    LaunchedEffect(exhausted) {
+    LaunchedEffect(caughtUp) {
         collapsed =
-            if (exhausted) {
+            if (caughtUp) {
                 delay(ALL_DONE_VISIBLE_MS)
                 true
             } else {
@@ -127,7 +134,13 @@ fun DmHistoryLoadingCard(
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
             tonalElevation = 2.dp,
         ) {
-            Crossfade(targetState = exhausted, animationSpec = tween(500), label = "dmHistoryState") { done ->
+            val phase =
+                when {
+                    caughtUp -> HistoryPhase.CaughtUp
+                    incomplete -> HistoryPhase.Incomplete
+                    else -> HistoryPhase.Loading
+                }
+            Crossfade(targetState = phase, animationSpec = tween(500), label = "dmHistoryState") { state ->
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -135,35 +148,47 @@ fun DmHistoryLoadingCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(Modifier.size(22.dp), contentAlignment = Alignment.Center) {
-                        if (done) {
-                            Text(
-                                "✓",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        } else if (loading) {
-                            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                        } else {
-                            // Paused: not caught up, but not actively loading (the rooms-list auto-fill
-                            // stopped short of exhaustion, or we're between round-model pages). Show a
-                            // static "more" glyph so the icon slot is never blank — loading resumes on scroll.
-                            Text(
-                                "⋯",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                        when (state) {
+                            HistoryPhase.CaughtUp ->
+                                Text(
+                                    "✓",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            HistoryPhase.Incomplete ->
+                                // Same glyph the per-relay dialog uses for a stalled relay, same error colour —
+                                // signals "stopped early, some relays didn't answer", not "done".
+                                Text(
+                                    "…",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            HistoryPhase.Loading ->
+                                if (loading) {
+                                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                                } else {
+                                    // Paused: not caught up, but not actively loading (the rooms-list auto-fill
+                                    // stopped short of exhaustion, or we're between round-model pages). Show a
+                                    // static "more" glyph so the icon slot is never blank — resumes on scroll.
+                                    Text(
+                                        "⋯",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                         }
                     }
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
                             text =
-                                if (done) {
-                                    stringResource(R.string.chats_history_all_caught_up)
-                                } else {
-                                    stringResource(R.string.chats_history_older, protocolName)
+                                when (state) {
+                                    HistoryPhase.CaughtUp -> stringResource(R.string.chats_history_all_caught_up)
+                                    HistoryPhase.Incomplete -> stringResource(R.string.chats_history_incomplete)
+                                    HistoryPhase.Loading -> stringResource(R.string.chats_history_older, protocolName)
                                 },
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
@@ -171,10 +196,10 @@ fun DmHistoryLoadingCard(
                         )
                         Text(
                             text =
-                                if (done) {
-                                    stringResource(R.string.chats_history_reached_start, protocolName)
-                                } else {
-                                    historySubtitle(protocolTag, relayCount, stalledCount, reachedBack)
+                                when (state) {
+                                    HistoryPhase.CaughtUp -> stringResource(R.string.chats_history_reached_start, protocolName)
+                                    HistoryPhase.Incomplete -> incompleteSubtitle(stalledCount)
+                                    HistoryPhase.Loading -> historySubtitle(protocolTag, relayCount, stalledCount, reachedBack)
                                 },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -185,6 +210,19 @@ fun DmHistoryLoadingCard(
         }
     }
 }
+
+/** The three terminal-vs-loading faces of the history card: still loading/paused, genuinely caught up, or
+ * stopped early because relays stalled. Kept distinct so an incomplete window never reads as "all caught up". */
+private enum class HistoryPhase { Loading, CaughtUp, Incomplete }
+
+/** Subtitle for the "stopped early" state: how many relays we couldn't reach, with a hint to tap for the list.
+ * Shared with the reply placeholder so both read identically. */
+@Composable
+internal fun incompleteSubtitle(stalledCount: Int): String =
+    stringResource(
+        R.string.chats_history_incomplete_sub,
+        pluralStringResource(R.plurals.chats_history_relays, stalledCount, stalledCount),
+    )
 
 @Composable
 internal fun historySubtitle(
@@ -222,7 +260,7 @@ internal fun historySubtitle(
  * ↓ still reaching) and how far back it has paged ("back to <date>"), deepest-reaching first.
  */
 @Composable
-private fun DmHistoryRelayDialog(
+internal fun DmHistoryRelayDialog(
     protocolTag: String,
     relayProgress: Map<NormalizedRelayUrl, RelayPagingProgress>,
     onDismiss: () -> Unit,

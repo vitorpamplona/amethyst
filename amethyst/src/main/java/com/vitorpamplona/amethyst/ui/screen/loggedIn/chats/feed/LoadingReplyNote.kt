@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -38,7 +39,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -46,8 +49,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.RelayPagingProgress
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -114,6 +119,11 @@ fun LoadingReplyNote(
             DmReplyProtocol.NIP17 -> giftWrapsHistory.reachedBack
             DmReplyProtocol.NIP04 -> nip04History.reachedBack
         }
+    val relayProgressFlow: StateFlow<Map<NormalizedRelayUrl, RelayPagingProgress>> =
+        when (protocol) {
+            DmReplyProtocol.NIP17 -> giftWrapsHistory.relayProgress
+            DmReplyProtocol.NIP04 -> nip04History.relayProgress
+        }
     val protocolTag =
         when (protocol) {
             DmReplyProtocol.NIP17 -> "NIP-17"
@@ -124,6 +134,7 @@ fun LoadingReplyNote(
     val relayCount by relayCountFlow.collectAsStateWithLifecycle()
     val stalledCount by stalledCountFlow.collectAsStateWithLifecycle()
     val reachedBack by reachedBackFlow.collectAsStateWithLifecycle()
+    val relayProgress by relayProgressFlow.collectAsStateWithLifecycle()
 
     LaunchedEffect(protocol, loadingFlow, exhaustedFlow) {
         // Step the next, older page whenever the previous one has settled and history isn't exhausted.
@@ -141,30 +152,54 @@ fun LoadingReplyNote(
             }
     }
 
+    // Tapping opens the same per-relay popup the history card uses, so when the search gives up the user
+    // can see exactly which relays were reached and which stalled. Empty progress keeps it non-interactive.
+    var showRelays by remember { mutableStateOf(false) }
+    if (showRelays) {
+        DmHistoryRelayDialog(protocolTag, relayProgress) { showRelays = false }
+    }
+
     // Same chrome as DmHistoryLoadingCard (the older-history status card at the oldest end) so an
     // unloaded reply reads as the same kind of "reaching back into history" state, just inline in the
     // quote: rounded translucent surface, a spinner-in-a-box, then the status line.
     Surface(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+                .then(if (relayProgress.isNotEmpty()) Modifier.clickable { showRelays = true } else Modifier),
         shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
         tonalElevation = 2.dp,
     ) {
+        // When the walk gives up it splits the same way the history card does: some relays stalled
+        // (couldn't reach them — the message may still be out there) vs every relay genuinely bottomed
+        // out (it really isn't in your history). Either way we say what happened instead of a bare glyph.
+        val stalledOut = exhausted && stalledCount > 0
         Crossfade(targetState = exhausted, animationSpec = tween(500), label = "loadingReplyState") { isExhausted ->
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(Modifier.size(22.dp), contentAlignment = Alignment.Center) {
-                    if (isExhausted) {
-                        Text(
-                            "⋯",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    } else {
-                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    when {
+                        stalledOut ->
+                            // Stalled-out: same red "…" the per-relay dialog and history card use for unreachable.
+                            Text(
+                                "…",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        isExhausted ->
+                            // Genuinely searched everything and it isn't there.
+                            Text(
+                                "✕",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        else -> CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                     }
                 }
                 Spacer(Modifier.width(14.dp))
@@ -172,7 +207,7 @@ fun LoadingReplyNote(
                     Text(
                         text =
                             if (isExhausted) {
-                                stringRes(R.string.post_not_found_short)
+                                stringRes(R.string.chats_reply_not_found)
                             } else {
                                 stringRes(R.string.chats_reply_searching_history)
                             },
@@ -182,17 +217,20 @@ fun LoadingReplyNote(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    // Same status line as the oldest-end card: which protocol, how many relays it's
-                    // still asking, and how far back it has paged. Hidden once history runs dry.
-                    if (!isExhausted) {
-                        Text(
-                            text = historySubtitle(protocolTag, relayCount, stalledCount, reachedBack),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
+                    // While loading: which protocol, how many relays, how far back. When it gives up: either
+                    // "N relays unreachable · tap to see which" (stalled) or "searched every relay · tap to see".
+                    Text(
+                        text =
+                            when {
+                                stalledOut -> incompleteSubtitle(stalledCount)
+                                isExhausted -> stringRes(R.string.chats_reply_searched)
+                                else -> historySubtitle(protocolTag, relayCount, stalledCount, reachedBack)
+                            },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
         }
