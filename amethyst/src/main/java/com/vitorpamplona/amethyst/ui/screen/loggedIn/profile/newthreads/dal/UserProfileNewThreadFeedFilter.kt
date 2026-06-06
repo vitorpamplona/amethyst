@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
+import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
 import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
@@ -82,6 +83,7 @@ class UserProfileNewThreadFeedFilter(
                 it.event is TextNoteEvent ||
                     it.event is CommentEvent ||
                     it.event is ClassifiedsEvent ||
+                    it.event is FundraiserEvent ||
                     it.event.isRenderableRepost() ||
                     it.event is LongTextNoteEvent ||
                     it.event is WikiNoteEvent ||

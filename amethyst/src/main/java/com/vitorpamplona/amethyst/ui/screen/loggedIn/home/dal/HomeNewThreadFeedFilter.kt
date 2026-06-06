@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.noteBased.muted.MutedAuthors
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
+import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
 import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
@@ -68,6 +69,7 @@ class HomeNewThreadFeedFilter(
                 InteractiveStoryPrologueEvent.KIND,
                 WikiNoteEvent.KIND,
                 ClassifiedsEvent.KIND,
+                FundraiserEvent.KIND,
                 LongTextNoteEvent.KIND,
                 LiveChessGameEndEvent.KIND,
                 AttestationEvent.KIND,
@@ -123,6 +125,7 @@ class HomeNewThreadFeedFilter(
         return (
             noteEvent is TextNoteEvent ||
                 noteEvent is ClassifiedsEvent ||
+                noteEvent is FundraiserEvent ||
                 noteEvent.isRenderableRepost() ||
                 (noteEvent is LongTextNoteEvent && noteEvent.content.isNotEmpty()) ||
                 (noteEvent is WikiNoteEvent && noteEvent.content.isNotEmpty()) ||
