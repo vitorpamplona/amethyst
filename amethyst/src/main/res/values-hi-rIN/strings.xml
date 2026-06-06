@@ -734,7 +734,7 @@
     <string name="route_music_tracks">संगीत</string>
     <string name="route_music_playlists">संगीतसूचियाँ</string>
     <string name="route_podcast_episodes">कडियाँ</string>
-    <string name="route_podcasts">प्रसारयान</string>
+    <string name="route_podcasts">पुटप्रसार</string>
     <string name="podcast_view_episodes">कडियाँ देखें</string>
     <string name="podcast_episodes_section">कडियाँ</string>
     <string name="podcast_no_episodes">कोई कडी प्राप्त नहीं अब तक</string>
@@ -774,6 +774,12 @@
     <string name="add_to_public_bookmarks">सार्वजनिक स्मर्तव्य सूची में जोडें</string>
     <string name="remove_from_private_bookmarks">निजी स्मर्तव्य सूची से हटाएँ</string>
     <string name="remove_from_public_bookmarks">सार्वजनिक स्मर्तव्य सूची से हटाएँ</string>
+    <string name="add_hashtag_label">विषयसूचक जोडें</string>
+    <string name="add_hashtag_label_title">विषयसूचक जोडें</string>
+    <string name="add_hashtag_label_explainer">सार्वजनिक रूप से इस पत्र के साथ विषयसूचक (निप॰३२ चिप्पी) जोडें। जो लोग आपका अनुचरण करते हैं उस विषयसूचक की सूचनावली में इस पत्र को देखेंगे।</string>
+    <string name="add_hashtag_label_field">विषयसूचक</string>
+    <string name="add_hashtag_label_confirm">जोडें</string>
+    <string name="hashtag_label_added_by">के द्वारा जोडा गया</string>
     <string name="pinned_notes">टँगे गए पत्र</string>
     <string name="pinned_notes_explainer">आपके टँगे गए टीकाएँ</string>
     <string name="pin_to_profile">परिचय के साथ जोडें</string>
@@ -842,6 +848,29 @@
     <string name="quick_zap_amounts">शीघ्र ज्साप संख्याएँ</string>
     <string name="quick_zap_amounts_explainer">ज्साप घुण्डी दबाने पर दिखाया जाता है। एक संख्या दबाएँ उसे हटाने के लिए। उसे रिक्त छोड दें तो प्रत्येक बार संख्या प्रविष्ट करने के लिए पूछेगा।</string>
     <string name="send_onchain_instead">खण्डश्रृंखला सत्यापित विधि से भेजें इसके स्थान पर</string>
+    <string name="reload_mint_title">पुनःभरण टकसाल</string>
+    <string name="reload_mint_sats_amount">%1$s साट्स</string>
+    <string name="reload_mint_topup_label">पुनःभरण मात्रा</string>
+    <string name="reload_mint_section_to">पुनःभरण टकसाल</string>
+    <string name="reload_mint_section_from">इस से धनराशि</string>
+    <string name="reload_mint_pay_lightning">लैटनिंग द्वारा भुगतान</string>
+    <string name="reload_mint_lightning_desc">नव्य ईकाश॰ का टंकण करें अपने लैटनिंग धनकोष से</string>
+    <string name="reload_mint_not_enough">यहाँ पर्याप्त नहीं</string>
+    <string name="reload_mint_available">%1$s साट्स उपलब्ध</string>
+    <string name="reload_mint_confirm">पुनःभरण तथा ज्साप भेजें</string>
+    <string name="reload_mint_send_confirm">ज्साप भेजें</string>
+    <string name="reload_mint_awaiting_payment">भुगतान की प्रतीक्षा…</string>
+    <string name="reload_mint_retry">पुनःप्रयास करें</string>
+    <string name="reload_mint_summary">पुनःभरण %1$s साट्स %2$s तक तथा ज्साप %3$s को %4$s साट्स। शुल्क लगभग %5$s साट्स</string>
+    <string name="reload_mint_summary_funded">ज्साप %1$s को %2$s साट्स %3$s से</string>
+    <string name="reload_mint_recipient_fallback">प्राप्तकर्ता</string>
+    <string name="reload_mint_needs_more">%1$s साट्स अधिक आवश्यक</string>
+    <string name="reload_mint_funded">वित्तपोषित</string>
+    <string name="reload_mint_copy_invoice">चालान अनुकृति</string>
+    <string name="topup_mint_title">पुनःभरण टकसाल</string>
+    <string name="topup_mint_action">इस टकसाल का पुनःभरण</string>
+    <string name="topup_mint_amount_label">जोडने की मात्रा</string>
+    <string name="topup_mint_confirm">पुनःभरण</string>
     <string name="zap_privacy_section">ज्साप गोपनीयता</string>
     <string name="zap_type_section_explainer">नियन्त्रण करता है कि आपका परिचय कैसे दिखाया जाता है ज्साप भेजने पर।</string>
     <string name="wallet_connect_connect_app">संयोजन धनकोष</string>
@@ -1345,6 +1374,8 @@
     <string name="account_settings">लेखा स्थापना विकल्प</string>
     <string name="app_settings">क्रमक स्थापना विकल्प</string>
     <!-- Settings search -->
+    <string name="settings_search_placeholder">खोज स्थापना विकल्प</string>
+    <string name="settings_search_no_results">\"%1$s\" के लिए कोई स्थापना विकल्प प्राप्त नहीं</string>
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
          negentropy, …) stay searchable in every locale and aren't sent to translators. -->
@@ -1476,6 +1507,9 @@
     <string name="copy_nprofile_to_clipboard">टाँकाफलक में एन॰परिचय की अनुकृति करें</string>
     <string name="copy_npub_to_clipboard">टाँकाफलक में एनपुब॰ की अनुकृति करें</string>
     <string name="share_or_save">बाँटें अथवा अभिलेखन करें</string>
+    <string name="share_target_as_dm">सीधासन्देश के रूप में भेजें</string>
+    <string name="share_to_dm_title">को भेजें…</string>
+    <string name="share_to_dm_start_new">नया सन्देश</string>
     <string name="copy_url_to_clipboard">टाँकाफलक में जालपता की अनुकृति करें</string>
     <string name="copy_the_note_id_to_the_clipboard">टाँकाफलक में टीका विभेदक की अनुकृति करें</string>
     <string name="add_media_to_gallery">अभिलेख को चित्रालय में जोडें</string>
@@ -2420,10 +2454,10 @@
     <string name="kind_audio_track">ध्वनि अभिलेख</string>
     <string name="kind_music_track">संगीत अभिलेख</string>
     <string name="kind_music_playlist">संगीतसूची</string>
-    <string name="kind_podcast_episode">प्रसारयान कडी</string>
-    <string name="kind_podcast_metadata">प्रसारयान कार्यक्रम</string>
-    <string name="kind_authored_podcasts">कृत प्रसारयान</string>
-    <string name="kind_favorite_podcasts">प्रिय प्रसारयान</string>
+    <string name="kind_podcast_episode">पुटप्रसार कडी</string>
+    <string name="kind_podcast_metadata">पुटप्रसार कार्यक्रम</string>
+    <string name="kind_authored_podcasts">कृत पुटप्रसार</string>
+    <string name="kind_favorite_podcasts">प्रिय पुटप्रसार</string>
     <string name="kind_badge_awards">पदक पुरस्कार</string>
     <string name="kind_badge_definitions">पदक परिभाषाएँ</string>
     <string name="kind_accepted_badge_set">स्वीकृत पदक समुच्चय</string>
