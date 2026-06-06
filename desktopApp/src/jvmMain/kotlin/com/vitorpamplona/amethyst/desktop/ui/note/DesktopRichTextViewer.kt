@@ -194,9 +194,18 @@ fun DesktopRichTextViewer(
                             modifier = Modifier.fillMaxWidth(),
                         )
                     } else {
+                        // RichTextParser splits paragraphs on ' ' so each segment is one
+                        // space-delimited token; the source space lives BETWEEN segments,
+                        // not within them. spacedBy(4.dp) restores that inter-word gap
+                        // so mixed-content paragraphs (text + mention/hashtag/link) don't
+                        // render as a wall of glued-together words.
                         FlowRow(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = if (paragraph.isRTL) Arrangement.End else Arrangement.Start,
+                            horizontalArrangement =
+                                Arrangement.spacedBy(
+                                    4.dp,
+                                    if (paragraph.isRTL) Alignment.End else Alignment.Start,
+                                ),
                         ) {
                             for (word in paragraph.words) {
                                 RenderSegment(word, state, localCache, callbacks)
