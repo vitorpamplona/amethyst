@@ -110,14 +110,17 @@ to load, just not advancing) keeps it false.
 > All three history managers (`AccountGiftWrapsHistoryEoseManager`,
 > `ChatroomNip04HistorySubAssembler`, `ChatroomListNip04HistorySubAssembler`)
 > were structurally the same per-relay loader, so that bookkeeping is now a
-> single reusable engine — **`BackwardRelayPager<K>`** (in quartz,
-> `nip01Core/relay/client/paging/`). It owns the cursors, in-flight + silence
-> tracking, stalled set, pinned floor, and the display flows; each manager
-> supplies only its REQ-filter builder, a `relaysFor(key)` lookup, and the
-> subscription wiring (it forwards relay callbacks via
-> `onEvent`/`onEose`/`onClosed`/`onCannotConnect` and re-issues filters after
-> `advance`/`advanceAll`). The earlier round-model history (and the rooms-list
-> "stall-gate") was fully removed — see Design evolution.
+> single reusable engine — **`BackwardRelayPager`** (keyless, single-active). It
+> does **not** hold the cursors: the per-relay `RelayLoadingCursors` live on the
+> scope's own domain object (a `Chatroom` per conversation, a `ChatroomList` per
+> account), so they share the cached messages' lifetime and survive an account
+> switch. The orchestrator owns only the transient bits — in-flight + silence
+> tracking, the stalled set, and the display flows — and
+> `bind(cursors, scope, relaysFor)`s to whichever scope is active. Each manager
+> supplies its REQ-filter builder, a `relaysFor` lookup, and the subscription
+> wiring (forwards relay callbacks via `onEvent`/`onEose`/`onClosed`/`onCannotConnect`,
+> re-issues filters after `advance`/`advanceAll`). The earlier round-model history
+> (and the rooms-list "stall-gate") was fully removed — see Design evolution.
 
 ### What drives `advance()`: on-screen markers, off viewport visibility
 
@@ -227,18 +230,28 @@ pagination, but it lived here because unreachable relays were part of the same
 
 ## Component map (vs `origin/main`)
 
-**Reusable paging toolkit (quartz, `nip01Core/relay/client/paging/`)** — moved
-out of amethyst so desktop / CLI / any feed can reuse it; in the `jvmAndroid`
-source set (uses `java.util.concurrent`), visible to amethyst + desktop + quartz's
-`jvmAndroidTest` (geode in-process relay).
-- `RelayLoadingCursors.kt` — per-relay `until`+`limit` cursor. *(+ `RelayLoadingCursorsTest` in amethyst)*
-- `PerRelayLoadTracker.kt` — per-relay in-flight tracker + silence watchdog.
-- `WindowLoadTracker.kt` — round/barrier completion tracker (live tail). *(+ silence test in amethyst)*
+**Paging primitives (quartz, `nip01Core/relay/client/paging/`, `commonMain`)** —
+the pure, protocol-level paging *state*; iOS-clean, reusable by any KMP target.
+- `RelayLoadingCursors.kt` — per-relay `until`+`limit` cursor state + pinned floor;
+  held on the scope's domain object. *(+ `RelayLoadingCursorsTest` in amethyst; the
+  `until`+`limit` wire contract is covered by `UntilLimitPagingRelayTest` against
+  the quartz `jvmAndroidTest` geode relay)*
 - `RelayPagingProgress.kt` — `(reachedUntil, done, stalled)` per relay.
-- `BackwardRelayPager.kt` — the generic per-relay backward-pagination engine the
-  three history managers delegate to. *(+ `BackwardRelayPagerTest` state-machine
-  + `UntilLimitPagingRelayTest` geode wire-contract test)*
-- `DmRelayLog.kt`, diagnostics/`DmRelayDiagnosticsLogger.kt` — `DMPagination` logs.
+
+**Paging orchestrators (commons, `relayClient/paging/`, `jvmAndroid`)** — the
+StateFlow-backed, subscription-loading state holders. Moved out of amethyst **and**
+out of quartz (per `commons/ARCHITECTURE.md`: the relay-subscription client +
+`StateFlow` state holders live in commons) so desktop / CLI / any feed can reuse
+them; `jvmAndroid` (uses `java.util.concurrent` + `@Synchronized`) → Android +
+Desktop, not iOS.
+- `BackwardRelayPager.kt` — the keyless single-active orchestrator the three
+  history managers `bind` to. *(+ `BackwardRelayPagerTest` state-machine in commons
+  `jvmTest`)*
+- `PerRelayLoadTracker.kt` — per-relay in-flight tracker + silence watchdog.
+- `WindowLoadTracker.kt` — round/barrier completion tracker (live tail). *(+ `WindowLoadTrackerIdleTest` in amethyst)*
+
+**Diagnostics (amethyst)** — `service/relayClient/eoseManagers/DmRelayLog.kt`,
+`service/relayClient/diagnostics/DmRelayDiagnosticsLogger.kt` — the `DMPagination` logs.
 
 **Managers / assemblers**
 - `AccountGiftWrapsEoseManager.kt` (live tail) + `AccountGiftWrapsHistoryEoseManager.kt` (new, history).
