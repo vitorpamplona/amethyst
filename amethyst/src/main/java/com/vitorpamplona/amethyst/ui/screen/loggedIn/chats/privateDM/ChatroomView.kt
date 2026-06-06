@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -43,6 +44,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryLoadingCard
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachCursor
+import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachDetailDialog
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachMarkers
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachSentinels
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachState
@@ -237,18 +239,24 @@ fun ChatroomViewUI(
             buildList {
                 if (!giftWrapsExhausted) {
                     giftWrapsProgress.forEach { (relay, p) ->
-                        add(RelayReachCursor("17:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p)) { giftWrapsHistory.advance(relay) })
+                        add(RelayReachCursor("17:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p), "NIP-17") { giftWrapsHistory.advance(relay) })
                     }
                 }
                 if (!nip04Exhausted) {
                     nip04Progress.forEach { (relay, p) ->
-                        add(RelayReachCursor("04:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p)) { nip04History.advance(relay) })
+                        add(RelayReachCursor("04:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p), "NIP-04") { nip04History.advance(relay) })
                     }
                 }
             }
         }
     val nip17Name = stringResource(R.string.chats_history_proto_nip17)
     val nip04Name = stringResource(R.string.chats_history_proto_nip04)
+
+    // The relays behind a tapped in-stream "Relay sync" marker; non-null shows the detail popup.
+    var syncDetail by remember { mutableStateOf<List<RelayReachCursor>?>(null) }
+    syncDetail?.let { detail ->
+        RelayReachDetailDialog(detail, ::formatHistoryReachDate) { syncDetail = null }
+    }
 
     BootstrapHistoryWhenEmpty(feedViewModel.feedState, accountViewModel)
 
@@ -284,7 +292,7 @@ fun ChatroomViewUI(
                     if (limits.isEmpty()) {
                         null
                     } else {
-                        { newer, older -> RelayReachMarkers(limits, newer, older) }
+                        { newer, older -> RelayReachMarkers(limits, newer, older) { syncDetail = it } }
                     },
                 // The hoisted load driver that pulls each relay's next page while its marker is on screen,
                 // off viewport visibility (see RelayReachSentinels) so feed reorders don't re-page.

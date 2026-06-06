@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.resources.chats_history_incomplete_sub
 import com.vitorpamplona.amethyst.commons.resources.chats_history_older
 import com.vitorpamplona.amethyst.commons.resources.chats_history_reached_start
 import com.vitorpamplona.amethyst.commons.resources.chats_history_relay_back
+import com.vitorpamplona.amethyst.commons.resources.chats_history_relay_sync
 import com.vitorpamplona.amethyst.commons.resources.chats_history_relays
 import com.vitorpamplona.amethyst.commons.resources.chats_history_relays_title
 import com.vitorpamplona.amethyst.commons.resources.chats_history_subtitle
@@ -116,6 +117,11 @@ fun DmHistoryLoadingCard(
     //    so messages may still be out there. It must say so, stay put, and let the user tap to see which.
     val caughtUp = exhausted && stalledCount <= 0
     val incomplete = exhausted && stalledCount > 0
+
+    // Relays that still have older history to pull: not done and not stalled. Unlike [relayCount] (only
+    // those fetching a page *right now*), this also counts relays that returned a page and PARKED — the
+    // `⋯` paused state — so the subtitle doesn't read as a bare tag while the tap-popup lists N relays.
+    val reaching = remember(relayProgress) { relayProgress.values.count { !it.done && !it.stalled } }
 
     // Only the genuine caught-up state lingers then collapses; an incomplete window stays so it can be acted on.
     var collapsed by remember { mutableStateOf(false) }
@@ -215,7 +221,7 @@ fun DmHistoryLoadingCard(
                                 when (state) {
                                     HistoryPhase.CaughtUp -> stringResource(Res.string.chats_history_reached_start, protocolName)
                                     HistoryPhase.Incomplete -> incompleteSubtitle(stalledCount)
-                                    HistoryPhase.Loading -> historySubtitle(protocolTag, relayCount, stalledCount, reachedBack, formatReachDate)
+                                    HistoryPhase.Loading -> historySubtitle(protocolTag, reaching, stalledCount, reachedBack, formatReachDate)
                                 },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -249,9 +255,9 @@ fun historySubtitle(
     formatReachDate: (epochSeconds: Long) -> String,
 ): String {
     val backLabel = remember(reachedBack) { reachedBack?.let(formatReachDate) }
-    // Middle segment: the relays actively fetching ("N relays"), or — when none are in flight but some
-    // can't be reached — what we're waiting on ("waiting on N relays"). With neither, just the tag, since
-    // a paged-out-but-parked protocol isn't waiting on anything (it resumes on scroll).
+    // Middle segment: relays still working on it — fetching a page OR parked with more to pull ("N relays")
+    // — or, when none are reaching but some can't be reached, what we're waiting on ("waiting on N relays").
+    // With neither (every relay done), just the tag. [relayCount] here is the reaching count, not in-flight.
     val middle =
         when {
             relayCount > 0 -> pluralStringResource(Res.plurals.chats_history_relays, relayCount, relayCount)
@@ -347,3 +353,71 @@ private fun relayShortName(relay: NormalizedRelayUrl): String =
         .substringAfter("://")
         .trimEnd('/')
         .substringBefore('/')
+
+/**
+ * Popup shown when an in-stream "Relay sync" marker is tapped: the relays whose window sits at that point
+ * in the stream, each with its protocol tag, state glyph (✓ done · … stalled · ↓ reaching) and how far
+ * back it has paged — so the otherwise-terse `Relay sync: ✓ N` divider stops being a dead end and its
+ * meaning is explorable. Deepest-reaching first.
+ */
+@Composable
+fun RelayReachDetailDialog(
+    cursors: List<RelayReachCursor>,
+    formatReachDate: (epochSeconds: Long) -> String,
+    onDismiss: () -> Unit,
+) {
+    val rows = remember(cursors) { cursors.sortedBy { it.reachedUntil } }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_dismiss)) }
+        },
+        title = { Text(stringResource(Res.string.chats_history_relay_sync)) },
+        text = {
+            Column(
+                Modifier
+                    .heightIn(max = 360.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                rows.forEach { c ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = reachGlyph(c.state),
+                            color = reachColor(c.state),
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.width(22.dp),
+                        )
+                        if (c.protocol.isNotEmpty()) {
+                            Text(
+                                text = c.protocol,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                            )
+                            Spacer(Modifier.width(6.dp))
+                        }
+                        Text(
+                            text = c.name,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(Res.string.chats_history_relay_back, formatReachDate(c.reachedUntil)),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
+        },
+    )
+}

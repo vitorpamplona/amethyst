@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.feeds
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -97,6 +98,9 @@ data class RelayReachCursor(
     val name: String,
     val reachedUntil: Long,
     val state: RelayReachState,
+    // Short protocol tag (e.g. "NIP-17" / "NIP-04") shown in the tap-through detail popup, so a marker
+    // that mixes protocols in one gap isn't ambiguous. Empty when the feed has a single (implicit) kind.
+    val protocol: String = "",
     val advance: () -> Unit,
 )
 
@@ -173,6 +177,9 @@ fun RelayReachMarkers(
     limits: List<RelayReachCursor>,
     newerCreatedAt: Long?,
     olderCreatedAt: Long?,
+    // Tapped with the relays in this gap, so the caller can open a detail popup (which relays, how far
+    // back, per protocol). Null leaves the marker a passive, non-interactive divider.
+    onShowDetail: ((List<RelayReachCursor>) -> Unit)? = null,
 ) {
     val here =
         remember(limits, newerCreatedAt, olderCreatedAt) {
@@ -180,7 +187,7 @@ fun RelayReachMarkers(
         }
     if (here.isEmpty()) return
 
-    RelayReachMarker(here.map { RelayReach(it.name, it.state) })
+    RelayReachMarker(here.map { RelayReach(it.name, it.state) }, onClick = onShowDetail?.let { cb -> { cb(here) } })
 }
 
 /**
@@ -196,13 +203,16 @@ fun RelayReachMarkers(
  * Reads e.g. "Relay sync: ✓ 8 · ↓ 1" or "Relay sync: ↓ nostr.wine".
  */
 @Composable
-private fun RelayReachMarker(entries: List<RelayReach>) {
+private fun RelayReachMarker(
+    entries: List<RelayReach>,
+    onClick: (() -> Unit)? = null,
+) {
     if (entries.isEmpty()) return
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
-        modifier = Modifier.padding(5.dp),
+        modifier = Modifier.padding(5.dp).then(if (onClick != null) Modifier.clickable { onClick() } else Modifier),
     ) {
         HorizontalDivider(modifier = Modifier.weight(1f), thickness = DividerThickness)
         Text(
@@ -227,8 +237,8 @@ private fun RelayReachMarker(entries: List<RelayReach>) {
                     Text("·", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
                 }
                 Text(
-                    text = glyph(state) + " " + if (list.size == 1) list.first().name else list.size.toString(),
-                    color = color(state),
+                    text = reachGlyph(state) + " " + if (list.size == 1) list.first().name else list.size.toString(),
+                    color = reachColor(state),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
@@ -239,7 +249,7 @@ private fun RelayReachMarker(entries: List<RelayReach>) {
     }
 }
 
-private fun glyph(state: RelayReachState) =
+internal fun reachGlyph(state: RelayReachState) =
     when (state) {
         RelayReachState.REACHING -> "↓"
         RelayReachState.STALLED -> "…"
@@ -247,7 +257,7 @@ private fun glyph(state: RelayReachState) =
     }
 
 @Composable
-private fun color(state: RelayReachState): Color =
+internal fun reachColor(state: RelayReachState): Color =
     when (state) {
         RelayReachState.REACHING -> MaterialTheme.colorScheme.onSurfaceVariant
         RelayReachState.STALLED -> MaterialTheme.colorScheme.error
