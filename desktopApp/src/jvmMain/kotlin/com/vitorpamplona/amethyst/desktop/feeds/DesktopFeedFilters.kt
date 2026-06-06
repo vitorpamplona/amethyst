@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -194,8 +195,11 @@ class DesktopThreadFilter(
  * Profile feed: text notes + reposts by a specific pubkey.
  *
  * When [repliesOnly] is true, the filter switches to "Replies" mode:
- * only the pubkey's NIP-10 reply posts (kind 1 with a parent tag) — no
- * reposts, no top-level notes, no channel/live messages.
+ * only the pubkey's reply posts — NIP-22 [CommentEvent]s and NIP-10
+ * [TextNoteEvent]s carrying an explicit `reply`/`root` marker. Plain
+ * unmarked e-tags don't count: modern clients use those for quotes
+ * and mentions, and `Note.isNewThread()` (which is what Android's
+ * conversations feed checks) would let those through as "replies".
  */
 class DesktopProfileFeedFilter(
     private val pubkey: HexKey,
@@ -204,13 +208,18 @@ class DesktopProfileFeedFilter(
 ) : AdditiveFeedFilter<Note>() {
     override fun feedKey(): String = if (repliesOnly) "profile-$pubkey-replies" else "profile-$pubkey"
 
+    private fun isReply(event: Event): Boolean =
+        when (event) {
+            is CommentEvent -> true
+            is TextNoteEvent -> event.markedReply() != null || event.markedRoot() != null
+            else -> false
+        }
+
     private fun isProfileNote(note: Note): Boolean {
         val event = note.event ?: return false
         if (note.author?.pubkeyHex != pubkey) return false
         return if (repliesOnly) {
-            // event is TextNoteEvent excludes reposts AND chat-message types
-            // that !isNewThread() would otherwise let through.
-            event is TextNoteEvent && !note.isNewThread()
+            isReply(event)
         } else {
             isFeedNote(event)
         }
