@@ -21,11 +21,10 @@
 package com.vitorpamplona.quartz.experimental.agora
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.experimental.agora.tags.DeadlineTag
-import com.vitorpamplona.quartz.experimental.agora.tags.GoalAmountTag
-import com.vitorpamplona.quartz.experimental.agora.tags.WalletTag
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.firstTagValueAsLong
+import com.vitorpamplona.quartz.nip01Core.core.mapValueTagged
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.BannerTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
@@ -71,13 +70,16 @@ class FundraiserEvent(
     fun coverImage() = banner() ?: image()
 
     /** Fundraising target in sats, from the `goal` tag. */
-    fun goal() = tags.firstNotNullOfOrNull(GoalAmountTag::parse)
+    fun goal() = tags.firstTagValueAsLong("goal")
 
     /** Deadline (unix seconds) from the `deadline` tag. */
-    fun deadline() = tags.firstNotNullOfOrNull(DeadlineTag::parse)
+    fun deadline() = tags.firstTagValueAsLong("deadline")
 
-    /** On-chain donation addresses from the `w` tags (may be empty). */
-    fun wallets() = tags.mapNotNull(WalletTag::parse)
+    /**
+     * On-chain donation addresses from the `w` tags (Bitcoin / silent payment;
+     * may be empty). Display/copy only — Amethyst does not send on-chain.
+     */
+    fun wallets() = tags.mapValueTagged("w") { it }
 
     fun topics() = tags.hashtags()
 

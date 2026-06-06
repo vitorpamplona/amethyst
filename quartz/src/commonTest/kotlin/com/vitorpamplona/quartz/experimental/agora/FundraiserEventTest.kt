@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class FundraiserEventTest {
@@ -65,7 +66,8 @@ class FundraiserEventTest {
 
     @Test
     fun parsesFundraiserFields() {
-        val event = sampleEvent() as FundraiserEvent
+        val event = sampleEvent()
+        assertIs<FundraiserEvent>(event)
 
         assertEquals("Please help me, I'm Amira from Gaza", event.title())
         assertEquals("https://blossom.primal.net/abc.jpg", event.coverImage())
