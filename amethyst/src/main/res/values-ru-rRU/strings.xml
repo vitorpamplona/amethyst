@@ -8,6 +8,12 @@
     <string name="show_anyway">Показать</string>
     <string name="post_was_hidden">Данный пост был скрыт, потому что упоминает скрытых ваши пользователей</string>
     <string name="post_was_flagged_as_inappropriate_by">Запись была помечена как неуместная</string>
+    <plurals name="post_was_hidden_due_to_too_many_hashtags">
+        <item quantity="one">Этот пост имеет более чем %1$d хэштег</item>
+        <item quantity="few">Этот пост имеет более чем %1$d хэштегов</item>
+        <item quantity="many">Этот пост имеет более чем %1$d хэштегов</item>
+        <item quantity="other">Этот пост имеет более чем %1$d хэштегов</item>
+    </plurals>
     <string name="post_not_found">запись не найдена</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Фото канала</string>
@@ -15,6 +21,7 @@
     <string name="could_not_decrypt_the_message">Не удалось расшифровать сообщение</string>
     <string name="group_picture">Фото группы</string>
     <string name="explicit_content">Запрещённый контент</string>
+    <string name="duplicated_post">Дублированный пост</string>
     <string name="spam">Спам</string>
     <string name="impersonation">Выдача себя за другое лицо</string>
     <string name="illegal_behavior">Незаконные действия</string>
@@ -27,6 +34,7 @@
     <string name="copy_text">Копировать текст</string>
     <string name="copy_user_pubkey">Копировать ID автора</string>
     <string name="copy_note_id">Копировать ID записи</string>
+    <string name="copy_raw_json">Скопировать исходный JSON</string>
     <string name="broadcast">Разослать</string>
     <string name="request_deletion">Запросить удаление</string>
     <string name="block_report">Блок / Жалоба</string>
@@ -44,6 +52,7 @@
     <string name="login_with_a_private_key_to_like_posts">Вы используете публичный ключ, они - только для чтения. Войдите с приватным ключом, чтобы лайкать посты</string>
     <string name="no_zap_amount_setup_long_press_to_change">Не настроены запы. Нажмите и удерживайте для настройки</string>
     <string name="chat_zap_anonymous">Анонимный</string>
+    <string name="chat_raid_is_raiding">проводит рейды</string>
     <string name="chat_clip_created_a_clip">создал клип</string>
     <string name="login_with_a_private_key_to_be_able_to_send_zaps">Войдите с приватным ключом чтобы запать</string>
     <string name="login_with_a_private_key_to_be_able_to_follow">Вы используете публичный ключ, они - только для чтения. Войдите в систему приватным ключом, чтобы иметь возможность подписаться</string>
@@ -52,6 +61,7 @@
     <string name="login_with_a_private_key_to_be_able_to_show_word">Вы используете публичный ключ, они - только для чтения. Войдите в систему приватным ключом, чтобы иметь возможность показать слово или предложение</string>
     <string name="login_with_a_private_key_to_be_able_to_change_settings">Вы используете публичный ключ. Войдите приватным ключом, чтобы редактировать</string>
     <string name="login_with_a_private_key_to_be_able_to_upload">Вы используете публичный ключ, они - только для чтения. Войдите в систему приватным ключом, чтобы иметь возможность загружать</string>
+    <string name="login_with_a_private_key_to_be_able_to_sign_events">Вы используете публичный ключ. Войдите приватным ключом, чтобы редактировать</string>
     <string name="unauthorized_exception_description">Подписчик не авторизовал расшифровку, необходимую для выполнения этой операции. Активируйте расшифровки NIP-44 в приложении для подписчика и попробуйте еще раз</string>
     <string name="signer_not_found_exception">Подпись не найдена</string>
     <string name="zaps">Запы</string>
@@ -85,6 +95,7 @@
     <string name="thank_you_so_much">Большое спасибо!</string>
     <string name="amount_in_sats">Сумма в sat</string>
     <string name="send_sats">Отправить</string>
+    <string name="secret_note_to_receiver">Секретное примечание для получателя</string>
     <string name="secret_note_to_receiver_placeholder">Мое скрытое сообщение</string>
     <string name="secret_visible_text">Видимый префикс</string>
     <string name="secret_add_to_text">Добавить к посту</string>
@@ -103,6 +114,7 @@
     <string name="write_a_message">Написать сообщение…</string>
     <string name="post">Отправить</string>
     <string name="save">Сохранить</string>
+    <string name="send">Отправить</string>
     <string name="create">Создать</string>
     <string name="rename">Переименовать</string>
     <string name="cancel">Отменить</string>
@@ -138,6 +150,7 @@
     <string name="pronouns">Местоимения</string>
     <string name="ln_address">LN адрес</string>
     <string name="ln_url_outdated">LN URL (устаревш.)</string>
+    <string name="stale_relay_hint_label">Ретрансляторы могут быть устаревшими</string>
     <string name="download_to_phone">Сохранить в телефон</string>
     <string name="save_to_gallery">Сохранить в галерею</string>
     <string name="image_saved_to_the_gallery">Фото сохранено в галерею</string>
@@ -146,6 +159,7 @@
     <string name="failed_to_save_the_image">Не удалось сохранить фото</string>
     <string name="video_saved_to_the_gallery">Видео сохранено в галерею</string>
     <string name="failed_to_save_the_video">Не удалось сохранить видео</string>
+    <string name="failed_to_save_the_pdf">Не удалось сохранить PDF-файл</string>
     <string name="upload_image">Загрузить фото</string>
     <string name="upload_file">Загрузить файл</string>
     <string name="take_a_picture">Сделать фото</string>
@@ -155,13 +169,16 @@
     <string name="record_a_message_description">Нажмите и удерживайте, чтобы записать сообщение</string>
     <string name="re_record">Перезаписать</string>
     <string name="recording_indicator_description">Запись</string>
+    <string name="recording_indicator_with_time">Запись %1$s</string>
     <string name="uploading">Загрузка…</string>
     <string name="upload_error_title">Ошибка загрузки</string>
     <string name="upload_error_voice_message_failed">Неудалось загрузить голосовое сообщение</string>
+    <string name="upload_error_voice_message_unexpected_state">Неожиданное состояние загрузки</string>
     <string name="voice_preset_none">Отсутствует</string>
     <string name="voice_preset_deep">Глубокий</string>
     <string name="voice_preset_high">Высокий</string>
     <string name="voice_preset_neutral">Нейтральный</string>
+    <string name="voice_anonymize_title">Анонимизировать</string>
     <string name="voice_anonymize_description">Обрабатывает ваш голос. Внимание: основные изменения тона потенциально могут быть отменены определенными слушателями.</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Пользователь не установил Lightning адрес для получения чаевых</string>
     <string name="reply_here">"ответить.. "</string>
@@ -174,6 +191,7 @@
     <string name="blocked_users">Заблокированные пользователи</string>
     <string name="new_threads">Новые треды</string>
     <string name="conversations">Обсуждения</string>
+    <string name="mod_queue">Очередь модов</string>
     <string name="notes">Записи</string>
     <string name="replies">Ответы</string>
     <string name="mutual">Ваш</string>
@@ -226,12 +244,14 @@
     <string name="error_loading_replies">"Не удалось загрузить ответы: "</string>
     <string name="try_again">Повторить</string>
     <string name="notification_feed_is_empty">Уведомлений пока нет.</string>
+    <string name="open_poll">Открыть опрос</string>
     <string name="feed_is_empty">Лента пуста.</string>
     <string name="refresh">Обновить</string>
     <string name="created">создал(а)</string>
     <string name="with_description_of">с описанием</string>
     <string name="and_picture">и фото</string>
     <string name="changed_chat_name_to">сменил(а) название на</string>
+    <string name="changed_chat_profile_to">Новый профиль чата:</string>
     <string name="description_to">описание на</string>
     <string name="and_picture_to">и фото на</string>
     <string name="leave">Выйти</string>
