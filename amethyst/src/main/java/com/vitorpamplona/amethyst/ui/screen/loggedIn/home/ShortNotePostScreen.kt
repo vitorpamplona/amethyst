@@ -631,7 +631,7 @@ private fun NewPostScreenBody(
                 confirmButton = {
                     TextButton(onClick = {
                         showAlwaysOnPrompt = false
-                        nav.nav(Route.Settings)
+                        nav.nav(Route.NotificationSettings)
                     }) {
                         Text(stringRes(R.string.schedule_post_always_on_prompt_open_settings))
                     }
