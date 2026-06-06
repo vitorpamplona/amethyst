@@ -133,6 +133,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderCommunity
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
 import com.vitorpamplona.amethyst.ui.note.types.RenderFedimint
 import com.vitorpamplona.amethyst.ui.note.types.RenderFhirResource
+import com.vitorpamplona.amethyst.ui.note.types.RenderFundraiser
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitPatchEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitRepositoryEvent
@@ -208,6 +209,7 @@ import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.newItemBackgroundColor
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
+import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
 import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
@@ -1256,6 +1258,10 @@ private fun RenderNoteRow(
 
         is GoalEvent -> {
             RenderGoal(baseNote, accountViewModel, nav)
+        }
+
+        is FundraiserEvent -> {
+            RenderFundraiser(baseNote, makeItShort, accountViewModel, nav)
         }
 
         is HighlightEvent -> {

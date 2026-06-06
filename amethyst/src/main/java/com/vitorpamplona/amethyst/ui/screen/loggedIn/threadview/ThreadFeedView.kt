@@ -157,6 +157,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderCodeSnippetHeaderForThread
 import com.vitorpamplona.amethyst.ui.note.types.RenderEmojiPack
 import com.vitorpamplona.amethyst.ui.note.types.RenderFedimint
 import com.vitorpamplona.amethyst.ui.note.types.RenderFhirResource
+import com.vitorpamplona.amethyst.ui.note.types.RenderFundraiser
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitIssueEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitPatchEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderGitRepositoryEvent
@@ -221,6 +222,7 @@ import com.vitorpamplona.amethyst.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.ui.theme.lessImportantLink
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.selectedNote
+import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
 import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
@@ -765,6 +767,8 @@ private fun FullBleedNoteCompose(
                     RenderCalendarDateSlotEvent(baseNote, accountViewModel, nav)
                 } else if (noteEvent is GoalEvent) {
                     RenderGoal(baseNote, accountViewModel, nav)
+                } else if (noteEvent is FundraiserEvent) {
+                    RenderFundraiser(baseNote, makeItShort = false, accountViewModel, nav)
                 } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
                     RenderRepost(baseNote, quotesLeft = 3, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is RelayDiscoveryEvent) {
