@@ -66,6 +66,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -144,6 +145,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUsers
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
@@ -151,6 +153,7 @@ import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
+import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.GlobalScope
@@ -404,7 +407,7 @@ private fun rememberReplyContext(
                 ?.takeUnless { it.contains(":") }
         }
 
-    // Observe parent metadata so recomposition picks up the parent event /
+    // Observe parent NOTE metadata so recomposition picks up the parent event /
     // author when it arrives via relay subscription.
     val parentNote =
         replyTargetEventId?.let {
@@ -418,7 +421,22 @@ private fun rememberReplyContext(
         onDispose { parentNote?.clearFlow() }
     }
 
-    return remember(event, parentMetaValue) {
+    // Also observe the parent AUTHOR's user metadata (kind 0) flow so the
+    // "Replying to @X" label upgrades from truncated-hex to display name once
+    // the author metadata arrives. parentAuthor can be null until the parent
+    // event lands, so produceState (single unconditional composable call) is
+    // used to avoid the "conditional composable call" slot-structure trap.
+    val parentAuthor = parentNote?.author
+    val parentAuthorMetaValue by produceState<Any?>(initialValue = null, key1 = parentAuthor) {
+        val author = parentAuthor
+        if (author == null) {
+            value = null
+        } else {
+            author.metadata().flow.collect { value = it }
+        }
+    }
+
+    return remember(event, parentMetaValue, parentAuthorMetaValue) {
         ReplyContext.from(threaded, localCache)
     }
 }
@@ -658,6 +676,15 @@ fun FeedScreen(
                     .mapNotNull { it.replyTo?.lastOrNull() }
             val repostIds = repostOriginals.filter { it.event == null }.map { it.idHex }
 
+            // Reply parents — when the visible note is a reply, fetch the immediate parent
+            // so QuotedNoteEmbed can render it. Skip addressable-coord parents (kind 30023 etc).
+            val replyParentIds =
+                notes
+                    .mapNotNull { note ->
+                        val evt = note.event as? BaseThreadedEvent ?: return@mapNotNull null
+                        evt.replyingToAddressOrEvent()?.takeUnless { it.contains(":") }
+                    }.filter { localCache.getNoteIfExists(it)?.event == null }
+
             // Quoted note IDs from content bech32s (nostr:nevent/nostr:note references)
             val allEvents = (notes + repostOriginals.filter { it.event != null }).mapNotNull { it.event }
             val contentQuotedIds =
@@ -672,7 +699,7 @@ fun FeedScreen(
                         }
                     }.filter { localCache.getNoteIfExists(it)?.event == null }
 
-            (repostIds + contentQuotedIds).distinct()
+            (repostIds + replyParentIds + contentQuotedIds).distinct()
         }
 
     rememberSubscription(allRelayUrls, missingNoteIds, relayManager = relayManager) {
@@ -699,6 +726,20 @@ fun FeedScreen(
                     .filter { it.event is RepostEvent || it.event is GenericRepostEvent }
                     .mapNotNull { it.replyTo?.lastOrNull() }
 
+            // Reply-parent authors — extract DIRECTLY from each visible reply's tags
+            // (NIP-22 ReplyAuthorTag for CommentEvent; NIP-10 last p-tag convention for
+            // TextNote / other threaded events). Doesn't require the parent event itself
+            // to be in cache, so the metadata fetch races in parallel with the parent-event
+            // fetch above and lands as soon as either relay returns kind 0 for the author.
+            val replyParentAuthorHexes =
+                notes.mapNotNull { note ->
+                    when (val evt = note.event) {
+                        is CommentEvent -> evt.replyAuthor()?.pubKey
+                        is BaseThreadedEvent -> evt.taggedUsers().lastOrNull()?.pubKey
+                        else -> null
+                    }
+                }
+
             // All notes in cache that are referenced by visible notes
             val allEvents = (notes + repostOriginals.filter { it.event != null }).mapNotNull { it.event }
             val quotedNotes =
@@ -712,11 +753,28 @@ fun FeedScreen(
                     }
                 }
 
-            // Authors from feed notes + repost originals + quoted notes
-            (notes.mapNotNull { it.author } + repostOriginals.mapNotNull { it.author } + quotedNotes.mapNotNull { it.author })
-                .filter { it.profilePicture() == null }
-                .map { it.pubkeyHex }
-                .distinct()
+            // Authors from feed notes + repost originals + quoted notes (User-based —
+            // filter by missing profile picture). Reply-parent authors are hex-only
+            // (the parent User may not yet exist in cache) so they're concat'd as hexes
+            // after the User → hex projection.
+            val knownAuthorHexes =
+                (
+                    notes.mapNotNull { it.author } +
+                        repostOriginals.mapNotNull { it.author } +
+                        quotedNotes.mapNotNull { it.author }
+                ).filter { it.profilePicture() == null }
+                    .map { it.pubkeyHex }
+
+            val replyParentAuthorMissing =
+                replyParentAuthorHexes.filter {
+                    localCache
+                        .getOrCreateUser(it)
+                        .metadataOrNull()
+                        ?.flow
+                        ?.value == null
+                }
+
+            (knownAuthorHexes + replyParentAuthorMissing).distinct()
         }
 
     rememberSubscription(allRelayUrls, missingAuthorPubkeys, relayManager = relayManager) {

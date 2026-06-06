@@ -44,6 +44,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -170,11 +171,30 @@ fun NoteCard(
             replyContext?.let { ctx ->
                 val parentNoteId = ctx.parentNoteId
                 if (parentNoteId != null) {
+                    // Box owns the click so it consumes the pointer event before the
+                    // outer OutlinedCard's onClick (which would navigate to the reply's
+                    // own thread — current view, looking like "click does nothing").
+                    // Pass onNavigateToThread = null into QuotedNoteEmbed so the inner
+                    // card isn't separately clickable, keeping the click target a
+                    // single explicit surface.
+                    val onEmbedClick =
+                        if (onNavigateToThread != null) {
+                            { onNavigateToThread.invoke(parentNoteId) }
+                        } else {
+                            null
+                        }
                     Box(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
-                                .border(
+                                .clip(RoundedCornerShape(8.dp))
+                                .then(
+                                    if (onEmbedClick != null) {
+                                        Modifier.clickable(onClick = onEmbedClick)
+                                    } else {
+                                        Modifier
+                                    },
+                                ).border(
                                     width = 1.dp,
                                     color = MaterialTheme.colorScheme.outlineVariant,
                                     shape = RoundedCornerShape(8.dp),
@@ -184,7 +204,7 @@ fun NoteCard(
                             noteId = parentNoteId,
                             localCache = localCache,
                             onMentionClick = onMentionClick,
-                            onNavigateToThread = onNavigateToThread,
+                            onNavigateToThread = null,
                         )
                     }
                 }
@@ -466,9 +486,27 @@ fun QuotedNoteEmbed(
         onDispose { note.clearFlow() }
     }
 
+    // Observe the author's user metadata (kind 0) so the embed's name + avatar
+    // update once metadata arrives via relay subscription. produceState avoids
+    // the conditional-composable trap when note.author is null until the parent
+    // event lands.
+    val author = note.author
+    val authorMetaValue by produceState<Any?>(initialValue = null, key1 = author) {
+        val a = author
+        if (a == null) {
+            value = null
+        } else {
+            a.metadata().flow.collect { value = it }
+        }
+    }
+
     val event = note.event
     if (event != null) {
-        // Recompute on every recomposition — picks up user metadata changes
+        // Recompute on every recomposition — picks up note + user metadata changes.
+        // authorMetaValue is read to mark this recomposition path as author-meta
+        // dependent so toNoteDisplayData() sees the latest avatar/displayName.
+        @Suppress("UNUSED_EXPRESSION")
+        authorMetaValue
         val displayData = event.toNoteDisplayData(localCache)
 
         NoteCard(
