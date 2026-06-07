@@ -21,15 +21,17 @@
 package com.vitorpamplona.amethyst.commons.audio
 
 enum class VisualizerStyle {
-    OFF,
+    CLASSIC,
     BARS,
     WAVES,
     RADIAL,
     AURORA,
+    STATIC,
+    OFF,
     ;
 
     companion object {
-        val DEFAULT = WAVES
+        val DEFAULT = CLASSIC
 
         fun fromName(name: String?): VisualizerStyle = entries.firstOrNull { it.name == name } ?: DEFAULT
     }

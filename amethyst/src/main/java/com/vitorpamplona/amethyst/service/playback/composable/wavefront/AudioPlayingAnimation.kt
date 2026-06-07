@@ -21,7 +21,8 @@
 package com.vitorpamplona.amethyst.service.playback.composable.wavefront
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -30,14 +31,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import com.vitorpamplona.amethyst.commons.audio.AudioVisualizer
+import com.vitorpamplona.amethyst.commons.audio.SyntheticSpectrum
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 import com.vitorpamplona.amethyst.service.playback.playerPool.PcmTapRegistry
+import kotlinx.coroutines.flow.flowOf
 
 fun Tracks.isAudio() = groups.isNotEmpty() && groups.none { it.type == C.TRACK_TYPE_VIDEO }
 
@@ -45,6 +49,7 @@ fun Tracks.isAudio() = groups.isNotEmpty() && groups.none { it.type == C.TRACK_T
 fun AudioPlayingAnimation(
     controllerState: MediaControllerState,
     waveform: WaveformData?,
+    mediaId: String,
     style: VisualizerStyle,
     modifier: Modifier = Modifier,
     hasBlurhash: Boolean = false,
@@ -69,23 +74,23 @@ fun AudioPlayingAnimation(
         // NIP-A0 voice notes etc. that ship a precomputed waveform keep their seek bar.
         waveform != null -> Waveform(waveform, controllerState, modifier)
 
+        // The app's classic animated waveform.
+        style == VisualizerStyle.CLASSIC -> FakeWaveformAnimation(mediaControllerState = controllerState, modifier = modifier)
+
+        // A still, non-animated bar graphic for users who prefer no motion.
+        style == VisualizerStyle.STATIC -> {
+            val frozen = remember { flowOf(SyntheticSpectrum.frame(0f, 48)) }
+            AudioVisualizer(style = VisualizerStyle.BARS, spectrum = frozen, modifier = modifier.fillMaxWidth().requiredHeight(72.dp))
+        }
+
         // Visualizer disabled: draw nothing so any blurhash/cover backdrop shows through.
         style == VisualizerStyle.OFF -> Unit
 
+        // Live FFT styles (BARS / WAVES / RADIAL / AURORA).
         else -> {
-            val spectrum = remember(controllerState.controller) { PcmTapRegistry.spectrumFor(controllerState.controller) }
-            if (spectrum != null) {
-                // Dim the cover/blurhash backdrop behind the live visualizer.
-                val drawModifier = if (hasBlurhash) modifier.background(Color.Black.copy(alpha = 0.45f)) else modifier
-                AudioVisualizer(
-                    style = style,
-                    spectrum = spectrum,
-                    modifier = drawModifier.fillMaxSize(),
-                )
-            } else if (!hasBlurhash) {
-                // No live PCM available and no backdrop: keep the decorative fallback.
-                FakeWaveformAnimation(mediaControllerState = controllerState, modifier = modifier)
-            }
+            val spectrum = remember(mediaId) { PcmTapRegistry.spectrumFor(mediaId) }
+            val drawModifier = if (hasBlurhash) modifier.background(Color.Black.copy(alpha = 0.45f)) else modifier
+            AudioVisualizer(style = style, spectrum = spectrum, modifier = drawModifier.fillMaxWidth().requiredHeight(72.dp))
         }
     }
 }

@@ -201,6 +201,6 @@ class AccountSecurityPreferencesInternal(
 
 @Serializable
 class AccountMediaPreferencesInternal(
-    // Stored as VisualizerStyle.name; defaults to WAVES.
-    var audioVisualizer: String = "WAVES",
+    // Stored as VisualizerStyle.name; defaults to CLASSIC (the app's classic audio animation).
+    var audioVisualizer: String = "CLASSIC",
 )

@@ -28,12 +28,12 @@ class VisualizerStyleTest {
     fun parsesByNameWithSafeDefault() {
         assertEquals(VisualizerStyle.WAVES, VisualizerStyle.fromName("WAVES"))
         assertEquals(VisualizerStyle.RADIAL, VisualizerStyle.fromName("RADIAL"))
-        assertEquals(VisualizerStyle.WAVES, VisualizerStyle.fromName("nonsense"))
-        assertEquals(VisualizerStyle.WAVES, VisualizerStyle.fromName(null))
+        assertEquals(VisualizerStyle.CLASSIC, VisualizerStyle.fromName("nonsense"))
+        assertEquals(VisualizerStyle.CLASSIC, VisualizerStyle.fromName(null))
     }
 
     @Test
-    fun defaultIsWaves() {
-        assertEquals(VisualizerStyle.WAVES, VisualizerStyle.DEFAULT)
+    fun defaultIsClassic() {
+        assertEquals(VisualizerStyle.CLASSIC, VisualizerStyle.DEFAULT)
     }
 }

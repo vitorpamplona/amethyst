@@ -22,20 +22,31 @@ package com.vitorpamplona.amethyst.commons.audio
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class VisualizerRegistryTest {
     @Test
-    fun everyStyleHasARenderer() {
-        for (style in VisualizerStyle.entries) {
-            assertEquals(style, VisualizerRegistry.forStyle(style).style)
-        }
+    fun registryCoversTheFiveSpectrumStylesExactlyOnce() {
+        val styles = VisualizerRegistry.all.map { it.style }.toSet()
+        assertEquals(
+            setOf(
+                VisualizerStyle.OFF,
+                VisualizerStyle.BARS,
+                VisualizerStyle.WAVES,
+                VisualizerStyle.RADIAL,
+                VisualizerStyle.AURORA,
+            ),
+            styles,
+        )
+        assertEquals(5, VisualizerRegistry.all.size)
     }
 
     @Test
-    fun registryCoversEveryStyleExactlyOnce() {
-        val styles = VisualizerRegistry.all.map { it.style }.toSet()
-        assertTrue(styles.containsAll(VisualizerStyle.entries.toList()))
-        assertEquals(VisualizerStyle.entries.size, VisualizerRegistry.all.size)
+    fun forStyleReturnsMatchingRendererForSpectrumStylesAndFallsBackForOthers() {
+        for (renderer in VisualizerRegistry.all) {
+            assertEquals(renderer.style, VisualizerRegistry.forStyle(renderer.style).style)
+        }
+        // CLASSIC and STATIC have no spectrum renderer; the dispatcher falls back to OFF.
+        assertEquals(VisualizerStyle.OFF, VisualizerRegistry.forStyle(VisualizerStyle.CLASSIC).style)
+        assertEquals(VisualizerStyle.OFF, VisualizerRegistry.forStyle(VisualizerStyle.STATIC).style)
     }
 }

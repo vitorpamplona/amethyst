@@ -325,6 +325,8 @@ sealed class Route {
 
     @Serializable object ReactionsSettings : Route()
 
+    @Serializable object AudioVisualizerSettings : Route()
+
     @Serializable object BottomBarSettings : Route()
 
     @Serializable object HomeTabsSettings : Route()

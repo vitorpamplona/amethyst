@@ -209,7 +209,7 @@ class ExoPlayerPool(
                 coldPool.add(player)
             }
         } else {
-            PcmTapRegistry.unregister(player)
+            PcmTapRegistry.unregisterPlayer(player)
             player.release() // Release if pool is full.
         }
     }
@@ -225,11 +225,11 @@ class ExoPlayerPool(
                             copy
                         }
                     warmSnapshot.forEach {
-                        PcmTapRegistry.unregister(it.player)
+                        PcmTapRegistry.unregisterPlayer(it.player)
                         it.player.release()
                     }
                     coldPool.forEach {
-                        PcmTapRegistry.unregister(it)
+                        PcmTapRegistry.unregisterPlayer(it)
                         it.release()
                     }
                     coldPool.clear()

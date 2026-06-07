@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.service.playback.playerPool
 
 import android.content.Context
 import androidx.annotation.OptIn
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.exoplayer.DefaultLoadControl
@@ -67,7 +69,18 @@ class ExoPlayerBuilder(
                 setLoadControl(feedTunedLoadControl())
             }.build()
             .apply {
-                PcmTapRegistry.register(this, sink)
+                PcmTapRegistry.registerPlayer(this, sink)
+                addListener(
+                    object : Player.Listener {
+                        override fun onMediaItemTransition(
+                            mediaItem: MediaItem?,
+                            reason: Int,
+                        ) {
+                            PcmTapRegistry.bind(mediaItem?.mediaId, sink)
+                        }
+                    },
+                )
+                PcmTapRegistry.bind(currentMediaItem?.mediaId, sink)
                 addListener(AspectRatioCacher(MediaAspectRatioCache))
                 addListener(KeepVideosPlaying(this))
                 addListener(CurrentPlayPositionCacher(this, VideoViewedPositionCache))

@@ -1526,6 +1526,7 @@
     <string name="favorite_dvms_search_keywords" translatable="false">dvm, data vending machine, algo, algorithm, feeds</string>
     <string name="reactions_search_keywords" translatable="false">emoji, like, reaction</string>
     <string name="video_player_search_keywords" translatable="false">video, player, playback, autoplay, mute</string>
+    <string name="audio_visualizer_search_keywords" translatable="false">audio, visualizer, spectrum, bars, waves, radial, aurora, animation</string>
     <string name="payment_targets_search_keywords" translatable="false">zap split, split, recipients, forward zaps</string>
     <string name="call_settings_search_keywords" translatable="false">webrtc, video call, voice call, calls</string>
     <string name="translations_search_keywords" translatable="false">language, translate, locale</string>
@@ -2335,6 +2336,16 @@
     <string name="video_player_settings_action_pip_description">Play the video in a floating window (hidden if unsupported)</string>
     <string name="video_player_settings_action_cast">Cast to Device</string>
     <string name="video_player_settings_action_cast_description">Send the video to a Chromecast receiver on your Wi-Fi (hidden for local files)</string>
+
+    <string name="audio_visualizer_settings">Audio Visualizer</string>
+    <string name="audio_visualizer_settings_description">Choose the animation shown while audio notes play.</string>
+    <string name="audio_visualizer_off">Off</string>
+    <string name="audio_visualizer_bars">Spectrum Bars</string>
+    <string name="audio_visualizer_waves">Color Waves</string>
+    <string name="audio_visualizer_radial">Radial Ring</string>
+    <string name="audio_visualizer_aurora">Aurora Glow</string>
+    <string name="audio_visualizer_classic">Classic Waveform</string>
+    <string name="audio_visualizer_static">Static Image</string>
 
     <string name="profile_image_of_user">Profile Picture of %1$s</string>
     <string name="relay_info">Relay %1$s</string>

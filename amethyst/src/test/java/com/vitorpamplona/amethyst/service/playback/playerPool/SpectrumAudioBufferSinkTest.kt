@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.service.playback.playerPool
 import androidx.annotation.OptIn
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
+import com.vitorpamplona.amethyst.commons.audio.Spectrum
+import kotlinx.coroutines.flow.MutableSharedFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -66,11 +68,13 @@ class SpectrumAudioBufferSinkTest {
     @Test
     fun lowFrequencySineLightsLowBins() {
         val sink = SpectrumAudioBufferSink(fftSize = fftSize, binCount = binCount)
+        val out = MutableSharedFlow<Spectrum>(replay = 1, extraBufferCapacity = 1)
+        sink.output = out
         sink.flush(48000, 1, C.ENCODING_PCM_16BIT)
         sink.handleBuffer(monoPcm(sineShorts(k = 2, n = fftSize)))
 
         val bins =
-            sink.frames.replayCache
+            out.replayCache
                 .last()
                 .bins
         assertEquals(binCount, bins.size)
@@ -80,11 +84,13 @@ class SpectrumAudioBufferSinkTest {
     @Test
     fun highFrequencySineLightsHighBins() {
         val sink = SpectrumAudioBufferSink(fftSize = fftSize, binCount = binCount)
+        val out = MutableSharedFlow<Spectrum>(replay = 1, extraBufferCapacity = 1)
+        sink.output = out
         sink.flush(48000, 1, C.ENCODING_PCM_16BIT)
         sink.handleBuffer(monoPcm(sineShorts(k = 28, n = fftSize)))
 
         val bins =
-            sink.frames.replayCache
+            out.replayCache
                 .last()
                 .bins
         assertTrue("expected high bin to dominate, got ${maxBin(bins)}", maxBin(bins) >= binCount / 2)
@@ -93,11 +99,13 @@ class SpectrumAudioBufferSinkTest {
     @Test
     fun stereoIsDownmixedFromFirstChannel() {
         val sink = SpectrumAudioBufferSink(fftSize = fftSize, binCount = binCount)
+        val out = MutableSharedFlow<Spectrum>(replay = 1, extraBufferCapacity = 1)
+        sink.output = out
         sink.flush(48000, 2, C.ENCODING_PCM_16BIT)
         sink.handleBuffer(interleavedStereoPcm(sineShorts(k = 2, n = fftSize), ShortArray(fftSize)))
 
         val bins =
-            sink.frames.replayCache
+            out.replayCache
                 .last()
                 .bins
         assertTrue(maxBin(bins) < binCount / 2)
@@ -106,22 +114,26 @@ class SpectrumAudioBufferSinkTest {
     @Test
     fun emitsOnlyAfterAFullFftWindowAccumulates() {
         val sink = SpectrumAudioBufferSink(fftSize = fftSize, binCount = binCount)
+        val out = MutableSharedFlow<Spectrum>(replay = 1, extraBufferCapacity = 1)
+        sink.output = out
         sink.flush(48000, 1, C.ENCODING_PCM_16BIT)
         val full = sineShorts(k = 4, n = fftSize)
 
         sink.handleBuffer(monoPcm(full.copyOfRange(0, fftSize / 2)))
-        assertTrue("no frame should emit before a full window", sink.frames.replayCache.isEmpty())
+        assertTrue("no frame should emit before a full window", out.replayCache.isEmpty())
 
         sink.handleBuffer(monoPcm(full.copyOfRange(fftSize / 2, fftSize)))
-        assertEquals(1, sink.frames.replayCache.size)
+        assertEquals(1, out.replayCache.size)
     }
 
     @Test
     fun nonPcm16EncodingEmitsNothing() {
         val sink = SpectrumAudioBufferSink(fftSize = fftSize, binCount = binCount)
+        val out = MutableSharedFlow<Spectrum>(replay = 1, extraBufferCapacity = 1)
+        sink.output = out
         sink.flush(48000, 1, C.ENCODING_PCM_FLOAT)
         sink.handleBuffer(monoPcm(sineShorts(k = 4, n = fftSize)))
 
-        assertTrue("non-16-bit PCM must not emit a spectrum", sink.frames.replayCache.isEmpty())
+        assertTrue("non-16-bit PCM must not emit a spectrum", out.replayCache.isEmpty())
     }
 }

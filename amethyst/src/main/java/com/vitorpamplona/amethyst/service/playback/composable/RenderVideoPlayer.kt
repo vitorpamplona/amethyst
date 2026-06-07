@@ -186,6 +186,7 @@ fun RenderVideoPlayer(
         AudioPlayingAnimation(
             controllerState = controllerState,
             waveform = mediaItem.src.waveformData,
+            mediaId = mediaItem.src.videoUri,
             style = visualizerStyle,
             modifier = Modifier.fillMaxSize().align(Alignment.Center),
             hasBlurhash = hasBlurhash,
