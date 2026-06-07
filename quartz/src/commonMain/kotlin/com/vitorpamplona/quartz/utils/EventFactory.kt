@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.experimental.attestations.recommendation.Attesto
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
@@ -341,6 +342,7 @@ class EventFactory {
                 AudioTrackEvent.KIND -> AudioTrackEvent(id, pubKey, createdAt, tags, content, sig)
                 BadgeAwardEvent.KIND -> BadgeAwardEvent(id, pubKey, createdAt, tags, content, sig)
                 BadgeDefinitionEvent.KIND -> BadgeDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
+                BirdexEvent.KIND -> BirdexEvent(id, pubKey, createdAt, tags, content, sig)
                 BidEvent.KIND -> BidEvent(id, pubKey, createdAt, tags, content, sig)
                 BidConfirmationEvent.KIND -> BidConfirmationEvent(id, pubKey, createdAt, tags, content, sig)
                 BlockedRelayListEvent.KIND -> BlockedRelayListEvent(id, pubKey, createdAt, tags, content, sig)
