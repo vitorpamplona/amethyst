@@ -47,7 +47,12 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class PerRelayLoadTracker(
     private val name: String,
-    private val silenceMs: Long = 15_000L,
+    // How long the whole in-flight cohort can go without ANY signal before the still-pending relays are
+    // dropped + reported stalled. lastActivityMs is global, so any relay delivering keeps it fresh for all
+    // — this only fires on total dead air. Set well above mobile-over-Tor connect times (which run tens of
+    // seconds, occasionally past a minute): at 15 s a relay was being flagged "stalled" before its circuit
+    // even finished connecting. A genuinely dead relay still settles via CLOSED/cannot-connect, not this.
+    private val silenceMs: Long = 60_000L,
     private val onSilenced: (Set<NormalizedRelayUrl>) -> Unit = {},
 ) {
     private val _loading = MutableStateFlow(false)
