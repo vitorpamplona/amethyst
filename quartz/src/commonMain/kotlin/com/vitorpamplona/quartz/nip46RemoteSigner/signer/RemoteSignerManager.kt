@@ -27,11 +27,12 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.cache.LargeCache
-import com.vitorpamplona.quartz.utils.tryAndWait
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
-import kotlin.coroutines.Continuation
-import kotlin.coroutines.resume
+import kotlinx.coroutines.withTimeoutOrNull
 
 class RemoteSignerManager(
     val timeout: Long = 65_000,
@@ -41,19 +42,27 @@ class RemoteSignerManager(
     val relayList: Set<NormalizedRelayUrl>,
     val maxRetries: Int = 1,
 ) {
-    private val awaitingRequests = LargeCache<String, Continuation<BunkerResponse>>()
+    private val pending = LargeCache<String, Channel<BunkerResponse>>()
 
     suspend fun newResponse(responseEvent: NostrConnectEvent) {
         val decryptedJson = signer.decrypt(responseEvent.content, remoteKey)
         val bunkerResponse = OptimizedJsonMapper.fromJsonTo<BunkerResponse>(decryptedJson)
-        awaitingRequests.get(bunkerResponse.id)?.resume(bunkerResponse)
+
+        val channel = pending.remove(bunkerResponse.id)
+        if (channel == null) {
+            Log.d("NIP46") { "no channel for bunker response id=${bunkerResponse.id} (duplicate, unknown, or late)" }
+            return
+        }
+        channel.trySend(bunkerResponse)
     }
 
     /**
      * Launches the signer, waits and parses the result.
      *
-     * Builds the request once and republishes the same event on retry to ensure
-     * the bunker's response (keyed by request ID) can always be matched.
+     * Each retry attempt uses a fresh request id so a late response from a previous
+     * attempt cannot resume the current attempt with stale data. The bunker request
+     * builder is still called only once per call; the manager rewrites the id per
+     * attempt internally.
      *
      * @param bunkerRequestBuilder The BunkerRequest to be sent.
      * @param parser A function that parses the BunkerResponse into a [SignerResult.RequestAddressed<T>].
@@ -63,36 +72,38 @@ class RemoteSignerManager(
         bunkerRequestBuilder: () -> BunkerRequest,
         parser: (response: BunkerResponse) -> SignerResult.RequestAddressed<T>,
     ): SignerResult.RequestAddressed<T> {
-        val request = bunkerRequestBuilder()
-        val event =
-            NostrConnectEvent.create(
-                message = request,
-                remoteKey = remoteKey,
-                signer = signer,
-            )
+        val template = bunkerRequestBuilder()
 
         var attempt = 0
         while (true) {
-            val result =
-                tryAndWait(timeout) { continuation ->
-                    continuation.invokeOnCancellation {
-                        awaitingRequests.remove(request.id)
-                    }
+            val attemptRequest =
+                BunkerRequest(
+                    id = RandomInstance.randomChars(32),
+                    method = template.method,
+                    params = template.params,
+                )
+            val event =
+                NostrConnectEvent.create(
+                    message = attemptRequest,
+                    remoteKey = remoteKey,
+                    signer = signer,
+                )
 
-                    awaitingRequests.put(request.id, continuation)
+            val channel = Channel<BunkerResponse>(capacity = 1)
+            pending.put(attemptRequest.id, channel)
 
+            val response =
+                try {
                     client.publish(event, relayList = relayList)
+                    withTimeoutOrNull(timeout) { channel.receive() }
+                } finally {
+                    pending.remove(attemptRequest.id)
+                    channel.close()
                 }
 
             when {
-                result != null -> {
-                    return parser(result)
-                }
-
-                attempt >= maxRetries -> {
-                    return SignerResult.RequestAddressed.TimedOut()
-                }
-
+                response != null -> return parser(response)
+                attempt >= maxRetries -> return SignerResult.RequestAddressed.TimedOut()
                 else -> {
                     attempt++
                     delay(2_000L)
