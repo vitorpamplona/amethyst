@@ -104,22 +104,26 @@ class ChatroomListNip04HistorySubAssembler(
         return requestNewSubscription(historyListener(key))
     }
 
-    private fun historyListener(key: ChatroomListState): SubscriptionListener =
-        object : SubscriptionListener {
+    private fun historyListener(key: ChatroomListState): SubscriptionListener {
+        // A just-backgrounded account's subscription can still deliver after the orchestrator rebinds to
+        // another account; gate the pager (single-active) on whether it's still bound to THIS account's
+        // cursors so a late callback can't move another account's cursors. newEose runs regardless.
+        val myCursors = key.account.chatroomList.nip04History
+        return object : SubscriptionListener {
             override fun onEvent(
                 event: Event,
                 isLive: Boolean,
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                pager.onEvent(relay, event.createdAt)
+                if (pager.isBoundTo(myCursors)) pager.onEvent(relay, event.createdAt)
             }
 
             override fun onEose(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                if (pager.onEose(relay)) {
+                if (pager.isBoundTo(myCursors) && pager.onEose(relay)) {
                     Log.d("DMPagination") { "[rooms.nip04.history] ${relay.url} reached the bottom (done)" }
                 }
                 newEose(key, relay, TimeUtils.now(), forFilters)
@@ -130,7 +134,7 @@ class ChatroomListNip04HistorySubAssembler(
                 relay: NormalizedRelayUrl,
                 forFilters: List<Filter>?,
             ) {
-                pager.onClosed(relay, message)
+                if (pager.isBoundTo(myCursors)) pager.onClosed(relay, message)
             }
 
             override fun onCannotConnect(
@@ -138,7 +142,8 @@ class ChatroomListNip04HistorySubAssembler(
                 message: String,
                 forFilters: List<Filter>?,
             ) {
-                pager.onCannotConnect(relay, message)
+                if (pager.isBoundTo(myCursors)) pager.onCannotConnect(relay, message)
             }
         }
+    }
 }

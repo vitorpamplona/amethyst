@@ -147,6 +147,15 @@ class BackwardRelayPager(
         recomputeExhausted()
     }
 
+    /**
+     * Whether [c] is the currently-bound scope's cursor object. The orchestrator is single-active: it can
+     * only correctly process callbacks for the bound scope. A caller whose subscription may still be alive
+     * for a *just-backgrounded* scope (navigation overlap, a second pane) must gate its forwarded callbacks
+     * on this — otherwise a late EOSE from scope A would move scope B's cursors. The cursor object is the
+     * scope identity (one per `Chatroom`/`ChatroomList`), so reference identity is the check.
+     */
+    fun isBoundTo(c: RelayLoadingCursors): Boolean = c === cursors
+
     // --- Filter building support: the caller assembles the actual REQ from these. ---
 
     /** Relays of the active scope that have been advanced (armed) and aren't done — i.e. carry a REQ. */
