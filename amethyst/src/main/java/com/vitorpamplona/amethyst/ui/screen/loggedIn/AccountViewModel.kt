@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.AccountInfo
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.model.LiveHiddenUsers
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
@@ -1308,6 +1309,12 @@ class AccountViewModel(
         launchSigner {
             account.changeVideoPlayerButtonItems(items)
         }
+
+    fun audioVisualizerFlow(): StateFlow<VisualizerStyle> = account.settings.syncedSettings.media.audioVisualizer
+
+    fun changeAudioVisualizer(style: VisualizerStyle) {
+        account.settings.changeAudioVisualizer(style)
+    }
 
     fun updateZapAmounts(
         amountSet: List<Long>,

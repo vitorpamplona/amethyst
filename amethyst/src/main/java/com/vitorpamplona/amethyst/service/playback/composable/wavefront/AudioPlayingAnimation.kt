@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.service.playback.composable.wavefront
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -27,11 +29,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
+import com.vitorpamplona.amethyst.commons.audio.AudioVisualizer
+import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
+import com.vitorpamplona.amethyst.service.playback.playerPool.PcmTapRegistry
 
 fun Tracks.isAudio() = groups.isNotEmpty() && groups.none { it.type == C.TRACK_TYPE_VIDEO }
 
@@ -39,11 +45,10 @@ fun Tracks.isAudio() = groups.isNotEmpty() && groups.none { it.type == C.TRACK_T
 fun AudioPlayingAnimation(
     controllerState: MediaControllerState,
     waveform: WaveformData?,
+    style: VisualizerStyle,
     modifier: Modifier = Modifier,
     hasBlurhash: Boolean = false,
 ) {
-    if (hasBlurhash) return
-
     var isAudio by remember { mutableStateOf(controllerState.controller.currentTracks.isAudio()) }
 
     DisposableEffect(controllerState.controller) {
@@ -58,14 +63,29 @@ fun AudioPlayingAnimation(
         onDispose { controllerState.controller.removeListener(listener) }
     }
 
-    if (isAudio) {
-        if (waveform != null) {
-            Waveform(waveform, controllerState, modifier)
-        } else {
-            FakeWaveformAnimation(
-                mediaControllerState = controllerState,
-                modifier = modifier,
-            )
+    if (!isAudio) return
+
+    when {
+        // NIP-A0 voice notes etc. that ship a precomputed waveform keep their seek bar.
+        waveform != null -> Waveform(waveform, controllerState, modifier)
+
+        // Visualizer disabled: draw nothing so any blurhash/cover backdrop shows through.
+        style == VisualizerStyle.OFF -> Unit
+
+        else -> {
+            val spectrum = remember(controllerState.controller) { PcmTapRegistry.spectrumFor(controllerState.controller) }
+            if (spectrum != null) {
+                // Dim the cover/blurhash backdrop behind the live visualizer.
+                val drawModifier = if (hasBlurhash) modifier.background(Color.Black.copy(alpha = 0.45f)) else modifier
+                AudioVisualizer(
+                    style = style,
+                    spectrum = spectrum,
+                    modifier = drawModifier.fillMaxSize(),
+                )
+            } else if (!hasBlurhash) {
+                // No live PCM available and no backdrop: keep the decorative fallback.
+                FakeWaveformAnimation(mediaControllerState = controllerState, modifier = modifier)
+            }
         }
     }
 }

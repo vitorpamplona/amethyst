@@ -25,7 +25,11 @@ import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
+import androidx.media3.exoplayer.audio.TeeAudioProcessor
 import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.playerPool.aspectRatio.AspectRatioCacher
@@ -38,18 +42,37 @@ class ExoPlayerBuilder(
     val videoCache: VideoCache,
     val dataSourceFactory: DataSource.Factory,
 ) {
-    fun build(context: Context): ExoPlayer =
-        ExoPlayer
-            .Builder(context)
+    fun build(context: Context): ExoPlayer {
+        val sink = PcmTapRegistry.newSink()
+
+        val renderersFactory =
+            object : DefaultRenderersFactory(context) {
+                override fun buildAudioSink(
+                    context: Context,
+                    enableFloatOutput: Boolean,
+                    enableAudioTrackPlaybackParams: Boolean,
+                ): AudioSink =
+                    DefaultAudioSink
+                        .Builder(context)
+                        .setEnableFloatOutput(enableFloatOutput)
+                        .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+                        .setAudioProcessors(arrayOf(TeeAudioProcessor(sink)))
+                        .build()
+            }
+
+        return ExoPlayer
+            .Builder(context, renderersFactory)
             .apply {
                 setMediaSourceFactory(CustomMediaSourceFactory(videoCache, dataSourceFactory))
                 setLoadControl(feedTunedLoadControl())
             }.build()
             .apply {
+                PcmTapRegistry.register(this, sink)
                 addListener(AspectRatioCacher(MediaAspectRatioCache))
                 addListener(KeepVideosPlaying(this))
                 addListener(CurrentPlayPositionCacher(this, VideoViewedPositionCache))
             }
+    }
 
     companion object {
         // Default DefaultLoadControl buffers 50s ahead before slowing down. Every visible video

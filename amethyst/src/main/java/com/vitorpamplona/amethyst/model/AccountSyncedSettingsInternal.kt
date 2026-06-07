@@ -155,6 +155,7 @@ class AccountSyncedSettingsInternal(
     val languages: AccountLanguagePreferencesInternal = AccountLanguagePreferencesInternal(),
     val security: AccountSecurityPreferencesInternal = AccountSecurityPreferencesInternal(),
     val videoPlayer: AccountVideoPlayerPreferencesInternal = AccountVideoPlayerPreferencesInternal(),
+    val media: AccountMediaPreferencesInternal = AccountMediaPreferencesInternal(),
 )
 
 @Serializable
@@ -196,4 +197,10 @@ class AccountSecurityPreferencesInternal(
     val maxHashtagLimit: Int = 8,
     var sendKind0EventsToLocalRelay: Boolean = false,
     var addClientTag: Boolean = true,
+)
+
+@Serializable
+class AccountMediaPreferencesInternal(
+    // Stored as VisualizerStyle.name; defaults to WAVES.
+    var audioVisualizer: String = "WAVES",
 )

@@ -1,0 +1,65 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.audio
+
+import kotlin.math.exp
+import kotlin.math.ln
+import kotlin.math.log10
+
+/** One frame of frequency-domain magnitudes, ordered low→high Hz and normalized 0f..1f. */
+class Spectrum(
+    val bins: FloatArray,
+)
+
+/**
+ * Groups a linear-frequency magnitude array (index 0 = DC, last index = Nyquist)
+ * into [binCount] log-spaced buckets so bass/mid get more bars than the treble
+ * tail. Output is normalized 0f..1f using [floorDb] as the silence floor.
+ * Bin 0 (DC) is always excluded from the output.
+ */
+fun FloatArray.toLogBins(
+    binCount: Int,
+    floorDb: Float = -60f,
+): FloatArray {
+    if (isEmpty() || binCount <= 0) return FloatArray(0)
+    val step = ln(size.toDouble()) / binCount
+    val out = FloatArray(binCount)
+    for (b in 0 until binCount) {
+        val lo = exp(step * b).toInt().coerceAtLeast(1)
+        val hi = exp(step * (b + 1)).toInt().coerceAtMost(size).coerceAtLeast(lo + 1)
+        var peak = 0f
+        for (i in lo until hi) if (i < size && this[i] > peak) peak = this[i]
+        val db = if (peak > 0f) 20f * log10(peak) else floorDb
+        out[b] = ((db - floorDb) / -floorDb).coerceIn(0f, 1f)
+    }
+    return out
+}
+
+fun silentSpectrum(binCount: Int): Spectrum = Spectrum(FloatArray(binCount))
+
+/** Returns a NEW array scaled so the largest value becomes 1f. An all-zero input is returned as a zero-filled copy. */
+fun FloatArray.normalizedToPeak(): FloatArray {
+    var peak = 0f
+    for (v in this) if (v > peak) peak = v
+    if (peak <= 0f) return copyOf()
+    val inv = 1f / peak
+    return FloatArray(size) { this[it] * inv }
+}

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatRepository
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListRepository
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
@@ -319,6 +320,15 @@ class AccountSettings(
     fun changeVideoPlayerButtonItems(newItems: List<VideoPlayerButtonItem>): Boolean {
         if (syncedSettings.videoPlayer.buttonItems.value != newItems) {
             syncedSettings.videoPlayer.buttonItems.tryEmit(newItems.toImmutableList())
+            saveAccountSettings()
+            return true
+        }
+        return false
+    }
+
+    fun changeAudioVisualizer(style: VisualizerStyle): Boolean {
+        if (syncedSettings.media.audioVisualizer.value != style) {
+            syncedSettings.media.audioVisualizer.tryEmit(style)
             saveAccountSettings()
             return true
         }
