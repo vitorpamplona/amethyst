@@ -59,13 +59,12 @@ class BirdexEvent(
     fun speciesNames() = tags.mapValueTagged("n") { it }
 
     /** Number of collected species (one `n` tag per species). */
-    fun speciesCount() = tags.count { it.size > 1 && it[0] == "n" }
+    fun speciesCount() = speciesNames().size
 
     /** Publisher-provided human-readable summary, from the `alt` tag (may be null). */
     fun summary() = tags.firstTagValue("alt")
 
     companion object {
         const val KIND = 12473
-        const val ALT_DESCRIPTION = "A Birdex species collection"
     }
 }

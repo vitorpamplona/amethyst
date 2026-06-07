@@ -3142,7 +3142,10 @@
         <item quantity="one">Birdex · %1$d species</item>
         <item quantity="other">Birdex · %1$d species</item>
     </plurals>
-    <string name="birdex_species_preview_more">%1$s  +%2$s more</string>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d more</item>
+        <item quantity="other">%1$s +%2$d more</item>
+    </plurals>
     <string name="goal_amount_label">Goal amount (sats)</string>
     <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Describe your goal</string>

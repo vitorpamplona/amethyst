@@ -772,7 +772,7 @@ private fun FullBleedNoteCompose(
                 } else if (noteEvent is FundraiserEvent) {
                     RenderFundraiser(baseNote, makeItShort = false, accountViewModel, nav)
                 } else if (noteEvent is BirdexEvent) {
-                    RenderBirdex(baseNote, makeItShort = false, accountViewModel)
+                    RenderBirdex(baseNote)
                 } else if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
                     RenderRepost(baseNote, quotesLeft = 3, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is RelayDiscoveryEvent) {

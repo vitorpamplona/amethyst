@@ -34,8 +34,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
@@ -50,19 +48,16 @@ private const val SPECIES_PREVIEW_LIMIT = 6
  * bounded regardless of how many species a Birdex holds, we show the count and a
  * short preview of scientific names with a "+N more" suffix — no images, no
  * expansion, no network calls. The card is identical in the feed and the opened
- * view (it ignores [makeItShort]).
+ * view, so it takes no makeItShort flag.
  */
 @Composable
-fun RenderBirdex(
-    baseNote: Note,
-    makeItShort: Boolean,
-    accountViewModel: AccountViewModel,
-) {
+fun RenderBirdex(baseNote: Note) {
     val noteEvent = baseNote.event as? BirdexEvent ?: return
 
     val names = remember(noteEvent) { noteEvent.speciesNames() }
     val preview = remember(names) { names.take(SPECIES_PREVIEW_LIMIT) }
     val remaining = names.size - preview.size
+    val joined = remember(preview) { preview.joinToString(", ") }
 
     Column(MaterialTheme.colorScheme.replyModifier.padding(10.dp)) {
         Text(
@@ -72,16 +67,16 @@ fun RenderBirdex(
 
         if (preview.isNotEmpty()) {
             Spacer(Modifier.height(6.dp))
-            val joined = preview.joinToString(", ")
             Text(
                 text =
                     if (remaining > 0) {
-                        stringRes(R.string.birdex_species_preview_more, joined, remaining.toString())
+                        pluralStringResource(R.plurals.birdex_species_preview_more, remaining, joined, remaining)
                     } else {
                         joined
                     },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.placeholderText,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }

@@ -1267,7 +1267,7 @@ private fun RenderNoteRow(
         }
 
         is BirdexEvent -> {
-            RenderBirdex(baseNote, makeItShort, accountViewModel)
+            RenderBirdex(baseNote)
         }
 
         is HighlightEvent -> {
