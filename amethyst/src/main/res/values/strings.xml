@@ -3138,6 +3138,11 @@
     <string name="goal_progress">%1$s funded of %2$s sats goal</string>
     <string name="fundraiser_ends">Ends %1$s</string>
     <string name="fundraiser_onchain_donation">On-chain donation</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d species</item>
+        <item quantity="other">Birdex · %1$d species</item>
+    </plurals>
+    <string name="birdex_species_preview_more">%1$s  +%2$s more</string>
     <string name="goal_amount_label">Goal amount (sats)</string>
     <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Describe your goal</string>

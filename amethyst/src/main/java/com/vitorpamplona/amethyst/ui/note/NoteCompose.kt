@@ -117,6 +117,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderAttestorRecommendation
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioHeader
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderBadgeAward
+import com.vitorpamplona.amethyst.ui.note.types.RenderBirdex
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarCollectionEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarDateSlotEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderCalendarRSVPEvent
@@ -216,6 +217,7 @@ import com.vitorpamplona.quartz.experimental.attestations.recommendation.Attesto
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
@@ -1262,6 +1264,10 @@ private fun RenderNoteRow(
 
         is FundraiserEvent -> {
             RenderFundraiser(baseNote, makeItShort, accountViewModel, nav)
+        }
+
+        is BirdexEvent -> {
+            RenderBirdex(baseNote, makeItShort, accountViewModel)
         }
 
         is HighlightEvent -> {
