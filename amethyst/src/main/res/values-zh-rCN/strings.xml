@@ -2789,6 +2789,8 @@
     <!-- NIP-75 Zap Goals -->
     <string name="goal_closed">此目标已关闭</string>
     <string name="goal_progress">设定目标为 %2$s sats，筹集到 %1$s</string>
+    <string name="fundraiser_ends">结束 %1$s</string>
+    <string name="fundraiser_onchain_donation">链上捐助</string>
     <string name="goal_amount_label">目标金额 (sats)</string>
     <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">描述您的目标</string>
