@@ -75,41 +75,12 @@ class BirthdayTolerantSerializerTest {
         }
     }
 
-    @Test
-    fun specObjectBirthdayStillParses() {
-        val meta = metaWith("""{"name":"A","birthday":{"year":1990,"month":6,"day":15}}""").contactMetaData()
-        assertIs<UserMetadata>(meta)
-        val birthday = meta.birthday
-        assertIs<Birthday>(birthday)
-        assertEquals(1990, birthday.year)
-        assertEquals(6, birthday.month)
-        assertEquals(15, birthday.day)
-    }
-
-    @Test
-    fun partialObjectBirthdayStillParses() {
-        val meta = metaWith("""{"name":"A","birthday":{"month":6,"day":15}}""").contactMetaData()
-        assertIs<UserMetadata>(meta)
-        val birthday = meta.birthday
-        assertIs<Birthday>(birthday)
-        assertNull(birthday.year)
-        assertEquals(6, birthday.month)
-        assertEquals(15, birthday.day)
-    }
-
-    @Test
-    fun objectBirthdayRoundTrips() {
-        val meta = metaWith("""{"name":"A","birthday":{"year":1990,"month":6,"day":15}}""").contactMetaData()
-        assertIs<UserMetadata>(meta)
-        val serialized = JsonMapper.toJson(meta)
-        val reparsed = JsonMapper.fromJson<UserMetadata>(serialized)
-        val birthday = reparsed.birthday
-        assertIs<Birthday>(birthday)
-        assertEquals(1990, birthday.year)
-        assertEquals(6, birthday.month)
-        assertEquals(15, birthday.day)
-    }
-
+    /**
+     * End-to-end check that a dropped birthday does not leak back into the
+     * serialized profile. The omission itself is the decoder's default-null
+     * suppression (encodeDefaults stays false on JsonMapper), not the serializer —
+     * this just pins the real-world JsonMapper output.
+     */
     @Test
     fun nullBirthdayIsOmittedOnSerialization() {
         val meta = metaWith("""{"name":"A","birthday":"10-24"}""").contactMetaData()

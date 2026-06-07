@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.metadata
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.nullable
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonDecoder
@@ -48,7 +49,9 @@ import kotlinx.serialization.json.JsonObject
 object BirthdayTolerantSerializer : KSerializer<Birthday?> {
     private val delegate = Birthday.serializer()
 
-    override val descriptor: SerialDescriptor = delegate.descriptor
+    // Nullable serializer ⇒ nullable descriptor, so the framework's metadata stays
+    // honest even on code paths that consult it (e.g. coerceInputValues).
+    override val descriptor: SerialDescriptor = delegate.descriptor.nullable
 
     override fun deserialize(decoder: Decoder): Birthday? {
         require(decoder is JsonDecoder) { "This serializer can only be used with Json format" }
@@ -56,8 +59,9 @@ object BirthdayTolerantSerializer : KSerializer<Birthday?> {
         val element = decoder.decodeJsonElement()
         if (element !is JsonObject) {
             // Non-spec birthday (e.g. Ditto's "10-24" string). Ignore it rather than
-            // failing the whole profile parse.
-            Log.w("BirthdayTolerantSerializer") { "Ignoring non-object birthday: $element" }
+            // failing the whole profile parse. Log the JSON kind only, not the raw
+            // (untrusted, network-sourced) value.
+            Log.w("BirthdayTolerantSerializer") { "Ignoring non-object birthday (${element::class.simpleName})" }
             return null
         }
 
