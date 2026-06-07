@@ -22,47 +22,37 @@ package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
-import androidx.collection.LruCache
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.IResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.SignerResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.results.IntentResult
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
-import com.vitorpamplona.quartz.utils.tryAndWait
-import kotlin.coroutines.Continuation
-import kotlin.coroutines.resume
+import com.vitorpamplona.quartz.utils.cache.LargeCache
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * This class manages the lifecycle of foreground signing requests in a NIP-55 compliant Android signer flow.
+ * Manages the lifecycle of foreground signing requests in a NIP-55 compliant Android signer flow.
  *
- * - It tracks pending signing requests using a unique ID and allows for awaiting their results via coroutines.
+ * - Tracks pending signing requests by a unique call id via a per-request [Channel].
  * - Provides a way to launch foreground Intents (to request user approval) and wait for the response.
- * - Handles timeouts on user approval using [tryAndWait].
+ * - Handles approval timeouts via [withTimeoutOrNull].
  * - Collects results via [newResponse] when the user responds to the foreground request.
  *
- * Main components:
+ * Key usage flow: request initiated -> store channel by id -> launch intent -> withTimeoutOrNull
+ * receive -> finally cleanup. User responds -> atomic remove + trySend on the channel.
  *
- * - `awaitingRequests`: LRU cache mapping request IDs to continuations for async response handling.
- * - `appLauncher`: Function reference to launch foreground Intents (typically provided by an Activity).
- * - `launchAndWait`: Suspend function to send an Intent, wait for an answer, and parse the result.
- * - `newResponse`: Handles incoming results from the foreground activity using a unique ID.
- *
- * Key usage flows:
- *
- * - Request initiated -> store continuation by ID -> launch intent -> wait
- * - User responds -> resume continuation -> remove ID -> return parsed result
- *
- * The class also cleans up pending requests on timeout or cancellation.
+ * Duplicate, unknown, or late deliveries (e.g. if the activity surfaces multiple results for the
+ * same id) atomically read out as null and are dropped after a debug log line — no continuation
+ * is ever resumed twice.
  */
 class IntentRequestManager(
     val foregroundApprovalTimeout: Long = 30000,
 ) {
     val activityNotFoundIntent = Intent()
 
-    // LRU cache to store pending requests and their continuations.
-    private val awaitingRequests = LruCache<String, Continuation<IntentResult>>(2000)
+    private val pending = LargeCache<String, Channel<IntentResult>>()
 
-    // Function to launch an Intent in the foreground.
     private var appLauncher: ((Intent) -> Unit)? = null
 
     /** Call this function when the launcher becomes available on activity, fragment or compose */
@@ -82,70 +72,66 @@ class IntentRequestManager(
         if (results != null) {
             // This happens when the intent responds to many requests at the same time.
             IntentResult.fromJsonArray(results).forEach { result ->
-                if (result.id != null) {
-                    awaitingRequests[result.id]?.resume(result)
-                    awaitingRequests.remove(result.id)
-                }
+                if (result.id != null) dispatch(result.id, result)
             }
         } else {
             val result = IntentResult.fromIntent(data)
-            if (result.id != null) {
-                awaitingRequests[result.id]?.resume(result)
-                awaitingRequests.remove(result.id)
-            }
+            if (result.id != null) dispatch(result.id, result)
         }
+    }
+
+    private fun dispatch(
+        id: String,
+        result: IntentResult,
+    ) {
+        val channel = pending.remove(id)
+        if (channel == null) {
+            Log.d("NIP55") { "no channel for intent result id=$id (duplicate, unknown, or late)" }
+            return
+        }
+        channel.trySend(result)
     }
 
     fun hasForegroundActivity() = appLauncher != null
 
     /**
-     * Launches the signer, waits and parses the result
+     * Launches the signer, waits and parses the result.
      *
-     * @param requestIntent The Intent to be launched.
+     * @param requestIntentBuilder Builder for the Intent to be launched.
      * @param parser A function that parses the response Intent into a [SignerResult.RequestAddressed<T>].
      * @return The result after parsing the Intent using the provided parser.
-     *
-     * This function uses the [tryAndWait] utility to implement a timeout on the foreground approval.
-     * It assigns a unique ID to the request and keeps a continuation to resume once the result is received.
-     * If the timeout occurs or the continuation is cancelled, the request ID is cleaned up from [awaitingRequests].
-     * Flags are added to the Intent to ensure it is brought to the front if already running.
      */
     suspend fun <T : IResult> launchWaitAndParse(
         requestIntentBuilder: () -> Intent,
         parser: (intent: IntentResult) -> SignerResult.RequestAddressed<T>,
-    ): SignerResult.RequestAddressed<T> =
-        appLauncher?.let { launcher ->
-            val requestIntent = requestIntentBuilder()
-            val callId = RandomInstance.randomChars(32)
+    ): SignerResult.RequestAddressed<T> {
+        val launcher = appLauncher ?: return SignerResult.RequestAddressed.NoActivityToLaunchFrom()
 
-            requestIntent.putExtra("id", callId)
-            requestIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        val requestIntent = requestIntentBuilder()
+        val callId = RandomInstance.randomChars(32)
 
+        requestIntent.putExtra("id", callId)
+        requestIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+
+        val channel = Channel<IntentResult>(capacity = 1)
+        pending.put(callId, channel)
+
+        return try {
             try {
-                val resultIntent =
-                    tryAndWait(foregroundApprovalTimeout) { continuation ->
-                        continuation.invokeOnCancellation {
-                            awaitingRequests.remove(callId)
-                        }
-
-                        awaitingRequests.put(callId, continuation)
-
-                        try {
-                            launcher.invoke(requestIntent)
-                        } catch (e: Exception) {
-                            Log.e("ExternalSigner", "Error launching intent", e)
-                            awaitingRequests.remove(callId)
-                            throw e
-                        }
-                    }
-
-                when (resultIntent) {
-                    null -> SignerResult.RequestAddressed.TimedOut()
-                    else -> parser(resultIntent)
-                }
+                launcher.invoke(requestIntent)
             } catch (e: ActivityNotFoundException) {
                 Log.e("ExternalSigner", "Error launching intent: Signer not found", e)
-                SignerResult.RequestAddressed.SignerNotFound()
+                return SignerResult.RequestAddressed.SignerNotFound()
             }
-        } ?: SignerResult.RequestAddressed.NoActivityToLaunchFrom()
+
+            val resultIntent = withTimeoutOrNull(foregroundApprovalTimeout) { channel.receive() }
+            when (resultIntent) {
+                null -> SignerResult.RequestAddressed.TimedOut()
+                else -> parser(resultIntent)
+            }
+        } finally {
+            pending.remove(callId)
+            channel.close()
+        }
+    }
 }
