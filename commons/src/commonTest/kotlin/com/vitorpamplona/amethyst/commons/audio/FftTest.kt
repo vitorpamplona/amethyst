@@ -61,4 +61,14 @@ class FftTest {
         }
         assertTrue(threw)
     }
+
+    @Test
+    fun magnitudesIntoMatchesMagnitudes() {
+        val n = 64
+        val signal = FloatArray(n) { sin(2.0 * PI * 5 * it / n).toFloat() }
+        val expected = Fft.magnitudes(signal)
+        val out = FloatArray(n / 2 + 1)
+        Fft.magnitudesInto(signal, DoubleArray(n), DoubleArray(n), out)
+        for (i in out.indices) assertEquals(expected[i], out[i], 1e-3f)
+    }
 }

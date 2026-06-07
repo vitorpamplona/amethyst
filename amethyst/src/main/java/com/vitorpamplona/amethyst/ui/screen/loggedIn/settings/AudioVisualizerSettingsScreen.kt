@@ -20,12 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.settings
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -45,9 +39,11 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.audio.AudioVisualizer
+import com.vitorpamplona.amethyst.commons.audio.Spectrum
 import com.vitorpamplona.amethyst.commons.audio.SyntheticSpectrum
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.FakeWaveformAnimation
@@ -63,7 +60,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.Flow
 
 @Composable
 fun AudioVisualizerSettingsScreen(
@@ -85,6 +82,7 @@ fun AudioVisualizerSettingsContent(
     modifier: Modifier = Modifier,
 ) {
     val selected by accountViewModel.audioVisualizerFlow().collectAsStateWithLifecycle()
+    val previewSpectrum = remember { SyntheticSpectrum.flow(48) }
 
     LazyColumn(modifier = modifier.fillMaxWidth()) {
         item {
@@ -99,6 +97,7 @@ fun AudioVisualizerSettingsContent(
             VisualizerStyleRow(
                 style = style,
                 selected = style == selected,
+                previewSpectrum = previewSpectrum,
                 onClick = { accountViewModel.changeAudioVisualizer(style) },
             )
         }
@@ -110,6 +109,7 @@ fun AudioVisualizerSettingsContent(
 private fun VisualizerStyleRow(
     style: VisualizerStyle,
     selected: Boolean,
+    previewSpectrum: Flow<Spectrum>,
     onClick: () -> Unit,
 ) {
     Row(
@@ -132,28 +132,17 @@ private fun VisualizerStyleRow(
                     .clip(RoundedCornerShape(8.dp))
                     .background(Color(0xFF0C0C10)),
         ) {
-            when (style) {
-                VisualizerStyle.OFF -> Unit
-                VisualizerStyle.CLASSIC -> {
-                    val transition = rememberInfiniteTransition(label = "classicPreview")
-                    val anim by transition.animateFloat(
-                        initialValue = 0f,
-                        targetValue = 1f,
-                        animationSpec = infiniteRepeatable(tween(1500, easing = LinearEasing), RepeatMode.Restart),
-                        label = "classicProgress",
-                    )
-                    val progress = remember { mutableFloatStateOf(0f) }
-                    progress.floatValue = anim
-                    FakeWaveformAnimation(progress, 40, Modifier.fillMaxWidth().height(56.dp))
+            if (style == VisualizerStyle.CLASSIC) {
+                val progress = remember { mutableFloatStateOf(0f) }
+                LaunchedEffect(Unit) {
+                    while (true) {
+                        withFrameMillis { ms -> progress.floatValue = (ms % 1500L) / 1500f }
+                    }
                 }
-                VisualizerStyle.STATIC -> {
-                    val frozen = remember { flowOf(SyntheticSpectrum.frame(0f, 48)) }
-                    AudioVisualizer(style = VisualizerStyle.BARS, spectrum = frozen, modifier = Modifier.fillMaxWidth().height(56.dp))
-                }
-                else -> {
-                    val preview = remember { SyntheticSpectrum.flow(48) }
-                    AudioVisualizer(style = style, spectrum = preview, modifier = Modifier.fillMaxWidth().height(56.dp))
-                }
+                FakeWaveformAnimation(progress, 40, Modifier.fillMaxWidth().height(56.dp))
+            } else {
+                // OFF → OffRenderer (nothing), STATIC → frozen bars, others → live preview.
+                AudioVisualizer(style = style, spectrum = previewSpectrum, modifier = Modifier.fillMaxWidth().height(56.dp))
             }
         }
     }

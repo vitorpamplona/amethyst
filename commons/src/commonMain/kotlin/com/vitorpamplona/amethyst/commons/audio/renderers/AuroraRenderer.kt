@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.audio.renderers
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
@@ -33,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.audio.SpectrumCanvas
 import com.vitorpamplona.amethyst.commons.audio.VisualizerPalette
 import com.vitorpamplona.amethyst.commons.audio.VisualizerRenderer
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
+import com.vitorpamplona.amethyst.commons.audio.wrapHue
 import kotlinx.coroutines.flow.Flow
 import kotlin.math.sin
 
@@ -59,15 +61,17 @@ object AuroraRenderer : VisualizerRenderer {
         palette: VisualizerPalette,
         modifier: Modifier,
     ) {
+        val paths = remember { List(ribbons.size) { Path() } }
         SpectrumCanvas(spectrum, palette, modifier) { bins, t, pal ->
             if (bins.isEmpty()) return@SpectrumCanvas
             val n = bins.size
             val w = size.width
             val h = size.height
-            for (r in ribbons) {
+            ribbons.forEachIndexed { index, r ->
                 val idx = (r.band * (n - 1)).toInt().coerceIn(0, n - 1)
-                val amp = (0.25f + bins[idx] * 0.9f) * h * 0.4f
-                val path = Path()
+                val amp = (0.3f + bins[idx] * 1.2f) * h * 0.5f
+                val path = paths[index]
+                path.reset()
                 var x = 0f
                 while (x <= w) {
                     val f = x / w
@@ -75,7 +79,7 @@ object AuroraRenderer : VisualizerRenderer {
                     if (x == 0f) path.moveTo(x, y) else path.lineTo(x, y)
                     x += 5f
                 }
-                val hue = (((r.hue(pal)) % 360f) + 360f) % 360f
+                val hue = r.hue(pal).wrapHue()
                 drawPath(
                     path = path,
                     brush =

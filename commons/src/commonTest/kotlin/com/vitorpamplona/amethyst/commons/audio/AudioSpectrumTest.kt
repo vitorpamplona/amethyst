@@ -53,4 +53,13 @@ class AudioSpectrumTest {
         assertTrue(bins.all { it in 0f..1f })
         assertTrue(bins.first() > bins.last())
     }
+
+    @Test
+    fun normalizeToPeakInPlaceMatchesAllocatingVersion() {
+        val input = floatArrayOf(0f, 2f, 4f, 1f)
+        val expected = input.normalizedToPeak()
+        val inPlace = input.copyOf()
+        inPlace.normalizeToPeakInPlace()
+        for (i in inPlace.indices) assertEquals(expected[i], inPlace[i], 1e-6f)
+    }
 }

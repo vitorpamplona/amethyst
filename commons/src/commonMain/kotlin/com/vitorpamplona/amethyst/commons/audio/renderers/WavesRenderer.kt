@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.audio.renderers
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
@@ -31,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.audio.SpectrumCanvas
 import com.vitorpamplona.amethyst.commons.audio.VisualizerPalette
 import com.vitorpamplona.amethyst.commons.audio.VisualizerRenderer
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
+import com.vitorpamplona.amethyst.commons.audio.wrapHue
 import kotlinx.coroutines.flow.Flow
 import kotlin.math.sin
 
@@ -58,13 +60,16 @@ object WavesRenderer : VisualizerRenderer {
         palette: VisualizerPalette,
         modifier: Modifier,
     ) {
+        val paths = remember { List(layers.size) { Path() } }
         SpectrumCanvas(spectrum, palette, modifier) { bins, t, pal ->
             if (bins.isEmpty()) return@SpectrumCanvas
             val n = bins.size
             val w = size.width
             val h = size.height
-            for (layer in layers) {
-                val path = Path().apply { moveTo(0f, h) }
+            layers.forEachIndexed { index, layer ->
+                val path = paths[index]
+                path.reset()
+                path.moveTo(0f, h)
                 var x = 0f
                 while (x <= w) {
                     val f = x / w
@@ -76,7 +81,7 @@ object WavesRenderer : VisualizerRenderer {
                 }
                 path.lineTo(w, h)
                 path.close()
-                val hue = ((layer.hue(pal) % 360f) + 360f) % 360f
+                val hue = layer.hue(pal).wrapHue()
                 drawPath(
                     path = path,
                     brush =

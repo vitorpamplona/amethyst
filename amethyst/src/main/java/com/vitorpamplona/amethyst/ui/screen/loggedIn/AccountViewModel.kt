@@ -1312,9 +1312,10 @@ class AccountViewModel(
 
     fun audioVisualizerFlow(): StateFlow<VisualizerStyle> = account.settings.syncedSettings.media.audioVisualizer
 
-    fun changeAudioVisualizer(style: VisualizerStyle) {
-        account.settings.changeAudioVisualizer(style)
-    }
+    fun changeAudioVisualizer(style: VisualizerStyle) =
+        launchSigner {
+            account.changeAudioVisualizer(style)
+        }
 
     fun updateZapAmounts(
         amountSet: List<Long>,

@@ -41,4 +41,16 @@ object AudioWindow {
         FloatArray(window.size) { i ->
             if (i < samples.size) (samples[i] / 32768f) * window[i] else 0f
         }
+
+    /** Like [shortsToWindowed] but writes into [out] (size must equal [window].size); no allocation. */
+    fun shortsToWindowedInto(
+        samples: ShortArray,
+        window: FloatArray,
+        out: FloatArray,
+    ) {
+        require(out.size == window.size) { "out buffer must match window size" }
+        for (i in window.indices) {
+            out[i] = if (i < samples.size) (samples[i] / 32768f) * window[i] else 0f
+        }
+    }
 }

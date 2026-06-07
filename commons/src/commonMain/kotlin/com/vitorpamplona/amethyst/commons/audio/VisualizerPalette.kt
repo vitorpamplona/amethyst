@@ -43,3 +43,6 @@ data class VisualizerPalette(
         val DEFAULT = VisualizerPalette()
     }
 }
+
+/** Wraps a hue into 0f..360f (handles negatives), for Color.hsl. */
+fun Float.wrapHue(): Float = ((this % 360f) + 360f) % 360f

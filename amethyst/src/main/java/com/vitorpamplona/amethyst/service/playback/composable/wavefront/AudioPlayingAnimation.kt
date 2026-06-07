@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.service.playback.composable.wavefront
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -31,17 +30,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import com.vitorpamplona.amethyst.commons.audio.AudioVisualizer
-import com.vitorpamplona.amethyst.commons.audio.SyntheticSpectrum
+import com.vitorpamplona.amethyst.commons.audio.Spectrum
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
 import com.vitorpamplona.amethyst.service.playback.composable.WaveformData
 import com.vitorpamplona.amethyst.service.playback.playerPool.PcmTapRegistry
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.emptyFlow
 
 fun Tracks.isAudio() = groups.isNotEmpty() && groups.none { it.type == C.TRACK_TYPE_VIDEO }
 
@@ -70,27 +71,50 @@ fun AudioPlayingAnimation(
 
     if (!isAudio) return
 
-    when {
+    // Dim any blurhash/cover backdrop behind whatever we draw, for contrast and consistency across
+    // every visible style. OFF draws nothing, so the cover still shows cleanly there.
+    val drawModifier = if (hasBlurhash) modifier.background(Color.Black.copy(alpha = 0.45f)) else modifier
+
+    if (waveform != null) {
         // NIP-A0 voice notes etc. that ship a precomputed waveform keep their seek bar.
-        waveform != null -> Waveform(waveform, controllerState, modifier)
+        Waveform(waveform, controllerState, drawModifier)
+        return
+    }
 
-        // The app's classic animated waveform.
-        style == VisualizerStyle.CLASSIC -> FakeWaveformAnimation(mediaControllerState = controllerState, modifier = modifier)
-
-        // A still, non-animated bar graphic for users who prefer no motion.
-        style == VisualizerStyle.STATIC -> {
-            val frozen = remember { flowOf(SyntheticSpectrum.frame(0f, 48)) }
-            AudioVisualizer(style = VisualizerStyle.BARS, spectrum = frozen, modifier = modifier.fillMaxWidth().requiredHeight(72.dp))
+    when (style) {
+        VisualizerStyle.CLASSIC -> FakeWaveformAnimation(mediaControllerState = controllerState, modifier = drawModifier)
+        VisualizerStyle.STATIC -> {
+            // StaticRenderer ignores the flow and shows a frozen frame.
+            val empty = remember { emptyFlow<Spectrum>() }
+            AudioVisualizer(style = VisualizerStyle.STATIC, spectrum = empty, modifier = drawModifier.audioVisualizerHeight())
         }
-
-        // Visualizer disabled: draw nothing so any blurhash/cover backdrop shows through.
-        style == VisualizerStyle.OFF -> Unit
-
-        // Live FFT styles (BARS / WAVES / RADIAL / AURORA).
-        else -> {
+        VisualizerStyle.OFF -> Unit
+        VisualizerStyle.BARS,
+        VisualizerStyle.WAVES,
+        VisualizerStyle.RADIAL,
+        VisualizerStyle.AURORA,
+        -> {
             val spectrum = remember(mediaId) { PcmTapRegistry.spectrumFor(mediaId) }
-            val drawModifier = if (hasBlurhash) modifier.background(Color.Black.copy(alpha = 0.45f)) else modifier
-            AudioVisualizer(style = style, spectrum = spectrum, modifier = drawModifier.fillMaxWidth().requiredHeight(72.dp))
+            AudioVisualizer(style = style, spectrum = spectrum, modifier = drawModifier.audioVisualizerHeight())
         }
     }
 }
+
+/**
+ * Fills the available height only when the parent gives a bounded height clearly larger than
+ * [fallback] (the full-screen media dialog); otherwise uses the fixed [fallback] strip. This avoids
+ * filling a small bounded feed cell and avoids collapsing to zero under the feed's unbounded lazy
+ * height. Always fills width.
+ */
+private fun Modifier.audioVisualizerHeight(fallback: Dp = 72.dp): Modifier =
+    fillMaxWidth().layout { measurable, constraints ->
+        val fallbackPx = fallback.roundToPx()
+        val targetHeight =
+            if (constraints.hasBoundedHeight && constraints.maxHeight >= fallbackPx * 2) {
+                constraints.maxHeight
+            } else {
+                fallbackPx
+            }
+        val placeable = measurable.measure(constraints.copy(minHeight = targetHeight, maxHeight = targetHeight))
+        layout(placeable.width, targetHeight) { placeable.placeRelative(0, 0) }
+    }

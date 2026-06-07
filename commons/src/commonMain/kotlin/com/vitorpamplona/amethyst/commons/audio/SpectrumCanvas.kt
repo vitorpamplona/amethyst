@@ -31,9 +31,10 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Collects [spectrum] into a decayed [FloatArray] and runs a monotonic time clock,
+ * Collects [spectrum] into a decayed [FloatArray] and optionally runs a monotonic time clock,
  * then calls [draw] inside the Canvas draw lambda. The fast-changing state is read
  * ONLY in the draw lambda, so new frames trigger the draw phase, never recomposition.
+ * Pass [animated] = false for non-time-varying styles (bars, radial) to avoid 60fps redraws.
  */
 @Composable
 fun SpectrumCanvas(
@@ -41,12 +42,15 @@ fun SpectrumCanvas(
     palette: VisualizerPalette,
     modifier: Modifier,
     decay: Float = 0.85f,
+    animated: Boolean = true,
     draw: DrawScope.(bins: FloatArray, timeSec: Float, palette: VisualizerPalette) -> Unit,
 ) {
     val smoothed = remember { mutableStateOf(FloatArray(0)) }
     LaunchedEffect(spectrum, decay) {
         var prev = FloatArray(0)
         spectrum.collect { frame ->
+            // A fresh array each frame is intentional: mutableStateOf compares by reference, so a new
+            // instance is what signals Compose to redraw. Do NOT switch to in-place mutation.
             val next =
                 FloatArray(frame.bins.size) { i ->
                     val prior = if (i < prev.size) prev[i] * decay else 0f
@@ -57,21 +61,20 @@ fun SpectrumCanvas(
         }
     }
 
-    // Monotonic, never-resetting clock. Accumulates elapsed seconds so the time value
-    // passed to renderers is continuous — a repeating transition would jump back to 0
-    // at its boundary and cause a visible phase discontinuity in sine-based renderers.
     val timeSec = remember { mutableStateOf(0f) }
-    LaunchedEffect(Unit) {
-        var last = 0L
-        while (true) {
-            withFrameMillis { ms ->
-                if (last != 0L) timeSec.value += (ms - last) / 1000f
-                last = ms
+    if (animated) {
+        LaunchedEffect(Unit) {
+            var last = 0L
+            while (true) {
+                withFrameMillis { ms ->
+                    if (last != 0L) timeSec.value += (ms - last) / 1000f
+                    last = ms
+                }
             }
         }
     }
 
     Canvas(modifier) {
-        draw(smoothed.value, timeSec.value, palette)
+        draw(smoothed.value, if (animated) timeSec.value else 0f, palette)
     }
 }

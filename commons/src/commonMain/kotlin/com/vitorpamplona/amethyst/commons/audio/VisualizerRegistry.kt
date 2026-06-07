@@ -24,11 +24,16 @@ import com.vitorpamplona.amethyst.commons.audio.renderers.AuroraRenderer
 import com.vitorpamplona.amethyst.commons.audio.renderers.BarsRenderer
 import com.vitorpamplona.amethyst.commons.audio.renderers.OffRenderer
 import com.vitorpamplona.amethyst.commons.audio.renderers.RadialRenderer
+import com.vitorpamplona.amethyst.commons.audio.renderers.StaticRenderer
 import com.vitorpamplona.amethyst.commons.audio.renderers.WavesRenderer
 
+/**
+ * CLASSIC is intentionally absent — it requires the live player and is handled by the caller;
+ * forStyle(CLASSIC) falls back to OffRenderer.
+ */
 object VisualizerRegistry {
     val all: List<VisualizerRenderer> =
-        listOf(OffRenderer, BarsRenderer, WavesRenderer, RadialRenderer, AuroraRenderer)
+        listOf(OffRenderer, BarsRenderer, WavesRenderer, RadialRenderer, AuroraRenderer, StaticRenderer)
 
     private val byStyle = all.associateBy { it.style }
 

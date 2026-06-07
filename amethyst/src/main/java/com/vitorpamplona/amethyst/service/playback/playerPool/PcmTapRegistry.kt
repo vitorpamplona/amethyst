@@ -27,7 +27,7 @@ import androidx.media3.exoplayer.audio.TeeAudioProcessor
 import com.vitorpamplona.amethyst.commons.audio.AudioWindow
 import com.vitorpamplona.amethyst.commons.audio.Fft
 import com.vitorpamplona.amethyst.commons.audio.Spectrum
-import com.vitorpamplona.amethyst.commons.audio.normalizedToPeak
+import com.vitorpamplona.amethyst.commons.audio.normalizeToPeakInPlace
 import com.vitorpamplona.amethyst.commons.audio.toLogBins
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -38,13 +38,9 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * A Media3 [TeeAudioProcessor.AudioBufferSink] that turns the decoded 16-bit PCM of the
- * currently-playing track into a live [Spectrum] stream via FFT + log binning, emitting into
- * whichever per-media-id [output] flow [PcmTapRegistry] has currently bound it to.
- *
- * Only 16-bit PCM is handled; other encodings are ignored. ExoPlayer audio *offload* and
- * *passthrough* modes bypass the processor chain, so no PCM reaches this sink in those modes —
- * the bound flow stays empty and the visualizer renders idle (never stale). Amethyst does not
- * enable offload, so this is not expected in practice.
+ * currently-playing track into a live [Spectrum] stream via FFT + log binning, emitting into the
+ * per-media-id flow [PcmTapRegistry] has bound it to. Only 16-bit PCM is handled; offload/passthrough
+ * bypass the processor chain so the flow simply stays empty (visualizer idles, never stale).
  */
 @OptIn(UnstableApi::class)
 class SpectrumAudioBufferSink(
@@ -53,10 +49,18 @@ class SpectrumAudioBufferSink(
 ) : TeeAudioProcessor.AudioBufferSink {
     /** The per-media-id flow this sink currently feeds; set by [PcmTapRegistry.bind]. */
     @Volatile
-    var output: MutableSharedFlow<Spectrum>? = null
+    internal var output: MutableSharedFlow<Spectrum>? = null
+
+    /** The media id this sink is currently bound to; protects its flow from eviction. */
+    @Volatile
+    internal var boundMediaId: String? = null
 
     private val window = AudioWindow.hann(fftSize)
     private val mono = ShortArray(fftSize)
+    private val scratch = FloatArray(fftSize)
+    private val re = DoubleArray(fftSize)
+    private val im = DoubleArray(fftSize)
+    private val mags = FloatArray(fftSize / 2 + 1)
     private var filled = 0
     private var channels = 1
     private var encoding = C.ENCODING_PCM_16BIT
@@ -70,7 +74,6 @@ class SpectrumAudioBufferSink(
         this.channels = channelCount.coerceAtLeast(1)
         this.encoding = encoding
         filled = 0
-        // Drop any spectrum from the previous track so a fresh subscriber doesn't see it on reuse.
         output?.resetReplayCache()
     }
 
@@ -79,7 +82,7 @@ class SpectrumAudioBufferSink(
         val pcm = buffer.order(ByteOrder.LITTLE_ENDIAN)
         while (pcm.remaining() >= 2 * channels) {
             val sample = pcm.short // first channel of the frame
-            for (c in 1 until channels) pcm.short // skip remaining channels
+            if (channels > 1) pcm.position(pcm.position() + (channels - 1) * 2) // skip remaining channels
             mono[filled++] = sample
             if (filled == fftSize) {
                 emitSpectrum()
@@ -88,23 +91,29 @@ class SpectrumAudioBufferSink(
         }
     }
 
-    // Allocates a few short-lived arrays per FFT window (~47/s at 48kHz/1024). Acceptable for now;
-    // pre-allocated working buffers would be the optimization if audio-thread GC shows up.
+    // Reuses pre-allocated working buffers; the only per-frame allocation is the published bins.
     private fun emitSpectrum() {
-        val windowed = AudioWindow.shortsToWindowed(mono, window)
-        val mags = Fft.magnitudes(windowed).normalizedToPeak()
+        AudioWindow.shortsToWindowedInto(mono, window, scratch)
+        Fft.magnitudesInto(scratch, re, im, mags)
+        mags.normalizeToPeakInPlace()
         output?.tryEmit(Spectrum(mags.toLogBins(binCount)))
     }
 }
 
 /**
- * Routes each pooled player's decoded-PCM spectrum to a stable, per-media-id flow that the UI can
- * subscribe to by media URL. The flow is created on demand so a UI subscriber can attach before
- * playback binds the sink (avoids a compose-vs-playback race).
+ * Routes each pooled player's decoded-PCM spectrum to a stable per-media-id flow the UI subscribes
+ * to by media URL. Flows are created on demand (so a UI subscriber can attach before playback binds
+ * the sink) and the map is bounded: past [MAX_TRACKED_FLOWS], the least-recently-used flows that no
+ * live sink is currently feeding are evicted, so a long feed session can't grow the map without limit.
  */
 @OptIn(UnstableApi::class)
 object PcmTapRegistry {
-    private val flowsByMediaId = ConcurrentHashMap<String, MutableSharedFlow<Spectrum>>()
+    private const val MAX_TRACKED_FLOWS = 64
+
+    private val lock = Any()
+
+    // access-order LinkedHashMap → eldest (least-recently-used) entries iterate first for eviction.
+    private val flowsByMediaId = LinkedHashMap<String, MutableSharedFlow<Spectrum>>(16, 0.75f, true)
     private val sinkByPlayer = ConcurrentHashMap<Any, SpectrumAudioBufferSink>()
 
     fun newSink(): SpectrumAudioBufferSink = SpectrumAudioBufferSink()
@@ -116,20 +125,37 @@ object PcmTapRegistry {
         sinkByPlayer[playerKey] = sink
     }
 
-    /** Points [sink]'s output at the flow for [mediaId] (the item it is now playing), or detaches it. */
+    /** Points [sink]'s output at the flow for [mediaId] (the item it now plays), or detaches it. */
     fun bind(
         mediaId: String?,
         sink: SpectrumAudioBufferSink,
     ) {
+        sink.boundMediaId = mediaId
         sink.output = mediaId?.let { flowFor(it) }
     }
 
     fun unregisterPlayer(playerKey: Any) {
-        sinkByPlayer.remove(playerKey)?.output = null
+        sinkByPlayer.remove(playerKey)?.let {
+            it.output = null
+            it.boundMediaId = null
+        }
     }
 
-    /** Stable spectrum stream for a media URL. Frames arrive once a player is bound to it and plays. */
+    /** Stable spectrum stream for a media URL; frames arrive once a player binds to it and plays. */
     fun spectrumFor(mediaId: String): Flow<Spectrum> = flowFor(mediaId)
 
-    private fun flowFor(mediaId: String): MutableSharedFlow<Spectrum> = flowsByMediaId.getOrPut(mediaId) { MutableSharedFlow(replay = 1, extraBufferCapacity = 1) }
+    private fun flowFor(mediaId: String): MutableSharedFlow<Spectrum> =
+        synchronized(lock) {
+            flowsByMediaId.getOrPut(mediaId) {
+                if (flowsByMediaId.size >= MAX_TRACKED_FLOWS) {
+                    val iter = flowsByMediaId.entries.iterator()
+                    while (iter.hasNext() && flowsByMediaId.size >= MAX_TRACKED_FLOWS) {
+                        val key = iter.next().key
+                        // never evict a flow a live sink is currently feeding
+                        if (sinkByPlayer.values.none { it.boundMediaId == key }) iter.remove()
+                    }
+                }
+                MutableSharedFlow(replay = 1, extraBufferCapacity = 1)
+            }
+        }
 }

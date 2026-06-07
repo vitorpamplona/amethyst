@@ -21,22 +21,23 @@
 package com.vitorpamplona.amethyst.commons.audio.renderers
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.commons.audio.Spectrum
-import com.vitorpamplona.amethyst.commons.audio.SpectrumCanvas
+import com.vitorpamplona.amethyst.commons.audio.SyntheticSpectrum
 import com.vitorpamplona.amethyst.commons.audio.VisualizerPalette
 import com.vitorpamplona.amethyst.commons.audio.VisualizerRenderer
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
-import com.vitorpamplona.amethyst.commons.audio.wrapHue
 import kotlinx.coroutines.flow.Flow
-import kotlin.math.min
+import kotlinx.coroutines.flow.flowOf
 
-object BarsRenderer : VisualizerRenderer {
-    override val style = VisualizerStyle.BARS
+/**
+ * A still, non-animated bar graphic for users who dislike motion. Ignores the live [spectrum]
+ * and renders a single frozen frame via [BarsRenderer] (which runs its canvas with animated=false,
+ * so there is no per-frame redraw once settled).
+ */
+object StaticRenderer : VisualizerRenderer {
+    override val style = VisualizerStyle.STATIC
 
     @Composable
     override fun Render(
@@ -44,26 +45,7 @@ object BarsRenderer : VisualizerRenderer {
         palette: VisualizerPalette,
         modifier: Modifier,
     ) {
-        SpectrumCanvas(spectrum, palette, modifier, animated = false) { bins, _, pal ->
-            if (bins.isEmpty()) return@SpectrumCanvas
-            val n = bins.size
-            val gap = 2f
-            val barW = (size.width - gap * (n - 1)) / n
-            if (barW <= 0f) return@SpectrumCanvas
-            val mid = size.height / 2f
-            val radius = CornerRadius(min(barW / 2f, 3f), min(barW / 2f, 3f))
-            for (i in 0 until n) {
-                val v = bins[i].coerceIn(0f, 1f)
-                val half = v * (size.height / 2f - 2f)
-                if (half <= 0f) continue
-                val hue = pal.midHue + (pal.highHue - pal.midHue) * (i / n.toFloat())
-                drawRoundRect(
-                    color = Color.hsl(hue.wrapHue(), pal.saturation, pal.lightness),
-                    topLeft = Offset(i * (barW + gap), mid - half),
-                    size = Size(barW, half * 2f),
-                    cornerRadius = radius,
-                )
-            }
-        }
+        val frozen = remember { flowOf(SyntheticSpectrum.frame(0f, 48)) }
+        BarsRenderer.Render(frozen, palette, modifier)
     }
 }

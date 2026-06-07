@@ -25,7 +25,7 @@ import kotlin.test.assertEquals
 
 class VisualizerRegistryTest {
     @Test
-    fun registryCoversTheFiveSpectrumStylesExactlyOnce() {
+    fun registryCoversSpectrumStylesExactlyOnce() {
         val styles = VisualizerRegistry.all.map { it.style }.toSet()
         assertEquals(
             setOf(
@@ -34,19 +34,19 @@ class VisualizerRegistryTest {
                 VisualizerStyle.WAVES,
                 VisualizerStyle.RADIAL,
                 VisualizerStyle.AURORA,
+                VisualizerStyle.STATIC,
             ),
             styles,
         )
-        assertEquals(5, VisualizerRegistry.all.size)
+        assertEquals(6, VisualizerRegistry.all.size)
     }
 
     @Test
-    fun forStyleReturnsMatchingRendererForSpectrumStylesAndFallsBackForOthers() {
+    fun forStyleMatchesForRegisteredStylesAndFallsBackForClassic() {
         for (renderer in VisualizerRegistry.all) {
             assertEquals(renderer.style, VisualizerRegistry.forStyle(renderer.style).style)
         }
-        // CLASSIC and STATIC have no spectrum renderer; the dispatcher falls back to OFF.
+        // CLASSIC has no spectrum renderer; the dispatcher falls back to OFF.
         assertEquals(VisualizerStyle.OFF, VisualizerRegistry.forStyle(VisualizerStyle.CLASSIC).style)
-        assertEquals(VisualizerStyle.OFF, VisualizerRegistry.forStyle(VisualizerStyle.STATIC).style)
     }
 }

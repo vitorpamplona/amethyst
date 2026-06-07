@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.audio.SpectrumCanvas
 import com.vitorpamplona.amethyst.commons.audio.VisualizerPalette
 import com.vitorpamplona.amethyst.commons.audio.VisualizerRenderer
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
+import com.vitorpamplona.amethyst.commons.audio.wrapHue
 import kotlinx.coroutines.flow.Flow
 import kotlin.math.PI
 import kotlin.math.cos
@@ -46,7 +47,7 @@ object RadialRenderer : VisualizerRenderer {
         palette: VisualizerPalette,
         modifier: Modifier,
     ) {
-        SpectrumCanvas(spectrum, palette, modifier) { bins, _, pal ->
+        SpectrumCanvas(spectrum, palette, modifier, animated = false) { bins, _, pal ->
             if (bins.isEmpty()) return@SpectrumCanvas
             val n = bins.size
             val cx = size.width / 2f
@@ -75,7 +76,7 @@ object RadialRenderer : VisualizerRenderer {
             for (i in 0 until n) {
                 val a = i / n.toFloat() * (2f * PI.toFloat()) - PI.toFloat() / 2f
                 val len = r0 + bins[i].coerceIn(0f, 1f) * minDim * 0.32f
-                val hue = (((pal.midHue + (pal.highHue - pal.midHue) * (i / n.toFloat())) % 360f) + 360f) % 360f
+                val hue = (pal.midHue + (pal.highHue - pal.midHue) * (i / n.toFloat())).wrapHue()
                 drawLine(
                     color = Color.hsl(hue, pal.saturation, pal.lightness),
                     start = Offset(cx + cos(a) * r0, cy + sin(a) * r0),

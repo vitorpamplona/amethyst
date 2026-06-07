@@ -50,7 +50,12 @@ object SyntheticSpectrum {
         return Spectrum(bins)
     }
 
-    /** Compose-friendly stream that emits one [frame] per display frame. */
+    /**
+     * Compose-friendly stream that emits one [frame] per display frame.
+     *
+     * Must be collected inside a Compose frame-clock scope (e.g. a `LaunchedEffect`); it uses
+     * `withFrameMillis`, which throws if collected from a plain coroutine with no frame clock.
+     */
     fun flow(binCount: Int = 48): Flow<Spectrum> =
         flow {
             var startMs = -1L

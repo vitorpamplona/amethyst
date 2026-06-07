@@ -43,4 +43,14 @@ class AudioWindowTest {
         assertEquals(0f, out[2])
         assertEquals(0f, out[3])
     }
+
+    @Test
+    fun shortsToWindowedIntoMatchesAllocatingVersion() {
+        val window = AudioWindow.hann(8)
+        val samples = ShortArray(8) { (it * 1000).toShort() }
+        val expected = AudioWindow.shortsToWindowed(samples, window)
+        val out = FloatArray(8)
+        AudioWindow.shortsToWindowedInto(samples, window, out)
+        for (i in out.indices) assertEquals(expected[i], out[i], 1e-6f)
+    }
 }

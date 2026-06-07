@@ -24,7 +24,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.flow.Flow
 
-/** Renders [spectrum] using whichever [style] the user selected. */
+/**
+ * Renders [spectrum] using whichever [style] the user selected.
+ * CLASSIC is not a spectrum renderer; passing it renders nothing (OffRenderer fallback). Callers handle CLASSIC separately.
+ */
 @Composable
 fun AudioVisualizer(
     style: VisualizerStyle,

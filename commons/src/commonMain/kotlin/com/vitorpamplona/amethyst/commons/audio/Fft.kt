@@ -86,13 +86,36 @@ object Fft {
         }
     }
 
-    /** Forward-transforms real [signal] and returns magnitudes for bins 0..N/2 (DC..Nyquist). */
+    /**
+     * Forward-transforms real [signal] and returns magnitudes for bins 0..N/2 (DC..Nyquist).
+     * Reference/allocating variant — production uses the *Into / in-place form on the audio thread.
+     */
     fun magnitudes(signal: FloatArray): FloatArray {
+        val out = FloatArray(signal.size / 2 + 1)
+        magnitudesInto(signal, DoubleArray(signal.size), DoubleArray(signal.size), out)
+        return out
+    }
+
+    /**
+     * Like [magnitudes] but writes into caller-owned buffers (no allocation). [re] and [im] must be
+     * the same length as [signal] (a power of 2); [out] must be `signal.size / 2 + 1`. Used on the
+     * audio thread to avoid per-frame garbage.
+     */
+    fun magnitudesInto(
+        signal: FloatArray,
+        re: DoubleArray,
+        im: DoubleArray,
+        out: FloatArray,
+    ) {
         val n = signal.size
         require(n != 0 && (n and (n - 1)) == 0) { "FFT size must be a power of 2, was $n" }
-        val re = DoubleArray(n) { signal[it].toDouble() }
-        val im = DoubleArray(n)
+        require(re.size == n && im.size == n) { "re/im buffers must be size $n" }
+        require(out.size == n / 2 + 1) { "out buffer must be size ${n / 2 + 1}" }
+        for (i in 0 until n) {
+            re[i] = signal[i].toDouble()
+            im[i] = 0.0
+        }
         transform(re, im)
-        return FloatArray(n / 2 + 1) { sqrt(re[it] * re[it] + im[it] * im[it]).toFloat() }
+        for (i in out.indices) out[i] = sqrt(re[i] * re[i] + im[i] * im[i]).toFloat()
     }
 }
