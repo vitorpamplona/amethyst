@@ -32,7 +32,6 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
@@ -52,6 +51,27 @@ import com.vitorpamplona.amethyst.service.playback.playerPool.PcmTapRegistry
 import kotlinx.coroutines.flow.emptyFlow
 
 fun Tracks.isAudio() = groups.isNotEmpty() && groups.none { it.type == C.TRACK_TYPE_VIDEO }
+
+/**
+ * Observes whether the controller's current tracks are audio-only, updating live via the player's
+ * track-change listener. Shared by [AudioPlayingAnimation] (to decide what to draw) and the player
+ * container (to decide whether to size the player as a square).
+ */
+@Composable
+fun rememberIsAudioTrack(controller: Player): State<Boolean> {
+    val isAudio = remember(controller) { mutableStateOf(controller.currentTracks.isAudio()) }
+    DisposableEffect(controller) {
+        val listener =
+            object : Player.Listener {
+                override fun onTracksChanged(tracks: Tracks) {
+                    isAudio.value = tracks.isAudio()
+                }
+            }
+        controller.addListener(listener)
+        onDispose { controller.removeListener(listener) }
+    }
+    return isAudio
+}
 
 // Output-latency compensation. The spectrum is tapped upstream of the AudioTrack output buffer (and,
 // over Bluetooth, the codec/transmission lag downstream of it), so the visual leads the speaker and
@@ -75,19 +95,7 @@ fun AudioPlayingAnimation(
     modifier: Modifier = Modifier,
     hasBlurhash: Boolean = false,
 ) {
-    var isAudio by remember { mutableStateOf(controllerState.controller.currentTracks.isAudio()) }
-
-    DisposableEffect(controllerState.controller) {
-        val listener =
-            object : Player.Listener {
-                override fun onTracksChanged(tracks: Tracks) {
-                    super.onTracksChanged(tracks)
-                    isAudio = tracks.isAudio()
-                }
-            }
-        controllerState.controller.addListener(listener)
-        onDispose { controllerState.controller.removeListener(listener) }
-    }
+    val isAudio by rememberIsAudioTrack(controllerState.controller)
 
     if (!isAudio) return
 
@@ -102,6 +110,7 @@ fun AudioPlayingAnimation(
     }
 
     when (style) {
+        // CLASSIC keeps its compact fixed-height wave (it does not stretch to fill the square).
         VisualizerStyle.CLASSIC -> FakeWaveformAnimation(mediaControllerState = controllerState, modifier = drawModifier)
         VisualizerStyle.STATIC -> {
             // StaticRenderer ignores the flow and shows a frozen frame.
