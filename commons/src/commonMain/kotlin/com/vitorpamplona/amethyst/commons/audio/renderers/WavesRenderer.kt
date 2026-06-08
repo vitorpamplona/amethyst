@@ -36,6 +36,12 @@ import com.vitorpamplona.amethyst.commons.audio.wrapHue
 import kotlinx.coroutines.flow.Flow
 import kotlin.math.sin
 
+/**
+ * Three translucent, overlapping filled waves. Each wave's OUTLINE is the live spectrum of its
+ * frequency band (low / mid / high), interpolated across the width, so the shape tracks the audio
+ * directly. A small time shimmer (±6%) adds life without driving the motion, and the height is
+ * clamped to 0.92·h so the fill never reaches or leaves the top edge.
+ */
 object WavesRenderer : VisualizerRenderer {
     override val style = VisualizerStyle.WAVES
 
@@ -49,9 +55,9 @@ object WavesRenderer : VisualizerRenderer {
 
     private val layers =
         listOf(
-            Layer(0f, 0.33f, { it.lowHue }, 0.95f, 0f),
-            Layer(0.2f, 0.7f, { it.midHue }, 0.8f, 1.5f),
-            Layer(0.5f, 1f, { it.highHue }, 0.7f, 3f),
+            Layer(0f, 0.4f, { it.lowHue }, 1.0f, 0f),
+            Layer(0.2f, 0.75f, { it.midHue }, 0.9f, 1.5f),
+            Layer(0.5f, 1f, { it.highHue }, 0.8f, 3f),
         )
 
     @Composable
@@ -73,11 +79,15 @@ object WavesRenderer : VisualizerRenderer {
                 var x = 0f
                 while (x <= w) {
                     val f = x / w
-                    val idx = ((layer.lo + (layer.hi - layer.lo) * f) * (n - 1)).toInt().coerceIn(0, n - 1)
-                    val v = bins[idx] * layer.amp
-                    val wob = 0.5f + 0.5f * sin(f * 8f + layer.phase + t * 2f)
-                    path.lineTo(x, h - v * h * (0.45f + 0.55f * wob))
-                    x += 6f
+                    // interpolate the spectrum within this layer's band → smooth, audio-driven outline
+                    val fb = (layer.lo + (layer.hi - layer.lo) * f) * (n - 1)
+                    val i0 = fb.toInt().coerceIn(0, n - 1)
+                    val i1 = (i0 + 1).coerceAtMost(n - 1)
+                    val v = (bins[i0] + (bins[i1] - bins[i0]) * (fb - i0)) * layer.amp
+                    val shimmer = 1f + 0.06f * sin(f * 12f + layer.phase + t * 1.5f)
+                    val height = (v * shimmer).coerceIn(0f, 1f) * h * 0.92f
+                    path.lineTo(x, h - height)
+                    x += 4f
                 }
                 path.lineTo(w, h)
                 path.close()

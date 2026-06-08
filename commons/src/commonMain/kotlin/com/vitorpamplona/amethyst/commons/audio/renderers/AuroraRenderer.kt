@@ -38,21 +38,29 @@ import com.vitorpamplona.amethyst.commons.audio.wrapHue
 import kotlinx.coroutines.flow.Flow
 import kotlin.math.sin
 
+/**
+ * Three overlapping glowing ribbons. Each ribbon is a stroked line whose vertical displacement from
+ * its centre is the live spectrum of its band (interpolated across the width), so the ribbon's shape
+ * tracks the audio; the glow thickness swells with the overall energy. A small time shimmer (±8%)
+ * adds life without driving the motion. The line is clamped inside the canvas (accounting for the
+ * stroke width) so the tops/bottoms never get cut.
+ */
 object AuroraRenderer : VisualizerRenderer {
     override val style = VisualizerStyle.AURORA
 
     private class Ribbon(
         val hue: (VisualizerPalette) -> Float,
         val yo: Float,
-        val sp: Float,
-        val band: Float,
+        val lo: Float,
+        val hi: Float,
+        val dir: Float,
     )
 
     private val ribbons =
         listOf(
-            Ribbon({ it.midHue - 40f }, 0.5f, 1.0f, 0.15f),
-            Ribbon({ it.lowHue }, 0.55f, 1.4f, 0.45f),
-            Ribbon({ it.highHue }, 0.45f, 0.7f, 0.75f),
+            Ribbon({ it.midHue - 40f }, 0.55f, 0f, 0.5f, -1f),
+            Ribbon({ it.lowHue }, 0.5f, 0.15f, 0.85f, 1f),
+            Ribbon({ it.highHue }, 0.45f, 0.5f, 1f, -1f),
         )
 
     @Composable
@@ -67,15 +75,28 @@ object AuroraRenderer : VisualizerRenderer {
             val n = bins.size
             val w = size.width
             val h = size.height
+
+            // overall energy → glow thickness swells with loudness (bounded)
+            var energy = 0f
+            for (b in bins) energy += b
+            energy /= bins.size
+            val strokeW = 12f + energy * 30f
+            val half = strokeW / 2f
+
             ribbons.forEachIndexed { index, r ->
-                val idx = (r.band * (n - 1)).toInt().coerceIn(0, n - 1)
-                val amp = (0.3f + bins[idx] * 1.2f) * h * 0.5f
                 val path = paths[index]
                 path.reset()
                 var x = 0f
                 while (x <= w) {
                     val f = x / w
-                    val y = h * r.yo + sin(f * 6f * r.sp + t * 1.5f * r.sp) * amp + sin(f * 13f + t) * amp * 0.25f
+                    // interpolate this ribbon's band → the displacement IS the spectrum
+                    val fb = (r.lo + (r.hi - r.lo) * f) * (n - 1)
+                    val i0 = fb.toInt().coerceIn(0, n - 1)
+                    val i1 = (i0 + 1).coerceAtMost(n - 1)
+                    val v = bins[i0] + (bins[i1] - bins[i0]) * (fb - i0)
+                    val shimmer = 1f + 0.08f * sin(f * 9f + t)
+                    val disp = (v * shimmer).coerceIn(0f, 1f) * h * 0.40f
+                    val y = (h * r.yo + r.dir * disp).coerceIn(half, h - half)
                     if (x == 0f) path.moveTo(x, y) else path.lineTo(x, y)
                     x += 5f
                 }
@@ -85,10 +106,10 @@ object AuroraRenderer : VisualizerRenderer {
                     brush =
                         Brush.horizontalGradient(
                             0f to Color.hsl(hue, pal.saturation, pal.lightness, 0f),
-                            0.5f to Color.hsl(hue, pal.saturation, pal.lightness, 0.55f),
+                            0.5f to Color.hsl(hue, pal.saturation, pal.lightness, 0.6f),
                             1f to Color.hsl(hue, pal.saturation, pal.lightness, 0f),
                         ),
-                    style = Stroke(width = 22f + bins[idx] * 26f, cap = StrokeCap.Round),
+                    style = Stroke(width = strokeW, cap = StrokeCap.Round),
                     blendMode = BlendMode.Plus,
                 )
             }
