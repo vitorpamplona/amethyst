@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.LocalContentColor
@@ -29,6 +30,7 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
@@ -50,6 +52,7 @@ import ru.noties.jlatexmath.JLatexMathDrawable
 fun LatexEquation(
     latex: String,
     displayMode: Boolean,
+    trailing: String = "",
 ) {
     val color = LocalContentColor.current.toArgb()
     val density = LocalDensity.current
@@ -76,7 +79,8 @@ fun LatexEquation(
         }
 
     if (drawable == null) {
-        Text(if (displayMode) "$$$latex$$" else "$$latex$")
+        // Couldn't parse — show the raw delimited source so nothing is lost.
+        Text((if (displayMode) "$$$latex$$" else "$$latex$") + trailing)
         return
     }
 
@@ -85,13 +89,20 @@ fun LatexEquation(
 
     // Wide display equations can overflow the column; allow them to scroll
     // horizontally instead of being clipped.
-    val sizeModifier = Modifier.size(widthDp, heightDp)
-    val modifier = if (displayMode) Modifier.horizontalScroll(rememberScrollState()).then(sizeModifier) else sizeModifier
+    val equationSize = Modifier.size(widthDp, heightDp)
+    val equationModifier = if (displayMode) Modifier.horizontalScroll(rememberScrollState()).then(equationSize) else equationSize
 
-    Canvas(modifier = modifier) {
-        drawIntoCanvas { canvas ->
-            drawable.setBounds(0, 0, drawable.intrinsicWidth, drawable.intrinsicHeight)
-            drawable.draw(canvas.nativeCanvas)
+    // Row keeps trailing punctuation (the `.` in `$x$.`) hugging the equation
+    // rather than getting a word-gap from the parent FlowRow.
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Canvas(modifier = equationModifier) {
+            drawIntoCanvas { canvas ->
+                drawable.setBounds(0, 0, drawable.intrinsicWidth, drawable.intrinsicHeight)
+                drawable.draw(canvas.nativeCanvas)
+            }
+        }
+        if (trailing.isNotEmpty()) {
+            Text(trailing)
         }
     }
 }

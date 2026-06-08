@@ -506,7 +506,7 @@ private fun RenderWordWithoutPreview(
 
         is SecretEmoji -> Text(word.segmentText)
 
-        is MathSegment -> LatexEquation(word.latex, word.displayMode)
+        is MathSegment -> LatexEquation(word.latex, word.displayMode, word.trailing)
 
         is PhoneSegment -> ClickablePhone(word.segmentText)
 
@@ -550,7 +550,7 @@ private fun RenderWordWithPreview(
         is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
         is EmailSegment -> ClickableEmail(word.segmentText)
         is SecretEmoji -> DisplaySecretEmoji(word, state, callbackUri, true, quotesLeft, backgroundColor, accountViewModel, nav)
-        is MathSegment -> LatexEquation(word.latex, word.displayMode)
+        is MathSegment -> LatexEquation(word.latex, word.displayMode, word.trailing)
         is PhoneSegment -> ClickablePhone(word.segmentText)
         is BechSegment -> BechLink(word.segmentText, true, quotesLeft, backgroundColor, accountViewModel, nav)
         is HashTagSegment -> HashTag(word, nav)

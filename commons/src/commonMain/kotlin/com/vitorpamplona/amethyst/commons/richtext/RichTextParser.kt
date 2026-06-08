@@ -239,34 +239,15 @@ class RichTextParser {
 
         lines.forEach { paragraph ->
             val isRTL = isArabic(paragraph)
-            val trimmed = paragraph.trimEnd()
 
+            // split() behaves like `line.split(' ')`, but keeps math spans
+            // (`$...$`, `$$...$$`) whole instead of tearing them at internal spaces.
             val segments =
-                if (MathParser.mightContainMath(trimmed)) {
-                    // Math spans (`$...$`, `$$...$$`) can contain spaces, so pull them out
-                    // as atomic segments before the regular whitespace word-split.
-                    val list = ArrayList<Segment>()
-                    MathParser.split(trimmed).forEach { token ->
-                        when (token) {
-                            is MathParser.Token.Math ->
-                                list.add(MathSegment(token.raw, token.latex, token.displayMode))
-
-                            is MathParser.Token.Text ->
-                                token.text.split(' ').forEach { word ->
-                                    if (word.isNotEmpty()) {
-                                        list.add(wordIdentifier(word, images, videos, pdfs, urls, emojis, tags))
-                                    }
-                                }
-                        }
+                MathParser.split(paragraph.trimEnd()).map { token ->
+                    when (token) {
+                        is MathParser.Token.Math -> MathSegment(token.raw, token.latex, token.displayMode, token.trailing)
+                        is MathParser.Token.Word -> wordIdentifier(token.text, images, videos, pdfs, urls, emojis, tags)
                     }
-                    list
-                } else {
-                    val wordList = trimmed.split(' ')
-                    val list = ArrayList<Segment>(wordList.size)
-                    wordList.forEach { word ->
-                        list.add(wordIdentifier(word, images, videos, pdfs, urls, emojis, tags))
-                    }
-                    list
                 }
 
             paragraphSegments.add(ParagraphState(segments.toPersistentList(), isRTL))

@@ -21,13 +21,15 @@
 package com.vitorpamplona.amethyst.commons.richtext
 
 /**
- * Extracts LaTeX math spans delimited by `$...$` (inline) and `$$...$$` (display)
- * from a single line of text.
+ * Splits a line into the space-delimited words consumed by [RichTextParser],
+ * keeping LaTeX math spans (`$...$` inline, `$$...$$` display) whole even though
+ * they may contain spaces.
  *
- * Math spans can contain spaces, so this runs *before* the regular whitespace
- * word-splitter in [RichTextParser]: it tokenizes a line into atomic math spans
- * (kept whole) interleaved with the surrounding plain text (which the caller
- * then splits on spaces as usual).
+ * This is a drop-in replacement for `line.split(' ')`: for a line with no math
+ * it returns exactly the same words (including the empty strings that
+ * consecutive/leading/trailing spaces produce, which [RichTextParser] relies on
+ * to preserve double-spaces). A math span simply comes back as a single
+ * [Token.Math] word instead of being torn apart at its internal spaces.
  *
  * Delimiter rules follow the common "pandoc/remark-math dollar" convention so
  * that ordinary prose with currency (`$5 and $10`) doesn't false-fire:
@@ -36,19 +38,28 @@ package com.vitorpamplona.amethyst.commons.richtext
  *    must not be immediately followed by a digit.
  *  - A `$` escaped with a backslash (`\$`) is a literal dollar, never a delimiter.
  *  - `$$...$$` (display) is matched before `$...$` (inline).
+ *
+ * Math glued to text without a separating space (e.g. `a$x$b`) stays a single
+ * plain word and renders literally — only whitespace-delimited spans become math.
  */
 object MathParser {
     sealed interface Token {
-        /** Plain text run; the caller splits this on spaces. */
-        data class Text(
+        /** A space-delimited word; may be empty for consecutive spaces. */
+        data class Word(
             val text: String,
         ) : Token
 
-        /** A math span. [raw] includes the `$` delimiters; [latex] is the inner formula. */
+        /**
+         * A math span. [raw] includes the `$` delimiters; [latex] is the inner
+         * formula. [trailing] holds any punctuation glued right after the closing
+         * `$` (e.g. the `.` in `$x$.`) so it renders next to the equation instead
+         * of drifting off behind a space — same idea as [HashTagSegment]'s extras.
+         */
         data class Math(
             val raw: String,
             val latex: String,
             val displayMode: Boolean,
+            val trailing: String = "",
         ) : Token
     }
 
@@ -59,41 +70,63 @@ object MathParser {
     }
 
     /**
-     * Splits [line] into alternating [Token.Text] and [Token.Math] tokens.
-     * When no valid math span is found the whole line comes back as a single
-     * [Token.Text].
+     * Splits [line] on spaces into [Token.Word]s, with any whitespace-delimited
+     * math span surfaced as a [Token.Math].
      */
-    fun split(line: String): List<Token> {
-        if (!mightContainMath(line)) return listOf(Token.Text(line))
+    fun split(line: String): List<Token> =
+        splitKeepingMathWhole(line).map { cell ->
+            // A span at the start of the cell becomes math, carrying any trailing
+            // punctuation (`$x$.`). Leading-glued math (`a$x$`) stays a plain word.
+            val math = matchMathAt(cell, 0)
+            if (math != null) math.copy(trailing = cell.substring(math.raw.length)) else Token.Word(cell)
+        }
 
-        val tokens = ArrayList<Token>()
-        val text = StringBuilder()
+    /**
+     * Splits [line] on single spaces the way `line.split(' ')` would, except that
+     * spaces *inside* a math span don't act as delimiters.
+     */
+    private fun splitKeepingMathWhole(line: String): List<String> {
+        if (!mightContainMath(line)) return line.split(' ')
+
+        val cells = ArrayList<String>()
+        val current = StringBuilder()
         val len = line.length
         var i = 0
-
-        fun flushText() {
-            if (text.isNotEmpty()) {
-                tokens.add(Token.Text(text.toString()))
-                text.clear()
-            }
-        }
-
         while (i < len) {
-            if (line[i] == '$' && !isEscaped(line, i)) {
-                val match = matchDisplay(line, i) ?: matchInline(line, i)
-                if (match != null) {
-                    flushText()
-                    tokens.add(match)
-                    i = match.raw.length + i
-                    continue
+            val c = line[i]
+            when {
+                c == ' ' -> {
+                    cells.add(current.toString())
+                    current.clear()
+                    i++
+                }
+                c == '$' -> {
+                    val span = matchMathAt(line, i)?.raw
+                    if (span != null) {
+                        current.append(span)
+                        i += span.length
+                    } else {
+                        current.append(c)
+                        i++
+                    }
+                }
+                else -> {
+                    current.append(c)
+                    i++
                 }
             }
-            text.append(line[i])
-            i++
         }
-        flushText()
+        cells.add(current.toString())
+        return cells
+    }
 
-        return tokens
+    /** Matches a `$$...$$` or `$...$` span starting at [start], or null. */
+    private fun matchMathAt(
+        line: String,
+        start: Int,
+    ): Token.Math? {
+        if (start >= line.length || line[start] != '$' || isEscaped(line, start)) return null
+        return matchDisplay(line, start) ?: matchInline(line, start)
     }
 
     /** A `$` is escaped when preceded by an odd number of backslashes. */

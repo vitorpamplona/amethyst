@@ -27,30 +27,30 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class MathParserTest {
-    // Kotlin uses `$` for string templates; using a constant keeps the test
+    // Kotlin uses `$` for string templates; using constants keeps the test
     // strings readable instead of peppering them with `\$`.
     private val d = "$"
     private val bs = "\\"
 
     private fun math(tokens: List<Token>) = tokens.filterIsInstance<Token.Math>()
 
+    private fun joinWords(tokens: List<Token>) = tokens.filterIsInstance<Token.Word>().joinToString(" ") { it.text }
+
     @Test
     fun simpleInlineMath() {
-        val tokens = MathParser.split("before ${d}x_1$d after")
         assertEquals(
             listOf(
-                Token.Text("before "),
+                Token.Word("before"),
                 Token.Math("${d}x_1$d", "x_1", false),
-                Token.Text(" after"),
+                Token.Word("after"),
             ),
-            tokens,
+            MathParser.split("before ${d}x_1$d after"),
         )
     }
 
     @Test
     fun displayMath() {
-        val tokens = MathParser.split("eq $d${d}E = mc^2$d$d end")
-        val m = math(tokens).single()
+        val m = math(MathParser.split("eq $d${d}E = mc^2$d$d end")).single()
         assertEquals("E = mc^2", m.latex)
         assertTrue(m.displayMode)
         assertEquals("$d${d}E = mc^2$d$d", m.raw)
@@ -58,7 +58,12 @@ class MathParserTest {
 
     @Test
     fun mathWithInternalSpacesStaysWhole() {
-        val tokens = MathParser.split("Vectors ${d}A_1, ${bs}ldots, A_n$d are independent")
+        // The span keeps its internal spaces instead of being split into words.
+        val tokens = MathParser.split("Vectors ${d}A_1, ${bs}ldots, A_n$d are")
+        assertEquals(
+            listOf("Vectors", "are"),
+            tokens.filterIsInstance<Token.Word>().map { it.text },
+        )
         val m = math(tokens).single()
         assertEquals("A_1, ${bs}ldots, A_n", m.latex)
         assertFalse(m.displayMode)
@@ -74,15 +79,26 @@ class MathParserTest {
         assertEquals("A_1, ${bs}ldots, A_n", m[0].latex)
         assertEquals("x_1 A_1 + ${bs}cdots + x_n A_n = 0", m[1].latex)
         assertEquals("x_1 = ${bs}cdots = x_n = 0", m[2].latex)
+        // The closing span ends the sentence, so the period rides along as trailing.
+        assertEquals("", m[0].trailing)
+        assertEquals(".", m[2].trailing)
+    }
+
+    @Test
+    fun trailingPunctuationRidesWithMath() {
+        val m = math(MathParser.split("the value ${d}x$d, computed")).single()
+        assertEquals("x", m.latex)
+        assertEquals(",", m.trailing)
     }
 
     @Test
     fun currencyIsNotMath() {
         // Opening `$` of `$5` is followed by a digit (fine), but the closing `$`
         // of `$10` is preceded by a space, so no valid span is formed.
-        val tokens = MathParser.split("It costs ${d}5 and ${d}10 total")
+        val line = "It costs ${d}5 and ${d}10 total"
+        val tokens = MathParser.split(line)
         assertTrue(math(tokens).isEmpty())
-        assertEquals("It costs ${d}5 and ${d}10 total", (tokens.single() as Token.Text).text)
+        assertEquals(line, joinWords(tokens))
     }
 
     @Test
@@ -107,10 +123,38 @@ class MathParserTest {
     }
 
     @Test
-    fun noDollarsShortCircuits() {
+    fun gluedMathStaysPlainWord() {
+        // Math without a separating space is not whitespace-delimited, so it
+        // remains a single literal word rather than three rendered pieces.
+        val tokens = MathParser.split("a${d}x$d" + "b")
+        assertTrue(math(tokens).isEmpty())
+        assertEquals(listOf(Token.Word("a${d}x$d" + "b")), tokens)
+    }
+
+    @Test
+    fun noDollarsBehavesLikeSpaceSplit() {
         assertFalse(MathParser.mightContainMath("just regular text"))
-        val tokens = MathParser.split("just regular text")
-        assertEquals(listOf(Token.Text("just regular text")), tokens)
+        assertEquals(
+            "just regular text".split(' ').map { Token.Word(it) },
+            MathParser.split("just regular text"),
+        )
+    }
+
+    @Test
+    fun doubleSpacesArePreservedAsEmptyWords() {
+        // RichTextParser relies on split(' ') semantics to keep double-spaces:
+        // each run of N spaces yields N-1 empty words, on both sides of math.
+        assertEquals(
+            listOf(
+                Token.Word("a"),
+                Token.Word(""),
+                Token.Word("b"),
+                Token.Math("${d}x$d", "x", false),
+                Token.Word(""),
+                Token.Word("c"),
+            ),
+            MathParser.split("a  b ${d}x$d  c"),
+        )
     }
 
     @Test
