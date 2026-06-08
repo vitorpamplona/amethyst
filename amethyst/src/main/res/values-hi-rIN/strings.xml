@@ -473,7 +473,7 @@
     <string name="scheduled_posts_event_id_copied">टीका विभेदक की अनुकृति की गई</string>
     <string name="polls">मतदान</string>
     <string name="open_polls">खुला</string>
-    <string name="closed_polls">अवरुद्ध</string>
+    <string name="closed_polls">आवृत</string>
     <string name="badges">पदक</string>
     <string name="communities">समुदाय</string>
     <string name="new_community">नया समुदाय</string>
@@ -597,9 +597,9 @@
     <string name="nest_listen_to_recording">अभिलेख सुनें</string>
     <string name="nest_chat_send_failed_title">सन्देश प्रेषण असफल</string>
     <string name="nest_no_app_to_open_link">इस योजक को खोलने के लिए कोई क्रमक स्थापित नहीं।</string>
-    <string name="nest_close_room_confirm_title">क्या इस शाला को अवरोधित करें।</string>
-    <string name="nest_close_room_confirm_body">सभी उपस्थित वियोजित हो जाएँगे। शाला अवरुद्ध दिखेगा सूचनावली में।</string>
-    <string name="nest_close_room_confirm_action">शाला अवरोधन</string>
+    <string name="nest_close_room_confirm_title">क्या इस शाला को आवृत करें।</string>
+    <string name="nest_close_room_confirm_body">सभी उपस्थित वियोजित हो जाएँगे। शाला आवृत दिखेगा सूचनावली में।</string>
+    <string name="nest_close_room_confirm_action">शाला आवृत करें</string>
     <string name="nest_create_when_in_past">भविष्य आरम्भ समय का चयन।</string>
     <string name="nest_audio_failed">ध्वनि असफल : %1$s</string>
     <string name="nest_audio_unavailable">इस शाला के लिए ध्वनि उपलब्ध नहीं</string>
@@ -636,10 +636,10 @@
     <string name="nest_presence_left">निलय छोडकर गए</string>
     <string name="nest_leave">निर्गमन</string>
     <string name="nest_leave_host_title">कया इस निलय को अवरुद्ध करें।</string>
-    <string name="nest_leave_host_body">आप निमन्त्रक हैं। शाला अवरुद्ध करने से सभी वियोजित हो जाएँगे। \"केवल निर्गमन\" का चयन करें यदि आप लौटना चाहते हें कुछ समय पश्चात। शाला स्वतः अवरुद्ध होगी ८ घण्टों की निष्क्रियता पश्चात।</string>
-    <string name="nest_leave_host_close">शाला अवरोधन</string>
+    <string name="nest_leave_host_body">आप निमन्त्रक हैं। शाला आवृत करने से सभी वियोजित हो जाएँगे। \"केवल निर्गमन\" का चयन करें यदि आप लौटना चाहते हें कुछ समय पश्चात। शाला स्वतः आवृत होगी ८ घण्टों की निष्क्रियता पश्चात।</string>
+    <string name="nest_leave_host_close">शाला आवृत करें</string>
     <string name="nest_leave_host_just_leave">केवल निर्गमन</string>
-    <string name="nest_leave_host_close_failed">शाला अवरुद्ध चिह्नित करने में असफल। तथापि निर्गमन चालू। शाला स्वतः अवरुद्ध हो जाएगी।</string>
+    <string name="nest_leave_host_close_failed">शाला आवृत चिह्नित करने में असफल। तथापि निर्गमन चालू। शाला स्वतः आवृत हो जाएगी।</string>
     <plurals name="nest_listener_count">
         <item quantity="one">%1$d श्रोता</item>
         <item quantity="other">%1$d श्रोतागण</item>
@@ -655,7 +655,7 @@
     <string name="nest_reactions_button">प्रतिक्रिया</string>
     <string name="nest_edit_title">शाला सम्पादन</string>
     <string name="nest_edit_save">अभिलेखन</string>
-    <string name="nest_close_action">शाला अवरोधन</string>
+    <string name="nest_close_action">शाला आवृत करें</string>
     <string name="nest_overflow_menu">शाला क्रियाएँ</string>
     <string name="nest_hand_raise_queue_title">उठे हुए हाथ</string>
     <string name="nest_hand_raise_approve">स्वीकार</string>
@@ -895,7 +895,7 @@
     <string name="poll_closing_time">के पश्चात समाप्त करें</string>
     <string name="poll_closing_time_days">दिन</string>
     <string name="poll_unable_to_vote">निर्वाचन करने में असफल</string>
-    <string name="poll_is_closed_explainer">मतदान अवरोधित है नये निर्वाचनों के लिए</string>
+    <string name="poll_is_closed_explainer">मतदान आवृत है नये निर्वाचनों के लिए</string>
     <string name="poll_zap_amount">ज्साप मात्रा</string>
     <string name="one_vote_per_user_on_atomic_votes">प्रत्येक उपयोगकर्ता को केवल एक निर्वाचन करने की अनुमति है इस प्रकार के मतदान में।</string>
     <string name="looking_for_event">"घटना %1$s के लिए खोज चल रहा है"</string>
@@ -1346,7 +1346,7 @@
     <string name="live_stream_has_ended">तत्क्षणप्रसार समाप्त</string>
     <string name="meeting_space_open_tag">खुला</string>
     <string name="meeting_space_private_tag">निजी</string>
-    <string name="meeting_space_closed_tag">निबद्ध</string>
+    <string name="meeting_space_closed_tag">आवृत</string>
     <string name="meeting_space_planned_tag">समय निर्धारित</string>
     <string name="meeting_space_planned_starts_at">आरम्भ %1$s</string>
     <string name="are_you_sure_you_want_to_log_out">निर्गमनांकन करने पर आपकी सारी स्थानीय जानकारी मिट जाएगी। सुनिश्चित करें कि आपके निजी कुंचिकाएँ सुरक्षित रखें हैं अपनी लेखा नहीं खोना चाहते हैं तो। क्या आप आगे बढना चाहते हैं?</string>
@@ -1623,7 +1623,7 @@
     <string name="notification_channel_status_off">निष्क्रिय</string>
     <string name="select_push_server">संयुक्तप्रेषण क्रमक का चयन करें</string>
     <string name="push_server_title">प्रेषित सूचना</string>
-    <string name="push_server_explainer">स्थापित संयुक्तप्रेषण क्रमकों से</string>
+    <string name="push_server_explainer">एक संयुक्तप्रेषण क्रमक का चयन करें सूचनाओं को भेजने के लिए जब अमेथिस्ट आवृत हो।</string>
     <string name="push_server_none">कुछ भी नहीं</string>
     <string name="push_server_none_explainer">प्रेषित सूचनाएँ अक्षम करता है</string>
     <string name="push_server_uses_app_explainer">%1$s क्रमक का प्रयोग करता है</string>
@@ -2021,7 +2021,7 @@
     <string name="add_a_tag">विषयसूचक जोडें\u2026</string>
     <string name="start_writing_article">अपना लेख लिखना आरम्भ करें\u2026</string>
     <string name="open_all_reactions_to_this_post">इस पत्र प्रकाशन के सभी प्रतिक्रियाओं को खोलें</string>
-    <string name="close_all_reactions_to_this_post">इस पत्र प्रकाशन के सभी प्रतिक्रियाओं को अवरोधित करें</string>
+    <string name="close_all_reactions_to_this_post">इस पत्र प्रकाशन के सभी प्रतिक्रियाओं को आवृत करें</string>
     <string name="reply_description">उत्तर</string>
     <string name="jump_to_parent_reply">उस टीका तक जाएँ जिसका यह उत्तर है</string>
     <string name="boost_or_quote_description">उद्धृत करें अथवा टीका लिखें</string>
@@ -2200,7 +2200,7 @@
     <string name="git_clone_address">अनुकृति :</string>
     <string name="git_status_open">खुला</string>
     <string name="git_status_merged">विलीन</string>
-    <string name="git_status_closed">अवरुद्ध</string>
+    <string name="git_status_closed">आवृत</string>
     <string name="git_status_draft">पाण्डुलिपि</string>
     <string name="git_repo_tab_overview">रूपरेखा विवरण</string>
     <string name="git_repo_tab_issues">समस्याएँ</string>
@@ -2817,6 +2817,14 @@
     <string name="goal_progress">%1$s वित्तपोषित %2$s साट्स उद्देश्य में से</string>
     <string name="fundraiser_ends">समाप्ति %1$s</string>
     <string name="fundraiser_onchain_donation">खण्डश्रृंखलाबद्ध दान</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">बिर्डेक्स। %1$d प्रजाति</item>
+        <item quantity="other">बिर्डेक्स। %1$d प्रजातियाँ</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s सं॰ %2$d अधिक</item>
+        <item quantity="other">%1$s सं॰ %2$d अधिक</item>
+    </plurals>
     <string name="goal_amount_label">उद्देश्य संख्या (साट्स)</string>
     <string name="goal_amount_placeholder">१०००००</string>
     <string name="goal_description_label">आपके उद्देश्य का विवरण करें</string>
