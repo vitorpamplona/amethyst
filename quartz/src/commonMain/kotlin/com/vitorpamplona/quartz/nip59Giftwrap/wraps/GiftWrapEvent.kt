@@ -74,7 +74,7 @@ open class GiftWrapEvent(
         val gift = fromJson(giftStr)
 
         if (gift is WrappedEvent) {
-            gift.host = HostStub(this.id, this.pubKey, this.kind)
+            gift.host = HostStub(this.id, this.pubKey, this.kind, this.createdAt)
         }
         innerEventId = gift.id
 

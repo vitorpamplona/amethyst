@@ -103,11 +103,18 @@ class RelayLoadingCursors {
     ): Boolean {
         val c = cursor(relay)
         if (c.done) return false
+        val reached = c.reachedUntil
         c.requestedUntil =
-            if (c.requestedUntil == null) {
-                start
-            } else {
-                (c.reachedUntil ?: start) - 1
+            when {
+                // Resume just below the oldest event already delivered. Covers both normal page-to-page
+                // advance and a post-[rewindTo] resume (which un-arms the relay — requestedUntil back to
+                // null — but keeps the rewound reached point, so the next page picks up at the boundary
+                // instead of restarting at the floor and re-streaming the still-held tail).
+                reached != null -> reached - 1
+                // Very first page for this relay (nothing delivered, nothing requested yet).
+                c.requestedUntil == null -> start
+                // Armed but still mid-page (no EOSE yet) — keep asking from the same top.
+                else -> start
             }
         c.pageCount = 0
         c.pageOldest = Long.MAX_VALUE
@@ -143,6 +150,45 @@ class RelayLoadingCursors {
                 c.reachedUntil = c.pageOldest
             } else {
                 c.done = true
+            }
+        }
+    }
+
+    /**
+     * Realigns the window after the cache prunes messages out of it: for each `relay → newestPrunedUntil`
+     * entry, rewinds that relay so it no longer claims to hold anything at or below [newestPrunedUntil]
+     * (the newest cursor-space `created_at` among the messages pruned from that relay — for gift wraps the
+     * **outer-wrap** time, recovered from the rumor's [host][com.vitorpamplona.quartz.nip59Giftwrap.HostStub]).
+     *
+     * Without this, a relay that already paged past the pruned band — or reached `done` — would never
+     * re-request the dropped messages: its [reachedUntil] still points below them, so the next [advance]
+     * starts even older and skips the hole entirely.
+     *
+     * The rewind pulls [reachedUntil] back up to just above [newestPrunedUntil] (so the next page's
+     * `until` re-includes it), clears [done] (there *is* older data to re-fetch again), and un-arms the
+     * relay (requested cursor back to null) so paging stays demand-driven — the dropped band comes back
+     * only when the on-screen marker advances the relay again, not eagerly on the next re-subscribe.
+     *
+     * Bounds:
+     *  - A relay with no cursor yet (never paged) is skipped — there is no window position to misalign.
+     *  - The rewind never moves [reachedUntil] above the pinned [floor] (history lives strictly below it;
+     *    a pruned message newer than the floor is the live tail's concern, not this window's).
+     *  - A relay whose reached point is already shallower than the pruned band needs no rewind.
+     */
+    fun rewindTo(newestPrunedUntil: Map<NormalizedRelayUrl, Long>) {
+        val floorAt = floor ?: return
+        newestPrunedUntil.forEach { (relay, prunedUntil) ->
+            val c = cursors.get(relay) ?: return@forEach
+            val reached = c.reachedUntil ?: return@forEach
+            // Re-include the newest pruned event: the next page asks `until = reached - 1`, so reached must
+            // sit one tick above it. Never climb above the floor.
+            val target = minOf(prunedUntil + 1, floorAt)
+            if (reached < target) {
+                c.reachedUntil = target
+                c.requestedUntil = null
+                c.done = false
+                c.pageCount = 0
+                c.pageOldest = Long.MAX_VALUE
             }
         }
     }

@@ -106,4 +106,101 @@ class RelayLoadingCursorsTest {
         val cursors = RelayLoadingCursors()
         assertEquals(null, cursors.deepestReached(emptyList(), start))
     }
+
+    // ── rewindTo: realign the window after the cache prunes messages out of it ──
+
+    @Test
+    fun rewindReopensThePrunedBandAndResumesFromItOnNextAdvance() {
+        val cursors = RelayLoadingCursors()
+        cursors.floor = start
+
+        // page deep: floor 1000 → reached 200
+        cursors.advance(relayA, start)
+        cursors.onEvent(relayA, 900)
+        cursors.onEvent(relayA, 200)
+        cursors.onEose(relayA)
+        assertEquals(200L, cursors.reachedUntilFor(relayA, start))
+
+        // prune drops everything older than 700 (newest pruned = 700)
+        cursors.rewindTo(mapOf(relayA to 700L))
+
+        // reached pulled up to just above the pruned band, not done, and un-armed (demand-driven)
+        assertEquals(701L, cursors.reachedUntilFor(relayA, start))
+        assertFalse(cursors.isDone(relayA))
+        assertEquals(emptyList<Any>(), cursors.armedRelays(listOf(relayA)))
+
+        // the next advance resumes at the boundary and re-requests the pruned band (until = 700),
+        // NOT from the floor (which would re-stream the still-held tail above 700)
+        assertTrue(cursors.advance(relayA, start))
+        assertEquals(700L, cursors.requestedUntilFor(relayA))
+    }
+
+    @Test
+    fun rewindClearsDoneSoAnExhaustedRelayCanReFetch() {
+        val cursors = RelayLoadingCursors()
+        cursors.floor = start
+
+        cursors.advance(relayA, start)
+        cursors.onEvent(relayA, 300)
+        cursors.onEose(relayA) // reached 300
+        cursors.advance(relayA, start)
+        cursors.onEose(relayA) // empty page → done
+        assertTrue(cursors.isDone(relayA))
+
+        cursors.rewindTo(mapOf(relayA to 500L))
+
+        assertFalse("a pruned relay must be re-fetchable even after it reached the bottom", cursors.isDone(relayA))
+        assertEquals(501L, cursors.reachedUntilFor(relayA, start))
+        assertTrue(cursors.advance(relayA, start))
+        assertEquals(500L, cursors.requestedUntilFor(relayA))
+    }
+
+    @Test
+    fun rewindNeverClimbsAboveTheFloor() {
+        val cursors = RelayLoadingCursors()
+        cursors.floor = start
+
+        cursors.advance(relayA, start)
+        cursors.onEvent(relayA, 300)
+        cursors.onEose(relayA) // reached 300
+
+        // a boundary at/above the floor clamps to the floor (history lives strictly below it)
+        cursors.rewindTo(mapOf(relayA to start))
+        assertEquals(start, cursors.reachedUntilFor(relayA, start))
+    }
+
+    @Test
+    fun rewindSkipsRelaysWithoutACursorOrShallowerThanThePrunedBand() {
+        val cursors = RelayLoadingCursors()
+        cursors.floor = start
+
+        // A delivered to 200; B never paged
+        cursors.advance(relayA, start)
+        cursors.onEvent(relayA, 200)
+        cursors.onEose(relayA)
+
+        // B has no cursor (never paged) → skipped, no entry minted; A's reach (200) is already shallower
+        // than a boundary of 150 (target 151), so it needs no rewind either.
+        cursors.rewindTo(mapOf(relayB to 500L, relayA to 150L))
+
+        // B: untouched (still at the floor, unarmed)
+        assertEquals(start, cursors.reachedUntilFor(relayB, start))
+        assertEquals(emptyList<Any>(), cursors.armedRelays(listOf(relayB)))
+        // A: unchanged
+        assertEquals(200L, cursors.reachedUntilFor(relayA, start))
+    }
+
+    @Test
+    fun rewindIsANoOpWhenTheWindowNeverPagedHistory() {
+        val cursors = RelayLoadingCursors()
+        // floor is null (never advanced any history page)
+        cursors.advance(relayA, start)
+        cursors.onEvent(relayA, 200)
+        cursors.onEose(relayA)
+
+        cursors.rewindTo(mapOf(relayA to 150L))
+
+        // unchanged: with no pinned floor there is no history window to realign
+        assertEquals(200L, cursors.reachedUntilFor(relayA, start))
+    }
 }

@@ -70,7 +70,7 @@ class SealedRumorEvent(
 
         val event = rumor.mergeWith(this)
         if (event is WrappedEvent) {
-            event.host = host ?: HostStub(this.id, this.pubKey, this.kind)
+            event.host = host ?: HostStub(this.id, this.pubKey, this.kind, this.createdAt)
         }
         innerEventId = event.id
 
