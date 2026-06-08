@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -38,6 +39,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
@@ -180,10 +182,13 @@ fun RenderVideoPlayer(
             modifier = Modifier.align(Alignment.Center),
         )
 
+        val visualizerStyle by accountViewModel.audioVisualizerFlow().collectAsStateWithLifecycle()
         AudioPlayingAnimation(
-            controllerState,
-            mediaItem.src.waveformData,
-            Modifier.fillMaxSize().align(Alignment.Center),
+            controllerState = controllerState,
+            waveform = mediaItem.src.waveformData,
+            mediaId = mediaItem.src.videoUri,
+            style = visualizerStyle,
+            modifier = Modifier.fillMaxSize().align(Alignment.Center),
             hasBlurhash = hasBlurhash,
         )
 
