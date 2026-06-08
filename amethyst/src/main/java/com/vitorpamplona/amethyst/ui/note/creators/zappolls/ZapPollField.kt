@@ -36,10 +36,13 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.ShortNotePostViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip88Polls.poll.tags.OptionTag
+import com.vitorpamplona.quartz.utils.RandomInstance
 
 @Composable
 fun ZapPollField(postViewModel: ShortNotePostViewModel) {
-    val optionsList = postViewModel.zapPollOptions
+    // Shares the same `pollOptions` text fields as the regular poll so switching poll types keeps the text.
+    val optionsList = postViewModel.pollOptions
     Column(
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -55,8 +58,7 @@ fun ZapPollField(postViewModel: ShortNotePostViewModel) {
 
         Button(
             onClick = {
-                // postViewModel.pollOptions[postViewModel.pollOptions.size] = ""
-                optionsList[optionsList.size] = ""
+                optionsList[optionsList.size] = OptionTag(RandomInstance.randomChars(6), "")
             },
             border =
                 BorderStroke(
