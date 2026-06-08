@@ -2078,7 +2078,9 @@
     <string name="audio_visualizer_settings_description">Välj animeringen som visas när ljudanteckningar spelas upp.</string>
     <string name="audio_visualizer_off">Av</string>
     <string name="audio_visualizer_bars">Spektrumstaplar</string>
+    <string name="audio_visualizer_waves">Color Waves</string>
     <string name="audio_visualizer_radial">Radiell ring</string>
+    <string name="audio_visualizer_aurora">Aurora Glow</string>
     <string name="audio_visualizer_classic">Klassisk vågform</string>
     <string name="audio_visualizer_static">Statisk bild</string>
     <string name="profile_image_of_user">%1$s Profilbild</string>
