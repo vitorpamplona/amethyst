@@ -149,7 +149,7 @@ private fun VisualizerStyleRow(
 }
 
 @Composable
-fun visualizerStyleName(style: VisualizerStyle): String =
+private fun visualizerStyleName(style: VisualizerStyle): String =
     when (style) {
         VisualizerStyle.CLASSIC -> stringRes(R.string.audio_visualizer_classic)
         VisualizerStyle.OFF -> stringRes(R.string.audio_visualizer_off)

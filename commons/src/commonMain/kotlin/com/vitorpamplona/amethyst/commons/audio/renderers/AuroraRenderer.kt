@@ -70,7 +70,21 @@ object AuroraRenderer : VisualizerRenderer {
         modifier: Modifier,
     ) {
         val paths = remember { List(ribbons.size) { Path() } }
-        SpectrumCanvas(spectrum, palette, modifier) { bins, t, pal ->
+        // Each ribbon's gradient depends only on the palette (the animation lives in the Path
+        // geometry), so build the brushes once instead of allocating three Colors + a Brush per
+        // ribbon on every frame.
+        val brushes =
+            remember(palette) {
+                ribbons.map { ribbon ->
+                    val hue = ribbon.hue(palette).wrapHue()
+                    Brush.horizontalGradient(
+                        0f to Color.hsl(hue, palette.saturation, palette.lightness, 0f),
+                        0.5f to Color.hsl(hue, palette.saturation, palette.lightness, 0.6f),
+                        1f to Color.hsl(hue, palette.saturation, palette.lightness, 0f),
+                    )
+                }
+            }
+        SpectrumCanvas(spectrum, palette, modifier) { bins, t, _ ->
             if (bins.isEmpty()) return@SpectrumCanvas
             val n = bins.size
             val w = size.width
@@ -96,19 +110,15 @@ object AuroraRenderer : VisualizerRenderer {
                     val v = bins[i0] + (bins[i1] - bins[i0]) * (fb - i0)
                     val shimmer = 1f + 0.08f * sin(f * 9f + t)
                     val disp = (v * shimmer).coerceIn(0f, 1f) * h * 0.40f
-                    val y = (h * r.yo + r.dir * disp).coerceIn(half, h - half)
+                    // maxOf guards the reversed-range crash when the canvas is shorter than the
+                    // loudness-swelled stroke (h < strokeW makes half > h - half).
+                    val y = (h * r.yo + r.dir * disp).coerceIn(half, maxOf(half, h - half))
                     if (x == 0f) path.moveTo(x, y) else path.lineTo(x, y)
                     x += 5f
                 }
-                val hue = r.hue(pal).wrapHue()
                 drawPath(
                     path = path,
-                    brush =
-                        Brush.horizontalGradient(
-                            0f to Color.hsl(hue, pal.saturation, pal.lightness, 0f),
-                            0.5f to Color.hsl(hue, pal.saturation, pal.lightness, 0.6f),
-                            1f to Color.hsl(hue, pal.saturation, pal.lightness, 0f),
-                        ),
+                    brush = brushes[index],
                     style = Stroke(width = strokeW, cap = StrokeCap.Round),
                     blendMode = BlendMode.Plus,
                 )

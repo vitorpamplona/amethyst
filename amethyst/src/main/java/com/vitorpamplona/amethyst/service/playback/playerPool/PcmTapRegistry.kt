@@ -95,7 +95,9 @@ class SpectrumAudioBufferSink(
     private fun emitSpectrum() {
         AudioWindow.shortsToWindowedInto(mono, window, scratch)
         Fft.magnitudesInto(scratch, re, im, mags)
-        mags.normalizeToPeakInPlace()
+        // Skip the DC bin (index 0): toLogBins ignores it, so letting a DC/offset component be the
+        // peak would scale every audible bin toward zero and wash the spectrum out.
+        mags.normalizeToPeakInPlace(fromIndex = 1)
         output?.tryEmit(Spectrum(mags.toLogBins(binCount)))
     }
 }
@@ -130,14 +132,20 @@ object PcmTapRegistry {
         mediaId: String?,
         sink: SpectrumAudioBufferSink,
     ) {
-        sink.boundMediaId = mediaId
-        sink.output = mediaId?.let { flowFor(it) }
+        // Mutate the sink's binding under the same lock that guards flow eviction (flowFor is
+        // reentrant), so the eviction guard never observes a half-updated boundMediaId.
+        synchronized(lock) {
+            sink.boundMediaId = mediaId
+            sink.output = mediaId?.let { flowFor(it) }
+        }
     }
 
     fun unregisterPlayer(playerKey: Any) {
-        sinkByPlayer.remove(playerKey)?.let {
-            it.output = null
-            it.boundMediaId = null
+        synchronized(lock) {
+            sinkByPlayer.remove(playerKey)?.let {
+                it.output = null
+                it.boundMediaId = null
+            }
         }
     }
 
@@ -150,9 +158,13 @@ object PcmTapRegistry {
                 if (flowsByMediaId.size >= MAX_TRACKED_FLOWS) {
                     val iter = flowsByMediaId.entries.iterator()
                     while (iter.hasNext() && flowsByMediaId.size >= MAX_TRACKED_FLOWS) {
-                        val key = iter.next().key
-                        // never evict a flow a live sink is currently feeding
-                        if (sinkByPlayer.values.none { it.boundMediaId == key }) iter.remove()
+                        val entry = iter.next()
+                        // Never evict a flow a live sink is currently feeding, nor one a composable is
+                        // still collecting — otherwise a later bind() would create a fresh instance the
+                        // sink feeds while the old subscriber keeps collecting the dead one (blank viz).
+                        val fedByLiveSink = sinkByPlayer.values.any { it.boundMediaId == entry.key }
+                        val stillCollected = entry.value.subscriptionCount.value > 0
+                        if (!fedByLiveSink && !stillCollected) iter.remove()
                     }
                 }
                 MutableSharedFlow(replay = 1, extraBufferCapacity = 1)

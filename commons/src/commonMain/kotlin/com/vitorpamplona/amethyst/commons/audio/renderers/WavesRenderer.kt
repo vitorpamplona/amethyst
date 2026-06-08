@@ -67,7 +67,20 @@ object WavesRenderer : VisualizerRenderer {
         modifier: Modifier,
     ) {
         val paths = remember { List(layers.size) { Path() } }
-        SpectrumCanvas(spectrum, palette, modifier) { bins, t, pal ->
+        // Each layer's gradient depends only on the palette (the animation lives in the Path
+        // geometry), so build the brushes once instead of allocating two Colors + a Brush per layer
+        // on every frame.
+        val brushes =
+            remember(palette) {
+                layers.map { layer ->
+                    val hue = layer.hue(palette).wrapHue()
+                    Brush.verticalGradient(
+                        0f to Color.hsl(hue, palette.saturation, palette.lightness, 0.85f),
+                        1f to Color.hsl(hue, palette.saturation, palette.lightness * 0.8f, 0.05f),
+                    )
+                }
+            }
+        SpectrumCanvas(spectrum, palette, modifier) { bins, t, _ ->
             if (bins.isEmpty()) return@SpectrumCanvas
             val n = bins.size
             val w = size.width
@@ -91,14 +104,9 @@ object WavesRenderer : VisualizerRenderer {
                 }
                 path.lineTo(w, h)
                 path.close()
-                val hue = layer.hue(pal).wrapHue()
                 drawPath(
                     path = path,
-                    brush =
-                        Brush.verticalGradient(
-                            0f to Color.hsl(hue, pal.saturation, pal.lightness, 0.85f),
-                            1f to Color.hsl(hue, pal.saturation, pal.lightness * 0.8f, 0.05f),
-                        ),
+                    brush = brushes[index],
                     blendMode = BlendMode.Plus,
                 )
             }

@@ -61,8 +61,6 @@ fun FloatArray.toLogBins(
     return out
 }
 
-fun silentSpectrum(binCount: Int): Spectrum = Spectrum(FloatArray(binCount))
-
 /**
  * Returns a NEW array scaled so the largest value becomes 1f. An all-zero input is returned as a zero-filled copy.
  * Reference/allocating variant — production uses the *Into / in-place form on the audio thread.
@@ -75,11 +73,15 @@ fun FloatArray.normalizedToPeak(): FloatArray {
     return FloatArray(size) { this[it] * inv }
 }
 
-/** In-place version of [normalizedToPeak]: scales this array so its largest value becomes 1f. */
-fun FloatArray.normalizeToPeakInPlace() {
+/**
+ * In-place version of [normalizedToPeak]: scales this array so its largest value becomes 1f.
+ * [fromIndex] excludes leading entries from both the peak search and the scaling (e.g. pass 1 to
+ * ignore the DC bin of an FFT magnitude array, which downstream log-binning also skips).
+ */
+fun FloatArray.normalizeToPeakInPlace(fromIndex: Int = 0) {
     var peak = 0f
-    for (v in this) if (v > peak) peak = v
+    for (i in fromIndex until size) if (this[i] > peak) peak = this[i]
     if (peak <= 0f) return
     val inv = 1f / peak
-    for (i in indices) this[i] *= inv
+    for (i in fromIndex until size) this[i] *= inv
 }

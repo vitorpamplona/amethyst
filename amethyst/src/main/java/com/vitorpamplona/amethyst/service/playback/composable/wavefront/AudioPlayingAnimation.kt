@@ -110,9 +110,12 @@ private fun Modifier.audioVisualizerHeight(fallback: Dp = 72.dp): Modifier =
     fillMaxWidth().layout { measurable, constraints ->
         val fallbackPx = fallback.roundToPx()
         val targetHeight =
-            if (constraints.hasBoundedHeight && constraints.maxHeight >= fallbackPx * 2) {
-                constraints.maxHeight
+            if (constraints.hasBoundedHeight) {
+                // Fill a clearly-large cell (full-screen dialog); otherwise use the fallback strip but
+                // never exceed the cell, so a small bounded cell can't overflow onto its neighbors.
+                if (constraints.maxHeight >= fallbackPx * 2) constraints.maxHeight else minOf(fallbackPx, constraints.maxHeight)
             } else {
+                // Unbounded (lazy feed): the fallback strip avoids collapsing to zero.
                 fallbackPx
             }
         val placeable = measurable.measure(constraints.copy(minHeight = targetHeight, maxHeight = targetHeight))

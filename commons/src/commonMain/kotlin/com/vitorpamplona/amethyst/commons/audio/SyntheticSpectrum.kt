@@ -26,7 +26,6 @@ import kotlinx.coroutines.flow.flow
 import kotlin.math.PI
 import kotlin.math.exp
 import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sin
 
@@ -45,7 +44,7 @@ object SyntheticSpectrum {
                 val mid = exp(-((f - 0.35) * 4.0).pow(2.0)) * (0.35 + 0.25 * sin(t * 5.0 + i))
                 val treble = exp(-((f - 0.8) * 3.5).pow(2.0)) * max(0.0, sin(t * 14.0 + i * 2.3)) * 0.4
                 val v = bass + mid + treble + 0.04 * sin(t * 3.0 + i * 0.7)
-                min(1.0, max(0.0, v)).toFloat()
+                v.coerceIn(0.0, 1.0).toFloat()
             }
         return Spectrum(bins)
     }

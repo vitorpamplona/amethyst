@@ -53,6 +53,9 @@ object RadialRenderer : VisualizerRenderer {
             val cx = size.width / 2f
             val cy = size.height / 2f
             val minDim = min(size.width, size.height)
+            // A zero/near-zero canvas (transient layout pass while audio plays) would make coreR == 0,
+            // and Brush.radialGradient(radius = 0f) throws. Nothing meaningful to draw at that size.
+            if (minDim <= 0f) return@SpectrumCanvas
             val r0 = minDim * 0.16f
 
             var energy = 0f
