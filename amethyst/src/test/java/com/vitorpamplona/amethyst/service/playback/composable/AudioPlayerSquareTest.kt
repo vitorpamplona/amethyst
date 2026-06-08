@@ -65,4 +65,9 @@ class AudioPlayerSquareTest {
     fun sideEqualsCapAtBoundary() {
         assertEquals(1000, audioSquareSide(widthPx = 1000, maxHeightPx = 1000))
     }
+
+    @Test
+    fun sideIsZeroWhenWidthIsZero() {
+        assertEquals(0, audioSquareSide(widthPx = 0, maxHeightPx = 1000))
+    }
 }

@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.dp
  * [tracksAreAudio] (covers bare-URL audio once tracks resolve). Voice notes keep their seek-bar strip,
  * and the full-screen dialog fills the screen, so both opt out.
  */
-fun shouldSquareAudioPlayer(
+internal fun shouldSquareAudioPlayer(
     isFullscreen: Boolean,
     isVoiceNote: Boolean,
     isAudioMime: Boolean,
@@ -44,10 +44,10 @@ fun shouldSquareAudioPlayer(
  * Maximum height of the square. The player is always full width; below this height it is a true
  * square (1:1), and above it the height is capped (full width, shorter than square).
  */
-val AUDIO_SQUARE_MAX_HEIGHT: Dp = 400.dp
+internal val AUDIO_SQUARE_MAX_HEIGHT: Dp = 400.dp
 
 /** Square side in px: the full width, but never taller than the cap. */
-fun audioSquareSide(
+internal fun audioSquareSide(
     widthPx: Int,
     maxHeightPx: Int,
 ): Int = minOf(widthPx, maxHeightPx)
@@ -57,21 +57,16 @@ fun audioSquareSide(
  * bounded incoming width (the feed cell); with an unbounded width it measures normally and does
  * nothing, so it is safe to leave in the chain unconditionally if ever needed.
  */
-fun Modifier.audioSquare(maxHeight: Dp = AUDIO_SQUARE_MAX_HEIGHT): Modifier =
+internal fun Modifier.audioSquare(maxHeight: Dp = AUDIO_SQUARE_MAX_HEIGHT): Modifier =
     layout { measurable, constraints ->
-        if (!constraints.hasBoundedWidth) {
+        val width = constraints.maxWidth
+        // Unbounded width, or first layout pass before the cell has a width: measure normally and let
+        // the next pass impose the square once a real width arrives.
+        if (!constraints.hasBoundedWidth || width == 0) {
             val placeable = measurable.measure(constraints)
-            layout(placeable.width, placeable.height) { placeable.placeRelative(0, 0) }
-        } else {
-            val width = constraints.maxWidth
-            if (width == 0) {
-                // First layout pass before the cell has a width: measure normally, size next pass.
-                val placeable = measurable.measure(constraints)
-                layout(placeable.width, placeable.height) { placeable.placeRelative(0, 0) }
-            } else {
-                val side = audioSquareSide(width, maxHeight.roundToPx())
-                val placeable = measurable.measure(Constraints.fixed(width, side))
-                layout(width, side) { placeable.placeRelative(0, 0) }
-            }
+            return@layout layout(placeable.width, placeable.height) { placeable.placeRelative(0, 0) }
         }
+        val side = audioSquareSide(width, maxHeight.roundToPx())
+        val placeable = measurable.measure(Constraints.fixed(width, side))
+        layout(width, side) { placeable.placeRelative(0, 0) }
     }

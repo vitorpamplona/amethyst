@@ -68,6 +68,8 @@ fun rememberIsAudioTrack(controller: Player): State<Boolean> {
                 }
             }
         controller.addListener(listener)
+        // Re-read after registering so a track change racing the initial remember{} read isn't missed.
+        isAudio.value = controller.currentTracks.isAudio()
         onDispose { controller.removeListener(listener) }
     }
     return isAudio
@@ -92,11 +94,10 @@ fun AudioPlayingAnimation(
     waveform: WaveformData?,
     mediaId: String,
     style: VisualizerStyle,
+    isAudio: Boolean,
     modifier: Modifier = Modifier,
     hasBlurhash: Boolean = false,
 ) {
-    val isAudio by rememberIsAudioTrack(controllerState.controller)
-
     if (!isAudio) return
 
     // Dim any blurhash/cover backdrop behind whatever we draw, for contrast and consistency across

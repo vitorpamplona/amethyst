@@ -202,6 +202,7 @@ fun RenderVideoPlayer(
             waveform = mediaItem.src.waveformData,
             mediaId = mediaItem.src.videoUri,
             style = visualizerStyle,
+            isAudio = tracksAreAudio,
             modifier = Modifier.fillMaxSize().align(Alignment.Center),
             hasBlurhash = hasBlurhash,
         )
