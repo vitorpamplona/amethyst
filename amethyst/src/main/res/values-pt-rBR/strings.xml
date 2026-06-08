@@ -2990,4 +2990,23 @@
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Arte</string>
     <string name="nowhere_link_card_forum">Nowhere Fórum</string>
+    <string name="audio_visualizer_aurora">Aurora Glow</string>
+    <string name="audio_visualizer_bars">Barras de espectro</string>
+    <string name="audio_visualizer_classic">Forma de onda clássica</string>
+    <string name="audio_visualizer_off">Desligado</string>
+    <string name="audio_visualizer_radial">Anel radial</string>
+    <string name="audio_visualizer_settings">Visualizador de áudio</string>
+    <string name="audio_visualizer_settings_description">Escolha a animação exibida enquanto as notas de áudio são reproduzidas.</string>
+    <string name="audio_visualizer_static">Imagem estática</string>
+    <string name="audio_visualizer_waves">Color Waves</string>
+    <string name="fundraiser_ends">Termina %1$s</string>
+    <string name="fundraiser_onchain_donation">Doação on-chain</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d espécie</item>
+        <item quantity="other">Birdex · %1$d espécies</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d a mais</item>
+        <item quantity="other">%1$s +%2$d a mais</item>
+    </plurals>
 </resources>

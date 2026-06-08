@@ -2989,4 +2989,23 @@
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Konst</string>
     <string name="nowhere_link_card_forum">Nowhere Forum</string>
+    <string name="audio_visualizer_aurora">Aurora Glow</string>
+    <string name="audio_visualizer_bars">Spektrumstaplar</string>
+    <string name="audio_visualizer_classic">Klassisk vågform</string>
+    <string name="audio_visualizer_off">Av</string>
+    <string name="audio_visualizer_radial">Radiell ring</string>
+    <string name="audio_visualizer_settings">Ljudvisualiserare</string>
+    <string name="audio_visualizer_settings_description">Välj animeringen som visas när ljudanteckningar spelas upp.</string>
+    <string name="audio_visualizer_static">Statisk bild</string>
+    <string name="audio_visualizer_waves">Color Waves</string>
+    <string name="fundraiser_ends">Slutar %1$s</string>
+    <string name="fundraiser_onchain_donation">On-chain-donation</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d art</item>
+        <item quantity="other">Birdex · %1$d arter</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d till</item>
+        <item quantity="other">%1$s +%2$d till</item>
+    </plurals>
 </resources>
