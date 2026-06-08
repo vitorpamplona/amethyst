@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.audio
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlin.math.exp
 import kotlin.math.ln
 import kotlin.math.log10
@@ -85,3 +87,24 @@ fun FloatArray.normalizeToPeakInPlace(fromIndex: Int = 0) {
     val inv = 1f / peak
     for (i in fromIndex until size) this[i] *= inv
 }
+
+/**
+ * Holds back the latest [frames] spectra and emits the one from [frames] hops ago. The PCM tap
+ * computes each [Spectrum] inside the audio processor chain, upstream of the AudioTrack output
+ * buffer, so it runs ahead of what's audible by roughly that buffer's depth. Delaying the visual by
+ * the same number of decoded FFT hops (one [Spectrum] == one hop) realigns it with the speaker, in
+ * the same decoded-sample units as the lead, so it stays correct across startup and rate jitter.
+ * [frames] <= 0 is identity (e.g. previews, which carry no output latency).
+ */
+fun Flow<Spectrum>.delayedByFrames(frames: Int): Flow<Spectrum> =
+    if (frames <= 0) {
+        this
+    } else {
+        flow {
+            val queue = ArrayDeque<Spectrum>(frames + 1)
+            collect { frame ->
+                queue.addLast(frame)
+                if (queue.size > frames) emit(queue.removeFirst())
+            }
+        }
+    }
