@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps
 
+import com.vitorpamplona.amethyst.commons.model.privateChats.DmHistoryTuning
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.filterGiftWrapsToPubkey
 import com.vitorpamplona.amethyst.commons.relayClient.paging.WindowLoadTracker
 import com.vitorpamplona.amethyst.commons.relayClient.paging.trackingListener
@@ -68,9 +69,9 @@ class AccountGiftWrapsEoseManager(
         }
         val relays = key.account.dmRelays.flow.value
         windowLoad.setExpectedRelays(relays.toSet())
-        val sinceTime = TimeUtils.now() - LIVE_TAIL_SECONDS
+        val sinceTime = DmHistoryTuning.recentBoundary()
         DmRelayLog.log("giftwrap.live", key.account)
-        Log.d(TAG) { "[giftwrap.live] REQ since=$sinceTime (7d, no until) on ${relays.size} relay(s): ${relays.map { it.url }}" }
+        Log.d(TAG) { "[giftwrap.live] REQ since=$sinceTime (no until) on ${relays.size} relay(s): ${relays.map { it.url }}" }
         return relays.flatMap { relay ->
             filterGiftWrapsToPubkey(relay = relay, pubkey = user(key).pubkeyHex, since = sinceTime)
         }
@@ -106,8 +107,5 @@ class AccountGiftWrapsEoseManager(
 
     companion object {
         private const val TAG = "DMPagination"
-
-        // The live tail's fixed lower bound: one week of recent history, always open at the top.
-        val LIVE_TAIL_SECONDS = 7L * TimeUtils.ONE_DAY
     }
 }

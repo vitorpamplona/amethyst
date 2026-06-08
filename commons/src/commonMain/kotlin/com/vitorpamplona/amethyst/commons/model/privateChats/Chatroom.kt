@@ -34,7 +34,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursor
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -140,11 +139,11 @@ class Chatroom : NotesGatherer {
         val sorted = messages.sortedWith(DefaultFeedOrder)
 
         val toKeep =
-            if ((sorted.firstOrNull()?.createdAt() ?: 0L) > TimeUtils.oneWeekAgo()) {
-                // Recent messages, keep last 100
-                sorted.take(100).toSet()
+            if ((sorted.firstOrNull()?.createdAt() ?: 0L) > DmHistoryTuning.recentBoundary()) {
+                // Recent conversation, keep its newest N
+                sorted.take(DmHistoryTuning.recentKeepCount).toSet()
             } else {
-                // Old messages, keep the last one.
+                // Old conversation, keep the last one.
                 sorted.take(1).toSet()
             } + sorted.filter { it.flowSet?.isInUse() ?: false } + sorted.filter { it.event !is PrivateDmEvent && it.event !is WrappedEvent }
         // Both DM protocols are pruned by the recency rule above: NIP-04 (PrivateDmEvent) and NIP-17

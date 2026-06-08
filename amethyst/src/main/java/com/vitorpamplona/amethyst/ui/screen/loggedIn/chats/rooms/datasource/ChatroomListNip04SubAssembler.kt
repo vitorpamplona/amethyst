@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.datasource
 
+import com.vitorpamplona.amethyst.commons.model.privateChats.DmHistoryTuning
 import com.vitorpamplona.amethyst.commons.relayClient.paging.WindowLoadTracker
 import com.vitorpamplona.amethyst.commons.relayClient.paging.trackingListener
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -59,9 +59,9 @@ class ChatroomListNip04SubAssembler(
             val homeRelays = key.account.homeRelays.flow.value
             val dmRelays = key.account.dmRelays.flow.value
             windowLoad.setExpectedRelays((homeRelays + dmRelays).toSet())
-            val sinceTime = TimeUtils.now() - AccountGiftWrapsEoseManager.LIVE_TAIL_SECONDS
+            val sinceTime = DmHistoryTuning.recentBoundary()
             DmRelayLog.log("rooms.nip04.live", key.account)
-            Log.d("DMPagination") { "[rooms.nip04.live] REQ since=$sinceTime (7d, no until) fromMe(outbox)=${homeRelays.map { it.url }} toMe(inbox)=${dmRelays.map { it.url }}" }
+            Log.d("DMPagination") { "[rooms.nip04.live] REQ since=$sinceTime (no until) fromMe(outbox)=${homeRelays.map { it.url }} toMe(inbox)=${dmRelays.map { it.url }}" }
             homeRelays.map { filterNip04DMsFromMe(key.account.userProfile(), it, sinceTime) } +
                 dmRelays.map { filterNip04DMsToMe(key.account.userProfile(), it, sinceTime) }
         } else {

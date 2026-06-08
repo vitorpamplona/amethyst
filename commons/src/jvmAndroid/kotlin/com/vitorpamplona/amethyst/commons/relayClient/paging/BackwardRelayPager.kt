@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.paging
 
+import com.vitorpamplona.amethyst.commons.model.privateChats.DmHistoryTuning
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
 import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayPagingProgress
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -74,8 +75,8 @@ class BackwardRelayPager(
     // volume. A relay returning fewer is its own cap, NOT exhaustion — only an empty page ends a relay.
     val pageLimit: Int = DEFAULT_PAGE_LIMIT,
     // How far below "now" the history floor sits — paging starts here and walks backward. Defaults to
-    // the one-week live-tail boundary: everything newer is the always-on tail's job.
-    private val liveTailSeconds: Long = DEFAULT_LIVE_TAIL_SECONDS,
+    // the shared live-tail boundary ([DmHistoryTuning]): everything newer is the always-on tail's job.
+    private val liveTailSeconds: Long = DmHistoryTuning.liveTailSeconds,
 ) {
     private val loadTracker = PerRelayLoadTracker(name, onSilenced = ::onSilenced)
 
@@ -300,8 +301,5 @@ class BackwardRelayPager(
         private const val TAG = "DMPagination"
 
         const val DEFAULT_PAGE_LIMIT = 10000
-
-        // One week — matches the DM live-tail floor (everything newer is the always-on tail's job).
-        const val DEFAULT_LIVE_TAIL_SECONDS = 7L * TimeUtils.ONE_DAY
     }
 }

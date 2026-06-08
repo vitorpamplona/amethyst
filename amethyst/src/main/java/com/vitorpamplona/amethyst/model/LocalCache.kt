@@ -2693,9 +2693,18 @@ object LocalCache : ILocalCache, ICacheProvider {
 
                 // Realign the windows so a relay that already paged past (or `done` below) the dropped band
                 // re-requests it on the next demand-advance instead of skipping the hole.
-                if (giftWrapPruned.isNotEmpty()) room.giftWrapHistory.rewindTo(giftWrapPruned)
-                if (accountNip04Pruned.isNotEmpty()) room.nip04History.rewindTo(accountNip04Pruned)
-                if (roomNip04Pruned.isNotEmpty()) chatroom.nip04History.rewindTo(roomNip04Pruned)
+                if (giftWrapPruned.isNotEmpty()) {
+                    room.giftWrapHistory.rewindTo(giftWrapPruned)
+                    Log.d("DMPagination") { "[giftwrap] window rewound after prune: ${giftWrapPruned.size} relay(s), newest pruned wrap @${giftWrapPruned.values.max()}" }
+                }
+                if (accountNip04Pruned.isNotEmpty()) {
+                    room.nip04History.rewindTo(accountNip04Pruned)
+                    Log.d("DMPagination") { "[rooms.nip04] window rewound after prune: ${accountNip04Pruned.size} relay(s), newest pruned @${accountNip04Pruned.values.max()}" }
+                }
+                if (roomNip04Pruned.isNotEmpty()) {
+                    chatroom.nip04History.rewindTo(roomNip04Pruned)
+                    Log.d("DMPagination") { "[convo.nip04] window rewound after prune of ${key.users.joinToString()}: ${roomNip04Pruned.size} relay(s), newest pruned @${roomNip04Pruned.values.max()}" }
+                }
 
                 if (toBeRemoved.size > 1) {
                     println(

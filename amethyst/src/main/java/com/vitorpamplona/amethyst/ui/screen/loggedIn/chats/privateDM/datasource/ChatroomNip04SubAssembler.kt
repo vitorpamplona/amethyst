@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource
 
+import com.vitorpamplona.amethyst.commons.model.privateChats.DmHistoryTuning
 import com.vitorpamplona.amethyst.commons.relayClient.paging.WindowLoadTracker
 import com.vitorpamplona.amethyst.commons.relayClient.paging.trackingListener
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59GiftWraps.AccountGiftWrapsEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -50,11 +50,11 @@ class ChatroomNip04SubAssembler(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? =
         if (key.account.isWriteable()) {
-            val sinceTime = TimeUtils.now() - AccountGiftWrapsEoseManager.LIVE_TAIL_SECONDS
+            val sinceTime = DmHistoryTuning.recentBoundary()
             val filters = filterNip04DMs(key.room.users, key.account, sinceTime)
             windowLoad.setExpectedRelays(filters?.mapTo(mutableSetOf()) { it.relay } ?: emptySet())
             DmRelayLog.log("convo.nip04.live", key.account)
-            Log.d("DMPagination") { "[convo.nip04.live] REQ since=$sinceTime (7d, no until) on ${filters?.size ?: 0} relay-filter(s): ${filters?.map { it.relay.url }?.distinct()}" }
+            Log.d("DMPagination") { "[convo.nip04.live] REQ since=$sinceTime (no until) on ${filters?.size ?: 0} relay-filter(s): ${filters?.map { it.relay.url }?.distinct()}" }
             filters
         } else {
             windowLoad.setExpectedRelays(emptySet())
