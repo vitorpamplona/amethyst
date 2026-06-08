@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.richtext.ImageGalleryParagraph
 import com.vitorpamplona.amethyst.commons.richtext.ImageSegment
 import com.vitorpamplona.amethyst.commons.richtext.InvoiceSegment
 import com.vitorpamplona.amethyst.commons.richtext.LinkSegment
+import com.vitorpamplona.amethyst.commons.richtext.MathSegment
 import com.vitorpamplona.amethyst.commons.richtext.NowhereLinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.ParagraphState
 import com.vitorpamplona.amethyst.commons.richtext.PdfSegment
@@ -505,6 +506,8 @@ private fun RenderWordWithoutPreview(
 
         is SecretEmoji -> Text(word.segmentText)
 
+        is MathSegment -> LatexEquation(word.latex, word.displayMode)
+
         is PhoneSegment -> ClickablePhone(word.segmentText)
 
         is BechSegment -> BechLink(word.segmentText, false, 0, backgroundColor, accountViewModel, nav)
@@ -547,6 +550,7 @@ private fun RenderWordWithPreview(
         is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
         is EmailSegment -> ClickableEmail(word.segmentText)
         is SecretEmoji -> DisplaySecretEmoji(word, state, callbackUri, true, quotesLeft, backgroundColor, accountViewModel, nav)
+        is MathSegment -> LatexEquation(word.latex, word.displayMode)
         is PhoneSegment -> ClickablePhone(word.segmentText)
         is BechSegment -> BechLink(word.segmentText, true, quotesLeft, backgroundColor, accountViewModel, nav)
         is HashTagSegment -> HashTag(word, nav)

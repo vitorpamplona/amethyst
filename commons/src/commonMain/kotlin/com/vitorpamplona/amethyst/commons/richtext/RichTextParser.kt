@@ -239,13 +239,35 @@ class RichTextParser {
 
         lines.forEach { paragraph ->
             val isRTL = isArabic(paragraph)
+            val trimmed = paragraph.trimEnd()
 
-            val wordList = paragraph.trimEnd().split(' ')
+            val segments =
+                if (MathParser.mightContainMath(trimmed)) {
+                    // Math spans (`$...$`, `$$...$$`) can contain spaces, so pull them out
+                    // as atomic segments before the regular whitespace word-split.
+                    val list = ArrayList<Segment>()
+                    MathParser.split(trimmed).forEach { token ->
+                        when (token) {
+                            is MathParser.Token.Math ->
+                                list.add(MathSegment(token.raw, token.latex, token.displayMode))
 
-            val segments = ArrayList<Segment>(wordList.size)
-            wordList.forEach { word ->
-                segments.add(wordIdentifier(word, images, videos, pdfs, urls, emojis, tags))
-            }
+                            is MathParser.Token.Text ->
+                                token.text.split(' ').forEach { word ->
+                                    if (word.isNotEmpty()) {
+                                        list.add(wordIdentifier(word, images, videos, pdfs, urls, emojis, tags))
+                                    }
+                                }
+                        }
+                    }
+                    list
+                } else {
+                    val wordList = trimmed.split(' ')
+                    val list = ArrayList<Segment>(wordList.size)
+                    wordList.forEach { word ->
+                        list.add(wordIdentifier(word, images, videos, pdfs, urls, emojis, tags))
+                    }
+                    list
+                }
 
             paragraphSegments.add(ParagraphState(segments.toPersistentList(), isRTL))
         }
