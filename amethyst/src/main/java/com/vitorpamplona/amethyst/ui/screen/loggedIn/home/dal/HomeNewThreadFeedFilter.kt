@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.experimental.attestations.recommendation.Attesto
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
@@ -70,6 +71,7 @@ class HomeNewThreadFeedFilter(
                 WikiNoteEvent.KIND,
                 ClassifiedsEvent.KIND,
                 FundraiserEvent.KIND,
+                BirdexEvent.KIND,
                 LongTextNoteEvent.KIND,
                 LiveChessGameEndEvent.KIND,
                 AttestationEvent.KIND,
@@ -126,6 +128,7 @@ class HomeNewThreadFeedFilter(
             noteEvent is TextNoteEvent ||
                 noteEvent is ClassifiedsEvent ||
                 noteEvent is FundraiserEvent ||
+                noteEvent is BirdexEvent ||
                 noteEvent.isRenderableRepost() ||
                 (noteEvent is LongTextNoteEvent && noteEvent.content.isNotEmpty()) ||
                 (noteEvent is WikiNoteEvent && noteEvent.content.isNotEmpty()) ||

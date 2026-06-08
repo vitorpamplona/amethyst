@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
@@ -78,6 +79,7 @@ class UserProfileMutualFeedFilter(
                 it.event is TextNoteEvent ||
                     it.event is ClassifiedsEvent ||
                     it.event is FundraiserEvent ||
+                    it.event is BirdexEvent ||
                     it.event.isRenderableRepost() ||
                     it.event is LongTextNoteEvent ||
                     it.event is WikiNoteEvent ||

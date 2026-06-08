@@ -2815,6 +2815,8 @@
     <!-- NIP-75 Zap Goals -->
     <string name="goal_closed">यह उद्देश्य समाप्त हो चुका है</string>
     <string name="goal_progress">%1$s वित्तपोषित %2$s साट्स उद्देश्य में से</string>
+    <string name="fundraiser_ends">समाप्ति %1$s</string>
+    <string name="fundraiser_onchain_donation">खण्डश्रृंखलाबद्ध दान</string>
     <string name="goal_amount_label">उद्देश्य संख्या (साट्स)</string>
     <string name="goal_amount_placeholder">१०००००</string>
     <string name="goal_description_label">आपके उद्देश्य का विवरण करें</string>
