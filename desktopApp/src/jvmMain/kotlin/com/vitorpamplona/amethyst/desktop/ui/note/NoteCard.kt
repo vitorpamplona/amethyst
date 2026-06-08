@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.ui.note
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,6 +44,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +57,8 @@ import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
+import com.vitorpamplona.amethyst.commons.ui.note.ReplyContext
+import com.vitorpamplona.amethyst.commons.ui.note.ReplyToLabel
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.service.DesktopCachedRichTextParser
 import com.vitorpamplona.amethyst.desktop.ui.components.ToggleableTimeAgoText
@@ -103,6 +107,8 @@ fun NoteCard(
     onPayInvoice: ((String) -> Unit)? = null,
     bottomContent: (@Composable ColumnScope.() -> Unit)? = null,
     headerTrailingContent: (@Composable () -> Unit)? = null,
+    replyContext: ReplyContext? = null,
+    onNavigateToThread: ((String) -> Unit)? = null,
 ) {
     val urls = remember(note.content) { UrlParser().parseValidUrls(note.content) }
     val imageUrls =
@@ -160,6 +166,55 @@ fun NoteCard(
     val cardShape = MaterialTheme.shapes.medium
     val cardBody: @Composable ColumnScope.() -> Unit = {
         Column(modifier = Modifier.padding(16.dp)) {
+            // Reply context — embedded parent + "Replying to @X" label.
+            // Rendered above the standard author/timestamp row.
+            replyContext?.let { ctx ->
+                val parentNoteId = ctx.parentNoteId
+                if (parentNoteId != null) {
+                    // Box owns the click so it consumes the pointer event before the
+                    // outer OutlinedCard's onClick (which would navigate to the reply's
+                    // own thread — current view, looking like "click does nothing").
+                    // Pass onNavigateToThread = null into QuotedNoteEmbed so the inner
+                    // card isn't separately clickable, keeping the click target a
+                    // single explicit surface.
+                    val onEmbedClick =
+                        if (onNavigateToThread != null) {
+                            { onNavigateToThread.invoke(parentNoteId) }
+                        } else {
+                            null
+                        }
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .then(
+                                    if (onEmbedClick != null) {
+                                        Modifier.clickable(onClick = onEmbedClick)
+                                    } else {
+                                        Modifier
+                                    },
+                                ).border(
+                                    width = 1.dp,
+                                    color = MaterialTheme.colorScheme.outlineVariant,
+                                    shape = RoundedCornerShape(8.dp),
+                                ),
+                    ) {
+                        QuotedNoteEmbed(
+                            noteId = parentNoteId,
+                            localCache = localCache,
+                            onMentionClick = onMentionClick,
+                            onNavigateToThread = null,
+                        )
+                    }
+                }
+                ReplyToLabel(
+                    parentAuthorDisplay = ctx.parentAuthorDisplay,
+                    onClick = { onAuthorClick?.invoke(ctx.parentAuthorPubKey) },
+                    modifier = Modifier.padding(vertical = 4.dp),
+                )
+            }
+
             Column {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -431,9 +486,27 @@ fun QuotedNoteEmbed(
         onDispose { note.clearFlow() }
     }
 
+    // Observe the author's user metadata (kind 0) so the embed's name + avatar
+    // update once metadata arrives via relay subscription. produceState avoids
+    // the conditional-composable trap when note.author is null until the parent
+    // event lands.
+    val author = note.author
+    val authorMetaValue by produceState<Any?>(initialValue = null, key1 = author) {
+        val a = author
+        if (a == null) {
+            value = null
+        } else {
+            a.metadata().flow.collect { value = it }
+        }
+    }
+
     val event = note.event
     if (event != null) {
-        // Recompute on every recomposition — picks up user metadata changes
+        // Recompute on every recomposition — picks up note + user metadata changes.
+        // authorMetaValue is read to mark this recomposition path as author-meta
+        // dependent so toNoteDisplayData() sees the latest avatar/displayName.
+        @Suppress("UNUSED_EXPRESSION")
+        authorMetaValue
         val displayData = event.toNoteDisplayData(localCache)
 
         NoteCard(

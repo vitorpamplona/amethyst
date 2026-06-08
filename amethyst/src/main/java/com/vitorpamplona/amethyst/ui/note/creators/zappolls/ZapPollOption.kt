@@ -47,7 +47,7 @@ fun ZapPollOption(
         val deleteIcon: @Composable (() -> Unit) = {
             IconButton(
                 onClick = {
-                    pollViewModel.removeZapPollOption(optionIndex)
+                    pollViewModel.removePollOption(optionIndex)
                 },
             ) {
                 Icon(
@@ -59,9 +59,9 @@ fun ZapPollOption(
 
         OutlinedTextField(
             modifier = Modifier.weight(1F),
-            value = pollViewModel.zapPollOptions[optionIndex] ?: "",
+            value = pollViewModel.pollOptions[optionIndex]?.label ?: "",
             onValueChange = {
-                pollViewModel.updateZapPollOption(optionIndex, it)
+                pollViewModel.updatePollOption(optionIndex, it)
             },
             label = {
                 Text(

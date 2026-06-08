@@ -48,6 +48,8 @@ class UserMetadata {
     var about: String? = null
     var bot: Boolean? = null
     var pronouns: String? = null
+
+    @Serializable(with = BirthdayTolerantSerializer::class)
     var birthday: Birthday? = null
     var nip05: String? = null
     var domain: String? = null

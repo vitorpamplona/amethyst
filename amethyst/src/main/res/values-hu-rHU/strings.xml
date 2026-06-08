@@ -774,6 +774,12 @@
     <string name="add_to_public_bookmarks">Hozzáadás a nyilvános könyvjelzőkhöz</string>
     <string name="remove_from_private_bookmarks">Törlés a privát könyvjelzőkből</string>
     <string name="remove_from_public_bookmarks">Törlés a nyilvános könyvjelzőkből</string>
+    <string name="add_hashtag_label">Kulcsszó hozzáadása</string>
+    <string name="add_hashtag_label_title">Egy kulcsszó hozzáadása</string>
+    <string name="add_hashtag_label_explainer">Címkézze meg ezt a bejegyzést nyilvánosan egy kulcsszóval (NIP-32 címke). A követői a kulcsszó hírfolyamában fogják látni.</string>
+    <string name="add_hashtag_label_field">Kulcsszó</string>
+    <string name="add_hashtag_label_confirm">Hozzáadás</string>
+    <string name="hashtag_label_added_by">hozzáadta:</string>
     <string name="pinned_notes">Rögzített bejegyzések</string>
     <string name="pinned_notes_explainer">Saját kitűzött bejegyzések</string>
     <string name="pin_to_profile">Rögzítés a profilhoz</string>
@@ -840,8 +846,31 @@
     <string name="wallet_connect_status_not_connected">Nem kapcsolódott</string>
     <string name="wallet_connect_manual_config">Speciális: kapcsolat részleteinek kézi megadása</string>
     <string name="quick_zap_amounts">Gyors Zap-összegek</string>
-    <string name="quick_zap_amounts_explainer">A zap gomb megnyomásakor jelenik meg. Érintse meg az összeget, hogy eltávolítsa. Ha üresen hagyja, akkor minden alkalommal megnyílik a párbeszédablak az összeg beírásához.</string>
+    <string name="quick_zap_amounts_explainer">A „Zap” gomb megnyomásakor jelenik meg. Az egyes összegeket a címzett által támogatott bármely fizetési csatornán keresztül ki lehet fizetni - Lightning, Cashu vagy láncon belül (láncon belül csak nagyobb összegek esetén). Érintse meg az összeget annak eltávolításához. Ha üresen hagyja, a rendszer minden alkalommal megnyitja az összeg megadására szolgáló párbeszédpanelt.</string>
     <string name="send_onchain_instead">Küldés inkább láncon belül</string>
+    <string name="reload_mint_title">Mint feltöltése</string>
+    <string name="reload_mint_sats_amount">%1$s sat</string>
+    <string name="reload_mint_topup_label">Feltöltés összege</string>
+    <string name="reload_mint_section_to">Feltöltendő mint</string>
+    <string name="reload_mint_section_from">Fedezet innen</string>
+    <string name="reload_mint_pay_lightning">Kifizetés Lightninggal</string>
+    <string name="reload_mint_lightning_desc">Új ecash verése a saját Lightning tárcából</string>
+    <string name="reload_mint_not_enough">Itt nincs elég fedezet</string>
+    <string name="reload_mint_available">%1$s sat érhető ek</string>
+    <string name="reload_mint_confirm">Feltöltés és zap küldése</string>
+    <string name="reload_mint_send_confirm">Zap küldése</string>
+    <string name="reload_mint_awaiting_payment">Várakozás a fizetésre…</string>
+    <string name="reload_mint_retry">Próbálja újra</string>
+    <string name="reload_mint_summary"> %1$s sat feltöltése ide: %2$s és %3$s zapelése %4$s sattal · díj ≈ %5$s sat</string>
+    <string name="reload_mint_summary_funded">%1$s zapelése %2$s sattal innen: %3$s</string>
+    <string name="reload_mint_recipient_fallback">a címzett</string>
+    <string name="reload_mint_needs_more">további %1$s sat szükséges</string>
+    <string name="reload_mint_funded">feltöltve</string>
+    <string name="reload_mint_copy_invoice">Számla másolása</string>
+    <string name="topup_mint_title">Mint feltöltése</string>
+    <string name="topup_mint_action">Ezen mint feltöltése</string>
+    <string name="topup_mint_amount_label">Hozzáadandó összeg</string>
+    <string name="topup_mint_confirm">Feltöltés</string>
     <string name="zap_privacy_section">Zap adatvédelem</string>
     <string name="zap_type_section_explainer">Állítsa be, hogy hogyan jelenjen meg a személyazonossága a zap elküldésekor.</string>
     <string name="wallet_connect_connect_app">Pénztárca összekapcsolása</string>
@@ -1345,6 +1374,8 @@
     <string name="account_settings">Fiókbeállítások</string>
     <string name="app_settings">Alkalmazásbeállítások</string>
     <!-- Settings search -->
+    <string name="settings_search_placeholder">Keresési beállítások</string>
+    <string name="settings_search_no_results">Nincs találat a beállításokban erre: „%1$s”</string>
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
          negentropy, …) stay searchable in every locale and aren't sent to translators. -->
@@ -1476,6 +1507,9 @@
     <string name="copy_nprofile_to_clipboard">nprofile-kulcs vágólapra másolása</string>
     <string name="copy_npub_to_clipboard">Npub másolása a vágólapra</string>
     <string name="share_or_save">Megosztás vagy mentés</string>
+    <string name="share_target_as_dm">Küldés közvetlen üzenetként</string>
+    <string name="share_to_dm_title">Küldés ide…</string>
+    <string name="share_to_dm_start_new">Új üzenet</string>
     <string name="copy_url_to_clipboard">Webcím másolása a vágólapra</string>
     <string name="copy_the_note_id_to_the_clipboard">Bejegyzés-azonosító másolása a vágólapra</string>
     <string name="add_media_to_gallery">Média hozzáadása a galériához</string>

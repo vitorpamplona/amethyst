@@ -473,7 +473,7 @@
     <string name="scheduled_posts_event_id_copied">टीका विभेदक की अनुकृति की गई</string>
     <string name="polls">मतदान</string>
     <string name="open_polls">खुला</string>
-    <string name="closed_polls">अवरुद्ध</string>
+    <string name="closed_polls">आवृत</string>
     <string name="badges">पदक</string>
     <string name="communities">समुदाय</string>
     <string name="new_community">नया समुदाय</string>
@@ -597,9 +597,9 @@
     <string name="nest_listen_to_recording">अभिलेख सुनें</string>
     <string name="nest_chat_send_failed_title">सन्देश प्रेषण असफल</string>
     <string name="nest_no_app_to_open_link">इस योजक को खोलने के लिए कोई क्रमक स्थापित नहीं।</string>
-    <string name="nest_close_room_confirm_title">क्या इस शाला को अवरोधित करें।</string>
-    <string name="nest_close_room_confirm_body">सभी उपस्थित वियोजित हो जाएँगे। शाला अवरुद्ध दिखेगा सूचनावली में।</string>
-    <string name="nest_close_room_confirm_action">शाला अवरोधन</string>
+    <string name="nest_close_room_confirm_title">क्या इस शाला को आवृत करें।</string>
+    <string name="nest_close_room_confirm_body">सभी उपस्थित वियोजित हो जाएँगे। शाला आवृत दिखेगा सूचनावली में।</string>
+    <string name="nest_close_room_confirm_action">शाला आवृत करें</string>
     <string name="nest_create_when_in_past">भविष्य आरम्भ समय का चयन।</string>
     <string name="nest_audio_failed">ध्वनि असफल : %1$s</string>
     <string name="nest_audio_unavailable">इस शाला के लिए ध्वनि उपलब्ध नहीं</string>
@@ -636,10 +636,10 @@
     <string name="nest_presence_left">निलय छोडकर गए</string>
     <string name="nest_leave">निर्गमन</string>
     <string name="nest_leave_host_title">कया इस निलय को अवरुद्ध करें।</string>
-    <string name="nest_leave_host_body">आप निमन्त्रक हैं। शाला अवरुद्ध करने से सभी वियोजित हो जाएँगे। \"केवल निर्गमन\" का चयन करें यदि आप लौटना चाहते हें कुछ समय पश्चात। शाला स्वतः अवरुद्ध होगी ८ घण्टों की निष्क्रियता पश्चात।</string>
-    <string name="nest_leave_host_close">शाला अवरोधन</string>
+    <string name="nest_leave_host_body">आप निमन्त्रक हैं। शाला आवृत करने से सभी वियोजित हो जाएँगे। \"केवल निर्गमन\" का चयन करें यदि आप लौटना चाहते हें कुछ समय पश्चात। शाला स्वतः आवृत होगी ८ घण्टों की निष्क्रियता पश्चात।</string>
+    <string name="nest_leave_host_close">शाला आवृत करें</string>
     <string name="nest_leave_host_just_leave">केवल निर्गमन</string>
-    <string name="nest_leave_host_close_failed">शाला अवरुद्ध चिह्नित करने में असफल। तथापि निर्गमन चालू। शाला स्वतः अवरुद्ध हो जाएगी।</string>
+    <string name="nest_leave_host_close_failed">शाला आवृत चिह्नित करने में असफल। तथापि निर्गमन चालू। शाला स्वतः आवृत हो जाएगी।</string>
     <plurals name="nest_listener_count">
         <item quantity="one">%1$d श्रोता</item>
         <item quantity="other">%1$d श्रोतागण</item>
@@ -655,7 +655,7 @@
     <string name="nest_reactions_button">प्रतिक्रिया</string>
     <string name="nest_edit_title">शाला सम्पादन</string>
     <string name="nest_edit_save">अभिलेखन</string>
-    <string name="nest_close_action">शाला अवरोधन</string>
+    <string name="nest_close_action">शाला आवृत करें</string>
     <string name="nest_overflow_menu">शाला क्रियाएँ</string>
     <string name="nest_hand_raise_queue_title">उठे हुए हाथ</string>
     <string name="nest_hand_raise_approve">स्वीकार</string>
@@ -734,7 +734,7 @@
     <string name="route_music_tracks">संगीत</string>
     <string name="route_music_playlists">संगीतसूचियाँ</string>
     <string name="route_podcast_episodes">कडियाँ</string>
-    <string name="route_podcasts">प्रसारयान</string>
+    <string name="route_podcasts">पुटप्रसार</string>
     <string name="podcast_view_episodes">कडियाँ देखें</string>
     <string name="podcast_episodes_section">कडियाँ</string>
     <string name="podcast_no_episodes">कोई कडी प्राप्त नहीं अब तक</string>
@@ -774,6 +774,12 @@
     <string name="add_to_public_bookmarks">सार्वजनिक स्मर्तव्य सूची में जोडें</string>
     <string name="remove_from_private_bookmarks">निजी स्मर्तव्य सूची से हटाएँ</string>
     <string name="remove_from_public_bookmarks">सार्वजनिक स्मर्तव्य सूची से हटाएँ</string>
+    <string name="add_hashtag_label">विषयसूचक जोडें</string>
+    <string name="add_hashtag_label_title">विषयसूचक जोडें</string>
+    <string name="add_hashtag_label_explainer">सार्वजनिक रूप से इस पत्र के साथ विषयसूचक (निप॰३२ चिप्पी) जोडें। जो लोग आपका अनुचरण करते हैं उस विषयसूचक की सूचनावली में इस पत्र को देखेंगे।</string>
+    <string name="add_hashtag_label_field">विषयसूचक</string>
+    <string name="add_hashtag_label_confirm">जोडें</string>
+    <string name="hashtag_label_added_by">के द्वारा जोडा गया</string>
     <string name="pinned_notes">टँगे गए पत्र</string>
     <string name="pinned_notes_explainer">आपके टँगे गए टीकाएँ</string>
     <string name="pin_to_profile">परिचय के साथ जोडें</string>
@@ -842,6 +848,29 @@
     <string name="quick_zap_amounts">शीघ्र ज्साप संख्याएँ</string>
     <string name="quick_zap_amounts_explainer">ज्साप घुण्डी दबाने पर दिखाया जाता है। एक संख्या दबाएँ उसे हटाने के लिए। उसे रिक्त छोड दें तो प्रत्येक बार संख्या प्रविष्ट करने के लिए पूछेगा।</string>
     <string name="send_onchain_instead">खण्डश्रृंखला सत्यापित विधि से भेजें इसके स्थान पर</string>
+    <string name="reload_mint_title">पुनःभरण टकसाल</string>
+    <string name="reload_mint_sats_amount">%1$s साट्स</string>
+    <string name="reload_mint_topup_label">पुनःभरण मात्रा</string>
+    <string name="reload_mint_section_to">पुनःभरण टकसाल</string>
+    <string name="reload_mint_section_from">इस से धनराशि</string>
+    <string name="reload_mint_pay_lightning">लैटनिंग द्वारा भुगतान</string>
+    <string name="reload_mint_lightning_desc">नव्य ईकाश॰ का टंकण करें अपने लैटनिंग धनकोष से</string>
+    <string name="reload_mint_not_enough">यहाँ पर्याप्त नहीं</string>
+    <string name="reload_mint_available">%1$s साट्स उपलब्ध</string>
+    <string name="reload_mint_confirm">पुनःभरण तथा ज्साप भेजें</string>
+    <string name="reload_mint_send_confirm">ज्साप भेजें</string>
+    <string name="reload_mint_awaiting_payment">भुगतान की प्रतीक्षा…</string>
+    <string name="reload_mint_retry">पुनःप्रयास करें</string>
+    <string name="reload_mint_summary">पुनःभरण %1$s साट्स %2$s तक तथा ज्साप %3$s को %4$s साट्स। शुल्क लगभग %5$s साट्स</string>
+    <string name="reload_mint_summary_funded">ज्साप %1$s को %2$s साट्स %3$s से</string>
+    <string name="reload_mint_recipient_fallback">प्राप्तकर्ता</string>
+    <string name="reload_mint_needs_more">%1$s साट्स अधिक आवश्यक</string>
+    <string name="reload_mint_funded">वित्तपोषित</string>
+    <string name="reload_mint_copy_invoice">चालान अनुकृति</string>
+    <string name="topup_mint_title">पुनःभरण टकसाल</string>
+    <string name="topup_mint_action">इस टकसाल का पुनःभरण</string>
+    <string name="topup_mint_amount_label">जोडने की मात्रा</string>
+    <string name="topup_mint_confirm">पुनःभरण</string>
     <string name="zap_privacy_section">ज्साप गोपनीयता</string>
     <string name="zap_type_section_explainer">नियन्त्रण करता है कि आपका परिचय कैसे दिखाया जाता है ज्साप भेजने पर।</string>
     <string name="wallet_connect_connect_app">संयोजन धनकोष</string>
@@ -866,7 +895,7 @@
     <string name="poll_closing_time">के पश्चात समाप्त करें</string>
     <string name="poll_closing_time_days">दिन</string>
     <string name="poll_unable_to_vote">निर्वाचन करने में असफल</string>
-    <string name="poll_is_closed_explainer">मतदान अवरोधित है नये निर्वाचनों के लिए</string>
+    <string name="poll_is_closed_explainer">मतदान आवृत है नये निर्वाचनों के लिए</string>
     <string name="poll_zap_amount">ज्साप मात्रा</string>
     <string name="one_vote_per_user_on_atomic_votes">प्रत्येक उपयोगकर्ता को केवल एक निर्वाचन करने की अनुमति है इस प्रकार के मतदान में।</string>
     <string name="looking_for_event">"घटना %1$s के लिए खोज चल रहा है"</string>
@@ -1317,7 +1346,7 @@
     <string name="live_stream_has_ended">तत्क्षणप्रसार समाप्त</string>
     <string name="meeting_space_open_tag">खुला</string>
     <string name="meeting_space_private_tag">निजी</string>
-    <string name="meeting_space_closed_tag">निबद्ध</string>
+    <string name="meeting_space_closed_tag">आवृत</string>
     <string name="meeting_space_planned_tag">समय निर्धारित</string>
     <string name="meeting_space_planned_starts_at">आरम्भ %1$s</string>
     <string name="are_you_sure_you_want_to_log_out">निर्गमनांकन करने पर आपकी सारी स्थानीय जानकारी मिट जाएगी। सुनिश्चित करें कि आपके निजी कुंचिकाएँ सुरक्षित रखें हैं अपनी लेखा नहीं खोना चाहते हैं तो। क्या आप आगे बढना चाहते हैं?</string>
@@ -1345,6 +1374,8 @@
     <string name="account_settings">लेखा स्थापना विकल्प</string>
     <string name="app_settings">क्रमक स्थापना विकल्प</string>
     <!-- Settings search -->
+    <string name="settings_search_placeholder">खोज स्थापना विकल्प</string>
+    <string name="settings_search_no_results">\"%1$s\" के लिए कोई स्थापना विकल्प प्राप्त नहीं</string>
     <!-- Settings search keywords: an English concept/protocol index that supplements the
          (translated) row titles. Marked translatable="false" so protocol terms (blossom, nsec,
          negentropy, …) stay searchable in every locale and aren't sent to translators. -->
@@ -1476,6 +1507,9 @@
     <string name="copy_nprofile_to_clipboard">टाँकाफलक में एन॰परिचय की अनुकृति करें</string>
     <string name="copy_npub_to_clipboard">टाँकाफलक में एनपुब॰ की अनुकृति करें</string>
     <string name="share_or_save">बाँटें अथवा अभिलेखन करें</string>
+    <string name="share_target_as_dm">सीधासन्देश के रूप में भेजें</string>
+    <string name="share_to_dm_title">को भेजें…</string>
+    <string name="share_to_dm_start_new">नया सन्देश</string>
     <string name="copy_url_to_clipboard">टाँकाफलक में जालपता की अनुकृति करें</string>
     <string name="copy_the_note_id_to_the_clipboard">टाँकाफलक में टीका विभेदक की अनुकृति करें</string>
     <string name="add_media_to_gallery">अभिलेख को चित्रालय में जोडें</string>
@@ -1589,7 +1623,7 @@
     <string name="notification_channel_status_off">निष्क्रिय</string>
     <string name="select_push_server">संयुक्तप्रेषण क्रमक का चयन करें</string>
     <string name="push_server_title">प्रेषित सूचना</string>
-    <string name="push_server_explainer">स्थापित संयुक्तप्रेषण क्रमकों से</string>
+    <string name="push_server_explainer">एक संयुक्तप्रेषण क्रमक का चयन करें सूचनाओं को भेजने के लिए जब अमेथिस्ट आवृत हो।</string>
     <string name="push_server_none">कुछ भी नहीं</string>
     <string name="push_server_none_explainer">प्रेषित सूचनाएँ अक्षम करता है</string>
     <string name="push_server_uses_app_explainer">%1$s क्रमक का प्रयोग करता है</string>
@@ -1987,7 +2021,7 @@
     <string name="add_a_tag">विषयसूचक जोडें\u2026</string>
     <string name="start_writing_article">अपना लेख लिखना आरम्भ करें\u2026</string>
     <string name="open_all_reactions_to_this_post">इस पत्र प्रकाशन के सभी प्रतिक्रियाओं को खोलें</string>
-    <string name="close_all_reactions_to_this_post">इस पत्र प्रकाशन के सभी प्रतिक्रियाओं को अवरोधित करें</string>
+    <string name="close_all_reactions_to_this_post">इस पत्र प्रकाशन के सभी प्रतिक्रियाओं को आवृत करें</string>
     <string name="reply_description">उत्तर</string>
     <string name="jump_to_parent_reply">उस टीका तक जाएँ जिसका यह उत्तर है</string>
     <string name="boost_or_quote_description">उद्धृत करें अथवा टीका लिखें</string>
@@ -2166,7 +2200,7 @@
     <string name="git_clone_address">अनुकृति :</string>
     <string name="git_status_open">खुला</string>
     <string name="git_status_merged">विलीन</string>
-    <string name="git_status_closed">अवरुद्ध</string>
+    <string name="git_status_closed">आवृत</string>
     <string name="git_status_draft">पाण्डुलिपि</string>
     <string name="git_repo_tab_overview">रूपरेखा विवरण</string>
     <string name="git_repo_tab_issues">समस्याएँ</string>
@@ -2420,10 +2454,10 @@
     <string name="kind_audio_track">ध्वनि अभिलेख</string>
     <string name="kind_music_track">संगीत अभिलेख</string>
     <string name="kind_music_playlist">संगीतसूची</string>
-    <string name="kind_podcast_episode">प्रसारयान कडी</string>
-    <string name="kind_podcast_metadata">प्रसारयान कार्यक्रम</string>
-    <string name="kind_authored_podcasts">कृत प्रसारयान</string>
-    <string name="kind_favorite_podcasts">प्रिय प्रसारयान</string>
+    <string name="kind_podcast_episode">पुटप्रसार कडी</string>
+    <string name="kind_podcast_metadata">पुटप्रसार कार्यक्रम</string>
+    <string name="kind_authored_podcasts">कृत पुटप्रसार</string>
+    <string name="kind_favorite_podcasts">प्रिय पुटप्रसार</string>
     <string name="kind_badge_awards">पदक पुरस्कार</string>
     <string name="kind_badge_definitions">पदक परिभाषाएँ</string>
     <string name="kind_accepted_badge_set">स्वीकृत पदक समुच्चय</string>
@@ -2781,6 +2815,16 @@
     <!-- NIP-75 Zap Goals -->
     <string name="goal_closed">यह उद्देश्य समाप्त हो चुका है</string>
     <string name="goal_progress">%1$s वित्तपोषित %2$s साट्स उद्देश्य में से</string>
+    <string name="fundraiser_ends">समाप्ति %1$s</string>
+    <string name="fundraiser_onchain_donation">खण्डश्रृंखलाबद्ध दान</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">बिर्डेक्स। %1$d प्रजाति</item>
+        <item quantity="other">बिर्डेक्स। %1$d प्रजातियाँ</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s सं॰ %2$d अधिक</item>
+        <item quantity="other">%1$s सं॰ %2$d अधिक</item>
+    </plurals>
     <string name="goal_amount_label">उद्देश्य संख्या (साट्स)</string>
     <string name="goal_amount_placeholder">१०००००</string>
     <string name="goal_description_label">आपके उद्देश्य का विवरण करें</string>

@@ -55,7 +55,7 @@
     <string name="accessibility_user_avatar">User avatar</string>
     <string name="accessibility_navigate">Navigate</string>
 
-    <!-- Relay history paging (shared feed markers + status card) -->
+<!-- Relay history paging (shared feed markers + status card) -->
     <string name="chats_history_relay_sync">Relay sync:</string>
     <string name="chats_history_older">Older %1$s messages</string>
     <string name="chats_history_all_caught_up">All caught up</string>
@@ -72,4 +72,7 @@
         <item quantity="one">%1$d relay</item>
         <item quantity="other">%1$d relays</item>
     </plurals>
+
+    <!-- Notes & Replies -->
+    <string name="replying_to">replying to </string>
 </resources>

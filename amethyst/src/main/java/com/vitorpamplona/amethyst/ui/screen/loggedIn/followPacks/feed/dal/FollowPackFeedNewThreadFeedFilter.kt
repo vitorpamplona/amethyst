@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.followPacks.feed.dal
 
+import com.vitorpamplona.amethyst.commons.ui.feeds.isRenderableRepost
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -30,8 +31,10 @@ import com.vitorpamplona.amethyst.model.topNavFeeds.allUserFollows.AllUserFollow
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
+import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
@@ -65,6 +68,8 @@ class FollowPackFeedNewThreadFeedFilter(
                 WikiNoteEvent.KIND,
                 NipTextEvent.KIND,
                 ClassifiedsEvent.KIND,
+                FundraiserEvent.KIND,
+                BirdexEvent.KIND,
                 LongTextNoteEvent.KIND,
             )
     }
@@ -133,8 +138,9 @@ class FollowPackFeedNewThreadFeedFilter(
         return (
             noteEvent is TextNoteEvent ||
                 noteEvent is ClassifiedsEvent ||
-                noteEvent is RepostEvent ||
-                noteEvent is GenericRepostEvent ||
+                noteEvent is FundraiserEvent ||
+                noteEvent is BirdexEvent ||
+                noteEvent.isRenderableRepost() ||
                 (noteEvent is LongTextNoteEvent && noteEvent.content.isNotEmpty()) ||
                 (noteEvent is WikiNoteEvent && noteEvent.content.isNotEmpty()) ||
                 noteEvent is ZapPollEvent ||

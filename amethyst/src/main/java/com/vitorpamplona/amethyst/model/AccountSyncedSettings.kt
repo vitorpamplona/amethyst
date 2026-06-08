@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.collections.immutable.ImmutableList
@@ -62,6 +63,10 @@ class AccountSyncedSettings(
         AccountVideoPlayerPreferences(
             MutableStateFlow(mergeWithDefaultVideoPlayerButtons(internalSettings.videoPlayer.buttonItems).toImmutableList()),
         )
+    val media =
+        AccountMediaPreferences(
+            MutableStateFlow(VisualizerStyle.fromName(internalSettings.media.audioVisualizer)),
+        )
 
     fun toInternal(): AccountSyncedSettingsInternal =
         AccountSyncedSettingsInternal(
@@ -92,6 +97,7 @@ class AccountSyncedSettings(
                     security.addClientTag.value,
                 ),
             videoPlayer = AccountVideoPlayerPreferencesInternal(videoPlayer.buttonItems.value),
+            media = AccountMediaPreferencesInternal(media.audioVisualizer.value.name),
         )
 
     fun updateFrom(syncedSettingsInternal: AccountSyncedSettingsInternal) {
@@ -159,6 +165,11 @@ class AccountSyncedSettings(
             mergeWithDefaultVideoPlayerButtons(syncedSettingsInternal.videoPlayer.buttonItems).toImmutableList()
         if (!equalImmutableLists(videoPlayer.buttonItems.value, newVideoPlayerButtonItems)) {
             videoPlayer.buttonItems.tryEmit(newVideoPlayerButtonItems)
+        }
+
+        val newAudioVisualizer = VisualizerStyle.fromName(syncedSettingsInternal.media.audioVisualizer)
+        if (media.audioVisualizer.value != newAudioVisualizer) {
+            media.audioVisualizer.tryEmit(newAudioVisualizer)
         }
     }
 
@@ -252,6 +263,11 @@ class AccountLanguagePreferences(
         target: String,
     ): String? = languagePreferences.value["$source,$target"]
 }
+
+@Stable
+class AccountMediaPreferences(
+    val audioVisualizer: MutableStateFlow<VisualizerStyle>,
+)
 
 @Stable
 class AccountSecurityPreferences(

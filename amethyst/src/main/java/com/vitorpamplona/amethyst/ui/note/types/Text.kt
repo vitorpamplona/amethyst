@@ -35,15 +35,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.ui.note.ReplyToLabel
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.ui.note.ReplyNoteComposition
-import com.vitorpamplona.amethyst.ui.note.ReplyToLabel
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.DisplayExternalId
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -114,12 +115,14 @@ fun RenderTextEvent(
                 }
 
                 ReplyRenderType.LINE -> {
-                    ReplyToLabel(
-                        replyingDirectlyTo = replyingDirectlyTo,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                    Spacer(modifier = HalfVertSpacer)
+                    val parentAuthor = replyingDirectlyTo.author
+                    if (parentAuthor != null) {
+                        ReplyToLabel(
+                            parentAuthorDisplay = parentAuthor.toBestDisplayName(),
+                            onClick = { nav.nav(routeFor(parentAuthor)) },
+                        )
+                        Spacer(modifier = HalfVertSpacer)
+                    }
                 }
             }
         } else if (!makeItShort && noteEvent is CommentEvent) {

@@ -1533,6 +1533,7 @@
     <string name="favorite_dvms_search_keywords" translatable="false">dvm, data vending machine, algo, algorithm, feeds</string>
     <string name="reactions_search_keywords" translatable="false">emoji, like, reaction</string>
     <string name="video_player_search_keywords" translatable="false">video, player, playback, autoplay, mute</string>
+    <string name="audio_visualizer_search_keywords" translatable="false">audio, visualizer, spectrum, bars, waves, radial, aurora, animation</string>
     <string name="payment_targets_search_keywords" translatable="false">zap split, split, recipients, forward zaps</string>
     <string name="call_settings_search_keywords" translatable="false">webrtc, video call, voice call, calls</string>
     <string name="translations_search_keywords" translatable="false">language, translate, locale</string>
@@ -2343,6 +2344,16 @@
     <string name="video_player_settings_action_cast">Cast to Device</string>
     <string name="video_player_settings_action_cast_description">Send the video to a Chromecast receiver on your Wi-Fi (hidden for local files)</string>
 
+    <string name="audio_visualizer_settings">Audio Visualizer</string>
+    <string name="audio_visualizer_settings_description">Choose the animation shown while audio notes play.</string>
+    <string name="audio_visualizer_off">Off</string>
+    <string name="audio_visualizer_bars">Spectrum Bars</string>
+    <string name="audio_visualizer_waves">Color Waves</string>
+    <string name="audio_visualizer_radial">Radial Ring</string>
+    <string name="audio_visualizer_aurora">Aurora Glow</string>
+    <string name="audio_visualizer_classic">Classic Waveform</string>
+    <string name="audio_visualizer_static">Static Image</string>
+
     <string name="profile_image_of_user">Profile Picture of %1$s</string>
     <string name="relay_info">Relay %1$s</string>
     <string name="expand_relay_list">Expand relay list</string>
@@ -3143,6 +3154,16 @@
     <!-- NIP-75 Zap Goals -->
     <string name="goal_closed">This goal has closed</string>
     <string name="goal_progress">%1$s funded of %2$s sats goal</string>
+    <string name="fundraiser_ends">Ends %1$s</string>
+    <string name="fundraiser_onchain_donation">On-chain donation</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d species</item>
+        <item quantity="other">Birdex · %1$d species</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d more</item>
+        <item quantity="other">%1$s +%2$d more</item>
+    </plurals>
     <string name="goal_amount_label">Goal amount (sats)</string>
     <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Describe your goal</string>

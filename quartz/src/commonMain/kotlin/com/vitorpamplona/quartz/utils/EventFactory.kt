@@ -22,12 +22,14 @@
 
 package com.vitorpamplona.quartz.utils
 
+import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
 import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
 import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
+import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
@@ -340,6 +342,7 @@ class EventFactory {
                 AudioTrackEvent.KIND -> AudioTrackEvent(id, pubKey, createdAt, tags, content, sig)
                 BadgeAwardEvent.KIND -> BadgeAwardEvent(id, pubKey, createdAt, tags, content, sig)
                 BadgeDefinitionEvent.KIND -> BadgeDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
+                BirdexEvent.KIND -> BirdexEvent(id, pubKey, createdAt, tags, content, sig)
                 BidEvent.KIND -> BidEvent(id, pubKey, createdAt, tags, content, sig)
                 BidConfirmationEvent.KIND -> BidConfirmationEvent(id, pubKey, createdAt, tags, content, sig)
                 BlockedRelayListEvent.KIND -> BlockedRelayListEvent(id, pubKey, createdAt, tags, content, sig)
@@ -418,6 +421,7 @@ class EventFactory {
                 FileStorageHeaderEvent.KIND -> FileStorageHeaderEvent(id, pubKey, createdAt, tags, content, sig)
                 FhirResourceEvent.KIND -> FhirResourceEvent(id, pubKey, createdAt, tags, content, sig)
                 FollowListEvent.KIND -> FollowListEvent(id, pubKey, createdAt, tags, content, sig)
+                FundraiserEvent.KIND -> FundraiserEvent(id, pubKey, createdAt, tags, content, sig)
                 GenericRepostEvent.KIND -> GenericRepostEvent(id, pubKey, createdAt, tags, content, sig)
                 GeohashListEvent.KIND -> GeohashListEvent(id, pubKey, createdAt, tags, content, sig)
                 GiftWrapEvent.KIND -> GiftWrapEvent(id, pubKey, createdAt, tags, content, sig)
@@ -598,5 +602,16 @@ class EventFactory {
                 WikiNoteEvent.KIND -> WikiNoteEvent(id, pubKey, createdAt, tags, content, sig)
                 else -> factories[kind]?.build(id, pubKey, createdAt, tags, content, sig) ?: Event(id, pubKey, createdAt, kind, tags, content, sig)
             } as T
+
+        /**
+         * True when [kind] maps to a typed Quartz event class — either a
+         * compiled-in branch above or a registered [factories] builder. Unknown
+         * kinds are parsed as a bare [Event], so a probe instance's runtime type
+         * equals [Event] exactly when the kind has no dedicated class.
+         *
+         * Used to decide whether a repost's inner (boosted) kind is something
+         * Amethyst can parse and render at all.
+         */
+        fun isKnownKind(kind: Int): Boolean = create<Event>("", "", 0L, kind, emptyArray(), "", "")::class != Event::class
     }
 }

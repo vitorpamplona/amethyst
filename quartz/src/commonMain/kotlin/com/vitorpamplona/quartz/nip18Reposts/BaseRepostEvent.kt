@@ -27,4 +27,7 @@ interface BaseRepostEvent {
     fun boostedEventId(): HexKey?
 
     fun boostedAddress(): Address?
+
+    /** The kind of the reposted (boosted) event, as declared in the `k` tag. */
+    fun boostedKind(): Int?
 }
