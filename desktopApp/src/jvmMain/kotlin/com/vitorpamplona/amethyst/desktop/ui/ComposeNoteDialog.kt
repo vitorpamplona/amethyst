@@ -64,9 +64,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.commons.model.User
-import com.vitorpamplona.amethyst.commons.service.upload.CompressionException
 import com.vitorpamplona.amethyst.commons.service.upload.CompressionQuality
-import com.vitorpamplona.amethyst.commons.service.upload.ImageFormatSniffer
 import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.upload.UploadResult
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
@@ -78,11 +76,13 @@ import com.vitorpamplona.amethyst.desktop.service.upload.DesktopUploadTracker
 import com.vitorpamplona.amethyst.desktop.ui.compose.ComposeRelayPicker
 import com.vitorpamplona.amethyst.desktop.ui.compose.RelayPickerState
 import com.vitorpamplona.amethyst.desktop.ui.media.ClipboardPasteHandler
-import com.vitorpamplona.amethyst.desktop.ui.media.CompressionFailureDialog
+import com.vitorpamplona.amethyst.desktop.ui.media.CompressionPreviewDialog
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopFilePicker
-import com.vitorpamplona.amethyst.desktop.ui.media.FailedAttachment
 import com.vitorpamplona.amethyst.desktop.ui.media.MediaAttachmentRow
+import com.vitorpamplona.amethyst.desktop.ui.media.PreviewItem
 import com.vitorpamplona.amethyst.desktop.ui.media.QualitySelectorChip
+import com.vitorpamplona.amethyst.desktop.ui.media.buildPreview
+import com.vitorpamplona.amethyst.desktop.ui.media.cleanupPreviewTemps
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -98,7 +98,6 @@ import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -187,9 +186,16 @@ fun ComposeNoteDialog(
     var perPostQualityOverride by remember { mutableStateOf<CompressionQuality?>(null) }
     val activeQuality = perPostQualityOverride ?: defaultQuality
 
-    // Fail-loud failure dialog state. CompletableDeferred suspends the
-    // send loop until the user confirms or cancels.
-    var pendingFailureDialog by remember { mutableStateOf<FailureDialogState?>(null) }
+    // Preview-then-publish state. When images are attached, the
+    // publish button reads "Preview" and a click here triggers the
+    // CompressionPreviewDialog: every attachment is run through the
+    // ImageReencoder eagerly, the user reviews the result, and the
+    // actual upload uses the cached temp files (preCompressed).
+    var pendingPreview by remember { mutableStateOf<List<PreviewItem>?>(null) }
+    val hasImages =
+        attachedFiles.any {
+            it.extension.lowercase() in IMAGE_EXTENSIONS
+        }
 
     // Relay picker state
     val connectedRelays by relayManager.connectedRelays.collectAsState()
@@ -230,6 +236,109 @@ fun ComposeNoteDialog(
                 }
             }
         }
+
+    // Shared upload + publish flow. Called by either the main button
+    // (when there are no images, hence no preview gate) or by the
+    // CompressionPreviewDialog's Publish button (when the user has
+    // confirmed the preview).
+    val runPublish: () -> Unit = {
+        scope.launch {
+            isPosting = true
+            errorMessage = null
+            try {
+                val preview = pendingPreview
+                pendingPreview = null
+                val uploadResults = mutableListOf<UploadResult>()
+
+                val total = preview?.size ?: attachedFiles.size
+                val sources: List<Pair<File, PreviewItem?>> =
+                    preview?.map { it.source to it }
+                        ?: attachedFiles.map { it to null }
+
+                for ((idx, pair) in sources.withIndex()) {
+                    val (file, item) = pair
+                    val n = idx + 1
+                    val prefix = if (total > 1) "$n/$total: " else ""
+                    uploadTracker.startUpload("$prefix${file.name}")
+                    val result =
+                        when (item) {
+                            is PreviewItem.Reencoded ->
+                                orchestrator.upload(
+                                    file = file,
+                                    alt = null,
+                                    serverBaseUrl = selectedServer,
+                                    signer = account.signer,
+                                    stripExif = stripExifSetting,
+                                    quality = activeQuality,
+                                    preCompressed = item.compressedFile,
+                                )
+                            is PreviewItem.Failed ->
+                                orchestrator.upload(
+                                    file = file,
+                                    alt = null,
+                                    serverBaseUrl = selectedServer,
+                                    signer = account.signer,
+                                    stripExif = stripExifSetting,
+                                    quality = activeQuality,
+                                    bypassReencode = true,
+                                )
+                            else ->
+                                orchestrator.upload(
+                                    file = file,
+                                    alt = null,
+                                    serverBaseUrl = selectedServer,
+                                    signer = account.signer,
+                                    stripExif = stripExifSetting,
+                                    quality = activeQuality,
+                                )
+                        }
+                    uploadTracker.onSuccess(result)
+                    uploadResults.add(result)
+                }
+
+                perPostQualityOverride = null
+
+                val finalContent =
+                    buildString {
+                        append(content)
+                        for (result in uploadResults) {
+                            result.blossom.url?.let { url ->
+                                if (isNotBlank()) append("\n")
+                                append(url)
+                            }
+                        }
+                    }
+
+                if (postAsPicture) {
+                    val pictureMetas = buildPictureMetas(uploadResults)
+                    publishPicture(
+                        description = content,
+                        images = pictureMetas,
+                        account = account,
+                        relayManager = relayManager,
+                        relays = selectedRelays,
+                    )
+                } else {
+                    val imetaTags = buildIMetaTags(uploadResults)
+                    publishNote(
+                        content = finalContent,
+                        account = account,
+                        relayManager = relayManager,
+                        replyTo = replyTo,
+                        quoteOf = quoteOf,
+                        imetaTags = imetaTags,
+                        relays = selectedRelays,
+                    )
+                }
+                onDismiss()
+            } catch (e: Exception) {
+                errorMessage = "Failed: ${e.message}"
+                uploadTracker.onError(e.message ?: "Unknown error")
+            } finally {
+                isPosting = false
+            }
+        }
+    }
 
     Dialog(
         onDismissRequest = { if (!isPosting) onDismiss() },
@@ -349,10 +458,6 @@ fun ComposeNoteDialog(
                 // Server selector + per-post quality + post type — shown when files are attached
                 if (attachedFiles.isNotEmpty()) {
                     Spacer(Modifier.height(4.dp))
-                    val hasImages =
-                        attachedFiles.any {
-                            it.extension.lowercase() in IMAGE_EXTENSIONS
-                        }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -451,159 +556,57 @@ fun ComposeNoteDialog(
                                 errorMessage = "Note cannot be empty"
                                 return@Button
                             }
-
-                            scope.launch {
-                                isPosting = true
-                                errorMessage = null
-
-                                try {
-                                    // Upload attached files and collect results.
-                                    // Inline "Processing N/M" progress via the tracker's
-                                    // existing fileName slot — no new state class needed.
-                                    // CompressionException failures are collected and
-                                    // surfaced in a fail-loud dialog before the post
-                                    // publishes — never silently downgrade.
-                                    val uploadResults = mutableListOf<UploadResult>()
-                                    val failures = mutableListOf<FailedAttachment>()
-                                    for ((idx, file) in attachedFiles.withIndex()) {
-                                        val n = idx + 1
-                                        val total = attachedFiles.size
-                                        val prefix = if (total > 1) "$n/$total: " else ""
-                                        uploadTracker.startUpload("$prefix${file.name}")
-                                        try {
-                                            val result =
-                                                orchestrator.upload(
-                                                    file = file,
-                                                    alt = null,
-                                                    serverBaseUrl = selectedServer,
-                                                    signer = account.signer,
-                                                    stripExif = stripExifSetting,
-                                                    quality = activeQuality,
-                                                )
-                                            uploadTracker.onSuccess(result)
-                                            uploadResults.add(result)
-                                        } catch (e: CompressionException) {
-                                            failures.add(
-                                                FailedAttachment(
-                                                    file = file,
-                                                    exception = e,
-                                                    originalBytes = file.length(),
-                                                    sourceFormat = ImageFormatSniffer.sniff(file),
-                                                ),
+                            // When there are images and we don't have a
+                            // preview yet, the publish button acts as a
+                            // "Preview" gate — build the preview, show it,
+                            // and let the user confirm before any upload.
+                            if (hasImages && pendingPreview == null) {
+                                scope.launch {
+                                    isPosting = true
+                                    errorMessage = null
+                                    try {
+                                        pendingPreview =
+                                            buildPreview(
+                                                attachments = attachedFiles.toList(),
+                                                imageExtensions = IMAGE_EXTENSIONS,
+                                                quality = activeQuality,
                                             )
-                                        }
+                                    } finally {
+                                        isPosting = false
                                     }
-
-                                    // If anything failed compression, ask the user
-                                    // whether to ship raw bytes or abort. Block
-                                    // until the dialog returns a UserChoice.
-                                    if (failures.isNotEmpty()) {
-                                        val choice = CompletableDeferred<FailureUserChoice>()
-                                        pendingFailureDialog = FailureDialogState(failures.toList(), choice)
-                                        val outcome = choice.await()
-                                        pendingFailureDialog = null
-                                        when (outcome) {
-                                            FailureUserChoice.Cancel -> {
-                                                isPosting = false
-                                                return@launch
-                                            }
-                                            FailureUserChoice.SendOriginal -> {
-                                                for (failure in failures) {
-                                                    uploadTracker.startUpload(failure.file.name)
-                                                    val result =
-                                                        orchestrator.upload(
-                                                            file = failure.file,
-                                                            alt = null,
-                                                            serverBaseUrl = selectedServer,
-                                                            signer = account.signer,
-                                                            stripExif = stripExifSetting,
-                                                            quality = activeQuality,
-                                                            bypassReencode = true,
-                                                        )
-                                                    uploadTracker.onSuccess(result)
-                                                    uploadResults.add(result)
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    // Reset per-post override so the next post starts
-                                    // from the saved default again.
-                                    perPostQualityOverride = null
-
-                                    // Append uploaded URLs to content
-                                    val finalContent =
-                                        buildString {
-                                            append(content)
-                                            for (result in uploadResults) {
-                                                result.blossom.url?.let { url ->
-                                                    if (isNotBlank()) append("\n")
-                                                    append(url)
-                                                }
-                                            }
-                                        }
-
-                                    if (postAsPicture) {
-                                        val pictureMetas = buildPictureMetas(uploadResults)
-                                        publishPicture(
-                                            description = content,
-                                            images = pictureMetas,
-                                            account = account,
-                                            relayManager = relayManager,
-                                            relays = selectedRelays,
-                                        )
-                                    } else {
-                                        val imetaTags = buildIMetaTags(uploadResults)
-                                        publishNote(
-                                            content = finalContent,
-                                            account = account,
-                                            relayManager = relayManager,
-                                            replyTo = replyTo,
-                                            quoteOf = quoteOf,
-                                            imetaTags = imetaTags,
-                                            relays = selectedRelays,
-                                        )
-                                    }
-                                    onDismiss()
-                                } catch (e: Exception) {
-                                    errorMessage = "Failed: ${e.message}"
-                                    uploadTracker.onError(e.message ?: "Unknown error")
-                                } finally {
-                                    isPosting = false
                                 }
+                                return@Button
                             }
+                            runPublish()
                         },
                         enabled = !isPosting && (content.isNotBlank() || attachedFiles.isNotEmpty()),
                     ) {
-                        Text(if (isPosting) "Publishing..." else "Publish")
+                        Text(
+                            when {
+                                isPosting -> if (pendingPreview == null && hasImages) "Compressing…" else "Publishing…"
+                                hasImages && pendingPreview == null -> "Preview"
+                                else -> "Publish"
+                            },
+                        )
                     }
                 }
             }
         }
     }
 
-    pendingFailureDialog?.let { state ->
-        CompressionFailureDialog(
-            failures = state.failures,
-            stripExifOnByPass = stripExifSetting,
-            onSendOriginal = { state.choice.complete(FailureUserChoice.SendOriginal) },
-            onCancel = { state.choice.complete(FailureUserChoice.Cancel) },
+    pendingPreview?.let { items ->
+        CompressionPreviewDialog(
+            items = items,
+            stripExifSetting = stripExifSetting,
+            onPublish = runPublish,
+            onCancel = {
+                cleanupPreviewTemps(items)
+                pendingPreview = null
+                isPosting = false
+            },
         )
     }
 }
-
-/**
- * State for the in-flight failure dialog. Held in
- * [ComposeNoteDialog]'s `mutableStateOf` so the dialog renders on
- * top of the compose dialog while the send coroutine awaits the
- * user's choice via [choice].
- */
-private data class FailureDialogState(
-    val failures: List<FailedAttachment>,
-    val choice: CompletableDeferred<FailureUserChoice>,
-)
-
-private enum class FailureUserChoice { SendOriginal, Cancel }
 
 private fun buildIMetaTags(results: List<UploadResult>): List<IMetaTag> =
     results.mapNotNull { result ->
