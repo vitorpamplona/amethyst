@@ -46,6 +46,7 @@ data class NDebit(
     /** True when this is a single-use session pointer (carries [k1]). */
     val isSession: Boolean get() = k1 != null
 
+    // Note: SDK 1.5.5 does not encode k1; it is a spec-level session extension at TLV index 3.
     override fun encode(): String =
         TlvBuilder()
             .apply {
