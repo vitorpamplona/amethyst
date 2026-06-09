@@ -198,6 +198,35 @@ class ImageReencoderTest {
         }
 
     @Test
+    fun reencodesPngWithAlphaToJpeg() =
+        runTest {
+            // Regression: TYPE_INT_ARGB inputs (typical PNG decode)
+            // used to crash the JPEG writer with "Bogus input
+            // colorspace". encodeJpeg now flattens onto a white RGB
+            // canvas before handing off to the writer.
+            val src = makePngWithAlpha(800, 600)
+            val result = ImageReencoder.reencode(src, CompressionQuality.MEDIUM)
+            val reencoded = assertIs<ReencodeResult.Reencoded>(result)
+            track(reencoded.file)
+
+            val decoded = ImageIO.read(reencoded.file)
+            assertTrue(decoded != null, "output must be a valid JPEG")
+            assertEquals(640, decoded.width, "Medium clamps long edge to 640")
+        }
+
+    @Test
+    fun encodeFailedWrapsCauseWithoutCrashing() {
+        // Regression: CompressionException had a double-set cause
+        // (super(message, cause) + initCause(cause)) that threw
+        // IllegalStateException at construction time, masking the
+        // real encode error.
+        val original = javax.imageio.IIOException("Bogus input colorspace")
+        val wrapped = CompressionException.EncodeFailed(original)
+        assertEquals(original, wrapped.cause)
+        assertTrue(wrapped.message!!.contains("Bogus input colorspace"))
+    }
+
+    @Test
     fun outputLivesInAmethystTmpDir() =
         runTest {
             val src = makeJpeg(800, 600)
@@ -220,6 +249,35 @@ class ImageReencoderTest {
 
     private fun track(file: File) {
         createdFiles += file
+    }
+
+    private fun makePngWithAlpha(
+        width: Int,
+        height: Int,
+    ): File {
+        val img = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB)
+        val g = img.createGraphics()
+        try {
+            // Transparent left half, solid colored right half — the
+            // "Bogus input colorspace" trap fires regardless of
+            // pixel data, just on the color model.
+            for (y in 0 until height step 8) {
+                for (x in 0 until width step 8) {
+                    val alpha = if (x < width / 2) 0 else 255
+                    val r = (x * 255 / width).coerceIn(0, 255)
+                    val gg = (y * 255 / height).coerceIn(0, 255)
+                    val b = ((x + y) * 255 / (width + height)).coerceIn(0, 255)
+                    g.color = Color(r, gg, b, alpha)
+                    g.fillRect(x, y, 8, 8)
+                }
+            }
+        } finally {
+            g.dispose()
+        }
+        val out = File.createTempFile("reencoder_alpha_", ".png")
+        track(out)
+        ImageIO.write(img, "png", out)
+        return out
     }
 
     private fun makeJpeg(

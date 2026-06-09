@@ -185,16 +185,20 @@ object ImageReencoder {
 
     /**
      * Encode `image` as JPEG into `out` at the given `quality` factor.
-     * When the source has a non-sRGB ICC profile, the JPEG writer's
-     * default behavior is to embed the profile as APP2 markers so the
-     * uploaded file retains color fidelity on Display P3 / Adobe RGB
-     * inputs.
+     *
+     * JPEG can only write 3-channel RGB. Inputs decoded as
+     * TYPE_INT_ARGB (most PNGs), TYPE_BYTE_GRAY, TYPE_CUSTOM (CMYK
+     * JPEGs, indexed PNGs, exotic colorspaces) all blow up the stock
+     * `JPEGImageWriter` with `Bogus input colorspace`. Force a
+     * canonical `TYPE_INT_RGB` BufferedImage via [toRgbCanvas] before
+     * handing off to the writer.
      */
     private fun encodeJpeg(
         image: BufferedImage,
         out: File,
         quality: Float,
     ) {
+        val rgb = if (image.type == BufferedImage.TYPE_INT_RGB) image else toRgbCanvas(image)
         val writer =
             ImageIO.getImageWritersByMIMEType("image/jpeg").let {
                 if (!it.hasNext()) throw EncodeFailed(IllegalStateException("no JPEG writer registered"))
@@ -209,11 +213,30 @@ object ImageReencoder {
                         compressionType = "JPEG"
                         compressionQuality = quality
                     }
-                writer.write(null, IIOImage(image, null, null), param)
+                writer.write(null, IIOImage(rgb, null, null), param)
             }
         } finally {
             writer.dispose()
         }
+    }
+
+    /**
+     * Draw [src] onto a fresh `TYPE_INT_RGB` canvas. Transparent
+     * pixels render against a white background — JPEG has no alpha,
+     * and "default to white" matches what every major image viewer
+     * does when displaying transparent PNGs over a light surface.
+     */
+    private fun toRgbCanvas(src: BufferedImage): BufferedImage {
+        val rgb = BufferedImage(src.width, src.height, BufferedImage.TYPE_INT_RGB)
+        val g = rgb.createGraphics()
+        try {
+            g.color = java.awt.Color.WHITE
+            g.fillRect(0, 0, src.width, src.height)
+            g.drawImage(src, 0, 0, null)
+        } finally {
+            g.dispose()
+        }
+        return rgb
     }
 
     /**

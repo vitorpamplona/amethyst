@@ -26,19 +26,15 @@ package com.vitorpamplona.amethyst.commons.service.upload
  * "Send Original" decision (e.g., InputTooLarge → user can still
  * bypass; UnsupportedFormat → bypass uploads raw bytes).
  *
- * Each subclass calls `initCause` (via the secondary constructor) so
- * the cause chain survives logging — Kotlin's primary constructor
- * does not auto-wire `cause` to `Throwable.cause` when the parent
- * constructor receives both message and cause.
+ * `Exception(message, cause)` already wires `cause` into the
+ * `Throwable.cause` slot — DO NOT call `initCause` again, doing so
+ * throws `IllegalStateException("Can't overwrite cause …")` at
+ * construction time.
  */
 sealed class CompressionException(
     message: String,
     cause: Throwable? = null,
 ) : Exception(message, cause) {
-    init {
-        if (cause != null) initCause(cause)
-    }
-
     /** Source format has no usable decoder in v1 (AVIF, HEIC). */
     class UnsupportedFormat(
         val format: String,
