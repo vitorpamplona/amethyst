@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst.commons.richtext
 
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class RichTextParserMultibyteTest {
     @Test
@@ -42,20 +42,20 @@ class RichTextParserMultibyteTest {
 
         // user@example.com should be EmailSegment
         assertTrue(
-            "user@example.com should be EmailSegment",
             allSegments.any { it is EmailSegment && it.segmentText == "user@example.com" },
+            "user@example.com should be EmailSegment",
         )
 
         // user@example.com should NOT be a LinkSegment
         assertTrue(
-            "user@example.com should not be a LinkSegment",
             allSegments.none { it is LinkSegment && it.segmentText == "user@example.com" },
+            "user@example.com should not be a LinkSegment",
         )
 
         // user@example.com should not be in urlSet
         assertTrue(
-            "user@example.com should not be in urlSet",
             !state.urlSet.withScheme.contains("user@example.com") && !state.urlSet.withoutScheme.contains("user@example.com"),
+            "user@example.com should not be in urlSet",
         )
     }
 
@@ -145,8 +145,8 @@ class RichTextParserMultibyteTest {
         val state = RichTextParser().parseText(text, EmptyTagList, null)
         val allSegments = state.paragraphs.flatMap { it.words }
         assertTrue(
-            "user@example.com should be EmailSegment",
             allSegments.any { it is EmailSegment && it.segmentText == "user@example.com" },
+            "user@example.com should be EmailSegment",
         )
     }
 
@@ -158,11 +158,11 @@ class RichTextParserMultibyteTest {
         val allSegments = state.paragraphs.flatMap { it.words }
 
         val urlSegments = allSegments.filterIsInstance<SchemelessUrlSegment>()
-        assertTrue("Should have SchemelessUrlSegment", urlSegments.isNotEmpty())
-        assertTrue("URL should be example.com", urlSegments.any { it.segmentText == "example.com" })
+        assertTrue(urlSegments.isNotEmpty(), "Should have SchemelessUrlSegment")
+        assertTrue(urlSegments.any { it.segmentText == "example.com" }, "URL should be example.com")
 
         val textSegments = allSegments.filterIsInstance<RegularTextSegment>()
-        assertTrue("Should have prefix ああ", textSegments.any { it.segmentText == "ああ" })
+        assertTrue(textSegments.any { it.segmentText == "ああ" }, "Should have prefix ああ")
     }
 
     @Test
@@ -173,11 +173,11 @@ class RichTextParserMultibyteTest {
         val allSegments = state.paragraphs.flatMap { it.words }
 
         val urlSegments = allSegments.filterIsInstance<SchemelessUrlSegment>()
-        assertTrue("Should have SchemelessUrlSegment", urlSegments.isNotEmpty())
-        assertTrue("URL should be example.com", urlSegments.any { it.segmentText == "example.com" })
+        assertTrue(urlSegments.isNotEmpty(), "Should have SchemelessUrlSegment")
+        assertTrue(urlSegments.any { it.segmentText == "example.com" }, "URL should be example.com")
 
         val textSegments = allSegments.filterIsInstance<RegularTextSegment>()
-        assertTrue("Should have suffix ああ", textSegments.any { it.segmentText == "ああ" })
+        assertTrue(textSegments.any { it.segmentText == "ああ" }, "Should have suffix ああ")
     }
 
     @Test
@@ -188,12 +188,12 @@ class RichTextParserMultibyteTest {
         val allSegments = state.paragraphs.flatMap { it.words }
 
         val emailSegment = allSegments.filterIsInstance<EmailSegment>()
-        assertTrue("Should have EmailSegment", emailSegment.isNotEmpty())
-        assertTrue("Email should be user@example.com", emailSegment.any { it.segmentText == "user@example.com" })
+        assertTrue(emailSegment.isNotEmpty(), "Should have EmailSegment")
+        assertTrue(emailSegment.any { it.segmentText == "user@example.com" }, "Email should be user@example.com")
 
         val textSegments = allSegments.filterIsInstance<RegularTextSegment>()
-        assertTrue("Should have prefix ほむほむ", textSegments.any { it.segmentText == "ほむほむ" })
-        assertTrue("Should have suffix ほげほげ", textSegments.any { it.segmentText == "ほげほげ" })
+        assertTrue(textSegments.any { it.segmentText == "ほむほむ" }, "Should have prefix ほむほむ")
+        assertTrue(textSegments.any { it.segmentText == "ほげほげ" }, "Should have suffix ほげほげ")
     }
 
     @Test
@@ -204,10 +204,10 @@ class RichTextParserMultibyteTest {
         val allSegments = state.paragraphs.flatMap { it.words }
 
         val emailSegment = allSegments.filterIsInstance<EmailSegment>()
-        assertTrue("Should have EmailSegment", emailSegment.isNotEmpty())
-        assertTrue("Email should be user@example.com", emailSegment.any { it.segmentText == "user@example.com" })
+        assertTrue(emailSegment.isNotEmpty(), "Should have EmailSegment")
+        assertTrue(emailSegment.any { it.segmentText == "user@example.com" }, "Email should be user@example.com")
 
         val textSegments = allSegments.filterIsInstance<RegularTextSegment>()
-        assertTrue("Should have suffix ふがふが", textSegments.any { it.segmentText == "ふがふが" })
+        assertTrue(textSegments.any { it.segmentText == "ふがふが" }, "Should have suffix ふがふが")
     }
 }

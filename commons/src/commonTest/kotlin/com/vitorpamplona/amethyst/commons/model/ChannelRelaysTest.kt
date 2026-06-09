@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 /**
  * Lock in the descending-by-usage ordering and equal-count preservation of

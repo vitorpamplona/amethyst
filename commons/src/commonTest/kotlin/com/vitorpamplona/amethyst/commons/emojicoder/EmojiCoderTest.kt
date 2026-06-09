@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.emojicoder
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class EmojiCoderTest {
     companion object {
@@ -68,7 +68,7 @@ class EmojiCoderTest {
                 val encoded = EmojiCoder.encode(emoji, sentence)
                 val decoded = EmojiCoder.decode(encoded)
                 assertEquals(sentence, decoded)
-                assertTrue("Failed sentence for emoji $emoji with sentence `$sentence`: `$encoded`", EmojiCoder.isCoded(encoded))
+                assertTrue(EmojiCoder.isCoded(encoded), "Failed sentence for emoji $emoji with sentence `$sentence`: `$encoded`")
             }
         }
     }

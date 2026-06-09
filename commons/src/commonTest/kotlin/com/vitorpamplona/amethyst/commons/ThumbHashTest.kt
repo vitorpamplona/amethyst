@@ -22,12 +22,12 @@ package com.vitorpamplona.amethyst.commons
 
 import com.vitorpamplona.amethyst.commons.thumbhash.ThumbHashDecoder
 import com.vitorpamplona.amethyst.commons.thumbhash.ThumbHashEncoder
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Test
 import kotlin.math.abs
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class ThumbHashTest {
     @Test
@@ -37,20 +37,20 @@ class ThumbHashTest {
         val pixels = IntArray(w * h) { 0xFFFF8040.toInt() } // opaque warm orange
 
         val hashBytes = ThumbHashEncoder.encode(pixels, w, h)
-        assertTrue("hash should have at least header bytes", hashBytes.size >= 5)
+        assertTrue(hashBytes.size >= 5, "hash should have at least header bytes")
 
         val decoded = ThumbHashDecoder.decode(hashBytes)
         assertNotNull(decoded)
         decoded!!
-        assertTrue("decoded width should be positive", decoded.width > 0)
-        assertTrue("decoded height should be positive", decoded.height > 0)
+        assertTrue(decoded.width > 0, "decoded width should be positive")
+        assertTrue(decoded.height > 0, "decoded height should be positive")
 
         val originalRatio = w.toFloat() / h.toFloat()
         val decodedRatio = decoded.width.toFloat() / decoded.height.toFloat()
         // ThumbHash loses some precision, but landscape vs portrait should be preserved.
         assertTrue(
-            "decoded ratio ($decodedRatio) should be on the same side of 1 as original ($originalRatio)",
             (originalRatio > 1f) == (decodedRatio > 1f) || originalRatio == decodedRatio,
+            "decoded ratio ($decodedRatio) should be on the same side of 1 as original ($originalRatio)",
         )
     }
 
@@ -69,8 +69,8 @@ class ThumbHashTest {
             }
 
         val encoded = ThumbHashEncoder.encodeToBase64(pixels, w, h)
-        assertTrue("base64 string should be non-empty", encoded.isNotEmpty())
-        assertTrue("base64 string should not contain padding", !encoded.contains('='))
+        assertTrue(encoded.isNotEmpty(), "base64 string should be non-empty")
+        assertTrue(!encoded.contains('='), "base64 string should not contain padding")
 
         val viaBase64 = ThumbHashDecoder.decode(encoded)
         assertNotNull(viaBase64)
@@ -80,8 +80,8 @@ class ThumbHashTest {
         assertNotNull(viaBytes)
         viaBytes!!
 
-        assertEquals("base64 path and raw path should agree on width", viaBytes.width, viaBase64.width)
-        assertEquals("base64 path and raw path should agree on height", viaBytes.height, viaBase64.height)
+        assertEquals(viaBytes.width, viaBase64.width, "base64 path and raw path should agree on width")
+        assertEquals(viaBytes.height, viaBase64.height, "base64 path and raw path should agree on height")
     }
 
     @Test
@@ -101,7 +101,7 @@ class ThumbHashTest {
         decoded!!
         for (p in decoded.pixels) {
             val a = (p ushr 24) and 0xff
-            assertEquals("alpha should be 255 for opaque encode", 255, a)
+            assertEquals(255, a, "alpha should be 255 for opaque encode")
         }
     }
 
@@ -120,7 +120,7 @@ class ThumbHashTest {
             val a = (p ushr 24) and 0xff
             if (a > maxAlpha) maxAlpha = a
         }
-        assertTrue("max alpha of all-transparent decode should be low; got $maxAlpha", maxAlpha <= 16)
+        assertTrue(maxAlpha <= 16, "max alpha of all-transparent decode should be low; got $maxAlpha")
     }
 
     @Test
@@ -150,9 +150,9 @@ class ThumbHashTest {
         val avgB = sumB / count
 
         // ThumbHash quantisation allows a handful of codepoints of drift.
-        assertTrue("avg R drift: expected ${target[0]}, got $avgR", abs(avgR - target[0]) < 8)
-        assertTrue("avg G drift: expected ${target[1]}, got $avgG", abs(avgG - target[1]) < 8)
-        assertTrue("avg B drift: expected ${target[2]}, got $avgB", abs(avgB - target[2]) < 8)
+        assertTrue(abs(avgR - target[0]) < 8, "avg R drift: expected ${target[0]}, got $avgR")
+        assertTrue(abs(avgG - target[1]) < 8, "avg G drift: expected ${target[1]}, got $avgG")
+        assertTrue(abs(avgB - target[2]) < 8, "avg B drift: expected ${target[2]}, got $avgB")
     }
 
     @Test
@@ -163,7 +163,7 @@ class ThumbHashTest {
         val hash = ThumbHashEncoder.encode(pixels, w, h)
         val ratio = ThumbHashDecoder.aspectRatio(hash)
         assertNotNull(ratio)
-        assertTrue("landscape ratio should be > 1, got $ratio", ratio!! > 1f)
+        assertTrue(ratio!! > 1f, "landscape ratio should be > 1, got $ratio")
     }
 
     @Test
@@ -174,11 +174,11 @@ class ThumbHashTest {
         val hash = ThumbHashEncoder.encode(pixels, w, h)
         val ratio = ThumbHashDecoder.aspectRatio(hash)
         assertNotNull(ratio)
-        assertTrue("portrait ratio should be < 1, got $ratio", ratio!! < 1f)
+        assertTrue(ratio!! < 1f, "portrait ratio should be < 1, got $ratio")
     }
 
     @Test
-    fun `repeated decodes produce identical output (cosine cache determinism)`() {
+    fun `repeated decodes produce identical output - cosine cache determinism`() {
         val w = 40
         val h = 30
         val pixels =
@@ -222,8 +222,8 @@ class ThumbHashTest {
         // Chop off half the AC payload.
         val truncated = fullHash.copyOfRange(0, 5 + (fullHash.size - 5) / 4)
         assertNull(
-            "hash with insufficient AC bytes should be rejected",
             ThumbHashDecoder.decode(truncated),
+            "hash with insufficient AC bytes should be rejected",
         )
     }
 
@@ -239,13 +239,13 @@ class ThumbHashTest {
         assertNotNull(decoded)
         decoded!!
         assertTrue(
-            "expected output to fit in 32x32, got ${decoded.width}x${decoded.height}",
             decoded.width in 1..32 && decoded.height in 1..32,
+            "expected output to fit in 32x32, got ${decoded.width}x${decoded.height}",
         )
         assertEquals(
-            "pixel buffer size must match dimensions",
             decoded.width * decoded.height,
             decoded.pixels.size,
+            "pixel buffer size must match dimensions",
         )
     }
 }
