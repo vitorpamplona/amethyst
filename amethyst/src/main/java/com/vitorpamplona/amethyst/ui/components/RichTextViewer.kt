@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.richtext.Base64Segment
 import com.vitorpamplona.amethyst.commons.richtext.BechSegment
 import com.vitorpamplona.amethyst.commons.richtext.BlossomUriSegment
 import com.vitorpamplona.amethyst.commons.richtext.CashuSegment
+import com.vitorpamplona.amethyst.commons.richtext.ClinkOfferSegment
 import com.vitorpamplona.amethyst.commons.richtext.EmailSegment
 import com.vitorpamplona.amethyst.commons.richtext.EmojiSegment
 import com.vitorpamplona.amethyst.commons.richtext.HashIndexEventSegment
@@ -109,6 +110,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.note.creators.invoice.ClinkOfferPreview
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.MayBeInvoicePreview
 import com.vitorpamplona.amethyst.ui.note.toShortDisplay
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
@@ -506,6 +508,10 @@ private fun RenderWordWithoutPreview(
         // as a wall of base64.
         is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
 
+        // Decoding is local and the network round-trip only fires on the Pay tap,
+        // so the offer card is safe to render even in the no-preview path.
+        is ClinkOfferSegment -> ClinkOfferPreview(word.offer, accountViewModel)
+
         is EmailSegment -> ClickableEmail(word.segmentText)
 
         is SecretEmoji -> Text(word.segmentText)
@@ -552,6 +558,7 @@ private fun RenderWordWithPreview(
         is InvoiceSegment -> MayBeInvoicePreview(word.segmentText, accountViewModel)
         is WithdrawSegment -> MayBeWithdrawal(word.segmentText, accountViewModel)
         is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
+        is ClinkOfferSegment -> ClinkOfferPreview(word.offer, accountViewModel)
         is EmailSegment -> ClickableEmail(word.segmentText)
         is SecretEmoji -> DisplaySecretEmoji(word, state, callbackUri, true, quotesLeft, backgroundColor, accountViewModel, nav)
         is MathSegment -> LatexEquation(word.latex, word.displayMode, word.leading, word.trailing)

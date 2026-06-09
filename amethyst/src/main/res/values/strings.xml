@@ -112,6 +112,8 @@
     <string name="log_out">Logout</string>
     <string name="show_more">Show More</string>
     <string name="lightning_invoice">Lightning Invoice</string>
+    <string name="clink_lightning_offer">Lightning Offer</string>
+    <string name="clink_requesting_invoice">Requesting invoice…</string>
     <string name="pay">Pay</string>
     <string name="lightning_tips">Lightning Tips</string>
     <string name="note_to_receiver">Note to Receiver</string>
