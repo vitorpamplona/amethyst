@@ -197,6 +197,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.ThreadScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.VideoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.hls.NewHlsVideoScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.AddCashuWalletScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.AddClinkDebitWalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.AddNwcWalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.AddWalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.CashuWalletScreen
@@ -317,6 +318,7 @@ fun BuildNavigation(
         composableFromEnd<Route.WalletAdd> { AddWalletScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.WalletAddNwc> { AddNwcWalletScreen(accountViewModel, nav, it.nip47) }
         composableFromEnd<Route.WalletAddCashu> { AddCashuWalletScreen(accountViewModel, nav) }
+        composableFromEndArgs<Route.WalletAddClinkDebit> { AddClinkDebitWalletScreen(accountViewModel, nav, it.ndebit) }
         composableFromEnd<Route.CashuWallet> { CashuWalletScreen(accountViewModel, nav) }
         composableFromEnd<Route.CashuWalletSettings> { CashuWalletSettingsScreen(accountViewModel, nav) }
 

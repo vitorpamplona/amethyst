@@ -210,6 +210,10 @@ sealed class Route {
 
     @Serializable object WalletAddCashu : Route()
 
+    @Serializable data class WalletAddClinkDebit(
+        val ndebit: String? = null,
+    ) : Route()
+
     @Serializable object CashuWallet : Route()
 
     @Serializable object CashuWalletSettings : Route()

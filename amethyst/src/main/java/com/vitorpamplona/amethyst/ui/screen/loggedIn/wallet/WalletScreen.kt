@@ -234,8 +234,11 @@ private fun MultiWalletHomeContent(
             WalletCard(
                 walletInfo = walletInfo,
                 onSelect = {
-                    walletViewModel.selectWallet(walletInfo.walletId)
-                    nav.nav(Route.WalletDetail(walletInfo.walletId))
+                    // The detail screen is NWC-only (balance/transactions); debits have neither.
+                    if (walletInfo.canShowBalance) {
+                        walletViewModel.selectWallet(walletInfo.walletId)
+                        nav.nav(Route.WalletDetail(walletInfo.walletId))
+                    }
                 },
                 onSetDefault = {
                     walletViewModel.setDefaultWallet(walletInfo.walletId)
@@ -325,7 +328,7 @@ private fun WalletCard(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onSelect),
+                .clickable(enabled = walletInfo.canShowBalance, onClick = onSelect),
         shape = RoundedCornerShape(16.dp),
         border =
             if (walletInfo.isDefault) {
@@ -377,8 +380,14 @@ private fun WalletCard(
                     }
                 }
 
-                // Balance
-                if (walletInfo.isLoading && walletInfo.balanceSats == null) {
+                // Balance — debits are spend-only, so show a capability badge instead.
+                if (!walletInfo.canShowBalance) {
+                    Text(
+                        text = stringRes(R.string.clink_debit_pay_only),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else if (walletInfo.isLoading && walletInfo.balanceSats == null) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
                 } else {
                     Column(horizontalAlignment = Alignment.End) {
