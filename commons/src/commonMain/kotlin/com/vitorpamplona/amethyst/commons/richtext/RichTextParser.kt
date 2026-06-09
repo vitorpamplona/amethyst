@@ -144,22 +144,46 @@ class RichTextParser {
         // URL on iOS — e.g. "https://x" came back as "h https://x". A direct scan
         // sidesteps the engine entirely and is platform-independent.
         //
-        // Longest-first so a URL that is a prefix of another never shadows it.
-        val urls = urlList.filter { it.isNotEmpty() }.sortedByDescending { it.length }
+        // This runs on the main thread per rendered note, so it stays linear in the
+        // text length: URLs are bucketed by their first character, and the inner
+        // match attempt only fires at positions whose character can actually start
+        // a URL — every other character costs a single map lookup. Within a bucket
+        // the URLs are kept longest-first so a URL that is a prefix of a longer one
+        // never shadows it.
+        val byFirstChar = HashMap<Char, MutableList<String>>()
+        urlList
+            .asSequence()
+            .filter { it.isNotEmpty() }
+            .sortedByDescending { it.length }
+            .forEach { byFirstChar.getOrPut(it[0]) { ArrayList(1) }.add(it) }
+
         val result = StringBuilder(input.length)
+        val length = input.length
         var i = 0
-        while (i < input.length) {
-            val match = urls.firstOrNull { input.startsWith(it, i) }
+        while (i < length) {
+            val candidates = byFirstChar[input[i]]
+            var match: String? = null
+            if (candidates != null) {
+                for (url in candidates) {
+                    if (input.startsWith(url, i)) {
+                        match = url
+                        break
+                    }
+                }
+            }
+
             if (match != null) {
                 // Separate from a glued prefix character.
-                val prev = result.lastOrNull()
-                if (prev != null && prev != ' ' && prev != '\n') result.append(' ')
+                if (result.isNotEmpty()) {
+                    val prev = result[result.length - 1]
+                    if (prev != ' ' && prev != '\n') result.append(' ')
+                }
 
                 result.append(match)
                 i += match.length
 
                 // Separate from a glued suffix character.
-                if (i < input.length) {
+                if (i < length) {
                     val next = input[i]
                     if (next != ' ' && next != '\n') result.append(' ')
                 }
