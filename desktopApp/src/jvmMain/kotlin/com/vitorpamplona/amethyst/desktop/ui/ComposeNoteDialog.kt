@@ -239,12 +239,11 @@ fun ComposeNoteDialog(
 
     // Shared upload + publish flow. Called by either the main button
     // (when there are no images, hence no preview gate) or by the
-    // CompressionPreviewDialog's Publish button (when the user has
-    // confirmed the preview). The parameter is the filtered list of
-    // items the user actually wants to upload (skipped rows have
-    // already been cleaned up by the dialog), or null for the
-    // no-preview path.
-    val runPublish: (List<PreviewItem>?) -> Unit = { selectedItems ->
+    // CompressionPreviewDialog's Publish button (when the user
+    // confirms the preview). The Reencoded items in `useOriginalPaths`
+    // get their compressed temp deleted and ship the original bytes
+    // (bypassReencode=true) — same code path as Failed items.
+    val runPublish: (List<PreviewItem>?, Set<String>) -> Unit = { selectedItems, useOriginalPaths ->
         scope.launch {
             isPosting = true
             errorMessage = null
@@ -262,9 +261,10 @@ fun ComposeNoteDialog(
                     val n = idx + 1
                     val prefix = if (total > 1) "$n/$total: " else ""
                     uploadTracker.startUpload("$prefix${file.name}")
+                    val isUseOriginal = item?.source?.canonicalPath in useOriginalPaths
                     val result =
-                        when (item) {
-                            is PreviewItem.Reencoded ->
+                        when {
+                            item is PreviewItem.Reencoded && !isUseOriginal ->
                                 orchestrator.upload(
                                     file = file,
                                     alt = null,
@@ -274,7 +274,22 @@ fun ComposeNoteDialog(
                                     quality = activeQuality,
                                     preCompressed = item.compressedFile,
                                 )
-                            is PreviewItem.Failed ->
+                            item is PreviewItem.Reencoded && isUseOriginal -> {
+                                // User opted out of the compressed
+                                // version — drop the temp before we
+                                // ship the original.
+                                item.compressedFile.delete()
+                                orchestrator.upload(
+                                    file = file,
+                                    alt = null,
+                                    serverBaseUrl = selectedServer,
+                                    signer = account.signer,
+                                    stripExif = stripExifSetting,
+                                    quality = activeQuality,
+                                    bypassReencode = true,
+                                )
+                            }
+                            item is PreviewItem.Failed ->
                                 orchestrator.upload(
                                     file = file,
                                     alt = null,
@@ -579,7 +594,7 @@ fun ComposeNoteDialog(
                                 }
                                 return@Button
                             }
-                            runPublish(null)
+                            runPublish(null, emptySet())
                         },
                         enabled = !isPosting && (content.isNotBlank() || attachedFiles.isNotEmpty()),
                     ) {
@@ -600,7 +615,9 @@ fun ComposeNoteDialog(
         CompressionPreviewDialog(
             items = items,
             stripExifSetting = stripExifSetting,
-            onPublish = { included -> runPublish(included) },
+            onPublish = { itemsToUpload, useOriginalPaths ->
+                runPublish(itemsToUpload, useOriginalPaths)
+            },
             onCancel = {
                 cleanupPreviewTemps(items)
                 pendingPreview = null

@@ -25,6 +25,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,12 +40,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -79,23 +80,27 @@ import com.vitorpamplona.amethyst.commons.service.upload.ImageReencoder.PassReas
 fun CompressionPreviewDialog(
     items: List<PreviewItem>,
     stripExifSetting: Boolean,
-    onPublish: (toUpload: List<PreviewItem>) -> Unit,
+    onPublish: (items: List<PreviewItem>, useOriginalPaths: Set<String>) -> Unit,
     onCancel: () -> Unit,
 ) {
     var zoomed by remember { mutableStateOf<PreviewItem.Reencoded?>(null) }
 
-    // Per-row skip state — keyed by canonical path so re-ordering or
-    // re-renders don't lose the user's choices.
-    val skipped = remember { mutableStateMapOf<String, Boolean>() }
+    // Per-row "use original" state. Toggling true means: drop the
+    // compressed temp, upload the user's original bytes instead. Only
+    // meaningful on Reencoded rows — other variants always ship the
+    // original anyway.
+    val useOriginal = remember { mutableStateMapOf<String, Boolean>() }
 
-    fun isSkipped(item: PreviewItem) = skipped[item.source.canonicalPath] == true
+    fun isUseOriginal(item: PreviewItem) = useOriginal[item.source.canonicalPath] == true
 
-    fun toggleSkip(item: PreviewItem) {
-        skipped[item.source.canonicalPath] = !isSkipped(item)
+    fun toggleUseOriginal(item: PreviewItem) {
+        useOriginal[item.source.canonicalPath] = !isUseOriginal(item)
     }
 
-    val included = items.filterNot(::isSkipped)
-    val skippedItems = items.filter(::isSkipped)
+    val useOriginalPaths: Set<String> =
+        items
+            .filter(::isUseOriginal)
+            .mapTo(mutableSetOf()) { it.source.canonicalPath }
 
     Dialog(
         onDismissRequest = onCancel,
@@ -126,34 +131,18 @@ fun CompressionPreviewDialog(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(items, key = { it.source.canonicalPath }) { item ->
-                        val skip = isSkipped(item)
                         when (item) {
                             is PreviewItem.Reencoded ->
                                 ReencodedRow(
                                     item = item,
-                                    isSkipped = skip,
-                                    onToggleSkip = { toggleSkip(item) },
+                                    useOriginal = isUseOriginal(item),
+                                    stripExifSetting = stripExifSetting,
+                                    onToggleUseOriginal = { toggleUseOriginal(item) },
                                     onZoom = { zoomed = item },
                                 )
-                            is PreviewItem.PassThrough ->
-                                PassThroughRow(
-                                    item = item,
-                                    isSkipped = skip,
-                                    onToggleSkip = { toggleSkip(item) },
-                                )
-                            is PreviewItem.Failed ->
-                                FailedRow(
-                                    item = item,
-                                    stripExifSetting = stripExifSetting,
-                                    isSkipped = skip,
-                                    onToggleSkip = { toggleSkip(item) },
-                                )
-                            is PreviewItem.NonImage ->
-                                NonImageRow(
-                                    item = item,
-                                    isSkipped = skip,
-                                    onToggleSkip = { toggleSkip(item) },
-                                )
+                            is PreviewItem.PassThrough -> PassThroughRow(item = item)
+                            is PreviewItem.Failed -> FailedRow(item = item, stripExifSetting = stripExifSetting)
+                            is PreviewItem.NonImage -> NonImageRow(item = item)
                         }
                     }
                 }
@@ -168,23 +157,8 @@ fun CompressionPreviewDialog(
                         Text("Cancel")
                     }
                     Spacer(Modifier.width(8.dp))
-                    Button(
-                        onClick = {
-                            // Drop the temps for items the user chose
-                            // to skip; included items hand off to the
-                            // orchestrator which owns their cleanup.
-                            cleanupPreviewTemps(skippedItems)
-                            onPublish(included)
-                        },
-                        enabled = included.isNotEmpty(),
-                    ) {
-                        Text(
-                            when {
-                                included.isEmpty() -> "Nothing to publish"
-                                included.size == items.size -> "Publish (${items.size})"
-                                else -> "Publish (${included.size} of ${items.size})"
-                            },
-                        )
+                    Button(onClick = { onPublish(items, useOriginalPaths) }) {
+                        Text("Publish (${items.size})")
                     }
                 }
             }
@@ -201,27 +175,37 @@ fun CompressionPreviewDialog(
 @Composable
 private fun ReencodedRow(
     item: PreviewItem.Reencoded,
-    isSkipped: Boolean,
-    onToggleSkip: () -> Unit,
+    useOriginal: Boolean,
+    stripExifSetting: Boolean,
+    onToggleUseOriginal: () -> Unit,
     onZoom: () -> Unit,
 ) {
+    // Both thumbnails stay full-bleed for context, but when the user
+    // opts to upload the original, the compressed half is dimmed so
+    // it visually reads "this side is being thrown away."
+    val compressedAlpha = if (useOriginal) 0.3f else 1f
+
     Surface(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clickable(enabled = !isSkipped) { onZoom() },
+                .clickable(enabled = !useOriginal) { onZoom() },
         shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isSkipped) 0.15f else 0.35f),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
     ) {
         Row(
             modifier = Modifier.padding(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Thumbnail(item.source, dimmed = isSkipped)
+            Thumbnail(item.source)
             Spacer(Modifier.width(8.dp))
-            Text("→", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                "→",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.alpha(compressedAlpha),
+            )
             Spacer(Modifier.width(8.dp))
-            Thumbnail(item.compressedFile, dimmed = isSkipped)
+            Thumbnail(item.compressedFile, dimmed = useOriginal)
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -232,52 +216,125 @@ private fun ReencodedRow(
                     softWrap = false,
                 )
                 Spacer(Modifier.height(2.dp))
-                Text(
-                    "${formatDims(item.originalDims)} → ${formatDims(item.compressedDims)} · ${item.quality.chipLabel}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    "${formatBytes(item.originalSize)} → ${formatBytes(item.compressedSize)} · saves ${"%.0f".format(item.savings * 100)}%",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    "All EXIF, GPS, camera tags stripped (re-encoded to JPEG)",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.tertiary,
-                )
+                if (useOriginal) {
+                    Text(
+                        "${formatDims(item.originalDims)} · ${formatBytes(item.originalSize)} · " +
+                            "compression skipped — original uploads as-is",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        reencodedMetadataHint(item, useOriginal = true, stripExif = stripExifSetting),
+                        style = MaterialTheme.typography.labelSmall,
+                        color =
+                            if (stripExifSetting) {
+                                MaterialTheme.colorScheme.tertiary
+                            } else {
+                                MaterialTheme.colorScheme.error
+                            },
+                    )
+                } else {
+                    Text(
+                        "${formatDims(item.originalDims)} → ${formatDims(item.compressedDims)} · ${item.quality.chipLabel}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        "${formatBytes(item.originalSize)} → ${formatBytes(item.compressedSize)} · saves ${"%.0f".format(item.savings * 100)}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        reencodedMetadataHint(item, useOriginal = false, stripExif = stripExifSetting),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                    )
+                }
             }
-            Column(horizontalAlignment = Alignment.End) {
-                if (!isSkipped) {
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                if (!useOriginal) {
                     Text(
                         "Click to compare",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
-                SkipToggle(isSkipped = isSkipped, onToggle = onToggleSkip)
+                UseOriginalToggle(useOriginal = useOriginal, onToggle = onToggleUseOriginal)
             }
         }
     }
 }
 
+/**
+ * Small text-button toggle for the "use original instead of
+ * compressed" choice on a Reencoded row. Two-state label so the verb
+ * is unambiguous — a bare icon could be misread.
+ */
 @Composable
-private fun PassThroughRow(
-    item: PreviewItem.PassThrough,
-    isSkipped: Boolean,
-    onToggleSkip: () -> Unit,
+private fun UseOriginalToggle(
+    useOriginal: Boolean,
+    onToggle: () -> Unit,
 ) {
+    TextButton(
+        onClick = onToggle,
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+        colors =
+            ButtonDefaults.textButtonColors(
+                contentColor =
+                    if (useOriginal) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+            ),
+    ) {
+        Text(
+            if (useOriginal) "Using original — undo" else "Use original",
+            style = MaterialTheme.typography.labelSmall,
+        )
+    }
+}
+
+/**
+ * Metadata-strip wording for a Reencoded row, which differs based on
+ * whether the user is uploading the compressed JPEG (always stripped
+ * by re-encode) or the original (depends on the strip-EXIF setting +
+ * source format).
+ */
+private fun reencodedMetadataHint(
+    item: PreviewItem.Reencoded,
+    useOriginal: Boolean,
+    stripExif: Boolean,
+): String {
+    if (!useOriginal) return "All EXIF, GPS, camera tags stripped (re-encoded to JPEG)"
+    // Original is being uploaded. Behavior depends on strip-EXIF setting
+    // + source format.
+    val sourceIsJpeg =
+        item.source.name.lowercase().let {
+            it.endsWith(".jpg") || it.endsWith(".jpeg")
+        }
+    return when {
+        stripExif && sourceIsJpeg -> "EXIF, GPS, camera tags stripped from original before upload"
+        stripExif && !sourceIsJpeg -> "Metadata preserved — strip only runs on JPEG; original is non-JPEG"
+        else -> "Metadata preserved (EXIF strip off in settings)"
+    }
+}
+
+@Composable
+private fun PassThroughRow(item: PreviewItem.PassThrough) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isSkipped) 0.15f else 0.35f),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
     ) {
         Row(
             modifier = Modifier.padding(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Thumbnail(item.source, dimmed = isSkipped)
+            Thumbnail(item.source)
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -304,8 +361,6 @@ private fun PassThroughRow(
                 label = { Text(passReasonBadge(item.reason), style = MaterialTheme.typography.labelSmall) },
                 colors = AssistChipDefaults.assistChipColors(),
             )
-            Spacer(Modifier.width(8.dp))
-            SkipToggle(isSkipped = isSkipped, onToggle = onToggleSkip)
         }
     }
 }
@@ -314,8 +369,6 @@ private fun PassThroughRow(
 private fun FailedRow(
     item: PreviewItem.Failed,
     stripExifSetting: Boolean,
-    isSkipped: Boolean,
-    onToggleSkip: () -> Unit,
 ) {
     val isJpeg = item.sourceFormat is com.vitorpamplona.amethyst.commons.service.upload.ImageFormat.Jpeg
     val privacy =
@@ -327,13 +380,13 @@ private fun FailedRow(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = if (isSkipped) 0.10f else 0.20f),
+        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.20f),
     ) {
         Row(
             modifier = Modifier.padding(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Thumbnail(item.source, dimmed = isSkipped)
+            Thumbnail(item.source)
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -364,21 +417,16 @@ private fun FailedRow(
                         },
                 )
             }
-            SkipToggle(isSkipped = isSkipped, onToggle = onToggleSkip)
         }
     }
 }
 
 @Composable
-private fun NonImageRow(
-    item: PreviewItem.NonImage,
-    isSkipped: Boolean,
-    onToggleSkip: () -> Unit,
-) {
+private fun NonImageRow(item: PreviewItem.NonImage) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isSkipped) 0.15f else 0.35f),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
     ) {
         Row(
             modifier = Modifier.padding(10.dp),
@@ -420,7 +468,6 @@ private fun NonImageRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            SkipToggle(isSkipped = isSkipped, onToggle = onToggleSkip)
         }
     }
 }
@@ -440,37 +487,6 @@ private fun Thumbnail(
                 .alpha(if (dimmed) 0.4f else 1f),
         contentScale = ContentScale.Crop,
     )
-}
-
-/**
- * Skip toggle for a preview row. Includes the small "Skip" /
- * "Include" label next to the Switch so the verb is unambiguous —
- * a bare Switch leaves users guessing whether ON means included
- * or skipped.
- */
-@Composable
-private fun SkipToggle(
-    isSkipped: Boolean,
-    onToggle: () -> Unit,
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            if (isSkipped) "Skipped" else "Include",
-            style = MaterialTheme.typography.labelSmall,
-            color =
-                if (isSkipped) {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                } else {
-                    MaterialTheme.colorScheme.primary
-                },
-        )
-        Spacer(Modifier.width(4.dp))
-        Switch(
-            checked = !isSkipped,
-            onCheckedChange = { onToggle() },
-            colors = SwitchDefaults.colors(),
-        )
-    }
 }
 
 /** Metadata-strip wording for the pass-through rows. */
