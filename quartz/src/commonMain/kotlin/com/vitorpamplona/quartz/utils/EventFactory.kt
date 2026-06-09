@@ -30,6 +30,9 @@ import com.vitorpamplona.quartz.experimental.attestations.request.AttestationReq
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
+import com.vitorpamplona.quartz.experimental.clink.debits.DebitEvent
+import com.vitorpamplona.quartz.experimental.clink.manage.ManageEvent
+import com.vitorpamplona.quartz.experimental.clink.offers.OfferEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
@@ -462,6 +465,9 @@ class EventFactory {
                 LnZapEvent.KIND -> LnZapEvent(id, pubKey, createdAt, tags, content, sig)
                 LnZapPaymentRequestEvent.KIND -> LnZapPaymentRequestEvent(id, pubKey, createdAt, tags, content, sig)
                 LnZapPaymentResponseEvent.KIND -> LnZapPaymentResponseEvent(id, pubKey, createdAt, tags, content, sig)
+                OfferEvent.KIND -> OfferEvent(id, pubKey, createdAt, tags, content, sig)
+                DebitEvent.KIND -> DebitEvent(id, pubKey, createdAt, tags, content, sig)
+                ManageEvent.KIND -> ManageEvent(id, pubKey, createdAt, tags, content, sig)
                 NwcInfoEvent.KIND -> NwcInfoEvent(id, pubKey, createdAt, tags, content, sig)
                 NwcNotificationEvent.KIND -> NwcNotificationEvent(id, pubKey, createdAt, tags, content, sig)
                 NwcNotificationEvent.LEGACY_KIND -> NwcNotificationEvent(id, pubKey, createdAt, tags, content, sig)
