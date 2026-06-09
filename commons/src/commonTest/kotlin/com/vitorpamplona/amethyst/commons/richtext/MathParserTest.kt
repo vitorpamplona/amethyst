@@ -123,6 +123,19 @@ class MathParserTest {
     }
 
     @Test
+    fun collapsesOverEscapedBackslashes() {
+        // `\\ldots` (over-escaped) -> `\ldots`; otherwise JLaTeXMath sees a line
+        // break plus the literal letters "ldots".
+        assertEquals("A_1, ${bs}ldots, A_n", MathParser.collapseDoubledBackslashes("A_1, $bs$bs" + "ldots, A_n"))
+        assertEquals("x_1 = ${bs}cdots = x_n", MathParser.collapseDoubledBackslashes("x_1 = $bs$bs" + "cdots = x_n"))
+    }
+
+    @Test
+    fun singleBackslashLatexIsLeftAlone() {
+        assertEquals("${bs}frac{1}{2} + ${bs}sqrt{x}", MathParser.collapseDoubledBackslashes("${bs}frac{1}{2} + ${bs}sqrt{x}"))
+    }
+
+    @Test
     fun gluedMathStaysPlainWord() {
         // Math without a separating space is not whitespace-delimited, so it
         // remains a single literal word rather than three rendered pieces.

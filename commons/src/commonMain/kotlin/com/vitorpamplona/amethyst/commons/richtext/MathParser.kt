@@ -70,6 +70,20 @@ object MathParser {
     }
 
     /**
+     * Collapses doubled backslashes (`\\cmd` → `\cmd`).
+     *
+     * Some sources over-escape their LaTeX (every `\` written as `\\`). In inline
+     * math a `\\` is a TeX forced line break that is never intended, so `\\ldots`
+     * really means `\ldots`. Left as-is, a renderer like JLaTeXMath reads `\\` as
+     * a line break — splitting the equation across two lines — and the trailing
+     * command name (`ldots`, `cdots`) as literal letters, so the symbol is lost.
+     *
+     * No-op when the input isn't over-escaped. Only meant for inline math; display
+     * math (`$$…$$`) may use `\\` as a genuine line break in aligned/matrix forms.
+     */
+    fun collapseDoubledBackslashes(latex: String): String = if (latex.contains("\\\\")) latex.replace("\\\\", "\\") else latex
+
+    /**
      * Splits [line] on spaces into [Token.Word]s, with any whitespace-delimited
      * math span surfaced as a [Token.Math].
      */
