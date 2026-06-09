@@ -414,6 +414,8 @@ dependencies {
 
     // LaTeX math rendering ($...$ and $$...$$ inline equations)
     implementation(libs.jlatexmath.android)
+    implementation(libs.jlatexmath.font.greek)
+    implementation(libs.jlatexmath.font.cyrillic)
 
     // Language picker and Theme chooser
     implementation(libs.androidx.appcompat)
