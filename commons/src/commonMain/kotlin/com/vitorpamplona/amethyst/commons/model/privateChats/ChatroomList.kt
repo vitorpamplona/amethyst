@@ -28,12 +28,19 @@ import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 
 class ChatroomList(
     val ownerPubKey: HexKey,
 ) {
     var rooms = LargeCache<ChatroomKey, Chatroom>()
         private set
+
+    // Emits the affected [ChatroomKey] whenever a room gains or loses a message, so list UIs can
+    // refresh reactively instead of polling. Mirrors [MarmotGroupList.groupListChanges].
+    private val _changes = MutableSharedFlow<ChatroomKey>(0, 64, BufferOverflow.DROP_OLDEST)
+    val changes = _changes
 
     // Account-level DM history paging cursors (one scope per account), held here so they share the
     // lifetime of the cached messages and are dropped when the cache prunes them. The account-level
@@ -81,31 +88,19 @@ class ChatroomList(
             if (msg.author?.pubkeyHex == ownerPubKey) {
                 privateChatroom.ownerSentMessage = true
             }
+            _changes.tryEmit(room)
         }
     }
 
     fun addMessage(
         user: User,
         msg: Note,
-    ) {
-        val privateChatroom = getOrCreatePrivateChatroom(user)
-        if (msg !in privateChatroom.messages) {
-            privateChatroom.addMessageSync(msg)
-            if (msg.author?.pubkeyHex == ownerPubKey) {
-                privateChatroom.ownerSentMessage = true
-            }
-        }
-    }
+    ) = addMessage(ChatroomKey(persistentSetOf(user.pubkeyHex)), msg)
 
     fun removeMessage(
         user: User,
         msg: Note,
-    ) {
-        val privateChatroom = getOrCreatePrivateChatroom(user)
-        if (msg in privateChatroom.messages) {
-            privateChatroom.removeMessageSync(msg)
-        }
-    }
+    ) = removeMessage(ChatroomKey(persistentSetOf(user.pubkeyHex)), msg)
 
     fun removeMessage(
         room: ChatroomKey,
@@ -114,6 +109,7 @@ class ChatroomList(
         val privateChatroom = getOrCreatePrivateChatroom(room)
         if (msg in privateChatroom.messages) {
             privateChatroom.removeMessageSync(msg)
+            _changes.tryEmit(room)
         }
     }
 

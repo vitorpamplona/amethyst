@@ -101,11 +101,22 @@ class ChatroomListState(
     // Track pubkeys we've already requested metadata for
     private val fetchedMetadataKeys = mutableSetOf<String>()
 
+    // Timestamp (createdAt) of the newest message seen by the user per room, set when a room is
+    // opened. A room is unread when its newest incoming message is newer than this mark.
+    private val lastSeen = mutableMapOf<ChatroomKey, Long>()
+
     init {
+        // Reactive: refresh as soon as a room gains/loses a message.
+        scope.launch(Dispatchers.IO) {
+            account.chatroomList.changes.collect {
+                refreshRooms()
+            }
+        }
+        // Safety poll: catches metadata/profile arrivals that don't emit a chatroom change.
         scope.launch(Dispatchers.IO) {
             while (isActive) {
                 refreshRooms()
-                delay(2000)
+                delay(10000)
             }
         }
     }
@@ -116,6 +127,14 @@ class ChatroomListState(
 
     fun selectRoom(roomKey: ChatroomKey) {
         _selectedRoom.value = roomKey
+        // Mark everything currently in the room as seen so it stops showing as unread.
+        val newest =
+            account.chatroomList.rooms
+                .get(roomKey)
+                ?.newestMessage
+                ?.createdAt() ?: 0L
+        lastSeen[roomKey] = maxOf(lastSeen[roomKey] ?: 0L, newest)
+        scope.launch(Dispatchers.IO) { refreshRooms() }
     }
 
     fun clearSelection() {
@@ -199,6 +218,10 @@ class ChatroomListState(
             // Skip rooms with no messages
             if (chatroom.messages.isEmpty()) continue
 
+            // Hide rooms whose latest message is from a muted/blocked author or otherwise filtered.
+            val newestMessage = chatroom.newestMessage
+            if (newestMessage != null && !account.isAcceptable(newestMessage)) continue
+
             val users = key.users.mapNotNull { cacheProvider.getUserIfExists(it) }
 
             // Collect pubkeys without profile info
@@ -219,9 +242,13 @@ class ChatroomListState(
                         ?.let { "$it..." } ?: "Unknown"
                 }
 
-            val newestMessage = chatroom.newestMessage
             val lastPreview = decryptPreview(newestMessage?.event)
             val lastTimestamp = newestMessage?.createdAt() ?: 0L
+
+            // Unread when the newest message is incoming (not authored by us) and newer than the
+            // last time the user opened this room.
+            val incoming = newestMessage != null && newestMessage.author?.pubkeyHex != account.pubKey
+            val hasUnread = incoming && lastTimestamp > (lastSeen[key] ?: 0L)
 
             val item =
                 ConversationItem(
@@ -232,7 +259,7 @@ class ChatroomListState(
                     lastMessagePreview = lastPreview,
                     lastMessageTimestamp = lastTimestamp,
                     isGroup = key.users.size > 1,
-                    hasUnread = !chatroom.ownerSentMessage && newestMessage != null,
+                    hasUnread = hasUnread,
                 )
 
             if (chatroom.ownerSentMessage) {

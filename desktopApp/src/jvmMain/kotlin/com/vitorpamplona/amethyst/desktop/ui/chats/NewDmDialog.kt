@@ -20,15 +20,19 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.chats
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +43,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -49,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.search.SearchResult
 import com.vitorpamplona.amethyst.commons.ui.components.UserSearchCard
@@ -71,6 +77,15 @@ fun NewDmDialog(
     onDismiss: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    // Recipients selected so far. One → 1:1 chat, more than one → group chat.
+    val selected = remember { mutableStateListOf<User>() }
+
+    fun toggle(user: User) {
+        val existing = selected.firstOrNull { it.pubkeyHex == user.pubkeyHex }
+        if (existing != null) selected.remove(existing) else selected.add(user)
+    }
+
+    fun isSelected(user: User) = selected.any { it.pubkeyHex == user.pubkeyHex }
     val searchState = remember { SearchBarState(cacheProvider, scope) }
     val searchText by searchState.searchText.collectAsState()
     val bech32Results by searchState.bech32Results.collectAsState()
@@ -146,9 +161,37 @@ fun NewDmDialog(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Text(
-                    "New Message",
+                    if (selected.size > 1) "New Group" else "New Message",
                     style = MaterialTheme.typography.titleLarge,
                 )
+
+                // Selected recipients as removable chips. Add more to form a group.
+                if (selected.isNotEmpty()) {
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(selected) { user ->
+                            Surface(
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                shape = MaterialTheme.shapes.small,
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(start = 10.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
+                                ) {
+                                    Text(
+                                        user.toBestDisplayName(),
+                                        style = MaterialTheme.typography.labelLarge,
+                                    )
+                                    IconButton(onClick = { toggle(user) }, modifier = Modifier.size(24.dp)) {
+                                        Icon(MaterialSymbols.Clear, contentDescription = "Remove", modifier = Modifier.size(16.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
 
                 OutlinedTextField(
                     value = searchText,
@@ -184,11 +227,8 @@ fun NewDmDialog(
                         if (user != null) {
                             UserSearchCard(
                                 user = user,
-                                onClick = {
-                                    onUserSelected(
-                                        ChatroomKey(setOf(user.pubkeyHex)),
-                                    )
-                                },
+                                onClick = { toggle(user) },
+                                modifier = selectedModifier(isSelected(user)),
                             )
                         } else {
                             // Minimal card for unloaded users
@@ -210,11 +250,8 @@ fun NewDmDialog(
                     items(cachedUsers) { user ->
                         UserSearchCard(
                             user = user,
-                            onClick = {
-                                onUserSelected(
-                                    ChatroomKey(setOf(user.pubkeyHex)),
-                                )
-                            },
+                            onClick = { toggle(user) },
+                            modifier = selectedModifier(isSelected(user)),
                         )
                     }
 
@@ -222,11 +259,8 @@ fun NewDmDialog(
                     items(relaySearchResults) { user ->
                         UserSearchCard(
                             user = user,
-                            onClick = {
-                                onUserSelected(
-                                    ChatroomKey(setOf(user.pubkeyHex)),
-                                )
-                            },
+                            onClick = { toggle(user) },
+                            modifier = selectedModifier(isSelected(user)),
                         )
                     }
 
@@ -262,7 +296,34 @@ fun NewDmDialog(
                         }
                     }
                 }
+
+                Button(
+                    onClick = {
+                        onUserSelected(ChatroomKey(selected.map { it.pubkeyHex }.toSet()))
+                    },
+                    enabled = selected.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        when (selected.size) {
+                            0 -> "Select recipients"
+                            1 -> "Message"
+                            else -> "Create group (${selected.size})"
+                        },
+                    )
+                }
             }
         }
     }
 }
+
+/** Border highlight for a selected recipient card in the new-DM picker. */
+@Composable
+private fun selectedModifier(selected: Boolean): Modifier =
+    if (selected) {
+        Modifier
+            .fillMaxWidth()
+            .border(2.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.medium)
+    } else {
+        Modifier
+    }
