@@ -169,3 +169,20 @@ class NowhereLinkSegment(
 class RegularTextSegment(
     segment: String,
 ) : Segment(segment)
+
+/**
+ * A LaTeX math span delimited by `$...$` (inline) or `$$...$$` (display).
+ *
+ * [segmentText] keeps the original text *including* the `$` delimiters so the
+ * raw form can be shown as a fallback when rendering fails, while [latex] holds
+ * just the inner formula that gets handed to the math renderer. [trailing] is any
+ * punctuation glued after the closing `$` (e.g. `.` in `$x$.`), rendered right
+ * next to the equation so it doesn't drift off behind a space.
+ */
+@Immutable
+class MathSegment(
+    segment: String,
+    val latex: String,
+    val displayMode: Boolean,
+    val trailing: String = "",
+) : Segment(segment)
