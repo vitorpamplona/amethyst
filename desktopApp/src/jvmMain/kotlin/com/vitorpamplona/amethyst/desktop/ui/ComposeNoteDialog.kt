@@ -63,7 +63,9 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.service.upload.CompressionException
 import com.vitorpamplona.amethyst.commons.service.upload.CompressionQuality
+import com.vitorpamplona.amethyst.commons.service.upload.ImageFormatSniffer
 import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.upload.UploadResult
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
@@ -75,7 +77,9 @@ import com.vitorpamplona.amethyst.desktop.service.upload.DesktopUploadTracker
 import com.vitorpamplona.amethyst.desktop.ui.compose.ComposeRelayPicker
 import com.vitorpamplona.amethyst.desktop.ui.compose.RelayPickerState
 import com.vitorpamplona.amethyst.desktop.ui.media.ClipboardPasteHandler
+import com.vitorpamplona.amethyst.desktop.ui.media.CompressionFailureDialog
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopFilePicker
+import com.vitorpamplona.amethyst.desktop.ui.media.FailedAttachment
 import com.vitorpamplona.amethyst.desktop.ui.media.MediaAttachmentRow
 import com.vitorpamplona.amethyst.desktop.ui.media.QualitySelectorChip
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -93,6 +97,7 @@ import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -180,6 +185,10 @@ fun ComposeNoteDialog(
     val stripExifSetting by ImageCompressionStore.stripExif.collectAsState()
     var perPostQualityOverride by remember { mutableStateOf<CompressionQuality?>(null) }
     val activeQuality = perPostQualityOverride ?: defaultQuality
+
+    // Fail-loud failure dialog state. CompletableDeferred suspends the
+    // send loop until the user confirms or cancels.
+    var pendingFailureDialog by remember { mutableStateOf<FailureDialogState?>(null) }
 
     // Relay picker state
     val connectedRelays by relayManager.connectedRelays.collectAsState()
@@ -447,24 +456,73 @@ fun ComposeNoteDialog(
                                     // Upload attached files and collect results.
                                     // Inline "Processing N/M" progress via the tracker's
                                     // existing fileName slot — no new state class needed.
+                                    // CompressionException failures are collected and
+                                    // surfaced in a fail-loud dialog before the post
+                                    // publishes — never silently downgrade.
                                     val uploadResults = mutableListOf<UploadResult>()
+                                    val failures = mutableListOf<FailedAttachment>()
                                     for ((idx, file) in attachedFiles.withIndex()) {
                                         val n = idx + 1
                                         val total = attachedFiles.size
                                         val prefix = if (total > 1) "$n/$total: " else ""
                                         uploadTracker.startUpload("$prefix${file.name}")
-                                        val result =
-                                            orchestrator.upload(
-                                                file = file,
-                                                alt = null,
-                                                serverBaseUrl = selectedServer,
-                                                signer = account.signer,
-                                                stripExif = stripExifSetting,
-                                                quality = activeQuality,
+                                        try {
+                                            val result =
+                                                orchestrator.upload(
+                                                    file = file,
+                                                    alt = null,
+                                                    serverBaseUrl = selectedServer,
+                                                    signer = account.signer,
+                                                    stripExif = stripExifSetting,
+                                                    quality = activeQuality,
+                                                )
+                                            uploadTracker.onSuccess(result)
+                                            uploadResults.add(result)
+                                        } catch (e: CompressionException) {
+                                            failures.add(
+                                                FailedAttachment(
+                                                    file = file,
+                                                    exception = e,
+                                                    originalBytes = file.length(),
+                                                    sourceFormat = ImageFormatSniffer.sniff(file),
+                                                ),
                                             )
-                                        uploadTracker.onSuccess(result)
-                                        uploadResults.add(result)
+                                        }
                                     }
+
+                                    // If anything failed compression, ask the user
+                                    // whether to ship raw bytes or abort. Block
+                                    // until the dialog returns a UserChoice.
+                                    if (failures.isNotEmpty()) {
+                                        val choice = CompletableDeferred<FailureUserChoice>()
+                                        pendingFailureDialog = FailureDialogState(failures.toList(), choice)
+                                        val outcome = choice.await()
+                                        pendingFailureDialog = null
+                                        when (outcome) {
+                                            FailureUserChoice.Cancel -> {
+                                                isPosting = false
+                                                return@launch
+                                            }
+                                            FailureUserChoice.SendOriginal -> {
+                                                for (failure in failures) {
+                                                    uploadTracker.startUpload(failure.file.name)
+                                                    val result =
+                                                        orchestrator.upload(
+                                                            file = failure.file,
+                                                            alt = null,
+                                                            serverBaseUrl = selectedServer,
+                                                            signer = account.signer,
+                                                            stripExif = stripExifSetting,
+                                                            quality = activeQuality,
+                                                            bypassReencode = true,
+                                                        )
+                                                    uploadTracker.onSuccess(result)
+                                                    uploadResults.add(result)
+                                                }
+                                            }
+                                        }
+                                    }
+
                                     // Reset per-post override so the next post starts
                                     // from the saved default again.
                                     perPostQualityOverride = null
@@ -519,7 +577,29 @@ fun ComposeNoteDialog(
             }
         }
     }
+
+    pendingFailureDialog?.let { state ->
+        CompressionFailureDialog(
+            failures = state.failures,
+            stripExifOnByPass = stripExifSetting,
+            onSendOriginal = { state.choice.complete(FailureUserChoice.SendOriginal) },
+            onCancel = { state.choice.complete(FailureUserChoice.Cancel) },
+        )
+    }
 }
+
+/**
+ * State for the in-flight failure dialog. Held in
+ * [ComposeNoteDialog]'s `mutableStateOf` so the dialog renders on
+ * top of the compose dialog while the send coroutine awaits the
+ * user's choice via [choice].
+ */
+private data class FailureDialogState(
+    val failures: List<FailedAttachment>,
+    val choice: CompletableDeferred<FailureUserChoice>,
+)
+
+private enum class FailureUserChoice { SendOriginal, Cancel }
 
 private fun buildIMetaTags(results: List<UploadResult>): List<IMetaTag> =
     results.mapNotNull { result ->

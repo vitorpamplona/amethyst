@@ -227,6 +227,13 @@ object ImageReencoder {
 
         /** Vector format (SVG) — no raster re-encode is meaningful. */
         Vector,
+
+        /**
+         * Re-encode was attempted earlier and failed; the user
+         * confirmed via the fail-loud dialog that the original
+         * should be uploaded anyway.
+         */
+        BypassByUser,
     }
 
     /** Outcome of a [reencode] call. */

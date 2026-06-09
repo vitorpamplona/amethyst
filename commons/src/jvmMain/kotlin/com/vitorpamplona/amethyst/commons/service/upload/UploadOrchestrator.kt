@@ -73,12 +73,23 @@ class UploadOrchestrator(
         signer: NostrSigner,
         stripExif: Boolean = true,
         quality: CompressionQuality = CompressionQuality.DEFAULT,
+        bypassReencode: Boolean = false,
     ): UploadResult {
         var reencodedTemp: File? = null
         var strippedTemp: File? = null
         try {
-            // 1. Re-encode (or pass-through).
-            val reencode = ImageReencoder.reencode(file, quality)
+            // 1. Re-encode (or pass-through). The bypass branch is
+            //    used by the fail-loud confirm dialog: when the user
+            //    clicks "Send Original" after a reencode failure, we
+            //    re-invoke upload with bypassReencode=true to skip
+            //    the reencoder and ship the source bytes (still
+            //    EXIF-stripped if JPEG + stripExif=true).
+            val reencode =
+                if (bypassReencode) {
+                    ReencodeResult.PassThrough(ImageReencoder.PassReason.BypassByUser)
+                } else {
+                    ImageReencoder.reencode(file, quality)
+                }
             val afterReencode =
                 when (reencode) {
                     is ReencodeResult.Reencoded -> reencode.file.also { reencodedTemp = it }
