@@ -39,8 +39,10 @@ package com.vitorpamplona.amethyst.commons.richtext
  *  - A `$` escaped with a backslash (`\$`) is a literal dollar, never a delimiter.
  *  - `$$...$$` (display) is matched before `$...$` (inline).
  *
- * Math glued to text without a separating space (e.g. `a$x$b`) stays a single
- * plain word and renders literally — only whitespace-delimited spans become math.
+ * Math glued to alphanumeric text without a separating space (e.g. `a$x$b`)
+ * stays a single plain word and renders literally. A span glued only to leading
+ * opening punctuation — a paren, bracket, or quote, as in `($x$)` — is still
+ * detected: the punctuation rides along as the equation's leading/trailing extras.
  */
 object MathParser {
     sealed interface Token {
@@ -51,14 +53,17 @@ object MathParser {
 
         /**
          * A math span. [raw] includes the `$` delimiters; [latex] is the inner
-         * formula. [trailing] holds any punctuation glued right after the closing
-         * `$` (e.g. the `.` in `$x$.`) so it renders next to the equation instead
-         * of drifting off behind a space — same idea as [HashTagSegment]'s extras.
+         * formula. [leading] holds any opening punctuation glued right before the
+         * opening `$` (e.g. the `(` in `($x$)`) and [trailing] any punctuation
+         * glued right after the closing `$` (e.g. the `.` in `$x$.`), so both
+         * render next to the equation instead of drifting off behind a space —
+         * same idea as [HashTagSegment]'s extras.
          */
         data class Math(
             val raw: String,
             val latex: String,
             val displayMode: Boolean,
+            val leading: String = "",
             val trailing: String = "",
         ) : Token
     }
@@ -87,13 +92,46 @@ object MathParser {
      * Splits [line] on spaces into [Token.Word]s, with any whitespace-delimited
      * math span surfaced as a [Token.Math].
      */
-    fun split(line: String): List<Token> =
-        splitKeepingMathWhole(line).map { cell ->
-            // A span at the start of the cell becomes math, carrying any trailing
-            // punctuation (`$x$.`). Leading-glued math (`a$x$`) stays a plain word.
-            val math = matchMathAt(cell, 0)
-            if (math != null) math.copy(trailing = cell.substring(math.raw.length)) else Token.Word(cell)
-        }
+    fun split(line: String): List<Token> = splitKeepingMathWhole(line).map(::toToken)
+
+    /**
+     * Turns one space-delimited [cell] into a token. A `$…$` span at the start of
+     * the cell — or behind a run of opening punctuation (`(`, `[`, `"`, …) —
+     * becomes math, with that punctuation kept as [Token.Math.leading] and any
+     * remainder (e.g. a closing `)` or `.`) as [Token.Math.trailing]. Anything
+     * else, including alphanumeric-glued math (`a$x$`), stays a plain word.
+     */
+    private fun toToken(cell: String): Token {
+        val dollar = mathStartIn(cell) ?: return Token.Word(cell)
+        val math = matchMathAt(cell, dollar) ?: return Token.Word(cell)
+        return math.copy(
+            leading = cell.substring(0, dollar),
+            trailing = cell.substring(dollar + math.raw.length),
+        )
+    }
+
+    /**
+     * The index of a `$` that may open math in [cell]: index 0, or the first `$`
+     * when every character before it is opening punctuation. Null otherwise.
+     */
+    private fun mathStartIn(cell: String): Int? {
+        if (cell.isEmpty() || cell[0] == '$') return 0
+        var i = 0
+        while (i < cell.length && isOpeningPunctuation(cell[i])) i++
+        return if (i in 1 until cell.length && cell[i] == '$') i else null
+    }
+
+    /**
+     * Punctuation that commonly opens a wrapped equation in prose. Covers every
+     * Unicode opening bracket and initial quote (so CJK/fullwidth `「『（` work for
+     * a global audience) plus the ASCII straight quotes, which Unicode classes as
+     * generic — not initial — punctuation and so must be named explicitly.
+     */
+    private fun isOpeningPunctuation(c: Char): Boolean =
+        c == '"' ||
+            c == '\'' ||
+            c.category == CharCategory.START_PUNCTUATION ||
+            c.category == CharCategory.INITIAL_QUOTE_PUNCTUATION
 
     /**
      * Splits [line] on single spaces the way `line.split(' ')` would, except that

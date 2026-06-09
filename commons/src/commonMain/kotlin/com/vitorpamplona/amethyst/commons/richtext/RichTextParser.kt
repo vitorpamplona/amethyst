@@ -245,7 +245,7 @@ class RichTextParser {
             val segments =
                 MathParser.split(paragraph.trimEnd()).map { token ->
                     when (token) {
-                        is MathParser.Token.Math -> MathSegment(token.raw, token.latex, token.displayMode, token.trailing)
+                        is MathParser.Token.Math -> MathSegment(token.raw, token.latex, token.displayMode, token.leading, token.trailing)
                         is MathParser.Token.Word -> wordIdentifier(token.text, images, videos, pdfs, urls, emojis, tags)
                     }
                 }
