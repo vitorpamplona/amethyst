@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.richtext
 
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
-import junit.framework.TestCase
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -688,17 +687,17 @@ class RichTextParserTest {
         val state =
             RichTextParser()
                 .parseText(textToParse, EmptyTagList, null)
-        TestCase.assertEquals(
+        assertEquals(
             "relay.shitforce.one, relayable.org, universe.nostrich.land, nos.lol, universe.nostrich.land?lang=zh, universe.nostrich.land?lang=en, relay.damus.io, relay.nostr.wirednet.jp, offchain.pub, nostr.rocks, relay.wellorder.net, nostr.oxtr.dev, universe.nostrich.land?lang=ja, relay.mostr.pub, nostr.bitcoiner.social, Nostr-Check.com, MR.Rabbit, Ancap.su, miceliomad@miceliomad.github.io/nostr/, zapper.lol, smies.me, baller.hodl",
             state.urlSet.withoutScheme.joinToString(", "),
         )
 
-        TestCase.assertEquals(
+        assertEquals(
             "jb55@jb55.com, Snowden@Nostr-Check.com, cameri@elder.nostr.land, natalie@NostrVerified.com, alanbwt@nostrplebs.com, rick@no.str.cr, shawn@shawnyeager.com, 0xtr@oxtr.dev, pavol@rusnak.io, caitlin@nostrverified.com, ralf@snort.social, stacksats@nostrplebs.com, MrHodl@nostrpurple.com, _@mikedilger.com, jascha@relayable.org, Nakadaimon@nostrplebs.com, KeithMukai@nostr.seedsigner.com, theguyswann@NostrVerified.com, dk@stacker.news, npub1z7eqn5603ltuxr77w70t3sasep8hyngzr6lxqpa9hfcqjwe9wmdqhw0qhv@nost.vip, miljan@primal.net, jared@nostrplebs.com, radii@orangepill.dev, _@katieannbaker.com, giacomozucco@BitcoinNostr.com, kr@stacker.news, phil@nostrpurple.com, angela@nostr.world, mason@lacosanostr.com, lau@nostr.report, damascusrex@iris.to, nym@nostr.fan, nico@nostrplebs.com, seekerdreamer1@stacker.news, thesamecat@iris.to, nitesh@noderunner.wtf, gpt3@jb55.com, byzantine@stacker.news, wealththeory@nostrplebs.com, gug@nostrplebs.com, lana@b.tc, shevacai@nostrplebs.com, joe@nostrpurple.com, simplestbitcoinbook@nostrplebs.com, knutsvanholm@iris.to, rs@zbd.ai, GRANTGILLIAM@grantgilliam.com, lifeloveliberty@iris.to, npub1s9c53smfq925qx6fgkqgw8as2e99l2hmj32gz0hjjhe8q67fxdvs3ga9je@nost.vip, arbedout@granddecentral.com, glowleaf@nostrplebs.com, modus@lacosanostr.com, anil@bitcoinnostr.com, documentingbtc@uselessshit.co, wolfbearclaw@nostr.messagepush.io, _@amboss.space, k3tan@k3tan.com, wolzie@BitcoinNostr.com, trey@nostrplebs.com, woody@fountain.fm, cosmicdimension@nostrplebs.com, mirbtc@getalby.com, marks@nostrplebs.com, barrensatin40@walletofsatoshi.com, alexemidio@alexemidio.github.io, Jenn@mintgreen.co, spacemonkey@nostrich.love, ishak@nostrplebs.com, GrassFedBitcoin@start9.com, ninoholds@nostrplebs.com, satcap@nostr.satcap.io, tpmoreira@nostrplebs.com, force2b@nostrplebs.com, hendrix@nostrplebs.com, TXMC@alphabetasoup.tv, pipleb@iris.to, reallhex@terranostr.com, nicb@nicb.me, NabismoPrime@BostonBTC.com, paco@iris.to, globalstatesmen@nostrplebs.com, _@NostrNet.work, crayonsmell@habel.net, ToxiKat27@Bitcoiner.social, jtrag@BitcoinNostr.com, joemartinmusic@nostrplebs.com, ph@nostrplebs.com, horse@iris.to, kp@no.str.cr, rebornbitcoiner@getalby.com, toshi@nostr-check.com, freeborn@nostrplebs.com, blee@bitcoiner.social, SatsTonight@BitcoinNostr.com, freeverification@Nostr-Check.com, cowmaster@getalby.com, hacker818@iris.to, amandabitcasa@nostrplebs.com, tiago@nostrplebs.com, sepehr@nostribe.com, gfy@stacker.news, cryptojournaal@iris.to, bon@nostrplebs.com, bot@binarywatch.org, moritz@getalby.com, hodlish@Nostr-Check.com, HolgerHatGarKeineNode@nip05.easify.de, joe@jaxo.github.io, hahattpro@iris.to, bensima@simatime.com, satan@nostrcheck.me, radvladdy@nostrplebs.com, yidneth@getalby.com, bellatrix@iris.to, securecoop@iris.to, charliesurf@ln.tips, bitcoinatm@Nostr-Check.com, lnstallone@allmysats.com, L0laL33tz@cashu.me, Lommy@nostrplebs.com, jgmontoya@nostrplebs.com, bavarianledger@iris.to, operator@brb.io, tiotito@nostriches.net, javi@www.javiergonzalez.io, geekigai@nostrplebs.com, Mr.Rabbit@BitcoinNostr.com, kilicl@nostr-check.com, alexbit@nostrbr.online, william@nostrplebs.com, oneezra@nostrplebs.com, iceandfirebtc@nostrplebs.com, nostrgang@nostrplebs.com, npub1vez5zekuzc3qk989q5gtly2zg9k2gz4l3wuplv5xs8y3se09yussg4vp7p@carteclip.com, Sqvaznyak@uselessshit.co, braj@nostrplebs.com, libertus@getalby.com, ZoeBoudreault@id.nostrfy.me, dnilso@iris.to, shroom@nostrplebs.com, olegaba@olegaba.com, wasabi@nostrplebs.com, artur@getalby.com, ihsanmd@getalby.com, satoshee@vida.page, ancapsu@getalby.com, niceaction@www.niceaction.com, seak@nostrplebs.com, andy@nodeless.io, pinkyjay@nostrplebs.com, criptobastardo@nostrplebs.com, lacosanostr@lacosanostr.com, teejem@nostrplebs.com, mewj@elder.nostr.land, thetonewrecker@nostrplebs.com, yodatravels@iris.to, bitcoin69@iris.to, Zzar@nostrplebs.com, vidalbidi@getalby.com, juangalt@current.ninja, dean@nostrplebs.com, alex2@nostrverified.com, trooper@iris.to, satscoinsv@getalby.com, aarbtc@iris.to, _@gue.yogsite.com, nostrmemes@iris.to, btcpavao@iris.to, Anonymous@BitcoinNostr.com, zoltanab@iris.to, katsu@onsats.org, bryan@nonni.io, pedromvpg@pedromvpg.com, sonicstudio@getalby.com, kounsellor@nostrplebs.com, katieross@nostrplebs.com, iamlj@iris.to, Zach@BitcoinNostr.com, amouranth@nostrcheck.me, hss5qy@getalby.com, dpcpw@iris.to, bitcoinfinity@nostrplebs.com, TonySeries@BitcoinNostr.com, kuobano@nostrplebs.com, kitakripto@BitcoinNostr.com, _@localhost.re, alxc@uselessshit.co, kukryr@orangepill.dev, saidah@nostrplebs.com, sharon21m@nostr.fan, dmn@noderunners.org, nela_at_nostrica2023@Nostr-Check.com, xbologg@nanostr.deno.dev, btcurenas@nostr.fan, amaluenda@getalby.com, queenb@nostrplebs.com, ezekiel@Nostr-Check.com, marakesh@getalby.com, storm@reddirtmining.io, _b_o_n_e_s_@stacker.news, bdichdbd@stacker.news, j9@nostrplebs.com, nokyctranslate@iris.to, Neomobius_at_mstdn.jp@mostr.pub, paddepadde@getcurrent.io, val@nostrplebs.com, dishwasher_iot@wlvs.space, 1@justinrezvani.com, sshh@nostrplebs.com, mk05@iris.to, herald@bitcoin-herald.org, nostr@pos.btcpayserver.it, thumpgofast@NostrVerified.com, neo@elder.nostr.land, alchemist@electronalchemy.com, timp@iris.to, ken@BitcoinNostr.com, irebus@nostr.red, stim4444@no.str.cr, layerlnw@nostr.fan, enhickman@enhickman.net, LiveFreeBTC@livefreebtc.org, aptx4869@aptx4869.app, khalil@klouche.com, nsec@ittybitty.tips, bigfish@iris.to, oldschool@iris.to, danton@nostrplebs.com, bitcoinzavior@nostrplebs.com, BitcoinSermons@BitcoinNostr.com, uknwlinux@plebs.place, satoshism@nostrplebs.com, jon@nostrplebs.com, hobozakki@nostrplebs.com, sirgalahodl@satstream.me, victor@lnmarkets.com, jacksmies@iris.to, chemaclass@snort.social, jayson@tautic.com, jesterhodl@jesterhodl.com, Bitcoin_Gamer_21@bitcoin-21.org, water-bot@gourcetools.github.io, w3crypto@iris.to, makaveli@nostrplebs.com, jamieanders@ln.tips, cball@nostrplebs.com, laura@nostrich.zone, kaz@reddirtmining.io, verismus@nostrplebs.com, bitpetro@nostrplebs.com, nossence@nossence.xyz, manbearpig@nostrplebs.com, johnsmith@nostrplebs.com, bitcoin@bitcoinedu.com, knggolf@nostrplebs.com, nighthaven@iris.to, xbt_fi@iris.to, gencarlosq17@iris.to, rotciv@plebs.place, Merlin@bitcoinnostr.com, yeg0rpetrov@iris.to, baloo@nostrpurple.com, jamesgospodyn@nostr.theorangepillapp.com, carl@armadalabs.studio, btcportal@nostrplebs.com, mjb@nostrplebs.com, esbewolkt@nostr.fan, koukos@iris.to, davekrock@NostrVerified.com, Bitcoinlovelife@BitcoinNostr.com, xolagl2@getalby.com, remoney@nostrplebs.com, roberto@bitcoiner.chat, cryptolazyninja@stacker.news, kimymt@getalby.com, benderlogic@rogue.earth, MAESTRO@BitcoinNostr.com, travis@west.report, coffeelover@nostrplebs.com, shadowysuperstore@shadowysuperstore.com, npub1wg2dsjnh0g7phheq23v288k0mj8x75fffmq7rghtkhv53027hnassf4w8t@nost.vip, eynhaender@nostrplebs.com, b1ackswan@nostrplebs.com, mrbitc0in@nostrplebs.com, jedi@nostrplebs.com, cloudnull@nostrplebs.com, Mrwh0@Mrwh0.github.io, shinohai@iris.to, awoi@iris.to, jcope101@nostrplebs.com, murmur@nostrplebs.com, dario@nostrplebs.com, leonawankum@BitcoinNostr.com, phil@iris.to, thatirdude@nostrplebs.com, K_hole@ketamine.com, 2@lokuyow.github.io, hazey@iris.to, HeineNon@tomottodx.github.io, titan@nostrplebs.com",
             state.urlSet.emails.joinToString(", "),
         )
 
-        TestCase.assertEquals(
+        assertEquals(
             "",
             state.urlSet.withScheme.joinToString(", "),
         )
@@ -4046,7 +4045,7 @@ class RichTextParserTest {
             .forEachIndexed { index, seg ->
                 assertEquals(
                     expectedResult[index],
-                    "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
+                    "${seg::class.simpleName!!.replace("Segment", "")}(${seg.segmentText})",
                 )
             }
 
@@ -4183,7 +4182,7 @@ class RichTextParserTest {
             .forEachIndexed { index, seg ->
                 assertEquals(
                     expectedResult[index],
-                    "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
+                    "${seg::class.simpleName!!.replace("Segment", "")}(${seg.segmentText})",
                 )
             }
     }
@@ -4216,7 +4215,7 @@ class RichTextParserTest {
             .forEachIndexed { index, seg ->
                 assertEquals(
                     expectedResult[index],
-                    "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
+                    "${seg::class.simpleName!!.replace("Segment", "")}(${seg.segmentText})",
                 )
             }
     }
@@ -4248,7 +4247,7 @@ class RichTextParserTest {
             .forEachIndexed { index, seg ->
                 assertEquals(
                     expectedResult[index],
-                    "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
+                    "${seg::class.simpleName!!.replace("Segment", "")}(${seg.segmentText})",
                 )
             }
     }
@@ -4280,7 +4279,7 @@ class RichTextParserTest {
             .forEachIndexed { index, seg ->
                 assertEquals(
                     expectedResult[index],
-                    "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
+                    "${seg::class.simpleName!!.replace("Segment", "")}(${seg.segmentText})",
                 )
             }
     }
@@ -4312,7 +4311,7 @@ class RichTextParserTest {
             .forEachIndexed { index, seg ->
                 assertEquals(
                     expectedResult[index],
-                    "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
+                    "${seg::class.simpleName!!.replace("Segment", "")}(${seg.segmentText})",
                 )
             }
     }
@@ -4357,7 +4356,7 @@ class RichTextParserTest {
             .forEachIndexed { index, seg ->
                 assertEquals(
                     expectedResult[index],
-                    "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
+                    "${seg::class.simpleName!!.replace("Segment", "")}(${seg.segmentText})",
                 )
             }
     }
@@ -4395,7 +4394,7 @@ class RichTextParserTest {
             .forEachIndexed { index, seg ->
                 assertEquals(
                     expectedResult[index],
-                    "${seg.javaClass.simpleName.replace("Segment", "")}(${seg.segmentText})",
+                    "${seg::class.simpleName!!.replace("Segment", "")}(${seg.segmentText})",
                 )
             }
     }
@@ -4451,7 +4450,7 @@ class RichTextParserTest {
             paragraph.words.forEach { seg ->
                 println(
                     "\"${
-                        seg.javaClass.simpleName.replace(
+                        seg::class.simpleName!!.replace(
                             "Segment",
                             "",
                         )
