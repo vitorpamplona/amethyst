@@ -222,8 +222,8 @@ fun RelayReachMarkers(
  * same depth (e.g. all nine clustered at the oldest-end floor) so the line can't grow into an unreadable
  * comma list. In the rare mixed line (an active frontier sharing the oldest-end gap with done relays) the
  * caption is "Loading:", so the done chip is suffixed "(fully loaded)" to keep its meaning clear. Either
- * way the whole marker is tappable for the full per-relay breakdown. Reads e.g. "Loading: ↓ nostr.wine"
- * or "Fully loaded: ✓ 8".
+ * way the whole marker is tappable for the full per-relay breakdown. Reads e.g. "Loading: ↓ nostr.wine",
+ * "Loading: ↓ 8 relays" or "Fully loaded: ✓ 8 relays".
  */
 @Composable
 private fun RelayReachMarker(
@@ -266,18 +266,12 @@ private fun RelayReachMarker(
                 if (index > 0) {
                     Text("·", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
                 }
-                // Spell out 1–2 short host names; otherwise a count. Done relays count as "N relays" so the
-                // fully-loaded floor reads as a sentence ("✓ 8 relays"), not a bare number; active frontiers
-                // stay terse ("↓ 1"). Only a mixed line (caption "Loading:") needs the done chip tagged
-                // "(fully loaded)" — a pure-done line already says so in its "Fully loaded:" caption.
+                // Spell out 1–2 short host names; otherwise "N relays" for every state, so a count chip
+                // always reads as a sentence ("↓ 8 relays", "✓ 8 relays") rather than a bare number. Only a
+                // mixed line (caption "Loading:") needs the done chip tagged "(fully loaded)" — a pure-done
+                // line already says so in its "Fully loaded:" caption.
                 val names = list.map { it.name }
-                val inlineNames = reachInlineNames(names)
-                val label =
-                    when {
-                        inlineNames != null -> inlineNames
-                        state == RelayReachState.DONE -> pluralStringResource(Res.plurals.chats_history_relays, names.size, names.size)
-                        else -> names.size.toString()
-                    }
+                val label = reachInlineNames(names) ?: pluralStringResource(Res.plurals.chats_history_relays, names.size, names.size)
                 val chip = reachGlyph(state) + " " + label
                 Text(
                     text = if (state == RelayReachState.DONE && hasActiveFrontier) chip + " " + stringResource(Res.string.chats_history_fully_loaded) else chip,
