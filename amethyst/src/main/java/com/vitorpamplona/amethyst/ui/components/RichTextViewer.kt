@@ -368,6 +368,7 @@ private fun RenderRegular(
                         callbackUri,
                         accountViewModel,
                         nav,
+                        authorPubKey,
                     )
                 }
             }
@@ -381,6 +382,7 @@ private fun RenderRegular(
                     backgroundColor,
                     accountViewModel,
                     nav,
+                    authorPubKey,
                 )
             }
         }
@@ -476,6 +478,7 @@ private fun RenderWordWithoutPreview(
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
+    authorPubKey: String? = null,
 ) {
     when (word) {
         // Don't preview Images
@@ -510,7 +513,7 @@ private fun RenderWordWithoutPreview(
 
         // Decoding is local and the network round-trip only fires on the Pay tap,
         // so the offer card is safe to render even in the no-preview path.
-        is ClinkOfferSegment -> ClinkOfferPreview(word.offer, accountViewModel)
+        is ClinkOfferSegment -> ClinkOfferPreview(word.offer, accountViewModel, authorPubKey)
 
         is EmailSegment -> ClickableEmail(word.segmentText)
 
@@ -547,6 +550,7 @@ private fun RenderWordWithPreview(
     callbackUri: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
+    authorPubKey: String? = null,
 ) {
     when (word) {
         is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
@@ -558,7 +562,7 @@ private fun RenderWordWithPreview(
         is InvoiceSegment -> MayBeInvoicePreview(word.segmentText, accountViewModel)
         is WithdrawSegment -> MayBeWithdrawal(word.segmentText, accountViewModel)
         is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
-        is ClinkOfferSegment -> ClinkOfferPreview(word.offer, accountViewModel)
+        is ClinkOfferSegment -> ClinkOfferPreview(word.offer, accountViewModel, authorPubKey)
         is EmailSegment -> ClickableEmail(word.segmentText)
         is SecretEmoji -> DisplaySecretEmoji(word, state, callbackUri, true, quotesLeft, backgroundColor, accountViewModel, nav)
         is MathSegment -> LatexEquation(word.latex, word.displayMode, word.leading, word.trailing)

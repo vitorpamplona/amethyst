@@ -52,13 +52,14 @@ object ClinkOfferPayer {
         account: Account,
         offer: NOffer,
         amountSats: Long? = null,
+        zap: String? = null,
         timeoutMs: Long = DEFAULT_TIMEOUT_MS,
     ): OfferResponse? {
         val relays = offer.relays.toSet()
         if (relays.isEmpty()) return null
 
         val client = OfferClient(offer, account.signer)
-        val request = client.requestInvoice(amountSats)
+        val request = client.requestInvoice(amountSats = amountSats, zap = zap)
 
         val reply = CompletableDeferred<OfferEvent>()
         val subId = "clink-offer-${request.id}"
