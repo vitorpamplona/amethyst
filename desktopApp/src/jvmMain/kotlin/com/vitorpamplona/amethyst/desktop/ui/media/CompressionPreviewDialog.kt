@@ -42,14 +42,18 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -75,10 +79,23 @@ import com.vitorpamplona.amethyst.commons.service.upload.ImageReencoder.PassReas
 fun CompressionPreviewDialog(
     items: List<PreviewItem>,
     stripExifSetting: Boolean,
-    onPublish: () -> Unit,
+    onPublish: (toUpload: List<PreviewItem>) -> Unit,
     onCancel: () -> Unit,
 ) {
     var zoomed by remember { mutableStateOf<PreviewItem.Reencoded?>(null) }
+
+    // Per-row skip state — keyed by canonical path so re-ordering or
+    // re-renders don't lose the user's choices.
+    val skipped = remember { mutableStateMapOf<String, Boolean>() }
+
+    fun isSkipped(item: PreviewItem) = skipped[item.source.canonicalPath] == true
+
+    fun toggleSkip(item: PreviewItem) {
+        skipped[item.source.canonicalPath] = !isSkipped(item)
+    }
+
+    val included = items.filterNot(::isSkipped)
+    val skippedItems = items.filter(::isSkipped)
 
     Dialog(
         onDismissRequest = onCancel,
@@ -109,12 +126,34 @@ fun CompressionPreviewDialog(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(items, key = { it.source.canonicalPath }) { item ->
+                        val skip = isSkipped(item)
                         when (item) {
                             is PreviewItem.Reencoded ->
-                                ReencodedRow(item = item, onZoom = { zoomed = item })
-                            is PreviewItem.PassThrough -> PassThroughRow(item = item)
-                            is PreviewItem.Failed -> FailedRow(item = item, stripExifSetting = stripExifSetting)
-                            is PreviewItem.NonImage -> NonImageRow(item = item)
+                                ReencodedRow(
+                                    item = item,
+                                    isSkipped = skip,
+                                    onToggleSkip = { toggleSkip(item) },
+                                    onZoom = { zoomed = item },
+                                )
+                            is PreviewItem.PassThrough ->
+                                PassThroughRow(
+                                    item = item,
+                                    isSkipped = skip,
+                                    onToggleSkip = { toggleSkip(item) },
+                                )
+                            is PreviewItem.Failed ->
+                                FailedRow(
+                                    item = item,
+                                    stripExifSetting = stripExifSetting,
+                                    isSkipped = skip,
+                                    onToggleSkip = { toggleSkip(item) },
+                                )
+                            is PreviewItem.NonImage ->
+                                NonImageRow(
+                                    item = item,
+                                    isSkipped = skip,
+                                    onToggleSkip = { toggleSkip(item) },
+                                )
                         }
                     }
                 }
@@ -129,8 +168,23 @@ fun CompressionPreviewDialog(
                         Text("Cancel")
                     }
                     Spacer(Modifier.width(8.dp))
-                    Button(onClick = onPublish) {
-                        Text("Publish (${items.size})")
+                    Button(
+                        onClick = {
+                            // Drop the temps for items the user chose
+                            // to skip; included items hand off to the
+                            // orchestrator which owns their cleanup.
+                            cleanupPreviewTemps(skippedItems)
+                            onPublish(included)
+                        },
+                        enabled = included.isNotEmpty(),
+                    ) {
+                        Text(
+                            when {
+                                included.isEmpty() -> "Nothing to publish"
+                                included.size == items.size -> "Publish (${items.size})"
+                                else -> "Publish (${included.size} of ${items.size})"
+                            },
+                        )
                     }
                 }
             }
@@ -147,25 +201,27 @@ fun CompressionPreviewDialog(
 @Composable
 private fun ReencodedRow(
     item: PreviewItem.Reencoded,
+    isSkipped: Boolean,
+    onToggleSkip: () -> Unit,
     onZoom: () -> Unit,
 ) {
     Surface(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clickable { onZoom() },
+                .clickable(enabled = !isSkipped) { onZoom() },
         shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isSkipped) 0.15f else 0.35f),
     ) {
         Row(
             modifier = Modifier.padding(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Thumbnail(item.source)
+            Thumbnail(item.source, dimmed = isSkipped)
             Spacer(Modifier.width(8.dp))
             Text("→", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.width(8.dp))
-            Thumbnail(item.compressedFile)
+            Thumbnail(item.compressedFile, dimmed = isSkipped)
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -186,28 +242,42 @@ private fun ReencodedRow(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Text(
+                    "All EXIF, GPS, camera tags stripped (re-encoded to JPEG)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.tertiary,
+                )
             }
-            Text(
-                "Click to compare",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            Column(horizontalAlignment = Alignment.End) {
+                if (!isSkipped) {
+                    Text(
+                        "Click to compare",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                SkipToggle(isSkipped = isSkipped, onToggle = onToggleSkip)
+            }
         }
     }
 }
 
 @Composable
-private fun PassThroughRow(item: PreviewItem.PassThrough) {
+private fun PassThroughRow(
+    item: PreviewItem.PassThrough,
+    isSkipped: Boolean,
+    onToggleSkip: () -> Unit,
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isSkipped) 0.15f else 0.35f),
     ) {
         Row(
             modifier = Modifier.padding(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Thumbnail(item.source)
+            Thumbnail(item.source, dimmed = isSkipped)
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -223,12 +293,19 @@ private fun PassThroughRow(item: PreviewItem.PassThrough) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Text(
+                    passThroughMetadataHint(item.reason),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             AssistChip(
                 onClick = {},
                 label = { Text(passReasonBadge(item.reason), style = MaterialTheme.typography.labelSmall) },
                 colors = AssistChipDefaults.assistChipColors(),
             )
+            Spacer(Modifier.width(8.dp))
+            SkipToggle(isSkipped = isSkipped, onToggle = onToggleSkip)
         }
     }
 }
@@ -237,24 +314,26 @@ private fun PassThroughRow(item: PreviewItem.PassThrough) {
 private fun FailedRow(
     item: PreviewItem.Failed,
     stripExifSetting: Boolean,
+    isSkipped: Boolean,
+    onToggleSkip: () -> Unit,
 ) {
     val isJpeg = item.sourceFormat is com.vitorpamplona.amethyst.commons.service.upload.ImageFormat.Jpeg
     val privacy =
         when {
-            stripExifSetting && isJpeg -> "EXIF will be stripped before upload"
-            stripExifSetting && !isJpeg -> "metadata may still be present (non-JPEG)"
-            else -> "metadata preserved per your settings"
+            stripExifSetting && isJpeg -> "EXIF, GPS, camera tags stripped before upload"
+            stripExifSetting && !isJpeg -> "Metadata preserved — strip only runs on JPEG; this is ${item.sourceFormat::class.simpleName}"
+            else -> "Metadata preserved (EXIF strip off in settings)"
         }
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.20f),
+        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = if (isSkipped) 0.10f else 0.20f),
     ) {
         Row(
             modifier = Modifier.padding(10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Thumbnail(item.source)
+            Thumbnail(item.source, dimmed = isSkipped)
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -270,21 +349,36 @@ private fun FailedRow(
                     color = MaterialTheme.colorScheme.error,
                 )
                 Text(
-                    "Will send original (${formatBytes(item.originalSize)}) · $privacy",
+                    "Will send original (${formatBytes(item.originalSize)})",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Text(
+                    privacy,
+                    style = MaterialTheme.typography.labelSmall,
+                    color =
+                        if (stripExifSetting && isJpeg) {
+                            MaterialTheme.colorScheme.tertiary
+                        } else {
+                            MaterialTheme.colorScheme.error
+                        },
+                )
             }
+            SkipToggle(isSkipped = isSkipped, onToggle = onToggleSkip)
         }
     }
 }
 
 @Composable
-private fun NonImageRow(item: PreviewItem.NonImage) {
+private fun NonImageRow(
+    item: PreviewItem.NonImage,
+    isSkipped: Boolean,
+    onToggleSkip: () -> Unit,
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (isSkipped) 0.15f else 0.35f),
     ) {
         Row(
             modifier = Modifier.padding(10.dp),
@@ -320,23 +414,72 @@ private fun NonImageRow(item: PreviewItem.NonImage) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Text(
+                    "Metadata preserved — EXIF strip applies to JPEG only",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
+            SkipToggle(isSkipped = isSkipped, onToggle = onToggleSkip)
         }
     }
 }
 
 @Composable
-private fun Thumbnail(file: java.io.File) {
+private fun Thumbnail(
+    file: java.io.File,
+    dimmed: Boolean = false,
+) {
     AsyncImage(
         model = file,
         contentDescription = file.name,
         modifier =
             Modifier
                 .size(64.dp)
-                .clip(RoundedCornerShape(4.dp)),
+                .clip(RoundedCornerShape(4.dp))
+                .alpha(if (dimmed) 0.4f else 1f),
         contentScale = ContentScale.Crop,
     )
 }
+
+/**
+ * Skip toggle for a preview row. Includes the small "Skip" /
+ * "Include" label next to the Switch so the verb is unambiguous —
+ * a bare Switch leaves users guessing whether ON means included
+ * or skipped.
+ */
+@Composable
+private fun SkipToggle(
+    isSkipped: Boolean,
+    onToggle: () -> Unit,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            if (isSkipped) "Skipped" else "Include",
+            style = MaterialTheme.typography.labelSmall,
+            color =
+                if (isSkipped) {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
+        )
+        Spacer(Modifier.width(4.dp))
+        Switch(
+            checked = !isSkipped,
+            onCheckedChange = { onToggle() },
+            colors = SwitchDefaults.colors(),
+        )
+    }
+}
+
+/** Metadata-strip wording for the pass-through rows. */
+private fun passThroughMetadataHint(reason: PassReason): String =
+    when (reason) {
+        PassReason.Animated -> "Metadata preserved (animated — re-encode would drop frames)"
+        PassReason.Vector -> "No raster metadata (SVG)"
+        PassReason.BypassByUser -> "Metadata preserved per your override"
+    }
 
 // ---------- zoom sub-dialog ----------
 

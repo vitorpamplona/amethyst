@@ -240,19 +240,21 @@ fun ComposeNoteDialog(
     // Shared upload + publish flow. Called by either the main button
     // (when there are no images, hence no preview gate) or by the
     // CompressionPreviewDialog's Publish button (when the user has
-    // confirmed the preview).
-    val runPublish: () -> Unit = {
+    // confirmed the preview). The parameter is the filtered list of
+    // items the user actually wants to upload (skipped rows have
+    // already been cleaned up by the dialog), or null for the
+    // no-preview path.
+    val runPublish: (List<PreviewItem>?) -> Unit = { selectedItems ->
         scope.launch {
             isPosting = true
             errorMessage = null
             try {
-                val preview = pendingPreview
                 pendingPreview = null
                 val uploadResults = mutableListOf<UploadResult>()
 
-                val total = preview?.size ?: attachedFiles.size
+                val total = selectedItems?.size ?: attachedFiles.size
                 val sources: List<Pair<File, PreviewItem?>> =
-                    preview?.map { it.source to it }
+                    selectedItems?.map { it.source to it }
                         ?: attachedFiles.map { it to null }
 
                 for ((idx, pair) in sources.withIndex()) {
@@ -577,7 +579,7 @@ fun ComposeNoteDialog(
                                 }
                                 return@Button
                             }
-                            runPublish()
+                            runPublish(null)
                         },
                         enabled = !isPosting && (content.isNotBlank() || attachedFiles.isNotEmpty()),
                     ) {
@@ -598,7 +600,7 @@ fun ComposeNoteDialog(
         CompressionPreviewDialog(
             items = items,
             stripExifSetting = stripExifSetting,
-            onPublish = runPublish,
+            onPublish = { included -> runPublish(included) },
             onCancel = {
                 cleanupPreviewTemps(items)
                 pendingPreview = null
