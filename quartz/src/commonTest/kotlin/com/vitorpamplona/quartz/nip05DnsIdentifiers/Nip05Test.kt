@@ -274,4 +274,71 @@ class Nip05Test {
 
         assertEquals(result, newResult)
     }
+
+    // ── parseLenient ──────────────────────────────────────────────────
+    // parseLenient is used by mention/text-rendering paths and accepts both
+    // the full `name@domain` NIP-05 form and a bare domain that is synthesized
+    // as the `_@domain` wildcard form per NIP-05.
+
+    @Test
+    fun `parseLenient accepts full form like Nip05Id parse`() {
+        val full = Nip05Id.parseLenient("alice@example.com")
+        assertNotNull(full)
+        assertEquals("alice", full.name)
+        assertEquals("example.com", full.domain)
+    }
+
+    @Test
+    fun `parseLenient accepts dot bit full form`() {
+        val parsed = Nip05Id.parseLenient("m@testls.bit")
+        assertNotNull(parsed)
+        assertEquals("m", parsed.name)
+        assertEquals("testls.bit", parsed.domain)
+    }
+
+    @Test
+    fun `parseLenient synthesizes wildcard for bare domain`() {
+        val bare = Nip05Id.parseLenient("testls.bit")
+        assertNotNull(bare)
+        assertEquals("_", bare.name)
+        assertEquals("testls.bit", bare.domain)
+        assertEquals(false, bare.hasLocalPart())
+        assertEquals("testls.bit", bare.toDisplayValue())
+        assertEquals("_@testls.bit", bare.toValue())
+    }
+
+    @Test
+    fun `parseLenient synthesizes wildcard for non-bit bare domain`() {
+        val bare = Nip05Id.parseLenient("nostr.example.org")
+        assertNotNull(bare)
+        assertEquals("_", bare.name)
+        assertEquals("nostr.example.org", bare.domain)
+    }
+
+    @Test
+    fun `parseLenient lowercases input`() {
+        val parsed = Nip05Id.parseLenient("M@TestLS.BIT")
+        assertNotNull(parsed)
+        assertEquals("m", parsed.name)
+        assertEquals("testls.bit", parsed.domain)
+    }
+
+    @Test
+    fun `parseLenient rejects single-label garbage`() {
+        assertNull(Nip05Id.parseLenient("justaword"))
+        assertNull(Nip05Id.parseLenient(""))
+        assertNull(Nip05Id.parseLenient("   "))
+    }
+
+    @Test
+    fun `parseLenient rejects IP literal disguised as a bare domain`() {
+        assertNull(Nip05Id.parseLenient("192.168.1.1"))
+    }
+
+    @Test
+    fun `parseLenient rejects malformed full form`() {
+        assertNull(Nip05Id.parseLenient("@example.com"))
+        assertNull(Nip05Id.parseLenient("foo@"))
+        assertNull(Nip05Id.parseLenient("foo@bar"))
+    }
 }
