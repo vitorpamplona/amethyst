@@ -106,17 +106,10 @@ class ChatroomListState(
     private val lastSeen = mutableMapOf<ChatroomKey, Long>()
 
     init {
-        // Reactive: refresh as soon as a room gains/loses a message.
-        scope.launch(Dispatchers.IO) {
-            account.chatroomList.changes.collect {
-                refreshRooms()
-            }
-        }
-        // Safety poll: catches metadata/profile arrivals that don't emit a chatroom change.
         scope.launch(Dispatchers.IO) {
             while (isActive) {
                 refreshRooms()
-                delay(10000)
+                delay(2000)
             }
         }
     }
