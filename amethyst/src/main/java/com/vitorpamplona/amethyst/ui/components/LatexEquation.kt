@@ -53,6 +53,7 @@ import ru.noties.jlatexmath.JLatexMathDrawable
 fun LatexEquation(
     latex: String,
     displayMode: Boolean,
+    leading: String = "",
     trailing: String = "",
 ) {
     val color = LocalContentColor.current.toArgb()
@@ -86,7 +87,7 @@ fun LatexEquation(
 
     if (drawable == null) {
         // Couldn't parse — show the raw delimited source so nothing is lost.
-        Text((if (displayMode) "$$$latex$$" else "$$latex$") + trailing)
+        Text(leading + (if (displayMode) "$$$latex$$" else "$$latex$") + trailing)
         return
     }
 
@@ -98,9 +99,12 @@ fun LatexEquation(
     val equationSize = Modifier.size(widthDp, heightDp)
     val equationModifier = if (displayMode) Modifier.horizontalScroll(rememberScrollState()).then(equationSize) else equationSize
 
-    // Row keeps trailing punctuation (the `.` in `$x$.`) hugging the equation
-    // rather than getting a word-gap from the parent FlowRow.
+    // Row keeps leading/trailing punctuation (the `(` and `)` in `($x$)`) hugging
+    // the equation rather than getting a word-gap from the parent FlowRow.
     Row(verticalAlignment = Alignment.CenterVertically) {
+        if (leading.isNotEmpty()) {
+            Text(leading)
+        }
         Canvas(modifier = equationModifier) {
             drawIntoCanvas { canvas ->
                 drawable.setBounds(0, 0, drawable.intrinsicWidth, drawable.intrinsicHeight)

@@ -177,4 +177,36 @@ class MathParserTest {
         assertEquals("a", m[0].latex)
         assertEquals("b", m[1].latex)
     }
+
+    @Test
+    fun parenWrappedMathIsDetected() {
+        // `($r = 1$)` is the common prose case: the opening paren rides along as
+        // leading, the closing paren as trailing, and the inner span is math.
+        val m = math(MathParser.split("translations (${d}r = 1$d) is cyclic")).single()
+        assertEquals("r = 1", m.latex)
+        assertEquals("(", m.leading)
+        assertEquals(")", m.trailing)
+    }
+
+    @Test
+    fun bracketAndQuoteWrappedMathAreDetected() {
+        val tokens = MathParser.split("see [${d}x$d] and \"${d}y$d\" here")
+        val m = math(tokens)
+        assertEquals(2, m.size)
+        assertEquals("x", m[0].latex)
+        assertEquals("[", m[0].leading)
+        assertEquals("]", m[0].trailing)
+        assertEquals("y", m[1].latex)
+        assertEquals("\"", m[1].leading)
+        assertEquals("\"", m[1].trailing)
+    }
+
+    @Test
+    fun alphanumericGluedPrefixStaysPlainWord() {
+        // A letter before `$` is not opening punctuation, so the existing
+        // glued-word behaviour is preserved (no false-firing on `a$x$`).
+        val tokens = MathParser.split("a${d}x$d" + " end")
+        assertTrue(math(tokens).isEmpty())
+        assertEquals(listOf("a${d}x$d", "end"), tokens.filterIsInstance<Token.Word>().map { it.text })
+    }
 }
