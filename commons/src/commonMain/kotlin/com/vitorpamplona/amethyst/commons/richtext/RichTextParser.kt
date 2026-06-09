@@ -240,12 +240,15 @@ class RichTextParser {
         lines.forEach { paragraph ->
             val isRTL = isArabic(paragraph)
 
-            val wordList = paragraph.trimEnd().split(' ')
-
-            val segments = ArrayList<Segment>(wordList.size)
-            wordList.forEach { word ->
-                segments.add(wordIdentifier(word, images, videos, pdfs, urls, emojis, tags))
-            }
+            // split() behaves like `line.split(' ')`, but keeps math spans
+            // (`$...$`, `$$...$$`) whole instead of tearing them at internal spaces.
+            val segments =
+                MathParser.split(paragraph.trimEnd()).map { token ->
+                    when (token) {
+                        is MathParser.Token.Math -> MathSegment(token.raw, token.latex, token.displayMode, token.trailing)
+                        is MathParser.Token.Word -> wordIdentifier(token.text, images, videos, pdfs, urls, emojis, tags)
+                    }
+                }
 
             paragraphSegments.add(ParagraphState(segments.toPersistentList(), isRTL))
         }

@@ -2074,6 +2074,15 @@
     <string name="video_player_settings_action_pip_description">Spela upp videon i ett flytande fönster (dolt om det inte stöds)</string>
     <string name="video_player_settings_action_cast">Casta till enhet</string>
     <string name="video_player_settings_action_cast_description">Skicka videon till en Chromecast-mottagare på ditt Wi-Fi (dolt för lokala filer)</string>
+    <string name="audio_visualizer_settings">Ljudvisualiserare</string>
+    <string name="audio_visualizer_settings_description">Välj animeringen som visas när ljudanteckningar spelas upp.</string>
+    <string name="audio_visualizer_off">Av</string>
+    <string name="audio_visualizer_bars">Spektrumstaplar</string>
+    <string name="audio_visualizer_waves">Color Waves</string>
+    <string name="audio_visualizer_radial">Radiell ring</string>
+    <string name="audio_visualizer_aurora">Aurora Glow</string>
+    <string name="audio_visualizer_classic">Klassisk vågform</string>
+    <string name="audio_visualizer_static">Statisk bild</string>
     <string name="profile_image_of_user">%1$s Profilbild</string>
     <string name="relay_info">Relä %1$s</string>
     <string name="expand_relay_list">Expandera relälistan</string>
@@ -2809,6 +2818,16 @@
     <!-- NIP-75 Zap Goals -->
     <string name="goal_closed">Detta mål har avslutats</string>
     <string name="goal_progress">%1$s finansierat av %2$s sats mål</string>
+    <string name="fundraiser_ends">Slutar %1$s</string>
+    <string name="fundraiser_onchain_donation">On-chain-donation</string>
+    <plurals name="birdex_species_count">
+        <item quantity="one">Birdex · %1$d art</item>
+        <item quantity="other">Birdex · %1$d arter</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="one">%1$s +%2$d till</item>
+        <item quantity="other">%1$s +%2$d till</item>
+    </plurals>
     <string name="goal_amount_label">Målbelopp (sats)</string>
     <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Beskriv ditt mål</string>

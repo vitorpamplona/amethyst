@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.richtext.ImageGalleryParagraph
 import com.vitorpamplona.amethyst.commons.richtext.ImageSegment
 import com.vitorpamplona.amethyst.commons.richtext.InvoiceSegment
 import com.vitorpamplona.amethyst.commons.richtext.LinkSegment
+import com.vitorpamplona.amethyst.commons.richtext.MathSegment
 import com.vitorpamplona.amethyst.commons.richtext.NowhereLinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.ParagraphState
 import com.vitorpamplona.amethyst.commons.richtext.PdfSegment
@@ -394,6 +395,10 @@ fun RenderTextParagraph(
     FlowRow(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(spaceWidth),
+        // Center items on the cross axis so a taller item (an equation, whose image
+        // is taller than a text line) sits centered on the line instead of hanging
+        // below the baseline. No-op for the common all-text row.
+        itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         paragraph.words.forEach { word ->
             renderWord(word)
@@ -505,6 +510,8 @@ private fun RenderWordWithoutPreview(
 
         is SecretEmoji -> Text(word.segmentText)
 
+        is MathSegment -> LatexEquation(word.latex, word.displayMode, word.trailing)
+
         is PhoneSegment -> ClickablePhone(word.segmentText)
 
         is BechSegment -> BechLink(word.segmentText, false, 0, backgroundColor, accountViewModel, nav)
@@ -547,6 +554,7 @@ private fun RenderWordWithPreview(
         is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
         is EmailSegment -> ClickableEmail(word.segmentText)
         is SecretEmoji -> DisplaySecretEmoji(word, state, callbackUri, true, quotesLeft, backgroundColor, accountViewModel, nav)
+        is MathSegment -> LatexEquation(word.latex, word.displayMode, word.trailing)
         is PhoneSegment -> ClickablePhone(word.segmentText)
         is BechSegment -> BechLink(word.segmentText, true, quotesLeft, backgroundColor, accountViewModel, nav)
         is HashTagSegment -> HashTag(word, nav)

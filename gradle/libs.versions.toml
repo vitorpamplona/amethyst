@@ -43,6 +43,7 @@ genaiImageDescription = "1.0.0-beta1"
 languageId = "17.0.6"
 lifecycleRuntimeKtx = "2.10.0"
 lightcompressor-enhanced = "2.2.1"
+jlatexmath = "0.2.0"
 markdown = "f92ef49c9d"
 material3 = "1.9.0"
 media3 = "1.10.1"
@@ -69,6 +70,7 @@ zelory = "3.0.1"
 zoomable = "2.12.0"
 vlcj = "4.8.3"
 commonsImaging = "1.0.0-alpha6"
+thumbnailator = "0.4.21"
 zxing = "3.5.4"
 zxingAndroidEmbedded = "4.3.0"
 windowCoreAndroid = "1.5.1"
@@ -144,6 +146,7 @@ coil-svg = { group = "io.coil-kt.coil3", name = "coil-svg", version.ref = "coil"
 coil-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 coil-video = { group = "io.coil-kt.coil3", name = "coil-video", version.ref = "coil" }
 commons-imaging = { group = "org.apache.commons", name = "commons-imaging", version.ref = "commonsImaging" }
+thumbnailator = { group = "net.coobird", name = "thumbnailator", version.ref = "thumbnailator" }
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
 vlcj = { group = "uk.co.caprica", name = "vlcj", version.ref = "vlcj" }
 dev-whyoleg-cryptography-provider-apple-optimal = { module = "dev.whyoleg.cryptography:cryptography-provider-optimal", version.ref = "devWhyolegCryptography" }
@@ -173,6 +176,7 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinxCoroutinesCore" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinx-serialization-cbor = { module = "org.jetbrains.kotlinx:kotlinx-serialization-cbor", version.ref = "kotlinxSerialization" }
+jlatexmath-android = { group = "ru.noties", name = "jlatexmath-android", version.ref = "jlatexmath" }
 markdown-commonmark = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-commonmark", version.ref = "markdown" }
 markdown-ui = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-ui", version.ref = "markdown" }
 markdown-ui-material3 = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-ui-material3", version.ref = "markdown" }

@@ -412,6 +412,9 @@ dependencies {
     implementation(libs.markdown.ui.material3)
     implementation(libs.markdown.commonmark)
 
+    // LaTeX math rendering ($...$ and $$...$$ inline equations)
+    implementation(libs.jlatexmath.android)
+
     // Language picker and Theme chooser
     implementation(libs.androidx.appcompat)
 

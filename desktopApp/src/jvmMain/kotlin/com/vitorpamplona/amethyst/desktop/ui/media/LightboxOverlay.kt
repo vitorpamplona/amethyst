@@ -39,10 +39,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -102,6 +108,7 @@ private sealed class DownloadState {
     ) : DownloadState()
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LightboxOverlay(
     urls: List<String>,
@@ -119,6 +126,21 @@ fun LightboxOverlay(
     var viewMode by remember { mutableStateOf(if (initialFullscreen) ViewMode.FULLSCREEN else ViewMode.DEFAULT) }
     val awtWindow = LocalAwtWindow.current
     val isImmersiveFullscreen = LocalIsImmersiveFullscreen.current
+
+    // Snackbar-like banner state for the "Copied … to clipboard"
+    // confirmation. Auto-dismisses after 2.5 s.
+    var copyConfirmation by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(copyConfirmation) {
+        if (copyConfirmation != null) {
+            delay(2500)
+            copyConfirmation = null
+        }
+    }
+
+    fun copyUrlToClipboard(url: String) {
+        Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(url), null)
+        copyConfirmation = url
+    }
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
@@ -274,10 +296,7 @@ fun LightboxOverlay(
                             onExpandMenu = { menuExpanded = true },
                             onDismissMenu = { menuExpanded = false },
                             onSave = { triggerSave() },
-                            onCopyUrl = {
-                                val clipboard = Toolkit.getDefaultToolkit().systemClipboard
-                                clipboard.setContents(StringSelection(urls[currentIndex]), null)
-                            },
+                            onCopyUrl = { copyUrlToClipboard(urls[currentIndex]) },
                             onOpenInBrowser = {
                                 Desktop.getDesktop().browse(URI(urls[currentIndex]))
                             },
@@ -286,10 +305,27 @@ fun LightboxOverlay(
                 )
             }
         } else {
-            ZoomableImage(
-                url = currentUrl,
+            // Hover tooltip shows the full Blossom URL; single-click
+            // copies it to the clipboard + triggers the snackbar.
+            val tooltipState = rememberTooltipState(isPersistent = false)
+            TooltipBox(
+                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above, 8.dp),
+                tooltip = {
+                    PlainTooltip {
+                        Text(
+                            currentUrl,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                },
+                state = tooltipState,
                 modifier = contentModifier,
-            )
+            ) {
+                ZoomableImage(
+                    url = currentUrl,
+                    onTap = { copyUrlToClipboard(currentUrl) },
+                )
+            }
         }
 
         // Download banner (top)
@@ -373,6 +409,44 @@ fun LightboxOverlay(
             }
         }
 
+        // Copy-to-clipboard confirmation snackbar. Slides in below
+        // the download banner so the two can stack if both fire.
+        AnimatedVisibility(
+            visible = copyConfirmation != null,
+            modifier =
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = if (downloadState is DownloadState.Idle) 0.dp else 40.dp),
+            enter = slideInVertically() + fadeIn(),
+            exit = slideOutVertically() + fadeOut(),
+        ) {
+            copyConfirmation?.let { url ->
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFF2E7D32))
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        MaterialSymbols.Check,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Copied $url to clipboard",
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        softWrap = false,
+                    )
+                }
+            }
+        }
+
         // "..." menu (bottom right) — only for images; videos get it in the controls bar
         // Hidden in fullscreen to keep the view immersive
         if (!isVideo && viewMode != ViewMode.FULLSCREEN) {
@@ -384,10 +458,7 @@ fun LightboxOverlay(
                     onExpandMenu = { menuExpanded = true },
                     onDismissMenu = { menuExpanded = false },
                     onSave = { triggerSave() },
-                    onCopyUrl = {
-                        val clipboard = Toolkit.getDefaultToolkit().systemClipboard
-                        clipboard.setContents(StringSelection(urls[currentIndex]), null)
-                    },
+                    onCopyUrl = { copyUrlToClipboard(urls[currentIndex]) },
                     onOpenInBrowser = {
                         Desktop.getDesktop().browse(URI(urls[currentIndex]))
                     },

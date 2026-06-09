@@ -26,6 +26,16 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 
 object MediaCompressor {
+    /**
+     * Strip EXIF from a JPEG. Caller owns the returned file's cleanup
+     * — the temp file lands under [AmethystTempDir] and is NOT
+     * registered with deleteOnExit (long-running desktop sessions
+     * leaked under the old behavior, see
+     * `docs/temp-file-cleanup-analysis.md`).
+     *
+     * Returns the input file unchanged if the source is not a JPEG,
+     * carries no EXIF, or strip fails.
+     */
     fun stripExif(file: File): File {
         if (!file.name.lowercase().let { it.endsWith(".jpg") || it.endsWith(".jpeg") }) {
             return file
@@ -39,9 +49,8 @@ object MediaCompressor {
 
             val baos = ByteArrayOutputStream()
             ExifRewriter().removeExifMetadata(bytes, baos)
-            val stripped = File.createTempFile("stripped_", ".jpg")
+            val stripped = AmethystTempDir.createTempFile("amethyst_stripped_", ".jpg")
             stripped.writeBytes(baos.toByteArray())
-            stripped.deleteOnExit()
             stripped
         } catch (_: Exception) {
             file
