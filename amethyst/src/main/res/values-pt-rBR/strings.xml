@@ -2079,7 +2079,9 @@
     <string name="audio_visualizer_settings_description">Escolha a animação exibida enquanto as notas de áudio são reproduzidas.</string>
     <string name="audio_visualizer_off">Desligado</string>
     <string name="audio_visualizer_bars">Barras de espectro</string>
+    <string name="audio_visualizer_waves">Color Waves</string>
     <string name="audio_visualizer_radial">Anel radial</string>
+    <string name="audio_visualizer_aurora">Aurora Glow</string>
     <string name="audio_visualizer_classic">Forma de onda clássica</string>
     <string name="audio_visualizer_static">Imagem estática</string>
     <string name="profile_image_of_user">Foto de perfil de %1$s</string>

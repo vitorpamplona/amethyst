@@ -2115,7 +2115,9 @@
     <string name="audio_visualizer_settings_description">Vyberte animaci zobrazenou při přehrávání zvukových poznámek.</string>
     <string name="audio_visualizer_off">Vypnuto</string>
     <string name="audio_visualizer_bars">Spektrální pruhy</string>
+    <string name="audio_visualizer_waves">Color Waves</string>
     <string name="audio_visualizer_radial">Radiální prstenec</string>
+    <string name="audio_visualizer_aurora">Aurora Glow</string>
     <string name="audio_visualizer_classic">Klasická křivka</string>
     <string name="audio_visualizer_static">Statický obrázek</string>
     <string name="profile_image_of_user">Obrázek profilu %1$s</string>

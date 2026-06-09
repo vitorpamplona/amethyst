@@ -2084,7 +2084,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="audio_visualizer_settings_description">Wähle die Animation, die beim Abspielen von Audio-Notizen angezeigt wird.</string>
     <string name="audio_visualizer_off">Aus</string>
     <string name="audio_visualizer_bars">Spektrum-Balken</string>
+    <string name="audio_visualizer_waves">Color Waves</string>
     <string name="audio_visualizer_radial">Radialer Ring</string>
+    <string name="audio_visualizer_aurora">Aurora Glow</string>
     <string name="audio_visualizer_classic">Klassische Wellenform</string>
     <string name="audio_visualizer_static">Statisches Bild</string>
     <string name="profile_image_of_user">Profilbild von %1$s</string>
