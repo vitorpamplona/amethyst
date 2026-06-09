@@ -23,12 +23,14 @@ package com.vitorpamplona.amethyst.service
 import android.content.Context
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
@@ -206,14 +208,27 @@ class ZapPaymentHandler(
             onProgress(0.75f)
         }
 
-        if (account.nip47SignerState.hasWalletConnectSetup()) {
-            payViaNWC(payables, note, onError = onError, onProgress = {
-                onProgress(it * 0.25f + 0.75f) // keeps within range.
-            }, context)
-            // onProgress(1f)
-        } else {
-            onPayViaIntent(payables.toImmutableList())
-            onProgress(0f)
+        // Route through the user's selected default payment source. A CLINK debit takes
+        // precedence over NWC when it is the chosen default; NWC-only users are unaffected
+        // (defaultPaymentSource() resolves to their NWC wallet). No source -> wallet app.
+        when (val source = account.settings.defaultPaymentSource()) {
+            is PaymentSource.ClinkDebit -> {
+                payViaClinkDebit(payables, source.wallet.pointer, onError = onError, onProgress = {
+                    onProgress(it * 0.25f + 0.75f)
+                }, context)
+            }
+
+            is PaymentSource.Nwc -> {
+                payViaNWC(payables, note, onError = onError, onProgress = {
+                    onProgress(it * 0.25f + 0.75f) // keeps within range.
+                }, context)
+                // onProgress(1f)
+            }
+
+            null -> {
+                onPayViaIntent(payables.toImmutableList())
+                onProgress(0f)
+            }
         }
     }
 
@@ -370,6 +385,43 @@ class ZapPaymentHandler(
                 onProgress(progressAllPayments)
 
                 Paid(payable, true)
+            },
+        )
+    }
+
+    /**
+     * Pays each zap invoice by asking the user's CLINK debit service (kind 21002) to
+     * settle the BOLT-11. The service authorizes against the account identity; a failure
+     * surfaces the service's `GFY` error text. Untested end-to-end — needs a live debit
+     * service to verify a real payout.
+     */
+    suspend fun payViaClinkDebit(
+        payables: List<Payable>,
+        pointer: NDebit,
+        onError: (String, String, User?) -> Unit,
+        onProgress: (percent: Float) -> Unit,
+        context: Context,
+    ): List<Paid> {
+        var progressAllPayments = 0.00f
+
+        return mapNotNullAsync(
+            items = payables,
+            runRequestFor = { payable: Payable ->
+                val response = ClinkDebitPayer.payInvoice(account, pointer, payable.invoice)
+
+                progressAllPayments += 1f / payables.size
+                onProgress(progressAllPayments)
+
+                val paid = response?.isOk() == true
+                if (!paid) {
+                    onError(
+                        stringRes(context, R.string.error_dialog_pay_invoice_error),
+                        response?.error?.takeIf { it.isNotBlank() }
+                            ?: stringRes(context, R.string.clink_debit_no_response),
+                        payable.info.user,
+                    )
+                }
+                Paid(payable, paid)
             },
         )
     }
