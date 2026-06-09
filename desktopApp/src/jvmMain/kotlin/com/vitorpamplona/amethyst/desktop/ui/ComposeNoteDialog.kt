@@ -63,10 +63,12 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.service.upload.CompressionQuality
 import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.upload.UploadResult
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.desktop.DesktopPreferences
+import com.vitorpamplona.amethyst.desktop.ImageCompressionStore
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.service.upload.DesktopUploadTracker
@@ -75,6 +77,7 @@ import com.vitorpamplona.amethyst.desktop.ui.compose.RelayPickerState
 import com.vitorpamplona.amethyst.desktop.ui.media.ClipboardPasteHandler
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopFilePicker
 import com.vitorpamplona.amethyst.desktop.ui.media.MediaAttachmentRow
+import com.vitorpamplona.amethyst.desktop.ui.media.QualitySelectorChip
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -169,6 +172,14 @@ fun ComposeNoteDialog(
     val orchestrator = remember { UploadOrchestrator() }
     var selectedServer by remember { mutableStateOf(DesktopPreferences.preferredBlossomServer) }
     var postAsPicture by remember { mutableStateOf(false) }
+
+    // Image compression: global default + optional per-post override.
+    // Override resets after every successful send so the next post
+    // starts from the saved default again.
+    val defaultQuality by ImageCompressionStore.quality.collectAsState()
+    val stripExifSetting by ImageCompressionStore.stripExif.collectAsState()
+    var perPostQualityOverride by remember { mutableStateOf<CompressionQuality?>(null) }
+    val activeQuality = perPostQualityOverride ?: defaultQuality
 
     // Relay picker state
     val connectedRelays by relayManager.connectedRelays.collectAsState()
@@ -322,9 +333,13 @@ fun ComposeNoteDialog(
                     onRemove = { attachedFiles.remove(it) },
                 )
 
-                // Server selector + post type — shown when files are attached
+                // Server selector + per-post quality + post type — shown when files are attached
                 if (attachedFiles.isNotEmpty()) {
                     Spacer(Modifier.height(4.dp))
+                    val hasImages =
+                        attachedFiles.any {
+                            it.extension.lowercase() in IMAGE_EXTENSIONS
+                        }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -335,11 +350,18 @@ fun ComposeNoteDialog(
                             onServerSelected = { selectedServer = it },
                         )
 
+                        // Quality override chip — only when images are attached
+                        // (no point picking a JPEG preset for a video upload).
+                        if (hasImages) {
+                            QualitySelectorChip(
+                                activeQuality = activeQuality,
+                                isOverride = perPostQualityOverride != null,
+                                onSelect = { perPostQualityOverride = it },
+                                onReset = { perPostQualityOverride = null },
+                            )
+                        }
+
                         // Post type toggle — only when images are attached
-                        val hasImages =
-                            attachedFiles.any {
-                                it.extension.lowercase() in IMAGE_EXTENSIONS
-                            }
                         if (hasImages) {
                             PostTypeSelector(
                                 isPicture = postAsPicture,
@@ -422,20 +444,30 @@ fun ComposeNoteDialog(
                                 errorMessage = null
 
                                 try {
-                                    // Upload attached files and collect results
+                                    // Upload attached files and collect results.
+                                    // Inline "Processing N/M" progress via the tracker's
+                                    // existing fileName slot — no new state class needed.
                                     val uploadResults = mutableListOf<UploadResult>()
-                                    for (file in attachedFiles) {
-                                        uploadTracker.startUpload(file.name)
+                                    for ((idx, file) in attachedFiles.withIndex()) {
+                                        val n = idx + 1
+                                        val total = attachedFiles.size
+                                        val prefix = if (total > 1) "$n/$total: " else ""
+                                        uploadTracker.startUpload("$prefix${file.name}")
                                         val result =
                                             orchestrator.upload(
                                                 file = file,
                                                 alt = null,
                                                 serverBaseUrl = selectedServer,
                                                 signer = account.signer,
+                                                stripExif = stripExifSetting,
+                                                quality = activeQuality,
                                             )
                                         uploadTracker.onSuccess(result)
                                         uploadResults.add(result)
                                     }
+                                    // Reset per-post override so the next post starts
+                                    // from the saved default again.
+                                    perPostQualityOverride = null
 
                                     // Append uploaded URLs to content
                                     val finalContent =
