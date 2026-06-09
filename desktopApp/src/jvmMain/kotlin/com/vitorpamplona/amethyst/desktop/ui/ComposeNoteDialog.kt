@@ -677,25 +677,40 @@ private fun PostTypeSelector(
     isPicture: Boolean,
     onToggle: (Boolean) -> Unit,
 ) {
-    Row(
-        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
+    var expanded by remember { mutableStateOf(false) }
+    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
         Text(
-            "Post as:",
+            "Post as: ",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        androidx.compose.material3.FilterChip(
-            selected = !isPicture,
-            onClick = { onToggle(false) },
-            label = { Text("Note", style = MaterialTheme.typography.labelSmall) },
-        )
-        androidx.compose.material3.FilterChip(
-            selected = isPicture,
-            onClick = { onToggle(true) },
-            label = { Text("Picture", style = MaterialTheme.typography.labelSmall) },
-        )
+        Box {
+            androidx.compose.material3.TextButton(onClick = { expanded = true }) {
+                Text(
+                    if (isPicture) "Picture" else "Note",
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+            androidx.compose.material3.DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text("Note", style = MaterialTheme.typography.bodySmall) },
+                    onClick = {
+                        onToggle(false)
+                        expanded = false
+                    },
+                )
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text("Picture", style = MaterialTheme.typography.bodySmall) },
+                    onClick = {
+                        onToggle(true)
+                        expanded = false
+                    },
+                )
+            }
+        }
     }
 }
 

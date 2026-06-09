@@ -95,9 +95,24 @@ class ImageReencoderTest {
             val src = makeJpeg(2000, 1500)
             val low = (ImageReencoder.reencode(src, CompressionQuality.LOW) as ReencodeResult.Reencoded).file.also(::track)
             val medium = (ImageReencoder.reencode(src, CompressionQuality.MEDIUM) as ReencodeResult.Reencoded).file.also(::track)
+            val high = (ImageReencoder.reencode(src, CompressionQuality.HIGH) as ReencodeResult.Reencoded).file.also(::track)
             // DESKTOP_HIGH at 1920 is bigger than 640-based presets, so monotonicity is
-            // strict only over the same-dim subset (LOW < MEDIUM).
+            // strict only over the same-dim subset (LOW < MEDIUM < HIGH).
             assertTrue(low.length() < medium.length(), "LOW (${low.length()}) < MEDIUM (${medium.length()})")
+            assertTrue(medium.length() < high.length(), "MEDIUM (${medium.length()}) < HIGH (${high.length()})")
+        }
+
+    @Test
+    fun reencodesJpegAtHigh() =
+        runTest {
+            val src = makeJpeg(2000, 1500)
+            val result = ImageReencoder.reencode(src, CompressionQuality.HIGH)
+            val reencoded = assertIs<ReencodeResult.Reencoded>(result)
+            track(reencoded.file)
+
+            val decoded = ImageIO.read(reencoded.file)
+            // High = 640 max-dim. Longer edge clamps to 640.
+            assertEquals(640, decoded.width)
         }
 
     @Test

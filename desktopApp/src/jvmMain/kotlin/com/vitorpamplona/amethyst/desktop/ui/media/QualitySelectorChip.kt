@@ -21,26 +21,29 @@
 package com.vitorpamplona.amethyst.desktop.ui.media
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.font.FontWeight
 import com.vitorpamplona.amethyst.commons.service.upload.CompressionQuality
 
 /**
- * Per-post compression quality selector. `selected = (override != null)`
- * so the chip visually indicates "you've changed this from the global
- * default." Clicking opens a DropdownMenu with the three presets plus a
- * "Reset to default" row.
+ * Per-post compression quality selector. Visually matches the
+ * sibling [ServerSelector] and [PostTypeSelector]: a "Quality:" label
+ * + a [TextButton] that opens a [DropdownMenu] of presets. Each
+ * dropdown row carries a one-line summary (dimension + tradeoff).
  *
- * The chip is intentionally lightweight — settings semantics live in
- * the global Media settings panel; this is only for one-off overrides.
+ * When the user has chosen something other than the saved default,
+ * the dropdown shows a "Reset to default" row at the bottom so the
+ * override can be cleared without sending a post.
  */
 @Composable
 fun QualitySelectorChip(
@@ -50,49 +53,62 @@ fun QualitySelectorChip(
     onReset: () -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Box {
-        FilterChip(
-            selected = isOverride,
-            onClick = { expanded = true },
-            label = {
+    androidx.compose.foundation.layout.Row(
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+    ) {
+        Text(
+            "Quality: ",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Box {
+            TextButton(onClick = { expanded = true }) {
                 Text(
-                    "Quality: ${activeQuality.displayName}",
+                    activeQuality.chipLabel,
                     style = MaterialTheme.typography.labelSmall,
                 )
-            },
-        )
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            CompressionQuality.entries.forEach { preset ->
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            preset.displayName,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    },
-                    onClick = {
-                        onSelect(preset)
-                        expanded = false
-                    },
-                )
             }
-            if (isOverride) {
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            "Reset to default",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    },
-                    onClick = {
-                        onReset()
-                        expanded = false
-                    },
-                )
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
+                CompressionQuality.entries.forEach { preset ->
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text(
+                                    preset.chipLabel,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = if (preset == activeQuality) FontWeight.SemiBold else FontWeight.Normal,
+                                )
+                                Text(
+                                    preset.summary,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        },
+                        onClick = {
+                            onSelect(preset)
+                            expanded = false
+                        },
+                    )
+                }
+                if (isOverride) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                "Reset to default",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
+                        onClick = {
+                            onReset()
+                            expanded = false
+                        },
+                    )
+                }
             }
         }
     }

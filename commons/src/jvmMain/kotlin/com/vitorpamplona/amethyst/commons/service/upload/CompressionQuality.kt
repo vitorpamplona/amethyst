@@ -39,11 +39,21 @@ enum class CompressionQuality(
     val displayName: String,
     val maxDim: Int,
     val jpegQuality: Float,
+    /**
+     * Short subtitle that explains what the preset gives you. Surfaced
+     * under the segmented row in settings and under each row in the
+     * per-post override dropdown.
+     */
+    val summary: String,
 ) {
-    LOW("Low", 640, 0.65f),
-    MEDIUM("Medium", 640, 0.75f),
-    DESKTOP_HIGH("Desktop High", 1920, 0.90f),
+    LOW("Low", 640, 0.65f, "640 px · smallest files, best for slow uplinks"),
+    MEDIUM("Medium", 640, 0.75f, "640 px · balanced size and quality"),
+    HIGH("High", 640, 0.85f, "640 px · visually lossless on phones"),
+    DESKTOP_HIGH("Desktop High", 1920, 0.90f, "1920 px · best for desktop displays"),
     ;
+
+    /** Compact label suitable for a chip: "Medium (640 px)". */
+    val chipLabel: String get() = "$displayName ($maxDim px)"
 
     companion object {
         /** Default for first-install. */

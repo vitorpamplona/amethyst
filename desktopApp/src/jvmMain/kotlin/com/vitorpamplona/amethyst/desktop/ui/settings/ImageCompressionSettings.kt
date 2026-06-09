@@ -82,7 +82,7 @@ fun ImageCompressionSettings(modifier: Modifier = Modifier) {
         }
         Spacer(Modifier.height(4.dp))
         Text(
-            qualityHint(quality),
+            quality.summary,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -114,10 +114,3 @@ fun ImageCompressionSettings(modifier: Modifier = Modifier) {
         }
     }
 }
-
-private fun qualityHint(quality: CompressionQuality): String =
-    when (quality) {
-        CompressionQuality.LOW -> "Smallest files — long edge max 640 px. Best for slow uplinks."
-        CompressionQuality.MEDIUM -> "Balanced — long edge max 640 px, moderate quality."
-        CompressionQuality.DESKTOP_HIGH -> "Good quality for desktop — long edge max 1920 px."
-    }
