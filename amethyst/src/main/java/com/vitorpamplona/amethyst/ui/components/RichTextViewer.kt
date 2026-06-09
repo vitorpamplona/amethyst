@@ -395,6 +395,10 @@ fun RenderTextParagraph(
     FlowRow(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(spaceWidth),
+        // Center items on the cross axis so a taller item (an equation, whose image
+        // is taller than a text line) sits centered on the line instead of hanging
+        // below the baseline. No-op for the common all-text row.
+        itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         paragraph.words.forEach { word ->
             renderWord(word)
