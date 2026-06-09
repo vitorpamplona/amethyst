@@ -115,6 +115,9 @@
     <string name="clink_lightning_offer">Lightning Offer</string>
     <string name="clink_requesting_invoice">Requesting invoice…</string>
     <string name="clink_debit_no_response">The debit service did not complete the payment.</string>
+    <string name="clink_confirm_payment_title">Confirm payment</string>
+    <string name="clink_confirm_pay_amount_via_source">Pay %1$s via %2$s?</string>
+    <string name="clink_confirm_pay_via_source">Pay this invoice via %1$s?</string>
     <string name="clink_debit_pay_only">Pay only</string>
     <string name="wallet_add_clink_title">CLINK Debit</string>
     <string name="wallet_add_clink_description">Pay and zap from a wallet that pre-authorized your account. Spend only — no balance or history.</string>

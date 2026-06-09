@@ -50,7 +50,6 @@ import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Lightning
 import com.vitorpamplona.amethyst.service.ClinkOfferPayer
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
-import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -63,7 +62,8 @@ import kotlinx.coroutines.launch
 /**
  * Inline card for a CLINK Offers pointer (`noffer1…`) found in a note. Tapping "Pay"
  * runs the offer round-trip ([ClinkOfferPayer]) to fetch a fresh BOLT-11 over Nostr,
- * then hands it to the existing wallet intent.
+ * then pays it through the user's default payment source (confirmed for in-app wallets,
+ * see [InvoicePaymentDispatcher]).
  */
 @Composable
 fun ClinkOfferPreview(
@@ -75,6 +75,7 @@ fun ClinkOfferPreview(
 
     var requesting by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var payingInvoice by remember { mutableStateOf<String?>(null) }
 
     errorMessage?.let {
         ErrorMessageDialog(
@@ -83,6 +84,13 @@ fun ClinkOfferPreview(
             onDismiss = { errorMessage = null },
         )
     }
+
+    InvoicePaymentDispatcher(
+        bolt11 = payingInvoice,
+        accountViewModel = accountViewModel,
+        onClear = { payingInvoice = null },
+        onError = { errorMessage = it },
+    )
 
     Column(
         modifier =
@@ -148,7 +156,7 @@ fun ClinkOfferPreview(
 
                         val bolt11 = response?.bolt11
                         when {
-                            bolt11 != null -> payViaIntent(bolt11, context, { }) { errorMessage = it }
+                            bolt11 != null -> payingInvoice = bolt11
                             response?.error != null -> errorMessage = response.error
                             else -> errorMessage = stringRes(context, R.string.error_dialog_pay_invoice_error)
                         }
