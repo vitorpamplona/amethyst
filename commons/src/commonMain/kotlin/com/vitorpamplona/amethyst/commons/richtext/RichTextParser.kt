@@ -134,38 +134,42 @@ class RichTextParser {
     ): String {
         if (urlList.isEmpty()) return input
 
-        // Escape and join words: (word1|word2)
-        val wordsPattern = urlList.sortedByDescending { it.length }.joinToString("|") { Regex.escape(it) }
+        // Walk the text, and wherever one of the detected URLs sits glued to a
+        // non-space/non-newline neighbour, insert a single separating space so the
+        // word-by-word segmenter downstream can recognise it as a standalone URL.
+        //
+        // This used to be a `Regex("([^ \n])?($escapedWords)([^ \n])?")` replace,
+        // but Kotlin/Native's regex engine mishandles the optional capture groups
+        // `([^ \n])?` (it fails to backtrack them to zero width), corrupting every
+        // URL on iOS — e.g. "https://x" came back as "h https://x". A direct scan
+        // sidesteps the engine entirely and is platform-independent.
+        //
+        // Longest-first so a URL that is a prefix of another never shadows it.
+        val urls = urlList.filter { it.isNotEmpty() }.sortedByDescending { it.length }
+        val result = StringBuilder(input.length)
+        var i = 0
+        while (i < input.length) {
+            val match = urls.firstOrNull { input.startsWith(it, i) }
+            if (match != null) {
+                // Separate from a glued prefix character.
+                val prev = result.lastOrNull()
+                if (prev != null && prev != ' ' && prev != '\n') result.append(' ')
 
-        // Regex breakdown:
-        // ([^ ])?          -> Group 1: Optional character that is NOT a space or new line (Prefix)
-        // ($wordsPattern)  -> Group 2: One of your target words
-        // ([^ ])?          -> Group 3: Optional character that is NOT a space or new line (Suffix)
-        val regex = Regex("([^ \n])?($wordsPattern)([^ \n])?")
+                result.append(match)
+                i += match.length
 
-        return regex.replace(input) { match ->
-            val prefix = match.groups[1]?.value ?: ""
-            val word = match.groups[2]?.value ?: ""
-            val suffix = match.groups[3]?.value ?: ""
-
-            val result = StringBuilder()
-
-            // Add prefix + space if the prefix exists
-            if (prefix.isNotEmpty()) {
-                result.append(prefix)
-                result.append(" ")
+                // Separate from a glued suffix character.
+                if (i < input.length) {
+                    val next = input[i]
+                    if (next != ' ' && next != '\n') result.append(' ')
+                }
+            } else {
+                result.append(input[i])
+                i++
             }
-
-            result.append(word)
-
-            // Add space + suffix if the suffix exists
-            if (suffix.isNotEmpty()) {
-                result.append(" ")
-                result.append(suffix)
-            }
-
-            result.toString()
         }
+
+        return result.toString()
     }
 
     fun parseText(
