@@ -2062,6 +2062,15 @@
     <string name="video_player_settings_action_pip_description">在浮动窗口播放视频(不支持时隐藏)</string>
     <string name="video_player_settings_action_cast">投射到设备</string>
     <string name="video_player_settings_action_cast_description">发送视频到您Wi-Fi上的 Chromecast 接收器(本地文件隐藏)</string>
+    <string name="audio_visualizer_settings">音频可视化</string>
+    <string name="audio_visualizer_settings_description">选择音频笔记播放时显示的动画。</string>
+    <string name="audio_visualizer_off">关</string>
+    <string name="audio_visualizer_bars">柱状频谱</string>
+    <string name="audio_visualizer_waves">彩色波形</string>
+    <string name="audio_visualizer_radial">辐射环</string>
+    <string name="audio_visualizer_aurora">极光</string>
+    <string name="audio_visualizer_classic">经典波形</string>
+    <string name="audio_visualizer_static">静态图像</string>
     <string name="profile_image_of_user">%1$s 的个人头像</string>
     <string name="relay_info">中继器 %1$s</string>
     <string name="expand_relay_list">展开中继列表</string>
