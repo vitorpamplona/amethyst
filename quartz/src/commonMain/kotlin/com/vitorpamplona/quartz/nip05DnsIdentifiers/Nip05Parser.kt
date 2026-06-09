@@ -43,6 +43,29 @@ class Nip05Parser {
             ?.jsonPrimitive
             ?.content
 
+    /**
+     * Reads a CLINK Offers pointer (`noffer1…`) from a NIP-05 `.well-known/nostr.json`,
+     * mirroring the `names` map. ShockNet's clink-demo advertises offers here keyed by the
+     * local name (queried as `?name=<name>`). The exact key shape is not yet a finalized
+     * spec, so a missing or differently-shaped `clink_offer` entry simply yields null.
+     */
+    fun parseClinkOffer(
+        nip05: Nip05Id,
+        json: String,
+    ): String? =
+        try {
+            Json
+                .parseToJsonElement(json)
+                .jsonObject["clink_offer"]
+                ?.jsonObject
+                ?.get(nip05.name)
+                ?.jsonPrimitive
+                ?.content
+                ?.takeIf { it.isNotBlank() }
+        } catch (_: Exception) {
+            null
+        }
+
     fun parseHexKeyAndRelays(
         nip05: Nip05Id,
         json: String,

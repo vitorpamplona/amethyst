@@ -33,10 +33,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -52,6 +54,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.nip01Core.UserInfo
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.model.User
@@ -63,6 +66,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.DrawPlayName
 import com.vitorpamplona.amethyst.ui.note.ObserveAndRenderNIP05VerifiedSymbol
+import com.vitorpamplona.amethyst.ui.note.creators.invoice.ClinkOfferPreview
 import com.vitorpamplona.amethyst.ui.note.lastSeenSentence
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -76,8 +80,11 @@ import com.vitorpamplona.amethyst.ui.theme.SpacedBy3dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser
+import com.vitorpamplona.quartz.experimental.clink.pointers.NOffer
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
 import com.vitorpamplona.quartz.nip39ExtIdentities.GitHubIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.IdentityClaimTag
 import com.vitorpamplona.quartz.nip39ExtIdentities.MastodonIdentity
@@ -87,6 +94,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val IDENTITY_ICON_CACHE_KEY = 0
 
@@ -217,6 +225,8 @@ fun DrawAdditionalInfo(
                     ?: userState?.info?.lud06?.trim()
             }
         DisplayLNAddress(lud16, baseUser, accountViewModel, nav)
+
+        DisplayClinkOffer(baseUser, user, accountViewModel)
 
         DisplayPaymentTargets(baseUser, accountViewModel)
 
@@ -377,3 +387,44 @@ fun getIdentityClaimDescription(identity: IdentityClaimTag): Int =
         is GitHubIdentity -> R.string.github
         else -> R.string.github
     }
+
+/**
+ * Shows a payable CLINK Offer card when the profile advertises one, preferring the
+ * kind-0 `clink_offer` field and falling back to the user's NIP-05 `.well-known`
+ * `clink_offer`. Paying zaps this profile (see [ClinkOfferPreview]).
+ */
+@Composable
+private fun DisplayClinkOffer(
+    baseUser: User,
+    userInfo: UserInfo,
+    accountViewModel: AccountViewModel,
+) {
+    val kind0Offer =
+        remember(userInfo) {
+            userInfo.info.clinkOffer()?.let { ClinkPointerParser.parse(it) as? NOffer }
+        }
+
+    var offer by remember(userInfo) { mutableStateOf(kind0Offer) }
+
+    val nip05 = userInfo.info.nip05
+    LaunchedEffect(kind0Offer, nip05) {
+        if (kind0Offer != null) {
+            offer = kind0Offer
+            return@LaunchedEffect
+        }
+        // Fall back to the NIP-05 .well-known clink_offer.
+        val id = nip05?.let { Nip05Id.parse(it) }
+        offer =
+            if (id != null) {
+                withContext(Dispatchers.IO) {
+                    accountViewModel.nip05ClientBuilder().loadClinkOffer(id)?.let { ClinkPointerParser.parse(it) as? NOffer }
+                }
+            } else {
+                null
+            }
+    }
+
+    offer?.let {
+        ClinkOfferPreview(it, accountViewModel, baseUser.pubkeyHex)
+    }
+}
