@@ -189,6 +189,37 @@ version. `quartz/` is protocol-only — no composables.
 ./gradlew spotlessApply
 ```
 
+## Dependency Licensing
+
+**MANDATORY whenever you introduce a new third-party dependency** — in *any*
+module (`quartz`, `commons`, `amethyst`, `desktopApp`, `cli`, `quic`,
+`nestsClient`, …), whether you add it to `gradle/libs.versions.toml` or to a
+module's `build.gradle.kts`: determine its license **before** wiring it in.
+Amethyst ships under the **MIT** license, so a copyleft dependency linked into a
+distributed artifact (APK, desktop binary) can force that artifact's
+combined-work terms onto the whole project.
+
+Verify against the dependency's actual `LICENSE`/`COPYING` file or its published
+POM — **not from memory**. Then classify and act:
+
+- **Permissive** (MIT, Apache-2.0, BSD, ISC, MPL-2.0, zlib, …) → **OK**,
+  proceed.
+- **LGPL, or GPL/EPL with a linking / Classpath exception** → **WARN.**
+  Acceptable to link (the exception keeps our own code MIT), but call it out in
+  your summary so the human knows. Confirm the exception actually exists in the
+  LICENSE text — don't assume it does.
+- **Stricter than LGPL** — GPL/AGPL **without** a linking exception, SSPL,
+  proprietary/commercial-only, or anything where the linking-exception check is
+  "no" → **STRONGLY WARN and STOP.** Do not add it silently. Surface it
+  prominently and **require an explicit call-out in the PR description** so a
+  maintainer makes the decision. Prefer a permissive alternative, a clean-room
+  implementation, or dropping the feature.
+
+For any GPL-family hit the decisive question is always **"is there a linking
+(LGPL/Classpath) exception?"** — that is what separates a WARN from a STOP.
+(Example: TarsosDSP, GPLv3 with no exception, was removed from `amethyst` and
+replaced with an in-house pitch shifter for exactly this reason.)
+
 ## Quartz KMP Structure
 
 Quartz uses expect/actual for platform-specific implementations (e.g. crypto
