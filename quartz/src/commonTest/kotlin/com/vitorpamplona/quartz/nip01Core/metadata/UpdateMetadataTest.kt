@@ -198,6 +198,27 @@ class UpdateMetadataTest {
     }
 
     @Test
+    fun clinkOfferRoundTrip() {
+        val noffer = "noffer1qqsxexampleclinkofferpointer"
+        val event = signer.sign(MetadataEvent.createNew(name = "Vitor", clinkOffer = noffer, createdAt = 1740669816))
+
+        // written into kind-0 content under the spec's `clink_offer` key
+        assertEquals(true, event.content.contains("\"clink_offer\":\"$noffer\""))
+
+        // and parses back out
+        val metadata = event.contactMetaData()
+        assertNotNull(metadata)
+        assertEquals(noffer, metadata.clinkOffer)
+        assertEquals(noffer, metadata.clinkOffer())
+    }
+
+    @Test
+    fun parseClinkOffer() {
+        val metadata = JsonMapper.fromJson<UserMetadata>("""{"name":"Test","clink_offer":"noffer1abc"}""")
+        assertEquals("noffer1abc", metadata.clinkOffer)
+    }
+
+    @Test
     fun parseBirthdayFull() {
         val json = """{"name":"Test","birthday":{"year":1990,"month":6,"day":15}}"""
         val metadata = JsonMapper.fromJson<UserMetadata>(json)

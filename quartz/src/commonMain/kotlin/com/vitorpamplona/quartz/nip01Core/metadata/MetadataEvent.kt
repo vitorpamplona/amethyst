@@ -88,6 +88,9 @@ class MetadataEvent(
         const val KIND = 0
         const val FIXED_D_TAG = ""
 
+        // CLINK Offers discovery key in kind-0 content (mirrors the NIP-05 `clink_offer` key).
+        const val CLINK_OFFER_PROPERTY = "clink_offer"
+
         fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, FIXED_D_TAG)
 
         fun createAddressATag(pubKey: HexKey): ATag = ATag(KIND, pubKey, FIXED_D_TAG, null)
@@ -127,6 +130,7 @@ class MetadataEvent(
             twitter: String? = null,
             mastodon: String? = null,
             github: String? = null,
+            clinkOffer: String? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<MetadataEvent>.() -> Unit = {},
         ): EventTemplate<MetadataEvent> {
@@ -145,6 +149,7 @@ class MetadataEvent(
                 lnAddress,
                 lnURL,
                 pronouns,
+                clinkOffer,
             )
 
             val newJsonObject = JsonObject(currentMetadata)
@@ -182,6 +187,7 @@ class MetadataEvent(
             twitter: String? = null,
             mastodon: String? = null,
             github: String? = null,
+            clinkOffer: String? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<MetadataEvent>.() -> Unit = {},
         ): EventTemplate<MetadataEvent> {
@@ -200,6 +206,7 @@ class MetadataEvent(
                 lnAddress,
                 lnURL,
                 pronouns,
+                clinkOffer,
             )
 
             val newJsonObject = JsonObject(currentMetadata)
@@ -233,6 +240,7 @@ class MetadataEvent(
             lnAddress: String? = null,
             lnURL: String? = null,
             pronouns: String? = null,
+            clinkOffer: String? = null,
         ) {
             name?.let { addIfNotBlank(currentMetadata, NameTag.TAG_NAME, it) }
             displayName?.let { addIfNotBlank(currentMetadata, DisplayNameTag.TAG_NAME, it) }
@@ -244,6 +252,7 @@ class MetadataEvent(
             nip05?.let { addIfNotBlank(currentMetadata, Nip05Tag.TAG_NAME, it) }
             lnAddress?.let { addIfNotBlank(currentMetadata, Lud16Tag.TAG_NAME, it) }
             lnURL?.let { addIfNotBlank(currentMetadata, Lud06Tag.TAG_NAME, it) }
+            clinkOffer?.let { addIfNotBlank(currentMetadata, CLINK_OFFER_PROPERTY, it) }
         }
 
         // For https://github.com/nostr-protocol/nips/pull/1770
