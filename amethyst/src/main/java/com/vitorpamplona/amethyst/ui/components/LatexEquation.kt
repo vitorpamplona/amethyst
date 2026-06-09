@@ -39,6 +39,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.commons.richtext.MathParser
 import ru.noties.jlatexmath.JLatexMathDrawable
 
 /**
@@ -58,6 +59,11 @@ fun LatexEquation(
     val density = LocalDensity.current
     val fontSize = LocalTextStyle.current.fontSize
 
+    // Inline math has no legitimate `\\` line break, so a doubled backslash is an
+    // over-escaped command (`\\ldots` → `\ldots`). Without this JLaTeXMath would
+    // read `\\` as a line break and render `ldots`/`cdots` as literal letters.
+    val formula = if (displayMode) latex else MathParser.collapseDoubledBackslashes(latex)
+
     // Display math renders a touch larger than the surrounding prose, matching
     // the visual weight KaTeX gives block equations.
     val textSizePx =
@@ -67,10 +73,10 @@ fun LatexEquation(
         }
 
     val drawable =
-        remember(latex, color, textSizePx) {
+        remember(formula, color, textSizePx) {
             runCatching {
                 JLatexMathDrawable
-                    .builder(latex)
+                    .builder(formula)
                     .textSize(textSizePx)
                     .color(color)
                     .align(JLatexMathDrawable.ALIGN_LEFT)
