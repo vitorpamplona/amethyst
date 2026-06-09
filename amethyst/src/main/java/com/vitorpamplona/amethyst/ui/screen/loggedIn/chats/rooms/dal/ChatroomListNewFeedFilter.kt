@@ -122,7 +122,7 @@ class ChatroomListNewFeedFilter(
                 if (room != null &&
                     (
                         newNote.author?.pubkeyHex != me.pubkeyHex &&
-                            room.senderIntersects(followingKeySet) &&
+                            !room.senderIntersects(followingKeySet) &&
                             !account.chatroomList.hasSentMessagesTo(roomKey)
                     ) &&
                     !account.isAllHidden(roomKey.users)

@@ -84,6 +84,7 @@ import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
+import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
@@ -106,8 +107,12 @@ fun ChatroomMessageCompose(
     onScrollToNote: ((Note) -> Unit)? = null,
     shouldHighlight: Boolean = false,
     onHighlightFinished: (() -> Unit)? = null,
+    // Replaces the generic "post not found" blank while baseNote's event hasn't loaded. Used for
+    // reply quotes inside a DM, where the target is simply older than the loaded window (see
+    // LoadingReplyNote). Null keeps the default blank for every other caller.
+    onBlank: (@Composable () -> Unit)? = null,
 ) {
-    WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel, nav) {
+    val onFound: @Composable () -> Unit = {
         WatchBlockAndReport(
             note = baseNote,
             showHiddenWarning = false,
@@ -139,6 +144,12 @@ fun ChatroomMessageCompose(
                 )
             }
         }
+    }
+
+    if (onBlank != null) {
+        WatchNoteEvent(baseNote = baseNote, onNoteEventFound = onFound, onBlank = onBlank, accountViewModel = accountViewModel)
+    } else {
+        WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel, nav = nav, onNoteEventFound = onFound)
     }
 }
 
@@ -396,9 +407,23 @@ private fun RenderReply(
                 }
             }
 
-        replyTo.value?.let { note ->
+        replyTo.value?.let { replyNote ->
+            // For a DM, a reply target that hasn't arrived isn't lost — it's older than the loaded
+            // window (and for gift wraps can't be fetched by id). Swap the generic blank for one that
+            // walks history backward until it surfaces. Pick the pager by the PARENT's protocol; leave
+            // public chats / marmot groups (not a DM event here) on the default blank.
+            val replyBlank: (@Composable () -> Unit)? =
+                when (note.event) {
+                    is ChatMessageEvent, is ChatMessageEncryptedFileHeaderEvent -> {
+                        { LoadingReplyNote(DmReplyProtocol.NIP17, accountViewModel) }
+                    }
+                    is PrivateDmEvent -> {
+                        { LoadingReplyNote(DmReplyProtocol.NIP04, accountViewModel) }
+                    }
+                    else -> null
+                }
             ChatroomMessageCompose(
-                baseNote = note,
+                baseNote = replyNote,
                 routeForLastRead = null,
                 innerQuote = true,
                 parentBackgroundColor = bgColor,
@@ -407,6 +432,7 @@ private fun RenderReply(
                 onWantsToReply = onWantsToReply,
                 onWantsToEditDraft = onWantsToEditDraft,
                 onScrollToNote = onScrollToNote,
+                onBlank = replyBlank,
             )
         }
     }

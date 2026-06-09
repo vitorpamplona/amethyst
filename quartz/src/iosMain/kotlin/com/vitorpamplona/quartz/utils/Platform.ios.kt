@@ -31,3 +31,5 @@ actual fun currentTimeSeconds(): Long {
     // NSDate().timeIntervalSince1970 returns seconds since 1970-01-01 00:00:00 UTC
     return (NSDate().timeIntervalSince1970).toLong()
 }
+
+actual fun currentTimeMillis(): Long = (NSDate().timeIntervalSince1970 * 1000).toLong()

@@ -36,9 +36,16 @@ class ChatroomQueryState(
 class ChatroomFilterAssembler(
     client: INostrClient,
 ) : ComposeSubscriptionManager<ChatroomQueryState>() {
+    // NIP-04 live tail: the recent week, always open at the top.
+    val nip04 = ChatroomNip04SubAssembler(client, ::allKeys)
+
+    // NIP-04 history: older DMs, paged backward by until+limit, independently of gift wraps.
+    val nip04History = ChatroomNip04HistorySubAssembler(client, ::allKeys)
+
     val group =
         listOf(
-            ChatroomFilterSubAssembler(client, ::allKeys),
+            nip04,
+            nip04History,
         )
 
     override fun invalidateKeys() = invalidateFilters()

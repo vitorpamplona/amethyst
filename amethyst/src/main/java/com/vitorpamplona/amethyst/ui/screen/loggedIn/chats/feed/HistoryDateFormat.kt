@@ -18,32 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed
 
-import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.alloc
-import kotlinx.cinterop.memScoped
-import kotlinx.cinterop.ptr
-import platform.posix.CLOCK_REALTIME
-import platform.posix.clock_gettime
-import platform.posix.timespec
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-actual fun platform() = "Linux"
-
-@OptIn(ExperimentalForeignApi::class)
-actual fun currentTimeSeconds(): Long {
-    memScoped {
-        val ts = alloc<timespec>()
-        clock_gettime(CLOCK_REALTIME, ts.ptr)
-        return ts.tv_sec
-    }
-}
-
-@OptIn(ExperimentalForeignApi::class)
-actual fun currentTimeMillis(): Long {
-    memScoped {
-        val ts = alloc<timespec>()
-        clock_gettime(CLOCK_REALTIME, ts.ptr)
-        return ts.tv_sec * 1000 + ts.tv_nsec / 1_000_000
-    }
-}
+/**
+ * The Android locale date formatter for the shared [com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryLoadingCard]
+ * — passed in so the shared (KMP) card carries no `java.time` dependency. Formats a paging reach point
+ * (epoch seconds) to a short month-year label, e.g. "Jun 2026".
+ */
+fun formatHistoryReachDate(epochSeconds: Long): String = SimpleDateFormat("MMM yyyy", Locale.getDefault()).format(Date(epochSeconds * 1000))

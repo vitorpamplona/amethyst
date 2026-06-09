@@ -22,8 +22,19 @@ package com.vitorpamplona.quartz.nip59Giftwrap
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
+/**
+ * A lightweight reference to the host event a [WrappedEvent] was extracted from — kept on the inner
+ * event so callers can broadcast / delete / locate the outer wrap without holding the full event.
+ *
+ * [createdAt] is the host's own `created_at` (e.g. the kind:1059 gift-wrap timestamp, randomized per
+ * NIP-59), carried here so a decrypted rumor self-describes its outer-wrap time. The history pager
+ * cursors page gift wraps by that outer time, so the prune path uses it to realign the per-relay
+ * download window when a wrapped message is pruned (the chatroom only keeps the inner rumor, whose
+ * `created_at` is the real message time, not the wrap time).
+ */
 class HostStub(
     val id: HexKey,
     val pubKey: HexKey,
     val kind: Int,
+    val createdAt: Long,
 )

@@ -18,28 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource
+package com.vitorpamplona.quartz.nip01Core.relay.client.paging
 
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
-
-class ChatroomFilterSubAssembler(
-    client: INostrClient,
-    allKeys: () -> Set<ChatroomQueryState>,
-) : PerUserAndFollowListEoseManager<ChatroomQueryState, String>(client, allKeys) {
-    override fun updateFilter(
-        key: ChatroomQueryState,
-        since: SincePerRelayMap?,
-    ): List<RelayBasedFilter>? =
-        if (key.account.isWriteable()) {
-            filterNip04DMs(key.room.users, key.account, since)
-        } else {
-            emptyList()
-        }
-
-    override fun user(key: ChatroomQueryState) = key.account.userProfile()
-
-    override fun list(key: ChatroomQueryState) = key.listId
-}
+/** How far back one relay has paged through its history, for a per-relay progress display. */
+data class RelayPagingProgress(
+    // The oldest createdAt this relay has loaded down to (its `until` cursor). This is the "loaded back
+    // to" point; it slides down (older) as the relay pages further back.
+    val reachedUntil: Long,
+    // The relay answered an empty page: it has nothing older, it has reached the bottom of its window.
+    val done: Boolean,
+    // The relay isn't answering right now (auth-walled CLOSE / unreachable / slow). It is NOT abandoned
+    // — its subscription stays open and it keeps trying to catch up — but it isn't currently advancing.
+    val stalled: Boolean,
+)

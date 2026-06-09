@@ -30,9 +30,10 @@ import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.WeakReference
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayLoadingCursors
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
-import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,6 +46,12 @@ class Chatroom : NotesGatherer {
     var subjectCreatedAt: Long? = null
     var ownerSentMessage: Boolean = false
     var newestMessage: Note? = null
+
+    // Per-conversation NIP-04 history paging cursors, held here so reopening this room keeps its
+    // progress and the cursors share the lifetime of the cached messages. The conversation history
+    // loader binds its (single-active) orchestrator to this. Lazy — most rooms in the rooms list are
+    // never opened for history paging, so they never allocate it.
+    val nip04History by lazy { RelayLoadingCursors() }
 
     // Per-instance lock shared by previously @Synchronized methods.
     private val syncLock = KmpLock()
@@ -132,13 +139,17 @@ class Chatroom : NotesGatherer {
         val sorted = messages.sortedWith(DefaultFeedOrder)
 
         val toKeep =
-            if ((sorted.firstOrNull()?.createdAt() ?: 0L) > TimeUtils.oneWeekAgo()) {
-                // Recent messages, keep last 100
-                sorted.take(100).toSet()
+            if ((sorted.firstOrNull()?.createdAt() ?: 0L) > DmHistoryTuning.recentBoundary()) {
+                // Recent conversation, keep its newest N
+                sorted.take(DmHistoryTuning.recentKeepCount).toSet()
             } else {
-                // Old messages, keep the last one.
+                // Old conversation, keep the last one.
                 sorted.take(1).toSet()
-            } + sorted.filter { it.flowSet?.isInUse() ?: false } + sorted.filter { it.event !is PrivateDmEvent }
+            } + sorted.filter { it.flowSet?.isInUse() ?: false } + sorted.filter { it.event !is PrivateDmEvent && it.event !is WrappedEvent }
+        // Both DM protocols are pruned by the recency rule above: NIP-04 (PrivateDmEvent) and NIP-17
+        // (WrappedEvent rumors — ChatMessageEvent / file headers). Anything else that ever lands in a
+        // room is kept. The caller realigns the per-relay download window for the dropped messages so
+        // they can be paged again later (see LocalCache.pruneOldMessages + RelayLoadingCursors.rewindTo).
 
         val toRemove = messages.minus(toKeep)
         messages = toKeep
