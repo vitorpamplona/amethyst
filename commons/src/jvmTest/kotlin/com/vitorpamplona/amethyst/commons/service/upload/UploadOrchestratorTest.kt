@@ -115,6 +115,7 @@ class UploadOrchestratorTest {
                     alt = null,
                     serverBaseUrl = "https://example.test",
                     signer = signer,
+                    quality = CompressionQuality.MEDIUM,
                 )
             }
             assertEquals(null, fake.lastUploadedFile, "must not call client.upload when reencoder refuses")

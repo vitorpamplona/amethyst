@@ -495,6 +495,7 @@ private fun passThroughMetadataHint(reason: PassReason): String =
         PassReason.Animated -> "Metadata preserved (animated — re-encode would drop frames)"
         PassReason.Vector -> "No raster metadata (SVG)"
         PassReason.BypassByUser -> "Metadata preserved per your override"
+        PassReason.NotAnImage -> "Metadata preserved (non-image — no re-encode applies)"
     }
 
 // ---------- zoom sub-dialog ----------
@@ -602,4 +603,5 @@ private fun passReasonBadge(reason: PassReason): String =
         PassReason.Animated -> "Animated · uploaded as-is"
         PassReason.Vector -> "Vector · uploaded as-is"
         PassReason.BypassByUser -> "Original · uploaded as-is"
+        PassReason.NotAnImage -> "Not an image · uploaded as-is"
     }

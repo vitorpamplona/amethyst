@@ -72,25 +72,32 @@ class UploadOrchestrator(
         serverBaseUrl: String,
         signer: NostrSigner,
         stripExif: Boolean = true,
-        quality: CompressionQuality = CompressionQuality.DEFAULT,
+        quality: CompressionQuality? = null,
         bypassReencode: Boolean = false,
         preCompressed: File? = null,
     ): UploadResult {
         var reencodedTemp: File? = null
         var strippedTemp: File? = null
         try {
-            // 1. Re-encode (or pass-through). Three branches:
+            // 1. Re-encode (or pass-through). Four branches:
             //    - preCompressed != null: the preview dialog already
             //      ran ImageReencoder and is handing off ownership of
             //      its temp file. Skip reencode, skip stripExif (the
             //      reencode already wiped EXIF), just upload + clean.
             //    - bypassReencode == true: user opted to send the
             //      original after a reencode failure or refusal.
-            //    - else: run the normal reencode path.
+            //    - quality == null: caller did not opt into the
+            //      desktop image-compression feature. Treat the file
+            //      as a pass-through — preserves old orchestrator
+            //      semantics for the CLI, Android, and any non-
+            //      image upload (voice memos, video, DM files).
+            //    - else: run the normal reencode path with the
+            //      caller-requested preset.
             val reencode =
                 when {
                     preCompressed != null -> ReencodeResult.Reencoded(preCompressed)
-                    bypassReencode -> ReencodeResult.PassThrough(ImageReencoder.PassReason.BypassByUser)
+                    bypassReencode || quality == null ->
+                        ReencodeResult.PassThrough(ImageReencoder.PassReason.BypassByUser)
                     else -> ImageReencoder.reencode(file, quality)
                 }
             val afterReencode =

@@ -94,7 +94,7 @@ object ImageReencoder {
                 ImageFormat.Svg -> return@withContext ReencodeResult.PassThrough(PassReason.Vector)
                 ImageFormat.Avif -> throw UnsupportedFormat("avif")
                 ImageFormat.Heic -> throw UnsupportedFormat("heic")
-                is ImageFormat.Unknown -> throw UnsupportedFormat(format.mimeType)
+                is ImageFormat.Unknown -> return@withContext ReencodeResult.PassThrough(PassReason.NotAnImage)
                 else -> { /* fall through to re-encode */ }
             }
             // 2) Decode with the pre-decode pixel guard + subsampling.
@@ -257,6 +257,15 @@ object ImageReencoder {
          * should be uploaded anyway.
          */
         BypassByUser,
+
+        /**
+         * Sniffer couldn't identify the bytes as any known image
+         * format. Common for voice memos, videos, plain-text
+         * attachments, and other non-image uploads that share the
+         * orchestrator path. Refusing them here would crash
+         * non-image upload flows (DM file send, voice messages).
+         */
+        NotAnImage,
     }
 
     /** Outcome of a [reencode] call. */
