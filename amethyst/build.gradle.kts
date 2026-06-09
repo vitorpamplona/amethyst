@@ -474,9 +474,6 @@ dependencies {
     // EXIF metadata stripping
     implementation(libs.androidx.exifinterface)
 
-    // Voice anonymization DSP
-    implementation(libs.tarsosdsp)
-
     // WebRTC for voice/video calls
     implementation(libs.stream.webrtc.android)
 

@@ -25,13 +25,6 @@ import android.media.MediaCodecInfo
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMuxer
-import be.tarsos.dsp.AudioDispatcher
-import be.tarsos.dsp.AudioEvent
-import be.tarsos.dsp.AudioProcessor
-import be.tarsos.dsp.WaveformSimilarityBasedOverlapAdd
-import be.tarsos.dsp.io.TarsosDSPAudioFloatConverter
-import be.tarsos.dsp.io.TarsosDSPAudioFormat
-import be.tarsos.dsp.resample.RateTransposer
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -57,9 +50,10 @@ data class AnonymizedResult(
 /**
  * Processes audio files to alter voice characteristics for privacy.
  *
- * Uses TarsosDSP's WSOLA (Waveform Similarity Overlap-Add) algorithm combined with
- * rate transposition to shift pitch while preserving duration. Note that in TarsosDSP,
- * pitch factors work inversely: factor < 1 raises pitch, factor > 1 lowers pitch.
+ * Uses the in-house [PitchShifter] (WSOLA time-stretch + resampling) to shift pitch
+ * while preserving duration. Preset pitch factors work inversely: factor < 1 raises
+ * pitch, factor > 1 lowers pitch — so the shifter receives the reciprocal as its
+ * output-to-input frequency ratio.
  */
 class VoiceAnonymizer {
     companion object {
@@ -73,7 +67,7 @@ class VoiceAnonymizer {
      *
      * The process involves three stages:
      * 1. Decode input audio to PCM (0-30% progress)
-     * 2. Apply pitch shifting with TarsosDSP (30-70% progress)
+     * 2. Apply pitch shifting with [PitchShifter] (30-70% progress)
      * 3. Encode processed audio to AAC (70-100% progress)
      *
      * @param inputFile Source audio file (supports formats decodable by MediaCodec)
@@ -102,7 +96,7 @@ class VoiceAnonymizer {
                     }
 
                 val processedPcm =
-                    processPcmWithTarsos(pcmData, preset, sampleRate) { progress ->
+                    applyPitchShift(pcmData, preset, sampleRate) { progress ->
                         onProgress(0.3f + progress * 0.4f)
                     }
 
@@ -292,7 +286,7 @@ class VoiceAnonymizer {
         release()
     }
 
-    private fun processPcmWithTarsos(
+    private fun applyPitchShift(
         pcmData: FloatArray,
         preset: VoicePreset,
         sampleRate: Int,
@@ -311,75 +305,13 @@ class VoiceAnonymizer {
                     baseFactor
                 }
             }
-        val totalSamples = pcmData.size
-        val processedSamples = ArrayList<Float>(totalSamples)
 
-        val wsola =
-            WaveformSimilarityBasedOverlapAdd(
-                WaveformSimilarityBasedOverlapAdd.Parameters.musicDefaults(
-                    factor,
-                    sampleRate.toDouble(),
-                ),
-            )
-        val rateTransposer = RateTransposer(factor)
-
-        val bufferSize = wsola.inputBufferSize
-        val overlap = wsola.overlap
-
-        val tarsosDspFormat =
-            TarsosDSPAudioFormat(
-                sampleRate.toFloat(),
-                16,
-                1,
-                true,
-                false,
-            )
-
-        val collector =
-            object : AudioProcessor {
-                override fun process(audioEvent: AudioEvent): Boolean {
-                    val buffer = audioEvent.floatBuffer
-                    for (i in 0 until audioEvent.bufferSize) {
-                        processedSamples.add(buffer[i])
-                    }
-                    return true
-                }
-
-                override fun processingFinished() {
-                    // No-op: no cleanup needed
-                }
-            }
-
-        val dispatcher =
-            AudioDispatcher(
-                FloatArrayAudioInputStream(pcmData, tarsosDspFormat, pcmData.size.toLong()),
-                bufferSize,
-                overlap,
-            )
-
-        wsola.setDispatcher(dispatcher)
-        dispatcher.addAudioProcessor(wsola)
-        dispatcher.addAudioProcessor(rateTransposer)
-        dispatcher.addAudioProcessor(collector)
-
-        var samplesProcessed = 0
-        val progressProcessor =
-            object : AudioProcessor {
-                override fun process(audioEvent: AudioEvent): Boolean {
-                    samplesProcessed += audioEvent.bufferSize
-                    onProgress((samplesProcessed.toFloat() / totalSamples).coerceIn(0f, 1f))
-                    return true
-                }
-
-                override fun processingFinished() {
-                    // No-op: no cleanup needed
-                }
-            }
-        dispatcher.addAudioProcessor(progressProcessor)
-
-        dispatcher.run()
-
-        return processedSamples.toFloatArray()
+        // Presets express factor inversely (factor > 1 lowers pitch), so the
+        // output-to-input frequency ratio is the reciprocal.
+        val frequencyRatio = 1.0 / factor
+        val shifted = PitchShifter(sampleRate).shift(pcmData, frequencyRatio)
+        onProgress(1f)
+        return shifted
     }
 
     private fun extractWaveform(
@@ -557,46 +489,5 @@ class VoiceAnonymizer {
             stop()
         }
         release()
-    }
-}
-
-private class FloatArrayAudioInputStream(
-    private val floatArray: FloatArray,
-    private val format: TarsosDSPAudioFormat,
-    private val frameLength: Long,
-) : be.tarsos.dsp.io.TarsosDSPAudioInputStream {
-    private var position = 0
-
-    override fun getFormat(): TarsosDSPAudioFormat = format
-
-    override fun getFrameLength(): Long = frameLength
-
-    override fun read(
-        buffer: ByteArray,
-        offset: Int,
-        length: Int,
-    ): Int {
-        val converter = TarsosDSPAudioFloatConverter.getConverter(format)
-        val floatBuffer = FloatArray(length / 2)
-        val samplesToRead = minOf(floatBuffer.size, floatArray.size - position)
-
-        if (samplesToRead <= 0) return -1
-
-        System.arraycopy(floatArray, position, floatBuffer, 0, samplesToRead)
-        position += samplesToRead
-
-        converter.toByteArray(floatBuffer, samplesToRead, buffer, offset)
-        return samplesToRead * 2
-    }
-
-    override fun skip(bytesToSkip: Long): Long {
-        val samplesToSkip = (bytesToSkip / 2).toInt()
-        val actualSkip = minOf(samplesToSkip, floatArray.size - position)
-        position += actualSkip
-        return actualSkip.toLong() * 2
-    }
-
-    override fun close() {
-        // No-op: no cleanup needed
     }
 }
