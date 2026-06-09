@@ -33,6 +33,8 @@
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Користите јавни кључ и јавни кључеви су само за читање. Пријавите се са приватним кључем да бисте могли да појачате постове</string>
     <string name="login_with_a_private_key_to_like_posts">Користите јавни кључ и јавни кључеви су само за читање. Пријавите се са приватним кључем да бисте лајковали постове</string>
     <string name="no_zap_amount_setup_long_press_to_change">Нема подешавања износа Зап. Дуго притисните да бисте променили</string>
+    <!-- A reply whose target was searched for across all reachable history and never found. -->
+    <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <!-- Call notifications and UI -->
     <!-- Settings search -->
     <!-- Settings search keywords: an English concept/protocol index that supplements the
