@@ -46,7 +46,15 @@ object AmethystTempDir {
     private const val PROP_OVERRIDE = "amethyst.tmp.dir"
     private const val ORPHAN_MAX_AGE_HOURS = 24L
 
-    private val root: File by lazy { resolveRoot().also { ensure(it) } }
+    private val root: File by lazy {
+        resolveRoot().also {
+            ensure(it)
+            // First access in this JVM session — sweep amethyst_* files
+            // older than ORPHAN_MAX_AGE_HOURS. Recovers temp space after
+            // a JVM crash that skipped shutdown hooks. Idempotent.
+            sweepOrphansAt(it)
+        }
+    }
 
     /**
      * Create a temp file under the per-user temp dir. Names follow
@@ -71,10 +79,12 @@ object AmethystTempDir {
      * Called once at app startup to clean up after JVM crashes that
      * skipped shutdown hooks. Returns the number of files removed.
      */
-    fun sweepOrphans(): Int {
+    fun sweepOrphans(): Int = sweepOrphansAt(root)
+
+    private fun sweepOrphansAt(dir: File): Int {
         val cutoff = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(ORPHAN_MAX_AGE_HOURS)
         var removed = 0
-        root.listFiles()?.forEach { f ->
+        dir.listFiles()?.forEach { f ->
             if (f.isFile && f.name.startsWith("amethyst_") && f.lastModified() < cutoff) {
                 if (f.delete()) removed++
             }

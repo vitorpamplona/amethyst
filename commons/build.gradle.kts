@@ -184,6 +184,15 @@ kotlin {
             }
         }
 
+        // jvmTest needs the JVM secp256k1 bindings whenever a test
+        // exercises a real signer (e.g. UploadOrchestratorTest, which
+        // signs Blossom auth events end-to-end).
+        getByName("jvmTest") {
+            dependencies {
+                implementation(libs.secp256k1.kmp.jni.jvm)
+            }
+        }
+
         getByName("androidDeviceTest") {
             dependencies {
                 implementation(libs.androidx.junit)
