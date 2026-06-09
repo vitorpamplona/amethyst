@@ -218,7 +218,7 @@ class WalletViewModel : ViewModel() {
     fun refreshWalletList() {
         val acc = account ?: return
         _wallets.value = acc.settings.nwcWallets.value
-        _defaultWalletId.value = acc.settings.defaultNwcWalletId.value
+        _defaultWalletId.value = acc.settings.defaultPaymentSourceId.value
         _hasWalletSetup.value = _wallets.value.isNotEmpty()
     }
 
@@ -258,7 +258,7 @@ class WalletViewModel : ViewModel() {
 
     fun setDefaultWallet(walletId: String) {
         val acc = account ?: return
-        acc.settings.setDefaultNwcWallet(walletId)
+        acc.settings.setDefaultPaymentSource(walletId)
         _defaultWalletId.value = walletId
     }
 

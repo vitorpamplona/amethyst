@@ -22,9 +22,12 @@ package com.vitorpamplona.amethyst.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
+import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatRepository
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatListRepository
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
+import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
+import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.ServerName
@@ -193,7 +196,10 @@ class AccountSettings(
     val defaultCommunitiesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
     val defaultFollowPacksFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val nwcWallets: MutableStateFlow<List<NwcWalletEntryNorm>> = MutableStateFlow(emptyList()),
-    val defaultNwcWalletId: MutableStateFlow<String?> = MutableStateFlow(null),
+    val clinkDebitWallets: MutableStateFlow<List<ClinkDebitWalletEntryNorm>> = MutableStateFlow(emptyList()),
+    // The unified default spend rail (an NWC wallet OR a CLINK debit). Persisted under a
+    // new key, migrated from the legacy NWC-only `defaultNwcWalletId`.
+    val defaultPaymentSourceId: MutableStateFlow<String?> = MutableStateFlow(null),
     var hideDeleteRequestDialog: Boolean = false,
     var hideBlockAlertDialog: Boolean = false,
     var hideNIP17WarningDialog: Boolean = false,
@@ -335,14 +341,17 @@ class AccountSettings(
         return false
     }
 
+    /** The selected default spend rail across both NWC wallets and CLINK debits. */
+    fun defaultPaymentSource(): PaymentSource? = PaymentSourceResolver.resolveDefault(nwcWallets.value, clinkDebitWallets.value, defaultPaymentSourceId.value)
+
+    /**
+     * The NWC wallet to use for NWC-only flows (balance display, mint top-up). Resolves
+     * the unified default when it points at an NWC wallet, otherwise falls back to the
+     * first NWC wallet so those flows keep working even when a debit is the zap default.
+     */
     fun defaultNwcWallet(): NwcWalletEntryNorm? {
-        val id = defaultNwcWalletId.value
         val wallets = nwcWallets.value
-        return if (id != null) {
-            wallets.firstOrNull { it.id == id }
-        } else {
-            wallets.firstOrNull()
-        }
+        return wallets.firstOrNull { it.id == defaultPaymentSourceId.value } ?: wallets.firstOrNull()
     }
 
     fun defaultZapPaymentRequest(): Nip47WalletConnect.Nip47URINorm? = defaultNwcWallet()?.uri
@@ -353,8 +362,10 @@ class AccountSettings(
             nwcWallets.tryEmit(nwcWallets.value.toMutableList().apply { set(existing, wallet) })
         } else {
             nwcWallets.tryEmit(nwcWallets.value + wallet)
-            if (nwcWallets.value.size == 1) {
-                defaultNwcWalletId.tryEmit(wallet.id)
+            // First configured source of any kind becomes the default; adding more never
+            // silently changes an existing default.
+            if (defaultPaymentSourceId.value == null) {
+                defaultPaymentSourceId.tryEmit(wallet.id)
             }
         }
         saveAccountSettings()
@@ -364,16 +375,68 @@ class AccountSettings(
     fun removeNwcWallet(walletId: String): Boolean {
         val wallets = nwcWallets.value.filter { it.id != walletId }
         nwcWallets.tryEmit(wallets)
-        if (defaultNwcWalletId.value == walletId) {
-            defaultNwcWalletId.tryEmit(wallets.firstOrNull()?.id)
+        reassignDefaultIfRemoved(walletId)
+        saveAccountSettings()
+        return true
+    }
+
+    fun addClinkDebitWallet(wallet: ClinkDebitWalletEntryNorm): Boolean {
+        val existing = clinkDebitWallets.value.indexOfFirst { it.id == wallet.id }
+        if (existing >= 0) {
+            clinkDebitWallets.tryEmit(clinkDebitWallets.value.toMutableList().apply { set(existing, wallet) })
+        } else {
+            clinkDebitWallets.tryEmit(clinkDebitWallets.value + wallet)
+            if (defaultPaymentSourceId.value == null) {
+                defaultPaymentSourceId.tryEmit(wallet.id)
+            }
         }
         saveAccountSettings()
         return true
     }
 
-    fun setDefaultNwcWallet(walletId: String): Boolean {
-        if (defaultNwcWalletId.value != walletId && nwcWallets.value.any { it.id == walletId }) {
-            defaultNwcWalletId.tryEmit(walletId)
+    fun removeClinkDebitWallet(walletId: String): Boolean {
+        clinkDebitWallets.tryEmit(clinkDebitWallets.value.filter { it.id != walletId })
+        reassignDefaultIfRemoved(walletId)
+        saveAccountSettings()
+        return true
+    }
+
+    fun renameClinkDebitWallet(
+        walletId: String,
+        newName: String,
+    ): Boolean {
+        val wallets = clinkDebitWallets.value.toMutableList()
+        val index = wallets.indexOfFirst { it.id == walletId }
+        if (index >= 0) {
+            wallets[index] = wallets[index].copy(name = newName)
+            clinkDebitWallets.tryEmit(wallets)
+            saveAccountSettings()
+            return true
+        }
+        return false
+    }
+
+    /** When the removed source was the default, fall back to the first remaining source. */
+    private fun reassignDefaultIfRemoved(walletId: String) {
+        if (defaultPaymentSourceId.value == walletId) {
+            defaultPaymentSourceId.tryEmit(PaymentSourceResolver.resolveDefault(nwcWallets.value, clinkDebitWallets.value, null)?.id)
+        }
+    }
+
+    /** Resets the default to the first remaining source if it no longer points at anything. */
+    private fun reassignDefaultIfMissing() {
+        val id = defaultPaymentSourceId.value ?: return
+        val exists = nwcWallets.value.any { it.id == id } || clinkDebitWallets.value.any { it.id == id }
+        if (!exists) {
+            defaultPaymentSourceId.tryEmit(PaymentSourceResolver.resolveDefault(nwcWallets.value, clinkDebitWallets.value, null)?.id)
+        }
+    }
+
+    /** Selects the unified default across both NWC wallets and CLINK debits. */
+    fun setDefaultPaymentSource(sourceId: String): Boolean {
+        val exists = nwcWallets.value.any { it.id == sourceId } || clinkDebitWallets.value.any { it.id == sourceId }
+        if (defaultPaymentSourceId.value != sourceId && exists) {
+            defaultPaymentSourceId.tryEmit(sourceId)
             saveAccountSettings()
             return true
         }
@@ -399,7 +462,7 @@ class AccountSettings(
         if (newServer == null) {
             if (nwcWallets.value.isNotEmpty()) {
                 nwcWallets.tryEmit(emptyList())
-                defaultNwcWalletId.tryEmit(null)
+                reassignDefaultIfMissing()
                 saveAccountSettings()
                 return true
             }
