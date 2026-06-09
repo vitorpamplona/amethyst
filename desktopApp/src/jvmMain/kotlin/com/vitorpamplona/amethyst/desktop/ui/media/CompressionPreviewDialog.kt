@@ -154,7 +154,7 @@ fun CompressionPreviewDialog(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     OutlinedButton(onClick = onCancel) {
-                        Text("Cancel")
+                        Text("Back")
                     }
                     Spacer(Modifier.width(8.dp))
                     Button(onClick = { onPublish(items, useOriginalPaths) }) {
