@@ -72,21 +72,21 @@ class PitchShifterTest {
     @Test
     fun `ratio of one preserves length`() {
         val input = sine(440.0)
-        val output = PitchShifter(sampleRate).shift(input, 1.0)
+        val output = PitchShifter().shift(input, 1.0)
         // Duration must be preserved (within a frame of tolerance).
         assertEquals(input.size.toDouble(), output.size.toDouble(), 4096.0)
     }
 
     @Test
     fun `shift up one octave roughly doubles the fundamental`() {
-        val output = PitchShifter(sampleRate).shift(sine(440.0), 2.0)
+        val output = PitchShifter().shift(sine(440.0), 2.0)
         val measured = estimateFrequency(output)
         assertEquals(880.0, measured, 880.0 * 0.06)
     }
 
     @Test
     fun `shift down one octave roughly halves the fundamental`() {
-        val output = PitchShifter(sampleRate).shift(sine(440.0), 0.5)
+        val output = PitchShifter().shift(sine(440.0), 0.5)
         val measured = estimateFrequency(output)
         assertEquals(220.0, measured, 220.0 * 0.06)
     }
@@ -95,7 +95,7 @@ class PitchShifterTest {
     fun `preserves duration for the deep preset ratio`() {
         // DEEP preset lowers pitch: frequencyRatio = 1 / 1.4.
         val input = sine(300.0)
-        val output = PitchShifter(sampleRate).shift(input, 1.0 / 1.4)
+        val output = PitchShifter().shift(input, 1.0 / 1.4)
         assertEquals(input.size.toDouble(), output.size.toDouble(), 4096.0)
         val measured = estimateFrequency(output)
         assertEquals(300.0 / 1.4, measured, (300.0 / 1.4) * 0.06)
@@ -105,7 +105,7 @@ class PitchShifterTest {
     fun `preserves duration for the high preset ratio`() {
         // HIGH preset raises pitch: frequencyRatio = 1 / 0.75.
         val input = sine(300.0)
-        val output = PitchShifter(sampleRate).shift(input, 1.0 / 0.75)
+        val output = PitchShifter().shift(input, 1.0 / 0.75)
         assertEquals(input.size.toDouble(), output.size.toDouble(), 4096.0)
         val measured = estimateFrequency(output)
         assertEquals(300.0 / 0.75, measured, (300.0 / 0.75) * 0.06)
@@ -113,7 +113,7 @@ class PitchShifterTest {
 
     @Test
     fun `empty input returns empty output`() {
-        val output = PitchShifter(sampleRate).shift(FloatArray(0), 1.5)
+        val output = PitchShifter().shift(FloatArray(0), 1.5)
         assertTrue(output.isEmpty())
     }
 }

@@ -26,11 +26,13 @@ import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMuxer
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.abs
 
@@ -95,10 +97,8 @@ class VoiceAnonymizer {
                         onProgress(progress * 0.3f)
                     }
 
-                val processedPcm =
-                    applyPitchShift(pcmData, preset, sampleRate) { progress ->
-                        onProgress(0.3f + progress * 0.4f)
-                    }
+                val processedPcm = applyPitchShift(pcmData, preset)
+                onProgress(0.7f)
 
                 val waveform = extractWaveform(processedPcm, sampleRate)
 
@@ -108,6 +108,10 @@ class VoiceAnonymizer {
 
                 onProgress(1f)
                 Result.success(AnonymizedResult(outputFile, waveform, duration))
+            } catch (e: CancellationException) {
+                // Let cancellation propagate so structured concurrency works (e.g. the
+                // upload screen being dismissed cancels this job).
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to anonymize audio", e)
                 Result.failure(e)
@@ -170,7 +174,10 @@ class VoiceAnonymizer {
             val inputBufferIndex = decoder.dequeueInputBuffer(10000)
             if (inputBufferIndex < 0) return
 
-            val inputBuffer = decoder.getInputBuffer(inputBufferIndex)!!
+            val inputBuffer =
+                requireNotNull(decoder.getInputBuffer(inputBufferIndex)) {
+                    "Decoder input buffer $inputBufferIndex was null (codec in async mode?)"
+                }
             val sampleSize = extractor.readSampleData(inputBuffer, 0)
 
             if (sampleSize < 0) {
@@ -226,7 +233,10 @@ class VoiceAnonymizer {
         }
 
         private fun extractPcmSamples(outputBufferIndex: Int) {
-            val outputBuffer = decoder.getOutputBuffer(outputBufferIndex)!!
+            val outputBuffer =
+                requireNotNull(decoder.getOutputBuffer(outputBufferIndex)) {
+                    "Decoder output buffer $outputBufferIndex was null (codec in async mode?)"
+                }
             val shortBuffer = outputBuffer.order(ByteOrder.nativeOrder()).asShortBuffer()
             while (shortBuffer.hasRemaining()) {
                 pcmSamples.add(shortBuffer.get() / 32768f)
@@ -289,8 +299,6 @@ class VoiceAnonymizer {
     private fun applyPitchShift(
         pcmData: FloatArray,
         preset: VoicePreset,
-        sampleRate: Int,
-        onProgress: (Float) -> Unit,
     ): FloatArray {
         val baseFactor = preset.pitchFactor
         val factor =
@@ -309,9 +317,7 @@ class VoiceAnonymizer {
         // Presets express factor inversely (factor > 1 lowers pitch), so the
         // output-to-input frequency ratio is the reciprocal.
         val frequencyRatio = 1.0 / factor
-        val shifted = PitchShifter(sampleRate).shift(pcmData, frequencyRatio)
-        onProgress(1f)
-        return shifted
+        return PitchShifter().shift(pcmData, frequencyRatio)
     }
 
     private fun extractWaveform(
@@ -353,7 +359,10 @@ class VoiceAnonymizer {
             val inputBufferIndex = encoder.dequeueInputBuffer(10000)
             if (inputBufferIndex < 0) return
 
-            val inputBuffer = encoder.getInputBuffer(inputBufferIndex)!!
+            val inputBuffer =
+                requireNotNull(encoder.getInputBuffer(inputBufferIndex)) {
+                    "Encoder input buffer $inputBufferIndex was null (codec in async mode?)"
+                }
             inputBuffer.clear()
 
             val samplesToWrite = minOf((inputBuffer.capacity() / 2), pcmData.size - inputOffset)
@@ -377,7 +386,7 @@ class VoiceAnonymizer {
 
         private fun queueSampleData(
             inputBufferIndex: Int,
-            inputBuffer: java.nio.ByteBuffer,
+            inputBuffer: ByteBuffer,
             samplesToWrite: Int,
         ) {
             writePcmSamplesToBuffer(inputBuffer, samplesToWrite)
@@ -388,7 +397,7 @@ class VoiceAnonymizer {
         }
 
         private fun writePcmSamplesToBuffer(
-            inputBuffer: java.nio.ByteBuffer,
+            inputBuffer: ByteBuffer,
             samplesToWrite: Int,
         ) {
             for (i in 0 until samplesToWrite) {
@@ -429,13 +438,16 @@ class VoiceAnonymizer {
         }
 
         private fun processOutputBuffer(outputBufferIndex: Int) {
-            val outputBuffer = encoder.getOutputBuffer(outputBufferIndex)!!
+            val outputBuffer =
+                requireNotNull(encoder.getOutputBuffer(outputBufferIndex)) {
+                    "Encoder output buffer $outputBufferIndex was null (codec in async mode?)"
+                }
             writeToMuxerIfReady(outputBuffer)
             encoder.releaseOutputBuffer(outputBufferIndex, false)
             checkForEndOfStream()
         }
 
-        private fun writeToMuxerIfReady(outputBuffer: java.nio.ByteBuffer) {
+        private fun writeToMuxerIfReady(outputBuffer: ByteBuffer) {
             if (isMuxerStarted && bufferInfo.size > 0) {
                 outputBuffer.position(bufferInfo.offset)
                 outputBuffer.limit(bufferInfo.offset + bufferInfo.size)
@@ -456,7 +468,7 @@ class VoiceAnonymizer {
             setInteger(MediaFormat.KEY_BIT_RATE, BIT_RATE)
         }
 
-    private fun encodePcmToAac(
+    private suspend fun encodePcmToAac(
         pcmData: FloatArray,
         sampleRate: Int,
         outputFile: File,
@@ -473,7 +485,7 @@ class VoiceAnonymizer {
             val inputFeeder = EncoderInputFeeder(encoder, pcmData, sampleRate, onProgress)
             val outputDrainer = EncoderOutputDrainer(encoder, muxer)
 
-            while (!outputDrainer.isDone) {
+            while (!outputDrainer.isDone && currentCoroutineContext().isActive) {
                 inputFeeder.feedInput()
                 outputDrainer.drainOutput()
             }

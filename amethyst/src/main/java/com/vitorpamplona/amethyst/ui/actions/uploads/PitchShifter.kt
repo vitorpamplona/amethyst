@@ -20,8 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.actions.uploads
 
-import kotlin.math.PI
-import kotlin.math.cos
+import com.vitorpamplona.amethyst.commons.audio.AudioWindow
 import kotlin.math.roundToInt
 
 /**
@@ -44,7 +43,6 @@ import kotlin.math.roundToInt
  * pitch factors are modest (~0.7x–1.5x).
  */
 class PitchShifter(
-    private val sampleRate: Int,
     /** Analysis/synthesis window length in samples. ~46 ms at 44.1 kHz. */
     private val frameSize: Int = 2048,
     /** Half-radius (in samples) of the WSOLA cross-correlation search. */
@@ -52,7 +50,7 @@ class PitchShifter(
 ) {
     private val synthesisHop = frameSize / 2
     private val overlap = frameSize - synthesisHop
-    private val window = hannWindow(frameSize)
+    private val window = AudioWindow.hann(frameSize)
 
     /**
      * Returns [input] pitch-shifted by [frequencyRatio] with the same length.
@@ -177,9 +175,4 @@ class PitchShifter(
         }
         return out
     }
-
-    private fun hannWindow(size: Int): FloatArray =
-        FloatArray(size) { i ->
-            (0.5 * (1.0 - cos(2.0 * PI * i / (size - 1)))).toFloat()
-        }
 }
