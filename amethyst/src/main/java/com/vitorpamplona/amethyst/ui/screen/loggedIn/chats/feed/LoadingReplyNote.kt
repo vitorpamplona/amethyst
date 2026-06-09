@@ -49,13 +49,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.relayClient.paging.PagingStatus
 import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryRelayDialog
 import com.vitorpamplona.amethyst.commons.ui.feeds.historySubtitle
 import com.vitorpamplona.amethyst.commons.ui.feeds.incompleteSubtitle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayPagingProgress
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -102,30 +101,10 @@ fun LoadingReplyNote(
             DmReplyProtocol.NIP17 -> giftWrapsHistory.loadingMore
             DmReplyProtocol.NIP04 -> nip04History.loadingMore
         }
-    val exhaustedFlow: StateFlow<Boolean> =
+    val statusFlow: StateFlow<PagingStatus> =
         when (protocol) {
-            DmReplyProtocol.NIP17 -> giftWrapsHistory.exhausted
-            DmReplyProtocol.NIP04 -> nip04History.exhausted
-        }
-    val relayCountFlow: StateFlow<Int> =
-        when (protocol) {
-            DmReplyProtocol.NIP17 -> giftWrapsHistory.relayCount
-            DmReplyProtocol.NIP04 -> nip04History.relayCount
-        }
-    val stalledCountFlow: StateFlow<Int> =
-        when (protocol) {
-            DmReplyProtocol.NIP17 -> giftWrapsHistory.stalledCount
-            DmReplyProtocol.NIP04 -> nip04History.stalledCount
-        }
-    val reachedBackFlow: StateFlow<Long?> =
-        when (protocol) {
-            DmReplyProtocol.NIP17 -> giftWrapsHistory.reachedBack
-            DmReplyProtocol.NIP04 -> nip04History.reachedBack
-        }
-    val relayProgressFlow: StateFlow<Map<NormalizedRelayUrl, RelayPagingProgress>> =
-        when (protocol) {
-            DmReplyProtocol.NIP17 -> giftWrapsHistory.relayProgress
-            DmReplyProtocol.NIP04 -> nip04History.relayProgress
+            DmReplyProtocol.NIP17 -> giftWrapsHistory.status
+            DmReplyProtocol.NIP04 -> nip04History.status
         }
     val protocolTag =
         when (protocol) {
@@ -133,17 +112,19 @@ fun LoadingReplyNote(
             DmReplyProtocol.NIP04 -> "NIP-04"
         }
 
-    val exhausted by exhaustedFlow.collectAsStateWithLifecycle()
-    val relayCount by relayCountFlow.collectAsStateWithLifecycle()
-    val stalledCount by stalledCountFlow.collectAsStateWithLifecycle()
-    val reachedBack by reachedBackFlow.collectAsStateWithLifecycle()
-    val relayProgress by relayProgressFlow.collectAsStateWithLifecycle()
+    // One snapshot collector instead of five; the fields below are plain reads off it (downstream unchanged).
+    val status by statusFlow.collectAsStateWithLifecycle()
+    val exhausted = status.exhausted
+    val relayCount = status.relayCount
+    val stalledCount = status.stalledCount
+    val reachedBack = status.reachedBack
+    val relayProgress = status.relayProgress
 
-    LaunchedEffect(protocol, loadingFlow, exhaustedFlow) {
+    LaunchedEffect(protocol, loadingFlow, statusFlow) {
         // Step the next, older page whenever the previous one has settled and history isn't exhausted.
         // The target may surface mid-page (this composable then leaves composition and cancels us); if
         // not, we keep walking until the protocol bottoms out and the filter stops passing.
-        combine(loadingFlow, exhaustedFlow) { loading, exhaustedNow -> !loading && !exhaustedNow }
+        combine(loadingFlow, statusFlow) { loading, s -> !loading && !s.exhausted }
             .distinctUntilChanged()
             .filter { it }
             .collect {

@@ -66,7 +66,7 @@ class BackwardRelayPagerTest {
     @Test
     fun firstPageRequestsTheFloorAndAnEmptyPageIsCaughtUp() {
         val (p, cursors) = pagerOf(r1)
-        assertFalse(p.exhausted.value)
+        assertFalse(p.status.value.exhausted)
 
         assertTrue(p.advance(r1))
         // The very first page asks `until = floor` (pinned on the bound cursors).
@@ -75,12 +75,12 @@ class BackwardRelayPagerTest {
         // Empty page + EOSE → that relay is done; the only relay is done → genuinely caught up.
         assertTrue(p.onEose(r1))
         assertTrue(
-            p.relayProgress.value
+            p.status.value.relayProgress
                 .getValue(r1)
                 .done,
         )
-        assertTrue(p.exhausted.value)
-        assertEquals(0, p.stalledCount.value)
+        assertTrue(p.status.value.exhausted)
+        assertEquals(0, p.status.value.stalledCount)
     }
 
     @Test
@@ -94,12 +94,12 @@ class BackwardRelayPagerTest {
         p.onEvent(r1, 90)
         assertFalse(p.onEose(r1))
         assertFalse(
-            p.relayProgress.value
+            p.status.value.relayProgress
                 .getValue(r1)
                 .done,
         )
-        assertEquals(80L, p.reachedBack.value)
-        assertFalse(p.exhausted.value)
+        assertEquals(80L, p.status.value.reachedBack)
+        assertFalse(p.status.value.exhausted)
 
         // The next page must start strictly below the oldest reached (80 → until 79).
         assertTrue(p.advance(r1))
@@ -107,8 +107,8 @@ class BackwardRelayPagerTest {
 
         // Empty page now → done → caught up.
         assertTrue(p.onEose(r1))
-        assertTrue(p.exhausted.value)
-        assertEquals(0, p.stalledCount.value)
+        assertTrue(p.status.value.exhausted)
+        assertEquals(0, p.status.value.stalledCount)
     }
 
     @Test
@@ -119,24 +119,24 @@ class BackwardRelayPagerTest {
 
         // r1 genuinely bottoms out; r2 is still pending, so not exhausted yet.
         p.onEose(r1)
-        assertFalse(p.exhausted.value)
+        assertFalse(p.status.value.exhausted)
 
         // r2 auth-walls the REQ → stalled (kept, not done).
         p.onClosed(r2, "auth-required")
         assertTrue(
-            p.relayProgress.value
+            p.status.value.relayProgress
                 .getValue(r2)
                 .stalled,
         )
         assertFalse(
-            p.relayProgress.value
+            p.status.value.relayProgress
                 .getValue(r2)
                 .done,
         )
 
         // Every relay is now done-or-stalled → exhausted, but it is INCOMPLETE: one relay unreachable.
-        assertTrue(p.exhausted.value)
-        assertEquals(1, p.stalledCount.value)
+        assertTrue(p.status.value.exhausted)
+        assertEquals(1, p.status.value.stalledCount)
     }
 
     @Test
@@ -145,12 +145,12 @@ class BackwardRelayPagerTest {
         p.advance(r1)
         p.onCannotConnect(r1, "offline")
         assertTrue(
-            p.relayProgress.value
+            p.status.value.relayProgress
                 .getValue(r1)
                 .stalled,
         )
-        assertTrue(p.exhausted.value)
-        assertEquals(1, p.stalledCount.value)
+        assertTrue(p.status.value.exhausted)
+        assertEquals(1, p.status.value.stalledCount)
     }
 
     @Test
@@ -158,18 +158,18 @@ class BackwardRelayPagerTest {
         val (p, _) = pagerOf(r1)
         p.advance(r1)
         p.onClosed(r1, "auth-required")
-        assertTrue(p.exhausted.value)
-        assertEquals(1, p.stalledCount.value)
+        assertTrue(p.status.value.exhausted)
+        assertEquals(1, p.status.value.stalledCount)
 
         // Retrying it re-arms the relay: no longer stalled, no longer exhausted.
         assertTrue(p.advance(r1))
         assertFalse(
-            p.relayProgress.value
+            p.status.value.relayProgress
                 .getValue(r1)
                 .stalled,
         )
-        assertFalse(p.exhausted.value)
-        assertEquals(0, p.stalledCount.value)
+        assertFalse(p.status.value.exhausted)
+        assertEquals(0, p.status.value.stalledCount)
     }
 
     @Test
@@ -185,7 +185,7 @@ class BackwardRelayPagerTest {
         p.onEose(r2) // r2 reached 300
 
         // Deepest = the oldest point any relay has reached.
-        assertEquals(300L, p.reachedBack.value)
+        assertEquals(300L, p.status.value.reachedBack)
     }
 
     @Test
@@ -219,25 +219,25 @@ class BackwardRelayPagerTest {
         p.advance(r2)
         p.onEose(r1)
         p.onClosed(r2, "auth-required")
-        assertTrue(p.exhausted.value)
-        assertEquals(1, p.stalledCount.value)
+        assertTrue(p.status.value.exhausted)
+        assertEquals(1, p.status.value.stalledCount)
 
         // Bind to a fresh scope B: the flows reflect B's own (empty) state — nothing stalled, and its
         // reach sits at B's floor (no history fetched yet — markers start at the live-tail boundary).
         p.bind(cursorsB, scope) { listOf(r3) }
-        assertFalse(p.exhausted.value)
-        assertEquals(0, p.stalledCount.value)
-        assertEquals(cursorsB.floor, p.reachedBack.value)
+        assertFalse(p.status.value.exhausted)
+        assertEquals(0, p.status.value.stalledCount)
+        assertEquals(cursorsB.floor, p.status.value.reachedBack)
 
         // Rebind to A: r1 is still DONE (its cursor persisted on cursorsA), but r2's stall is gone — stall
         // is transient, so r2 is pending again and A is no longer exhausted (it will retry the auth relay).
         p.bind(cursorsA, scope) { listOf(r1, r2) }
         assertTrue(
-            p.relayProgress.value
+            p.status.value.relayProgress
                 .getValue(r1)
                 .done,
         )
-        assertEquals(0, p.stalledCount.value)
-        assertFalse(p.exhausted.value)
+        assertEquals(0, p.status.value.stalledCount)
+        assertFalse(p.status.value.exhausted)
     }
 }

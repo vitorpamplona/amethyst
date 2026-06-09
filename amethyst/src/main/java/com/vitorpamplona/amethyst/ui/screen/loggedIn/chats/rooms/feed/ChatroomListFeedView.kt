@@ -39,6 +39,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
+import com.vitorpamplona.amethyst.commons.relayClient.paging.PagingStatus
 import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryLoadingCard
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
@@ -110,9 +111,9 @@ private fun CrossFadeState(
     // not "no conversations" — keep the spinner up rather than flash empty.
     val giftWrapsHistory = remember(accountViewModel) { accountViewModel.dataSources().account.giftWrapsHistory }
     val nip04History = remember(accountViewModel) { accountViewModel.dataSources().chatroomList.nip04History }
-    val giftWrapsExhausted by giftWrapsHistory.exhausted.collectAsStateWithLifecycle()
-    val nip04Exhausted by nip04History.exhausted.collectAsStateWithLifecycle()
-    val historyExhausted = giftWrapsExhausted && nip04Exhausted
+    val giftWrapsStatus by giftWrapsHistory.status.collectAsStateWithLifecycle()
+    val nip04Status by nip04History.status.collectAsStateWithLifecycle()
+    val historyExhausted = giftWrapsStatus.exhausted && nip04Status.exhausted
 
     // A *genuinely* empty list has no rows to host the per-relay window-limit markers, so we step every
     // relay one page at a time to hunt for the first rooms. Gated on FeedState.Empty only (never the
@@ -120,8 +121,8 @@ private fun CrossFadeState(
     // already loaded does NOT kick a hunt. Once rooms appear the markers take over, demand-driven.
     val user = accountViewModel.userProfile()
     val bootstrap = feedState is FeedState.Empty
-    BootstrapHistoryWhenEmpty(bootstrap, giftWrapsHistory.loadingMore, giftWrapsHistory.exhausted) { giftWrapsHistory.advanceAll() }
-    BootstrapHistoryWhenEmpty(bootstrap, nip04History.loadingMore, nip04History.exhausted) { nip04History.advanceAll() }
+    BootstrapHistoryWhenEmpty(bootstrap, giftWrapsHistory.loadingMore, giftWrapsHistory.status) { giftWrapsHistory.advanceAll() }
+    BootstrapHistoryWhenEmpty(bootstrap, nip04History.loadingMore, nip04History.status) { nip04History.advanceAll() }
 
     CrossfadeIfEnabled(
         targetState = feedState,
@@ -167,21 +168,11 @@ private fun FeedLoaded(
     val nip04History = remember(accountViewModel) { accountViewModel.dataSources().chatroomList.nip04History }
     val loadingGiftWraps by giftWrapsHistory.loadingMore.collectAsStateWithLifecycle()
     val loadingNip04 by nip04History.loadingMore.collectAsStateWithLifecycle()
-    val giftWrapsExhausted by giftWrapsHistory.exhausted.collectAsStateWithLifecycle()
-    val nip04Exhausted by nip04History.exhausted.collectAsStateWithLifecycle()
+    // One atomic snapshot per protocol (exhausted + relays + reached + per-relay progress) instead of six
+    // separate collectors — the status card and the per-relay markers read all of it together anyway.
+    val giftWrapsStatus by giftWrapsHistory.status.collectAsStateWithLifecycle()
+    val nip04Status by nip04History.status.collectAsStateWithLifecycle()
     val user = accountViewModel.userProfile()
-
-    // One status card PER protocol, at that protocol's oldest loaded room: it shows what the app is
-    // reaching for (relays + how far back it has paged) while it loads, then crossfades to "All caught
-    // up" and collapses when it runs dry.
-    val giftWrapsRelays by giftWrapsHistory.relayCount.collectAsStateWithLifecycle()
-    val giftWrapsStalled by giftWrapsHistory.stalledCount.collectAsStateWithLifecycle()
-    val giftWrapsReached by giftWrapsHistory.reachedBack.collectAsStateWithLifecycle()
-    val nip04Relays by nip04History.relayCount.collectAsStateWithLifecycle()
-    val nip04Stalled by nip04History.stalledCount.collectAsStateWithLifecycle()
-    val nip04Reached by nip04History.reachedBack.collectAsStateWithLifecycle()
-    val giftWrapsProgress by giftWrapsHistory.relayProgress.collectAsStateWithLifecycle()
-    val nip04Progress by nip04History.relayProgress.collectAsStateWithLifecycle()
     val nip17Name = stringResource(R.string.chats_history_proto_nip17)
     val nip04Name = stringResource(R.string.chats_history_proto_nip04)
     val oldestNip17Index = items.list.indexOfLast { it.event is ChatroomKeyable && it.event !is PrivateDmEvent }
@@ -192,15 +183,15 @@ private fun FeedLoaded(
     // marker is on screen and keeps paging while it stays there, so a spam-dense relay never floods —
     // you have to scroll through its messages to pull more. A protocol drops out once exhausted.
     val limits =
-        remember(giftWrapsProgress, nip04Progress, giftWrapsExhausted, nip04Exhausted, user) {
+        remember(giftWrapsStatus, nip04Status, user) {
             buildList {
-                if (!giftWrapsExhausted) {
-                    giftWrapsProgress.forEach { (relay, p) ->
+                if (!giftWrapsStatus.exhausted) {
+                    giftWrapsStatus.relayProgress.forEach { (relay, p) ->
                         add(RelayReachCursor("17:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p), "NIP-17") { giftWrapsHistory.advance(relay) })
                     }
                 }
-                if (!nip04Exhausted) {
-                    nip04Progress.forEach { (relay, p) ->
+                if (!nip04Status.exhausted) {
+                    nip04Status.relayProgress.forEach { (relay, p) ->
                         add(RelayReachCursor("04:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p), "NIP-04") { nip04History.advance(relay) })
                     }
                 }
@@ -242,10 +233,10 @@ private fun FeedLoaded(
             // Rendered unconditionally at the protocol's oldest room so the card can run its own
             // "All caught up" crossfade-and-collapse when that protocol exhausts.
             if (index == oldestNip17Index) {
-                DmHistoryLoadingCard(nip17Name, "NIP-17", loadingGiftWraps, giftWrapsExhausted, giftWrapsRelays, giftWrapsStalled, giftWrapsReached, giftWrapsProgress, ::formatHistoryReachDate)
+                DmHistoryLoadingCard(nip17Name, "NIP-17", loadingGiftWraps, giftWrapsStatus.exhausted, giftWrapsStatus.relayCount, giftWrapsStatus.stalledCount, giftWrapsStatus.reachedBack, giftWrapsStatus.relayProgress, ::formatHistoryReachDate)
             }
             if (index == oldestNip04Index) {
-                DmHistoryLoadingCard(nip04Name, "NIP-04", loadingNip04, nip04Exhausted, nip04Relays, nip04Stalled, nip04Reached, nip04Progress, ::formatHistoryReachDate)
+                DmHistoryLoadingCard(nip04Name, "NIP-04", loadingNip04, nip04Status.exhausted, nip04Status.relayCount, nip04Status.stalledCount, nip04Status.reachedBack, nip04Status.relayProgress, ::formatHistoryReachDate)
             }
 
             // Per-relay window-limit markers/sentinels belonging in the gap toward the next-older room:
@@ -272,13 +263,13 @@ private fun FeedLoaded(
 private fun BootstrapHistoryWhenEmpty(
     active: Boolean,
     loadingMore: StateFlow<Boolean>,
-    exhausted: StateFlow<Boolean>,
+    status: StateFlow<PagingStatus>,
     advanceAll: () -> Unit,
 ) {
-    LaunchedEffect(active, loadingMore, exhausted) {
+    LaunchedEffect(active, loadingMore, status) {
         if (!active) return@LaunchedEffect
         delay(BOOTSTRAP_DEBOUNCE_MS)
-        combine(loadingMore, exhausted) { loading, exhaustedNow -> !loading && !exhaustedNow }
+        combine(loadingMore, status) { loading, s -> !loading && !s.exhausted }
             .distinctUntilChanged()
             .filter { it }
             .collect { advanceAll() }

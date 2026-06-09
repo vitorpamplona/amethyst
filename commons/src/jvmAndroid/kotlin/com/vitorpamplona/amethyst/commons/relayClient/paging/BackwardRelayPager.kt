@@ -33,6 +33,26 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.ConcurrentHashMap
 
 /**
+ * Atomic snapshot of a [BackwardRelayPager]'s display state. Every field is recomputed together in one
+ * pass ([BackwardRelayPager.status]'s producer), so a consumer collects ONE flow and never sees a torn
+ * mix (e.g. an updated [relayCount] against a still-stale [relayProgress]) or pays for several separate
+ * recompositions per page settle. [BackwardRelayPager.loadingMore] is deliberately NOT folded in here: it
+ * is debounced on its own timer in the load tracker, decoupled from this recompute.
+ */
+data class PagingStatus(
+    // Nothing more reachable right now: every relay is done or stalled. See the pager doc — not "caught up".
+    val exhausted: Boolean = false,
+    // Relays currently fetching a page (for an "asking N relays" status line).
+    val relayCount: Int = 0,
+    // Not-done relays that can't be reached right now (auth CLOSE / unreachable / silent).
+    val stalledCount: Int = 0,
+    // Oldest `createdAt` reached across all relays (the deepest cursor), or null before any delivery.
+    val reachedBack: Long? = null,
+    // Per-relay window position (reached / done / stalled) — what a caller's per-relay progress UI renders.
+    val relayProgress: Map<NormalizedRelayUrl, RelayPagingProgress> = emptyMap(),
+)
+
+/**
  * Reusable **per-relay backward pagination** engine: pages a set of relays back through history,
  * **one page at a time, per relay, on demand**, by `until`+`limit` ([RelayLoadingCursors]) — with each
  * relay advancing independently the moment *it* settles, never paced by the slowest one.
@@ -44,8 +64,8 @@ import java.util.concurrent.ConcurrentHashMap
  * scope (e.g. the one the user is viewing), so a backgrounded scope produces no callbacks to mis-route.
  *
  * What it owns (all transient, recomputed on each [bind]): the in-flight + silence tracking
- * ([PerRelayLoadTracker]), the stalled-relay set, and the display [StateFlow]s ([relayProgress],
- * [exhausted], [reachedBack], [relayCount], [stalledCount]). The persistent cursors and the pinned
+ * ([PerRelayLoadTracker]), the stalled-relay set, and the display flows — one atomic [status] snapshot
+ * ([PagingStatus]) plus the separately-debounced [loadingMore]. The persistent cursors and the pinned
  * history floor live on the bound [RelayLoadingCursors].
  *
  * What it does NOT own (the caller supplies these — they are protocol- and framework-specific):
@@ -92,33 +112,18 @@ class BackwardRelayPager(
     // and recomputed on each [bind]; a stalled relay is kept (its sub stays open) and retried on advance.
     private val stalledRelays = ConcurrentHashMap.newKeySet<NormalizedRelayUrl>()
 
-    /** True while any relay is mid-page. Starts false (an idle engine isn't "loading"). */
+    /**
+     * True while any relay is mid-page. Starts false (an idle engine isn't "loading"). Kept apart from
+     * [status] on purpose: the load tracker debounces this flow's falling edge on its own timer, decoupled
+     * from the [publishStatus] recompute, so folding it into the snapshot would miss that delayed flip.
+     */
     val loadingMore: StateFlow<Boolean> = loadTracker.loading
 
-    private val _exhausted = MutableStateFlow(false)
+    private val _status = MutableStateFlow(PagingStatus())
 
-    /** Nothing more reachable right now: every relay is done or stalled. See class doc — not "caught up". */
-    val exhausted: StateFlow<Boolean> = _exhausted.asStateFlow()
-
-    private val _relayCount = MutableStateFlow(0)
-
-    /** Relays currently fetching a page (for an "asking N relays" status line). */
-    val relayCount: StateFlow<Int> = _relayCount.asStateFlow()
-
-    private val _stalledCount = MutableStateFlow(0)
-
-    /** Not-done relays that can't be reached right now (auth CLOSE / unreachable / silent). */
-    val stalledCount: StateFlow<Int> = _stalledCount.asStateFlow()
-
-    private val _reachedBack = MutableStateFlow<Long?>(null)
-
-    /** Oldest `createdAt` reached across all relays (the deepest cursor), or null before any delivery. */
-    val reachedBack: StateFlow<Long?> = _reachedBack.asStateFlow()
-
-    private val _relayProgress = MutableStateFlow<Map<NormalizedRelayUrl, RelayPagingProgress>>(emptyMap())
-
-    /** Per-relay window position (reached / done / stalled) — what a caller's per-relay progress UI renders. */
-    val relayProgress: StateFlow<Map<NormalizedRelayUrl, RelayPagingProgress>> = _relayProgress.asStateFlow()
+    /** One atomic snapshot of the display state (exhausted / counts / reached / per-relay progress), all
+     * recomputed together in [publishStatus] so consumers collect ONE flow and never see a torn mix. */
+    val status: StateFlow<PagingStatus> = _status.asStateFlow()
 
     // The session-pinned floor for the active scope — kept on its cursors so it persists with the scope
     // and does not drift forward on recompute (which would re-trigger an undelivered relay's loader).
@@ -144,8 +149,7 @@ class BackwardRelayPager(
         loadTracker.bind(scope)
         loadTracker.reset()
         stalledRelays.clear()
-        updateStatus()
-        recomputeExhausted()
+        publishStatus()
     }
 
     /**
@@ -170,8 +174,7 @@ class BackwardRelayPager(
     /** Steps a single [relay] to its next, older page. @return true if it actually advanced. */
     fun advance(relay: NormalizedRelayUrl): Boolean {
         if (!arm(relay)) return false
-        _exhausted.value = false
-        updateStatus()
+        publishStatus()
         return true
     }
 
@@ -180,10 +183,7 @@ class BackwardRelayPager(
         val relays = relaysFor() ?: return false
         var any = false
         relays.forEach { if (arm(it)) any = true }
-        if (any) {
-            _exhausted.value = false
-            updateStatus()
-        }
+        if (any) publishStatus()
         return any
     }
 
@@ -219,8 +219,7 @@ class BackwardRelayPager(
         c.onEose(relay)
         loadTracker.onSettled(relay)
         val done = c.isDone(relay)
-        updateStatus()
-        recomputeExhausted()
+        publishStatus()
         return done
     }
 
@@ -231,8 +230,7 @@ class BackwardRelayPager(
     ) {
         loadTracker.onSettled(relay)
         markStalled(relay, "CLOSED: $message")
-        updateStatus()
-        recomputeExhausted()
+        publishStatus()
     }
 
     /** [relay] is unreachable right now: settle it and flag it stalled (kept, retryable). */
@@ -242,16 +240,14 @@ class BackwardRelayPager(
     ) {
         loadTracker.onSettled(relay)
         markStalled(relay, "cannot connect: $message")
-        updateStatus()
-        recomputeExhausted()
+        publishStatus()
     }
 
     // The tracker's silence watchdog fired: the still-pending relays went quiet after their REQ. Flag them
     // stalled but kept, so the window can settle instead of hanging on a dead relay.
     private fun onSilenced(relays: Set<NormalizedRelayUrl>) {
         relays.forEach { markStalled(it, "no response (silence timeout)") }
-        updateStatus()
-        recomputeExhausted()
+        publishStatus()
     }
 
     private fun markStalled(
@@ -261,40 +257,48 @@ class BackwardRelayPager(
         if (stalledRelays.add(relay)) Log.d(TAG) { "[$name] ${relay.url} stalled — $reason (kept, advance to retry)" }
     }
 
-    // --- Display-flow recompute (from the bound cursors). ---
+    // --- Display-state recompute (one atomic snapshot from the bound cursors). ---
 
-    /** Recomputes the display flows from the active scope's cursors. */
-    fun updateStatus() {
+    /**
+     * Recomputes the whole [status] snapshot from the active scope's cursors and publishes it in one
+     * emission, so consumers never see a torn mix of fields nor pay for several recompositions per settle.
+     *
+     * `exhausted` is computed here too: nothing more is reachable once every relay is done (empty page) or
+     * stalled (unreachable) — a merely parked relay (more to load, just not advancing) keeps it false. An
+     * empty / unbound scope leaves `exhausted` at its previous value (mirrors the old recompute's
+     * early-return), so a transient empty relay set never flips it spuriously.
+     */
+    private fun publishStatus() {
         val c = cursors
         val relays = relaysFor() ?: emptySet()
-        _relayCount.value = loadTracker.count()
         val floor = floor()
-        _reachedBack.value = c?.deepestReached(relays, floor)
-        _stalledCount.value = relays.count { it in stalledRelays && c?.isDone(it) != true }
-        _relayProgress.value =
-            relays.associateWith { relay ->
-                RelayPagingProgress(
-                    reachedUntil = c?.reachedUntilFor(relay, floor) ?: floor,
-                    done = c?.isDone(relay) ?: false,
-                    stalled = relay in stalledRelays && c?.isDone(relay) != true,
-                )
+        val prev = _status.value
+        val exhausted =
+            if (c == null || relays.isEmpty()) {
+                prev.exhausted
+            } else {
+                relays.none { !c.isDone(it) && it !in stalledRelays }
             }
-    }
-
-    // Exhausted once every relay is either done (empty page) or stalled (unreachable) — nothing more is
-    // reachable right now. A merely parked relay (more to load, just not advancing) keeps this false.
-    private fun recomputeExhausted() {
-        val c = cursors ?: return
-        val relays = relaysFor() ?: return
-        if (relays.isEmpty()) return
-        val pending = relays.any { !c.isDone(it) && it !in stalledRelays }
-        val ex = !pending
-        if (ex && !_exhausted.value) {
+        if (exhausted && !prev.exhausted && c != null) {
             val done = relays.filter { c.isDone(it) }.map { it.url }
             val stuck = relays.filter { it in stalledRelays && !c.isDone(it) }.map { it.url }
             Log.d(TAG) { "[$name] window settled (nothing more reachable) — done=$done stalled=$stuck" }
         }
-        _exhausted.value = ex
+        _status.value =
+            PagingStatus(
+                exhausted = exhausted,
+                relayCount = loadTracker.count(),
+                stalledCount = relays.count { it in stalledRelays && c?.isDone(it) != true },
+                reachedBack = c?.deepestReached(relays, floor),
+                relayProgress =
+                    relays.associateWith { relay ->
+                        RelayPagingProgress(
+                            reachedUntil = c?.reachedUntilFor(relay, floor) ?: floor,
+                            done = c?.isDone(relay) ?: false,
+                            stalled = relay in stalledRelays && c?.isDone(relay) != true,
+                        )
+                    },
+            )
     }
 
     companion object {

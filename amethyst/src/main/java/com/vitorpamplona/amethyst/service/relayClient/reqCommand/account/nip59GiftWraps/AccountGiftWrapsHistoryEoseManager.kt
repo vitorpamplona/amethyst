@@ -22,13 +22,13 @@ package com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.nip59G
 
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.filterGiftWrapsToPubkey
 import com.vitorpamplona.amethyst.commons.relayClient.paging.BackwardRelayPager
+import com.vitorpamplona.amethyst.commons.relayClient.paging.PagingStatus
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.account.AccountQueryState
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.paging.RelayPagingProgress
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
@@ -64,11 +64,7 @@ class AccountGiftWrapsHistoryEoseManager(
     private val pager = BackwardRelayPager("giftwrap.history")
 
     val loadingMore: StateFlow<Boolean> = pager.loadingMore
-    val exhausted: StateFlow<Boolean> = pager.exhausted
-    val relayCount: StateFlow<Int> = pager.relayCount
-    val stalledCount: StateFlow<Int> = pager.stalledCount
-    val reachedBack: StateFlow<Long?> = pager.reachedBack
-    val relayProgress: StateFlow<Map<NormalizedRelayUrl, RelayPagingProgress>> = pager.relayProgress
+    val status: StateFlow<PagingStatus> = pager.status
 
     private fun daysAgo(epochSeconds: Long) = (TimeUtils.now() - epochSeconds) / TimeUtils.ONE_DAY
 
