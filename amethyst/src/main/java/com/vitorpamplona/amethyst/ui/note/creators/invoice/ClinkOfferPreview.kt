@@ -25,11 +25,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -43,6 +45,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
@@ -56,7 +59,10 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
+import com.vitorpamplona.quartz.experimental.clink.common.SatRange
+import com.vitorpamplona.quartz.experimental.clink.offers.OfferErrorCode
 import com.vitorpamplona.quartz.experimental.clink.pointers.NOffer
+import com.vitorpamplona.quartz.experimental.clink.pointers.OfferPriceType
 import kotlinx.coroutines.launch
 
 /**
@@ -76,6 +82,9 @@ fun ClinkOfferPreview(
     var requesting by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var payingInvoice by remember { mutableStateOf<String?>(null) }
+    var amountInput by remember { mutableStateOf("") }
+    var needsAmount by remember { mutableStateOf((offer.priceType ?: OfferPriceType.SPONTANEOUS) == OfferPriceType.SPONTANEOUS) }
+    var amountRange by remember { mutableStateOf<SatRange?>(null) }
 
     errorMessage?.let {
         ErrorMessageDialog(
@@ -130,11 +139,41 @@ fun ClinkOfferPreview(
 
             HorizontalDivider(thickness = DividerThickness)
 
-            offer.price?.let {
-                Text(
-                    text = "$it ${stringRes(id = R.string.sats)}",
-                    fontSize = 25.sp,
-                    fontWeight = FontWeight.W500,
+            // FIXED offers display their preset price; SPONTANEOUS offers (and the default
+            // when the pointer omits a price type) require the payer to enter an amount.
+            val effectiveType = offer.priceType ?: OfferPriceType.SPONTANEOUS
+
+            if (effectiveType == OfferPriceType.FIXED) {
+                offer.price?.let {
+                    Text(
+                        text = "$it ${stringRes(id = R.string.sats)}",
+                        fontSize = 25.sp,
+                        fontWeight = FontWeight.W500,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 10.dp),
+                    )
+                }
+            }
+
+            if (needsAmount) {
+                OutlinedTextField(
+                    value = amountInput,
+                    onValueChange = { new -> amountInput = new.filter(Char::isDigit) },
+                    label = { Text(stringRes(R.string.clink_offer_amount_sats)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    supportingText =
+                        amountRange?.let { range ->
+                            val min = range.min
+                            val max = range.max
+                            if (min != null && max != null) {
+                                { Text(stringRes(R.string.clink_offer_amount_range, min.toString(), max.toString())) }
+                            } else {
+                                null
+                            }
+                        },
                     modifier =
                         Modifier
                             .fillMaxWidth()
@@ -142,21 +181,31 @@ fun ClinkOfferPreview(
                 )
             }
 
+            val amountRequired = needsAmount
             Button(
                 modifier =
                     Modifier
                         .fillMaxWidth()
                         .padding(vertical = 10.dp),
-                enabled = !requesting,
+                enabled = !requesting && (!amountRequired || (amountInput.toLongOrNull() ?: 0L) > 0L),
                 onClick = {
                     requesting = true
                     scope.launch {
-                        val response = ClinkOfferPayer.requestInvoice(accountViewModel.account, offer)
+                        val amount = if (amountRequired) amountInput.toLongOrNull() else null
+                        val response = ClinkOfferPayer.requestInvoice(accountViewModel.account, offer, amountSats = amount)
                         requesting = false
 
                         val bolt11 = response?.bolt11
                         when {
                             bolt11 != null -> payingInvoice = bolt11
+                            response?.code == OfferErrorCode.INVALID_AMOUNT -> {
+                                // Reveal the amount field (or refine it) with the service's range.
+                                needsAmount = true
+                                amountRange = response.range
+                                errorMessage =
+                                    response.error?.takeIf { it.isNotBlank() }
+                                        ?: stringRes(context, R.string.clink_offer_invalid_amount)
+                            }
                             response?.error != null -> errorMessage = response.error
                             else -> errorMessage = stringRes(context, R.string.error_dialog_pay_invoice_error)
                         }
