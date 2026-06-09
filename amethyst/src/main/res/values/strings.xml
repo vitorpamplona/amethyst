@@ -121,6 +121,7 @@
     <string name="clink_offer_amount_sats">Amount (sats)</string>
     <string name="clink_offer_invalid_amount">Enter a valid amount for this offer.</string>
     <string name="clink_offer_amount_range">Allowed range: %1$s–%2$s sats</string>
+    <string name="clink_offer_label">CLINK Offer (noffer)</string>
     <string name="clink_debit_pay_only">Pay only</string>
     <string name="wallet_add_clink_title">CLINK Debit</string>
     <string name="wallet_add_clink_description">Pay and zap from a wallet that pre-authorized your account. Spend only — no balance or history.</string>
