@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip17Dm.messages.changeSubject
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.utils.Hex
@@ -144,16 +145,19 @@ class ChatNewMessageState(
             }
 
         val replyHint = _replyTo.value?.toEventHint<BaseDMGroupEvent>()
+        val subjectText = _subject.value.text.ifBlank { null }
 
         val template =
             if (replyHint == null) {
                 ChatMessageEvent.build(messageText, pTags) {
+                    subjectText?.let { changeSubject(it) }
                     hashtags(findHashtags(messageText))
                     references(findURLs(messageText))
                     quotes(findNostrEventUris(messageText))
                 }
             } else {
                 ChatMessageEvent.reply(messageText, replyHint) {
+                    subjectText?.let { changeSubject(it) }
                     hashtags(findHashtags(messageText))
                     references(findURLs(messageText))
                     quotes(findNostrEventUris(messageText))
