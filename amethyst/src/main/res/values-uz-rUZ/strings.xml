@@ -68,6 +68,8 @@
     <string name="and">" va "</string>
     <string name="in_channel">"bu kanalda: "</string>
     <string name="profile_banner">Profil banneri</string>
+    <!-- A reply whose target was searched for across all reachable history and never found. -->
+    <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
     <!-- Call notifications and UI -->
     <!-- Settings search -->
     <!-- Settings search keywords: an English concept/protocol index that supplements the
