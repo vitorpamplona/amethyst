@@ -66,6 +66,8 @@ fun QualitySelectorChip(
                 Text(
                     activeQuality.chipLabel,
                     style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    softWrap = false,
                 )
             }
             DropdownMenu(

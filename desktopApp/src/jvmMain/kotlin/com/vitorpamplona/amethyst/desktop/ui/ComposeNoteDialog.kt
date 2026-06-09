@@ -62,6 +62,7 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.service.upload.CompressionException
 import com.vitorpamplona.amethyst.commons.service.upload.CompressionQuality
@@ -230,11 +231,14 @@ fun ComposeNoteDialog(
             }
         }
 
-    Dialog(onDismissRequest = { if (!isPosting) onDismiss() }) {
+    Dialog(
+        onDismissRequest = { if (!isPosting) onDismiss() },
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
         Card(
             modifier =
                 Modifier
-                    .width(600.dp)
+                    .width(780.dp)
                     .padding(16.dp)
                     .dragAndDropTarget(shouldStartDragAndDrop = { true }, target = dropTarget)
                     .then(
@@ -652,6 +656,8 @@ private fun ServerSelector(
                 Text(
                     selectedServer,
                     style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    softWrap = false,
                 )
             }
             androidx.compose.material3.DropdownMenu(
@@ -689,6 +695,8 @@ private fun PostTypeSelector(
                 Text(
                     if (isPicture) "Picture" else "Note",
                     style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    softWrap = false,
                 )
             }
             androidx.compose.material3.DropdownMenu(
