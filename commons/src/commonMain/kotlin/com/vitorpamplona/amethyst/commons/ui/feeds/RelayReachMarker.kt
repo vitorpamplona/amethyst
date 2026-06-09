@@ -42,10 +42,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.chats_history_relay_sync
+import com.vitorpamplona.amethyst.commons.resources.chats_history_fully_loaded
+import com.vitorpamplona.amethyst.commons.resources.chats_history_fully_loaded_label
+import com.vitorpamplona.amethyst.commons.resources.chats_history_loading_label
+import com.vitorpamplona.amethyst.commons.resources.chats_history_relays
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 // A relay-reach divider is hair-thin; inlined here so the shared component carries no app-theme dep.
@@ -171,6 +175,13 @@ fun RelayReachSentinels(
  * (at [newerCreatedAt]) and its next-older neighbour (at [olderCreatedAt], null at the oldest end). Pure
  * UI: the load driving lives in [RelayReachSentinels], so this can be (re)placed freely per row on
  * every feed reorder without triggering any paging.
+ *
+ * A [DONE][RelayReachState.DONE] relay has no incompleteness frontier — it has loaded everything it has —
+ * so it does NOT mark its own history bottom mid-stream (which would read like a false "incomplete below
+ * here" line). Instead every done relay sinks to the **oldest-end gap** ([olderCreatedAt] null), where it
+ * renders as one "fully loaded" marker. Only [REACHING][RelayReachState.REACHING] /
+ * [STALLED][RelayReachState.STALLED] relays — the genuine "below here may still be incomplete" frontiers —
+ * are placed at their reached cursor.
  */
 @Composable
 fun RelayReachMarkers(
@@ -183,7 +194,14 @@ fun RelayReachMarkers(
 ) {
     val here =
         remember(limits, newerCreatedAt, olderCreatedAt) {
-            limits.filter { reachedFallsInGap(it.reachedUntil, newerCreatedAt, olderCreatedAt) }
+            limits.filter {
+                if (it.state == RelayReachState.DONE) {
+                    // Fully loaded → sink to the oldest end rather than mark a frontier it doesn't have.
+                    newerCreatedAt != null && olderCreatedAt == null
+                } else {
+                    reachedFallsInGap(it.reachedUntil, newerCreatedAt, olderCreatedAt)
+                }
+            }
         }
     if (here.isEmpty()) return
 
@@ -196,11 +214,16 @@ fun RelayReachMarkers(
  * down (older) in the stream — relays that race ahead leave their marker deep while slower relays'
  * markers trail higher up, converging as they catch up.
  *
- * A leading "Relay sync:" label gives the glyphs context; then each state renders one compact label:
- * a relay's host name when it is the only one of its state there (the usual converged case, where each
- * relay sits at its own depth), or just a count when several pile up at the same depth (e.g. all nine
- * clustered at the live-tail floor on first open) so the line can't grow into an unreadable comma list.
- * Reads e.g. "Relay sync: ✓ 8 · ↓ 1" or "Relay sync: ↓ nostr.wine".
+ * The line is always captioned so it's never a bare glyph cluster: the live frontiers
+ * ([REACHING][RelayReachState.REACHING] / [STALLED][RelayReachState.STALLED]) read "Loading:"; the
+ * oldest-end pile of [DONE][RelayReachState.DONE] relays reads "Fully loaded:". Each state then renders
+ * one compact label: the host name(s) when one — or two short-named — relays sit at that state (the usual
+ * converged case, where each relay rests at its own depth), or just a count when several pile up at the
+ * same depth (e.g. all nine clustered at the oldest-end floor) so the line can't grow into an unreadable
+ * comma list. In the rare mixed line (an active frontier sharing the oldest-end gap with done relays) the
+ * caption is "Loading:", so the done chip is suffixed "(fully loaded)" to keep its meaning clear. Either
+ * way the whole marker is tappable for the full per-relay breakdown. Reads e.g. "Loading: ↓ nostr.wine"
+ * or "Fully loaded: ✓ 8".
  */
 @Composable
 private fun RelayReachMarker(
@@ -209,14 +232,21 @@ private fun RelayReachMarker(
 ) {
     if (entries.isEmpty()) return
 
+    val hasActiveFrontier = entries.any { it.state != RelayReachState.DONE }
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         modifier = Modifier.padding(5.dp).then(if (onClick != null) Modifier.clickable { onClick() } else Modifier),
     ) {
         HorizontalDivider(modifier = Modifier.weight(1f), thickness = DividerThickness)
+        // Always caption the line so it's never a bare glyph cluster: live frontiers are "Loading:"; the
+        // oldest-end pile of only-done relays is "Fully loaded:".
         Text(
-            text = stringResource(Res.string.chats_history_relay_sync),
+            text =
+                stringResource(
+                    if (hasActiveFrontier) Res.string.chats_history_loading_label else Res.string.chats_history_fully_loaded_label,
+                ),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
@@ -236,8 +266,21 @@ private fun RelayReachMarker(
                 if (index > 0) {
                     Text("·", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
                 }
+                // Spell out 1–2 short host names; otherwise a count. Done relays count as "N relays" so the
+                // fully-loaded floor reads as a sentence ("✓ 8 relays"), not a bare number; active frontiers
+                // stay terse ("↓ 1"). Only a mixed line (caption "Loading:") needs the done chip tagged
+                // "(fully loaded)" — a pure-done line already says so in its "Fully loaded:" caption.
+                val names = list.map { it.name }
+                val inlineNames = reachInlineNames(names)
+                val label =
+                    when {
+                        inlineNames != null -> inlineNames
+                        state == RelayReachState.DONE -> pluralStringResource(Res.plurals.chats_history_relays, names.size, names.size)
+                        else -> names.size.toString()
+                    }
+                val chip = reachGlyph(state) + " " + label
                 Text(
-                    text = reachGlyph(state) + " " + if (list.size == 1) list.first().name else list.size.toString(),
+                    text = if (state == RelayReachState.DONE && hasActiveFrontier) chip + " " + stringResource(Res.string.chats_history_fully_loaded) else chip,
                     color = reachColor(state),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
@@ -248,6 +291,21 @@ private fun RelayReachMarker(
         HorizontalDivider(modifier = Modifier.weight(1f), thickness = DividerThickness)
     }
 }
+
+// Host names short enough to spell out inline on the single-line divider instead of collapsing to a
+// bare count: a name up to [INLINE_NAME_MAX] when it's the lone relay of its state, or two names each
+// up to [INLINE_TWO_NAMES_MAX] when a pair shares it. Longer hosts, or 3+ relays at one state, return
+// null so the caller renders a count instead and the line can't grow unbounded — the tap-through dialog
+// always lists them all.
+private const val INLINE_NAME_MAX = 16
+private const val INLINE_TWO_NAMES_MAX = 12
+
+internal fun reachInlineNames(names: List<String>): String? =
+    when {
+        names.size == 1 && names[0].length <= INLINE_NAME_MAX -> names[0]
+        names.size == 2 && names.all { it.length <= INLINE_TWO_NAMES_MAX } -> names.joinToString(", ")
+        else -> null
+    }
 
 internal fun reachGlyph(state: RelayReachState) =
     when (state) {

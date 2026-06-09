@@ -60,14 +60,15 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.action_dismiss
 import com.vitorpamplona.amethyst.commons.resources.chats_history_all_caught_up
+import com.vitorpamplona.amethyst.commons.resources.chats_history_by_relay
 import com.vitorpamplona.amethyst.commons.resources.chats_history_incomplete
 import com.vitorpamplona.amethyst.commons.resources.chats_history_incomplete_sub
 import com.vitorpamplona.amethyst.commons.resources.chats_history_older
 import com.vitorpamplona.amethyst.commons.resources.chats_history_reached_start
-import com.vitorpamplona.amethyst.commons.resources.chats_history_relay_back
-import com.vitorpamplona.amethyst.commons.resources.chats_history_relay_sync
+import com.vitorpamplona.amethyst.commons.resources.chats_history_relay_since
 import com.vitorpamplona.amethyst.commons.resources.chats_history_relays
 import com.vitorpamplona.amethyst.commons.resources.chats_history_relays_title
+import com.vitorpamplona.amethyst.commons.resources.chats_history_stalled_retry
 import com.vitorpamplona.amethyst.commons.resources.chats_history_subtitle
 import com.vitorpamplona.amethyst.commons.resources.chats_history_subtitle_no_date
 import com.vitorpamplona.amethyst.commons.resources.chats_history_waiting
@@ -277,7 +278,8 @@ fun historySubtitle(
 
 /**
  * Popup shown when the history card is tapped: one row per relay with its state glyph (✓ done, … stalled,
- * ↓ still reaching) and how far back it has paged ("back to <date>"), deepest-reaching first.
+ * ↓ still reaching) and how far back it has paged ("since <date>"), deepest-reaching first. A stalled relay
+ * also gets a one-line hint that it retries when the screen is reopened.
  */
 @Composable
 fun DmHistoryRelayDialog(
@@ -300,36 +302,47 @@ fun DmHistoryRelayDialog(
                     .verticalScroll(rememberScrollState()),
             ) {
                 rows.forEach { (relay, p) ->
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = relayStateGlyph(p),
-                            color = relayStateColor(p),
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.width(22.dp),
-                        )
-                        Text(
-                            text = relayShortName(relay),
-                            modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodyMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = stringResource(Res.string.chats_history_relay_back, formatReachDate(p.reachedUntil)),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                        )
+                    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = relayStateGlyph(p),
+                                color = relayStateColor(p),
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.width(22.dp),
+                            )
+                            Text(
+                                text = relayShortName(relay),
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodyMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(Res.string.chats_history_relay_since, formatReachDate(p.reachedUntil)),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                            )
+                        }
+                        if (p.stalled) StalledRetryHint()
                     }
                 }
             }
         },
+    )
+}
+
+/** The "stopped early, retries on reopen" caption shown under a stalled relay in the per-relay popups.
+ * Retry is demand-driven (no timer): reopening the screen re-binds and clears the stalled set, which
+ * retries it — so that's what we tell the user rather than a countdown we can't honour. */
+@Composable
+private fun StalledRetryHint() {
+    Text(
+        text = stringResource(Res.string.chats_history_stalled_retry),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.error,
+        modifier = Modifier.padding(start = 22.dp, top = 2.dp),
     )
 }
 
@@ -355,10 +368,10 @@ private fun relayShortName(relay: NormalizedRelayUrl): String =
         .substringBefore('/')
 
 /**
- * Popup shown when an in-stream "Relay sync" marker is tapped: the relays whose window sits at that point
+ * Popup shown when an in-stream "Loading" marker is tapped: the relays whose window sits at that point
  * in the stream, each with its protocol tag, state glyph (✓ done · … stalled · ↓ reaching) and how far
- * back it has paged — so the otherwise-terse `Relay sync: ✓ N` divider stops being a dead end and its
- * meaning is explorable. Deepest-reaching first.
+ * back it has paged — so the otherwise-terse `Loading: ↓ N` divider stops being a dead end and its
+ * meaning is explorable. A stalled relay also gets the retry-on-reopen hint. Deepest-reaching first.
  */
 @Composable
 fun RelayReachDetailDialog(
@@ -372,7 +385,7 @@ fun RelayReachDetailDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(Res.string.action_dismiss)) }
         },
-        title = { Text(stringResource(Res.string.chats_history_relay_sync)) },
+        title = { Text(stringResource(Res.string.chats_history_by_relay)) },
         text = {
             Column(
                 Modifier
@@ -380,41 +393,39 @@ fun RelayReachDetailDialog(
                     .verticalScroll(rememberScrollState()),
             ) {
                 rows.forEach { c ->
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = reachGlyph(c.state),
-                            color = reachColor(c.state),
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.width(22.dp),
-                        )
-                        if (c.protocol.isNotEmpty()) {
+                    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = c.protocol,
-                                style = MaterialTheme.typography.labelSmall,
+                                text = reachGlyph(c.state),
+                                color = reachColor(c.state),
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.width(22.dp),
+                            )
+                            if (c.protocol.isNotEmpty()) {
+                                Text(
+                                    text = c.protocol,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                )
+                                Spacer(Modifier.width(6.dp))
+                            }
+                            Text(
+                                text = c.name,
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodyMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(Res.string.chats_history_relay_since, formatReachDate(c.reachedUntil)),
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                             )
-                            Spacer(Modifier.width(6.dp))
                         }
-                        Text(
-                            text = c.name,
-                            modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodyMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = stringResource(Res.string.chats_history_relay_back, formatReachDate(c.reachedUntil)),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                        )
+                        if (c.state == RelayReachState.STALLED) StalledRetryHint()
                     }
                 }
             }

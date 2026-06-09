@@ -31,7 +31,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -41,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.DmHistoryLoadingCard
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachCursor
+import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachDetailDialog
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachMarkers
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachSentinels
 import com.vitorpamplona.amethyst.commons.ui.feeds.RelayReachState
@@ -193,12 +196,12 @@ private fun FeedLoaded(
             buildList {
                 if (!giftWrapsExhausted) {
                     giftWrapsProgress.forEach { (relay, p) ->
-                        add(RelayReachCursor("17:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p)) { giftWrapsHistory.advance(relay) })
+                        add(RelayReachCursor("17:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p), "NIP-17") { giftWrapsHistory.advance(relay) })
                     }
                 }
                 if (!nip04Exhausted) {
                     nip04Progress.forEach { (relay, p) ->
-                        add(RelayReachCursor("04:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p)) { nip04History.advance(relay) })
+                        add(RelayReachCursor("04:${relay.url}", relayShortName(relay), p.reachedUntil, reachState(p), "NIP-04") { nip04History.advance(relay) })
                     }
                 }
             }
@@ -207,6 +210,14 @@ private fun FeedLoaded(
     // Hoisted load driver: pulls each relay's next page off viewport visibility, so feed reorders
     // (a live DM bumping a room) no longer re-fire paging. The markers below are pure UI.
     RelayReachSentinels(limits, listState) { index -> items.list.getOrNull(index)?.createdAt() }
+
+    // The relays behind a tapped in-stream "Relay sync" marker; non-null shows the per-relay popup so the
+    // terse divider isn't a dead end — every count/name is one tap from the full breakdown (which relays,
+    // protocol, how far back each paged).
+    var syncDetail by remember { mutableStateOf<List<RelayReachCursor>?>(null) }
+    syncDetail?.let { detail ->
+        RelayReachDetailDialog(detail, ::formatHistoryReachDate) { syncDetail = null }
+    }
 
     LazyColumn(
         contentPadding = rememberFeedContentPadding(FeedPadding),
@@ -244,7 +255,7 @@ private fun FeedLoaded(
                 limits,
                 item.createdAt(),
                 items.list.getOrNull(index + 1)?.createdAt(),
-            )
+            ) { syncDetail = it }
         }
     }
 }
