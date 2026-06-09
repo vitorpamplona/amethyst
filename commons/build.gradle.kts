@@ -148,6 +148,10 @@ kotlin {
 
                 // EXIF stripping for image uploads (used by service/upload/MediaCompressor).
                 implementation(libs.commons.imaging)
+
+                // Image re-encode + progressive downscale (used by service/upload/ImageReencoder).
+                // Pure-Java, MIT. See docs/plans/2026-06-08-feat-desktop-image-compression-plan.md.
+                implementation(libs.thumbnailator)
             }
         }
 
@@ -180,6 +184,15 @@ kotlin {
             }
         }
 
+        // jvmTest needs the JVM secp256k1 bindings whenever a test
+        // exercises a real signer (e.g. UploadOrchestratorTest, which
+        // signs Blossom auth events end-to-end).
+        getByName("jvmTest") {
+            dependencies {
+                implementation(libs.secp256k1.kmp.jni.jvm)
+            }
+        }
+
         getByName("androidDeviceTest") {
             dependencies {
                 implementation(libs.androidx.junit)
@@ -193,6 +206,15 @@ compose.resources {
     publicResClass = true
     packageOfResClass = "com.vitorpamplona.amethyst.commons.resources"
     generateResClass = always
+}
+
+// JVM tests run AWT-backed code (ImageIO, Thumbnailator, BufferedImage) — pin
+// headless mode so a stray Toolkit.getDefaultToolkit() in a transitive dep
+// never bounces the macOS Dock during CI/local test runs.
+tasks.withType<Test>().configureEach {
+    if (name == "jvmTest") {
+        jvmArgs("-Djava.awt.headless=true")
+    }
 }
 
 // iOS purity gate — same shape as :quartz:verifyKmpPurity. See the rationale
