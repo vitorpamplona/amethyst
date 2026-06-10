@@ -413,6 +413,8 @@ class ZapPaymentHandler(
             runRequestFor = { payable: Payable ->
                 account.scope.launch {
                     val response = ClinkDebitPayer.payInvoice(account, pointer, payable.invoice)
+                    progressAllPayments += 0.5f / payables.size
+                    onProgress(progressAllPayments)
                     if (response?.isOk() != true) {
                         onError(
                             stringRes(context, R.string.error_dialog_pay_invoice_error),
@@ -423,7 +425,7 @@ class ZapPaymentHandler(
                     }
                 }
 
-                progressAllPayments += 1f / payables.size
+                progressAllPayments += 0.5f / payables.size
                 onProgress(progressAllPayments)
 
                 Paid(payable, true)
