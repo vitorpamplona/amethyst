@@ -106,6 +106,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -1626,6 +1627,7 @@ class AccountViewModel(
         text: String,
         replyToInnerEventId: HexKey? = null,
         replyToInnerAuthorPubKey: HexKey? = null,
+        mentions: List<PTag> = emptyList(),
     ) {
         // Inner event construction lives on MarmotManager so CLI and UI don't drift.
         // persistOwn=false because Account.sendMarmotGroupMessage routes the outer
@@ -1638,6 +1640,7 @@ class AccountViewModel(
                     replyToEventId = replyToInnerEventId,
                     replyToAuthorPubKey = replyToInnerAuthorPubKey,
                     persistOwn = false,
+                    mentions = mentions,
                 )
                 ?: return
         val relays = account.marmotGroupRelays(nostrGroupId)

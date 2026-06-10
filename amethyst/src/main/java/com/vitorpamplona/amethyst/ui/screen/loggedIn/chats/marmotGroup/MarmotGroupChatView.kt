@@ -50,12 +50,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
+import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
+import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotFileSender
@@ -69,6 +75,7 @@ import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldModifier
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
+import com.vitorpamplona.amethyst.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.collections.immutable.ImmutableList
@@ -181,6 +188,15 @@ fun MarmotGroupMessageComposer(
             )
         }
 
+    val userSuggestions =
+        remember(nostrGroupId) {
+            UserSuggestionState(accountViewModel.account, accountViewModel.nip05ClientBuilder())
+        }
+
+    DisposableEffect(nostrGroupId) {
+        onDispose { userSuggestions.reset() }
+    }
+
     // Upload dialog
     uploadState.multiOrchestrator?.let {
         MarmotGroupFileUploadDialog(
@@ -200,11 +216,33 @@ fun MarmotGroupMessageComposer(
     }
 
     Column(modifier = EditFieldModifier) {
+        ShowUserSuggestionList(
+            userSuggestions,
+            onSelect = { user ->
+                userSuggestions.replaceCurrentWord(messageState, messageState.currentWord(), user)
+                userSuggestions.reset()
+            },
+            accountViewModel = accountViewModel,
+            modifier = SuggestionListDefaultHeightChat,
+        )
+
         ThinPaddingTextField(
             state = messageState,
+            onTextChanged = {
+                if (messageState.selection.collapsed) {
+                    val lastWord = messageState.currentWord()
+                    if (lastWord.startsWith("@")) {
+                        userSuggestions.processCurrentWord(lastWord)
+                    } else {
+                        userSuggestions.reset()
+                    }
+                }
+            },
             onContentReceived = { uri, mimeType ->
                 uploadState.load(persistentListOf(SelectedMedia(uri, mimeType)))
             },
+            inputTransformation = MentionPreservingInputTransformation,
+            outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
             modifier = Modifier.fillMaxWidth(),
             shape = EditFieldBorder,
             placeholder = {
@@ -235,11 +273,16 @@ fun MarmotGroupMessageComposer(
                         val replyAuthor = parentEvent?.pubKey
                         scope.launch(Dispatchers.IO) {
                             try {
+                                // Rewrites @npub…/@nprofile… mentions into nostr: URIs and
+                                // collects the referenced users as p-tags for the inner event.
+                                val tagger = NewMessageTagger(text, null, null, accountViewModel)
+                                tagger.run()
                                 accountViewModel.sendMarmotGroupMessage(
                                     nostrGroupId = nostrGroupId,
-                                    text = text,
+                                    text = tagger.message,
                                     replyToInnerEventId = replyId,
                                     replyToInnerAuthorPubKey = replyAuthor,
+                                    mentions = tagger.pTags?.map { it.toPTag() } ?: emptyList(),
                                 )
                                 messageState.clearText()
                                 replyTo.value = null
