@@ -66,7 +66,7 @@ class OfferClient(
         val request =
             OfferRequest(
                 offer = pointer.pointer,
-                amount_sats = amountSats ?: pointer.price?.toLong(),
+                amount_sats = amountSats ?: pointer.price,
                 payer_data = payerData,
                 zap = zap,
                 expires_in_seconds = expiresInSeconds,

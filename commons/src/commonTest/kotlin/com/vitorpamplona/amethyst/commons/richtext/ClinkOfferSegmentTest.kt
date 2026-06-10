@@ -47,7 +47,7 @@ class ClinkOfferSegmentTest {
         assertEquals(offerFixed, segment.segmentText)
         assertEquals("offer-id", segment.offer.pointer)
         assertEquals(OfferPriceType.FIXED, segment.offer.priceType)
-        assertEquals(21000, segment.offer.price)
+        assertEquals(21000L, segment.offer.price)
     }
 
     @Test

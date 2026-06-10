@@ -193,7 +193,7 @@ fun ClinkOfferPreview(
                 useOffer: NOffer,
                 followMoved: Boolean,
             ) {
-                val amount = if (amountRequired) amountInput.toLongOrNull() else useOffer.price?.toLong()
+                val amount = if (amountRequired) amountInput.toLongOrNull() else useOffer.price
 
                 val response = ClinkOfferPayer.requestInvoice(accountViewModel.account, useOffer, amountSats = amount)
 

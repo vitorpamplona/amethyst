@@ -21,8 +21,10 @@
 package com.vitorpamplona.quartz.experimental.clink.client
 
 import com.vitorpamplona.quartz.experimental.clink.manage.ManageEvent
+import com.vitorpamplona.quartz.experimental.clink.manage.ManageOffer
 import com.vitorpamplona.quartz.experimental.clink.manage.ManageRequest
 import com.vitorpamplona.quartz.experimental.clink.manage.ManageResponse
+import com.vitorpamplona.quartz.experimental.clink.manage.OfferFields
 import com.vitorpamplona.quartz.experimental.clink.pointers.NManage
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -45,18 +47,15 @@ class ManageClient(
         label: String? = null,
         priceSats: Long? = null,
         callbackUrl: String? = null,
-        payerData: Map<String, Any?>? = null,
+        payerData: List<String>? = null,
         createdAt: Long = TimeUtils.now(),
     ): ManageEvent =
         send(
             ManageRequest(
                 resource = ManageRequest.RESOURCE_OFFER,
                 action = ManageRequest.ACTION_CREATE,
-                label = label,
-                price_sats = priceSats,
-                callback_url = callbackUrl,
-                payer_data = payerData,
                 pointer = pointer.pointer,
+                offer = ManageOffer(fields = OfferFields(label, priceSats, callbackUrl, payerData)),
             ),
             createdAt,
         )
@@ -66,18 +65,14 @@ class ManageClient(
         label: String? = null,
         priceSats: Long? = null,
         callbackUrl: String? = null,
-        payerData: Map<String, Any?>? = null,
+        payerData: List<String>? = null,
         createdAt: Long = TimeUtils.now(),
     ): ManageEvent =
         send(
             ManageRequest(
                 resource = ManageRequest.RESOURCE_OFFER,
                 action = ManageRequest.ACTION_UPDATE,
-                id = id,
-                label = label,
-                price_sats = priceSats,
-                callback_url = callbackUrl,
-                payer_data = payerData,
+                offer = ManageOffer(id = id, fields = OfferFields(label, priceSats, callbackUrl, payerData)),
             ),
             createdAt,
         )
@@ -85,7 +80,7 @@ class ManageClient(
     suspend fun getOffer(
         id: String,
         createdAt: Long = TimeUtils.now(),
-    ): ManageEvent = send(ManageRequest(ManageRequest.RESOURCE_OFFER, ManageRequest.ACTION_GET, id = id), createdAt)
+    ): ManageEvent = send(ManageRequest(ManageRequest.RESOURCE_OFFER, ManageRequest.ACTION_GET, offer = ManageOffer(id = id)), createdAt)
 
     suspend fun listOffers(createdAt: Long = TimeUtils.now()): ManageEvent =
         send(
@@ -96,7 +91,7 @@ class ManageClient(
     suspend fun deleteOffer(
         id: String,
         createdAt: Long = TimeUtils.now(),
-    ): ManageEvent = send(ManageRequest(ManageRequest.RESOURCE_OFFER, ManageRequest.ACTION_DELETE, id = id), createdAt)
+    ): ManageEvent = send(ManageRequest(ManageRequest.RESOURCE_OFFER, ManageRequest.ACTION_DELETE, offer = ManageOffer(id = id)), createdAt)
 
     private suspend fun send(
         request: ManageRequest,

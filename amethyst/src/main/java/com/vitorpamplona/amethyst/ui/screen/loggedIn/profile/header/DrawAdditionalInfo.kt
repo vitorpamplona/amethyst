@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
 import android.content.ClipData
+import android.util.LruCache
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
@@ -389,9 +390,22 @@ fun getIdentityClaimDescription(identity: IdentityClaimTag): Int =
     }
 
 /**
+ * Process-wide cache of NIP-05 `.well-known` `clink_offer` lookups, keyed by the nip05
+ * address. Without it, every profile visit (and every relay-pushed kind-0 refresh while a
+ * profile is open) would re-fetch the domain's nostr.json. Caches "no offer" results too so
+ * profiles without one aren't re-hit. A [ResolvedClinkOffer] wrapper holds the nullable result
+ * (LruCache can't store nulls); absence means "not fetched yet".
+ */
+private class ResolvedClinkOffer(
+    val noffer: String?,
+)
+
+private val clinkOfferNip05Cache = LruCache<String, ResolvedClinkOffer>(256)
+
+/**
  * Shows a payable CLINK Offer card when the profile advertises one, preferring the
  * kind-0 `clink_offer` field and falling back to the user's NIP-05 `.well-known`
- * `clink_offer`. Paying zaps this profile (see [ClinkOfferPreview]).
+ * `clink_offer` (cached). Paying pays the advertised offer (see [ClinkOfferPreview]).
  */
 @Composable
 private fun DisplayClinkOffer(
@@ -411,13 +425,21 @@ private fun DisplayClinkOffer(
             offer = kind0Offer
             return@LaunchedEffect
         }
-        // Fall back to the NIP-05 .well-known clink_offer.
+        // Fall back to the NIP-05 .well-known clink_offer (cached per address).
         val id = nip05?.let { Nip05Id.parse(it) }
         offer =
-            if (id != null) {
-                withContext(Dispatchers.IO) {
-                    accountViewModel.nip05ClientBuilder().loadClinkOffer(id)?.let { ClinkPointerParser.parse(it) as? NOffer }
-                }
+            if (id != null && nip05 != null) {
+                // Distinguish "cache miss" from a cached "no offer" (null) so we don't refetch.
+                val cached = clinkOfferNip05Cache.get(nip05)
+                val nofferStr =
+                    if (cached != null) {
+                        cached.noffer
+                    } else {
+                        val fetched = withContext(Dispatchers.IO) { accountViewModel.nip05ClientBuilder().loadClinkOffer(id) }
+                        clinkOfferNip05Cache.put(nip05, ResolvedClinkOffer(fetched))
+                        fetched
+                    }
+                nofferStr?.let { ClinkPointerParser.parse(it) as? NOffer }
             } else {
                 null
             }

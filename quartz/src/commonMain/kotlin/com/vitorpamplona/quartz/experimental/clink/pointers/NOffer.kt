@@ -40,8 +40,8 @@ data class NOffer(
     override val pointer: String?,
     /** TLV 3 — how the offer is priced. Absent means [OfferPriceType.SPONTANEOUS]. */
     val priceType: OfferPriceType?,
-    /** TLV 4 — price in sats (display/fixed offers), 4-byte big-endian per the SDK. */
-    val price: Int?,
+    /** TLV 4 — price in sats (display/fixed offers), 4-byte big-endian *unsigned* per the SDK. */
+    val price: Long?,
 ) : ClinkPointer {
     override fun encode(): String =
         TlvBuilder()
@@ -50,7 +50,9 @@ data class NOffer(
                 relays.forEach { addStringIfNotNull(ClinkTlv.RELAY, it.url) }
                 addStringIfNotNull(ClinkTlv.POINTER, pointer)
                 priceType?.let { addHex(ClinkTlv.PRICE_TYPE, it.code.toSingleByteHex()) }
-                price?.let { addInt(ClinkTlv.PRICE, it) }
+                // addInt writes the low 32 bits big-endian; for an unsigned price up to
+                // 2^32-1 that is the correct 4-byte field even when it overflows a signed Int.
+                price?.let { addInt(ClinkTlv.PRICE, it.toInt()) }
             }.build()
             .let { Bech32.encodeBytes(HRP, it, Bech32.Encoding.Bech32) }
 
@@ -71,7 +73,18 @@ data class NOffer(
                 tlv.data[ClinkTlv.PRICE_TYPE]?.firstOrNull()?.firstOrNull()?.let {
                     OfferPriceType.fromCode(it.toInt() and 0xFF)
                 }
-            val price = tlv.firstAsInt(ClinkTlv.PRICE)
+            // The SDK decodes price as an UNSIGNED big-endian integer (parseInt of the hex);
+            // reading it as a signed Int would turn prices >= 2^31 sats into negative amounts.
+            val price =
+                tlv.data[ClinkTlv.PRICE]
+                    ?.firstOrNull()
+                    ?.takeIf { it.size == 4 }
+                    ?.let {
+                        ((it[0].toLong() and 0xFF) shl 24) or
+                            ((it[1].toLong() and 0xFF) shl 16) or
+                            ((it[2].toLong() and 0xFF) shl 8) or
+                            (it[3].toLong() and 0xFF)
+                    }
 
             return NOffer(pubKey, relays, pointer, priceType, price)
         }

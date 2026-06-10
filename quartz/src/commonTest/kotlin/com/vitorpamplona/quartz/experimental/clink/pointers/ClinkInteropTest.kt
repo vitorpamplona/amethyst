@@ -60,7 +60,7 @@ class ClinkInteropTest {
         assertEquals(RelayUrlNormalizer.normalizeOrNull(relay), offer.relays.single())
         assertEquals("offer-id", offer.pointer)
         assertEquals(OfferPriceType.FIXED, offer.priceType)
-        assertEquals(21000, offer.price)
+        assertEquals(21000L, offer.price)
         assertEquals(offer, ClinkPointerParser.parse(offer.encode()))
     }
 
@@ -78,7 +78,7 @@ class ClinkInteropTest {
         val offer = ClinkPointerParser.parse(offerVariable) as NOffer
         assertEquals("v", offer.pointer)
         assertEquals(OfferPriceType.VARIABLE, offer.priceType)
-        assertEquals(500, offer.price)
+        assertEquals(500L, offer.price)
         assertEquals(offer, ClinkPointerParser.parse(offer.encode()))
     }
 
