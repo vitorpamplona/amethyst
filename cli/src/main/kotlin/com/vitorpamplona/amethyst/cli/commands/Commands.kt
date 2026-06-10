@@ -115,4 +115,9 @@ object Commands {
         dataDir: DataDir,
         tail: Array<String>,
     ): Int = ZapCommand.dispatch(dataDir, tail)
+
+    suspend fun offer(
+        dataDir: DataDir,
+        tail: Array<String>,
+    ): Int = OfferCommands.dispatch(dataDir, tail)
 }

@@ -182,6 +182,10 @@ private suspend fun dispatch(argv: Array<String>): Int {
             Commands.zap(dataDir, tail)
         }
 
+        "offer" -> {
+            Commands.offer(dataDir, tail)
+        }
+
         else -> {
             System.err.println("unknown subcommand: $head")
             printUsage()
@@ -362,6 +366,12 @@ private fun printUsage() {
         |  zap event EVENT-ID SATS           same, but attribute the zap to a specific
         |    [--comment X] [--anon|--private]  event (must be in local store)
         |    [--timeout SECS]
+        |
+        |CLINK Offers:
+        |  offer info NOFFER                          decode a noffer1… pointer (local, no network)
+        |  offer request NOFFER [--amount SATS]       kind:21001 round-trip: ask the service for a
+        |    [--timeout MS]                            fresh BOLT11 (amount required for spontaneous
+        |                                              offers; defaults to the pointer's fixed price)
         |
         |Search (NIP-50):
         |  search user QUERY [--limit N]              search kind:0 profiles

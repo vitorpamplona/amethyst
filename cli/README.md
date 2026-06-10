@@ -244,6 +244,13 @@ $ amy relay publish-lists      # broadcast updated kind:10002/10050/10051
 | `amy marmot message react GID EVENT_ID EMOJI` | Publish a kind:7 reaction. |
 | `amy marmot message delete GID EVENT_ID …` | Publish a kind:5 deletion. |
 
+### CLINK Offers
+
+| Command | What it does |
+|---|---|
+| `amy offer info NOFFER` | Decode a `noffer1…` pointer (pubkey, relays, price type/amount). Local, no network. |
+| `amy offer request NOFFER [--amount SATS] [--timeout MS]` | kind:21001 round-trip: publish the request to the pointer's relays and print the returned BOLT11. `--amount` is required for spontaneous offers; fixed offers default to the pointer's price. |
+
 ### Wait-for-condition (`await`)
 
 Every `await` verb blocks until the condition holds, then prints the
