@@ -406,6 +406,9 @@ fun CardBody(
                 ) {
                     onWantsToEditDraft()
                 }
+            } else if (note.isPrivateRumor()) {
+                // No external share link for private rumors: nobody can
+                // resolve the id from relays and sharing it leaks the id.
             } else {
                 NoteQuickActionItem(
                     icon = MaterialSymbols.Share,

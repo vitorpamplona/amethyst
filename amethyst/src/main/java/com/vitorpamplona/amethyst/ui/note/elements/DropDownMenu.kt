@@ -226,17 +226,19 @@ fun NoteDropDownMenu(
                     onDismiss()
                 }
             }
-            M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(R.string.quick_action_share)) {
-                val sendIntent =
-                    Intent().apply {
-                        action = Intent.ACTION_SEND
-                        type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, externalLinkForNote(note))
-                        putExtra(Intent.EXTRA_TITLE, stringRes(actContext, R.string.quick_action_share_browser_link))
-                    }
-                val shareIntent = Intent.createChooser(sendIntent, stringRes(actContext, R.string.quick_action_share))
-                actContext.startActivity(shareIntent)
-                onDismiss()
+            if (!isPrivateRumor) {
+                M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(R.string.quick_action_share)) {
+                    val sendIntent =
+                        Intent().apply {
+                            action = Intent.ACTION_SEND
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, externalLinkForNote(note))
+                            putExtra(Intent.EXTRA_TITLE, stringRes(actContext, R.string.quick_action_share_browser_link))
+                        }
+                    val shareIntent = Intent.createChooser(sendIntent, stringRes(actContext, R.string.quick_action_share))
+                    actContext.startActivity(shareIntent)
+                    onDismiss()
+                }
             }
         }
 
@@ -307,6 +309,12 @@ fun NoteDropDownMenu(
             // Showing both at once is noisy and makes "bookmark" feel like the catch-all when
             // it really isn't for these kinds.
             when {
+                isPrivateRumor -> {
+                    // No bookmark/playlist/emoji-list rows for private rumors:
+                    // those lists reference the note by id, which other devices
+                    // can't resolve from relays and public lists would leak.
+                }
+
                 note.event is MusicTrackEvent && note is AddressableNote -> {
                     // Music tracks (kind 36787) belong in playlists (kind 34139). The
                     // sheet behind this nav lets the user toggle membership across all of
@@ -335,19 +343,15 @@ fun NoteDropDownMenu(
                 }
 
                 else -> {
-                    if (!isPrivateRumor) {
-                        val noteBookmarkType = if (note.event is LongTextNoteEvent) stringRes(R.string.article) else stringRes(R.string.post)
-                        M3ActionRow(icon = MaterialSymbols.BookmarkAdd, text = stringRes(R.string.manage_bookmark_label, noteBookmarkType)) {
-                            if (note.event is LongTextNoteEvent) {
-                                nav.nav(Route.ArticleBookmarkManagement((note as AddressableNote).address))
-                            } else {
-                                nav.nav(Route.PostBookmarkManagement(note.idHex))
-                            }
-                            onDismiss()
+                    val noteBookmarkType = if (note.event is LongTextNoteEvent) stringRes(R.string.article) else stringRes(R.string.post)
+                    M3ActionRow(icon = MaterialSymbols.BookmarkAdd, text = stringRes(R.string.manage_bookmark_label, noteBookmarkType)) {
+                        if (note.event is LongTextNoteEvent) {
+                            nav.nav(Route.ArticleBookmarkManagement((note as AddressableNote).address))
+                        } else {
+                            nav.nav(Route.PostBookmarkManagement(note.idHex))
                         }
+                        onDismiss()
                     }
-                    // Private bookmarks are stored inside the list's encrypted
-                    // content, so a private rumor's id stays off public relays.
                     if (state.isPrivateBookmarkNote) {
                         M3ActionRow(icon = MaterialSymbols.LockOpen, text = stringRes(R.string.remove_from_private_bookmarks)) {
                             accountViewModel.removePrivateBookmark(note)
@@ -359,17 +363,15 @@ fun NoteDropDownMenu(
                             onDismiss()
                         }
                     }
-                    if (!isPrivateRumor) {
-                        if (state.isPublicBookmarkNote) {
-                            M3ActionRow(icon = MaterialSymbols.BookmarkRemove, text = stringRes(R.string.remove_from_public_bookmarks)) {
-                                accountViewModel.removePublicBookmark(note)
-                                onDismiss()
-                            }
-                        } else {
-                            M3ActionRow(icon = MaterialSymbols.Bookmark, text = stringRes(R.string.add_to_public_bookmarks)) {
-                                accountViewModel.addPublicBookmark(note)
-                                onDismiss()
-                            }
+                    if (state.isPublicBookmarkNote) {
+                        M3ActionRow(icon = MaterialSymbols.BookmarkRemove, text = stringRes(R.string.remove_from_public_bookmarks)) {
+                            accountViewModel.removePublicBookmark(note)
+                            onDismiss()
+                        }
+                    } else {
+                        M3ActionRow(icon = MaterialSymbols.Bookmark, text = stringRes(R.string.add_to_public_bookmarks)) {
+                            accountViewModel.addPublicBookmark(note)
+                            onDismiss()
                         }
                     }
                 }

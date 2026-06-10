@@ -945,7 +945,15 @@ class Account(
         note: Note,
         type: ReportType,
         content: String = "",
-    ) = sendMyPublicAndPrivateOutbox(ReportAction.report(note, type, content, userProfile(), signer))
+    ) {
+        if (note.isPrivateRumor()) {
+            // A kind-1984 e-tagging the rumor would leak the private id onto
+            // public relays. Report the author instead (p-tag only).
+            note.author?.let { report(it, type, content) }
+        } else {
+            sendMyPublicAndPrivateOutbox(ReportAction.report(note, type, content, userProfile(), signer))
+        }
+    }
 
     suspend fun report(
         user: User,
@@ -1320,6 +1328,12 @@ class Account(
 
     suspend fun broadcast(note: Note) {
         note.event?.let { noteEvent ->
+            if (noteEvent !is WrappedEvent && noteEvent.sig.isEmpty()) {
+                // Unsealed rumor without a host wrap (e.g. a kind-1 private
+                // reply): publishing it would disclose the private content to
+                // relays even though they reject the missing signature.
+                return
+            }
             if (noteEvent is WrappedEvent && noteEvent.host != null) {
                 // download the event and send it.
                 noteEvent.host?.let { host ->

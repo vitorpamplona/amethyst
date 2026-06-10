@@ -316,10 +316,12 @@ private fun InnerReactionRow(
                 }
 
                 ReactionRowAction.Share -> {
-                    ShareReaction(
-                        note = baseNote,
-                        grayTint = MaterialTheme.colorScheme.placeholderText,
-                    )
+                    if (!isPrivateRumor) {
+                        ShareReaction(
+                            note = baseNote,
+                            grayTint = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    }
                 }
 
                 ReactionRowAction.Pay -> {

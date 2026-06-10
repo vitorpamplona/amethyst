@@ -57,6 +57,12 @@ object ReactionAction {
         if (!signer.isWriteable()) {
             throw IllegalStateException("Cannot react: signer is not writeable")
         }
+        if (eventHint.event.sig.isEmpty()) {
+            // Unsealed private rumor: a public kind-7 would e-tag the private
+            // rumor id onto public relays. Use reactToWithGroupSupport, which
+            // gift-wraps reactions for empty-sig targets.
+            throw IllegalStateException("Cannot react publicly to a private rumor")
+        }
 
         // Handle custom emoji reactions (format: ":emoji_name:")
         val template =

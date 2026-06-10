@@ -162,7 +162,7 @@ fun ZapCustomDialog(
         }
 
     var selectedZapType by
-        remember(accountViewModel) {
+        remember(accountViewModel, baseNote) {
             val default = accountViewModel.defaultZapType()
             mutableStateOf(
                 if (isPrivateTarget && default != LnZapEvent.ZapType.NONZAP) {
