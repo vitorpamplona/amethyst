@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.builder
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.AboutTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.BannerTag
+import com.vitorpamplona.quartz.nip01Core.metadata.tags.ClinkOfferTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.DisplayNameTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.Lud06Tag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.Lud16Tag
@@ -87,9 +88,6 @@ class MetadataEvent(
     companion object {
         const val KIND = 0
         const val FIXED_D_TAG = ""
-
-        // CLINK Offers discovery key in kind-0 content (mirrors the NIP-05 `clink_offer` key).
-        const val CLINK_OFFER_PROPERTY = "clink_offer"
 
         fun createAddress(pubKey: HexKey): Address = Address(KIND, pubKey, FIXED_D_TAG)
 
@@ -252,7 +250,7 @@ class MetadataEvent(
             nip05?.let { addIfNotBlank(currentMetadata, Nip05Tag.TAG_NAME, it) }
             lnAddress?.let { addIfNotBlank(currentMetadata, Lud16Tag.TAG_NAME, it) }
             lnURL?.let { addIfNotBlank(currentMetadata, Lud06Tag.TAG_NAME, it) }
-            clinkOffer?.let { addIfNotBlank(currentMetadata, CLINK_OFFER_PROPERTY, it) }
+            clinkOffer?.let { addIfNotBlank(currentMetadata, ClinkOfferTag.TAG_NAME, it) }
         }
 
         // For https://github.com/nostr-protocol/nips/pull/1770
@@ -267,6 +265,7 @@ class MetadataEvent(
             currentMetadata[Nip05Tag.TAG_NAME]?.let { nip05(it.text) } ?: run { remove(Nip05Tag.TAG_NAME) }
             currentMetadata[Lud16Tag.TAG_NAME]?.let { lud16(it.text) } ?: run { remove(Lud16Tag.TAG_NAME) }
             currentMetadata[Lud06Tag.TAG_NAME]?.let { lud06(it.text) } ?: run { remove(Lud06Tag.TAG_NAME) }
+            currentMetadata[ClinkOfferTag.TAG_NAME]?.let { clinkOffer(it.text) } ?: run { remove(ClinkOfferTag.TAG_NAME) }
         }
 
         private fun addIfNotBlank(

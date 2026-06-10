@@ -205,7 +205,10 @@ class UpdateMetadataTest {
         // written into kind-0 content under the spec's `clink_offer` key
         assertEquals(true, event.content.contains("\"clink_offer\":\"$noffer\""))
 
-        // and parses back out
+        // and dual-written as a kind-0 tag (NIP-1770 pattern), like the other fields
+        assertContentEquals(arrayOf("clink_offer", noffer), event.tags.firstOrNull { it.firstOrNull() == "clink_offer" })
+
+        // and parses back out of the content
         val metadata = event.contactMetaData()
         assertNotNull(metadata)
         assertEquals(noffer, metadata.clinkOffer)
