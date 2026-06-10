@@ -36,8 +36,8 @@ import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
- * CLINK Debits event (kind 21002). The same kind carries both the request (requestor →
- * service) and the response (service → requestor); a response is distinguished by an `e`
+ * CLINK Debits event (kind 21002). The same kind carries both the request (requestor â
+ * service) and the response (service â requestor); a response is distinguished by an `e`
  * tag referencing the request. Content is NIP-44 encrypted between the two parties.
  *
  * See https://github.com/shocknet/clink/blob/master/specs/clink-debits.md
@@ -61,13 +61,24 @@ class DebitEvent(
 
     fun version() = tags.firstNotNullOfOrNull(ClinkVersionTag::parse)
 
-    private fun talkingWith(oneSideHex: String): HexKey = if (pubKey == oneSideHex) recipientPubKey() ?: pubKey else pubKey
+    /**
+     * The NIP-44 conversation peer for [myPubKey]: the counterparty, or null if I am neither
+     * the author nor the addressed recipient. No self-fallback — a malformed event (e.g. an
+     * authored request missing its `p` tag) yields null and fails cleanly instead of deriving
+     * a conversation key with myself.
+     */
+    private fun conversationPeer(myPubKey: HexKey): HexKey? =
+        when (myPubKey) {
+            pubKey -> recipientPubKey()
+            recipientPubKey() -> pubKey
+            else -> null
+        }
 
-    fun canDecrypt(signer: NostrSigner) = pubKey == signer.pubKey || recipientPubKey() == signer.pubKey
+    fun canDecrypt(signer: NostrSigner) = conversationPeer(signer.pubKey) != null
 
     suspend fun decryptContent(signer: NostrSigner): String {
-        if (!canDecrypt(signer)) throw SignerExceptions.UnauthorizedDecryptionException()
-        return signer.nip44Decrypt(content, talkingWith(signer.pubKey))
+        val peer = conversationPeer(signer.pubKey) ?: throw SignerExceptions.UnauthorizedDecryptionException()
+        return signer.nip44Decrypt(content, peer)
     }
 
     suspend fun decryptRequest(signer: NostrSigner): DebitRequest = OptimizedJsonMapper.fromJsonTo<DebitRequest>(decryptContent(signer))

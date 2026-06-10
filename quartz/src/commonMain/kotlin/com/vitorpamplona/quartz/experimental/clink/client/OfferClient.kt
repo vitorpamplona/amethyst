@@ -80,7 +80,7 @@ class OfferClient(
         Filter(
             kinds = listOf(OfferEvent.KIND),
             authors = listOf(servicePubKey),
-            tags = mapOf("e" to listOf(requestId)),
+            tags = mapOf("e" to listOf(requestId), "p" to listOf(signer.pubKey)),
         )
 
     suspend fun parseResponse(event: OfferEvent): OfferResponse = event.decryptResponse(signer)

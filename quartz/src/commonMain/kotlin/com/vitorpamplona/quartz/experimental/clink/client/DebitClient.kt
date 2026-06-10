@@ -84,7 +84,7 @@ class DebitClient(
         Filter(
             kinds = listOf(DebitEvent.KIND),
             authors = listOf(servicePubKey),
-            tags = mapOf("e" to listOf(requestId)),
+            tags = mapOf("e" to listOf(requestId), "p" to listOf(signer.pubKey)),
         )
 
     suspend fun parseResponse(event: DebitEvent): DebitResponse = event.decryptResponse(signer)

@@ -102,7 +102,7 @@ class ManageClient(
         Filter(
             kinds = listOf(ManageEvent.KIND),
             authors = listOf(serverPubKey),
-            tags = mapOf("e" to listOf(requestId)),
+            tags = mapOf("e" to listOf(requestId), "p" to listOf(signer.pubKey)),
         )
 
     suspend fun parseResponse(event: ManageEvent): ManageResponse = event.decryptResponse(signer)
