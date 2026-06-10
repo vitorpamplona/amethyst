@@ -69,7 +69,6 @@ import com.vitorpamplona.amethyst.service.playback.service.PlaybackServiceClient
 import com.vitorpamplona.amethyst.service.relayClient.CacheClientConnector
 import com.vitorpamplona.amethyst.service.relayClient.RelayProxyClientConnector
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.AuthCoordinator
-import com.vitorpamplona.amethyst.service.relayClient.diagnostics.DmRelayDiagnosticsLogger
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderQueryState
@@ -340,6 +339,7 @@ class AppModules(
                     isPrimaryCoreRpc = true,
                 )
             }
+
             NamecoinBackend.ELECTRUMX -> {
                 // Custom servers first (if any). If the user only has the public
                 // defaults configured, primary == defaultElectrumx and the
@@ -513,7 +513,7 @@ class AppModules(
     val logger = if (isDebug) RelaySpeedLogger(client) else null
 
     // Focused timeline for the DM / gift-wrap loading path (tag: DMPagination).
-    val dmDiagnostics = if (isDebug) DmRelayDiagnosticsLogger(client) else null
+    // val dmDiagnostics = if (isDebug) DmRelayDiagnosticsLogger(client) else null
 
     // Coordinates all subscriptions for the Nostr Client
     val sources: RelaySubscriptionsCoordinator =
