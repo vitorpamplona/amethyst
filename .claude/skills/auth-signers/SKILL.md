@@ -75,7 +75,7 @@ Most feature code should go through `Account`'s mutation methods (`account.sendR
 Entry points:
 
 - **Existing private key** (`nsec`, 32-byte hex, file) → `NostrSignerInternal`.
-- **Bunker URL** (`bunker://...`) → `RemoteSignerManager.connect(url)` in `nip46RemoteSigner/signer/RemoteSignerManager.kt` returns a `NostrSignerRemote`.
+- **Bunker URL** (`bunker://...`) → `NostrSignerRemote.fromBunkerUri(bunkerUri, localSigner, client)` in `nip46RemoteSigner/signer/NostrSignerRemote.kt` parses the URI and returns a `NostrSignerRemote`; then call its `suspend fun connect()` to perform the NIP-46 handshake.
 - **Installed external signer app** (Amber, nos2x, etc. on Android) → `ExternalSignerLogin.launch(...)` opens the signer app; approval yields a `NostrSignerExternal`.
 
 The UI hosts both flows via `amethyst/.../ui/screen/loggedOff/login/` — look there for `ExternalSignerButton.kt` and the bunker-URL paste screen.
