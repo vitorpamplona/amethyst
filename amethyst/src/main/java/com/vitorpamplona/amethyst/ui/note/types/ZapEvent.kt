@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -82,6 +83,20 @@ fun RenderLnZap(
         nav,
     )
 }
+
+/**
+ * Resolves the sender of a zap receipt — the author of the embedded kind 9734
+ * request, decrypted when it is a private zap — since the receipt itself is
+ * signed by the recipient's lightning provider, not by the sender.
+ */
+@Composable
+fun observeZapSender(
+    zapNote: Note,
+    accountViewModel: AccountViewModel,
+): State<User?> =
+    produceState<User?>(initialValue = null, key1 = zapNote) {
+        value = accountViewModel.innerDecryptAmountMessage(zapNote)?.user
+    }
 
 @Composable
 private fun parseAuthorCommentAndAmount(

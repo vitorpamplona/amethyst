@@ -57,6 +57,7 @@ import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip73ExternalIds.scope
 
@@ -115,7 +116,15 @@ fun RenderTextEvent(
                 }
 
                 ReplyRenderType.LINE -> {
-                    val parentAuthor = replyingDirectlyTo.author
+                    // Zap receipts are signed by the recipient's lightning provider;
+                    // label the reply with the zap sender instead of the service key.
+                    val zapSender =
+                        if (replyingDirectlyTo.event is LnZapEvent) {
+                            observeZapSender(replyingDirectlyTo, accountViewModel).value
+                        } else {
+                            null
+                        }
+                    val parentAuthor = zapSender ?: replyingDirectlyTo.author
                     if (parentAuthor != null) {
                         ReplyToLabel(
                             parentAuthorDisplay = parentAuthor.toBestDisplayName(),

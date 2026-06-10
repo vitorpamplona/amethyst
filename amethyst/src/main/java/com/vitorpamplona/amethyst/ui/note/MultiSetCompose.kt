@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.authorRouteFor
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeReplyTo
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
@@ -469,6 +470,9 @@ data class ZapAmountCommentNotification(
     val user: User?,
     val comment: String?,
     val amount: String?,
+    // The zap receipt (kind 9735) note, when available, so the chip can offer
+    // actions that target the zap itself (e.g. replying to it).
+    val zapNote: Note? = null,
 )
 
 @Composable
@@ -485,6 +489,7 @@ private fun ParseAuthorCommentAndAmount(
                     user = zapRequest.author,
                     comment = null,
                     amount = null,
+                    zapNote = zapEvent,
                 ),
             )
         }
@@ -507,6 +512,7 @@ fun click(
     content.user?.let { nav.nav(routeFor(it)) }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun RenderState(
     content: ZapAmountCommentNotification,
@@ -515,7 +521,15 @@ private fun RenderState(
     nav: INav,
 ) {
     Row(
-        modifier = Modifier.clickable { click(content, nav) },
+        modifier =
+            Modifier.combinedClickable(
+                onClick = { click(content, nav) },
+                onLongClick = {
+                    content.zapNote?.let { zap ->
+                        nav.nav { routeReplyTo(zap, accountViewModel.account) }
+                    }
+                },
+            ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         DisplayAuthorCommentAndAmount(

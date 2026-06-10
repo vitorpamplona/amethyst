@@ -69,6 +69,13 @@ class LnZapRequestEvent(
 
     fun isPrivateZap() = tags.any { t -> t.size >= 2 && t[0] == "anon" && t[1].isNotBlank() }
 
+    /**
+     * True when the request carries an `anon` tag — a private zap (encrypted payload)
+     * or an anonymous zap (blank value). In both cases [pubKey] is an ephemeral
+     * throwaway key, not the sender's real identity.
+     */
+    fun hasAnonTag() = tags.any { t -> t.isNotEmpty() && t[0] == "anon" }
+
     fun getAnonTag(): String {
         val anonTag = tags.firstOrNull { t -> t.size >= 2 && t[0] == "anon" }
         if (anonTag != null) {

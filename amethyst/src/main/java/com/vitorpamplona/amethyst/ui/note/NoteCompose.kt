@@ -186,6 +186,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderWikiContent
 import com.vitorpamplona.amethyst.ui.note.types.RenderZapPoll
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
+import com.vitorpamplona.amethyst.ui.note.types.observeZapSender
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatClip
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.RenderPublicChatChannelHeader
@@ -1708,7 +1709,22 @@ fun FirstUserInfoRow(
         val isDraft = baseNote.isDraft()
         val textColor = if (isRepost) MaterialTheme.colorScheme.grayText else Color.Unspecified
 
-        if (showAuthorPicture) {
+        // Zap receipts are signed by the recipient's lightning provider; show the
+        // sender from the embedded zap request instead of the service key.
+        val zapSender =
+            if (baseNote.event is LnZapEvent) {
+                observeZapSender(baseNote, accountViewModel).value
+            } else {
+                null
+            }
+
+        if (zapSender != null) {
+            if (showAuthorPicture) {
+                UserPicture(zapSender, Size25dp, accountViewModel = accountViewModel, nav = nav)
+                Spacer(HalfPadding)
+            }
+            UsernameDisplay(zapSender, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel)
+        } else if (showAuthorPicture) {
             NoteAuthorPicture(baseNote, Size25dp, accountViewModel = accountViewModel, nav = nav)
             Spacer(HalfPadding)
             NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel)
