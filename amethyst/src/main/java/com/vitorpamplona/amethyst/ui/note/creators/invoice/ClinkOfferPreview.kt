@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.invoice
 
+import android.widget.Toast
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
@@ -30,6 +32,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -43,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -51,7 +55,10 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.hashtags.Lightning
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.service.ClinkOfferPayer
+import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -79,6 +86,7 @@ fun ClinkOfferPreview(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val clipboard = LocalClipboard.current
 
     var requesting by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -139,6 +147,25 @@ fun ClinkOfferPreview(
                     fontWeight = FontWeight.W500,
                     modifier = Modifier.padding(start = 10.dp),
                 )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                val copiedMessage = stringRes(R.string.copied_to_clipboard)
+                IconButton(
+                    onClick = {
+                        scope.launch {
+                            clipboard.setText(activeOffer.encode())
+                            Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                ) {
+                    Icon(
+                        symbol = MaterialSymbols.ContentCopy,
+                        contentDescription = stringRes(R.string.copy_to_clipboard),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Size20Modifier,
+                    )
+                }
             }
 
             HorizontalDivider(thickness = DividerThickness)
