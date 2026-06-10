@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
@@ -43,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.LocalInlineQuoteRenderer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
@@ -112,6 +114,13 @@ fun ChatroomMessageCompose(
     // LoadingReplyNote). Null keeps the default blank for every other caller.
     onBlank: (@Composable () -> Unit)? = null,
 ) {
+    // Re-skin inline `nostr:...` quotes for everything inside this bubble: a quoted
+    // chat message renders with the chat reply design instead of the quoted-note card.
+    val inlineQuoteRenderer =
+        remember(onWantsToReply, onWantsToEditDraft, onScrollToNote) {
+            chatInlineQuoteRenderer(onWantsToReply, onWantsToEditDraft, onScrollToNote)
+        }
+
     val onFound: @Composable () -> Unit = {
         WatchBlockAndReport(
             note = baseNote,
@@ -146,10 +155,12 @@ fun ChatroomMessageCompose(
         }
     }
 
-    if (onBlank != null) {
-        WatchNoteEvent(baseNote = baseNote, onNoteEventFound = onFound, onBlank = onBlank, accountViewModel = accountViewModel)
-    } else {
-        WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel, nav = nav, onNoteEventFound = onFound)
+    CompositionLocalProvider(LocalInlineQuoteRenderer provides inlineQuoteRenderer) {
+        if (onBlank != null) {
+            WatchNoteEvent(baseNote = baseNote, onNoteEventFound = onFound, onBlank = onBlank, accountViewModel = accountViewModel)
+        } else {
+            WatchNoteEvent(baseNote = baseNote, accountViewModel = accountViewModel, nav = nav, onNoteEventFound = onFound)
+        }
     }
 }
 
