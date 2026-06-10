@@ -73,6 +73,23 @@ class ClinkInteropTest {
         assertEquals(offer, ClinkPointerParser.parse(offer.encode()))
     }
 
+    // The live default offer hard-coded in shocknet/clink-demo (clinkme.dev), src/index.ts
+    // `DEFAULT_NOFFER`. Public domain (the demo is Unlicensed). A real-world spontaneous,
+    // relay-bearing, no-price offer whose offer-id is a 64-char hex string.
+    private val clinkDemoDefaultOffer =
+        "noffer1qvqsyqjqxuurvwpcxc6rvvrxxsurqep5vfjk2wf4v33nsenrxumnyvesxfnrswfkvycrwdp3x93xydf5xg6rzce4vv6xgdfh8quxgct9x5erxvspremhxue69uhhgetnwskhyetvv9ujumrfva58gmnfdenjuur4vgqzpccxc30wpf78wf2q78wg3vq008fd8ygtl4qy06gstpye3h5unc47xmee6z"
+
+    @Test
+    fun decodesClinkDemoDefaultOffer() {
+        val offer = ClinkPointerParser.parse(clinkDemoDefaultOffer) as NOffer
+        assertEquals("e306c45ee0a7c772540f1dc88b00f79d2d3910bfd4047e910584998de9c9e2be", offer.pubKey)
+        assertEquals(RelayUrlNormalizer.normalizeOrNull("wss://test-relay.lightning.pub"), offer.relays.single())
+        assertEquals("786886460f480d4bee95dc8fc772302f896a07411bb54241c5c4d5788dae5232", offer.pointer)
+        assertEquals(OfferPriceType.SPONTANEOUS, offer.priceType)
+        assertNull(offer.price)
+        assertEquals(offer, ClinkPointerParser.parse(offer.encode()))
+    }
+
     @Test
     fun decodesAndRoundTripsOfferVariable() {
         val offer = ClinkPointerParser.parse(offerVariable) as NOffer
