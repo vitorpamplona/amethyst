@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
+import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import kotlinx.coroutines.test.runTest
@@ -74,5 +75,38 @@ class PrivateNoteFactoryTest {
             assertEquals(aliceSigner.pubKey, rumor.pubKey)
             assertEquals("for your eyes only", rumor.content)
             assertTrue(rumor.sig.isEmpty(), "unsealed rumors must carry an empty signature")
+        }
+
+    @Test
+    fun privateDeletion_wrapsToExplicitRecipients_andRetractsTheRumorId() =
+        runTest {
+            // Alice retracts a private reaction she previously wrapped to Bob.
+            val reaction = aliceSigner.sign(TextNoteEvent.build("the rumor being retracted"))
+
+            val result =
+                NIP17Factory().createDeletionNIP17(
+                    template = DeletionEvent.build(listOf(reaction)),
+                    to = listOf(bobSigner.pubKey),
+                    signer = aliceSigner,
+                )
+
+            assertEquals(DeletionEvent.KIND, result.msg.kind)
+            assertEquals(
+                setOf(aliceSigner.pubKey, bobSigner.pubKey),
+                result.wraps.mapNotNull { it.recipientPubKey() }.toSet(),
+                "deletion wraps must cover the explicit recipients plus the sender's self-copy",
+            )
+
+            val bobWrap = result.wraps.first { it.recipientPubKey() == bobSigner.pubKey }
+            val rumor = bobWrap.unwrapAndUnsealOrNull(bobSigner)
+
+            assertNotNull(rumor, "recipient must be able to unwrap and unseal the deletion")
+            assertEquals(DeletionEvent.KIND, rumor.kind)
+            assertEquals(aliceSigner.pubKey, rumor.pubKey, "deletions only apply when the author matches")
+            assertTrue(rumor.sig.isEmpty(), "the deletion travels as an unsigned rumor")
+            assertTrue(
+                rumor.tags.any { it.size >= 2 && it[0] == "e" && it[1] == reaction.id },
+                "the deletion must e-tag the retracted rumor id (inside the wrap only)",
+            )
         }
 }

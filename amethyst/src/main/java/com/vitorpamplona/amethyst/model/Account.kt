@@ -975,6 +975,28 @@ class Account(
         }
     }
 
+    /**
+     * Retracts rumor-only events (private reactions/replies) with a
+     * gift-wrapped NIP-09 deletion delivered to the same participants as
+     * the [target] rumor they referenced. A public deletion would e-tag
+     * the private rumor ids onto public relays.
+     */
+    suspend fun deletePrivately(
+        notes: List<Note>,
+        target: Note,
+    ) {
+        if (!isWriteable()) return
+        val targetEvent = target.event ?: return
+
+        val myRumors = notes.filter { it.author == userProfile() }.mapNotNull { it.event }
+        if (myRumors.isEmpty()) return
+
+        val recipients = (targetEvent.taggedUserIds() + targetEvent.pubKey).distinct().minus(signer.pubKey)
+        broadcastPrivately(
+            NIP17Factory().createDeletionNIP17(DeletionEvent.build(myRumors), recipients, signer),
+        )
+    }
+
     suspend fun delete(
         event: Event,
         additionalRelays: Set<NormalizedRelayUrl>,

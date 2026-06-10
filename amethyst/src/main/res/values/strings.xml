@@ -2098,6 +2098,7 @@
     <string name="nutzap">Nutzap</string>
     <string name="nutzap_failed_title">Nutzap failed</string>
     <string name="nutzap_failed_no_recipient">No recipient pubkey on the note</string>
+    <string name="nutzap_failed_private_note">Nutzaps are public and would reveal this private note. Use a Lightning zap instead.</string>
     <string name="nutzap_failed_no_event">Cannot build event reference</string>
     <string name="cashu_create_token">Create token</string>
     <string name="cashu_redeem_button">Redeem</string>
