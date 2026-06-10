@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferEvent
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferRequest
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferResponse
+import com.vitorpamplona.quartz.experimental.clink.tags.ClinkVersionTag
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -55,7 +56,7 @@ class ClinkEventTest {
             buildList {
                 add(arrayOf("p", recipient))
                 if (requestId != null) add(arrayOf("e", requestId))
-                add(Clink.versionTag())
+                add(ClinkVersionTag.assemble())
             }.toTypedArray(),
         content = "encrypted-placeholder",
         sig = "b".repeat(128),
@@ -69,7 +70,7 @@ class ClinkEventTest {
         assertFalse(request.isResponse())
         assertNull(request.requestId())
         assertEquals(service.pubKey, request.recipientPubKey())
-        assertEquals(Clink.VERSION, request.version())
+        assertEquals(ClinkVersionTag.CURRENT, request.version())
     }
 
     @Test

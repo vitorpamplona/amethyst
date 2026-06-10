@@ -21,7 +21,8 @@
 package com.vitorpamplona.quartz.experimental.clink.offers
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.experimental.clink.Clink
+import com.vitorpamplona.quartz.experimental.clink.tags.ClinkVersionTag
+import com.vitorpamplona.quartz.experimental.clink.tags.clinkVersion
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
@@ -60,7 +61,7 @@ class OfferEvent(
 
     fun isResponse() = requestId() != null
 
-    fun version() = tags.firstOrNull { it.size > 1 && it[0] == Clink.VERSION_TAG_NAME }?.get(1)
+    fun version() = tags.firstNotNullOfOrNull(ClinkVersionTag::parse)
 
     private fun talkingWith(oneSideHex: String): HexKey = if (pubKey == oneSideHex) recipientPubKey() ?: pubKey else pubKey
 
@@ -90,7 +91,7 @@ class OfferEvent(
             return signer.sign(
                 eventTemplate(KIND, encrypted, createdAt) {
                     pTag(servicePubKey, null)
-                    add(Clink.versionTag())
+                    clinkVersion()
                     alt(ALT)
                 },
             )
@@ -109,7 +110,7 @@ class OfferEvent(
                 eventTemplate(KIND, encrypted, createdAt) {
                     pTag(payerPubKey, null)
                     add(ETag.assemble(requestEvent.id, null, null))
-                    add(Clink.versionTag())
+                    clinkVersion()
                     alt(ALT)
                 },
             )

@@ -18,16 +18,27 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.clink
+package com.vitorpamplona.quartz.experimental.clink.tags
+
+import com.vitorpamplona.quartz.utils.ensure
 
 /**
- * Constants shared by all three CLINK message kinds. Every CLINK request and
- * response carries a `["clink_version", "1"]` tag and a `["p", recipient]` tag,
- * and its content is a NIP-44 encrypted JSON payload.
+ * Protocol-version tag shared by all three CLINK message kinds (21001-3). Every CLINK
+ * request and response carries a `["clink_version", "1"]` tag alongside its `p` tag,
+ * with the content NIP-44 encrypted between the two parties.
  */
-object Clink {
-    const val VERSION = "1"
-    const val VERSION_TAG_NAME = "clink_version"
+class ClinkVersionTag {
+    companion object {
+        const val TAG_NAME = "clink_version"
+        const val CURRENT = "1"
 
-    fun versionTag(): Array<String> = arrayOf(VERSION_TAG_NAME, VERSION)
+        fun parse(tag: Array<String>): String? {
+            ensure(tag.size > 1) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return tag[1]
+        }
+
+        fun assemble(version: String = CURRENT) = arrayOf(TAG_NAME, version)
+    }
 }

@@ -21,7 +21,8 @@
 package com.vitorpamplona.quartz.experimental.clink.manage
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.experimental.clink.Clink
+import com.vitorpamplona.quartz.experimental.clink.tags.ClinkVersionTag
+import com.vitorpamplona.quartz.experimental.clink.tags.clinkVersion
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
@@ -58,7 +59,7 @@ class ManageEvent(
 
     fun isResponse() = requestId() != null
 
-    fun version() = tags.firstOrNull { it.size > 1 && it[0] == Clink.VERSION_TAG_NAME }?.get(1)
+    fun version() = tags.firstNotNullOfOrNull(ClinkVersionTag::parse)
 
     private fun talkingWith(oneSideHex: String): HexKey = if (pubKey == oneSideHex) recipientPubKey() ?: pubKey else pubKey
 
@@ -88,7 +89,7 @@ class ManageEvent(
             return signer.sign(
                 eventTemplate(KIND, encrypted, createdAt) {
                     pTag(serverPubKey, null)
-                    add(Clink.versionTag())
+                    clinkVersion()
                     alt(ALT)
                 },
             )
@@ -107,7 +108,7 @@ class ManageEvent(
                 eventTemplate(KIND, encrypted, createdAt) {
                     pTag(appPubKey, null)
                     add(ETag.assemble(requestEvent.id, null, null))
-                    add(Clink.versionTag())
+                    clinkVersion()
                     alt(ALT)
                 },
             )
