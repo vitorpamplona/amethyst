@@ -53,7 +53,6 @@ class MarmotGroupChatroom(
     var memberCount = MutableStateFlow(0)
     var members = MutableStateFlow<List<GroupMemberInfo>>(emptyList())
     var newestMessage: Note? = null
-    val unreadCount = MutableStateFlow(0)
 
     /**
      * Tracks the most recent createdAt (seconds) of a kind:445 group event
@@ -135,30 +134,6 @@ class MarmotGroupChatroom(
                     newestMessage = msg
                 }
 
-                unreadCount.value += 1
-                changesFlow?.get()?.tryEmit(ListChange.Addition(msg))
-                return@withLock true
-            }
-            return@withLock false
-        }
-
-    /**
-     * Add a message that is being restored from persistent storage on app
-     * startup. Behaves like [addMessageSync] but does NOT bump the unread
-     * count — restored messages were already seen by the user in a previous
-     * session.
-     */
-    fun restoreMessageSync(msg: Note): Boolean =
-        syncLock.withLock {
-            if (msg !in messages) {
-                messages = messages + msg
-                msg.addGatherer(this)
-
-                val createdAt = msg.createdAt() ?: 0L
-                if (createdAt > (newestMessage?.createdAt() ?: 0L)) {
-                    newestMessage = msg
-                }
-
                 changesFlow?.get()?.tryEmit(ListChange.Addition(msg))
                 return@withLock true
             }
@@ -180,10 +155,6 @@ class MarmotGroupChatroom(
             }
             return@withLock false
         }
-
-    fun markAsRead() {
-        unreadCount.value = 0
-    }
 
     fun recordRelayActivity(
         relay: NormalizedRelayUrl,
@@ -220,7 +191,6 @@ class MarmotGroupChatroom(
             if (toRemove.isEmpty()) return@withLock toRemove
             messages = emptySet()
             newestMessage = null
-            unreadCount.value = 0
             changesFlow?.get()?.tryEmit(ListChange.SetDeletion<Note>(toRemove))
             toRemove
         }

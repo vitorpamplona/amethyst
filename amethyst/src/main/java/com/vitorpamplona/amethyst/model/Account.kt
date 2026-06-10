@@ -3549,7 +3549,7 @@ class Account(
                                 if (isNew) {
                                     innerNote.event = innerEvent
                                 }
-                                marmotGroupList.restoreMessage(groupId, innerNote)
+                                marmotGroupList.addMessage(groupId, innerNote)
                             } catch (e: Exception) {
                                 Log.w(
                                     "Account",

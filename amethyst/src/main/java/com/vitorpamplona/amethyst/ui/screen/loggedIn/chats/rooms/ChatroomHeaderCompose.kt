@@ -260,7 +260,6 @@ private fun MarmotGroupRoomCompose(
     nav: INav,
 ) {
     val displayName by chatroom.displayName.collectAsStateWithLifecycle()
-    val unread by chatroom.unreadCount.collectAsStateWithLifecycle()
 
     val author = lastMessage.author
     val noteEvent = lastMessage.event
@@ -274,13 +273,15 @@ private fun MarmotGroupRoomCompose(
             stringRes(R.string.marmot_group_no_messages_yet)
         }
 
+    val lastReadTime by accountViewModel.account.loadLastReadFlow("MarmotGroup/${chatroom.nostrGroupId}").collectAsStateWithLifecycle()
+
     ChannelName(
         channelIdHex = chatroom.nostrGroupId,
         channelPicture = null,
         channelTitle = { modifier -> ChannelTitleWithLabelInfo(groupName, R.string.marmot_group, modifier) },
         channelLastTime = lastMessage.createdAt(),
         channelLastContent = lastContent,
-        hasNewMessages = unread > 0,
+        hasNewMessages = (lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         autoPlayGif =

@@ -222,10 +222,15 @@ fun MarmotGroupListItem(
     onClick: () -> Unit,
 ) {
     val displayName by chatroom.displayName.collectAsStateWithLifecycle()
-    val unread by chatroom.unreadCount.collectAsStateWithLifecycle()
     val members by chatroom.members.collectAsStateWithLifecycle()
     val memberPubkeys = remember(members) { members.map { it.pubkey } }
     val newestMessage = chatroom.newestMessage
+
+    val lastReadTime by accountViewModel.account.loadLastReadFlow("MarmotGroup/$groupId").collectAsStateWithLifecycle()
+    val unread =
+        remember(newestMessage, lastReadTime) {
+            chatroom.messages.count { (it.createdAt() ?: Long.MIN_VALUE) > lastReadTime }
+        }
 
     Row(
         modifier =
