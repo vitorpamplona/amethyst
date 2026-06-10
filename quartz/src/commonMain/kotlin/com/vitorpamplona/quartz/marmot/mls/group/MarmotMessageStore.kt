@@ -39,7 +39,12 @@ package com.vitorpamplona.quartz.marmot.mls.group
 interface MarmotMessageStore {
     /**
      * Append a decrypted inner event JSON to the group's persisted message log.
-     * Implementations should be tolerant to duplicate appends.
+     *
+     * Appends MUST be idempotent: appending a JSON string that is already in
+     * the group's log is a no-op. After a restart the MLS ratchet rewinds to
+     * the last persisted commit, so relays replaying recent kind:445 events
+     * can re-decrypt — and re-persist — messages already captured in a
+     * previous session; without dedup the log grows on every restart.
      *
      * @param nostrGroupId hex-encoded Nostr group ID
      * @param innerEventJson the decrypted inner Nostr event JSON (e.g., kind:9 chat)

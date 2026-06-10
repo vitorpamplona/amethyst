@@ -78,6 +78,10 @@ class AndroidMarmotMessageStore(
         writeMutex.withLock {
             try {
                 val existing = readAll(nostrGroupId).toMutableList()
+                if (innerEventJson in existing) {
+                    Log.d(TAG) { "appendMessage($nostrGroupId): duplicate entry skipped" }
+                    return@withLock
+                }
                 existing.add(innerEventJson)
                 writeAll(nostrGroupId, existing)
                 Log.d(TAG) {

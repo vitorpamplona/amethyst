@@ -279,7 +279,8 @@ private class InMemoryMarmotMessageStore : MarmotMessageStore {
         nostrGroupId: String,
         innerEventJson: String,
     ) {
-        messages.getOrPut(nostrGroupId) { mutableListOf() }.add(innerEventJson)
+        val log = messages.getOrPut(nostrGroupId) { mutableListOf() }
+        if (innerEventJson !in log) log.add(innerEventJson)
     }
 
     override suspend fun loadMessages(nostrGroupId: String): List<String> = messages[nostrGroupId]?.toList() ?: emptyList()

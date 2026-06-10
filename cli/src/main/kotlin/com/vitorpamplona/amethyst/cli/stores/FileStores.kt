@@ -140,9 +140,12 @@ class FileMarmotMessageStore(
         nostrGroupId: String,
         innerEventJson: String,
     ) {
-        // Each line is one inner event JSON. The store doc tolerates duplicates
-        // so we don't bother deduping here — readers can do it.
-        SecureFileIO.appendText(file(nostrGroupId), innerEventJson.replace("\n", " ") + "\n")
+        // Each line is one inner event JSON. Appends must be idempotent:
+        // post-restart relay replays re-decrypt already-persisted messages.
+        val line = innerEventJson.replace("\n", " ")
+        val target = file(nostrGroupId)
+        if (target.exists() && target.readLines().any { it == line }) return
+        SecureFileIO.appendText(target, line + "\n")
     }
 
     override suspend fun loadMessages(nostrGroupId: String): List<String> = file(nostrGroupId).takeIf { it.exists() }?.readLines()?.filter { it.isNotBlank() } ?: emptyList()
