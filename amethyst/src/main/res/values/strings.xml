@@ -214,6 +214,7 @@
     <string name="voice_anonymize_description">Alters your voice pitch. Note: basic pitch changes can potentially be reversed by determined listeners.</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">User does not have a lightning address set up to receive sats</string>
     <string name="reply_here">"reply here… "</string>
+    <string name="user_suggestion_in_this_chat">In this chat</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Copies the Note ID to the clipboard for sharing in Nostr</string>
     <string name="copy_channel_id_note_to_the_clipboard">Copy Channel ID (Note) to the Clipboard</string>
     <string name="edits_the_channel_metadata">Edits the Channel Metadata</string>

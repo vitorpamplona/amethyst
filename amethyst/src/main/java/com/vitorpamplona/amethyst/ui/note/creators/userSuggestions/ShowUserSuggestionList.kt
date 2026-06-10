@@ -25,13 +25,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -43,6 +46,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
@@ -52,6 +56,7 @@ import com.vitorpamplona.amethyst.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.ui.note.ObserveAndRenderNIP05VerifiedSymbol
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.Font14SP
 import com.vitorpamplona.amethyst.ui.theme.NIP05IconSize
@@ -116,13 +121,23 @@ fun WatchResponses(
     val suggestions by userSuggestions.results.collectAsStateWithLifecycle(emptyList())
 
     if (suggestions.isNotEmpty()) {
+        // Snapshot once per result list, not per row.
+        val priority = remember(suggestions) { userSuggestions.priorityPubkeys() }
+
         LazyColumn(
             contentPadding = PaddingValues(top = 10.dp),
             modifier = modifier,
             state = listState,
         ) {
             itemsIndexed(suggestions, key = { _, item -> item.pubkeyHex }) { _, item ->
-                UserLine(item, accountViewModel, trailingContent) { onSelect(item) }
+                val trailing =
+                    trailingContent
+                        ?: if (item.pubkeyHex in priority) {
+                            { InThisChatChip() }
+                        } else {
+                            null
+                        }
+                UserLine(item, accountViewModel, trailing) { onSelect(item) }
                 HorizontalDivider(
                     thickness = DividerThickness,
                 )
@@ -130,6 +145,22 @@ fun WatchResponses(
         }
     } else {
         onEmpty()
+    }
+}
+
+@Composable
+private fun InThisChatChip() {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+    ) {
+        Text(
+            text = stringRes(R.string.user_suggestion_in_this_chat),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+        )
     }
 }
 
