@@ -719,7 +719,9 @@ fun DisplayFullNote(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    LocalInlineQuoteRenderer.current.Render(note, extraChars, quotesLeft, backgroundColor, accountViewModel, nav)
+    LocalInlineQuoteRenderer.current.Render(note, quotesLeft, backgroundColor, accountViewModel, nav)
+
+    extraChars?.let { Text(it) }
 }
 
 @Composable
@@ -977,7 +979,7 @@ private fun DisplayNoteFromTag(
     nav: INav,
 ) {
     if (canPreview && quotesLeft > 0) {
-        LocalInlineQuoteRenderer.current.Render(baseNote, null, quotesLeft, backgroundColor, accountViewModel, nav)
+        LocalInlineQuoteRenderer.current.Render(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
     } else {
         ClickableTextPrimary(
             text = "@${baseNote.idNote().toShortDisplay()}",

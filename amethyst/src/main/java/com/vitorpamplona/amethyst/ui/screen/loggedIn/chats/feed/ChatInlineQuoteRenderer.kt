@@ -45,7 +45,7 @@ fun chatInlineQuoteRenderer(
     onWantsToReply: (Note) -> Unit,
     onWantsToEditDraft: (Note) -> Unit,
     onScrollToNote: ((Note) -> Unit)?,
-) = InlineQuoteRenderer { note, extraChars, quotesLeft, backgroundColor, accountViewModel, nav ->
+) = InlineQuoteRenderer { note, quotesLeft, backgroundColor, accountViewModel, nav ->
     WatchNoteEvent(
         baseNote = note,
         onNoteEventFound = {
@@ -62,11 +62,11 @@ fun chatInlineQuoteRenderer(
                     onScrollToNote = onScrollToNote,
                 )
             } else {
-                DefaultInlineQuoteRenderer.Render(note, extraChars, quotesLeft, backgroundColor, accountViewModel, nav)
+                DefaultInlineQuoteRenderer.Render(note, quotesLeft, backgroundColor, accountViewModel, nav)
             }
         },
         onBlank = {
-            DefaultInlineQuoteRenderer.Render(note, extraChars, quotesLeft, backgroundColor, accountViewModel, nav)
+            DefaultInlineQuoteRenderer.Render(note, quotesLeft, backgroundColor, accountViewModel, nav)
         },
         accountViewModel = accountViewModel,
     )

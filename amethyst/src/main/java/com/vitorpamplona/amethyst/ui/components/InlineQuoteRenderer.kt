@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.components
 
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.compositionLocalOf
@@ -44,12 +43,14 @@ import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
  * through the parser stack. Chat bubbles use this to keep a quoted chat
  * message in the chat reply design instead of the default quoted-note card
  * (see `chatInlineQuoteRenderer`).
+ *
+ * A renderer draws only the quoted note itself; any leftover characters
+ * around the mention stay with the caller ([DisplayFullNote]).
  */
 fun interface InlineQuoteRenderer {
     @Composable
     fun Render(
         note: Note,
-        extraChars: String?,
         quotesLeft: Int,
         backgroundColor: MutableState<Color>,
         accountViewModel: AccountViewModel,
@@ -59,7 +60,7 @@ fun interface InlineQuoteRenderer {
 
 /** The quoted-note card used everywhere outside chats. */
 val DefaultInlineQuoteRenderer =
-    InlineQuoteRenderer { note, extraChars, quotesLeft, backgroundColor, accountViewModel, nav ->
+    InlineQuoteRenderer { note, quotesLeft, backgroundColor, accountViewModel, nav ->
         NoteCompose(
             baseNote = note,
             modifier = MaterialTheme.colorScheme.innerPostModifier,
@@ -70,8 +71,6 @@ val DefaultInlineQuoteRenderer =
             accountViewModel = accountViewModel,
             nav = nav,
         )
-
-        extraChars?.let { Text(it) }
     }
 
 val LocalInlineQuoteRenderer = compositionLocalOf { DefaultInlineQuoteRenderer }
