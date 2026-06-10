@@ -73,9 +73,9 @@ class ClinkInteropTest {
         assertEquals(offer, ClinkPointerParser.parse(offer.encode()))
     }
 
-    // The live default offer hard-coded in shocknet/clink-demo (clinkme.dev), src/index.ts
-    // `DEFAULT_NOFFER`. Public domain (the demo is Unlicensed). A real-world spontaneous,
-    // relay-bearing, no-price offer whose offer-id is a 64-char hex string.
+    // The canonical example offer shipped by @shocknet/clink-sdk: it is both the README usage
+    // example (MIT) and clink-demo / clinkme.dev's `DEFAULT_NOFFER` (public domain). A
+    // real-world spontaneous, relay-bearing, no-price offer whose offer-id is a 64-char hex string.
     private val clinkDemoDefaultOffer =
         "noffer1qvqsyqjqxuurvwpcxc6rvvrxxsurqep5vfjk2wf4v33nsenrxumnyvesxfnrswfkvycrwdp3x93xydf5xg6rzce4vv6xgdfh8quxgct9x5erxvspremhxue69uhhgetnwskhyetvv9ujumrfva58gmnfdenjuur4vgqzpccxc30wpf78wf2q78wg3vq008fd8ygtl4qy06gstpye3h5unc47xmee6z"
 
