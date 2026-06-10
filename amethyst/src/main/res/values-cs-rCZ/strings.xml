@@ -207,6 +207,7 @@
     <string name="voice_anonymize_description">Upravuje výšku vašeho hlasu. Poznámka: základní změny výšky hlasu mohou být odhodlanými posluchači potenciálně zpětně rozpoznány.</string>
     <string name="user_does_not_have_a_lightning_address_setup_to_receive_sats">Uživatel nemá nastavenou LN adresu pro přijímání sats</string>
     <string name="reply_here">"Odpověď zde…"</string>
+    <string name="user_suggestion_in_this_chat">V tomto chatu</string>
     <string name="copies_the_note_id_to_the_clipboard_for_sharing">Zkopíruje ID poznámky do schránky pro sdílení</string>
     <string name="copy_channel_id_note_to_the_clipboard">Zkopírovat ID kanálu (poznámka) do schránky</string>
     <string name="edits_the_channel_metadata">Upravit metadata kanálu</string>
@@ -267,8 +268,13 @@
     <string name="generate_a_new_key">Vygenerovat nový klíč</string>
     <string name="loading_feed">Načítání zdroje</string>
     <string name="loading_account">Načítání účtu</string>
+    <string name="chats_history_proto_nip17">šifrované</string>
+    <string name="chats_history_proto_nip04">zastaralé</string>
+    <string name="chats_reply_searching_history">Hledání původní zprávy…</string>
     <!-- A reply whose target was searched for across all reachable history and never found. -->
+    <string name="chats_reply_not_found">Tuto zprávu se nepodařilo najít</string>
     <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
+    <string name="chats_reply_searched">Prohledány všechny relaye · klepnutím zobrazíte</string>
     <string name="error_loading_replies">"Chyba při načítání odpovědí: "</string>
     <string name="try_again">Zkusit znovu</string>
     <string name="notification_feed_is_empty">Zatím žádná oznámení.</string>
