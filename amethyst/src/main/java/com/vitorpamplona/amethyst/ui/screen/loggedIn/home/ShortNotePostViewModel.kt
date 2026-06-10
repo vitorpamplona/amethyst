@@ -167,6 +167,7 @@ enum class UserSuggestionAnchor {
     MAIN_MESSAGE,
     FORWARD_ZAPS,
     TO_USERS,
+    NOTIFY,
 }
 
 @Stable
@@ -320,6 +321,26 @@ open class ShortNotePostViewModel :
     fun togglePrivateNote() {
         if (privateNoteLocked) return
         wantsPrivateNote = !wantsPrivateNote
+    }
+
+    // Notify / Visible-to editor: lets the user p-tag people who aren't
+    // cited in the message. For private notes the Notify list IS the
+    // audience, so this is how receivers are picked.
+    var wantsToAddNotifyUser by mutableStateOf(false)
+    val notifyUserSearchText = TextFieldState()
+
+    fun onNotifyUserSearchTextChanged() {
+        if (notifyUserSearchText.selection.collapsed) {
+            val lastWord = notifyUserSearchText.text.toString()
+            userSuggestionsMainMessage = UserSuggestionAnchor.NOTIFY
+            userSuggestions?.processCurrentWord(lastWord)
+        }
+    }
+
+    fun addToReplyList(user: User) {
+        if (pTags?.contains(user) != true) {
+            pTags = (pTags ?: emptyList()).plus(user)
+        }
     }
 
     // A single ephemeral signer reused for the whole compose session so that media
@@ -1286,6 +1307,8 @@ open class ShortNotePostViewModel :
         scheduledForSec = null
         wantsPrivateNote = false
         privateNoteLocked = false
+        wantsToAddNotifyUser = false
+        notifyUserSearchText.clearText()
 
         forwardZapTo.value = SplitBuilder()
         forwardZapToEditting.clearText()
@@ -1350,6 +1373,10 @@ open class ShortNotePostViewModel :
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
                 forwardZapTo.value.addItem(item)
                 forwardZapToEditting.clearText()
+            } else if (userSuggestionsMainMessage == UserSuggestionAnchor.NOTIFY) {
+                addToReplyList(item)
+                notifyUserSearchText.clearText()
+                wantsToAddNotifyUser = false
             }
 
             userSuggestionsMainMessage = null
