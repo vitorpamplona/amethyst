@@ -49,6 +49,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.round
 
 class ZapPaymentHandler(
@@ -353,7 +354,7 @@ class ZapPaymentHandler(
         onProgress: (percent: Float) -> Unit,
         context: Context,
     ): List<Paid> {
-        var progressAllPayments = 0.00f
+        val progress = PaymentProgress(payables.size, onProgress)
 
         return mapNotNullAsync(
             items = payables,
@@ -362,9 +363,8 @@ class ZapPaymentHandler(
                     bolt11 = payable.invoice,
                     zappedNote = note,
                     onResponse = { response ->
+                        progress.step()
                         if (response is PayInvoiceErrorResponse) {
-                            progressAllPayments += 0.5f / payables.size
-                            onProgress(progressAllPayments)
                             onError(
                                 stringRes(context, R.string.error_dialog_pay_invoice_error),
                                 stringRes(
@@ -375,19 +375,31 @@ class ZapPaymentHandler(
                                 ),
                                 payable.info.user,
                             )
-                        } else {
-                            progressAllPayments += 0.5f / payables.size
-                            onProgress(progressAllPayments)
                         }
                     },
                 )
 
-                progressAllPayments += 0.5f / payables.size
-                onProgress(progressAllPayments)
+                progress.step()
 
                 Paid(payable, true)
             },
         )
+    }
+
+    /**
+     * Thread-safe progress accumulator for the parallel pay rails. Each payable advances in two
+     * half-steps (request dispatched, then response/settlement), reported as a 0..1 fraction.
+     * The counter is atomic because `mapNotNullAsync` runs the payables concurrently and the
+     * response half-step fires from an async callback, so plain `+=` would lose updates.
+     */
+    private class PaymentProgress(
+        payableCount: Int,
+        private val onProgress: (percent: Float) -> Unit,
+    ) {
+        private val totalSteps = (payableCount * 2).coerceAtLeast(1)
+        private val done = AtomicInteger(0)
+
+        fun step() = onProgress(done.incrementAndGet().toFloat() / totalSteps)
     }
 
     /**
@@ -406,15 +418,14 @@ class ZapPaymentHandler(
         onProgress: (percent: Float) -> Unit,
         context: Context,
     ): List<Paid> {
-        var progressAllPayments = 0.00f
+        val progress = PaymentProgress(payables.size, onProgress)
 
         return mapNotNullAsync(
             items = payables,
             runRequestFor = { payable: Payable ->
                 account.scope.launch {
                     val response = ClinkDebitPayer.payInvoice(account, pointer, payable.invoice)
-                    progressAllPayments += 0.5f / payables.size
-                    onProgress(progressAllPayments)
+                    progress.step()
                     if (response?.isOk() != true) {
                         onError(
                             stringRes(context, R.string.error_dialog_pay_invoice_error),
@@ -425,8 +436,7 @@ class ZapPaymentHandler(
                     }
                 }
 
-                progressAllPayments += 0.5f / payables.size
-                onProgress(progressAllPayments)
+                progress.step()
 
                 Paid(payable, true)
             },
