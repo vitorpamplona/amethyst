@@ -8,7 +8,7 @@ Extract the component `$ARGUMENTS` from the Android app to shared KMP code:
 
 1. **Locate the component** in the amethyst module:
    ```bash
-   find amethyst/src -name "*$ARGUMENTS*" -o -name "*$ARGUMENTS*"
+   find amethyst/src -name "*$ARGUMENTS*"
    grep -r "fun $ARGUMENTS\|class $ARGUMENTS" amethyst/src/
    ```
 

@@ -744,14 +744,14 @@ fun SignerIntegration(accountViewModel: AccountViewModel) {
 ```gradle
 android {
     namespace = 'com.vitorpamplona.amethyst'
-    compileSdk = 36
+    compileSdk = 37      // from libs.versions.toml android-compileSdk — check there, it drifts
 
     defaultConfig {
         applicationId = "com.vitorpamplona.amethyst"
         minSdk = 26          // Android 8.0 (Oreo)
-        targetSdk = 36       // Android 15
+        targetSdk = 37       // android-targetSdk in libs.versions.toml
         versionCode = 447
-        versionName = "1.11.0"
+        versionName = generateVersionName(libs.versions.app.get(), rootDir)
 
         vectorDrawables {
             useSupportLibrary = true

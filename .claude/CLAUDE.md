@@ -12,8 +12,10 @@ architecture while sharing the back end components with the android counterpart.
 a non-interactive JVM command-line client that drives the same `quartz` + `commons` code — used by
 humans, agents, and interop tests. `quic` is a from-scratch pure-Kotlin QUIC v1 + HTTP/3 +
 WebTransport client (no JNI, no BouncyCastle), built because no Android-compatible Java QUIC library
-exists. `nestsClient` runs the audio-room protocol on top of `:quic` for the NIP-53
-audio-rooms feature. It implements both IETF `draft-ietf-moq-transport-17` (under
+exists. `geode` is a standalone JVM Nostr relay (Ktor) built on quartz's
+relay-server code; smaller modules are `benchmark` (Android macrobenchmarks) and
+`quic-interop` (QUIC interop runner, lives at `quic/interop`). `nestsClient` runs
+the audio-room protocol on top of `:quic` for the NIP-53 audio-rooms feature. It implements both IETF `draft-ietf-moq-transport-17` (under
 `moq/`) and **moq-lite Lite-03** (kixelated's variant, under `moq/lite/`); the
 production listener AND speaker paths both run on moq-lite to interop with the
 nostrnests reference relay. The IETF code is kept as a reference + unit-test
@@ -55,6 +57,7 @@ amethyst/
 │   └── src/
 │       ├── commonMain/    # MoQ session, NestsListener, audio glue
 │       └── jvmAndroid/    # Opus encode/decode, AudioRecord/AudioTrack
+├── geode/          # Standalone JVM Nostr relay (Ktor) on quartz's relay-server code
 ├── desktopApp/     # Desktop JVM application (layouts, navigation)
 ├── amethyst/       # Android app (layouts, navigation)
 └── cli/            # Amy — non-interactive CLI (JVM only, no Compose)

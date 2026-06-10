@@ -74,7 +74,7 @@ fun main() = application {
 - `rememberWindowState()` manages size/position
 - `onCloseRequest` handles window close
 
-**See:** `desktopApp/src/jvmMain/kotlin/com/vitorpamplona/amethyst/desktop/Main.kt` — `fun main()` at L172, `application {` at L186, top-level `Window` at L229, `MenuBar` at L234.
+**See:** `desktopApp/src/jvmMain/kotlin/com/vitorpamplona/amethyst/desktop/Main.kt` — grep for `fun main()`, `application {`, the top-level `Window`, and `MenuBar {` (the file is large and line numbers drift; navigate by symbol).
 
 ---
 
@@ -280,9 +280,9 @@ Row(Modifier.fillMaxSize()) {
 }
 ```
 
-**See:** `desktopApp/src/jvmMain/kotlin/com/vitorpamplona/amethyst/desktop/ui/deck/SinglePaneLayout.kt` (NavigationRail at L97, items at L103+). `DeckLayout` alongside it handles multi-pane workspaces.
+**In Amethyst Desktop:** the sidebar is the custom `MainSidebar` composable in `desktopApp/.../ui/deck/DeckSidebar.kt`, instantiated from `Main.kt` and shared by both layout modes (`SinglePaneLayout` and the multi-pane `DeckLayout` alongside it). It is hand-rolled, not Material's `NavigationRail` — use `NavigationRail` only for new, simpler cases.
 
-**Why NavigationRail?**
+**Why a left sidebar?**
 - Desktop has horizontal space (1200+ dp width)
 - Vertical sidebar is standard desktop pattern
 - Always visible (no tabs hidden)
@@ -290,7 +290,7 @@ Row(Modifier.fillMaxSize()) {
 
 **Android comparison:**
 - Android: `BottomNavigationBar` (horizontal, bottom)
-- Desktop: `NavigationRail` (vertical, left)
+- Desktop: left vertical sidebar (`MainSidebar`)
 
 ### Multi-Pane Layouts
 
