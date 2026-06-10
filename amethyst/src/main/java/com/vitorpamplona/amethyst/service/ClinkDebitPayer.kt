@@ -32,6 +32,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -60,10 +62,13 @@ object ClinkDebitPayer {
         bolt11: String,
         amountSats: Long? = null,
         timeoutMs: Long = DEFAULT_TIMEOUT_MS,
-    ): DebitResponse? {
-        val client = clientFor(pointer, account) ?: return null
-        return sendAndAwait(account, client, client.payInvoice(bolt11, amountSats), timeoutMs)
-    }
+    ): DebitResponse? =
+        // Off the Main thread: building the request signs + NIP-44 encrypts, and callers reach
+        // this from Compose (Main) scopes (offer card, lightning-address row). See ClinkOfferPayer.
+        withContext(Dispatchers.IO) {
+            val client = clientFor(pointer, account) ?: return@withContext null
+            sendAndAwait(account, client, client.payInvoice(bolt11, amountSats), timeoutMs)
+        }
 
     /**
      * Asks the wallet to authorize a spending budget. Omit [frequency] for a one-time
@@ -75,10 +80,11 @@ object ClinkDebitPayer {
         amountSats: Long,
         frequency: DebitFrequency? = null,
         timeoutMs: Long = DEFAULT_TIMEOUT_MS,
-    ): DebitResponse? {
-        val client = clientFor(pointer, account) ?: return null
-        return sendAndAwait(account, client, client.requestBudget(amountSats, frequency), timeoutMs)
-    }
+    ): DebitResponse? =
+        withContext(Dispatchers.IO) {
+            val client = clientFor(pointer, account) ?: return@withContext null
+            sendAndAwait(account, client, client.requestBudget(amountSats, frequency), timeoutMs)
+        }
 
     // Debits sign with the persistent account identity (unlike offer requests, which use a
     // throwaway key — see ClinkOfferPayer): the service must see one stable app identity so a

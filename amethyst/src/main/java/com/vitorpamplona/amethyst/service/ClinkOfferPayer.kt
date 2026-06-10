@@ -33,6 +33,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -60,49 +62,54 @@ object ClinkOfferPayer {
         val relays = offer.relays.toSet()
         if (relays.isEmpty()) return null
 
-        // Sign the request with a fresh throwaway key, like the reference SDK/Zeus/Stacker
-        // News do: an offer round-trip is self-contained (the reply is NIP-44'd back to this
-        // key and decrypted with it), so there is no reason to expose the user's real identity
-        // to every offer service they pay. Payer identity, when needed, travels in the request
-        // body (payer_data / a signed zap request), not the transport key.
-        val ephemeralSigner = NostrSignerInternal(KeyPair())
-        val client = OfferClient(offer, ephemeralSigner)
-        val request = client.requestInvoice(amountSats = amountSats)
+        // Keep the round-trip off the Main thread: the ephemeral keygen, JSON serialization,
+        // NIP-44 encryption and signing are CPU/crypto-heavy, and callers reach this from a
+        // Compose (Main) scope. StrictMode flags any of it running on the UI thread.
+        return withContext(Dispatchers.IO) {
+            // Sign the request with a fresh throwaway key, like the reference SDK/Zeus/Stacker
+            // News do: an offer round-trip is self-contained (the reply is NIP-44'd back to this
+            // key and decrypted with it), so there is no reason to expose the user's real identity
+            // to every offer service they pay. Payer identity, when needed, travels in the request
+            // body (payer_data / a signed zap request), not the transport key.
+            val ephemeralSigner = NostrSignerInternal(KeyPair())
+            val client = OfferClient(offer, ephemeralSigner)
+            val request = client.requestInvoice(amountSats = amountSats)
 
-        val reply = CompletableDeferred<OfferEvent>()
-        val subId = "clink-offer-${request.id}"
-        val filters: Map<NormalizedRelayUrl, List<Filter>> = relays.associateWith { listOf(client.responseFilter(request.id)) }
+            val reply = CompletableDeferred<OfferEvent>()
+            val subId = "clink-offer-${request.id}"
+            val filters: Map<NormalizedRelayUrl, List<Filter>> = relays.associateWith { listOf(client.responseFilter(request.id)) }
 
-        val listener =
-            object : SubscriptionListener {
-                override fun onEvent(
-                    event: Event,
-                    isLive: Boolean,
-                    relay: NormalizedRelayUrl,
-                    forFilters: List<Filter>?,
-                ) {
-                    if (event is OfferEvent && event.requestId() == request.id && !reply.isCompleted) {
-                        reply.complete(event)
+            val listener =
+                object : SubscriptionListener {
+                    override fun onEvent(
+                        event: Event,
+                        isLive: Boolean,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        if (event is OfferEvent && event.requestId() == request.id && !reply.isCompleted) {
+                            reply.complete(event)
+                        }
                     }
                 }
-            }
 
-        account.client.subscribe(subId, filters, listener)
-        return try {
-            account.client.publish(request, relays)
-            val response = withTimeoutOrNull(timeoutMs) { reply.await() } ?: return null
-            // A reply that can't be decrypted/parsed (corrupt ciphertext, malformed JSON
-            // from a buggy or hostile relay) is treated as no usable response rather than
-            // thrown — callers only handle null, and an uncaught decode error would hang
-            // the UI (the Pay button stuck on "Requesting…").
+            account.client.subscribe(subId, filters, listener)
             try {
-                client.parseResponse(response)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                null
+                account.client.publish(request, relays)
+                val response = withTimeoutOrNull(timeoutMs) { reply.await() } ?: return@withContext null
+                // A reply that can't be decrypted/parsed (corrupt ciphertext, malformed JSON
+                // from a buggy or hostile relay) is treated as no usable response rather than
+                // thrown — callers only handle null, and an uncaught decode error would hang
+                // the UI (the Pay button stuck on "Requesting…").
+                try {
+                    client.parseResponse(response)
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    null
+                }
+            } finally {
+                account.client.unsubscribe(subId)
             }
-        } finally {
-            account.client.unsubscribe(subId)
         }
     }
 }
