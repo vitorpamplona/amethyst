@@ -31,7 +31,7 @@ import kotlin.test.assertEquals
  * AddressableNote than the one `a` tags point to, so quotes/reposts of
  * these videos never resolve on screen.
  */
-class ReplaceableVideoEventAddressTest {
+class AddressableVideoEventAddressTest {
     // Fixture from a real kind-34236 event published by the Divine client
     // (bfe2f224…, "Lunchtime for our Koi"); the horizontal test reuses the
     // same data synthetically.
@@ -40,7 +40,7 @@ class ReplaceableVideoEventAddressTest {
 
     private fun assertAddressUsesDTag(
         kind: Int,
-        event: ReplaceableVideoEvent,
+        event: AddressableVideoEvent,
     ) {
         assertEquals(dTag, event.dTag())
         assertEquals(Address(kind, pubkey, dTag), event.address())

@@ -37,7 +37,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.HashSha256Tag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.MimeTypeTag
 
 @Immutable
-abstract class ReplaceableVideoEvent(
+abstract class AddressableVideoEvent(
     id: HexKey,
     pubKey: HexKey,
     createdAt: Long,
