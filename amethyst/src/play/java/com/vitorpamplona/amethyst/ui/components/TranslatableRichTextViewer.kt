@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.service.lang.TranslationsCache
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.MaxWidthPaddingTop5dp
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
@@ -58,6 +59,7 @@ fun TranslatableRichTextViewer(
     authorPubKey: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
+    zapEvent: Event? = null,
 ) {
     TranslatableRichTextViewer(
         content = content,
@@ -76,6 +78,7 @@ fun TranslatableRichTextViewer(
             authorPubKey,
             accountViewModel,
             nav,
+            zapEvent,
         )
     }
 }

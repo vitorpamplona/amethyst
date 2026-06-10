@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.MaxWidthPaddingTop5dp
+import com.vitorpamplona.quartz.nip01Core.core.Event
 
 @Composable
 fun TranslatableRichTextViewer(
@@ -44,6 +45,7 @@ fun TranslatableRichTextViewer(
     authorPubKey: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
+    zapEvent: Event? = null,
 ) = ExpandableRichTextViewer(
     content,
     canPreview,
@@ -56,6 +58,7 @@ fun TranslatableRichTextViewer(
     authorPubKey,
     accountViewModel,
     nav,
+    zapEvent,
 )
 
 @Composable

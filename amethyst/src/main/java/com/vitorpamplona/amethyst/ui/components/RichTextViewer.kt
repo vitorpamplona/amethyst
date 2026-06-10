@@ -122,6 +122,7 @@ import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.inlinePlaceholder
 import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
 import kotlinx.coroutines.Dispatchers
@@ -139,12 +140,13 @@ fun RichTextViewer(
     authorPubKey: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
+    zapEvent: Event? = null,
 ) {
     Column(modifier = modifier) {
         if (remember(content) { CachedRichTextParser.isMarkdown(content) }) {
             RenderContentAsMarkdown(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav)
         } else {
-            RenderRegular(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, authorPubKey, accountViewModel, nav)
+            RenderRegular(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, authorPubKey, accountViewModel, nav, zapEvent)
         }
     }
 }
@@ -347,6 +349,7 @@ private fun RenderRegular(
     authorPubKey: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
+    zapEvent: Event? = null,
 ) {
     if (canPreview) {
         RenderRegular(content, tags, callbackUri, authorPubKey) { paragraph, state, spaceWidth, modifier ->
@@ -369,6 +372,7 @@ private fun RenderRegular(
                         accountViewModel,
                         nav,
                         authorPubKey,
+                        zapEvent,
                     )
                 }
             }
@@ -383,6 +387,7 @@ private fun RenderRegular(
                     accountViewModel,
                     nav,
                     authorPubKey,
+                    zapEvent,
                 )
             }
         }
@@ -479,6 +484,7 @@ private fun RenderWordWithoutPreview(
     accountViewModel: AccountViewModel,
     nav: INav,
     authorPubKey: String? = null,
+    zapEvent: Event? = null,
 ) {
     when (word) {
         // Don't preview Images
@@ -513,7 +519,7 @@ private fun RenderWordWithoutPreview(
 
         // Decoding is local and the network round-trip only fires on the Pay tap,
         // so the offer card is safe to render even in the no-preview path.
-        is ClinkOfferSegment -> ClinkOfferPreview(word.offer, accountViewModel, authorPubKey)
+        is ClinkOfferSegment -> ClinkOfferPreview(word.offer, accountViewModel, authorPubKey, zapEvent)
 
         is EmailSegment -> ClickableEmail(word.segmentText)
 
@@ -551,6 +557,7 @@ private fun RenderWordWithPreview(
     accountViewModel: AccountViewModel,
     nav: INav,
     authorPubKey: String? = null,
+    zapEvent: Event? = null,
 ) {
     when (word) {
         is ImageSegment -> ZoomableContentView(word.segmentText, state, accountViewModel)
@@ -562,7 +569,7 @@ private fun RenderWordWithPreview(
         is InvoiceSegment -> MayBeInvoicePreview(word.segmentText, accountViewModel)
         is WithdrawSegment -> MayBeWithdrawal(word.segmentText, accountViewModel)
         is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
-        is ClinkOfferSegment -> ClinkOfferPreview(word.offer, accountViewModel, authorPubKey)
+        is ClinkOfferSegment -> ClinkOfferPreview(word.offer, accountViewModel, authorPubKey, zapEvent)
         is EmailSegment -> ClickableEmail(word.segmentText)
         is SecretEmoji -> DisplaySecretEmoji(word, state, callbackUri, true, quotesLeft, backgroundColor, accountViewModel, nav)
         is MathSegment -> LatexEquation(word.latex, word.displayMode, word.leading, word.trailing)

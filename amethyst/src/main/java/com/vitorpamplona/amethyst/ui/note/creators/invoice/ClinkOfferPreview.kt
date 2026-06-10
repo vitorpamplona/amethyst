@@ -64,6 +64,7 @@ import com.vitorpamplona.quartz.experimental.clink.offers.OfferErrorCode
 import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser
 import com.vitorpamplona.quartz.experimental.clink.pointers.NOffer
 import com.vitorpamplona.quartz.experimental.clink.pointers.OfferPriceType
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.coroutines.launch
 
@@ -84,6 +85,7 @@ fun ClinkOfferPreview(
     offer: NOffer,
     accountViewModel: AccountViewModel,
     authorPubKey: String? = null,
+    zapEvent: Event? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -201,20 +203,30 @@ fun ClinkOfferPreview(
             ) {
                 val amount = if (amountRequired) amountInput.toLongOrNull() else useOffer.price?.toLong()
 
-                // Attach a NIP-57 zap request so paying the offer becomes a real zap on the
-                // author (skipped when there's no author or the user opted out via NONZAP).
+                // Attach a NIP-57 zap request so paying the offer becomes a real zap. With the
+                // note's event we zap the post (e-tag); otherwise we fall back to an author
+                // (profile) zap. Skipped when there's no target or the user opted out (NONZAP).
                 val zapType = accountViewModel.defaultZapType()
                 val zapRequest =
-                    if (authorPubKey != null && zapType != LnZapEvent.ZapType.NONZAP) {
-                        val author = accountViewModel.account.cache.getOrCreateUser(authorPubKey)
-                        accountViewModel.account
-                            .createZapRequestFor(
-                                user = author,
-                                zapType = zapType,
-                                amountMillisats = amount?.times(1000),
-                            ).toJson()
-                    } else {
-                        null
+                    when {
+                        zapType == LnZapEvent.ZapType.NONZAP -> null
+                        zapEvent != null ->
+                            accountViewModel.account
+                                .createZapRequestFor(
+                                    event = zapEvent,
+                                    pollOption = null,
+                                    zapType = zapType,
+                                    toUser = null,
+                                    amountMillisats = amount?.times(1000),
+                                ).toJson()
+                        authorPubKey != null ->
+                            accountViewModel.account
+                                .createZapRequestFor(
+                                    user = accountViewModel.account.cache.getOrCreateUser(authorPubKey),
+                                    zapType = zapType,
+                                    amountMillisats = amount?.times(1000),
+                                ).toJson()
+                        else -> null
                     }
 
                 val response = ClinkOfferPayer.requestInvoice(accountViewModel.account, useOffer, amountSats = amount, zap = zapRequest)
