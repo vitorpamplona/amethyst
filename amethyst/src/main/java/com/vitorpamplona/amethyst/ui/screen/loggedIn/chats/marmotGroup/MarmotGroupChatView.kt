@@ -190,7 +190,12 @@ fun MarmotGroupMessageComposer(
 
     val userSuggestions =
         remember(nostrGroupId) {
-            UserSuggestionState(accountViewModel.account, accountViewModel.nip05ClientBuilder())
+            val group = accountViewModel.account.marmotGroupList.getOrCreateGroup(nostrGroupId)
+            UserSuggestionState(
+                accountViewModel.account,
+                accountViewModel.nip05ClientBuilder(),
+                priorityPubkeys = { group.members.value.mapTo(mutableSetOf()) { it.pubkey } },
+            )
         }
 
     DisposableEffect(nostrGroupId) {

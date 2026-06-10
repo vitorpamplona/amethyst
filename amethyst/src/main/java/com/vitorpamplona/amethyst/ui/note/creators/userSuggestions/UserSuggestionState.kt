@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.logTime
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
@@ -58,10 +59,20 @@ val userUriPrefixes =
         DualCase("nostr:nprofile"),
     )
 
+/**
+ * Drives the @-mention autocomplete dropdown: searches the local cache,
+ * relays, and NIP-05 identifiers for the word currently being typed.
+ *
+ * [priorityPubkeys] is a live supplier of pubkeys to rank first in the
+ * results — pass the current conversation's participants (NIP-17 room
+ * users, public-chat authors, MLS group members, …) so they beat
+ * network-wide matches. Ranking only; it never filters anyone out.
+ */
 @Stable
 class UserSuggestionState(
     val account: Account,
     val nip05Client: INip05Client,
+    val priorityPubkeys: () -> Set<HexKey> = { emptySet() },
 ) {
     val invalidations = MutableStateFlow(0)
     val currentWord = MutableStateFlow("")
@@ -158,7 +169,13 @@ class UserSuggestionState(
             }
             if (prefix != null) {
                 logTime("UserSuggestionState Search $prefix version $version") {
-                    account.cache.findUsersStartingWith(prefix, account)
+                    val found = account.cache.findUsersStartingWith(prefix, account)
+                    val priority = priorityPubkeys()
+                    if (priority.isEmpty()) {
+                        found
+                    } else {
+                        found.sortedByDescending { it.pubkeyHex in priority }
+                    }
                 }
             } else {
                 emptyList()

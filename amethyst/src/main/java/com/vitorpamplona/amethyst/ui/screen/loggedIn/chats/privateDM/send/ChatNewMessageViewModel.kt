@@ -261,7 +261,12 @@ class ChatNewMessageViewModel :
         this.canAddZapRaiser = hasLnAddress()
 
         this.userSuggestions?.reset()
-        this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05ClientBuilder())
+        this.userSuggestions =
+            UserSuggestionState(
+                accountVM.account,
+                accountVM.nip05ClientBuilder(),
+                priorityPubkeys = { room.value?.users ?: emptySet() },
+            )
 
         this.emojiSuggestions?.reset()
         this.emojiSuggestions = EmojiSuggestionState(accountVM.account)

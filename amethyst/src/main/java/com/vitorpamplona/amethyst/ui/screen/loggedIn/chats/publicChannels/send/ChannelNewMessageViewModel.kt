@@ -188,7 +188,14 @@ open class ChannelNewMessageViewModel :
         this.canAddZapRaiser = hasLnAddress()
 
         this.userSuggestions?.reset()
-        this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05ClientBuilder())
+        this.userSuggestions =
+            UserSuggestionState(
+                accountVM.account,
+                accountVM.nip05ClientBuilder(),
+                priorityPubkeys = {
+                    channel?.participatingAuthors(0)?.mapTo(mutableSetOf()) { it.pubkeyHex } ?: emptySet()
+                },
+            )
 
         this.emojiSuggestions?.reset()
         this.emojiSuggestions = EmojiSuggestionState(accountVM.account)
