@@ -146,3 +146,11 @@ if amy_a zap user "$EXPECTED_PUB" 1000 --with "not-an-ndebit" >>"$LOG_FILE" 2>&1
 else
     record_result zap.with.bad pass "bad --with exits non-zero"
 fi
+
+# --- offer discover: rejects a malformed NIP-05 (validated before any network) ---
+step "offer discover rejects a non-nip05 address"
+if amy_a offer discover "not-a-nip05" >>"$LOG_FILE" 2>&1; then
+    record_result offer.discover.bad fail "bad nip05 should exit non-zero"
+else
+    record_result offer.discover.bad pass "bad nip05 exits non-zero"
+fi

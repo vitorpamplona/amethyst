@@ -31,12 +31,14 @@ import com.vitorpamplona.quartz.experimental.clink.offers.OfferResponse
 import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.experimental.clink.pointers.NOffer
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
 
 /**
  * `amy offer …` — CLINK Offers (`noffer1…`) from the command line, for headless interop
  * testing against a real offer service.
  *
  * - `info <noffer>` decodes a pointer locally (no network).
+ * - `discover <nip05>` resolves a profile's advertised offer from its NIP-05 `.well-known`.
  * - `request <noffer> [--amount N] [--timeout MS] [--follow]` runs the kind-21001 round-trip:
  *   publishes the request to the pointer's relays and prints the returned BOLT-11. With
  *   `--follow` it chases an "Expired or Moved" (code 3) reply to the `latest` pointer.
@@ -54,13 +56,55 @@ object OfferCommands {
         dataDir: DataDir,
         tail: Array<String>,
     ): Int {
-        if (tail.isEmpty()) return Output.error("bad_args", "offer <info|request|pay>")
+        if (tail.isEmpty()) return Output.error("bad_args", "offer <info|discover|request|pay>")
         val rest = tail.drop(1).toTypedArray()
         return when (tail[0]) {
             "info" -> info(rest)
+            "discover" -> discover(dataDir, rest)
             "request" -> request(dataDir, rest)
             "pay" -> pay(dataDir, rest)
-            else -> Output.error("bad_args", "offer ${tail[0]} (expected info|request|pay)")
+            else -> Output.error("bad_args", "offer ${tail[0]} (expected info|discover|request|pay)")
+        }
+    }
+
+    /**
+     * Resolve a profile's advertised offer from its NIP-05 `.well-known/nostr.json` `clink_offer`
+     * (the app's discovery fallback). A profile's kind-0 `clink_offer` is readable via
+     * `amy profile show <user>`.
+     */
+    private suspend fun discover(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val id =
+            Nip05Id.parse(args.positional(0, "nip05").trim())
+                ?: return Output.error("bad_args", "not a valid NIP-05 address (e.g. bob@example.com)")
+
+        val ctx = Context.open(dataDir)
+        try {
+            ctx.prepare()
+            val noffer = ctx.nip05Client.loadClinkOffer(id)
+            if (noffer == null) {
+                Output.emit(mapOf("nip05" to id.toDisplayValue(), "found" to false))
+                return 0
+            }
+            val offer = ClinkPointerParser.parse(noffer) as? NOffer
+            Output.emit(
+                mapOf(
+                    "nip05" to id.toDisplayValue(),
+                    "found" to true,
+                    "noffer" to noffer,
+                    "pubkey" to offer?.pubKey,
+                    "relays" to offer?.relays?.map { it.url },
+                    "pointer" to offer?.pointer,
+                    "price_type" to offer?.priceType?.name?.lowercase(),
+                    "price_sats" to offer?.price,
+                ),
+            )
+            return 0
+        } finally {
+            ctx.close()
         }
     }
 
