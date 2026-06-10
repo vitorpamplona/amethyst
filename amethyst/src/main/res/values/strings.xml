@@ -112,7 +112,7 @@
     <string name="log_out">Logout</string>
     <string name="show_more">Show More</string>
     <string name="lightning_invoice">Lightning Invoice</string>
-    <string name="clink_lightning_offer">Lightning Offer</string>
+    <string name="clink_lightning_offer">CLINK Offer</string>
     <string name="clink_requesting_invoice">Requesting invoice…</string>
     <string name="clink_debit_no_response">The debit service did not complete the payment.</string>
     <string name="clink_confirm_payment_title">Confirm payment</string>
