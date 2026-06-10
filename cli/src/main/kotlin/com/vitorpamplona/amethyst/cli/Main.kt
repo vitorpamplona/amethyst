@@ -186,6 +186,10 @@ private suspend fun dispatch(argv: Array<String>): Int {
             Commands.offer(dataDir, tail)
         }
 
+        "debit" -> {
+            Commands.debit(dataDir, tail)
+        }
+
         else -> {
             System.err.println("unknown subcommand: $head")
             printUsage()
@@ -372,6 +376,13 @@ private fun printUsage() {
         |  offer request NOFFER [--amount SATS]       kind:21001 round-trip: ask the service for a
         |    [--timeout MS]                            fresh BOLT11 (amount required for spontaneous
         |                                              offers; defaults to the pointer's fixed price)
+        |
+        |CLINK Debits:
+        |  debit info NDEBIT                          decode an ndebit1… pointer (local, no network)
+        |  debit pay NDEBIT BOLT11 [--amount SATS]    kind:21002 round-trip: ask the wallet to pay the
+        |    [--timeout MS]                            invoice; prints the preimage or a GFY error
+        |  debit budget NDEBIT --amount SATS          authorize a spending budget; omit --frequency
+        |    [--frequency day|week|month] [--timeout MS] for a one-time budget
         |
         |Search (NIP-50):
         |  search user QUERY [--limit N]              search kind:0 profiles
