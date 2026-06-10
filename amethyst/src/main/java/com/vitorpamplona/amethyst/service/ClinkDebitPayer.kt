@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.service
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.experimental.clink.client.DebitClient
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitEvent
+import com.vitorpamplona.quartz.experimental.clink.debits.DebitFrequency
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -33,13 +34,13 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * Drives the CLINK Debits payer round-trip: publishes a kind-21002 request asking the
- * pointed-to wallet to pay a BOLT-11, and waits for the encrypted reply. The wallet
+ * Drives the CLINK Debits payer round-trips: publishes a kind-21002 request (pay an
+ * invoice, or authorize a spending budget) and waits for the encrypted reply. The wallet
  * authorizes against the account's own identity (no shared secret).
  *
  * This is the CLINK-debit spend rail that the zap button / offer card route through
  * when a debit pointer is the selected default payment source. It MUST only be invoked
- * after an explicit user confirmation — a debit pulls real sats.
+ * after an explicit user confirmation — a debit moves real sats.
  *
  * Consume-only: Amethyst sends debit requests, it never answers them.
  */
@@ -47,6 +48,8 @@ object ClinkDebitPayer {
     const val DEFAULT_TIMEOUT_MS = 30_000L
 
     /**
+     * Asks the wallet to pay [bolt11].
+     *
      * @return the decrypted response (`res:"ok"` with optional preimage, or a `GFY`
      *   failure), or null if no reply arrived in time or the pointer carried no relay.
      */
@@ -57,11 +60,38 @@ object ClinkDebitPayer {
         amountSats: Long? = null,
         timeoutMs: Long = DEFAULT_TIMEOUT_MS,
     ): DebitResponse? {
-        val relays = pointer.relays.toSet()
-        if (relays.isEmpty()) return null
+        val client = clientFor(pointer, account) ?: return null
+        return sendAndAwait(account, client, client.payInvoice(bolt11, amountSats), timeoutMs)
+    }
 
-        val client = DebitClient(pointer, account.signer)
-        val request = client.payInvoice(bolt11, amountSats)
+    /**
+     * Asks the wallet to authorize a spending budget. Omit [frequency] for a one-time
+     * budget; otherwise it recurs every `frequency` (day/week/month).
+     */
+    suspend fun requestBudget(
+        account: Account,
+        pointer: NDebit,
+        amountSats: Long,
+        frequency: DebitFrequency? = null,
+        timeoutMs: Long = DEFAULT_TIMEOUT_MS,
+    ): DebitResponse? {
+        val client = clientFor(pointer, account) ?: return null
+        return sendAndAwait(account, client, client.requestBudget(amountSats, frequency), timeoutMs)
+    }
+
+    private fun clientFor(
+        pointer: NDebit,
+        account: Account,
+    ): DebitClient? = if (pointer.relays.isEmpty()) null else DebitClient(pointer, account.signer)
+
+    /** Publishes [request] to the pointer's relays and awaits the matching kind-21002 reply. */
+    private suspend fun sendAndAwait(
+        account: Account,
+        client: DebitClient,
+        request: DebitEvent,
+        timeoutMs: Long,
+    ): DebitResponse? {
+        val relays = client.pointer.relays.toSet()
 
         val reply = CompletableDeferred<DebitEvent>()
         val subId = "clink-debit-${request.id}"

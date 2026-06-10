@@ -25,7 +25,10 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.service.ClinkDebitPayer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.quartz.experimental.clink.debits.DebitFrequency
+import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
 import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -317,6 +320,24 @@ class WalletViewModel : ViewModel() {
         acc.settings.addClinkDebitWallet(entry)
         refreshWalletList()
         return true
+    }
+
+    /**
+     * Asks a CLINK debit wallet to authorize a spending budget (kind-21002). Omit
+     * [frequency] for a one-time budget; otherwise it recurs every day/week/month.
+     * [onResult] reports the wallet's decision (ok, GFY error text, or null on timeout).
+     */
+    fun requestDebitBudget(
+        walletId: String,
+        amountSats: Long,
+        frequency: DebitFrequency?,
+        onResult: (DebitResponse?) -> Unit,
+    ) {
+        val acc = account ?: return
+        val pointer = _debitWallets.value.firstOrNull { it.id == walletId }?.pointer ?: return
+        viewModelScope.launch {
+            onResult(ClinkDebitPayer.requestBudget(acc, pointer, amountSats, frequency))
+        }
     }
 
     fun addWallet(

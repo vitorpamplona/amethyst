@@ -38,11 +38,17 @@ class DebitRequest(
     var frequency: DebitFrequency? = null,
 ) : OptimizedSerializable
 
-/** Recurring-budget cadence; [unit] is one of `day`, `week`, `month`. */
+/** Recurring-budget cadence; [unit] is one of [UNIT_DAY], [UNIT_WEEK], [UNIT_MONTH]. */
 class DebitFrequency(
     var number: Int? = null,
     var unit: String? = null,
-) : OptimizedSerializable
+) : OptimizedSerializable {
+    companion object {
+        const val UNIT_DAY = "day"
+        const val UNIT_WEEK = "week"
+        const val UNIT_MONTH = "month"
+    }
+}
 
 /**
  * Decrypted response from a CLINK Debits service. [res] is `"ok"` on success (with
