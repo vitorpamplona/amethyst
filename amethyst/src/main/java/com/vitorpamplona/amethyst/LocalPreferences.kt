@@ -317,6 +317,9 @@ object LocalPreferences {
     suspend fun deleteAccount(accountInfo: AccountInfo) {
         Log.d("LocalPreferences") { "Saving to encrypted storage updatePrefsForLogout ${accountInfo.npub}" }
         withContext(Dispatchers.IO) {
+            // Drop the in-memory copy as well; otherwise re-adding the same account later
+            // would resurrect the deleted settings from this cache.
+            mutex.withLock { cachedAccounts.remove(accountInfo.npub) }
             encryptedPreferences(accountInfo.npub).edit(commit = true) { clear() }
             removeAccount(accountInfo)
             deleteUserPreferenceFile(accountInfo.npub)
