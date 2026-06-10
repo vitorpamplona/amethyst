@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 
 /**
  * Inline-quote renderer provided by [ChatroomMessageCompose] so that a chat
@@ -74,6 +75,7 @@ fun chatInlineQuoteRenderer(
 
 private fun isChatEvent(event: Event?) =
     event is ChatroomKeyable ||
+        event is ChatEvent ||
         event is IsInPublicChatChannel ||
         event is LiveActivitiesChatMessageEvent ||
         event is EphemeralChatEvent
