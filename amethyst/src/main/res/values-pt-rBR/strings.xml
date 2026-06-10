@@ -3011,4 +3011,10 @@
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Arte</string>
     <string name="nowhere_link_card_forum">Nowhere Fórum</string>
+    <string name="chats_history_proto_nip04">legado</string>
+    <string name="chats_history_proto_nip17">criptografado</string>
+    <string name="chats_reply_not_found">Não foi possível encontrar esta mensagem</string>
+    <string name="chats_reply_searched">Pesquisado em todos os relays · toque para ver</string>
+    <string name="chats_reply_searching_history">Procurando a mensagem original…</string>
+    <string name="user_suggestion_in_this_chat">Neste chat</string>
 </resources>
