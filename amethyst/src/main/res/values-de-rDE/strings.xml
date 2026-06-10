@@ -3016,10 +3016,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Kunst</string>
     <string name="nowhere_link_card_forum">Nowhere Forum</string>
-    <string name="chats_history_proto_nip04">veraltet</string>
-    <string name="chats_history_proto_nip17">verschlüsselt</string>
-    <string name="chats_reply_not_found">Diese Nachricht konnte nicht gefunden werden</string>
-    <string name="chats_reply_searched">Alle Relays durchsucht · zum Anzeigen tippen</string>
-    <string name="chats_reply_searching_history">Suche nach der ursprünglichen Nachricht…</string>
-    <string name="user_suggestion_in_this_chat">In diesem Chat</string>
 </resources>
