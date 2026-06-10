@@ -193,7 +193,9 @@ open class ChannelNewMessageViewModel :
                 accountVM.account,
                 accountVM.nip05ClientBuilder(),
                 priorityPubkeys = {
-                    channel?.participatingAuthors(0)?.mapTo(mutableSetOf()) { it.pubkeyHex } ?: emptySet()
+                    // Public channels have no membership; recent posters are the
+                    // closest thing. The cutoff also bounds the note scan.
+                    channel?.participatingAuthors(TimeUtils.oneMonthAgo())?.mapTo(mutableSetOf()) { it.pubkeyHex } ?: emptySet()
                 },
             )
 

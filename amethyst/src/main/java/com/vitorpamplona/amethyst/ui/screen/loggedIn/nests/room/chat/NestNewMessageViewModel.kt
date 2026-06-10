@@ -200,7 +200,7 @@ open class NestNewMessageViewModel :
                 accountVM.nip05ClientBuilder(),
                 priorityPubkeys = {
                     (room?.event as? MeetingSpaceEvent)?.let { space ->
-                        space.participantKeys().toMutableSet().apply { add(space.pubKey) }
+                        space.participantKeys().toSet() + space.pubKey
                     } ?: emptySet()
                 },
             )

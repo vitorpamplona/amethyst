@@ -50,10 +50,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
-import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectedMedia
@@ -155,6 +155,7 @@ fun MarmotGroupChatView(
 
         MarmotGroupMessageComposer(
             nostrGroupId = nostrGroupId,
+            chatroom = chatroom,
             messageState = messageState,
             replyTo = replyTo,
             accountViewModel = accountViewModel,
@@ -169,6 +170,7 @@ fun MarmotGroupChatView(
 @Composable
 fun MarmotGroupMessageComposer(
     nostrGroupId: HexKey,
+    chatroom: MarmotGroupChatroom,
     messageState: TextFieldState,
     replyTo: MutableState<Note?>,
     accountViewModel: AccountViewModel,
@@ -190,11 +192,10 @@ fun MarmotGroupMessageComposer(
 
     val userSuggestions =
         remember(nostrGroupId) {
-            val group = accountViewModel.account.marmotGroupList.getOrCreateGroup(nostrGroupId)
             UserSuggestionState(
                 accountViewModel.account,
                 accountViewModel.nip05ClientBuilder(),
-                priorityPubkeys = { group.members.value.mapTo(mutableSetOf()) { it.pubkey } },
+                priorityPubkeys = { chatroom.members.value.mapTo(mutableSetOf()) { it.pubkey } },
             )
         }
 
@@ -278,16 +279,11 @@ fun MarmotGroupMessageComposer(
                         val replyAuthor = parentEvent?.pubKey
                         scope.launch(Dispatchers.IO) {
                             try {
-                                // Rewrites @npub…/@nprofile… mentions into nostr: URIs and
-                                // collects the referenced users as p-tags for the inner event.
-                                val tagger = NewMessageTagger(text, null, null, accountViewModel)
-                                tagger.run()
                                 accountViewModel.sendMarmotGroupMessage(
                                     nostrGroupId = nostrGroupId,
-                                    text = tagger.message,
+                                    text = text,
                                     replyToInnerEventId = replyId,
                                     replyToInnerAuthorPubKey = replyAuthor,
-                                    mentions = tagger.pTags?.map { it.toPTag() } ?: emptyList(),
                                 )
                                 messageState.clearText()
                                 replyTo.value = null
