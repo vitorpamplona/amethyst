@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip17Dm
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
@@ -43,10 +44,24 @@ class NIP17Factory {
         val wraps: List<GiftWrapEvent>,
     )
 
+    /**
+     * Build one NIP-59 gift wrap per recipient.
+     *
+     * The rumor (kind 14) `created_at` is implicitly shared across all wraps
+     * because [event] is signed once by the caller before the per-recipient
+     * loop runs — every seal encodes the same rumor `id`. This anchors
+     * cross-recipient dedupe + reaction/receipt targeting on group sends.
+     *
+     * Per NIP-17, the gift wrap's `p` tag MAY carry the recipient's primary
+     * DM inbox relay as a hint. Pass [recipientRelayHints] to surface those;
+     * the default `{ null }` lambda preserves the historical 2-element tag
+     * shape for every recipient.
+     */
     private suspend fun createWraps(
         event: Event,
         to: Set<HexKey>,
         signer: NostrSigner,
+        recipientRelayHints: (HexKey) -> NormalizedRelayUrl? = { null },
     ): List<GiftWrapEvent> {
         val innerExpDelta =
             event.expiration()?.let {
@@ -70,6 +85,7 @@ class NIP17Factory {
                     ),
                 recipientPubKey = next,
                 expirationDelta = innerExpDelta,
+                recipientRelayHint = recipientRelayHints(next),
             )
         }
     }
@@ -77,9 +93,10 @@ class NIP17Factory {
     suspend fun createMessageNIP17(
         template: EventTemplate<ChatMessageEvent>,
         signer: NostrSigner,
+        recipientRelayHints: (HexKey) -> NormalizedRelayUrl? = { null },
     ): Result {
         val senderMessage = signer.sign(template)
-        val wraps = createWraps(senderMessage, senderMessage.groupMembers(), signer)
+        val wraps = createWraps(senderMessage, senderMessage.groupMembers(), signer, recipientRelayHints)
         return Result(
             msg = senderMessage,
             wraps = wraps,
@@ -108,9 +125,10 @@ class NIP17Factory {
     suspend fun createEncryptedFileNIP17(
         template: EventTemplate<ChatMessageEncryptedFileHeaderEvent>,
         signer: NostrSigner,
+        recipientRelayHints: (HexKey) -> NormalizedRelayUrl? = { null },
     ): Result {
         val senderMessage = signer.sign(template)
-        val wraps = createWraps(senderMessage, senderMessage.groupMembers(), signer)
+        val wraps = createWraps(senderMessage, senderMessage.groupMembers(), signer, recipientRelayHints)
 
         return Result(
             msg = senderMessage,
@@ -142,12 +160,13 @@ class NIP17Factory {
         originalNote: EventHintBundle<Event>,
         to: List<HexKey>,
         signer: NostrSigner,
+        recipientRelayHints: (HexKey) -> NormalizedRelayUrl? = { null },
     ): Result {
         val senderPublicKey = signer.pubKey
         val template = ReactionEvent.build(content, originalNote)
 
         val senderReaction = signer.sign(template)
-        val wraps = createWraps(senderReaction, to.plus(senderPublicKey).toSet(), signer)
+        val wraps = createWraps(senderReaction, to.plus(senderPublicKey).toSet(), signer, recipientRelayHints)
         return Result(
             msg = senderReaction,
             wraps = wraps,
@@ -159,12 +178,13 @@ class NIP17Factory {
         originalNote: EventHintBundle<Event>,
         to: List<HexKey>,
         signer: NostrSigner,
+        recipientRelayHints: (HexKey) -> NormalizedRelayUrl? = { null },
     ): Result {
         val senderPublicKey = signer.pubKey
         val template = ReactionEvent.build(emojiUrl, originalNote)
 
         val senderReaction = signer.sign(template)
-        val wraps = createWraps(senderReaction, to.plus(senderPublicKey).toSet(), signer)
+        val wraps = createWraps(senderReaction, to.plus(senderPublicKey).toSet(), signer, recipientRelayHints)
 
         return Result(
             msg = senderReaction,
