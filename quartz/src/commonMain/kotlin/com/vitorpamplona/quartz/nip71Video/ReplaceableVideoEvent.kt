@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip71Video
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
+import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -45,7 +45,7 @@ abstract class ReplaceableVideoEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseReplaceableEvent(id, pubKey, createdAt, kind, tags, content, sig),
+) : BaseAddressableEvent(id, pubKey, createdAt, kind, tags, content, sig),
     PublishedAtProvider,
     VideoEvent,
     RootScope {
