@@ -60,6 +60,22 @@ val userUriPrefixes =
     )
 
 /**
+ * Moves users whose pubkey is in [priority] to the top of [found],
+ * preserving the relative order everywhere else (stable sort). Reorders
+ * only — it never adds or removes entries, so priority keys whose users
+ * didn't match the search have no effect.
+ */
+fun rankPriorityFirst(
+    found: List<User>,
+    priority: Set<HexKey>,
+): List<User> =
+    if (priority.isEmpty()) {
+        found
+    } else {
+        found.sortedByDescending { it.pubkeyHex in priority }
+    }
+
+/**
  * Drives the @-mention autocomplete dropdown: searches the local cache,
  * relays, and NIP-05 identifiers for the word currently being typed.
  *
@@ -169,13 +185,10 @@ class UserSuggestionState(
             }
             if (prefix != null) {
                 logTime("UserSuggestionState Search $prefix version $version") {
-                    val found = account.cache.findUsersStartingWith(prefix, account)
-                    val priority = priorityPubkeys()
-                    if (priority.isEmpty()) {
-                        found
-                    } else {
-                        found.sortedByDescending { it.pubkeyHex in priority }
-                    }
+                    rankPriorityFirst(
+                        account.cache.findUsersStartingWith(prefix, account),
+                        priorityPubkeys(),
+                    )
                 }
             } else {
                 emptyList()
