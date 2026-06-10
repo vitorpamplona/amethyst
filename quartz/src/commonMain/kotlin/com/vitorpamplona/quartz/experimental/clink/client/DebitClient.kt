@@ -69,6 +69,11 @@ class DebitClient(
         description: String? = null,
         createdAt: Long = TimeUtils.now(),
     ): DebitEvent {
+        // Per spec the recurring cadence unit is one of day/week/month; reject anything else
+        // rather than sending a request a node service will GFY.
+        require(frequency == null || frequency.unit in DebitFrequency.VALID_UNITS) {
+            "Invalid budget frequency unit: ${frequency?.unit}"
+        }
         val request =
             DebitRequest(
                 pointer = pointer.pointer,

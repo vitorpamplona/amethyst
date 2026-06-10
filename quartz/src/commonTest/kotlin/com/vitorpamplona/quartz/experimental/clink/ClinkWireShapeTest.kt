@@ -198,6 +198,19 @@ class ClinkWireShapeTest {
     }
 
     @Test
+    fun debitFailureDetailSurfacesRangeAndRetryAfter() {
+        val range = parse<DebitResponse>("""{"res":"GFY","code":5,"error":"Invalid Amount","range":{"min":1000,"max":500000}}""").failureDetail()!!
+        assertTrue(range.contains("Invalid Amount"))
+        assertTrue(range.contains("1000") && range.contains("500000"))
+
+        val rateLimited = parse<DebitResponse>("""{"res":"GFY","code":4,"error":"Rate Limited","retry_after":1750000000}""").failureDetail()!!
+        assertTrue(rateLimited.contains("Rate Limited"))
+        assertTrue(rateLimited.contains("1750000000"))
+
+        assertNull(parse<DebitResponse>("""{"res":"ok"}""").failureDetail())
+    }
+
+    @Test
     fun debitGfyInvalidRequest() {
         val res = parse<DebitResponse>("""{"res":"GFY","code":6,"error":"Invalid Request: K1 already processed"}""")
         assertEquals(6, res.code)

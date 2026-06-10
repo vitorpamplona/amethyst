@@ -20,10 +20,13 @@
  */
 package com.vitorpamplona.quartz.experimental.clink
 
+import com.vitorpamplona.quartz.experimental.clink.client.DebitClient
 import com.vitorpamplona.quartz.experimental.clink.client.OfferClient
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitEvent
+import com.vitorpamplona.quartz.experimental.clink.debits.DebitFrequency
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferEvent
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferReceipt
+import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.experimental.clink.pointers.NOffer
 import com.vitorpamplona.quartz.experimental.clink.server.ClinkServer
 import com.vitorpamplona.quartz.experimental.clink.server.K1Tracker
@@ -69,6 +72,27 @@ class ClinkClientServerTest {
             val receipt = client.parseReceipt(receiptEvent)
             assertTrue(receipt.isOk())
             assertEquals("ab".repeat(32), receipt.preimage)
+        }
+
+    @Test
+    fun requestBudgetRejectsInvalidFrequencyUnit() =
+        kotlinx.coroutines.test.runTest {
+            val client = DebitClient(NDebit(servicePubKey, listOf(relay), null, null), signer)
+            kotlin.test.assertFailsWith<IllegalArgumentException> {
+                client.requestBudget(1000, DebitFrequency(1, "fortnight"))
+            }
+            // valid units do not throw
+            client.requestBudget(1000, DebitFrequency(1, DebitFrequency.UNIT_MONTH))
+        }
+
+    @Test
+    fun offerRequestTruncatesDescriptionTo100Chars() =
+        kotlinx.coroutines.test.runTest {
+            val service = NostrSignerInternal(KeyPair())
+            val client = OfferClient(NOffer(service.pubKey, listOf(relay), "o", null, null), signer)
+            val event = client.requestInvoice(amountSats = 100, description = "x".repeat(150))
+            val decrypted = event.decryptRequest(service)
+            assertEquals(100, decrypted.description?.length)
         }
 
     @Test

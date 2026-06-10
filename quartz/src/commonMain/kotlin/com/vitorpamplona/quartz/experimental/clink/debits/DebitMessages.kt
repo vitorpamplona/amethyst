@@ -47,6 +47,9 @@ class DebitFrequency(
         const val UNIT_DAY = "day"
         const val UNIT_WEEK = "week"
         const val UNIT_MONTH = "month"
+
+        /** The only cadence units the spec defines. */
+        val VALID_UNITS = setOf(UNIT_DAY, UNIT_WEEK, UNIT_MONTH)
     }
 }
 
@@ -66,6 +69,25 @@ class DebitResponse(
     var delta: GfyDelta? = null,
 ) : OptimizedSerializable {
     fun isOk(): Boolean = res == OK
+
+    /**
+     * A failure detail string for a GFY response: the service's [error] plus the actionable
+     * structured extra the spec attaches per code — the allowed [range] (code 5) or
+     * [retry_after] timestamp (code 4). Returns null for a success ([isOk]) response. The
+     * text is protocol-neutral (English, like the service's own `error`), meant to be shown
+     * as the detail line under a localized "payment failed" title.
+     */
+    fun failureDetail(): String? {
+        if (isOk()) return null
+        val base = error?.takeIf { it.isNotBlank() }
+        val extra =
+            when {
+                range != null -> "allowed ${range?.min ?: "?"} to ${range?.max ?: "?"} sats"
+                retry_after != null -> "retry after $retry_after"
+                else -> null
+            }
+        return listOfNotNull(base, extra?.let { "($it)" }).joinToString(" ").ifBlank { null }
+    }
 
     companion object {
         const val OK = "ok"

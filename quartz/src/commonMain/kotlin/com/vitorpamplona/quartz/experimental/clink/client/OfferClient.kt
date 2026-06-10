@@ -71,7 +71,9 @@ class OfferClient(
                 payer_data = payerData,
                 zap = zap,
                 expires_in_seconds = expiresInSeconds,
-                description = description,
+                // The spec caps the invoice description at 100 chars; trim so an over-long
+                // value doesn't get the whole request rejected by the service.
+                description = description?.take(100),
             )
         return OfferEvent.createRequest(request, servicePubKey, signer, createdAt)
     }

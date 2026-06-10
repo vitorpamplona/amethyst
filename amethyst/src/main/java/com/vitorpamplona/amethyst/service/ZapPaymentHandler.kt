@@ -416,7 +416,7 @@ class ZapPaymentHandler(
                 if (!paid) {
                     onError(
                         stringRes(context, R.string.error_dialog_pay_invoice_error),
-                        response?.error?.takeIf { it.isNotBlank() }
+                        response?.failureDetail()
                             ?: stringRes(context, R.string.clink_debit_no_response),
                         payable.info.user,
                     )

@@ -96,6 +96,15 @@ class ClinkPointerTest {
     }
 
     @Test
+    fun debitRejectsMalformedK1Length() {
+        // A session id (TLV 3) must be exactly 32 bytes; a wrong-length k1 is a malformed
+        // session pointer and the parser must reject it rather than accept a bad session.
+        val shortK1 = "abcd"
+        val encoded = NDebit(pubKey, listOf(relay), null, shortK1).encode()
+        assertNull(ClinkPointerParser.parse(encoded))
+    }
+
+    @Test
     fun manageRoundTrip() {
         val manage = NManage(pubKey, listOf(relay), null)
         val encoded = manage.encode()
