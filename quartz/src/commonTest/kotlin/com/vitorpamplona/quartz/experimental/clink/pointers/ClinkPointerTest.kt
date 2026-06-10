@@ -53,6 +53,19 @@ class ClinkPointerTest {
     }
 
     @Test
+    fun offerLargePriceRoundTripIsUnsigned() {
+        // A price with the high bit set (> Int.MAX_VALUE) must round-trip as a positive
+        // Long — the price is an unsigned 4-byte big-endian integer, so reading it signed
+        // would wrap it negative.
+        val price = 3_000_000_000L
+        val offer = NOffer(pubKey, listOf(relay), null, OfferPriceType.FIXED, price)
+        val parsed = ClinkPointerParser.parse(offer.encode()) as NOffer
+
+        assertEquals(price, parsed.price)
+        assertEquals(offer, parsed)
+    }
+
+    @Test
     fun debitStaticRoundTrip() {
         val debit = NDebit(pubKey, listOf(relay), "pointer-7", null)
         val parsed = ClinkPointerParser.parse(debit.encode()) as NDebit

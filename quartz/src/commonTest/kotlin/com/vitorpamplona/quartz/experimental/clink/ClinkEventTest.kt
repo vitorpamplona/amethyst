@@ -21,6 +21,10 @@
 package com.vitorpamplona.quartz.experimental.clink
 
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
+import com.vitorpamplona.quartz.experimental.clink.manage.ManageOffer
+import com.vitorpamplona.quartz.experimental.clink.manage.ManageRequest
+import com.vitorpamplona.quartz.experimental.clink.manage.ManageResponse
+import com.vitorpamplona.quartz.experimental.clink.manage.OfferFields
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferEvent
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferRequest
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferResponse
@@ -88,6 +92,23 @@ class ClinkEventTest {
         assertFalse(request.canDecrypt(stranger))
     }
 
+    @Test
+    fun cannotDecryptAuthoredEventMissingRecipient() {
+        // A malformed event I authored but with no `p` tag: my own key must NOT be used as
+        // the conversation peer (no self-fallback), so neither party can derive a key.
+        val noRecipient =
+            OfferEvent(
+                id = "a".repeat(64),
+                pubKey = payer.pubKey,
+                createdAt = 1L,
+                tags = arrayOf(ClinkVersionTag.assemble()),
+                content = "encrypted-placeholder",
+                sig = "b".repeat(128),
+            )
+        assertFalse(noRecipient.canDecrypt(payer))
+        assertFalse(noRecipient.canDecrypt(service))
+    }
+
     // --- JSON DTOs ---
 
     @Test
@@ -135,5 +156,33 @@ class ClinkEventTest {
         val parsed = OptimizedJsonMapper.fromJsonTo<DebitResponse>("""{"res":"ok","preimage":"deadbeef"}""")
         assertTrue(parsed.isOk())
         assertEquals("deadbeef", parsed.preimage)
+    }
+
+    @Test
+    fun manageCreateRequestSerializesNested() {
+        val request =
+            ManageRequest(
+                resource = ManageRequest.RESOURCE_OFFER,
+                action = ManageRequest.ACTION_CREATE,
+                offer = ManageOffer(fields = OfferFields("Coffee", 1500L, "https://x/cb", listOf("email", "name"))),
+            )
+        val json = OptimizedJsonMapper.toJson(request)
+
+        // Offer data is nested under offer.fields (not flat).
+        assertTrue(json.contains("\"offer\""), json)
+        assertTrue(json.contains("\"fields\""), json)
+
+        val parsed = OptimizedJsonMapper.fromJsonTo<ManageRequest>(json)
+        assertEquals("Coffee", parsed.offer?.fields?.label)
+        assertEquals(1500L, parsed.offer?.fields?.price_sats)
+        // payer_data is a list of field names, not a map.
+        assertEquals(listOf("email", "name"), parsed.offer?.fields?.payer_data)
+    }
+
+    @Test
+    fun manageFailureResponseParsesField() {
+        val parsed = OptimizedJsonMapper.fromJsonTo<ManageResponse>("""{"res":"GFY","code":5,"error":"bad","field":"price_sats"}""")
+        assertFalse(parsed.isOk())
+        assertEquals("price_sats", parsed.field)
     }
 }
