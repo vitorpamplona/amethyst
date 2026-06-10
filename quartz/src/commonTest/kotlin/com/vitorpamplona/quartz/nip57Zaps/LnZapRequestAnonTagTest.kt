@@ -88,6 +88,30 @@ class LnZapRequestAnonTagTest {
             assertFalse(zapRequest.pubKey == signer.pubKey, "anonymous zaps must be signed by a throwaway key")
         }
 
+    /**
+     * Regression test for the user-only (profile zap) overload: its ANONYMOUS
+     * branch used a blank-valued `anon` tag, which [NostrSignerInternal] treats
+     * as an unsigned *private* zap and encrypts — silently turning a public
+     * anonymous comment into an encrypted one nobody but the recipient can read.
+     */
+    @Test
+    fun `anonymous profile zap request keeps the message public`() =
+        runTest {
+            val zapRequest =
+                LnZapRequestEvent.create(
+                    userHex = receiverPubKey,
+                    relays = relays,
+                    signer = signer,
+                    message = "great work",
+                    zapType = LnZapEvent.ZapType.ANONYMOUS,
+                )
+
+            assertTrue(zapRequest.hasAnonTag())
+            assertFalse(zapRequest.isPrivateZap(), "anonymous zaps must not be encrypted as private zaps")
+            assertEquals("great work", zapRequest.content)
+            assertFalse(zapRequest.pubKey == signer.pubKey, "anonymous zaps must be signed by a throwaway key")
+        }
+
     @Test
     fun `private zap request has anon tag, is private, and hides the sender key`() =
         runTest {

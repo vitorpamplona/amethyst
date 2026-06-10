@@ -176,7 +176,10 @@ class LnZapRequestEvent(
                 }
 
                 LnZapEvent.ZapType.ANONYMOUS -> {
-                    tags += arrayOf(arrayOf("anon", ""))
+                    // Valueless `anon` tag: a blank-valued one (`["anon", ""]`) is the
+                    // marker for an *unsigned private* zap and would make the throwaway
+                    // signer encrypt the message instead of keeping it public.
+                    tags += arrayOf(arrayOf("anon"))
                     NostrSignerInternal(KeyPair()).sign(createdAt, KIND, tags, message)
                 }
 

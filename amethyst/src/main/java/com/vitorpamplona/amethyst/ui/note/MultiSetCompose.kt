@@ -373,6 +373,7 @@ fun RenderNutzapGallery(
                         user = note.author,
                         comment = event?.content?.ifBlank { null },
                         amount = showAmount(java.math.BigDecimal(sats)),
+                        zapNote = note,
                     )
                 }.toImmutableList()
         }
