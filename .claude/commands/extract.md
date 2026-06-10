@@ -18,7 +18,7 @@ Extract the component `$ARGUMENTS` from the Android app to shared KMP code:
    - Android Compose specifics vs standard Compose
 
 3. **Identify what can be shared**:
-   - Pure Composable functions → `shared-ui/commonMain/`
+   - Pure Composable functions → `commons/commonMain/`
    - Business logic → `quartz/commonMain/`
    - Platform-specific → create expect/actual
 

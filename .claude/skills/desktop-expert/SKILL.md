@@ -1,3 +1,8 @@
+---
+name: desktop-expert
+description: Compose Multiplatform Desktop patterns for the `desktopApp/` module. Use when working with (1) Desktop-only APIs (Window, WindowState, Tray, MenuBar, Dialog), (2) keyboard shortcuts and menu systems with OS-aware conventions (Cmd vs Ctrl, isMacOS branching), (3) desktop navigation (NavigationRail/sidebar vs Android bottom nav, multi-window), (4) file system integration (file pickers, drag-and-drop, Desktop.getDesktop()), (5) OS-specific behavior on macOS/Windows/Linux, (6) desktop UX principles (keyboard-first, tooltips). Delegates shared composables to compose-expert, build/packaging to gradle-expert, and source-set structure to kotlin-multiplatform.
+---
+
 # Desktop Expert
 
 Expert in Compose Multiplatform Desktop development for AmethystMultiplatform. Covers Desktop-specific APIs, OS conventions, navigation patterns, and UX principles.

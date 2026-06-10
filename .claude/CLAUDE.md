@@ -23,27 +23,13 @@ implementation for any future IETF target; see
 Canonical NIP specs live at <https://github.com/nostr-protocol/nips> — use
 `/nip <number>` to pull a specific one (it fetches the spec file directly).
 
-## Verify, Don't Guess (standing instruction)
+## Verify, Don't Guess
 
-A plausible-sounding explanation is cheap; being right is not. Before
-asserting what a problem is or how something behaves:
-
-1. **State hypotheses as hypotheses.** If you haven't run it, say "I'm
-   guessing" or "haven't verified" — never dress an untested guess up as a
-   diagnosis. Use "I verified X by running Y" only when you actually did.
-2. **Reproduce before diagnosing.** If a claim is checkable in under a
-   minute, check it before stating it. This repo gives you the means:
-   `./gradlew test`, the per-module tests, and `amy` (the CLI exists partly
-   to drive `quartz`/`commons` for interop checks). Write the failing case
-   first, watch it fail, *then* explain. For non-trivial bugs use `/bugfix`
-   (reproduce-first) or `/investigate` (competing hypotheses + refutation).
-3. **Predict, then run.** Before running a command, state the output you
-   expect. A mismatch is the cheapest signal that your model is wrong.
-4. **Don't commit to one cause.** A single immediate explanation stops you
-   from looking. Hold 2–3 candidates and a discriminating test for each.
-
-If you find yourself writing paragraphs to defend a theory, that effort
-almost always should have been one test.
+Don't assert a diagnosis you haven't reproduced. This repo gives you cheap
+verification tools: `./gradlew test`, per-module test suites, and the `amy`
+CLI (built partly to drive `quartz`/`commons` for interop checks). If a
+claim is checkable in under a minute, check it before stating it — write
+the failing case first, watch it fail, then explain.
 
 ## Architecture
 
@@ -123,16 +109,6 @@ to be used together:
   skills: `compose-expert` tells you where shared composables live;
   `compose-slot-api-pattern` tells you how to shape their public API.
 
-## Workflow
-
-**When you ask for a feature:**
-
-1. **Quick skill assessment** - I identify which skills are relevant
-2. **Propose which skills** - I present which skills I'll use for the task
-3. **Get approval** - You review and approve (or adjust) the skill selection
-4. **Review plan using approved skills** - I invoke the approved skills to create detailed implementation plan
-5. **Execute with skills** - Skills collaborate to implement the feature
-
 ## Feature Workflow
 
 **CRITICAL: Check existing implementations first — most logic already exists.**
@@ -142,17 +118,9 @@ job is usually to **reuse** (`quartz` protocol/business logic), **extract**
 (Android UI/ViewModels → `commons`), and add **platform-specific** layouts/nav —
 not to duplicate existing managers, caches, or state.
 
-Capture the survey as a matrix in your plan:
-
-| File/Component | Status | Location | Action |
-|----------------|--------|----------|--------|
-| FilterBuilders | ✅ Reuse | quartz/relay/filters/ | Use as-is |
-| NoteCard | 📦 Extract | amethyst/ui/note/ → commons/ | Extract to commons |
-| ProfileCache | ⚠️ Avoid | N/A | Already in User/Account pattern |
-
-**Legend:** ✅ Reuse (exists, use directly) · 📦 Extract (exists in Android, move
-to `commons`) · 🆕 New (doesn't exist — platform-specific only) · ⚠️ Avoid
-(duplicate; use existing pattern).
+Summarize the survey in your plan: for each component, note whether it's
+reused as-is, extracted from `amethyst/` to `commons/`, genuinely new
+(platform-specific only), or a duplicate of an existing pattern to avoid.
 
 **Share vs keep platform-native:**
 
