@@ -210,6 +210,7 @@ import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.HostStub
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
@@ -394,6 +395,15 @@ object LocalCache : ILocalCache, ICacheProvider {
     }
 
     val deletionIndex = DeletionIndex()
+
+    /**
+     * Rumor id → the kind-1059 gift wrap that delivered it. Lets the
+     * broadcast action republish the WRAP (never the unsigned rumor) for
+     * rumor kinds that aren't WrappedEvent subclasses and so can't carry a
+     * host pointer themselves (e.g. kind-1 private replies). Kind-14 chat
+     * messages carry the host on the event and don't need this index.
+     */
+    val rumorHosts = LargeCache<HexKey, HostStub>()
 
     /**
      * Inverted index over the active [Observable]s. New events fan

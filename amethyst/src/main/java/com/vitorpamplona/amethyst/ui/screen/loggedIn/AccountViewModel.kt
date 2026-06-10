@@ -1126,6 +1126,17 @@ class AccountViewModel(
 
     fun broadcast(note: Note) = launchSigner { account.broadcast(note) }
 
+    /**
+     * Broadcast republishes public events directly and rumors as their
+     * delivering kind-1059 wrap. A rumor whose wrap is unknown can't be
+     * broadcast at all — publishing the unsigned event would disclose the
+     * private content.
+     */
+    fun canBroadcast(note: Note): Boolean {
+        val event = note.event ?: return false
+        return event.sig.isNotEmpty() || account.rumorHost(event) != null
+    }
+
     fun timestamp(note: Note) = launchSigner { account.otsState.timestamp(note) }
 
     fun delete(notes: List<Note>) = launchSigner { account.delete(notes) }

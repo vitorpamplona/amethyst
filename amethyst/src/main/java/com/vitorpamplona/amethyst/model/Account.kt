@@ -222,6 +222,7 @@ import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.tags.ThumbTag
 import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.HostStub
 import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
@@ -1326,34 +1327,48 @@ class Account(
         }
     }
 
+    /**
+     * The kind-1059 gift wrap that delivered [event], when [event] is a
+     * rumor: WrappedEvent rumors (kind-14 chats) carry it on the event;
+     * other rumor kinds (kind-1 private replies) are looked up in the
+     * cache's rumor-host index.
+     */
+    fun rumorHost(event: Event): HostStub? =
+        if (event is WrappedEvent) {
+            event.host
+        } else if (event.sig.isEmpty()) {
+            cache.rumorHosts.get(event.id)
+        } else {
+            null
+        }
+
     suspend fun broadcast(note: Note) {
         note.event?.let { noteEvent ->
-            if (noteEvent !is WrappedEvent && noteEvent.sig.isEmpty()) {
-                // Unsealed rumor without a host wrap (e.g. a kind-1 private
-                // reply): publishing it would disclose the private content to
-                // relays even though they reject the missing signature.
+            val host = rumorHost(noteEvent)
+            if (host != null) {
+                // Rumors are rebroadcast as their delivering wrap:
+                // download the wrap and send it.
+                client
+                    .fetchFirst(
+                        filters =
+                            note.relays.associateWith { _ ->
+                                listOf(
+                                    Filter(
+                                        kinds = listOf(host.kind),
+                                        tags = mapOf("p" to listOf(pubKey)),
+                                        ids = listOf(host.id),
+                                    ),
+                                )
+                            },
+                    )?.let { downloadedEvent ->
+                        val toRelays = computeRelayListToBroadcast(downloadedEvent)
+                        client.publish(downloadedEvent, toRelays)
+                    }
+            } else if (noteEvent.sig.isEmpty()) {
+                // Rumor with no known wrap: publishing it would disclose the
+                // private content to relays even though they reject the
+                // missing signature.
                 return
-            }
-            if (noteEvent is WrappedEvent && noteEvent.host != null) {
-                // download the event and send it.
-                noteEvent.host?.let { host ->
-                    client
-                        .fetchFirst(
-                            filters =
-                                note.relays.associateWith { _ ->
-                                    listOf(
-                                        Filter(
-                                            kinds = listOf(host.kind),
-                                            tags = mapOf("p" to listOf(pubKey)),
-                                            ids = listOf(host.id),
-                                        ),
-                                    )
-                                },
-                        )?.let { downloadedEvent ->
-                            val toRelays = computeRelayListToBroadcast(downloadedEvent)
-                            client.publish(downloadedEvent, toRelays)
-                        }
-                }
             } else {
                 client.publish(noteEvent, computeRelayListToBroadcast(note))
             }

@@ -266,7 +266,10 @@ fun NoteDropDownMenu(
                     }
                 }
             }
-            if (!isPrivateRumor) {
+            // Rumors are rebroadcast as their delivering gift wrap; hidden
+            // when the wrap is unknown (the unsigned rumor must never be
+            // published).
+            if (accountViewModel.canBroadcast(note)) {
                 M3ActionRow(icon = MaterialSymbols.CellTower, text = stringRes(R.string.broadcast)) {
                     accountViewModel.broadcast(note)
                     onDismiss()

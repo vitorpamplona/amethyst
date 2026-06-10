@@ -412,6 +412,9 @@ class SealedRumorEventHandler(
         if (rumorId == null) {
             processNewSealedRumor(event, eventNote, publicNote)
         } else {
+            // Replayed seal: re-link the rumor to its delivering wrap so
+            // broadcast can republish the wrap after a cache rebuild.
+            event.host?.let { cache.rumorHosts.put(rumorId, it) }
             processExistingSealedRumor(rumorId, publicNote)
         }
     }
@@ -436,6 +439,12 @@ class SealedRumorEventHandler(
         val innerRumor = event.unsealOrNull(account.signer) ?: return
 
         eventNote.event = event.copyNoContent()
+
+        // Remember which kind-1059 wrap delivered this rumor. Rumor kinds
+        // that aren't WrappedEvent subclasses (kind-1 private replies) can't
+        // carry the host pointer on the event, and broadcast must republish
+        // the wrap — never the unsigned rumor.
+        event.host?.let { cache.rumorHosts.put(innerRumor.id, it) }
 
         cache.justConsume(innerRumor, null, true)
         cache.copyRelaysFromTo(publicNote, innerRumor)

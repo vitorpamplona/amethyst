@@ -385,9 +385,10 @@ fun CardBody(
                 }
             }
 
-            // Unsealed rumors are unsigned and private — rebroadcasting one
-            // to public relays is never valid.
-            if (!note.isPrivateRumor()) {
+            // Rumors are rebroadcast as their delivering gift wrap; hidden
+            // when the wrap is unknown (the unsigned rumor must never be
+            // published).
+            if (accountViewModel.canBroadcast(note)) {
                 VerticalDivider(color = primaryLight)
                 NoteQuickActionItem(
                     icon = MaterialSymbols.Dns,
