@@ -98,17 +98,10 @@ object DebitCommands {
         val amount =
             args.flag("amount")?.toLongOrNull()
                 ?: return Output.error("bad_args", "--amount SATS is required for a budget")
-        val frequency =
-            when (val f = args.flag("frequency")?.lowercase()) {
-                null, "once", "one-time" -> null
-                "day", "daily" -> DebitFrequency(1, DebitFrequency.UNIT_DAY)
-                "week", "weekly" -> DebitFrequency(1, DebitFrequency.UNIT_WEEK)
-                "month", "monthly" -> DebitFrequency(1, DebitFrequency.UNIT_MONTH)
-                else -> return Output.error("bad_args", "unknown --frequency '$f' (day|week|month)")
-            }
+        val frequency = parseFrequency(args.flag("frequency")) ?: return Output.error("bad_args", "unknown --frequency '${args.flag("frequency")}' (day|week|month)")
         val timeoutMs = args.longFlag("timeout", 15_000)
 
-        return roundTrip(dataDir, args, timeoutMs) { client -> client.requestBudget(amount, frequency) }
+        return roundTrip(dataDir, args, timeoutMs) { client -> client.requestBudget(amount, frequency.value) }
     }
 
     /**
@@ -124,43 +117,102 @@ object DebitCommands {
         val debit =
             ClinkPointerParser.parse(args.positional(0, "ndebit").trim()) as? NDebit
                 ?: return Output.error("bad_args", "not a valid ndebit pointer")
-        val relays = debit.relays.toSet()
-        if (relays.isEmpty()) return Output.error("bad_pointer", "ndebit carries no relay to reach")
+        if (debit.relays.isEmpty()) return Output.error("bad_pointer", "ndebit carries no relay to reach")
 
         val ctx = Context.open(dataDir)
         try {
             ctx.prepare()
-            val client = DebitClient(debit, ctx.signer)
-            val requestEvent = buildRequest(client)
-
-            val reply = ctx.requestResponse(requestEvent, relays, client.responseFilter(requestEvent.id), timeoutMs)
-            if (reply == null) {
-                Output.error("timeout", "no response from the debit service within ${timeoutMs}ms")
-                return 124
-            }
-
-            val response: DebitResponse =
-                (reply as? DebitEvent)?.let { client.parseResponse(it) }
-                    ?: return Output.error("bad_response", "service reply was not a kind-21002 debit event")
-
-            return if (response.isOk()) {
-                Output.emit(
-                    mapOf(
-                        "result" to "ok",
-                        "preimage" to response.preimage,
-                        "request_id" to requestEvent.id,
-                        "service" to debit.pubKey,
-                    ),
-                )
-                0
-            } else {
-                Output.error(
-                    "debit_error",
-                    response.error?.takeIf { it.isNotBlank() } ?: "service returned error code ${response.code}",
-                )
+            return when (val outcome = settle(ctx, debit, timeoutMs, buildRequest)) {
+                Settle.Timeout -> {
+                    Output.error("timeout", "no response from the debit service within ${timeoutMs}ms")
+                    124
+                }
+                Settle.BadReply -> Output.error("bad_response", "service reply was not a kind-21002 debit event")
+                is Settle.Replied -> emitDebit(outcome, debit.pubKey)
             }
         } finally {
             ctx.close()
         }
     }
+
+    /** Emit a [DebitResponse] as the standard `ok`+preimage success or a structured GFY error. */
+    internal fun emitDebit(
+        outcome: Settle.Replied,
+        servicePubKey: String,
+    ): Int {
+        val response = outcome.response
+        return if (response.isOk()) {
+            Output.emit(
+                mapOf(
+                    "result" to "ok",
+                    "preimage" to response.preimage,
+                    "request_id" to outcome.requestId,
+                    "service" to servicePubKey,
+                ),
+            )
+            0
+        } else {
+            Output.error(
+                "debit_error",
+                response.error?.takeIf { it.isNotBlank() } ?: "service returned error code ${response.code}",
+                gfyExtra(response),
+            )
+        }
+    }
+
+    /** Structured GFY extras (code + any actionable range/retry_after/delta) for error output. */
+    internal fun gfyExtra(response: DebitResponse): Map<String, Any?> =
+        mapOf(
+            "code" to response.code,
+            "range" to response.range?.let { mapOf("min" to it.min, "max" to it.max) },
+            "retry_after" to response.retry_after,
+            "delta" to response.delta?.let { mapOf("max_delta_ms" to it.max_delta_ms, "actual_delta_ms" to it.actual_delta_ms) },
+        )
+
+    /** Result of a single 21002 round-trip, decoupled from how it is emitted. */
+    internal sealed interface Settle {
+        data class Replied(
+            val requestId: String,
+            val response: DebitResponse,
+        ) : Settle
+
+        data object Timeout : Settle
+
+        data object BadReply : Settle
+    }
+
+    /**
+     * Core 21002 round-trip against an already-decoded [debit] on an open [ctx]: build the
+     * request, publish, await the reply, decrypt. Reused by `debit pay/budget` and by
+     * `offer pay` (fetch invoice → settle via debit).
+     */
+    internal suspend fun settle(
+        ctx: Context,
+        debit: NDebit,
+        timeoutMs: Long,
+        buildRequest: suspend (DebitClient) -> DebitEvent,
+    ): Settle {
+        val client = DebitClient(debit, ctx.signer)
+        val requestEvent = buildRequest(client)
+        val reply =
+            ctx.requestResponse(requestEvent, debit.relays.toSet(), client.responseFilter(requestEvent.id), timeoutMs)
+                ?: return Settle.Timeout
+        val response = (reply as? DebitEvent)?.let { client.parseResponse(it) } ?: return Settle.BadReply
+        return Settle.Replied(requestEvent.id, response)
+    }
+
+    /** Parses a `--frequency` value into a one-time (null) or recurring cadence. Null = invalid. */
+    internal fun parseFrequency(raw: String?): Frequency? =
+        when (raw?.lowercase()) {
+            null, "once", "one-time" -> Frequency(null)
+            "day", "daily" -> Frequency(DebitFrequency(1, DebitFrequency.UNIT_DAY))
+            "week", "weekly" -> Frequency(DebitFrequency(1, DebitFrequency.UNIT_WEEK))
+            "month", "monthly" -> Frequency(DebitFrequency(1, DebitFrequency.UNIT_MONTH))
+            else -> null
+        }
+
+    /** Wrapper so a valid "one-time" budget (null cadence) is distinguishable from an invalid flag. */
+    internal data class Frequency(
+        val value: DebitFrequency?,
+    )
 }

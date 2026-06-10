@@ -115,3 +115,26 @@ if amy_a debit budget "$NDEBIT_STATIC" >>"$LOG_FILE" 2>&1; then
 else
     record_result debit.budget.noamount pass "missing --amount exits non-zero"
 fi
+
+# --- offer pay: requires a --with funding pointer (validated before any network) ---
+step "offer pay requires --with <ndebit>"
+if amy_a offer pay "$NOFFER_SPONT" --amount 1000 >>"$LOG_FILE" 2>&1; then
+    record_result offer.pay.nowith fail "missing --with should exit non-zero"
+else
+    record_result offer.pay.nowith pass "missing --with exits non-zero"
+fi
+
+step "offer pay rejects a non-ndebit --with"
+if amy_a offer pay "$NOFFER_SPONT" --with "not-an-ndebit" >>"$LOG_FILE" 2>&1; then
+    record_result offer.pay.badwith fail "bad --with should exit non-zero"
+else
+    record_result offer.pay.badwith pass "bad --with exits non-zero"
+fi
+
+# --- profile edit --clink-offer: validates the noffer locally before publishing ---
+step "profile edit rejects a non-noffer --clink-offer"
+if amy_a profile edit --clink-offer "not-a-noffer" >>"$LOG_FILE" 2>&1; then
+    record_result profile.clinkoffer.bad fail "bad --clink-offer should exit non-zero"
+else
+    record_result profile.clinkoffer.bad pass "bad --clink-offer exits non-zero"
+fi
