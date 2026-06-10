@@ -138,3 +138,11 @@ if amy_a profile edit --clink-offer "not-a-noffer" >>"$LOG_FILE" 2>&1; then
 else
     record_result profile.clinkoffer.bad pass "bad --clink-offer exits non-zero"
 fi
+
+# --- zap --with: rejects a non-ndebit funding pointer (validated before any network) ---
+step "zap user rejects a non-ndebit --with"
+if amy_a zap user "$EXPECTED_PUB" 1000 --with "not-an-ndebit" >>"$LOG_FILE" 2>&1; then
+    record_result zap.with.bad fail "bad --with should exit non-zero"
+else
+    record_result zap.with.bad pass "bad --with exits non-zero"
+fi
