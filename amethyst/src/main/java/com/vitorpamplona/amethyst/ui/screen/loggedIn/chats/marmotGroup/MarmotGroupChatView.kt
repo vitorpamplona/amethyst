@@ -27,16 +27,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.input.TextFieldState
-import androidx.compose.foundation.text.input.clearText
-import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,9 +46,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
-import com.vitorpamplona.amethyst.commons.ui.text.currentWord
-import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.actions.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.ui.actions.uploads.SelectFromGallery
@@ -61,11 +54,11 @@ import com.vitorpamplona.amethyst.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSuggestionList
-import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotFileSender
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotFileUploader
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.send.MarmotNewMessageViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.DisplayReplyingToNote
@@ -103,18 +96,14 @@ fun MarmotGroupChatView(
 
     WatchLifecycleAndUpdateModel(feedViewModel)
 
-    val chatroom =
-        remember(nostrGroupId) {
-            accountViewModel.account.marmotGroupList.getOrCreateGroup(nostrGroupId)
-        }
+    val newMessageModel: MarmotNewMessageViewModel = viewModel(key = nostrGroupId + "MarmotNewMessageViewModel")
+    newMessageModel.init(accountViewModel)
+    newMessageModel.load(nostrGroupId)
 
     DisposableEffect(nostrGroupId) {
-        chatroom.markAsRead()
+        newMessageModel.chatroom?.markAsRead()
         onDispose { }
     }
-
-    val messageState = remember(nostrGroupId) { TextFieldState() }
-    val replyTo = remember(nostrGroupId) { mutableStateOf<Note?>(null) }
 
     // Resolve the navigation-supplied replyId (e.g. tapping reply on an MLS
     // message in the Notifications screen) into the actual Note once it has
@@ -123,14 +112,14 @@ fun MarmotGroupChatView(
         LaunchedEffect(replyToInnerNote) {
             val parent = accountViewModel.checkGetOrCreateNote(replyToInnerNote)
             if (parent != null) {
-                replyTo.value = parent
+                newMessageModel.reply(parent)
             }
         }
     }
 
     if (draftMessage != null) {
         LaunchedEffect(draftMessage) {
-            messageState.setTextAndPlaceCursorAtEnd(draftMessage)
+            newMessageModel.editFromDraft(draftMessage)
         }
     }
 
@@ -146,7 +135,7 @@ fun MarmotGroupChatView(
                 accountViewModel = accountViewModel,
                 nav = nav,
                 routeForLastRead = "MarmotGroup/$nostrGroupId",
-                onWantsToReply = { note -> replyTo.value = note },
+                onWantsToReply = { note -> newMessageModel.reply(note) },
                 onWantsToEditDraft = { },
             )
         }
@@ -155,9 +144,7 @@ fun MarmotGroupChatView(
 
         MarmotGroupMessageComposer(
             nostrGroupId = nostrGroupId,
-            chatroom = chatroom,
-            messageState = messageState,
-            replyTo = replyTo,
+            newMessageModel = newMessageModel,
             accountViewModel = accountViewModel,
             nav = nav,
             onMessageSent = {
@@ -170,82 +157,56 @@ fun MarmotGroupChatView(
 @Composable
 fun MarmotGroupMessageComposer(
     nostrGroupId: HexKey,
-    chatroom: MarmotGroupChatroom,
-    messageState: TextFieldState,
-    replyTo: MutableState<Note?>,
+    newMessageModel: MarmotNewMessageViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
     onMessageSent: suspend () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    val canPost by remember { derivedStateOf { messageState.text.isNotBlank() } }
+    val canPost by remember { derivedStateOf { newMessageModel.canPost() } }
     val context = LocalContext.current
 
     var isUploading by remember { mutableStateOf(false) }
-    val uploadState =
-        remember {
-            ChatFileUploadState(
-                defaultServer = accountViewModel.account.settings.defaultFileServer,
-                defaultStripMetadata = accountViewModel.account.settings.stripLocationOnUpload,
-            )
-        }
-
-    val userSuggestions =
-        remember(nostrGroupId) {
-            UserSuggestionState(
-                accountViewModel.account,
-                accountViewModel.nip05ClientBuilder(),
-                priorityPubkeys = { chatroom.members.value.mapTo(mutableSetOf()) { it.pubkey } },
-            )
-        }
 
     DisposableEffect(nostrGroupId) {
-        onDispose { userSuggestions.reset() }
+        onDispose { newMessageModel.userSuggestions?.reset() }
     }
 
     // Upload dialog
-    uploadState.multiOrchestrator?.let {
-        MarmotGroupFileUploadDialog(
-            nostrGroupId = nostrGroupId,
-            state = uploadState,
-            accountViewModel = accountViewModel,
-            nav = nav,
-            onUpload = { onMessageSent() },
-            onCancel = uploadState::reset,
-        )
+    newMessageModel.uploadState?.let { uploadState ->
+        uploadState.multiOrchestrator?.let {
+            MarmotGroupFileUploadDialog(
+                nostrGroupId = nostrGroupId,
+                state = uploadState,
+                accountViewModel = accountViewModel,
+                nav = nav,
+                onUpload = { onMessageSent() },
+                onCancel = uploadState::reset,
+            )
+        }
     }
 
-    replyTo.value?.let {
+    newMessageModel.replyTo.value?.let {
         DisplayReplyingToNote(it, accountViewModel, nav) {
-            replyTo.value = null
+            newMessageModel.clearReply()
         }
     }
 
     Column(modifier = EditFieldModifier) {
-        ShowUserSuggestionList(
-            userSuggestions,
-            onSelect = { user ->
-                userSuggestions.replaceCurrentWord(messageState, messageState.currentWord(), user)
-                userSuggestions.reset()
-            },
-            accountViewModel = accountViewModel,
-            modifier = SuggestionListDefaultHeightChat,
-        )
+        newMessageModel.userSuggestions?.let {
+            ShowUserSuggestionList(
+                it,
+                newMessageModel::autocompleteWithUser,
+                accountViewModel,
+                SuggestionListDefaultHeightChat,
+            )
+        }
 
         ThinPaddingTextField(
-            state = messageState,
-            onTextChanged = {
-                if (messageState.selection.collapsed) {
-                    val lastWord = messageState.currentWord()
-                    if (lastWord.startsWith("@")) {
-                        userSuggestions.processCurrentWord(lastWord)
-                    } else {
-                        userSuggestions.reset()
-                    }
-                }
-            },
+            state = newMessageModel.message,
+            onTextChanged = { newMessageModel.onMessageChanged() },
             onContentReceived = { uri, mimeType ->
-                uploadState.load(persistentListOf(SelectedMedia(uri, mimeType)))
+                newMessageModel.pickedMedia(persistentListOf(SelectedMedia(uri, mimeType)))
             },
             inputTransformation = MentionPreservingInputTransformation,
             outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
@@ -260,9 +221,7 @@ fun MarmotGroupMessageComposer(
             leadingIcon = {
                 MarmotGalleryLeadingIcon(
                     isUploading = isUploading,
-                    onImageChosen = { selectedMedia ->
-                        uploadState.load(selectedMedia)
-                    },
+                    onImageChosen = newMessageModel::pickedMedia,
                 )
             },
             trailingIcon = {
@@ -270,33 +229,18 @@ fun MarmotGroupMessageComposer(
                     isActive = canPost,
                     modifier = EditFieldTrailingIconModifier,
                 ) {
-                    val text = messageState.text.toString().trim()
-                    if (text.isNotEmpty()) {
-                        // Capture id+pubKey snapshot under the value? guard so
-                        // a slow send doesn't race a user-cleared reply state.
-                        val parentEvent = replyTo.value?.event
-                        val replyId = parentEvent?.id
-                        val replyAuthor = parentEvent?.pubKey
-                        scope.launch(Dispatchers.IO) {
-                            try {
-                                accountViewModel.sendMarmotGroupMessage(
-                                    nostrGroupId = nostrGroupId,
-                                    text = text,
-                                    replyToInnerEventId = replyId,
-                                    replyToInnerAuthorPubKey = replyAuthor,
-                                )
-                                messageState.clearText()
-                                replyTo.value = null
-                                onMessageSent()
-                            } catch (e: Exception) {
-                                launch(Dispatchers.Main) {
-                                    Toast
-                                        .makeText(
-                                            context,
-                                            "Failed to send message: ${e.message}",
-                                            Toast.LENGTH_SHORT,
-                                        ).show()
-                                }
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            newMessageModel.sendPost()
+                            onMessageSent()
+                        } catch (e: Exception) {
+                            launch(Dispatchers.Main) {
+                                Toast
+                                    .makeText(
+                                        context,
+                                        "Failed to send message: ${e.message}",
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
                             }
                         }
                     }
