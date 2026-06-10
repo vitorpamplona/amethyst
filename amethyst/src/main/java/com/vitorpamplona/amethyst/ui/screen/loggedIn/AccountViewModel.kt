@@ -2033,7 +2033,8 @@ class AccountViewModel(
     /**
      * Pays a single BOLT-11 through a CLINK debit pointer (kind 21002) — the debit-rail
      * counterpart of [sendZapPaymentRequestFor]. [onResult] receives the decrypted
-     * response (`isOk()` with optional preimage, or a GFY failure), or null on timeout.
+     * response (`isOk()` with optional preimage, or a GFY failure), or null on timeout,
+     * delivered on the main dispatcher so UI callbacks (toasts, dialogs) are safe.
      * Untested end-to-end.
      */
     fun payInvoiceViaClinkDebit(
@@ -2041,7 +2042,8 @@ class AccountViewModel(
         bolt11: String,
         onResult: (DebitResponse?) -> Unit,
     ) = launchSigner {
-        onResult(ClinkDebitPayer.payInvoice(account, pointer, bolt11))
+        val response = ClinkDebitPayer.payInvoice(account, pointer, bolt11)
+        withContext(Dispatchers.Main) { onResult(response) }
     }
 
     fun getInteractiveStoryReadingState(dATag: String): AddressableNote = LocalCache.getOrCreateAddressableNote(InteractiveStoryReadingStateEvent.createAddress(account.signer.pubKey, dATag))
