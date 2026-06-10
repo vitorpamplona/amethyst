@@ -3010,10 +3010,4 @@
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Konst</string>
     <string name="nowhere_link_card_forum">Nowhere Forum</string>
-    <string name="chats_history_proto_nip04">föråldrat</string>
-    <string name="chats_history_proto_nip17">krypterat</string>
-    <string name="chats_reply_not_found">Kunde inte hitta detta meddelande</string>
-    <string name="chats_reply_searched">Sökte på alla relayer · tryck för att visa</string>
-    <string name="chats_reply_searching_history">Letar efter ursprungsmeddelandet…</string>
-    <string name="user_suggestion_in_this_chat">I den här chatten</string>
 </resources>

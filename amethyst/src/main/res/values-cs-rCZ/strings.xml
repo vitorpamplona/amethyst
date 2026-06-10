@@ -3067,10 +3067,4 @@
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Umění</string>
     <string name="nowhere_link_card_forum">Nowhere Fórum</string>
-    <string name="chats_history_proto_nip04">zastaralé</string>
-    <string name="chats_history_proto_nip17">šifrované</string>
-    <string name="chats_reply_not_found">Tuto zprávu se nepodařilo najít</string>
-    <string name="chats_reply_searched">Prohledány všechny relaye · klepnutím zobrazíte</string>
-    <string name="chats_reply_searching_history">Hledání původní zprávy…</string>
-    <string name="user_suggestion_in_this_chat">V tomto chatu</string>
 </resources>
