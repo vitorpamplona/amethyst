@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
@@ -237,6 +238,9 @@ class AccountSettings(
     val lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
     val hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     val dismissedPollNoteIds: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
+    // Rooms pinned to the top of the chat list. Local-only (not synced as a Nostr
+    // event): there is no standard NIP-51 list for pinned DMs.
+    val pinnedChatrooms: MutableStateFlow<Set<ChatroomKey>> = MutableStateFlow(setOf()),
     val viewedPollResultNoteIds: MutableStateFlow<Map<String, Long>> = MutableStateFlow(mapOf()),
     val pendingAttestations: MutableStateFlow<Map<HexKey, String>> = MutableStateFlow(mapOf()),
     var backupNipA3PaymentTargets: PaymentTargetsEvent? = null,
@@ -1136,6 +1140,19 @@ class AccountSettings(
             }
             saveAccountSettings()
         }
+    }
+
+    // ---
+    // pinned chatrooms
+    // ---
+
+    fun isChatroomPinned(room: ChatroomKey) = pinnedChatrooms.value.contains(room)
+
+    fun toggleChatroomPin(room: ChatroomKey) {
+        pinnedChatrooms.update {
+            if (room in it) it - room else it + room
+        }
+        saveAccountSettings()
     }
 
     // ---

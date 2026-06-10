@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -40,6 +42,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
@@ -68,7 +72,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemC
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Height4dpModifier
+import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.newItemBubbleModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -338,6 +344,11 @@ private fun UserRoomCompose(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    var popupExpanded by remember { mutableStateOf(false) }
+    val pinnedRooms by accountViewModel.account.settings.pinnedChatrooms
+        .collectAsStateWithLifecycle()
+    val isPinned = room in pinnedRooms
+
     ChatHeaderLayout(
         channelPicture = {
             NonClickableUserPictures(
@@ -348,6 +359,15 @@ private fun UserRoomCompose(
         },
         firstRow = {
             RoomNameDisplay(room, Modifier.weight(1f), accountViewModel)
+            if (isPinned) {
+                Icon(
+                    symbol = MaterialSymbols.PushPin,
+                    contentDescription = stringRes(R.string.pinned_to_top),
+                    modifier = Size15Modifier,
+                    tint = MaterialTheme.colorScheme.placeholderText,
+                )
+                Spacer(modifier = StdHorzSpacer)
+            }
             TimeAgo(lastMessage.createdAt())
         },
         secondRow = {
@@ -379,7 +399,23 @@ private fun UserRoomCompose(
             }
         },
         onClick = { nav.nav(Route.Room(room)) },
+        onLongClick = { popupExpanded = true },
     )
+
+    DropdownMenu(
+        expanded = popupExpanded,
+        onDismissRequest = { popupExpanded = false },
+    ) {
+        DropdownMenuItem(
+            text = {
+                Text(stringRes(if (isPinned) R.string.unpin_conversation else R.string.pin_conversation))
+            },
+            onClick = {
+                accountViewModel.account.settings.toggleChatroomPin(room)
+                popupExpanded = false
+            },
+        )
+    }
 }
 
 @Composable

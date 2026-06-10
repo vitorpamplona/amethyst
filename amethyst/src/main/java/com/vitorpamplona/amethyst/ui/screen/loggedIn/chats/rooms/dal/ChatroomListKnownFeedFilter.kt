@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
@@ -88,7 +89,7 @@ class ChatroomListKnownFeedFilter(
                 }
             }
 
-        return (privateMessages + publicChannels + ephemeralChats + marmotGroups).sortedWith(DefaultFeedOrder)
+        return sort((privateMessages + publicChannels + ephemeralChats + marmotGroups).toSet())
     }
 
     override fun updateListWith(
@@ -261,7 +262,24 @@ class ChatroomListKnownFeedFilter(
         return newRelevantPrivateMessages
     }
 
-    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
+    override fun sort(items: Set<Note>): List<Note> {
+        val pinned = account.settings.pinnedChatrooms.value
+        if (pinned.isEmpty()) return items.sortedWith(DefaultFeedOrder)
+
+        val me = account.userProfile().pubkeyHex
+        return items.sortedWith(
+            compareByDescending<Note> { isPinned(it, me, pinned) }.then(DefaultFeedOrder),
+        )
+    }
+
+    private fun isPinned(
+        note: Note,
+        myPubKey: HexKey,
+        pinned: Set<ChatroomKey>,
+    ): Boolean {
+        val room = (note.event as? ChatroomKeyable)?.chatroomKey(myPubKey) ?: return false
+        return room in pinned
+    }
 
     // Maps a note that represents a public chat row to its channel id. The
     // representative note for a channel may be the channel's create event
