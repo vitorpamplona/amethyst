@@ -80,6 +80,9 @@ object ClinkDebitPayer {
         return sendAndAwait(account, client, client.requestBudget(amountSats, frequency), timeoutMs)
     }
 
+    // Debits sign with the persistent account identity (unlike offer requests, which use a
+    // throwaway key — see ClinkOfferPayer): the service must see one stable app identity so a
+    // budget authorization can cover repeat debits instead of prompting on every payment.
     private fun clientFor(
         pointer: NDebit,
         account: Account,

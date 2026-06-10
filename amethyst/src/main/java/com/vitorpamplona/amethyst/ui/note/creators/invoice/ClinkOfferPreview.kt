@@ -84,7 +84,7 @@ fun ClinkOfferPreview(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var payingInvoice by remember { mutableStateOf<String?>(null) }
     var amountInput by remember { mutableStateOf("") }
-    var needsAmount by remember { mutableStateOf((offer.priceType ?: OfferPriceType.SPONTANEOUS) == OfferPriceType.SPONTANEOUS) }
+    var needsAmount by remember { mutableStateOf(offer.priceType == OfferPriceType.SPONTANEOUS) }
     var amountRange by remember { mutableStateOf<SatRange?>(null) }
     // The pointer actually paid: starts as the rendered offer, swapped if the service
     // replies "Expired or Moved" (code 3) with a replacement noffer.
@@ -147,7 +147,7 @@ fun ClinkOfferPreview(
             // when the pointer omits a price type) require the payer to enter an amount.
             // Reflect the pointer actually being charged (which may have changed if the
             // service redirected us to a replacement noffer via "Expired or Moved").
-            val effectiveType = activeOffer.priceType ?: OfferPriceType.SPONTANEOUS
+            val effectiveType = activeOffer.priceType
 
             if (effectiveType == OfferPriceType.FIXED) {
                 activeOffer.price?.let {

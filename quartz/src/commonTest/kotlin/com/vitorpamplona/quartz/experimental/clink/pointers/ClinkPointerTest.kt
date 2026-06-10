@@ -44,16 +44,6 @@ class ClinkPointerTest {
     }
 
     @Test
-    fun offerAlwaysEncodesPriceTypeTlv() {
-        // Even when the model leaves priceType null, encode must emit TLV 3 (the SDK and
-        // bridgelet decoders reject a noffer without it); it decodes back as SPONTANEOUS.
-        val offer = NOffer(pubKey, listOf(relay), null, null, null)
-        val parsed = ClinkPointerParser.parse(offer.encode()) as NOffer
-
-        assertEquals(OfferPriceType.SPONTANEOUS, parsed.priceType)
-    }
-
-    @Test
     fun offerFixedPriceRoundTrip() {
         val offer = NOffer(pubKey, listOf(relay), null, OfferPriceType.FIXED, 21_000)
         val parsed = ClinkPointerParser.parse(offer.encode()) as NOffer

@@ -104,7 +104,7 @@ fun InvoicePaymentDispatcher(
                             onSuccess()
                         } else {
                             onError(
-                                response?.error?.takeIf { it.isNotBlank() }
+                                response?.failureDetail()
                                     ?: stringRes(context, R.string.clink_debit_no_response),
                             )
                         }

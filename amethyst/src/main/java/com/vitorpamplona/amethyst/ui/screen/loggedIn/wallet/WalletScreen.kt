@@ -258,7 +258,7 @@ private fun MultiWalletHomeContent(
                     if (!walletInfo.canShowBalance) {
                         { amount, frequency ->
                             walletViewModel.requestDebitBudget(walletInfo.walletId, amount, frequency) { response ->
-                                val error = response?.error
+                                val error = response?.failureDetail()
                                 val msg =
                                     when {
                                         response?.isOk() == true -> context.getString(R.string.clink_budget_approved)

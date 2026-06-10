@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.experimental.clink.offers.OfferEvent
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferReceipt
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.experimental.clink.pointers.NOffer
+import com.vitorpamplona.quartz.experimental.clink.pointers.OfferPriceType
 import com.vitorpamplona.quartz.experimental.clink.server.ClinkServer
 import com.vitorpamplona.quartz.experimental.clink.server.K1Tracker
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -45,7 +46,7 @@ class ClinkClientServerTest {
 
     @Test
     fun offerClientExposesPointerRoutingAndResponseFilter() {
-        val client = OfferClient(NOffer(servicePubKey, listOf(relay), "offer-id", null, null), signer)
+        val client = OfferClient(NOffer(servicePubKey, listOf(relay), "offer-id", OfferPriceType.SPONTANEOUS, null), signer)
 
         assertEquals(servicePubKey, client.servicePubKey)
         assertEquals(listOf(relay), client.relays)
@@ -61,7 +62,7 @@ class ClinkClientServerTest {
         kotlinx.coroutines.test.runTest {
             val payer = NostrSignerInternal(KeyPair())
             val service = NostrSignerInternal(KeyPair())
-            val offer = NOffer(service.pubKey, listOf(relay), "offer-id", null, null)
+            val offer = NOffer(service.pubKey, listOf(relay), "offer-id", OfferPriceType.SPONTANEOUS, null)
             val client = OfferClient(offer, payer)
 
             // payer asks, service settles and sends a receipt referencing the request
@@ -89,7 +90,7 @@ class ClinkClientServerTest {
     fun offerRequestTruncatesDescriptionTo100Chars() =
         kotlinx.coroutines.test.runTest {
             val service = NostrSignerInternal(KeyPair())
-            val client = OfferClient(NOffer(service.pubKey, listOf(relay), "o", null, null), signer)
+            val client = OfferClient(NOffer(service.pubKey, listOf(relay), "o", OfferPriceType.SPONTANEOUS, null), signer)
             val event = client.requestInvoice(amountSats = 100, description = "x".repeat(150))
             val decrypted = event.decryptRequest(service)
             assertEquals(100, decrypted.description?.length)

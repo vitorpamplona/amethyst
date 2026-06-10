@@ -39,10 +39,10 @@ data class NOffer(
     override val relays: List<NormalizedRelayUrl>,
     override val pointer: String?,
     /**
-     * TLV 3 — how the offer is priced. A decoded pointer always reports a concrete type
-     * ([OfferPriceType.SPONTANEOUS] when the wire field was absent, per the CLINK spec).
+     * TLV 3 — how the offer is priced. Always a concrete type: when the wire field is
+     * absent it is [OfferPriceType.SPONTANEOUS], per the CLINK spec.
      */
-    val priceType: OfferPriceType?,
+    val priceType: OfferPriceType,
     /** TLV 4 — price in sats (display/fixed offers), 4-byte big-endian *unsigned* per the SDK. */
     val price: Long?,
 ) : ClinkPointer {
@@ -55,7 +55,7 @@ data class NOffer(
                 // Always emit TLV 3, even for spontaneous offers: the reference SDK and
                 // bridgelet decoders throw on a missing price-type field, so an absent TLV 3
                 // would make our pointers undecodable by every JS consumer.
-                addHex(ClinkTlv.PRICE_TYPE, (priceType ?: OfferPriceType.SPONTANEOUS).code.toSingleByteHex())
+                addHex(ClinkTlv.PRICE_TYPE, priceType.code.toSingleByteHex())
                 // addInt writes the low 32 bits big-endian; for an unsigned price up to
                 // 2^32-1 that is the correct 4-byte field even when it overflows a signed Int.
                 price?.let { addInt(ClinkTlv.PRICE, it.toInt()) }
