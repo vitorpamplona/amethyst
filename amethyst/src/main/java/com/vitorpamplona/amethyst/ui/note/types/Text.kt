@@ -202,11 +202,8 @@ fun RenderTextEvent(
                             note.idHex
                         },
                     callbackUri = callbackUri,
-                    authorPubKey = note.author?.pubkeyHex,
                     accountViewModel = accountViewModel,
                     nav = nav,
-                    // Lets a CLINK offer in the body zap this very post (e-tag).
-                    zapEvent = noteEvent,
                 )
             }
 

@@ -49,7 +49,6 @@ import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.ButtonPadding
 import com.vitorpamplona.amethyst.ui.theme.StdTopPadding
-import com.vitorpamplona.quartz.nip01Core.core.Event
 
 object ShowFullTextCache {
     val cache = LruCache<String, Boolean>(10)
@@ -68,7 +67,6 @@ fun ExpandableRichTextViewer(
     authorPubKey: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
-    zapEvent: Event? = null,
 ) {
     var showFullText by
         rememberSaveable {
@@ -106,7 +104,6 @@ fun ExpandableRichTextViewer(
             authorPubKey,
             accountViewModel,
             nav,
-            zapEvent,
         )
 
         if (content.length > whereToCut && !showFullText) {

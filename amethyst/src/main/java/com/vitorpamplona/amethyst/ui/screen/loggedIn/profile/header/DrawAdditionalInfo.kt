@@ -226,7 +226,7 @@ fun DrawAdditionalInfo(
             }
         DisplayLNAddress(lud16, baseUser, accountViewModel, nav)
 
-        DisplayClinkOffer(baseUser, user, accountViewModel)
+        DisplayClinkOffer(user, accountViewModel)
 
         DisplayPaymentTargets(baseUser, accountViewModel)
 
@@ -395,7 +395,6 @@ fun getIdentityClaimDescription(identity: IdentityClaimTag): Int =
  */
 @Composable
 private fun DisplayClinkOffer(
-    baseUser: User,
     userInfo: UserInfo,
     accountViewModel: AccountViewModel,
 ) {
@@ -425,6 +424,6 @@ private fun DisplayClinkOffer(
     }
 
     offer?.let {
-        ClinkOfferPreview(it, accountViewModel, baseUser.pubkeyHex)
+        ClinkOfferPreview(it, accountViewModel)
     }
 }
