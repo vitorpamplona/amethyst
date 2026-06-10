@@ -145,10 +145,12 @@ fun ClinkOfferPreview(
 
             // FIXED offers display their preset price; SPONTANEOUS offers (and the default
             // when the pointer omits a price type) require the payer to enter an amount.
-            val effectiveType = offer.priceType ?: OfferPriceType.SPONTANEOUS
+            // Reflect the pointer actually being charged (which may have changed if the
+            // service redirected us to a replacement noffer via "Expired or Moved").
+            val effectiveType = activeOffer.priceType ?: OfferPriceType.SPONTANEOUS
 
             if (effectiveType == OfferPriceType.FIXED) {
-                offer.price?.let {
+                activeOffer.price?.let {
                     Text(
                         text = "$it ${stringRes(id = R.string.sats)}",
                         fontSize = 25.sp,

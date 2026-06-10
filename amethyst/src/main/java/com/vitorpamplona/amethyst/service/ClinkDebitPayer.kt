@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -115,7 +116,15 @@ object ClinkDebitPayer {
         return try {
             account.client.publish(request, relays)
             val response = withTimeoutOrNull(timeoutMs) { reply.await() } ?: return null
-            client.parseResponse(response)
+            // Treat an undecryptable/malformed reply as no usable response rather than
+            // throwing — callers only handle null, and an uncaught decode error would
+            // leave the calling UI hung (spinner stuck, no toast, sibling zaps cancelled).
+            try {
+                client.parseResponse(response)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                null
+            }
         } finally {
             account.client.unsubscribe(subId)
         }

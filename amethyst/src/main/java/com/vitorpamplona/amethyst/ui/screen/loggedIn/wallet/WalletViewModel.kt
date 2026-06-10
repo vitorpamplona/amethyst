@@ -287,8 +287,11 @@ class WalletViewModel : ViewModel() {
 
     fun setDefaultWallet(walletId: String) {
         val acc = account ?: return
-        acc.settings.setDefaultPaymentSource(walletId)
-        _defaultWalletId.value = walletId
+        // Only reflect the change locally if it actually persisted (the id must exist
+        // in one of the lists); otherwise the star and the stored default would diverge.
+        if (acc.settings.setDefaultPaymentSource(walletId)) {
+            _defaultWalletId.value = walletId
+        }
     }
 
     fun removeWallet(walletId: String) {

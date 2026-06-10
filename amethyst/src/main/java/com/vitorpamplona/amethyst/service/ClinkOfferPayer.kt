@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -82,7 +83,16 @@ object ClinkOfferPayer {
         return try {
             account.client.publish(request, relays)
             val response = withTimeoutOrNull(timeoutMs) { reply.await() } ?: return null
-            client.parseResponse(response)
+            // A reply that can't be decrypted/parsed (corrupt ciphertext, malformed JSON
+            // from a buggy or hostile relay) is treated as no usable response rather than
+            // thrown — callers only handle null, and an uncaught decode error would hang
+            // the UI (the Pay button stuck on "Requesting…").
+            try {
+                client.parseResponse(response)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                null
+            }
         } finally {
             account.client.unsubscribe(subId)
         }
