@@ -385,14 +385,18 @@ fun CardBody(
                 }
             }
 
-            VerticalDivider(color = primaryLight)
-            NoteQuickActionItem(
-                icon = MaterialSymbols.Dns,
-                label = stringRes(R.string.broadcast),
-            ) {
-                accountViewModel.broadcast(note)
-                // showSelectTextDialog = true
-                onDismiss()
+            // Unsealed rumors are unsigned and private — rebroadcasting one
+            // to public relays is never valid.
+            if (!note.isPrivateRumor()) {
+                VerticalDivider(color = primaryLight)
+                NoteQuickActionItem(
+                    icon = MaterialSymbols.Dns,
+                    label = stringRes(R.string.broadcast),
+                ) {
+                    accountViewModel.broadcast(note)
+                    // showSelectTextDialog = true
+                    onDismiss()
+                }
             }
             VerticalDivider(color = primaryLight)
             if (isOwnNote && note.isDraft()) {

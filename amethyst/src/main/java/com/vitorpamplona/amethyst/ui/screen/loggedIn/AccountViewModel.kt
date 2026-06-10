@@ -487,9 +487,14 @@ class AccountViewModel(
         launchSigner {
             val currentReactions = note.allReactionsOfContentByAuthor(userProfile(), reaction)
             if (currentReactions.isNotEmpty()) {
-                account.delete(currentReactions)
+                // Gift-wrapped reactions are add-only for now: a public NIP-09
+                // deletion would e-tag the private rumor id onto public relays.
+                val deletable = currentReactions.filter { !it.isPrivateRumor() }
+                if (deletable.isNotEmpty()) {
+                    account.delete(deletable)
+                }
             } else {
-                if (settings.useTrackedBroadcasts() && note.event !is NIP17Group) {
+                if (settings.useTrackedBroadcasts() && note.event !is NIP17Group && !note.isPrivateRumor()) {
                     // Tracked broadcasting with progress feedback
                     account.createReactionEvent(note, reaction)?.let { (event, relays) ->
                         broadcastTracker.trackBroadcast(

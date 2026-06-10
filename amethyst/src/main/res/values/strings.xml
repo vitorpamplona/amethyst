@@ -869,6 +869,7 @@
     <string name="article_bookmark_management_title">Bookmark this article</string>
     <string name="public_bookmark_presence_indicator">is a public bookmark here</string>
     <string name="private_bookmark_presence_indicator">is a private bookmark here</string>
+    <string name="private_rumor_mark">Private — only visible to tagged participants</string>
     <string name="bookmark_absence_indicator">is not a bookmark here</string>
     <string name="bookmark_remove_action_desc">Remove bookmark from list</string>
     <string name="bookmark_add_action_desc">Add bookmark to list</string>

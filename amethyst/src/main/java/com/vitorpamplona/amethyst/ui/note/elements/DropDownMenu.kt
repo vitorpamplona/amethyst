@@ -161,6 +161,12 @@ fun NoteDropDownMenu(
         val actContext = LocalContext.current
         val scope = rememberCoroutineScope()
 
+        // Unsealed rumors (private replies/posts received in gift wraps) are
+        // unsigned and must never be referenced by a public event: hide every
+        // action that would publish an e-tag of this note (broadcast, edit,
+        // OTS timestamp, pin, label, public bookmark, deletion request).
+        val isPrivateRumor = note.isPrivateRumor()
+
         // Follow section
         M3ActionSection {
             if (!state.isFollowingAuthor) {
@@ -241,7 +247,7 @@ fun NoteDropDownMenu(
                     nav.nav { routeEditDraftTo(note, accountViewModel.account) }
                 }
             }
-            if (!note.isDraft()) {
+            if (!note.isDraft() && !isPrivateRumor) {
                 if (note.event is TextNoteEvent) {
                     if (state.isLoggedUser) {
                         M3ActionRow(icon = MaterialSymbols.Edit, text = stringRes(R.string.edit_post)) {
@@ -258,23 +264,27 @@ fun NoteDropDownMenu(
                     }
                 }
             }
-            M3ActionRow(icon = MaterialSymbols.CellTower, text = stringRes(R.string.broadcast)) {
-                accountViewModel.broadcast(note)
-                onDismiss()
+            if (!isPrivateRumor) {
+                M3ActionRow(icon = MaterialSymbols.CellTower, text = stringRes(R.string.broadcast)) {
+                    accountViewModel.broadcast(note)
+                    onDismiss()
+                }
             }
         }
 
         // Timestamp & Bookmarks section
         M3ActionSection {
-            if (accountViewModel.account.otsState.hasPendingAttestations(note)) {
-                M3ActionRow(icon = MaterialSymbols.Schedule, text = stringRes(R.string.timestamp_pending)) { onDismiss() }
-            } else {
-                M3ActionRow(icon = MaterialSymbols.Schedule, text = stringRes(R.string.timestamp_it)) {
-                    accountViewModel.timestamp(note)
-                    onDismiss()
+            if (!isPrivateRumor) {
+                if (accountViewModel.account.otsState.hasPendingAttestations(note)) {
+                    M3ActionRow(icon = MaterialSymbols.Schedule, text = stringRes(R.string.timestamp_pending)) { onDismiss() }
+                } else {
+                    M3ActionRow(icon = MaterialSymbols.Schedule, text = stringRes(R.string.timestamp_it)) {
+                        accountViewModel.timestamp(note)
+                        onDismiss()
+                    }
                 }
             }
-            if (state.isLoggedUser) {
+            if (state.isLoggedUser && !isPrivateRumor) {
                 if (state.isPinnedNote) {
                     M3ActionRow(icon = MaterialSymbols.PushPin, text = stringRes(R.string.unpin_from_profile)) {
                         accountViewModel.removePin(note)
@@ -287,8 +297,10 @@ fun NoteDropDownMenu(
                     }
                 }
             }
-            M3ActionRow(icon = MaterialSymbols.Tag, text = stringRes(R.string.add_hashtag_label)) {
-                addLabelDialogShowing = true
+            if (!isPrivateRumor) {
+                M3ActionRow(icon = MaterialSymbols.Tag, text = stringRes(R.string.add_hashtag_label)) {
+                    addLabelDialogShowing = true
+                }
             }
             // Pick exactly one curation flow per kind: music tracks go to playlists, emoji
             // packs go to the emoji list, everything else gets the standard bookmark rows.
@@ -323,15 +335,19 @@ fun NoteDropDownMenu(
                 }
 
                 else -> {
-                    val noteBookmarkType = if (note.event is LongTextNoteEvent) stringRes(R.string.article) else stringRes(R.string.post)
-                    M3ActionRow(icon = MaterialSymbols.BookmarkAdd, text = stringRes(R.string.manage_bookmark_label, noteBookmarkType)) {
-                        if (note.event is LongTextNoteEvent) {
-                            nav.nav(Route.ArticleBookmarkManagement((note as AddressableNote).address))
-                        } else {
-                            nav.nav(Route.PostBookmarkManagement(note.idHex))
+                    if (!isPrivateRumor) {
+                        val noteBookmarkType = if (note.event is LongTextNoteEvent) stringRes(R.string.article) else stringRes(R.string.post)
+                        M3ActionRow(icon = MaterialSymbols.BookmarkAdd, text = stringRes(R.string.manage_bookmark_label, noteBookmarkType)) {
+                            if (note.event is LongTextNoteEvent) {
+                                nav.nav(Route.ArticleBookmarkManagement((note as AddressableNote).address))
+                            } else {
+                                nav.nav(Route.PostBookmarkManagement(note.idHex))
+                            }
+                            onDismiss()
                         }
-                        onDismiss()
                     }
+                    // Private bookmarks are stored inside the list's encrypted
+                    // content, so a private rumor's id stays off public relays.
                     if (state.isPrivateBookmarkNote) {
                         M3ActionRow(icon = MaterialSymbols.LockOpen, text = stringRes(R.string.remove_from_private_bookmarks)) {
                             accountViewModel.removePrivateBookmark(note)
@@ -343,15 +359,17 @@ fun NoteDropDownMenu(
                             onDismiss()
                         }
                     }
-                    if (state.isPublicBookmarkNote) {
-                        M3ActionRow(icon = MaterialSymbols.BookmarkRemove, text = stringRes(R.string.remove_from_public_bookmarks)) {
-                            accountViewModel.removePublicBookmark(note)
-                            onDismiss()
-                        }
-                    } else {
-                        M3ActionRow(icon = MaterialSymbols.Bookmark, text = stringRes(R.string.add_to_public_bookmarks)) {
-                            accountViewModel.addPublicBookmark(note)
-                            onDismiss()
+                    if (!isPrivateRumor) {
+                        if (state.isPublicBookmarkNote) {
+                            M3ActionRow(icon = MaterialSymbols.BookmarkRemove, text = stringRes(R.string.remove_from_public_bookmarks)) {
+                                accountViewModel.removePublicBookmark(note)
+                                onDismiss()
+                            }
+                        } else {
+                            M3ActionRow(icon = MaterialSymbols.Bookmark, text = stringRes(R.string.add_to_public_bookmarks)) {
+                                accountViewModel.addPublicBookmark(note)
+                                onDismiss()
+                            }
                         }
                     }
                 }
@@ -372,7 +390,7 @@ fun NoteDropDownMenu(
                 }
                 onDismiss()
             }
-            if (state.isLoggedUser) {
+            if (state.isLoggedUser && !isPrivateRumor) {
                 M3ActionRow(icon = MaterialSymbols.Delete, text = stringRes(R.string.request_deletion), isDestructive = true) {
                     accountViewModel.delete(note)
                     onDismiss()

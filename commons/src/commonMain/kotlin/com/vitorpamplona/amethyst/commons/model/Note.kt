@@ -325,6 +325,16 @@ open class Note(
 
     fun isDraft() = event is DraftWrapEvent
 
+    /**
+     * True when this note's event is an unsealed NIP-59 rumor (a private
+     * reply, private reaction, or chat message that arrived inside a gift
+     * wrap). Rumors are unsigned by design — they are materialized with an
+     * empty signature — so they must never be e-tagged, quoted, reposted,
+     * or rebroadcast on public relays: any public event referencing this
+     * note's id leaks the private rumor id.
+     */
+    fun isPrivateRumor() = event?.sig?.isEmpty() == true
+
     fun loadEvent(
         event: Event,
         author: User,

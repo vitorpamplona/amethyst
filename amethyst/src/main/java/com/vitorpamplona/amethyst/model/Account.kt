@@ -732,8 +732,10 @@ class Account(
 
         val eventHint = note.toEventHint<Event>() ?: return null
 
-        // For NIP-17 private groups, we don't support tracked mode (too complex)
-        if (eventHint.event is NIP17Group) return null
+        // For NIP-17 private groups, we don't support tracked mode (too complex).
+        // Unsealed rumors (empty sig) must never get a public reaction —
+        // the e-tag would leak the private rumor id to public relays.
+        if (eventHint.event is NIP17Group || eventHint.event.sig.isEmpty()) return null
 
         val event = ReactionAction.reactTo(eventHint, reaction, signer)
         val relays = computeRelayListToBroadcast(event)

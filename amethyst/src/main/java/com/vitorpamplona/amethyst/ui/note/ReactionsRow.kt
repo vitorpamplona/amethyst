@@ -259,21 +259,28 @@ private fun InnerReactionRow(
         },
         reactions = reactionRowItems,
         renderReaction = { item ->
+            // Unsealed rumors (private replies/posts) must not receive public
+            // replies, reposts, quotes, or zaps: each would e-tag the private
+            // rumor id onto public relays. Reactions stay enabled because
+            // ReactionAction gift-wraps them for empty-sig targets.
+            val isPrivateRumor = baseNote.isPrivateRumor()
             when (item.action) {
                 ReactionRowAction.Reply -> {
-                    ReplyReactionWithDialog(
-                        baseNote,
-                        MaterialTheme.colorScheme.placeholderText,
-                        accountViewModel,
-                        nav,
-                        showCounter = item.showCounter,
-                        voiceRecordingState = voiceRecordingState,
-                    )
+                    if (!isPrivateRumor) {
+                        ReplyReactionWithDialog(
+                            baseNote,
+                            MaterialTheme.colorScheme.placeholderText,
+                            accountViewModel,
+                            nav,
+                            showCounter = item.showCounter,
+                            voiceRecordingState = voiceRecordingState,
+                        )
+                    }
                 }
 
                 ReactionRowAction.Boost -> {
                     val isDM = baseNote.event is ChatroomKeyable
-                    if (!isDM) {
+                    if (!isDM && !isPrivateRumor) {
                         BoostWithDialog(
                             baseNote,
                             editState,
@@ -296,13 +303,15 @@ private fun InnerReactionRow(
                 }
 
                 ReactionRowAction.Zap -> {
-                    ZapReaction(
-                        baseNote,
-                        MaterialTheme.colorScheme.placeholderText,
-                        accountViewModel,
-                        nav = nav,
-                        showCounter = item.showCounter,
-                    )
+                    if (!isPrivateRumor) {
+                        ZapReaction(
+                            baseNote,
+                            MaterialTheme.colorScheme.placeholderText,
+                            accountViewModel,
+                            nav = nav,
+                            showCounter = item.showCounter,
+                        )
+                    }
                 }
 
                 ReactionRowAction.Share -> {
