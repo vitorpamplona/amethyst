@@ -46,6 +46,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import kotlin.math.round
@@ -391,9 +392,12 @@ class ZapPaymentHandler(
 
     /**
      * Pays each zap invoice by asking the user's CLINK debit service (kind 21002) to
-     * settle the BOLT-11. The service authorizes against the account identity; a failure
-     * surfaces the service's `GFY` error text. Untested end-to-end — needs a live debit
-     * service to verify a real payout.
+     * settle the BOLT-11. The service authorizes against the account identity.
+     *
+     * Fire-and-forget, like the NWC rail ([payViaNWC]): the request is dispatched on the
+     * account scope and each payable is reported paid optimistically so the zap UI completes
+     * promptly. A `GFY`/failure (or no reply within the debit timeout) surfaces later through
+     * [onError] rather than blocking the zap on the service's response.
      */
     suspend fun payViaClinkDebit(
         payables: List<Payable>,
@@ -407,21 +411,22 @@ class ZapPaymentHandler(
         return mapNotNullAsync(
             items = payables,
             runRequestFor = { payable: Payable ->
-                val response = ClinkDebitPayer.payInvoice(account, pointer, payable.invoice)
+                account.scope.launch {
+                    val response = ClinkDebitPayer.payInvoice(account, pointer, payable.invoice)
+                    if (response?.isOk() != true) {
+                        onError(
+                            stringRes(context, R.string.error_dialog_pay_invoice_error),
+                            response?.failureDetail()
+                                ?: stringRes(context, R.string.clink_debit_no_response),
+                            payable.info.user,
+                        )
+                    }
+                }
 
                 progressAllPayments += 1f / payables.size
                 onProgress(progressAllPayments)
 
-                val paid = response?.isOk() == true
-                if (!paid) {
-                    onError(
-                        stringRes(context, R.string.error_dialog_pay_invoice_error),
-                        response?.failureDetail()
-                            ?: stringRes(context, R.string.clink_debit_no_response),
-                        payable.info.user,
-                    )
-                }
-                Paid(payable, paid)
+                Paid(payable, true)
             },
         )
     }
