@@ -27,7 +27,11 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
-import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -48,9 +52,9 @@ class ManageEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
     override fun isContentEncoded() = true
 
-    fun recipientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
+    fun recipientPubKey() = tags.firstNotNullOfOrNull(PTag::parseKey)
 
-    fun requestId() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
+    fun requestId() = tags.firstNotNullOfOrNull(ETag::parseId)
 
     fun isResponse() = requestId() != null
 
@@ -80,14 +84,14 @@ class ManageEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): ManageEvent {
-            val tags =
-                arrayOf(
-                    arrayOf("p", serverPubKey),
-                    Clink.versionTag(),
-                    AltTag.assemble(ALT),
-                )
             val encrypted = signer.nip44Encrypt(OptimizedJsonMapper.toJson(request), serverPubKey)
-            return signer.sign(createdAt, KIND, tags, encrypted)
+            return signer.sign(
+                eventTemplate(KIND, encrypted, createdAt) {
+                    pTag(serverPubKey, null)
+                    add(Clink.versionTag())
+                    alt(ALT)
+                },
+            )
         }
 
         /** Builds a response event (server side) referencing the original [requestEvent]. */
@@ -98,15 +102,15 @@ class ManageEvent(
             createdAt: Long = TimeUtils.now(),
         ): ManageEvent {
             val appPubKey = requestEvent.pubKey
-            val tags =
-                arrayOf(
-                    arrayOf("p", appPubKey),
-                    arrayOf("e", requestEvent.id),
-                    Clink.versionTag(),
-                    AltTag.assemble(ALT),
-                )
             val encrypted = signer.nip44Encrypt(OptimizedJsonMapper.toJson(response), appPubKey)
-            return signer.sign(createdAt, KIND, tags, encrypted)
+            return signer.sign(
+                eventTemplate(KIND, encrypted, createdAt) {
+                    pTag(appPubKey, null)
+                    add(ETag.assemble(requestEvent.id, null, null))
+                    add(Clink.versionTag())
+                    alt(ALT)
+                },
+            )
         }
     }
 }

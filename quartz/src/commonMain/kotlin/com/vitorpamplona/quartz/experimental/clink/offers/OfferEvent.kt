@@ -27,7 +27,11 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
-import com.vitorpamplona.quartz.nip31Alts.AltTag
+import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.pTag
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -49,10 +53,10 @@ class OfferEvent(
     override fun isContentEncoded() = true
 
     /** The `p` tag — the counterparty this message is addressed to. */
-    fun recipientPubKey() = tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1)
+    fun recipientPubKey() = tags.firstNotNullOfOrNull(PTag::parseKey)
 
     /** The `e` tag — present only on responses, referencing the request event id. */
-    fun requestId() = tags.firstOrNull { it.size > 1 && it[0] == "e" }?.get(1)
+    fun requestId() = tags.firstNotNullOfOrNull(ETag::parseId)
 
     fun isResponse() = requestId() != null
 
@@ -82,14 +86,14 @@ class OfferEvent(
             signer: NostrSigner,
             createdAt: Long = TimeUtils.now(),
         ): OfferEvent {
-            val tags =
-                arrayOf(
-                    arrayOf("p", servicePubKey),
-                    Clink.versionTag(),
-                    AltTag.assemble(ALT),
-                )
             val encrypted = signer.nip44Encrypt(OptimizedJsonMapper.toJson(request), servicePubKey)
-            return signer.sign(createdAt, KIND, tags, encrypted)
+            return signer.sign(
+                eventTemplate(KIND, encrypted, createdAt) {
+                    pTag(servicePubKey, null)
+                    add(Clink.versionTag())
+                    alt(ALT)
+                },
+            )
         }
 
         /** Builds a response event (service side) referencing the original [requestEvent]. */
@@ -100,15 +104,15 @@ class OfferEvent(
             createdAt: Long = TimeUtils.now(),
         ): OfferEvent {
             val payerPubKey = requestEvent.pubKey
-            val tags =
-                arrayOf(
-                    arrayOf("p", payerPubKey),
-                    arrayOf("e", requestEvent.id),
-                    Clink.versionTag(),
-                    AltTag.assemble(ALT),
-                )
             val encrypted = signer.nip44Encrypt(OptimizedJsonMapper.toJson(response), payerPubKey)
-            return signer.sign(createdAt, KIND, tags, encrypted)
+            return signer.sign(
+                eventTemplate(KIND, encrypted, createdAt) {
+                    pTag(payerPubKey, null)
+                    add(ETag.assemble(requestEvent.id, null, null))
+                    add(Clink.versionTag())
+                    alt(ALT)
+                },
+            )
         }
     }
 }
