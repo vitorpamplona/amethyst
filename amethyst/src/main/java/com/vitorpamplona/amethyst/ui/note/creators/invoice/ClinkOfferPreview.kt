@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.experimental.clink.common.SatRange
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferErrorCode
+import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser
 import com.vitorpamplona.quartz.experimental.clink.pointers.NOffer
 import com.vitorpamplona.quartz.experimental.clink.pointers.OfferPriceType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
@@ -93,6 +94,9 @@ fun ClinkOfferPreview(
     var amountInput by remember { mutableStateOf("") }
     var needsAmount by remember { mutableStateOf((offer.priceType ?: OfferPriceType.SPONTANEOUS) == OfferPriceType.SPONTANEOUS) }
     var amountRange by remember { mutableStateOf<SatRange?>(null) }
+    // The pointer actually paid: starts as the rendered offer, swapped if the service
+    // replies "Expired or Moved" (code 3) with a replacement noffer.
+    var activeOffer by remember(offer) { mutableStateOf(offer) }
 
     errorMessage?.let {
         ErrorMessageDialog(
@@ -190,6 +194,67 @@ fun ClinkOfferPreview(
             }
 
             val amountRequired = needsAmount
+
+            suspend fun runOfferRequest(
+                useOffer: NOffer,
+                followMoved: Boolean,
+            ) {
+                val amount = if (amountRequired) amountInput.toLongOrNull() else useOffer.price?.toLong()
+
+                // Attach a NIP-57 zap request so paying the offer becomes a real zap on the
+                // author (skipped when there's no author or the user opted out via NONZAP).
+                val zapType = accountViewModel.defaultZapType()
+                val zapRequest =
+                    if (authorPubKey != null && zapType != LnZapEvent.ZapType.NONZAP) {
+                        val author = accountViewModel.account.cache.getOrCreateUser(authorPubKey)
+                        accountViewModel.account
+                            .createZapRequestFor(
+                                user = author,
+                                zapType = zapType,
+                                amountMillisats = amount?.times(1000),
+                            ).toJson()
+                    } else {
+                        null
+                    }
+
+                val response = ClinkOfferPayer.requestInvoice(accountViewModel.account, useOffer, amountSats = amount, zap = zapRequest)
+
+                val bolt11 = response?.bolt11
+                val movedTo =
+                    if (response?.code == OfferErrorCode.EXPIRED_OR_MOVED && followMoved) {
+                        response.latest?.let { ClinkPointerParser.parse(it) as? NOffer }
+                    } else {
+                        null
+                    }
+
+                when {
+                    bolt11 != null -> {
+                        requesting = false
+                        payingInvoice = bolt11
+                    }
+                    // Follow a relocated offer once, paying the replacement pointer.
+                    movedTo != null -> {
+                        activeOffer = movedTo
+                        runOfferRequest(movedTo, followMoved = false)
+                    }
+                    response?.code == OfferErrorCode.INVALID_AMOUNT -> {
+                        // Reveal the amount field (or refine it) with the service's range.
+                        requesting = false
+                        needsAmount = true
+                        amountRange = response.range
+                        errorMessage =
+                            response.error?.takeIf { it.isNotBlank() }
+                                ?: stringRes(context, R.string.clink_offer_invalid_amount)
+                    }
+                    else -> {
+                        requesting = false
+                        errorMessage =
+                            response?.error?.takeIf { it.isNotBlank() }
+                                ?: stringRes(context, R.string.error_dialog_pay_invoice_error)
+                    }
+                }
+            }
+
             Button(
                 modifier =
                     Modifier
@@ -198,44 +263,7 @@ fun ClinkOfferPreview(
                 enabled = !requesting && (!amountRequired || (amountInput.toLongOrNull() ?: 0L) > 0L),
                 onClick = {
                     requesting = true
-                    scope.launch {
-                        val amount = if (amountRequired) amountInput.toLongOrNull() else offer.price?.toLong()
-
-                        // Attach a NIP-57 zap request so paying the offer becomes a real zap
-                        // on the author (skipped when there's no author or the user opted out
-                        // of zaps via a NONZAP default).
-                        val zapType = accountViewModel.defaultZapType()
-                        val zapRequest =
-                            if (authorPubKey != null && zapType != LnZapEvent.ZapType.NONZAP) {
-                                val author = accountViewModel.account.cache.getOrCreateUser(authorPubKey)
-                                accountViewModel.account
-                                    .createZapRequestFor(
-                                        user = author,
-                                        zapType = zapType,
-                                        amountMillisats = amount?.times(1000),
-                                    ).toJson()
-                            } else {
-                                null
-                            }
-
-                        val response = ClinkOfferPayer.requestInvoice(accountViewModel.account, offer, amountSats = amount, zap = zapRequest)
-                        requesting = false
-
-                        val bolt11 = response?.bolt11
-                        when {
-                            bolt11 != null -> payingInvoice = bolt11
-                            response?.code == OfferErrorCode.INVALID_AMOUNT -> {
-                                // Reveal the amount field (or refine it) with the service's range.
-                                needsAmount = true
-                                amountRange = response.range
-                                errorMessage =
-                                    response.error?.takeIf { it.isNotBlank() }
-                                        ?: stringRes(context, R.string.clink_offer_invalid_amount)
-                            }
-                            response?.error != null -> errorMessage = response.error
-                            else -> errorMessage = stringRes(context, R.string.error_dialog_pay_invoice_error)
-                        }
-                    }
+                    scope.launch { runOfferRequest(activeOffer, followMoved = true) }
                 },
                 shape = QuoteBorder,
                 colors =
