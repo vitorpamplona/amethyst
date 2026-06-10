@@ -66,3 +66,22 @@ handles them natively; stale references fixed:
   `quartz-integration` and `nostr-expert` cover its pointers).
 - Stop hook moved to `.claude/hooks/stop-spotless.sh` and gated on modified
   Kotlin files, so Q&A-only turns no longer pay a Gradle invocation.
+
+Second audit pass (every concrete claim checked against the code; `amy-expert`,
+`find-missing-translations`, `find-non-lambda-logs`, and the vendored technique
+skills verified clean):
+
+- `auth-signers`: bunker login entry point corrected — `NostrSignerRemote.fromBunkerUri(...)`
+  + `connect()`, not the nonexistent `RemoteSignerManager.connect(url)`.
+- `nostr-expert`: NIP count 57 → 80+ packages; `Nip44v2.encrypt/decrypt`
+  static-object snippet replaced with the real `Nip44` facade
+  (returns `EncryptedInfo`, `encodePayload()` for event content); invented
+  `Nip19.npubEncode`/`Nip19Result` API replaced with the real `ByteArray`
+  extensions (`toNpub()`, …), entity `create()` helpers, and
+  `Nip19Parser.uriToRoute()?.entity`.
+- `nostr-expert/references/nip-catalog.md`: heading count (60+8) replaced with
+  actual package counts (87 + 23 experimental) and a ground-truth pointer.
+- `quartz-integration`: NIP-19 decode example rewritten for
+  `ParseReturn.entity` (the `Nip19Parser.Return.*` sealed class never existed);
+  Event Store section corrected from "Android only" to commonMain/all platforms
+  with the real `store.sqlite.EventStore` import and suspend generic `query<T>`.
