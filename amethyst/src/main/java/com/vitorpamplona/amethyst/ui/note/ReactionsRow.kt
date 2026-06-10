@@ -260,22 +260,21 @@ private fun InnerReactionRow(
         reactions = reactionRowItems,
         renderReaction = { item ->
             // Unsealed rumors (private replies/posts) must not receive public
-            // replies, reposts, quotes, or zaps: each would e-tag the private
-            // rumor id onto public relays. Reactions stay enabled because
-            // ReactionAction gift-wraps them for empty-sig targets.
+            // reposts, quotes, or zaps: each would e-tag the private rumor id
+            // onto public relays. Replies and reactions stay enabled because
+            // the composer locks private mode for rumor parents and
+            // ReactionAction gift-wraps reactions to empty-sig targets.
             val isPrivateRumor = baseNote.isPrivateRumor()
             when (item.action) {
                 ReactionRowAction.Reply -> {
-                    if (!isPrivateRumor) {
-                        ReplyReactionWithDialog(
-                            baseNote,
-                            MaterialTheme.colorScheme.placeholderText,
-                            accountViewModel,
-                            nav,
-                            showCounter = item.showCounter,
-                            voiceRecordingState = voiceRecordingState,
-                        )
-                    }
+                    ReplyReactionWithDialog(
+                        baseNote,
+                        MaterialTheme.colorScheme.placeholderText,
+                        accountViewModel,
+                        nav,
+                        showCounter = item.showCounter,
+                        voiceRecordingState = voiceRecordingState,
+                    )
                 }
 
                 ReactionRowAction.Boost -> {

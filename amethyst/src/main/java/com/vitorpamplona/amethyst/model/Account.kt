@@ -2247,6 +2247,18 @@ class Account(
         broadcastPrivately(events)
     }
 
+    /**
+     * Publishes a kind-1 note privately: signs the template, then gift-wraps
+     * the rumor to every p-tagged user plus a self-copy and sends each wrap
+     * to the recipient's DM relays. Used for private replies (the parent's
+     * author and participants are already p-tagged) and for private posts
+     * (the Notify list is the audience). Nothing reaches public relays.
+     */
+    suspend fun sendPrivateNote(template: EventTemplate<TextNoteEvent>) {
+        if (!isWriteable()) return
+        broadcastPrivately(NIP17Factory().createNoteNIP17(template, signer))
+    }
+
     override suspend fun sendGiftWraps(wraps: List<GiftWrapEvent>) {
         wraps.forEach { wrap ->
             val relayList = computeRelayListToBroadcast(wrap)

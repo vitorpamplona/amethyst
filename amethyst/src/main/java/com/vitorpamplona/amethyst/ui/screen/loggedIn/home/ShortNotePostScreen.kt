@@ -332,7 +332,11 @@ private fun NewPostScreenBody(
                             Box(
                                 modifier =
                                     Modifier.clickable {
-                                        postViewModel.wantsAnonymousPost = true
+                                        // Private notes are wrapped with the real key — the
+                                        // recipients must know who is talking to them.
+                                        if (!postViewModel.wantsPrivateNote) {
+                                            postViewModel.wantsAnonymousPost = true
+                                        }
                                     },
                             ) {
                                 BaseUserPicture(
@@ -708,7 +712,18 @@ private fun BottomRowActions(
             maxDurationSeconds = MAX_VOICE_RECORD_SECONDS,
         )
 
-        if (postViewModel.canUsePoll || postViewModel.canUseZapPoll) {
+        // Polls publish kinds that can't travel inside a private wrap, so the
+        // two toggles are mutually exclusive.
+        if (!postViewModel.wantsPoll && !postViewModel.wantsZapPoll) {
+            AddPrivateNoteButton(
+                isActive = postViewModel.wantsPrivateNote,
+                isLocked = postViewModel.privateNoteLocked,
+            ) {
+                postViewModel.togglePrivateNote()
+            }
+        }
+
+        if ((postViewModel.canUsePoll || postViewModel.canUseZapPoll) && !postViewModel.wantsPrivateNote) {
             AddPollButton(postViewModel.wantsPoll || postViewModel.wantsZapPoll) {
                 val isActive = postViewModel.wantsPoll || postViewModel.wantsZapPoll
                 if (isActive) {
@@ -738,7 +753,11 @@ private fun BottomRowActions(
             postViewModel.toggleExpirationDate()
         }
 
-        ScheduleAtButton(postViewModel.scheduledForSec != null, onScheduleClicked)
+        // Private wraps are built and sent immediately; scheduling them would
+        // require wrapping at publish time, so the option is hidden for now.
+        if (!postViewModel.wantsPrivateNote) {
+            ScheduleAtButton(postViewModel.scheduledForSec != null, onScheduleClicked)
+        }
 
         AddGeoHashButton(postViewModel.wantsToAddGeoHash) {
             postViewModel.wantsToAddGeoHash = !postViewModel.wantsToAddGeoHash
@@ -764,6 +783,33 @@ private fun BottomRowActionsPreview() {
     model.canUsePoll = true
     ThemeComparisonColumn {
         BottomRowActions(model)
+    }
+}
+
+@Composable
+private fun AddPrivateNoteButton(
+    isActive: Boolean,
+    isLocked: Boolean,
+    onClick: () -> Unit,
+) {
+    IconButton(
+        onClick = { onClick() },
+        enabled = !isLocked,
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Lock,
+            contentDescription =
+                stringRes(
+                    id =
+                        when {
+                            isLocked -> R.string.private_note_locked
+                            isActive -> R.string.disable_private_note
+                            else -> R.string.private_note
+                        },
+                ),
+            modifier = Modifier.height(22.dp),
+            tint = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
+        )
     }
 }
 

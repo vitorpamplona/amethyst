@@ -310,6 +310,18 @@ open class ShortNotePostViewModel :
     // Anonymous Reply
     var wantsAnonymousPost by mutableStateOf(false)
 
+    // Private (gift-wrapped) note: instead of publishing, the kind-1 is
+    // wrapped to every p-tagged user plus a self-copy and sent to their DM
+    // relays. Locked ON when replying to an unsealed rumor — a public reply
+    // would e-tag the parent's private id onto public relays.
+    var wantsPrivateNote by mutableStateOf(false)
+    var privateNoteLocked by mutableStateOf(false)
+
+    fun togglePrivateNote() {
+        if (privateNoteLocked) return
+        wantsPrivateNote = !wantsPrivateNote
+    }
+
     // A single ephemeral signer reused for the whole compose session so that media
     // uploads (Blossom/NIP-96 auth events) and the final anonymous post are all signed
     // by the same throwaway key, instead of leaking the real account's pubkey into the
@@ -453,6 +465,8 @@ open class ShortNotePostViewModel :
             }
         } else {
             originalNote = replyingTo
+            privateNoteLocked = replyingTo?.isPrivateRumor() == true
+            wantsPrivateNote = privateNoteLocked
             replyingTo?.let { replyNote ->
                 if (replyNote.event is BaseThreadedEvent) {
                     this.eTags = (replyNote.replyTo ?: emptyList()).plus(replyNote)
@@ -649,6 +663,12 @@ open class ShortNotePostViewModel :
 
         canUsePoll = originalNote == null
         canUseZapPoll = originalNote == null
+
+        // A drafted private reply must come back locked private: the parent
+        // rumor's id is inside the draft's e-tags, and posting it publicly
+        // would leak that id.
+        privateNoteLocked = originalNote?.isPrivateRumor() == true
+        wantsPrivateNote = privateNoteLocked
 
         if (forwardZapTo.value.items.isNotEmpty()) {
             wantsForwardZapTo = true
@@ -848,7 +868,21 @@ open class ShortNotePostViewModel :
         val version = draftTag.current
         val anonymous = wantsAnonymousPost
         val scheduledFor = scheduledForSec
+        val privately = wantsPrivateNote
         cancel()
+
+        if (privately && template.kind == TextNoteEvent.KIND) {
+            // Gift-wrap to the p-tagged users instead of publishing. Private
+            // wins over the anonymous and scheduled modes: a locked private
+            // reply must never fall through to a public publish path (the UI
+            // hides those toggles while private mode is on).
+            @Suppress("UNCHECKED_CAST")
+            accountViewModel.account.sendPrivateNote(template as EventTemplate<TextNoteEvent>)
+            accountViewModel.launchSigner {
+                accountViewModel.account.deleteDraftIgnoreErrors(version)
+            }
+            return
+        }
 
         if (scheduledFor != null && !anonymous) {
             // Re-stamp the template with created_at = scheduled time so the post,
@@ -1250,6 +1284,8 @@ open class ShortNotePostViewModel :
         wantsAnonymousPost = false
         anonymousSignerCache = null
         scheduledForSec = null
+        wantsPrivateNote = false
+        privateNoteLocked = false
 
         forwardZapTo.value = SplitBuilder()
         forwardZapToEditting.clearText()
