@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
 import com.vitorpamplona.quartz.nip04Dm.messages.PrivateDmEvent
+import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
@@ -394,10 +395,27 @@ fun RenderReplyRow(
     onWantsToEditDraft: (Note) -> Unit,
     onScrollToNote: ((Note) -> Unit)? = null,
 ) {
-    if (!innerQuote && note.replyTo?.lastOrNull() != null) {
+    val replyTo = note.replyTo?.lastOrNull()
+    if (!innerQuote && replyTo != null && !isCitedInContent(note, replyTo)) {
         RenderReply(note, bgColor, accountViewModel, nav, onWantsToReply, onWantsToEditDraft, onScrollToNote)
     }
 }
+
+/**
+ * Whether the reply target is already mentioned (`nostr:...` citation) in the middle of
+ * the message text. If it is, the inline quote renderer draws it at that spot, so the
+ * reply row would show the same message twice. Happens in MLS kind-9 chats, where the
+ * `q`-tagged parent of a quote is also cited inline — `Note.replyTo` keeps both replies
+ * and quotes for that kind.
+ */
+@Composable
+private fun isCitedInContent(
+    note: Note,
+    replyTo: Note,
+): Boolean =
+    remember(note.event, replyTo) {
+        (note.event as? BaseNoteEvent)?.findCitations()?.contains(replyTo.idHex) == true
+    }
 
 @Composable
 private fun RenderReply(
