@@ -390,14 +390,15 @@ fun getIdentityClaimDescription(identity: IdentityClaimTag): Int =
     }
 
 /**
- * Process-wide cache of NIP-05 `.well-known` `clink_offer` lookups, keyed by the nip05
- * address. Without it, every profile visit (and every relay-pushed kind-0 refresh while a
- * profile is open) would re-fetch the domain's nostr.json. Caches "no offer" results too so
- * profiles without one aren't re-hit. A [ResolvedClinkOffer] wrapper holds the nullable result
+ * Process-wide cache of NIP-05 `.well-known` `clink_offer` lookups, keyed by the
+ * lowercased nip05 address (NIP-05 identifiers are case-insensitive). Without it, every
+ * profile visit (and every relay-pushed kind-0 refresh while a profile is open) would
+ * re-fetch the domain's nostr.json. Caches "no offer" results too so profiles without one
+ * aren't re-hit. A [ResolvedClinkOffer] wrapper holds the nullable parsed pointer
  * (LruCache can't store nulls); absence means "not fetched yet".
  */
 private class ResolvedClinkOffer(
-    val noffer: String?,
+    val noffer: NOffer?,
 )
 
 private val clinkOfferNip05Cache = LruCache<String, ResolvedClinkOffer>(256)
@@ -430,16 +431,16 @@ private fun DisplayClinkOffer(
         offer =
             if (id != null && nip05 != null) {
                 // Distinguish "cache miss" from a cached "no offer" (null) so we don't refetch.
-                val cached = clinkOfferNip05Cache.get(nip05)
-                val nofferStr =
-                    if (cached != null) {
-                        cached.noffer
-                    } else {
-                        val fetched = withContext(Dispatchers.IO) { accountViewModel.nip05ClientBuilder().loadClinkOffer(id) }
-                        clinkOfferNip05Cache.put(nip05, ResolvedClinkOffer(fetched))
-                        fetched
-                    }
-                nofferStr?.let { ClinkPointerParser.parse(it) as? NOffer }
+                val cacheKey = nip05.lowercase()
+                val cached = clinkOfferNip05Cache.get(cacheKey)
+                if (cached != null) {
+                    cached.noffer
+                } else {
+                    val fetched = withContext(Dispatchers.IO) { accountViewModel.nip05ClientBuilder().loadClinkOffer(id) }
+                    val parsed = fetched?.let { ClinkPointerParser.parse(it) as? NOffer }
+                    clinkOfferNip05Cache.put(cacheKey, ResolvedClinkOffer(parsed))
+                    parsed
+                }
             } else {
                 null
             }
