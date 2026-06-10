@@ -87,6 +87,8 @@ class OfferEvent(
 
     suspend fun decryptResponse(signer: NostrSigner): OfferResponse = OptimizedJsonMapper.fromJsonTo<OfferResponse>(decryptContent(signer))
 
+    suspend fun decryptReceipt(signer: NostrSigner): OfferReceipt = OptimizedJsonMapper.fromJsonTo<OfferReceipt>(decryptContent(signer))
+
     companion object {
         const val KIND = 21001
         const val ALT = "CLINK offer"
@@ -117,6 +119,29 @@ class OfferEvent(
         ): OfferEvent {
             val payerPubKey = requestEvent.pubKey
             val encrypted = signer.nip44Encrypt(OptimizedJsonMapper.toJson(response), payerPubKey)
+            return signer.sign(
+                eventTemplate(KIND, encrypted, createdAt) {
+                    pTag(payerPubKey, null)
+                    add(ETag.assemble(requestEvent.id, null, null))
+                    clinkVersion()
+                    alt(ALT)
+                },
+            )
+        }
+
+        /**
+         * Builds a post-settlement receipt event (service side). Like [createResponse] it
+         * references the original [requestEvent] by `e` tag and is addressed to the payer, but
+         * carries an [OfferReceipt] (`{"res":"ok"[,"preimage"]}`) sent after the invoice is paid.
+         */
+        suspend fun createReceipt(
+            receipt: OfferReceipt,
+            requestEvent: OfferEvent,
+            signer: NostrSigner,
+            createdAt: Long = TimeUtils.now(),
+        ): OfferEvent {
+            val payerPubKey = requestEvent.pubKey
+            val encrypted = signer.nip44Encrypt(OptimizedJsonMapper.toJson(receipt), payerPubKey)
             return signer.sign(
                 eventTemplate(KIND, encrypted, createdAt) {
                     pTag(payerPubKey, null)

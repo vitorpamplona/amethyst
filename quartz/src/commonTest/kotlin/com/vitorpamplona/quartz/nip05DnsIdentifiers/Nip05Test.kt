@@ -56,6 +56,16 @@ class Nip05Test {
         }
 
     @Test
+    fun `parse clink_offer as a flat top-level string (bridgelet shape)`() =
+        runTest {
+            val noffer = "noffer1qqsexampleclinkoffer"
+            val json = """{ "names": { "bob": "abc" }, "clink_offer": "$noffer" }"""
+            val nip05 = Nip05Id.parse("bob@domain.com")
+            assertNotNull(nip05)
+            assertEquals(noffer, parser.parseClinkOffer(nip05, json))
+        }
+
+    @Test
     fun `parse clink_offer absent yields null`() =
         runTest {
             val json = """{ "names": { "bob": "abc" } }"""

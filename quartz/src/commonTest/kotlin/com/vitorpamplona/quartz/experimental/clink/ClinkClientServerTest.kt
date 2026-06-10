@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.experimental.clink
 import com.vitorpamplona.quartz.experimental.clink.client.OfferClient
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitEvent
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferEvent
+import com.vitorpamplona.quartz.experimental.clink.offers.OfferReceipt
 import com.vitorpamplona.quartz.experimental.clink.pointers.NOffer
 import com.vitorpamplona.quartz.experimental.clink.server.ClinkServer
 import com.vitorpamplona.quartz.experimental.clink.server.K1Tracker
@@ -51,6 +52,24 @@ class ClinkClientServerTest {
         assertEquals(listOf(servicePubKey), filter.authors)
         assertEquals(listOf("d".repeat(64)), filter.tags?.get("e"))
     }
+
+    @Test
+    fun offerReceiptRoundTripsFromServiceToPayer() =
+        kotlinx.coroutines.test.runTest {
+            val payer = NostrSignerInternal(KeyPair())
+            val service = NostrSignerInternal(KeyPair())
+            val offer = NOffer(service.pubKey, listOf(relay), "offer-id", null, null)
+            val client = OfferClient(offer, payer)
+
+            // payer asks, service settles and sends a receipt referencing the request
+            val request = client.requestInvoice(amountSats = 1000)
+            val receiptEvent = OfferEvent.createReceipt(OfferReceipt(res = OfferReceipt.OK, preimage = "ab".repeat(32)), request, service)
+
+            assertEquals(request.id, receiptEvent.requestId())
+            val receipt = client.parseReceipt(receiptEvent)
+            assertTrue(receipt.isOk())
+            assertEquals("ab".repeat(32), receipt.preimage)
+        }
 
     @Test
     fun serverRequestFilterTargetsRecipientByPTag() {

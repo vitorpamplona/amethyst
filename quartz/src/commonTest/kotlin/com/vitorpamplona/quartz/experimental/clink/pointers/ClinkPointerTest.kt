@@ -34,12 +34,23 @@ class ClinkPointerTest {
 
     @Test
     fun offerSpontaneousRoundTrip() {
-        val offer = NOffer(pubKey, listOf(relay), "my-offer-id", null, null)
+        // A spontaneous offer always carries TLV 3 on the wire and decodes back to SPONTANEOUS.
+        val offer = NOffer(pubKey, listOf(relay), "my-offer-id", OfferPriceType.SPONTANEOUS, null)
         val encoded = offer.encode()
 
         assertTrue(encoded.startsWith("noffer1"), "expected noffer1 prefix, got $encoded")
         assertEquals(offer, NOffer.parse(Bech32.decodeBytes(encoded).second))
         assertEquals(offer, ClinkPointerParser.parse(encoded))
+    }
+
+    @Test
+    fun offerAlwaysEncodesPriceTypeTlv() {
+        // Even when the model leaves priceType null, encode must emit TLV 3 (the SDK and
+        // bridgelet decoders reject a noffer without it); it decodes back as SPONTANEOUS.
+        val offer = NOffer(pubKey, listOf(relay), null, null, null)
+        val parsed = ClinkPointerParser.parse(offer.encode()) as NOffer
+
+        assertEquals(OfferPriceType.SPONTANEOUS, parsed.priceType)
     }
 
     @Test
@@ -95,7 +106,7 @@ class ClinkPointerTest {
 
     @Test
     fun parserStripsSchemeAndWhitespace() {
-        val offer = NOffer(pubKey, listOf(relay), null, null, null)
+        val offer = NOffer(pubKey, listOf(relay), null, OfferPriceType.SPONTANEOUS, null)
         val encoded = offer.encode()
 
         assertEquals(offer, ClinkPointerParser.parse("  nostr:$encoded  "))
@@ -111,7 +122,7 @@ class ClinkPointerTest {
 
     @Test
     fun parseAllFindsEmbeddedPointers() {
-        val offer = NOffer(pubKey, listOf(relay), null, null, null).encode()
+        val offer = NOffer(pubKey, listOf(relay), null, OfferPriceType.SPONTANEOUS, null).encode()
         val debit = NDebit(pubKey, listOf(relay), null, null).encode()
         val text = "Pay me at $offer or pull from $debit thanks"
 

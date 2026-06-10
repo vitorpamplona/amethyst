@@ -52,11 +52,21 @@ class OfferResponse(
     fun isSuccess(): Boolean = bolt11 != null
 }
 
-/** Optional post-settlement receipt (kind 21001). `preimage` is absent for internal settlements. */
+/**
+ * Optional post-settlement receipt (kind 21001): a second event the service sends after the
+ * invoice it returned is paid, confirming receipt out-of-band. `preimage` is absent for
+ * internal (non-Lightning) settlements — the payer's own wallet already holds it for LN pays.
+ */
 class OfferReceipt(
     var res: String? = null,
     var preimage: String? = null,
-) : OptimizedSerializable
+) : OptimizedSerializable {
+    fun isOk(): Boolean = res == OK
+
+    companion object {
+        const val OK = "ok"
+    }
+}
 
 /** Error codes returned by a CLINK Offers service in [OfferResponse.code]. */
 object OfferErrorCode {

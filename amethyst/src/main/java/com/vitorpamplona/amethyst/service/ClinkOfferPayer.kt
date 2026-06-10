@@ -26,9 +26,11 @@ import com.vitorpamplona.quartz.experimental.clink.offers.OfferEvent
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferResponse
 import com.vitorpamplona.quartz.experimental.clink.pointers.NOffer
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeoutOrNull
@@ -58,7 +60,13 @@ object ClinkOfferPayer {
         val relays = offer.relays.toSet()
         if (relays.isEmpty()) return null
 
-        val client = OfferClient(offer, account.signer)
+        // Sign the request with a fresh throwaway key, like the reference SDK/Zeus/Stacker
+        // News do: an offer round-trip is self-contained (the reply is NIP-44'd back to this
+        // key and decrypted with it), so there is no reason to expose the user's real identity
+        // to every offer service they pay. Payer identity, when needed, travels in the request
+        // body (payer_data / a signed zap request), not the transport key.
+        val ephemeralSigner = NostrSignerInternal(KeyPair())
+        val client = OfferClient(offer, ephemeralSigner)
         val request = client.requestInvoice(amountSats = amountSats)
 
         val reply = CompletableDeferred<OfferEvent>()

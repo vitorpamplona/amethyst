@@ -38,7 +38,10 @@ data class NOffer(
     override val pubKey: HexKey,
     override val relays: List<NormalizedRelayUrl>,
     override val pointer: String?,
-    /** TLV 3 — how the offer is priced. Absent means [OfferPriceType.SPONTANEOUS]. */
+    /**
+     * TLV 3 — how the offer is priced. A decoded pointer always reports a concrete type
+     * ([OfferPriceType.SPONTANEOUS] when the wire field was absent, per the CLINK spec).
+     */
     val priceType: OfferPriceType?,
     /** TLV 4 — price in sats (display/fixed offers), 4-byte big-endian *unsigned* per the SDK. */
     val price: Long?,
@@ -49,7 +52,10 @@ data class NOffer(
                 addHex(ClinkTlv.PUBKEY, pubKey)
                 relays.forEach { addStringIfNotNull(ClinkTlv.RELAY, it.url) }
                 addStringIfNotNull(ClinkTlv.POINTER, pointer)
-                priceType?.let { addHex(ClinkTlv.PRICE_TYPE, it.code.toSingleByteHex()) }
+                // Always emit TLV 3, even for spontaneous offers: the reference SDK and
+                // bridgelet decoders throw on a missing price-type field, so an absent TLV 3
+                // would make our pointers undecodable by every JS consumer.
+                addHex(ClinkTlv.PRICE_TYPE, (priceType ?: OfferPriceType.SPONTANEOUS).code.toSingleByteHex())
                 // addInt writes the low 32 bits big-endian; for an unsigned price up to
                 // 2^32-1 that is the correct 4-byte field even when it overflows a signed Int.
                 price?.let { addInt(ClinkTlv.PRICE, it.toInt()) }
@@ -69,10 +75,12 @@ data class NOffer(
 
             val relays = tlv.asString(ClinkTlv.RELAY)?.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) } ?: emptyList()
             val pointer = tlv.firstAsString(ClinkTlv.POINTER)
+            // Per the CLINK Offers spec, an absent (or unrecognized) price-type defaults to
+            // spontaneous — the payer chooses the amount.
             val priceType =
                 tlv.data[ClinkTlv.PRICE_TYPE]?.firstOrNull()?.firstOrNull()?.let {
                     OfferPriceType.fromCode(it.toInt() and 0xFF)
-                }
+                } ?: OfferPriceType.SPONTANEOUS
             // The SDK decodes price as an UNSIGNED big-endian integer (parseInt of the hex);
             // reading it as a signed Int would turn prices >= 2^31 sats into negative amounts.
             val price =

@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.experimental.clink.client
 
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferEvent
+import com.vitorpamplona.quartz.experimental.clink.offers.OfferReceipt
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferRequest
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferResponse
 import com.vitorpamplona.quartz.experimental.clink.pointers.NOffer
@@ -84,4 +85,10 @@ class OfferClient(
         )
 
     suspend fun parseResponse(event: OfferEvent): OfferResponse = event.decryptResponse(signer)
+
+    /**
+     * Parses a post-settlement receipt — the optional second kind-21001 event the service
+     * sends (on the same `e`+`p` filter as [responseFilter]) once the returned invoice is paid.
+     */
+    suspend fun parseReceipt(event: OfferEvent): OfferReceipt = event.decryptReceipt(signer)
 }

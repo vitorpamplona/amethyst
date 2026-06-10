@@ -83,11 +83,10 @@ class OfferData(
  * carries the affected offer(s); on failure [res] is `"GFY"` with [code]/[error] (and [field]
  * naming the invalid input for validation errors).
  *
- * NOTE: the spec types `details` as `OfferData | OfferData[]` (a single object for
- * create/update/get, an array for list). We model it as a list; a single-object response is
- * only fully parsed when the JSON mapper coerces single values to arrays. Amethyst is
- * consume-only for Manage (it never drives offer CRUD), so this is a documented limitation
- * rather than a live path.
+ * NOTE: the spec types `details` as `OfferData | OfferData[]` — a single object for
+ * create/update/get, an array for list. We model it as a list and rely on the JSON mapper
+ * coercing a lone object into a one-element list (Jackson `ACCEPT_SINGLE_VALUE_AS_ARRAY` on
+ * JVM/Android), so both shapes parse.
  */
 class ManageResponse(
     var res: String? = null,
