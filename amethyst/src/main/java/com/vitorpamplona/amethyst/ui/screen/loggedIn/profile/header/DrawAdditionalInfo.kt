@@ -22,6 +22,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
 import android.content.ClipData
 import android.util.LruCache
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
@@ -29,9 +32,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -76,7 +81,9 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.UserApp
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.badges.DisplayBadges
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.identity.UserExternalIdentitiesViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy3dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -404,9 +411,10 @@ private class ResolvedClinkOffer(
 private val clinkOfferNip05Cache = LruCache<String, ResolvedClinkOffer>(256)
 
 /**
- * Shows a payable CLINK Offer card when the profile advertises one, preferring the
- * kind-0 `clink_offer` field and falling back to the user's NIP-05 `.well-known`
- * `clink_offer` (cached). Paying pays the advertised offer (see [ClinkOfferPreview]).
+ * Shows a profile's advertised CLINK Offer as a compact, tappable chip (preferring the kind-0
+ * `clink_offer` field, falling back to the NIP-05 `.well-known` `clink_offer`, cached). Tapping
+ * the chip expands the payable [ClinkOfferPreview] card — collapsed by default so the full card
+ * isn't shown until the user opts in.
  */
 @Composable
 private fun DisplayClinkOffer(
@@ -446,7 +454,54 @@ private fun DisplayClinkOffer(
             }
     }
 
-    offer?.let {
-        ClinkOfferPreview(it, accountViewModel)
+    offer?.let { resolved ->
+        var expanded by remember(resolved) { mutableStateOf(false) }
+        Column {
+            ClinkOfferChip(expanded) { expanded = !expanded }
+            if (expanded) {
+                ClinkOfferPreview(resolved, accountViewModel)
+            }
+        }
+    }
+}
+
+/**
+ * Compact, payment-target-style chip for a profile's CLINK Offer. Tapping it toggles the
+ * payable [ClinkOfferPreview] card open/closed; collapsed by default so the profile mirrors the
+ * other payment-target chips instead of showing the full card up front.
+ */
+@Composable
+private fun ClinkOfferChip(
+    expanded: Boolean,
+    onClick: () -> Unit,
+) {
+    val label = stringRes(R.string.clink_lightning_offer)
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = BitcoinOrange.copy(alpha = 0.10f),
+        border = BorderStroke(1.dp, BitcoinOrange.copy(alpha = if (expanded) 0.6f else 0.35f)),
+        modifier =
+            Modifier
+                .padding(vertical = 4.dp)
+                .clickable(onClick = onClick),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+        ) {
+            Icon(
+                symbol = MaterialSymbols.Bolt,
+                contentDescription = label,
+                tint = BitcoinOrange,
+                modifier = Size16Modifier,
+            )
+            Text(
+                text = label,
+                color = BitcoinOrange,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
     }
 }
