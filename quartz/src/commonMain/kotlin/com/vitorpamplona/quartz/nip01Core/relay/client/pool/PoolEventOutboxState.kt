@@ -66,11 +66,15 @@ class PoolEventOutboxState(
         success: Boolean,
         message: String,
     ) {
-        val currentTries = failures[url]
         if (success || message.shouldDiscard()) {
             relaysRemaining = relaysRemaining - url
             failures = failures - url
+        } else if (message.isAuthRequired()) {
+            // NIP-42 AUTH challenge in flight — don't count toward the try cap.
+            // RelayAuthenticator signs + relay re-issues OK; syncFilters() then
+            // re-pumps this outbox so the original publish is retried.
         } else {
+            val currentTries = failures[url]
             if (currentTries != null) {
                 currentTries.addResponse(message)
             } else {
@@ -90,6 +94,8 @@ class PoolEventOutboxState(
             this.startsWith("pow:") ||
             this.startsWith("deleted:") ||
             this.startsWith("invalid:")
+
+    fun String.isAuthRequired() = this.startsWith("auth-required:")
 
     // Tries 3 times
     class Tries(
