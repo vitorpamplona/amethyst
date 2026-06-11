@@ -211,13 +211,6 @@ fun DrawAdditionalInfo(
 
         DisplayNip05ProfileStatus(baseUser, accountViewModel)
 
-        val lud16 =
-            remember(userState) {
-                userState?.info?.lud16?.trim()
-                    ?: userState?.info?.lud06?.trim()
-            }
-        DisplayPaymentRailChips(baseUser, lud16, user, accountViewModel, nav)
-
         val website = user.info.website
         if (!website.isNullOrEmpty()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -267,6 +260,13 @@ fun DrawAdditionalInfo(
                 }
             }
         }
+
+        val lud16 =
+            remember(userState) {
+                userState?.info?.lud16?.trim()
+                    ?: userState?.info?.lud06?.trim()
+            }
+        DisplayPaymentRailChips(baseUser, lud16, user, accountViewModel, nav)
 
         if (showBadges) {
             DisplayBadges(baseUser, accountViewModel, nav)
