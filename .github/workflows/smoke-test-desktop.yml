@@ -68,36 +68,6 @@ jobs:
         with:
           cache-read-only: true
 
-      - name: Cache vlc-setup downloads
-        uses: actions/cache@v5
-        with:
-          path: ~/.gradle/vlcSetup
-          key: vlcsetup-Linux-${{ hashFiles('desktopApp/build.gradle.kts') }}
-          restore-keys: |
-            vlcsetup-Linux-
-
-      - name: Pre-fetch VLC + UPX archives
-        env:
-          VLC_VERSION: "3.0.20"
-          UPX_VERSION: "4.2.4"
-        run: |
-          set -euo pipefail
-          DEST="$HOME/.gradle/vlcSetup"
-          mkdir -p "$DEST"
-          fetch() {
-            local url="$1" out="$2"
-            if [[ -s "$out" ]]; then echo "cached: $out"; return 0; fi
-            echo "fetching: $url"
-            curl -fL --retry 10 --retry-delay 5 --retry-all-errors \
-                 --retry-max-time 900 --connect-timeout 30 \
-                 -o "$out.part" "$url"
-            mv "$out.part" "$out"
-          }
-          fetch "https://repo1.maven.org/maven2/ir/mahozad/vlc-plugins-linux/${VLC_VERSION}/vlc-plugins-linux-${VLC_VERSION}.jar" \
-                "$DEST/vlc-${VLC_VERSION}.jar"
-          fetch "https://github.com/upx/upx/releases/download/v${UPX_VERSION}/upx-${UPX_VERSION}-amd64_linux.tar.xz" \
-                "$DEST/upx-${UPX_VERSION}.tar.xz"
-
       - name: Install xvfb + packaging deps
         run: sudo apt-get update && sudo apt-get install -y xvfb fakeroot
 

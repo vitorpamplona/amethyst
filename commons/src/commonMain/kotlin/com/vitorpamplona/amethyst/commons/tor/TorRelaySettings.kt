@@ -26,4 +26,5 @@ data class TorRelaySettings(
     val dmRelaysViaTor: Boolean = false,
     val newRelaysViaTor: Boolean = false,
     val trustedRelaysViaTor: Boolean = false,
+    val moneyOperationsViaTor: Boolean = false,
 )

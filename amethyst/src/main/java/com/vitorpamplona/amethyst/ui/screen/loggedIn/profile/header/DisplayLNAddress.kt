@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.actions.InformationDialog
 import com.vitorpamplona.amethyst.ui.components.util.LongPressCopyText
@@ -109,22 +110,38 @@ fun DisplayLNAddress(
                     lud16,
                     user,
                     accountViewModel,
-                    onSuccess = {
+                    onSuccess = { invoice ->
                         zapExpanded = false
-                        // pay directly
-                        if (accountViewModel.account.nip47SignerState.hasWalletConnectSetup()) {
-                            accountViewModel.sendZapPaymentRequestFor(it, null) { response ->
-                                if (response is PayInvoiceSuccessResponse) {
-                                    showInfoMessageDialog = stringRes(context, R.string.payment_successful)
-                                } else if (response is PayInvoiceErrorResponse) {
-                                    showErrorMessageDialog =
-                                        response.error?.message
-                                            ?: response.error?.code?.toString()
-                                            ?: stringRes(context, R.string.error_parsing_error_message)
+                        // pay directly through the selected default payment source
+                        when (val source = accountViewModel.account.settings.defaultPaymentSource()) {
+                            is PaymentSource.ClinkDebit -> {
+                                accountViewModel.payInvoiceViaClinkDebit(source.wallet.pointer, invoice) { response ->
+                                    if (response?.isOk() == true) {
+                                        showInfoMessageDialog = stringRes(context, R.string.payment_successful)
+                                    } else {
+                                        showErrorMessageDialog =
+                                            response?.error?.takeIf { it.isNotBlank() }
+                                                ?: stringRes(context, R.string.clink_debit_no_response)
+                                    }
                                 }
                             }
-                        } else {
-                            payViaIntent(it, context, { zapExpanded = false }, { showErrorMessageDialog = it })
+
+                            is PaymentSource.Nwc -> {
+                                accountViewModel.sendZapPaymentRequestFor(invoice, null) { response ->
+                                    if (response is PayInvoiceSuccessResponse) {
+                                        showInfoMessageDialog = stringRes(context, R.string.payment_successful)
+                                    } else if (response is PayInvoiceErrorResponse) {
+                                        showErrorMessageDialog =
+                                            response.error?.message
+                                                ?: response.error?.code?.toString()
+                                                ?: stringRes(context, R.string.error_parsing_error_message)
+                                    }
+                                }
+                            }
+
+                            null -> {
+                                payViaIntent(invoice, context, { zapExpanded = false }, { showErrorMessageDialog = it })
+                            }
                         }
                     },
                     onError = { title, message -> accountViewModel.toastManager.toast(title, message) },

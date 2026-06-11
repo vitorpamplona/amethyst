@@ -32,8 +32,8 @@ import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip71Video.AddressableVideoEvent
 import com.vitorpamplona.quartz.nip71Video.RegularVideoEvent
-import com.vitorpamplona.quartz.nip71Video.ReplaceableVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoVerticalEvent
 
 class UserProfileGalleryFeedFilter(
@@ -81,7 +81,7 @@ class UserProfileGalleryFeedFilter(
                 (
                     noteEvent is PictureEvent ||
                         noteEvent is RegularVideoEvent ||
-                        (noteEvent is ReplaceableVideoEvent && it is AddressableNote) ||
+                        (noteEvent is AddressableVideoEvent && it is AddressableNote) ||
                         (noteEvent is ProfileGalleryEntryEvent && noteEvent.hasUrl() && noteEvent.hasFromEvent())
                 )
 

@@ -1,3 +1,8 @@
+---
+name: android-expert
+description: Android platform patterns for the `amethyst/` module. Use when working with (1) Android navigation (Navigation Compose, type-safe routes, bottom nav), (2) runtime permissions (camera, notifications, biometrics), (3) platform APIs (Intent, Context, Activity, ContentResolver), (4) Material3 theming and edge-to-edge UI, (5) AndroidManifest.xml and intent filters, (6) Proguard/R8 and APK optimization, (7) Android lifecycle (ViewModel, collectAsStateWithLifecycle), (8) Coil image loading. Delegates shared composables to compose-expert, build files to gradle-expert, and KMP structure to kotlin-multiplatform.
+---
+
 # android-expert
 
 Android platform expertise for Amethyst Multiplatform project. Covers Compose Navigation, Material3, permissions, lifecycle, and Android-specific patterns in KMP architecture.
@@ -739,14 +744,14 @@ fun SignerIntegration(accountViewModel: AccountViewModel) {
 ```gradle
 android {
     namespace = 'com.vitorpamplona.amethyst'
-    compileSdk = 36
+    compileSdk = 37      // from libs.versions.toml android-compileSdk — check there, it drifts
 
     defaultConfig {
         applicationId = "com.vitorpamplona.amethyst"
         minSdk = 26          // Android 8.0 (Oreo)
-        targetSdk = 36       // Android 15
+        targetSdk = 37       // android-targetSdk in libs.versions.toml
         versionCode = 447
-        versionName = "1.11.0"
+        versionName = generateVersionName(libs.versions.app.get(), rootDir)
 
         vectorDrawables {
             useSupportLibrary = true

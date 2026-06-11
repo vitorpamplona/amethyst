@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.privacyOptions.EmptyRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privacyOptions.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
+import com.vitorpamplona.amethyst.service.ClinkDebitPayer
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
@@ -88,6 +89,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.ReloadMintRequest
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
+import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
+import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
@@ -2040,6 +2043,22 @@ class AccountViewModel(
     ) = launchSigner {
         account.sendZapPaymentRequestFor(bolt11, zappedNote, onResponse)
         onSent()
+    }
+
+    /**
+     * Pays a single BOLT-11 through a CLINK debit pointer (kind 21002) — the debit-rail
+     * counterpart of [sendZapPaymentRequestFor]. [onResult] receives the decrypted
+     * response (`isOk()` with optional preimage, or a GFY failure), or null on timeout,
+     * delivered on the main dispatcher so UI callbacks (toasts, dialogs) are safe.
+     * Untested end-to-end.
+     */
+    fun payInvoiceViaClinkDebit(
+        pointer: NDebit,
+        bolt11: String,
+        onResult: (DebitResponse?) -> Unit,
+    ) = launchSigner {
+        val response = ClinkDebitPayer.payInvoice(account, pointer, bolt11)
+        withContext(Dispatchers.Main) { onResult(response) }
     }
 
     fun getInteractiveStoryReadingState(dATag: String): AddressableNote = LocalCache.getOrCreateAddressableNote(InteractiveStoryReadingStateEvent.createAddress(account.signer.pubKey, dATag))

@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import okhttp3.OkHttpClient
 
 @Stable
@@ -44,6 +45,58 @@ class TorRelayState(
 ) {
     val dmRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
     val trustedRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
+
+    /**
+     * Relays known to be used for money operations from persistent configuration: NIP-47 wallet
+     * relays and saved CLINK Debits service relays. Fed by [AccountsTorStateConnector] across all
+     * logged-in accounts. These follow the money-operations Tor preference (see [TorRelayEvaluation]).
+     */
+    val moneyOpRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
+
+    /**
+     * Money-operation relays registered for the lifetime of a single ad-hoc round-trip whose relay
+     * isn't a saved wallet — e.g. paying someone's CLINK offer (`noffer`) pointer. Reference-counted
+     * so overlapping payments that share a relay don't unregister it while another is still in flight.
+     */
+    private val adHocMoneyOpCounts = MutableStateFlow<Map<NormalizedRelayUrl, Int>>(emptyMap())
+
+    private fun currentMoneyOpRelays(): Set<NormalizedRelayUrl> = moneyOpRelays.value + adHocMoneyOpCounts.value.keys
+
+    /**
+     * Marks [relays] as money-operation relays until a matching [unregisterMoneyOpRelays] call.
+     * Used by the CLINK offer/debit payers so a one-off payment relay honors the money-operations
+     * Tor preference instead of being treated as a generic "new" relay.
+     */
+    fun registerMoneyOpRelays(relays: Set<NormalizedRelayUrl>) {
+        if (relays.isEmpty()) return
+        adHocMoneyOpCounts.update { current ->
+            current.toMutableMap().apply {
+                relays.forEach { this[it] = (this[it] ?: 0) + 1 }
+            }
+        }
+    }
+
+    fun unregisterMoneyOpRelays(relays: Set<NormalizedRelayUrl>) {
+        if (relays.isEmpty()) return
+        adHocMoneyOpCounts.update { current ->
+            current.toMutableMap().apply {
+                relays.forEach {
+                    val next = (this[it] ?: 0) - 1
+                    if (next <= 0) remove(it) else this[it] = next
+                }
+            }
+        }
+    }
+
+    private fun currentSettings() =
+        TorRelaySettings(
+            torType = torSettingsFlow.torType.value,
+            onionRelaysViaTor = torSettingsFlow.onionRelaysViaTor.value,
+            dmRelaysViaTor = torSettingsFlow.dmRelaysViaTor.value,
+            newRelaysViaTor = torSettingsFlow.newRelaysViaTor.value,
+            trustedRelaysViaTor = torSettingsFlow.trustedRelaysViaTor.value,
+            moneyOperationsViaTor = torSettingsFlow.moneyOperationsViaTor.value,
+        )
 
     val torSettings =
         combine(
@@ -66,27 +119,15 @@ class TorRelayState(
                 newRelaysViaTor = newRelaysViaTor,
                 trustedRelaysViaTor = trustedRelaysViaTor,
             )
+        }.combine(torSettingsFlow.moneyOperationsViaTor) { settings, moneyOperationsViaTor ->
+            settings.copy(moneyOperationsViaTor = moneyOperationsViaTor)
         }.onStart {
-            emit(
-                TorRelaySettings(
-                    torType = torSettingsFlow.torType.value,
-                    onionRelaysViaTor = torSettingsFlow.onionRelaysViaTor.value,
-                    dmRelaysViaTor = torSettingsFlow.dmRelaysViaTor.value,
-                    newRelaysViaTor = torSettingsFlow.newRelaysViaTor.value,
-                    trustedRelaysViaTor = torSettingsFlow.trustedRelaysViaTor.value,
-                ),
-            )
+            emit(currentSettings())
         }.flowOn(Dispatchers.IO)
             .stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                TorRelaySettings(
-                    torType = torSettingsFlow.torType.value,
-                    onionRelaysViaTor = torSettingsFlow.onionRelaysViaTor.value,
-                    dmRelaysViaTor = torSettingsFlow.dmRelaysViaTor.value,
-                    newRelaysViaTor = torSettingsFlow.newRelaysViaTor.value,
-                    trustedRelaysViaTor = torSettingsFlow.trustedRelaysViaTor.value,
-                ),
+                currentSettings(),
             )
 
     val flow =
@@ -94,12 +135,21 @@ class TorRelayState(
             torSettings,
             trustedRelays,
             dmRelays,
-        ) { torSettings: TorRelaySettings, trustedRelayList: Set<NormalizedRelayUrl>, dmRelayList: Set<NormalizedRelayUrl> ->
+            moneyOpRelays,
+            adHocMoneyOpCounts,
+        ) {
+            torSettings: TorRelaySettings,
+            trustedRelayList: Set<NormalizedRelayUrl>,
+            dmRelayList: Set<NormalizedRelayUrl>,
+            moneyOpRelayList: Set<NormalizedRelayUrl>,
+            adHocMoneyOps: Map<NormalizedRelayUrl, Int>,
+            ->
             emit(
                 TorRelayEvaluation(
                     torSettings = torSettings,
                     trustedRelayList = trustedRelayList,
                     dmRelayList = dmRelayList,
+                    moneyOpRelayList = moneyOpRelayList + adHocMoneyOps.keys,
                 ),
             )
         }.onStart {
@@ -108,6 +158,7 @@ class TorRelayState(
                     torSettings = torSettings.value,
                     trustedRelayList = trustedRelays.value,
                     dmRelayList = dmRelays.value,
+                    moneyOpRelayList = currentMoneyOpRelays(),
                 ),
             )
         }.flowOn(Dispatchers.IO)
@@ -118,10 +169,22 @@ class TorRelayState(
                     torSettings = torSettings.value,
                     trustedRelayList = trustedRelays.value,
                     dmRelayList = dmRelays.value,
+                    moneyOpRelayList = currentMoneyOpRelays(),
                 ),
             )
 
-    fun shouldUseTorForRelay(relay: NormalizedRelayUrl) = flow.value.useTor(relay)
+    /**
+     * Resolves the Tor preference for [relay] from live source values rather than the cached [flow]
+     * snapshot. This makes ad-hoc money-op registration ([registerMoneyOpRelays]) take effect on the
+     * very next connection attempt, with no dependency on the combine pipeline having propagated yet.
+     */
+    fun shouldUseTorForRelay(relay: NormalizedRelayUrl) =
+        TorRelayEvaluation(
+            torSettings = currentSettings(),
+            trustedRelayList = trustedRelays.value,
+            dmRelayList = dmRelays.value,
+            moneyOpRelayList = currentMoneyOpRelays(),
+        ).useTor(relay)
 
     fun okHttpClientForRelay(url: NormalizedRelayUrl): OkHttpClient = okHttpClient.getHttpClient(shouldUseTorForRelay(url))
 }

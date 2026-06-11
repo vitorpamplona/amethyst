@@ -244,6 +244,21 @@ $ amy relay publish-lists      # broadcast updated kind:10002/10050/10051
 | `amy marmot message react GID EVENT_ID EMOJI` | Publish a kind:7 reaction. |
 | `amy marmot message delete GID EVENT_ID …` | Publish a kind:5 deletion. |
 
+### CLINK Offers
+
+| Command | What it does |
+|---|---|
+| `amy offer info NOFFER` | Decode a `noffer1…` pointer (pubkey, relays, price type/amount). Local, no network. |
+| `amy offer request NOFFER [--amount SATS] [--timeout MS]` | kind:21001 round-trip: publish the request to the pointer's relays and print the returned BOLT11. `--amount` is required for spontaneous offers; fixed offers default to the pointer's price. |
+
+### CLINK Debits
+
+| Command | What it does |
+|---|---|
+| `amy debit info NDEBIT` | Decode an `ndebit1…` pointer (pubkey, relays, pointer id, session flag). Local, no network. |
+| `amy debit pay NDEBIT BOLT11 [--amount SATS] [--timeout MS]` | kind:21002 round-trip: ask the pointed-to wallet to pay the invoice; print the preimage or the service's GFY error. |
+| `amy debit budget NDEBIT --amount SATS [--frequency day\|week\|month] [--timeout MS]` | Authorize a spending budget; omit `--frequency` for a one-time budget. |
+
 ### Wait-for-condition (`await`)
 
 Every `await` verb blocks until the condition holds, then prints the
