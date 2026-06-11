@@ -1333,20 +1333,28 @@ class Account(
         note.event?.let { noteEvent ->
             val host = note.rumorHost
             if (host != null) {
-                // Rumors are rebroadcast as their delivering wrap:
-                // download the wrap and send it.
+                // Rumors are rebroadcast as their delivering envelope: the
+                // cached copy is content-stripped, so download it and send it.
+                // A just-sent note has no relays until its self-wrap echoes
+                // back — fall back to our own DM inbox relays. Bare seals
+                // (kind 13) carry no p tag, so that filter is wrap-only.
+                val relays = note.relays.ifEmpty { dmRelays.flow.value.toList() }
+                val filter =
+                    if (host.kind == SealedRumorEvent.KIND) {
+                        Filter(
+                            kinds = listOf(host.kind),
+                            ids = listOf(host.id),
+                        )
+                    } else {
+                        Filter(
+                            kinds = listOf(host.kind),
+                            tags = mapOf("p" to listOf(pubKey)),
+                            ids = listOf(host.id),
+                        )
+                    }
                 client
                     .fetchFirst(
-                        filters =
-                            note.relays.associateWith { _ ->
-                                listOf(
-                                    Filter(
-                                        kinds = listOf(host.kind),
-                                        tags = mapOf("p" to listOf(pubKey)),
-                                        ids = listOf(host.id),
-                                    ),
-                                )
-                            },
+                        filters = relays.associateWith { _ -> listOf(filter) },
                     )?.let { downloadedEvent ->
                         val toRelays = computeRelayListToBroadcast(downloadedEvent)
                         client.publish(downloadedEvent, toRelays)
