@@ -602,9 +602,10 @@ class CashuWalletOps(
      *
      * Spends [available] proofs at [mintUrl] to produce P2PK-locked outputs
      * worth [amountSats] for [recipientPubKey]'s [recipientP2pkPubkeyHex].
-     * Publishes a kind:9321 with the locked proofs + message, rolls leftover
-     * change into a new kind:7375, NIP-09-deletes the source token events,
-     * and records the spend in kind:7376.
+     * Publishes a kind:9321 with the locked proofs + message (referencing
+     * [zappedEvent], or p-tag-only when null for a profile nutzap), rolls
+     * leftover change into a new kind:7375, NIP-09-deletes the source token
+     * events, and records the spend in kind:7376.
      *
      * Throws if `available` doesn't sum to at least [amountSats].
      */
@@ -637,14 +638,24 @@ class CashuWalletOps(
         // Build the kind:9321 first so we have its id to reference from history.
         val proofJsons = swap.send.map { nutzapProofJson.encodeToString(NutzapProofJson.serializer(), it.toNutzapJson()) }
         val nutzapTemplate =
-            NutzapEvent.build(
-                message = message,
-                proofs = proofJsons,
-                mintUrl = mintUrl,
-                unit = "sat",
-                zappedEvent = zappedEvent,
-                recipientPubKey = recipientPubKey,
-            )
+            if (zappedEvent != null) {
+                NutzapEvent.build(
+                    message = message,
+                    proofs = proofJsons,
+                    mintUrl = mintUrl,
+                    unit = "sat",
+                    zappedEvent = zappedEvent,
+                    recipientPubKey = recipientPubKey,
+                )
+            } else {
+                NutzapEvent.buildToUser(
+                    message = message,
+                    proofs = proofJsons,
+                    mintUrl = mintUrl,
+                    unit = "sat",
+                    recipientPubKey = recipientPubKey,
+                )
+            }
         val nutzapEvent = signer.sign(nutzapTemplate)
         publish(nutzapEvent)
         // kind:9321 is out — recipient's auto-redeem can fire from here.
