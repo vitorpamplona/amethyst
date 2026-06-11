@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.model.nip59Giftwrap.RumorHosts
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.model.Account
@@ -412,9 +413,11 @@ class SealedRumorEventHandler(
         if (rumorId == null) {
             processNewSealedRumor(event, eventNote, publicNote)
         } else {
-            // Replayed seal: re-link the rumor to its delivering wrap so
+            // Replayed seal: re-link the rumor to its delivering envelope so
             // broadcast can republish the wrap after a cache rebuild.
-            event.host?.let { cache.rumorHosts.put(rumorId, it) }
+            // publicNote is the outermost event of this unwrap chain — the
+            // kind-1059 wrap normally, the seal itself when it arrived bare.
+            publicNote.event?.let { envelope -> RumorHosts.put(rumorId, envelope) }
             processExistingSealedRumor(rumorId, publicNote)
         }
     }
@@ -440,11 +443,11 @@ class SealedRumorEventHandler(
 
         eventNote.event = event.copyNoContent()
 
-        // Remember which kind-1059 wrap delivered this rumor. Rumor kinds
-        // that aren't WrappedEvent subclasses (kind-1 private replies) can't
-        // carry the host pointer on the event, and broadcast must republish
-        // the wrap — never the unsigned rumor.
-        event.host?.let { cache.rumorHosts.put(innerRumor.id, it) }
+        // Remember which envelope delivered this rumor (publicNote is the
+        // kind-1059 wrap normally, the seal itself when it arrived bare).
+        // Consumers cite/broadcast/prune/evict through this index — the
+        // unsigned rumor itself must never be referenced publicly.
+        publicNote.event?.let { envelope -> RumorHosts.put(innerRumor.id, envelope) }
 
         cache.justConsume(innerRumor, null, true)
         cache.copyRelaysFromTo(publicNote, innerRumor)

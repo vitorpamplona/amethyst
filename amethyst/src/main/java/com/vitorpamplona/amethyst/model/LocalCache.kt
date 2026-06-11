@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
+import com.vitorpamplona.amethyst.commons.model.nip59Giftwrap.RumorHosts
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtIdHexComparator
 import com.vitorpamplona.amethyst.commons.model.observables.EventListMatchingFilter
 import com.vitorpamplona.amethyst.commons.model.observables.NewEventMatchingFilter
@@ -115,6 +116,7 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionIndex
 import com.vitorpamplona.quartz.nip10Notes.BaseNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
@@ -210,8 +212,6 @@ import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.HostStub
-import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
@@ -395,15 +395,6 @@ object LocalCache : ILocalCache, ICacheProvider {
     }
 
     val deletionIndex = DeletionIndex()
-
-    /**
-     * Rumor id → the kind-1059 gift wrap that delivered it. Lets the
-     * broadcast action republish the WRAP (never the unsigned rumor) for
-     * rumor kinds that aren't WrappedEvent subclasses and so can't carry a
-     * host pointer themselves (e.g. kind-1 private replies). Kind-14 chat
-     * messages carry the host on the event and don't need this index.
-     */
-    val rumorHosts = LargeCache<HexKey, HostStub>()
 
     /**
      * Inverted index over the active [Observable]s. New events fan
@@ -1389,30 +1380,39 @@ object LocalCache : ILocalCache, ICacheProvider {
      *    resurrected by `computeReplyTo` as a second Note for the same id.
      *  - prune (see [unlinkAndRemove] callers): the whole child subtree is removed.
      *
-     * Gift-wrapped events additionally drop their decrypted inner host.
+     * Rumors additionally drop the envelope notes that delivered them.
      */
     private fun deleteNote(deleteNote: Note) {
-        (deleteNote.event as? WrappedEvent)?.let { deleteWraps(it) }
+        deleteNote.event?.let { deleteEnvelopes(it) }
 
         deleteNote.detachFromChildren()
 
         unlinkAndRemove(deleteNote)
     }
 
-    fun deleteWraps(event: WrappedEvent) {
-        event.host?.let { hostStub ->
-            // seal
-            getNoteIfExists(hostStub.id)?.let { hostNote ->
-                val noteEvent = hostNote.event
-                if (noteEvent is WrappedEvent) {
-                    deleteWraps(noteEvent)
-                }
-                hostNote.clearFlow()
-                refreshDeletedNoteObservers(hostNote)
-            }
+    /**
+     * Removes the envelope notes that delivered [rumor]: the indexed host
+     * (normally the kind-1059 wrap; a bare kind-13 seal otherwise) and,
+     * when the host is a wrap, the seal layer it carried. Public events
+     * have no envelopes and are ignored.
+     */
+    fun deleteEnvelopes(rumor: Event) {
+        val host = RumorHosts.of(rumor) ?: return
 
-            notes.remove(hostStub.id)
+        getNoteIfExists(host.id)?.let { hostNote ->
+            (hostNote.event as? GiftWrapEvent)?.innerEventId?.let { sealId ->
+                getNoteIfExists(sealId)?.let { sealNote ->
+                    sealNote.clearFlow()
+                    refreshDeletedNoteObservers(sealNote)
+                }
+                notes.remove(sealId)
+            }
+            hostNote.clearFlow()
+            refreshDeletedNoteObservers(hostNote)
         }
+
+        notes.remove(host.id)
+        RumorHosts.remove(rumor.id)
     }
 
     fun consume(
@@ -2697,7 +2697,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 val childrenToBeRemoved = mutableListOf<Note>()
 
                 // Newest pruned `created_at` per relay, in each window's cursor space, capped at < floor.
-                // Gift wraps page by the OUTER wrap time (from the rumor's host stub); NIP-04 by the event's
+                // Gift wraps page by the OUTER wrap time (from the rumor-host index); NIP-04 by the event's
                 // own time, and a kind:4 belongs to BOTH the account (rooms-list) and per-conversation cursor.
                 val giftWrapPruned = HashMap<NormalizedRelayUrl, Long>()
                 val accountNip04Pruned = HashMap<NormalizedRelayUrl, Long>()
@@ -2708,9 +2708,9 @@ object LocalCache : ILocalCache, ICacheProvider {
 
                 toBeRemoved.forEach { note ->
                     when (val ev = note.event) {
-                        is WrappedEvent ->
+                        is BaseDMGroupEvent ->
                             if (giftWrapFloor != null) {
-                                val outerUntil = ev.host?.createdAt ?: ev.createdAt
+                                val outerUntil = RumorHosts.get(ev.id)?.createdAt ?: ev.createdAt
                                 if (outerUntil < giftWrapFloor) note.relays.forEach { giftWrapPruned.merge(it, outerUntil, ::maxOf) }
                             }
                         is PrivateDmEvent -> {
@@ -2753,21 +2753,22 @@ object LocalCache : ILocalCache, ICacheProvider {
     }
 
     fun removeIfWrap(note: Note): List<Note> {
-        val noteEvent = note.event
+        val noteEvent = note.event ?: return emptyList()
+        val host = RumorHosts.of(noteEvent) ?: return emptyList()
 
-        val children =
-            if (noteEvent is WrappedEvent) {
-                noteEvent.host?.id?.let {
-                    getNoteIfExists(it)?.let { it2 ->
-                        unlinkAndRemove(it2)
-                        it2.clearChildLinks()
-                    }
+        val children = mutableListOf<Note>()
+        getNoteIfExists(host.id)?.let { hostNote ->
+            (hostNote.event as? GiftWrapEvent)?.innerEventId?.let { sealId ->
+                getNoteIfExists(sealId)?.let { sealNote ->
+                    unlinkAndRemove(sealNote)
+                    children.addAll(sealNote.clearChildLinks())
                 }
-            } else {
-                null
             }
-
-        return children ?: emptyList()
+            unlinkAndRemove(hostNote)
+            children.addAll(hostNote.clearChildLinks())
+        }
+        RumorHosts.remove(noteEvent.id)
+        return children
     }
 
     fun prunePastVersionsOfReplaceables() {

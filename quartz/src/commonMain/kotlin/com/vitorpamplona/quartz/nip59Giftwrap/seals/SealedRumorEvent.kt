@@ -26,8 +26,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip40Expiration.ExpirationTag
 import com.vitorpamplona.quartz.nip59Giftwrap.HasInnerEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.HostStub
-import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -40,7 +38,7 @@ class SealedRumorEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : WrappedEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     HasInnerEvent {
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
@@ -57,7 +55,6 @@ class SealedRumorEvent(
                 sig,
             )
 
-        copy.host = host
         copy.innerEventId = innerEventId
 
         return copy
@@ -69,9 +66,6 @@ class SealedRumorEvent(
         val rumor = Rumor.fromJson(plainContent(signer))
 
         val event = rumor.mergeWith(this)
-        if (event is WrappedEvent) {
-            event.host = host ?: HostStub(this.id, this.pubKey, this.kind, this.createdAt)
-        }
         innerEventId = event.id
 
         return event

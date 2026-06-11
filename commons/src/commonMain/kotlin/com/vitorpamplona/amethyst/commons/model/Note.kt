@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.model
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.model.nip59Giftwrap.RumorHosts
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponsesCache
 import com.vitorpamplona.amethyst.commons.threading.checkNotInMainThread
 import com.vitorpamplona.amethyst.commons.util.KmpLock
@@ -61,7 +62,6 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.utils.BigDecimal
@@ -237,19 +237,17 @@ open class Note(
     open fun idNote() = toNEvent()
 
     open fun toNEvent(): String {
-        val myEvent = event
-        return if (myEvent is WrappedEvent) {
-            val host = myEvent.host
-            if (host != null) {
-                NEvent.create(
-                    host.id,
-                    host.pubKey,
-                    host.kind,
-                    relayHintUrl(),
-                )
-            } else {
-                NEvent.create(idHex, author?.pubkeyHex, event?.kind, relayHintUrl())
-            }
+        // Rumors are cited by the envelope that delivered them: the rumor id
+        // resolves to nothing on public relays and exposing it would leak the
+        // private event's identity.
+        val host = event?.let { RumorHosts.of(it) }
+        return if (host != null) {
+            NEvent.create(
+                host.id,
+                host.pubKey,
+                host.kind,
+                relayHintUrl(),
+            )
         } else {
             NEvent.create(idHex, author?.pubkeyHex, event?.kind, relayHintUrl())
         }

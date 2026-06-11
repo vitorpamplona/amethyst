@@ -31,8 +31,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip40Expiration.ExpirationTag
 import com.vitorpamplona.quartz.nip59Giftwrap.HasInnerEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.HostStub
-import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -73,9 +71,6 @@ open class GiftWrapEvent(
         val giftStr = plainContent(signer)
         val gift = fromJson(giftStr)
 
-        if (gift is WrappedEvent) {
-            gift.host = HostStub(this.id, this.pubKey, this.kind, this.createdAt)
-        }
         innerEventId = gift.id
 
         return gift

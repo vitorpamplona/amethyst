@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.model.nip51Lists.hashtagLists.HashtagL
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.muteList.MuteListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.ReportAction
+import com.vitorpamplona.amethyst.commons.model.nip59Giftwrap.RumorHosts
 import com.vitorpamplona.amethyst.commons.model.nip72Communities.CommunityListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.TrustProviderListDecryptionCache
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
@@ -178,6 +179,7 @@ import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip10Notes.threadRootIdOrSelf
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
+import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -223,8 +225,8 @@ import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.tags.ThumbTag
 import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.HostStub
-import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
@@ -1206,7 +1208,9 @@ class Account(
                 emptySet()
             }
         }
-        if (event is WrappedEvent) {
+        // Seals, inner DM messages, and unsigned rumors never get broadcast
+        // relays: they only travel inside gift wraps.
+        if (event is SealedRumorEvent || event is BaseDMGroupEvent || event.sig.isEmpty()) {
             return emptySet()
         }
 
@@ -1328,19 +1332,10 @@ class Account(
     }
 
     /**
-     * The kind-1059 gift wrap that delivered [event], when [event] is a
-     * rumor: WrappedEvent rumors (kind-14 chats) carry it on the event;
-     * other rumor kinds (kind-1 private replies) are looked up in the
-     * cache's rumor-host index.
+     * The envelope (kind-1059 gift wrap, or bare kind-13 seal) that
+     * delivered [event], when [event] is a rumor.
      */
-    fun rumorHost(event: Event): HostStub? =
-        if (event is WrappedEvent) {
-            event.host
-        } else if (event.sig.isEmpty()) {
-            cache.rumorHosts.get(event.id)
-        } else {
-            null
-        }
+    fun rumorHost(event: Event): HostStub? = RumorHosts.of(event)
 
     suspend fun broadcast(note: Note) {
         note.event?.let { noteEvent ->
