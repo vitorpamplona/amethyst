@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service
 
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.experimental.clink.client.OfferClient
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferEvent
@@ -28,6 +29,7 @@ import com.vitorpamplona.quartz.experimental.clink.pointers.NOffer
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -76,7 +78,9 @@ object ClinkOfferPayer {
             val request = client.requestInvoice(amountSats = amountSats)
 
             val reply = CompletableDeferred<OfferEvent>()
-            val subId = "clink-offer-${request.id}"
+            // A random short id: relays cap subscription ids at 64 chars (NIP-01) and reject an
+            // over-long REQ outright. The reply is matched by request id in the listener, not by subId.
+            val subId = newSubId()
             val filters: Map<NormalizedRelayUrl, List<Filter>> = relays.associateWith { listOf(client.responseFilter(request.id)) }
 
             val listener =
@@ -93,6 +97,14 @@ object ClinkOfferPayer {
                     }
                 }
 
+            // The offer's relays are an ad-hoc payment endpoint, not a saved wallet, so register them
+            // as money-operation relays for the duration of the round-trip. Otherwise account.client
+            // would treat them as generic "new" relays and route them per `newRelaysViaTor`, silently
+            // pushing the payment through Tor (and failing on services that block Tor exits) even when
+            // the user disabled Tor for money operations. The subscribe() below triggers a reconnect, and
+            // BasicRelayClient rebuilds any socket left on the now-wrong (Tor) transport onto clearnet.
+            val torState = Amethyst.instance.torEvaluatorFlow
+            torState.registerMoneyOpRelays(relays)
             account.client.subscribe(subId, filters, listener)
             try {
                 account.client.publish(request, relays)
@@ -109,6 +121,7 @@ object ClinkOfferPayer {
                 }
             } finally {
                 account.client.unsubscribe(subId)
+                torState.unregisterMoneyOpRelays(relays)
             }
         }
     }
