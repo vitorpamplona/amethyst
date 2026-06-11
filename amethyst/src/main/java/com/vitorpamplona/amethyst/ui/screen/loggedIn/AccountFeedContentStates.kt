@@ -150,11 +150,14 @@ class AccountFeedContentStates(
         }
 
         // Pinning/unpinning a room only changes sort order, not membership, so no
-        // event flows through LocalCache. Force a rebuild to re-sort.
+        // chat event flows through LocalCache. Force a rebuild to re-sort. This
+        // also fires when pins arrive via the synced AppSpecificData event.
         scope.launch(Dispatchers.IO) {
-            account.settings.pinnedChatrooms.drop(1).collect {
-                dmKnown.invalidateData()
-            }
+            account.settings.syncedSettings.chats.pinnedChatrooms
+                .drop(1)
+                .collect {
+                    dmKnown.invalidateData()
+                }
         }
 
         scope.launch(Dispatchers.IO) {

@@ -1321,6 +1321,13 @@ class AccountViewModel(
             account.changeAudioVisualizer(style)
         }
 
+    fun pinnedChatroomsFlow(): StateFlow<Set<ChatroomKey>> = account.settings.syncedSettings.chats.pinnedChatrooms
+
+    fun toggleChatroomPin(room: ChatroomKey) =
+        launchSigner {
+            account.toggleChatroomPin(room)
+        }
+
     fun updateZapAmounts(
         amountSet: List<Long>,
         selectedZapType: LnZapEvent.ZapType,

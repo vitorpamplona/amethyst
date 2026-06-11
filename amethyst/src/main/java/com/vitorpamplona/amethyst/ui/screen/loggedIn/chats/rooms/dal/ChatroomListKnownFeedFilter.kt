@@ -263,7 +263,7 @@ class ChatroomListKnownFeedFilter(
     }
 
     override fun sort(items: Set<Note>): List<Note> {
-        val pinned = account.settings.pinnedChatrooms.value
+        val pinned = account.settings.syncedSettings.chats.pinnedChatrooms.value
         if (pinned.isEmpty()) return items.sortedWith(DefaultFeedOrder)
 
         val me = account.userProfile().pubkeyHex

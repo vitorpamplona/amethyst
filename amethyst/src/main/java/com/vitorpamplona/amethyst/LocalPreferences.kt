@@ -45,7 +45,6 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
@@ -160,7 +159,6 @@ private object PrefKeys {
     const val SIGNER_PACKAGE_NAME = "signer_package_name"
     const val HAS_DONATED_IN_VERSION = "has_donated_in_version"
     const val DISMISSED_POLL_NOTE_IDS = "dismissed_poll_note_ids"
-    const val PINNED_CHATROOMS = "pinned_chatrooms"
     const val VIEWED_POLL_RESULT_NOTE_IDS = "viewed_poll_result_note_ids"
     const val PENDING_ATTESTATIONS = "pending_attestations"
 
@@ -479,11 +477,6 @@ object LocalPreferences {
                     )
                     putStringSet(PrefKeys.HAS_DONATED_IN_VERSION, settings.hasDonatedInVersion.value)
                     putStringSet(PrefKeys.DISMISSED_POLL_NOTE_IDS, settings.dismissedPollNoteIds.value)
-                    // Each room is its member pubkeys joined by "," (hex keys never contain commas).
-                    putStringSet(
-                        PrefKeys.PINNED_CHATROOMS,
-                        settings.pinnedChatrooms.value.mapTo(mutableSetOf()) { it.users.sorted().joinToString(",") },
-                    )
                     putString(
                         PrefKeys.VIEWED_POLL_RESULT_NOTE_IDS,
                         JsonMapper.toJson(settings.viewedPollResultNoteIds.value),
@@ -580,10 +573,6 @@ object LocalPreferences {
                     val splitNotificationsEnabled = getBoolean(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED, false)
                     val hasDonatedInVersion = getStringSet(PrefKeys.HAS_DONATED_IN_VERSION, null) ?: setOf()
                     val dismissedPollNoteIds = getStringSet(PrefKeys.DISMISSED_POLL_NOTE_IDS, null) ?: setOf()
-                    val pinnedChatrooms =
-                        getStringSet(PrefKeys.PINNED_CHATROOMS, null)
-                            ?.mapTo(mutableSetOf()) { ChatroomKey(it.split(",").toSet()) }
-                            ?: setOf<ChatroomKey>()
                     val viewedPollResultNoteIdsStr = getString(PrefKeys.VIEWED_POLL_RESULT_NOTE_IDS, null)
                     val localRelayServers = getStringSet(PrefKeys.LOCAL_RELAY_SERVERS, null) ?: setOf()
 
@@ -762,7 +751,6 @@ object LocalPreferences {
                         lastReadPerRoute = MutableStateFlow(lastReadPerRoute.await()),
                         hasDonatedInVersion = MutableStateFlow(hasDonatedInVersion),
                         dismissedPollNoteIds = MutableStateFlow(dismissedPollNoteIds),
-                        pinnedChatrooms = MutableStateFlow(pinnedChatrooms),
                         viewedPollResultNoteIds = MutableStateFlow(viewedPollResultNoteIds.await()),
                         pendingAttestations = MutableStateFlow(pendingAttestations.await()),
                         backupNipA3PaymentTargets = latestPaymentTargets.await(),
