@@ -24,12 +24,14 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -46,8 +48,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
-import com.vitorpamplona.amethyst.desktop.service.media.VlcjPlayerPool
+import io.github.kdroidfilter.composemediaplayer.VideoPlayerSurface
 import kotlinx.coroutines.delay
+import java.awt.Desktop
+import java.net.URI
 
 @Composable
 fun DesktopVideoPlayer(
@@ -60,16 +64,12 @@ fun DesktopVideoPlayer(
     onViewModeChange: ((ViewMode) -> Unit)? = null,
     trailingControls: @Composable (() -> Unit)? = null,
 ) {
-    // Check if this URL is the active video
     val videoState by GlobalMediaPlayer.videoState.collectAsState()
-    val videoFrame by GlobalMediaPlayer.videoFrame.collectAsState()
     val isActiveVideo = videoState.url == url
 
-    // Thumbnail for inactive videos
     var thumbnail by remember(url) { mutableStateOf(VideoThumbnailCache.getCached(url)) }
     var aspectRatio by remember { mutableFloatStateOf(16f / 9f) }
 
-    // Load thumbnail when not active
     LaunchedEffect(url, isActiveVideo) {
         if (!isActiveVideo && thumbnail == null) {
             for (attempt in 1..3) {
@@ -83,21 +83,14 @@ fun DesktopVideoPlayer(
         }
     }
 
-    // Auto-play on mount if requested
     LaunchedEffect(url, autoPlay) {
         if (autoPlay) {
             GlobalMediaPlayer.playVideo(url, initialSeekPosition)
         }
     }
 
-    // Sync aspect ratio from global state when active
     if (isActiveVideo && videoState.aspectRatio != 16f / 9f) {
         aspectRatio = videoState.aspectRatio
-    }
-
-    if (!VlcjPlayerPool.isAvailable() && VlcjPlayerPool.init().not()) {
-        VlcNotAvailableMessage(url, modifier)
-        return
     }
 
     BoxWithConstraints(modifier = modifier) {
@@ -115,17 +108,28 @@ fun DesktopVideoPlayer(
                     ),
             contentAlignment = Alignment.Center,
         ) {
-            val displayBitmap: ImageBitmap? = if (isActiveVideo) videoFrame ?: thumbnail else thumbnail
-            displayBitmap?.let { bitmap ->
-                Image(
-                    bitmap = bitmap,
-                    contentDescription = "Video",
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .clip(MaterialTheme.shapes.small),
+            val errorReason = if (isActiveVideo) videoState.errorReason else null
+
+            if (errorReason != null) {
+                PlaybackErrorMessage(url = url, reason = errorReason)
+            } else if (isActiveVideo) {
+                VideoPlayerSurface(
+                    playerState = GlobalMediaPlayer.activeVideoPlayerState,
+                    modifier = Modifier.fillMaxSize().clip(MaterialTheme.shapes.small),
                     contentScale = ContentScale.Fit,
                 )
+            } else {
+                thumbnail?.let { bitmap: ImageBitmap ->
+                    Image(
+                        bitmap = bitmap,
+                        contentDescription = "Video thumbnail",
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .clip(MaterialTheme.shapes.small),
+                        contentScale = ContentScale.Fit,
+                    )
+                }
             }
 
             VideoControls(
@@ -149,12 +153,8 @@ fun DesktopVideoPlayer(
                         GlobalMediaPlayer.seekVideo(pos)
                     }
                 },
-                onVolumeChange = { vol ->
-                    GlobalMediaPlayer.setVideoVolume(vol)
-                },
-                onMuteToggle = {
-                    GlobalMediaPlayer.toggleVideoMute()
-                },
+                onVolumeChange = { vol -> GlobalMediaPlayer.setVideoVolume(vol) },
+                onMuteToggle = { GlobalMediaPlayer.toggleVideoMute() },
                 onFullscreen =
                     if (onFullscreen != null) {
                         {
@@ -172,25 +172,34 @@ fun DesktopVideoPlayer(
 }
 
 @Composable
-private fun VlcNotAvailableMessage(
+private fun PlaybackErrorMessage(
     url: String,
-    modifier: Modifier = Modifier,
+    reason: String,
 ) {
     Box(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .background(
-                    MaterialTheme.colorScheme.surfaceContainerHigh,
-                    RoundedCornerShape(8.dp),
-                ),
+        modifier = Modifier.fillMaxSize().padding(16.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = "Video: $url\nInstall VLC to play videos: https://www.videolan.org/vlc/",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = "Can't play this video",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = reason,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            TextButton(
+                onClick = {
+                    runCatching { Desktop.getDesktop().browse(URI(url)) }
+                },
+            ) {
+                Text("Open in default player")
+            }
+        }
     }
 }

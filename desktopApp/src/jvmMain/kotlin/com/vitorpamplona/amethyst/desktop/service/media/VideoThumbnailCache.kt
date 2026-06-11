@@ -24,23 +24,86 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.jetbrains.skia.Bitmap
-import org.jetbrains.skia.ColorAlphaType
-import org.jetbrains.skia.ImageInfo
-import uk.co.caprica.vlcj.player.base.MediaPlayer
-import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter
-import uk.co.caprica.vlcj.player.embedded.videosurface.callback.BufferFormatCallback
-import uk.co.caprica.vlcj.player.embedded.videosurface.callback.RenderCallback
-import uk.co.caprica.vlcj.player.embedded.videosurface.callback.format.RV32BufferFormat
-import java.nio.ByteBuffer
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.jcodec.api.FrameGrab
+import org.jcodec.common.io.NIOUtils
+import org.jcodec.common.model.ColorSpace
+import org.jcodec.common.model.Picture
+import org.jcodec.scale.AWTUtil
+import org.jcodec.scale.ColorUtil
+import org.jetbrains.skia.Image
+import java.awt.image.BufferedImage
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.nio.file.Files
+import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-import org.jetbrains.skia.Image as SkiaImage
+import javax.imageio.ImageIO
 
+/**
+ * Per-URL one-frame thumbnail extractor backing feed video posters.
+ *
+ * Cascade:
+ *   1. **JCodec** (`org.jcodec:jcodec` + `jcodec-javase`, BSD-2) — pure-Java
+ *      H.264 baseline/main/high decode. Handles ~80% of Nostr feed media (MP4/H.264).
+ *   2. **Jaffree** (Apache-2) + **LGPL FFmpeg** subprocess — for everything else
+ *      (HEVC, VP9, AV1, HLS, malformed faststart MP4s). Requires a bundled
+ *      ffmpeg binary at `src/jvmMain/appResources/<os>/ffmpeg/ffmpeg(.exe)` or
+ *      a system `ffmpeg` on `$PATH`.
+ *
+ * Replaces the prior vlcj `RenderCallback` path. License moves from
+ * GPL-3.0 (vlcj) to BSD-2 + Apache-2 + LGPL-2.1 native, MIT-dominant overall.
+ */
 object VideoThumbnailCache {
+    private const val MAX_THUMB_BYTES = 4 * 1024 * 1024 // 4 MiB cap per thumbnail
+
     private val cache = ConcurrentHashMap<String, ImageBitmap>()
     private val pending = ConcurrentHashMap<String, Boolean>()
+
+    private val http: OkHttpClient by lazy {
+        OkHttpClient
+            .Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build()
+    }
+
+    private val downloadCacheDir: File by lazy {
+        val base =
+            File(System.getProperty("user.home"), ".cache/amethyst-desktop/video-thumbs")
+                .also { it.mkdirs() }
+        base
+    }
+
+    private val ffmpegBinary: String? by lazy {
+        // 1. System ffmpeg on PATH.
+        val onPath =
+            runCatching {
+                ProcessBuilder("ffmpeg", "-version")
+                    .redirectErrorStream(true)
+                    .start()
+                    .also { it.inputStream.close() }
+                    .waitFor(2, TimeUnit.SECONDS)
+            }.getOrDefault(false)
+        if (onPath) return@lazy "ffmpeg"
+
+        // 2. Bundled ffmpeg under appResources/<os>/ffmpeg/.
+        // jpackage drops appResources at <app>/lib/app/resources/ — equivalently,
+        // we can read from the working dir layout under desktopApp/src/jvmMain/appResources
+        // during `./gradlew :desktopApp:run`. Look for it in well-known locations.
+        val osName = System.getProperty("os.name").lowercase()
+        val isWin = "win" in osName
+        val binaryName = if (isWin) "ffmpeg.exe" else "ffmpeg"
+        val candidates =
+            listOf(
+                File(System.getProperty("compose.application.resources.dir") ?: "", "ffmpeg/$binaryName"),
+                File("desktopApp/src/jvmMain/appResources/${osTag(osName)}/ffmpeg/$binaryName"),
+                File("src/jvmMain/appResources/${osTag(osName)}/ffmpeg/$binaryName"),
+            )
+        candidates.firstOrNull { it.exists() && it.canExecute() }?.absolutePath
+    }
 
     fun getCached(url: String): ImageBitmap? = cache[url]
 
@@ -58,82 +121,161 @@ object VideoThumbnailCache {
     }
 
     private fun extractFirstFrame(url: String): ImageBitmap? {
-        if (!VlcjPlayerPool.init()) {
-            println("VLC thumbnail: init failed for $url")
-            return null
-        }
-        val player = VlcjPlayerPool.acquireForThumbnail()
-        if (player == null) {
-            println("VLC thumbnail: pool exhausted for $url")
-            return null
-        }
+        // For HLS we skip straight to Jaffree — JCodec can't read m3u8.
+        val isHls = url.contains(".m3u8", ignoreCase = true) || url.contains("/hls/", ignoreCase = true)
 
-        var result: ImageBitmap? = null
-        val latch = CountDownLatch(1)
-
-        val bufferFormatCallback =
-            object : BufferFormatCallback {
-                override fun getBufferFormat(
-                    sourceWidth: Int,
-                    sourceHeight: Int,
-                ): uk.co.caprica.vlcj.player.embedded.videosurface.callback.BufferFormat = RV32BufferFormat(sourceWidth, sourceHeight)
-
-                override fun allocatedBuffers(buffers: Array<out ByteBuffer>) {}
+        if (!isHls) {
+            val downloaded = runCatching { downloadFirstChunk(url) }.getOrNull()
+            if (downloaded != null) {
+                tryJCodec(downloaded)?.let { return it }
+                tryJaffreeFile(downloaded)?.let { return it }
             }
-
-        val renderCallback =
-            RenderCallback { _, nativeBuffers, bufferFormat ->
-                if (result != null) return@RenderCallback
-                try {
-                    if (nativeBuffers.isEmpty()) return@RenderCallback
-                    val w = bufferFormat.width
-                    val h = bufferFormat.height
-                    if (w <= 0 || h <= 0) return@RenderCallback
-                    val bmp = Bitmap()
-                    bmp.allocPixels(ImageInfo.makeN32(w, h, ColorAlphaType.PREMUL))
-                    val bytes = ByteArray(w * h * 4)
-                    val buffer = nativeBuffers[0]
-                    buffer.rewind()
-                    buffer.get(bytes)
-                    bmp.installPixels(bytes)
-                    result = SkiaImage.makeFromBitmap(bmp).toComposeImageBitmap()
-                    latch.countDown()
-                } catch (e: Exception) {
-                    println("VLC thumbnail: render error for $url — ${e.message}")
-                    latch.countDown()
-                }
-            }
-
-        val surface = VlcjPlayerPool.createVideoSurface(bufferFormatCallback, renderCallback)
-        if (surface == null) {
-            println("VLC thumbnail: surface creation failed for $url")
-            VlcjPlayerPool.release(player)
-            return null
         }
 
-        player.videoSurface().set(surface)
-        player.audio().setVolume(0)
-        player.audio().isMute = true
-
-        player.events().addMediaPlayerEventListener(
-            object : MediaPlayerEventAdapter() {
-                override fun error(mediaPlayer: MediaPlayer) {
-                    println("VLC thumbnail: playback error for $url")
-                    latch.countDown()
-                }
-            },
-        )
-
-        player.media().play(url)
-
-        // Wait up to 8 seconds for first frame (network videos can be slow)
-        latch.await(8, TimeUnit.SECONDS)
-
-        if (result == null) {
-            println("VLC thumbnail: timed out or failed for $url")
-        }
-
-        VlcjPlayerPool.release(player)
-        return result
+        return tryJaffreeUrl(url)
     }
+
+    /**
+     * Downloads up to [MAX_THUMB_BYTES] to a cache file, returning the file (or null on failure).
+     *
+     * Caps the copy regardless of whether the server honours `Range:` — some origins ignore it
+     * and serve a 200 with the full body, which would otherwise stream the entire video.
+     *
+     * Rejects responses whose `Content-Type` starts with `text/` (e.g. HTML error pages from
+     * broken origins) so we never persist non-video bytes into the cache.
+     *
+     * Cleans up zero-byte cache files on failure so a transient empty response isn't sticky.
+     */
+    private fun downloadFirstChunk(url: String): File? {
+        val hash = sha1Hex(url)
+        val cached = File(downloadCacheDir, "$hash.mp4")
+        if (cached.length() > 0L) return cached
+        if (cached.exists()) cached.delete()
+
+        var wrote = false
+        http.newCall(buildRangeRequest(url)).execute().use { resp ->
+            if (!resp.isSuccessful && resp.code != 206) return null
+            val contentType = resp.header("Content-Type")?.lowercase().orEmpty()
+            if (contentType.startsWith("text/") || "html" in contentType) return null
+            Files.newOutputStream(cached.toPath()).use { out ->
+                val copied = copyAtMost(resp.body.byteStream(), out, MAX_THUMB_BYTES.toLong())
+                wrote = copied > 0L
+            }
+        }
+        if (!wrote || cached.length() == 0L) {
+            cached.delete()
+            return null
+        }
+        return cached
+    }
+
+    private fun buildRangeRequest(url: String): Request =
+        Request
+            .Builder()
+            .url(url)
+            .header("Range", "bytes=0-${MAX_THUMB_BYTES - 1}")
+            .header("User-Agent", "Amethyst-Desktop/thumbnail")
+            .build()
+
+    private fun copyAtMost(
+        src: java.io.InputStream,
+        dst: java.io.OutputStream,
+        limit: Long,
+    ): Long {
+        val buf = ByteArray(64 * 1024)
+        var copied = 0L
+        while (copied < limit) {
+            val toRead = minOf(buf.size.toLong(), limit - copied).toInt()
+            val n = src.read(buf, 0, toRead)
+            if (n < 0) break
+            dst.write(buf, 0, n)
+            copied += n
+        }
+        return copied
+    }
+
+    private fun tryJCodec(mp4: File): ImageBitmap? =
+        runCatching {
+            NIOUtils.readableChannel(mp4).use { ch ->
+                val grab = FrameGrab.createFrameGrab(ch).seekToSecondSloppy(1.0)
+                val native: Picture = grab.nativeFrame ?: return null
+                val rgb = Picture.create(native.width, native.height, ColorSpace.RGB)
+                ColorUtil.getTransform(native.color, ColorSpace.RGB).transform(native, rgb)
+                bufferedImageToImageBitmap(AWTUtil.toBufferedImage(rgb))
+            }
+        }.getOrNull()
+
+    private fun tryJaffreeFile(file: File): ImageBitmap? = runFfmpegToImage(file.absolutePath)
+
+    private fun tryJaffreeUrl(url: String): ImageBitmap? = runFfmpegToImage(url)
+
+    /**
+     * Spawns `ffmpeg -ss 1 -i <input> -frames:v 1 -f image2pipe -c:v png -an pipe:1`,
+     * reads PNG bytes from stdout, decodes with Skia.
+     *
+     * Uses raw `ProcessBuilder` rather than the Jaffree DSL — fewer API guesses,
+     * easier to debug. Jaffree stays on the classpath as a future option.
+     */
+    private fun runFfmpegToImage(input: String): ImageBitmap? {
+        val ffmpeg = ffmpegBinary ?: return null
+        val cmd =
+            listOf(
+                ffmpeg,
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-ss",
+                "1",
+                "-i",
+                input,
+                "-frames:v",
+                "1",
+                "-an",
+                "-f",
+                "image2pipe",
+                "-c:v",
+                "png",
+                "pipe:1",
+            )
+        val process =
+            runCatching {
+                ProcessBuilder(cmd)
+                    .redirectErrorStream(false)
+                    .start()
+            }.getOrNull() ?: return null
+        val out = ByteArrayOutputStream(256 * 1024)
+        try {
+            process.inputStream.use { it.copyTo(out) }
+            if (!process.waitFor(8, TimeUnit.SECONDS)) {
+                process.destroyForcibly()
+                return null
+            }
+            if (process.exitValue() != 0 || out.size() == 0) return null
+        } catch (_: Exception) {
+            process.destroyForcibly()
+            return null
+        }
+        return runCatching {
+            Image.makeFromEncoded(out.toByteArray()).toComposeImageBitmap()
+        }.getOrNull()
+    }
+
+    private fun bufferedImageToImageBitmap(img: BufferedImage): ImageBitmap {
+        val baos = ByteArrayOutputStream(64 * 1024)
+        ImageIO.write(img, "png", baos)
+        return Image.makeFromEncoded(baos.toByteArray()).toComposeImageBitmap()
+    }
+
+    private fun sha1Hex(s: String): String {
+        val md = MessageDigest.getInstance("SHA-1")
+        val bytes = md.digest(s.toByteArray())
+        return bytes.joinToString("") { "%02x".format(it) }
+    }
+
+    private fun osTag(osName: String): String =
+        when {
+            "mac" in osName -> "macos"
+            "win" in osName -> "windows"
+            else -> "linux"
+        }
 }

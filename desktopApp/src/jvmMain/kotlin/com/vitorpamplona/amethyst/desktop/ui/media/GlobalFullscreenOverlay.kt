@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.media
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -42,12 +41,12 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+import io.github.kdroidfilter.composemediaplayer.VideoPlayerSurface
 
 @Composable
 fun GlobalFullscreenOverlay() {
     val isFullscreen by GlobalMediaPlayer.isFullscreen.collectAsState()
     val videoState by GlobalMediaPlayer.videoState.collectAsState()
-    val videoFrame by GlobalMediaPlayer.videoFrame.collectAsState()
 
     if (!isFullscreen || videoState.url == null) return
 
@@ -103,15 +102,12 @@ fun GlobalFullscreenOverlay() {
                 },
         contentAlignment = Alignment.Center,
     ) {
-        // Video frame
-        videoFrame?.let { frame ->
-            Image(
-                bitmap = frame,
-                contentDescription = "Video fullscreen",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Fit,
-            )
-        }
+        // Video frame — same player state as feed card; kdroidFilter draws to Canvas
+        VideoPlayerSurface(
+            playerState = GlobalMediaPlayer.activeVideoPlayerState,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit,
+        )
 
         // Video controls overlay
         VideoControls(

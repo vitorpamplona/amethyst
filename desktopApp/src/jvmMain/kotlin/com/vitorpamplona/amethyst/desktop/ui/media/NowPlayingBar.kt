@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.desktop.ui.media
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -51,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+import io.github.kdroidfilter.composemediaplayer.VideoPlayerSurface
 import kotlinx.coroutines.launch
 
 enum class MediaType { AUDIO, VIDEO }
@@ -59,7 +59,6 @@ enum class MediaType { AUDIO, VIDEO }
 fun NowPlayingBar(modifier: Modifier = Modifier) {
     val videoState by GlobalMediaPlayer.videoState.collectAsState()
     val audioState by GlobalMediaPlayer.audioState.collectAsState()
-    val videoFrame by GlobalMediaPlayer.videoFrame.collectAsState()
 
     val hasVideo = videoState.url != null
     val hasAudio = audioState.url != null
@@ -86,11 +85,10 @@ fun NowPlayingBar(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // Mini video thumbnail or music icon
-            if (activeType == MediaType.VIDEO && videoFrame != null) {
-                Image(
-                    bitmap = videoFrame!!,
-                    contentDescription = "Video thumbnail",
+            // Mini video preview or music icon
+            if (activeType == MediaType.VIDEO) {
+                VideoPlayerSurface(
+                    playerState = GlobalMediaPlayer.activeVideoPlayerState,
                     modifier =
                         Modifier
                             .size(width = 48.dp, height = 36.dp)

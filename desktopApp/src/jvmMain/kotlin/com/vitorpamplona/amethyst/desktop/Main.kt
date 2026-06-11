@@ -89,7 +89,7 @@ import com.vitorpamplona.amethyst.desktop.network.Nip11Fetcher
 import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
 import com.vitorpamplona.amethyst.desktop.service.highlights.DesktopHighlightStore
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
-import com.vitorpamplona.amethyst.desktop.service.media.VlcjPlayerPool
+import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinNameService
 import com.vitorpamplona.amethyst.desktop.service.namecoin.DesktopNamecoinPreferences
 import com.vitorpamplona.amethyst.desktop.service.namecoin.LocalNamecoinPreferences
@@ -237,15 +237,12 @@ fun main() {
     DesktopImageLoaderSetup.setup()
     Runtime.getRuntime().addShutdownHook(
         Thread {
-            com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
-                .shutdown()
-            VlcjPlayerPool.shutdown()
+            GlobalMediaPlayer.shutdown()
             // Stop Tor daemon if running — reference set by App composable
             activeTorManager?.stopSync()
         },
     )
-    // Pre-init VLC on background thread so first play is fast
-    Thread { VlcjPlayerPool.init() }.start()
+    // kdroidFilter lazy-loads the native player on first playback — no pre-init needed.
     application {
         val windowState =
             rememberWindowState(

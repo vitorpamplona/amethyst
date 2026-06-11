@@ -67,7 +67,8 @@ playServicesCast = "22.3.1"
 vico-charts-compose = "3.1.0"
 zelory = "3.0.1"
 zoomable = "2.12.0"
-vlcj = "4.8.3"
+composemediaplayer = "0.10.0"
+jcodec = "0.2.5"
 commonsImaging = "1.0.0-alpha6"
 zxing = "3.5.4"
 zxingAndroidEmbedded = "4.3.0"
@@ -145,7 +146,9 @@ coil-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", versio
 coil-video = { group = "io.coil-kt.coil3", name = "coil-video", version.ref = "coil" }
 commons-imaging = { group = "org.apache.commons", name = "commons-imaging", version.ref = "commonsImaging" }
 slf4j-nop = { module = "org.slf4j:slf4j-nop", version.ref = "slf4j" }
-vlcj = { group = "uk.co.caprica", name = "vlcj", version.ref = "vlcj" }
+composemediaplayer = { group = "io.github.kdroidfilter", name = "composemediaplayer", version.ref = "composemediaplayer" }
+jcodec = { group = "org.jcodec", name = "jcodec", version.ref = "jcodec" }
+jcodec-javase = { group = "org.jcodec", name = "jcodec-javase", version.ref = "jcodec" }
 dev-whyoleg-cryptography-provider-apple-optimal = { module = "dev.whyoleg.cryptography:cryptography-provider-optimal", version.ref = "devWhyolegCryptography" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
