@@ -37,7 +37,7 @@ class RoomReactionsStateTest {
         to: String?,
         content: String,
         createdAt: Long,
-        id: String = "%064x".format(nextEventId++),
+        id: String = (nextEventId++).toString(16).padStart(64, '0'),
     ): ReactionEvent {
         val tags =
             buildList<Array<String>> {

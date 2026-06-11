@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.tor
 
 import android.content.Context
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -67,6 +68,67 @@ class TorService(
         if (cacheDir.exists()) {
             cacheDir.deleteRecursively()
             Log.d("TorService") { "Cleared Arti cache directory" }
+        }
+    }
+
+    /**
+     * The on-disk guard sample Arti persists between runs.
+     * Path: `<filesDir>/arti/state/state/guards.json`.
+     */
+    private fun guardsFile() = File(File(File(artiDataDir(), "state"), "state"), "guards.json")
+
+    /**
+     * Detects the wedged-guard-sample state behind the long-standing "can't
+     * connect to Tor" bug.
+     *
+     * On a flaky network, Arti records circuit failures past the first hop as
+     * "indeterminate" (it can't tell whether the guard or a later hop was at
+     * fault). Once a guard's indeterminate ratio crosses 0.7, Arti
+     * *permanently* disables it (`TooManyIndeterminateFailures`). Disabled
+     * guards are never re-enabled and never removed from the sample (kept for
+     * the 60-day confirmed lifetime), and the sample is capped at
+     * `max_sample_size` (60). Arti normally refills usable guards from the
+     * network when they drop below `min_filtered_sample_size` (20), but once
+     * the sample is full of unusable guards there is no room to add more — so
+     * replenishment is permanently wedged and every circuit returns
+     * `AllGuardsDown`. The state persists in `guards.json`, and bootstrap still
+     * "succeeds" (it reads cached directory data), so none of the init-failure
+     * self-heal paths ever fire and Tor is stuck across restarts.
+     *
+     * A single usable guard is enough to keep building circuits, so we only
+     * recover at the last resort: when a non-empty guard set has *zero* usable
+     * guards. A guard is unusable on disk if it has been permanently
+     * `disabled` or dropped from the consensus (`unlisted_since` set);
+     * reachability is in-memory only and not persisted, so it can't be checked
+     * here. Returns true when at least one non-empty selection has no usable
+     * guard left.
+     */
+    private fun noUsableGuards(): Boolean {
+        val file = guardsFile()
+        if (!file.exists()) return false
+
+        return try {
+            val root = jacksonObjectMapper().readTree(file)
+            var wedged = false
+            // Each top-level field is a guard-set selection (e.g. "default").
+            root.forEach { selection ->
+                val guards = selection.get("guards") ?: return@forEach
+                if (guards.isArray && guards.size() > 0) {
+                    val usable =
+                        guards.count { guard ->
+                            val disabled = guard.get("disabled")
+                            val unlisted = guard.get("unlisted_since")
+                            val isDisabled = disabled != null && !disabled.isNull
+                            val isUnlisted = unlisted != null && !unlisted.isNull
+                            !isDisabled && !isUnlisted
+                        }
+                    if (usable == 0) wedged = true
+                }
+            }
+            wedged
+        } catch (e: Exception) {
+            Log.w("TorService") { "Could not inspect guards.json: ${e.message}" }
+            false
         }
     }
 
@@ -121,6 +183,16 @@ class TorService(
                 // Clear cached consensus/descriptors so Arti bootstraps with
                 // fresh network data, preventing stale guards/circuits.
                 clearArtiCache()
+
+                // Self-heal the wedged guard sample (see [noUsableGuards]): if
+                // the persisted sample has no usable guard left, Arti can
+                // neither build circuits nor replenish, and would return
+                // AllGuardsDown forever. Wipe the on-disk state so the next
+                // bootstrap rebuilds a fresh guard sample.
+                if (noUsableGuards()) {
+                    Log.w("TorService") { "No usable Arti guards left on disk — wiping state to rebuild the guard sample" }
+                    clearAllArtiData()
+                }
 
                 val dataDir = artiDataDir().absolutePath
                 Log.d("TorService") { "Initializing Arti with data dir: $dataDir" }

@@ -119,13 +119,16 @@ import com.vitorpamplona.amethyst.desktop.ui.media.LocalWindowState
 import com.vitorpamplona.amethyst.desktop.ui.profile.ProfileInfoCard
 import com.vitorpamplona.amethyst.desktop.ui.relay.LocalRelayCategories
 import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
+import com.vitorpamplona.amethyst.desktop.ui.settings.ImageCompressionSettings
 import com.vitorpamplona.amethyst.desktop.ui.settings.MediaServerSettings
 import com.vitorpamplona.amethyst.desktop.ui.settings.NamecoinSettingsSection
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
@@ -1352,28 +1355,31 @@ fun MainContent(
                         scope.launch {
                             val innerEvent = event.unwrapAndUnsealOrNull(iAccount.signer) ?: return@launch
                             when (innerEvent) {
-                                is com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent -> {
-                                    val innerNote = localCache.getOrCreateNote(innerEvent.id)
-                                    val innerAuthor = localCache.getOrCreateUser(innerEvent.pubKey)
-                                    if (innerNote.event == null) {
-                                        innerNote.loadEvent(innerEvent, innerAuthor, emptyList())
+                                // Any DM-group event (kind 14 text, kind 15 encrypted file, and any
+                                // future NIP-17 variant) routes into the room by its participant set.
+                                is ChatroomKeyable -> {
+                                    if (innerEvent.isIncluded(iAccount.pubKey)) {
+                                        val innerNote = localCache.getOrCreateNote(innerEvent.id)
+                                        val innerAuthor = localCache.getOrCreateUser(innerEvent.pubKey)
+                                        if (innerNote.event == null) {
+                                            innerNote.loadEvent(innerEvent, innerAuthor, emptyList())
+                                        }
+                                        iAccount.chatroomList.addMessage(
+                                            innerEvent.chatroomKey(iAccount.pubKey),
+                                            innerNote,
+                                        )
                                     }
-                                    iAccount.chatroomList.addMessage(
-                                        innerEvent.chatroomKey(iAccount.pubKey),
-                                        innerNote,
-                                    )
                                 }
 
-                                is com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent -> {
-                                    val innerNote = localCache.getOrCreateNote(innerEvent.id)
-                                    val innerAuthor = localCache.getOrCreateUser(innerEvent.pubKey)
-                                    if (innerNote.event == null) {
-                                        innerNote.loadEvent(innerEvent, innerAuthor, emptyList())
+                                // Self-authored NIP-37 draft wrapped to self. Store it so it isn't
+                                // dropped; the desktop chat UI doesn't render drafts in the room feed
+                                // yet, so it is intentionally not added to a chatroom.
+                                is DraftWrapEvent -> {
+                                    val draftNote = localCache.getOrCreateNote(innerEvent.id)
+                                    val draftAuthor = localCache.getOrCreateUser(innerEvent.pubKey)
+                                    if (draftNote.event == null) {
+                                        draftNote.loadEvent(innerEvent, draftAuthor, emptyList())
                                     }
-                                    iAccount.chatroomList.addMessage(
-                                        innerEvent.chatroomKey(iAccount.pubKey),
-                                        innerNote,
-                                    )
                                 }
 
                                 is com.vitorpamplona.quartz.nip25Reactions.ReactionEvent -> {
@@ -1780,6 +1786,12 @@ fun RelaySettingsScreen(
                 initialServers = DesktopPreferences.blossomServers,
                 onServersChanged = { DesktopPreferences.blossomServers = it },
             )
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(24.dp))
+
+            // Image Compression Settings
+            ImageCompressionSettings()
             Spacer(Modifier.height(24.dp))
             HorizontalDivider()
             Spacer(Modifier.height(24.dp))

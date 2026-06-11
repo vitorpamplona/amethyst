@@ -40,7 +40,7 @@ class VideoVerticalEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : ReplaceableVideoEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+) : AddressableVideoEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     RootScope {
     companion object {
         const val KIND = 34236

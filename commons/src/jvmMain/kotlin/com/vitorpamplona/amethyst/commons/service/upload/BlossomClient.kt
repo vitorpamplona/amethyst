@@ -40,10 +40,10 @@ import java.io.File
  * The default constructor uses a fresh OkHttpClient — fine for one-shot
  * uses such as the CLI.
  */
-class BlossomClient(
+open class BlossomClient(
     private val okHttpClient: OkHttpClient = OkHttpClient(),
 ) {
-    suspend fun upload(
+    open suspend fun upload(
         file: File,
         contentType: String,
         serverBaseUrl: String,
@@ -84,7 +84,7 @@ class BlossomClient(
     /**
      * Upload raw bytes (e.g. encrypted blobs) to a Blossom server.
      */
-    suspend fun upload(
+    open suspend fun upload(
         bytes: ByteArray,
         contentType: String,
         serverBaseUrl: String,

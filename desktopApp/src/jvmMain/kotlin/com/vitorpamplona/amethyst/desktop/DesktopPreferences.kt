@@ -113,4 +113,24 @@ object DesktopPreferences {
         set(value) {
             prefs.putBoolean(KEY_SIDEBAR_COLLAPSED, value)
         }
+
+    // Image compression — the typed accessors live in
+    // ImageCompressionStore, which wraps these raw String/Boolean prefs
+    // in StateFlow for Compose reactivity. Defaults match
+    // CompressionQuality.DEFAULT and the "strip EXIF by default"
+    // privacy stance.
+    private const val KEY_IMAGE_QUALITY = "image_quality"
+    private const val KEY_IMAGE_STRIP_EXIF = "image_strip_exif"
+
+    internal var imageQualityRaw: String
+        get() = prefs.get(KEY_IMAGE_QUALITY, "DESKTOP_HIGH")
+        set(value) {
+            prefs.put(KEY_IMAGE_QUALITY, value)
+        }
+
+    internal var imageStripExif: Boolean
+        get() = prefs.getBoolean(KEY_IMAGE_STRIP_EXIF, true)
+        set(value) {
+            prefs.putBoolean(KEY_IMAGE_STRIP_EXIF, value)
+        }
 }

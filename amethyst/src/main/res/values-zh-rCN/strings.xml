@@ -261,6 +261,13 @@
     <string name="generate_a_new_key">生成新密钥</string>
     <string name="loading_feed">正在加载</string>
     <string name="loading_account">正在载入帐户</string>
+    <string name="chats_history_proto_nip17">已加密</string>
+    <string name="chats_history_proto_nip04">旧的</string>
+    <string name="chats_reply_searching_history">正在寻找原始消息…</string>
+    <!-- A reply whose target was searched for across all reachable history and never found. -->
+    <string name="chats_reply_not_found">找不到这条消息</string>
+    <!-- Reply subtitle when every relay genuinely bottomed out (no stalls) and it still wasn't there. -->
+    <string name="chats_reply_searched">搜索了每个中继 · 点击查看</string>
     <string name="error_loading_replies">"加载回复出错："</string>
     <string name="try_again">重试</string>
     <string name="notification_feed_is_empty">暂无通知</string>
@@ -2062,6 +2069,15 @@
     <string name="video_player_settings_action_pip_description">在浮动窗口播放视频(不支持时隐藏)</string>
     <string name="video_player_settings_action_cast">投射到设备</string>
     <string name="video_player_settings_action_cast_description">发送视频到您Wi-Fi上的 Chromecast 接收器(本地文件隐藏)</string>
+    <string name="audio_visualizer_settings">音频可视化</string>
+    <string name="audio_visualizer_settings_description">选择音频笔记播放时显示的动画。</string>
+    <string name="audio_visualizer_off">关</string>
+    <string name="audio_visualizer_bars">柱状频谱</string>
+    <string name="audio_visualizer_waves">彩色波形</string>
+    <string name="audio_visualizer_radial">辐射环</string>
+    <string name="audio_visualizer_aurora">极光</string>
+    <string name="audio_visualizer_classic">经典波形</string>
+    <string name="audio_visualizer_static">静态图像</string>
     <string name="profile_image_of_user">%1$s 的个人头像</string>
     <string name="relay_info">中继器 %1$s</string>
     <string name="expand_relay_list">展开中继列表</string>
@@ -2791,6 +2807,12 @@
     <string name="goal_progress">设定目标为 %2$s sats，筹集到 %1$s</string>
     <string name="fundraiser_ends">结束 %1$s</string>
     <string name="fundraiser_onchain_donation">链上捐助</string>
+    <plurals name="birdex_species_count">
+        <item quantity="other">Birdex · %1$d 个物种</item>
+    </plurals>
+    <plurals name="birdex_species_preview_more">
+        <item quantity="other">%1$s + 另%2$d</item>
+    </plurals>
     <string name="goal_amount_label">目标金额 (sats)</string>
     <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">描述您的目标</string>

@@ -71,6 +71,7 @@ fun buildSettingsCatalog(
                     symEntry(R.string.favorite_dvms_title, MaterialSymbols.AutoAwesome, R.string.favorite_dvms_search_keywords, Route.EditFavoriteAlgoFeeds),
                     symEntry(R.string.reactions, MaterialSymbols.FavoriteBorder, R.string.reactions_search_keywords, Route.UpdateReactionType),
                     symEntry(R.string.video_player_settings, MaterialSymbols.VideoSettings, R.string.video_player_search_keywords, Route.VideoPlayerSettings),
+                    symEntry(R.string.audio_visualizer_settings, MaterialSymbols.MusicNote, R.string.audio_visualizer_search_keywords, Route.AudioVisualizerSettings),
                     symEntry(R.string.zaps, MaterialSymbols.Bolt, R.string.zaps_search_keywords, Route.UpdateZapAmount()),
                     symEntry(R.string.payment_targets, MaterialSymbols.Payment, R.string.payment_targets_search_keywords, Route.EditPaymentTargets),
                     symEntry(R.string.security_filters, MaterialSymbols.Security, R.string.security_filters_search_keywords, Route.SecurityFilters),

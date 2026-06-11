@@ -48,6 +48,13 @@ import kotlin.system.exitProcess
  * shape is not. Diagnostic logs always go to stderr.
  */
 fun main(argv: Array<String>) {
+    // Force AWT headless before any class load that might touch ImageIO,
+    // Toolkit, or Graphics2D (image upload pulls in BufferedImage via
+    // commons MediaMetadataReader / ImageReencoder). The Gradle launcher
+    // also sets this via applicationDefaultJvmArgs; this is a belt-and-
+    // braces guard for invocations that bypass the launcher scripts.
+    System.setProperty("java.awt.headless", "true")
+
     // Set output mode before dispatch so even argument-parsing errors
     // honour --json.
     if (argv.any { it == "--json" || it == "--json=true" }) {

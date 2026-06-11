@@ -412,6 +412,11 @@ dependencies {
     implementation(libs.markdown.ui.material3)
     implementation(libs.markdown.commonmark)
 
+    // LaTeX math rendering ($...$ and $$...$$ inline equations)
+    implementation(libs.jlatexmath.android)
+    implementation(libs.jlatexmath.font.greek)
+    implementation(libs.jlatexmath.font.cyrillic)
+
     // Language picker and Theme chooser
     implementation(libs.androidx.appcompat)
 
@@ -468,9 +473,6 @@ dependencies {
 
     // EXIF metadata stripping
     implementation(libs.androidx.exifinterface)
-
-    // Voice anonymization DSP
-    implementation(libs.tarsosdsp)
 
     // WebRTC for voice/video calls
     implementation(libs.stream.webrtc.android)

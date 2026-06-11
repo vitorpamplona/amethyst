@@ -339,6 +339,7 @@ class AppModules(
                     isPrimaryCoreRpc = true,
                 )
             }
+
             NamecoinBackend.ELECTRUMX -> {
                 // Custom servers first (if any). If the user only has the public
                 // defaults configured, primary == defaultElectrumx and the
@@ -510,6 +511,9 @@ class AppModules(
     val detailedLogger = if (isDebug) RelayLogger(client, debugSending = false, debugReceiving = false) else null
     val relayReqStats = if (isDebug) RelayReqStats(client) else null
     val logger = if (isDebug) RelaySpeedLogger(client) else null
+
+    // Focused timeline for the DM / gift-wrap loading path (tag: DMPagination).
+    // val dmDiagnostics = if (isDebug) DmRelayDiagnosticsLogger(client) else null
 
     // Coordinates all subscriptions for the Nostr Client
     val sources: RelaySubscriptionsCoordinator =

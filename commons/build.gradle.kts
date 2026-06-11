@@ -1,5 +1,23 @@
 
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.DisableCacheInKotlinVersion
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeCacheApi
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable
+
+// Disables the Kotlin/Native compiler cache for an iOS test binary so the
+// Compose ui-uikit klib recompiles fresh instead of linking the broken prebuilt
+// cache (see the call site in the `kotlin {}` block). The version guard makes
+// Kotlin re-surface this workaround once we move past 2.3.21, so it can be
+// dropped when a newer Compose/Kotlin pairing fixes the cache. Wrapped in a
+// helper because @OptIn only applies to declarations, not bare statements.
+@OptIn(KotlinNativeCacheApi::class)
+fun TestExecutable.disableUiKitPrebuiltCache() =
+    disableNativeCache(
+        DisableCacheInKotlinVersion.`2_3_21`,
+        "Compose ui-uikit prebuilt cache references UIViewLayoutRegion (iOS 17+); " +
+            "linking the iOS test binary fails under Xcode 16.4.",
+    )
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -49,6 +67,22 @@ kotlin {
     // which commonMain files still reach for platform-only APIs.
     iosArm64()
     iosSimulatorArm64()
+
+    // Compose Multiplatform 1.11.0 ships an `org.jetbrains.compose.ui:ui-uikit`
+    // prebuilt Kotlin/Native cache whose CMPLayoutRegion object hard-references
+    // the UIKit class `UIViewLayoutRegion` (introduced in iOS 17). Linking the
+    // iOS *test* executable against that cache under Xcode 16.4 fails with
+    //   ld: Undefined symbols: _OBJC_CLASS_$_UIViewLayoutRegion
+    // because the cached object was built for a newer simulator SDK (18.5) than
+    // the test binary is being linked for (14.0). Disabling the native cache for
+    // the iOS test binaries makes ui-uikit recompile against the active SDK,
+    // where the symbol resolves. See disableUiKitPrebuiltCache() below and
+    // https://kotl.in/disable-native-cache
+    targets.withType<KotlinNativeTarget>().configureEach {
+        binaries.withType<TestExecutable>().configureEach {
+            disableUiKitPrebuiltCache()
+        }
+    }
 
     sourceSets {
         commonMain {
@@ -148,6 +182,10 @@ kotlin {
 
                 // EXIF stripping for image uploads (used by service/upload/MediaCompressor).
                 implementation(libs.commons.imaging)
+
+                // Image re-encode + progressive downscale (used by service/upload/ImageReencoder).
+                // Pure-Java, MIT. See docs/plans/2026-06-08-feat-desktop-image-compression-plan.md.
+                implementation(libs.thumbnailator)
             }
         }
 
@@ -180,6 +218,15 @@ kotlin {
             }
         }
 
+        // jvmTest needs the JVM secp256k1 bindings whenever a test
+        // exercises a real signer (e.g. UploadOrchestratorTest, which
+        // signs Blossom auth events end-to-end).
+        getByName("jvmTest") {
+            dependencies {
+                implementation(libs.secp256k1.kmp.jni.jvm)
+            }
+        }
+
         getByName("androidDeviceTest") {
             dependencies {
                 implementation(libs.androidx.junit)
@@ -193,6 +240,15 @@ compose.resources {
     publicResClass = true
     packageOfResClass = "com.vitorpamplona.amethyst.commons.resources"
     generateResClass = always
+}
+
+// JVM tests run AWT-backed code (ImageIO, Thumbnailator, BufferedImage) — pin
+// headless mode so a stray Toolkit.getDefaultToolkit() in a transitive dep
+// never bounces the macOS Dock during CI/local test runs.
+tasks.withType<Test>().configureEach {
+    if (name == "jvmTest") {
+        jvmArgs("-Djava.awt.headless=true")
+    }
 }
 
 // iOS purity gate — same shape as :quartz:verifyKmpPurity. See the rationale

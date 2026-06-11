@@ -42,6 +42,9 @@ import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QAddressableTag
+import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
+import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuotes
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
@@ -294,6 +297,7 @@ class DesktopLocalCache : ICacheProvider {
         trackNoteAuthor(note, event.pubKey)
         relay?.let { note.addRelay(it) }
         repliesTo.forEach { it.addReply(note) }
+        addQuoteBoosts(event, note, repliesTo)
         return true
     }
 
@@ -313,7 +317,33 @@ class DesktopLocalCache : ICacheProvider {
         trackNoteAuthor(note, event.pubKey)
         relay?.let { note.addRelay(it) }
         repliesTo.forEach { it.addReply(note) }
+        addQuoteBoosts(event, note, repliesTo)
         return true
+    }
+
+    /**
+     * NIP-18 quote reposts: a note carrying a `q` tag is a quote-repost of the quoted
+     * note, so it counts as a boost in the quoted note's repost counter alongside
+     * kind:6/kind:16 reposts. The quoted note is kept out of `replyTo` so the quote
+     * still renders as a root post; targets already replied to are skipped to avoid
+     * double-counting, and self-quotes are ignored.
+     */
+    private fun addQuoteBoosts(
+        event: Event,
+        note: Note,
+        repliesTo: List<Note>,
+    ) {
+        event.taggedQuotes().forEach { qTag ->
+            val quoted =
+                when (qTag) {
+                    is QEventTag -> getOrCreateNote(qTag.eventId)
+                    is QAddressableTag -> getOrCreateAddressableNote(qTag.address)
+                    else -> null
+                }
+            if (quoted != null && quoted != note && quoted !in repliesTo) {
+                quoted.addBoost(note)
+            }
+        }
     }
 
     /**

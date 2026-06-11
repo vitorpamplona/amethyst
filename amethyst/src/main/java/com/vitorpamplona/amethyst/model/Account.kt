@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.BuildConfig
 import com.vitorpamplona.amethyst.LocalPreferences
+import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
@@ -647,6 +648,12 @@ class Account(
 
     suspend fun changeVideoPlayerButtonItems(items: List<VideoPlayerButtonItem>) {
         if (settings.changeVideoPlayerButtonItems(items)) {
+            sendNewAppSpecificData()
+        }
+    }
+
+    suspend fun changeAudioVisualizer(style: VisualizerStyle) {
+        if (settings.changeAudioVisualizer(style)) {
             sendNewAppSpecificData()
         }
     }

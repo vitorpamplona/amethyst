@@ -43,6 +43,7 @@ import coil3.compose.AsyncImage
 fun ZoomableImage(
     url: String,
     modifier: Modifier = Modifier,
+    onTap: (() -> Unit)? = null,
 ) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offsetX by remember { mutableFloatStateOf(0f) }
@@ -52,7 +53,7 @@ fun ZoomableImage(
         modifier =
             modifier
                 .fillMaxSize()
-                .pointerInput(Unit) {
+                .pointerInput(onTap) {
                     detectTapGestures(
                         onDoubleTap = {
                             scale = 1f
@@ -60,7 +61,9 @@ fun ZoomableImage(
                             offsetY = 0f
                         },
                         onTap = {
-                            // Consume single taps so they don't propagate to backdrop
+                            // Single tap → caller handles (e.g. copy URL).
+                            // Consumed either way so backdrop dismiss never fires.
+                            onTap?.invoke()
                         },
                     )
                 }.pointerInput(Unit) {

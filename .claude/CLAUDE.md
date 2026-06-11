@@ -12,8 +12,10 @@ architecture while sharing the back end components with the android counterpart.
 a non-interactive JVM command-line client that drives the same `quartz` + `commons` code — used by
 humans, agents, and interop tests. `quic` is a from-scratch pure-Kotlin QUIC v1 + HTTP/3 +
 WebTransport client (no JNI, no BouncyCastle), built because no Android-compatible Java QUIC library
-exists. `nestsClient` runs the audio-room protocol on top of `:quic` for the NIP-53
-audio-rooms feature. It implements both IETF `draft-ietf-moq-transport-17` (under
+exists. `geode` is a standalone JVM Nostr relay (Ktor) built on quartz's
+relay-server code; smaller modules are `benchmark` (Android macrobenchmarks) and
+`quic-interop` (QUIC interop runner, lives at `quic/interop`). `nestsClient` runs
+the audio-room protocol on top of `:quic` for the NIP-53 audio-rooms feature. It implements both IETF `draft-ietf-moq-transport-17` (under
 `moq/`) and **moq-lite Lite-03** (kixelated's variant, under `moq/lite/`); the
 production listener AND speaker paths both run on moq-lite to interop with the
 nostrnests reference relay. The IETF code is kept as a reference + unit-test
@@ -23,27 +25,13 @@ implementation for any future IETF target; see
 Canonical NIP specs live at <https://github.com/nostr-protocol/nips> — use
 `/nip <number>` to pull a specific one (it fetches the spec file directly).
 
-## Verify, Don't Guess (standing instruction)
+## Verify, Don't Guess
 
-A plausible-sounding explanation is cheap; being right is not. Before
-asserting what a problem is or how something behaves:
-
-1. **State hypotheses as hypotheses.** If you haven't run it, say "I'm
-   guessing" or "haven't verified" — never dress an untested guess up as a
-   diagnosis. Use "I verified X by running Y" only when you actually did.
-2. **Reproduce before diagnosing.** If a claim is checkable in under a
-   minute, check it before stating it. This repo gives you the means:
-   `./gradlew test`, the per-module tests, and `amy` (the CLI exists partly
-   to drive `quartz`/`commons` for interop checks). Write the failing case
-   first, watch it fail, *then* explain. For non-trivial bugs use `/bugfix`
-   (reproduce-first) or `/investigate` (competing hypotheses + refutation).
-3. **Predict, then run.** Before running a command, state the output you
-   expect. A mismatch is the cheapest signal that your model is wrong.
-4. **Don't commit to one cause.** A single immediate explanation stops you
-   from looking. Hold 2–3 candidates and a discriminating test for each.
-
-If you find yourself writing paragraphs to defend a theory, that effort
-almost always should have been one test.
+Don't assert a diagnosis you haven't reproduced. This repo gives you cheap
+verification tools: `./gradlew test`, per-module test suites, and the `amy`
+CLI (built partly to drive `quartz`/`commons` for interop checks). If a
+claim is checkable in under a minute, check it before stating it — write
+the failing case first, watch it fail, then explain.
 
 ## Architecture
 
@@ -69,6 +57,7 @@ amethyst/
 │   └── src/
 │       ├── commonMain/    # MoQ session, NestsListener, audio glue
 │       └── jvmAndroid/    # Opus encode/decode, AudioRecord/AudioTrack
+├── geode/          # Standalone JVM Nostr relay (Ktor) on quartz's relay-server code
 ├── desktopApp/     # Desktop JVM application (layouts, navigation)
 ├── amethyst/       # Android app (layouts, navigation)
 └── cli/            # Amy — non-interactive CLI (JVM only, no Compose)
@@ -123,16 +112,6 @@ to be used together:
   skills: `compose-expert` tells you where shared composables live;
   `compose-slot-api-pattern` tells you how to shape their public API.
 
-## Workflow
-
-**When you ask for a feature:**
-
-1. **Quick skill assessment** - I identify which skills are relevant
-2. **Propose which skills** - I present which skills I'll use for the task
-3. **Get approval** - You review and approve (or adjust) the skill selection
-4. **Review plan using approved skills** - I invoke the approved skills to create detailed implementation plan
-5. **Execute with skills** - Skills collaborate to implement the feature
-
 ## Feature Workflow
 
 **CRITICAL: Check existing implementations first — most logic already exists.**
@@ -142,17 +121,9 @@ job is usually to **reuse** (`quartz` protocol/business logic), **extract**
 (Android UI/ViewModels → `commons`), and add **platform-specific** layouts/nav —
 not to duplicate existing managers, caches, or state.
 
-Capture the survey as a matrix in your plan:
-
-| File/Component | Status | Location | Action |
-|----------------|--------|----------|--------|
-| FilterBuilders | ✅ Reuse | quartz/relay/filters/ | Use as-is |
-| NoteCard | 📦 Extract | amethyst/ui/note/ → commons/ | Extract to commons |
-| ProfileCache | ⚠️ Avoid | N/A | Already in User/Account pattern |
-
-**Legend:** ✅ Reuse (exists, use directly) · 📦 Extract (exists in Android, move
-to `commons`) · 🆕 New (doesn't exist — platform-specific only) · ⚠️ Avoid
-(duplicate; use existing pattern).
+Summarize the survey in your plan: for each component, note whether it's
+reused as-is, extracted from `amethyst/` to `commons/`, genuinely new
+(platform-specific only), or a duplicate of an existing pattern to avoid.
 
 **Share vs keep platform-native:**
 
@@ -188,6 +159,37 @@ version. `quartz/` is protocol-only — no composables.
 # Format code
 ./gradlew spotlessApply
 ```
+
+## Dependency Licensing
+
+**MANDATORY whenever you introduce a new third-party dependency** — in *any*
+module (`quartz`, `commons`, `amethyst`, `desktopApp`, `cli`, `quic`,
+`nestsClient`, …), whether you add it to `gradle/libs.versions.toml` or to a
+module's `build.gradle.kts`: determine its license **before** wiring it in.
+Amethyst ships under the **MIT** license, so a copyleft dependency linked into a
+distributed artifact (APK, desktop binary) can force that artifact's
+combined-work terms onto the whole project.
+
+Verify against the dependency's actual `LICENSE`/`COPYING` file or its published
+POM — **not from memory**. Then classify and act:
+
+- **Permissive** (MIT, Apache-2.0, BSD, ISC, MPL-2.0, zlib, …) → **OK**,
+  proceed.
+- **LGPL, or GPL/EPL with a linking / Classpath exception** → **WARN.**
+  Acceptable to link (the exception keeps our own code MIT), but call it out in
+  your summary so the human knows. Confirm the exception actually exists in the
+  LICENSE text — don't assume it does.
+- **Stricter than LGPL** — GPL/AGPL **without** a linking exception, SSPL,
+  proprietary/commercial-only, or anything where the linking-exception check is
+  "no" → **STRONGLY WARN and STOP.** Do not add it silently. Surface it
+  prominently and **require an explicit call-out in the PR description** so a
+  maintainer makes the decision. Prefer a permissive alternative, a clean-room
+  implementation, or dropping the feature.
+
+For any GPL-family hit the decisive question is always **"is there a linking
+(LGPL/Classpath) exception?"** — that is what separates a WARN from a STOP.
+(Example: TarsosDSP, GPLv3 with no exception, was removed from `amethyst` and
+replaced with an in-house pitch shifter for exactly this reason.)
 
 ## Quartz KMP Structure
 

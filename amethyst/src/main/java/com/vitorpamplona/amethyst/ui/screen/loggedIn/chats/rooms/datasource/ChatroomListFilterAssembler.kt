@@ -35,9 +35,16 @@ class ChatroomListState(
 class ChatroomListFilterAssembler(
     client: INostrClient,
 ) : ComposeSubscriptionManager<ChatroomListState>() {
+    // NIP-04 live tail: the recent week, always open at the top.
+    val nip04 = ChatroomListNip04SubAssembler(client, ::allKeys)
+
+    // NIP-04 history: older DMs, paged backward by until+limit, independently of gift wraps.
+    val nip04History = ChatroomListNip04HistorySubAssembler(client, ::allKeys)
+
     val group =
         listOf(
-            DMsFromUserFilterSubAssembler(client, ::allKeys),
+            nip04,
+            nip04History,
             FollowingPublicChatSubAssembler(client, ::allKeys),
             FollowingEphemeralChatSubAssembler(client, ::allKeys),
         )

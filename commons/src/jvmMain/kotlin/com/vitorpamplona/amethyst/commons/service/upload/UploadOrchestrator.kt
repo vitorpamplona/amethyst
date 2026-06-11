@@ -20,11 +20,14 @@
  */
 package com.vitorpamplona.amethyst.commons.service.upload
 
+import com.vitorpamplona.amethyst.commons.service.upload.ImageReencoder.ReencodeResult
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import com.vitorpamplona.quartz.utils.sha256.sha256
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import java.io.File
 
 data class UploadResult(
@@ -42,48 +45,109 @@ data class EncryptedUploadResult(
 class UploadOrchestrator(
     private val client: BlossomClient = BlossomClient(),
 ) {
+    /**
+     * Upload an image file to a Blossom server, optionally re-encoding
+     * + downscaling first, optionally stripping EXIF.
+     *
+     * Flow:
+     * 1. [ImageReencoder] decides:
+     *    - `Reencoded(temp)` → upload the temp; EXIF is naturally
+     *      absent because the re-encode wiped it.
+     *    - `PassThrough` (animated GIF / WebP / SVG) → upload the
+     *      *original*. If [stripExif] is on and source is JPEG, run
+     *      [MediaCompressor.stripExif] first.
+     * 2. [MediaMetadataReader] computes the upload hash on the final
+     *    bytes (whatever bytes actually leave the machine).
+     * 3. Blossom auth + upload (unchanged).
+     * 4. All temp files created along the way are deleted in a
+     *    finally block under [NonCancellable] so cleanup survives
+     *    coroutine cancellation.
+     *
+     * @throws CompressionException when the reencoder refuses or fails
+     *   (caller surfaces the fail-loud confirm dialog).
+     */
     suspend fun upload(
         file: File,
         alt: String?,
         serverBaseUrl: String,
         signer: NostrSigner,
         stripExif: Boolean = true,
+        quality: CompressionQuality? = null,
+        bypassReencode: Boolean = false,
+        preCompressed: File? = null,
     ): UploadResult {
-        // 1. Strip EXIF if requested (JPEG only)
-        val processedFile =
-            if (stripExif) {
-                MediaCompressor.stripExif(file)
-            } else {
-                file
+        var reencodedTemp: File? = null
+        var strippedTemp: File? = null
+        try {
+            // 1. Re-encode (or pass-through). Four branches:
+            //    - preCompressed != null: the preview dialog already
+            //      ran ImageReencoder and is handing off ownership of
+            //      its temp file. Skip reencode, skip stripExif (the
+            //      reencode already wiped EXIF), just upload + clean.
+            //    - bypassReencode == true: user opted to send the
+            //      original after a reencode failure or refusal.
+            //    - quality == null: caller did not opt into the
+            //      desktop image-compression feature. Treat the file
+            //      as a pass-through — preserves old orchestrator
+            //      semantics for the CLI, Android, and any non-
+            //      image upload (voice memos, video, DM files).
+            //    - else: run the normal reencode path with the
+            //      caller-requested preset.
+            val reencode =
+                when {
+                    preCompressed != null -> ReencodeResult.Reencoded(preCompressed)
+                    bypassReencode || quality == null ->
+                        ReencodeResult.PassThrough(ImageReencoder.PassReason.BypassByUser)
+                    else -> ImageReencoder.reencode(file, quality)
+                }
+            val afterReencode =
+                when (reencode) {
+                    is ReencodeResult.Reencoded -> reencode.file.also { reencodedTemp = it }
+                    is ReencodeResult.PassThrough -> file
+                }
+
+            // 2. Strip EXIF only when we're shipping the original
+            //    (re-encode already wipes EXIF naturally).
+            val finalFile =
+                if (stripExif && reencode is ReencodeResult.PassThrough) {
+                    val stripped = MediaCompressor.stripExif(afterReencode)
+                    if (stripped != afterReencode) strippedTemp = stripped
+                    stripped
+                } else {
+                    afterReencode
+                }
+
+            // 3. Compute metadata on the bytes that will actually
+            //    leave this machine.
+            val metadata = MediaMetadataReader.compute(finalFile)
+
+            // 4. Create auth header.
+            val authHeader =
+                BlossomAuth.createUploadAuth(
+                    hash = metadata.sha256,
+                    size = metadata.size,
+                    alt = alt ?: "Uploading ${file.name}",
+                    signer = signer,
+                )
+
+            // 5. Upload.
+            val result =
+                client.upload(
+                    file = finalFile,
+                    contentType = metadata.mimeType,
+                    serverBaseUrl = serverBaseUrl,
+                    authHeader = authHeader,
+                )
+
+            return UploadResult(blossom = result, metadata = metadata)
+        } finally {
+            // Eager cleanup of every intermediate. NonCancellable so a
+            // user-cancelled upload still cleans up its temps.
+            withContext(NonCancellable) {
+                strippedTemp?.delete()
+                reencodedTemp?.delete()
             }
-
-        // 2. Compute metadata (hash, dimensions, blurhash)
-        val metadata = MediaMetadataReader.compute(processedFile)
-
-        // 3. Create auth header
-        val authHeader =
-            BlossomAuth.createUploadAuth(
-                hash = metadata.sha256,
-                size = metadata.size,
-                alt = alt ?: "Uploading ${file.name}",
-                signer = signer,
-            )
-
-        // 4. Upload
-        val result =
-            client.upload(
-                file = processedFile,
-                contentType = metadata.mimeType,
-                serverBaseUrl = serverBaseUrl,
-                authHeader = authHeader,
-            )
-
-        // 5. Clean up temp file if we stripped EXIF
-        if (processedFile != file) {
-            processedFile.delete()
         }
-
-        return UploadResult(blossom = result, metadata = metadata)
     }
 
     /**

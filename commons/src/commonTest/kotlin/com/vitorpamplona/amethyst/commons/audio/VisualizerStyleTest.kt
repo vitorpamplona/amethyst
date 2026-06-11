@@ -18,28 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.datasource
+package com.vitorpamplona.amethyst.commons.audio
 
-import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
-import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
-import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-class ChatroomFilterSubAssembler(
-    client: INostrClient,
-    allKeys: () -> Set<ChatroomQueryState>,
-) : PerUserAndFollowListEoseManager<ChatroomQueryState, String>(client, allKeys) {
-    override fun updateFilter(
-        key: ChatroomQueryState,
-        since: SincePerRelayMap?,
-    ): List<RelayBasedFilter>? =
-        if (key.account.isWriteable()) {
-            filterNip04DMs(key.room.users, key.account, since)
-        } else {
-            emptyList()
-        }
+class VisualizerStyleTest {
+    @Test
+    fun parsesByNameWithSafeDefault() {
+        assertEquals(VisualizerStyle.WAVES, VisualizerStyle.fromName("WAVES"))
+        assertEquals(VisualizerStyle.RADIAL, VisualizerStyle.fromName("RADIAL"))
+        assertEquals(VisualizerStyle.CLASSIC, VisualizerStyle.fromName("nonsense"))
+        assertEquals(VisualizerStyle.CLASSIC, VisualizerStyle.fromName(null))
+    }
 
-    override fun user(key: ChatroomQueryState) = key.account.userProfile()
-
-    override fun list(key: ChatroomQueryState) = key.listId
+    @Test
+    fun defaultIsClassic() {
+        assertEquals(VisualizerStyle.CLASSIC, VisualizerStyle.DEFAULT)
+    }
 }

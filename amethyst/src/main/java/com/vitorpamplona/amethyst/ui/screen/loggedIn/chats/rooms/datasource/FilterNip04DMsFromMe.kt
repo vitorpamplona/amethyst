@@ -30,6 +30,8 @@ fun filterNip04DMsFromMe(
     user: User,
     relay: NormalizedRelayUrl,
     since: Long?,
+    until: Long? = null,
+    limit: Int? = null,
 ): RelayBasedFilter =
     RelayBasedFilter(
         relay = relay,
@@ -38,5 +40,7 @@ fun filterNip04DMsFromMe(
                 kinds = listOf(PrivateDmEvent.KIND),
                 authors = listOf(user.pubkeyHex),
                 since = since,
+                until = until,
+                limit = limit,
             ),
     )

@@ -257,6 +257,8 @@ open class ShortNotePostViewModel :
         get() = voiceAnonymization.processingPreset
 
     // Polls
+    // Both regular polls and zap polls share the same `pollOptions` text fields so that switching
+    // between the two poll types never hides or discards the text the user already typed.
     var canUsePoll by mutableStateOf(false)
     var wantsPoll by mutableStateOf(false)
     var pollOptions: SnapshotStateMap<Int, OptionTag> = newStateMapPollOptions()
@@ -266,7 +268,6 @@ open class ShortNotePostViewModel :
     // ZapPolls
     var canUseZapPoll by mutableStateOf(false)
     var wantsZapPoll by mutableStateOf(false)
-    var zapPollOptions: SnapshotStateMap<Int, String> = newStateMapZapPollOptions()
     var zapPollValueMaximum by mutableStateOf<Long?>(null)
     var zapPollValueMinimum by mutableStateOf<Long?>(null)
     var zapPollConsensusThreshold: Int? = null
@@ -794,7 +795,8 @@ open class ShortNotePostViewModel :
         wantsZapPoll = polls.isNotEmpty()
 
         polls.forEach { tag ->
-            zapPollOptions[tag.index] = tag.descriptor
+            val current = pollOptions[tag.index]
+            pollOptions[tag.index] = OptionTag(current?.code ?: RandomInstance.randomChars(6), tag.descriptor)
         }
 
         zapPollValueMinimum = draftEvent.minAmount()
@@ -1011,7 +1013,7 @@ open class ShortNotePostViewModel :
                 imetas(usedAttachments)
             }
         } else if (wantsZapPoll) {
-            val options = zapPollOptions.map { PollOptionTag(it.key, it.value) }
+            val options = pollOptions.map { PollOptionTag(it.key, it.value.label) }
             if (options.isEmpty()) return null
 
             ZapPollEvent.build(tagger.message, options) {
@@ -1230,7 +1232,6 @@ open class ShortNotePostViewModel :
         closedAt = TimeUtils.oneDayAhead()
 
         wantsZapPoll = false
-        zapPollOptions = newStateMapZapPollOptions()
         zapPollValueMaximum = null
         zapPollValueMinimum = null
         zapPollConsensusThreshold = null
@@ -1356,12 +1357,6 @@ open class ShortNotePostViewModel :
             1 to OptionTag(RandomInstance.randomChars(6), ""),
         )
 
-    private fun newStateMapZapPollOptions(): SnapshotStateMap<Int, String> =
-        mutableStateMapOf(
-            0 to "",
-            1 to "",
-        )
-
     fun canPost(): Boolean {
         // Voice messages can be posted without text (with either uploaded or pending recording)
         if (voiceMetadata != null || voiceRecording != null) {
@@ -1385,7 +1380,8 @@ open class ShortNotePostViewModel :
             (
                 !wantsZapPoll ||
                     (
-                        zapPollOptions.values.all { it.isNotEmpty() } &&
+                        pollOptions.isNotEmpty() &&
+                            pollOptions.all { it.value.label.isNotEmpty() } &&
                             isValidValueMinimum.value &&
                             isValidValueMaximum.value
                     )
@@ -1618,35 +1614,6 @@ open class ShortNotePostViewModel :
             isValidValueMinimum.value = true
             isValidValueMaximum.value = true
         }
-    }
-
-    fun removeZapPollOption(optionIndex: Int) {
-        zapPollOptions.removeOrderedZapPoll(optionIndex)
-        draftTag.newVersion()
-    }
-
-    private fun MutableMap<Int, String>.removeOrderedZapPoll(index: Int) {
-        val keyList = keys
-        val elementList = values.toMutableList()
-        run stop@{
-            for (i in index until elementList.size) {
-                val nextIndex = i + 1
-                if (nextIndex == elementList.size) return@stop
-                elementList[i] = elementList[nextIndex].also { elementList[nextIndex] = "null" }
-            }
-        }
-        elementList.removeAt(elementList.size - 1)
-        val newEntries = keyList.zip(elementList) { key, content -> Pair(key, content) }
-        this.clear()
-        this.putAll(newEntries)
-    }
-
-    fun updateZapPollOption(
-        optionIndex: Int,
-        text: String,
-    ) {
-        zapPollOptions[optionIndex] = text
-        draftTag.newVersion()
     }
 
     fun toggleMarkAsSensitive() {

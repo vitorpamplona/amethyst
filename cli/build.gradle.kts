@@ -33,6 +33,11 @@ dependencies {
 application {
     mainClass.set("com.vitorpamplona.amethyst.cli.MainKt")
     applicationName = "amy"
+    // amy is a non-interactive CLI — never spawn AWT GUI threads. Defensive
+    // against transitive deps that touch ImageIO / Toolkit during image
+    // upload (see commons/.../service/upload/ImageReencoder.kt). Belt-and-
+    // braces with the runtime System.setProperty in Main.kt.
+    applicationDefaultJvmArgs = listOf("-Djava.awt.headless=true")
 }
 
 // Inject `LANG=C.UTF-8` (and the matching Windows code page) into the
@@ -223,7 +228,7 @@ val amyImage =
             #!/bin/sh
             # amy launcher — uses the bundled jlink'd JRE so no system Java is required.
             DIR="${'$'}(cd "${'$'}(dirname "${'$'}0")/.." && pwd)"
-            exec "${'$'}DIR/runtime/bin/java" -cp "${'$'}DIR/lib/*" $mainClass "${'$'}@"
+            exec "${'$'}DIR/runtime/bin/java" -Djava.awt.headless=true -cp "${'$'}DIR/lib/*" $mainClass "${'$'}@"
             """.trimIndent() + "\n"
 
         doLast {

@@ -21,22 +21,22 @@
 package com.vitorpamplona.amethyst.commons
 
 import com.vitorpamplona.amethyst.commons.blurhash.SRGB
-import org.junit.Assert.assertEquals
-import org.junit.Test
 import kotlin.math.round
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class SRGBTest {
     @Test
     fun testEncodeDecode() {
         for (i in 0..255) {
-            assertEquals("$i encode decode", i, SRGB.linearToSrgb(SRGB.srgbToLinear(i)))
+            assertEquals(i, SRGB.linearToSrgb(SRGB.srgbToLinear(i)), "$i encode decode")
         }
 
         for (i in 0..100) {
             val srgb = SRGB.linearToSrgb(i / 100.0f)
             val linear = round(SRGB.srgbToLinear(srgb) * 100).toInt()
 
-            assertEquals("$i decode encode", i, linear)
+            assertEquals(i, linear, "$i decode encode")
         }
     }
 }
