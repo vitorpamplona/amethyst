@@ -66,7 +66,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import kotlinx.coroutines.launch
 import androidx.compose.material3.Icon as M3Icon
 
-private val CashuPurple = Color(0xFF7E57C2)
+private val CashuPurple = Color(0xFFA855F7)
 
 /**
  * One FlowRow of tappable chips for every rail the Send Payment screen can pay
@@ -159,10 +159,13 @@ fun DisplayPaymentRailChips(
                 label = stringRes(R.string.send_payment_method_cashu),
                 onClick = { openSendPayment(ProfilePaymentMethod.CASHU) },
             ) {
+                // The Cashu vector is a monochrome outline drawn in black,
+                // meant to be tinted like a Material Symbol — untinted it
+                // disappears on dark backgrounds.
                 M3Icon(
                     imageVector = CustomHashTagIcons.Cashu,
                     contentDescription = null,
-                    tint = Color.Unspecified,
+                    tint = CashuPurple,
                     modifier = Size16Modifier,
                 )
             }
