@@ -178,6 +178,7 @@ import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip10Notes.threadRootIdOrSelf
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -656,6 +657,11 @@ class Account(
         if (settings.changeAudioVisualizer(style)) {
             sendNewAppSpecificData()
         }
+    }
+
+    suspend fun toggleChatroomPin(room: ChatroomKey) {
+        settings.toggleChatroomPin(room)
+        sendNewAppSpecificData()
     }
 
     suspend fun updateZapAmounts(

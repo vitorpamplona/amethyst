@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
@@ -1199,6 +1200,17 @@ class AccountSettings(
             }
             saveAccountSettings()
         }
+    }
+
+    // ---
+    // pinned chatrooms
+    // ---
+
+    fun toggleChatroomPin(room: ChatroomKey) {
+        syncedSettings.chats.pinnedChatrooms.update {
+            if (room in it) it - room else it + room
+        }
+        saveAccountSettings()
     }
 
     // ---

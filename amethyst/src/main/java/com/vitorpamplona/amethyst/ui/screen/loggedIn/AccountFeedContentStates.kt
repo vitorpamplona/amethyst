@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.dal.VideoFeedFilter
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.dal.WebBookmarkFeedFilter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 class AccountFeedContentStates(
@@ -146,6 +147,17 @@ class AccountFeedContentStates(
                 dmKnown.invalidateData()
                 dmNew.invalidateData()
             }
+        }
+
+        // Pinning/unpinning a room only changes sort order, not membership, so no
+        // chat event flows through LocalCache. Force a rebuild to re-sort. This
+        // also fires when pins arrive via the synced AppSpecificData event.
+        scope.launch(Dispatchers.IO) {
+            account.settings.syncedSettings.chats.pinnedChatrooms
+                .drop(1)
+                .collect {
+                    dmKnown.invalidateData()
+                }
         }
 
         scope.launch(Dispatchers.IO) {

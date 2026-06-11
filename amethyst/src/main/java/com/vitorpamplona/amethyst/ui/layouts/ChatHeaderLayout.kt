@@ -20,8 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.layouts
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -134,15 +135,20 @@ fun ChannelNamePreview() {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChatHeaderLayout(
     channelPicture: @Composable () -> Unit,
     firstRow: @Composable RowScope.() -> Unit,
     secondRow: @Composable RowScope.() -> Unit,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
 ) {
     Row(
-        modifier = Modifier.clickable(onClick = onClick).padding(10.dp),
+        modifier =
+            Modifier
+                .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+                .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Size55Modifier) { channelPicture() }
