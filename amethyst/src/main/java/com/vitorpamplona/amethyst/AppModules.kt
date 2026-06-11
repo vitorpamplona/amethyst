@@ -428,7 +428,7 @@ class AppModules(
     // Connects the INostrClient class with okHttp
     val websocketBuilder =
         OkHttpWebSocket.Builder { url ->
-            val useTor = torEvaluatorFlow.flow.value.useTor(url)
+            val useTor = torEvaluatorFlow.shouldUseTorForRelay(url)
             okHttpClientForRelays.getHttpClient(useTor)
         }
 

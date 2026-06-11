@@ -33,6 +33,7 @@ class TorRelayEvaluationTest {
     private val localNetworkRelay = NormalizedRelayUrl("ws://192.168.1.100:8080/")
     private val dmRelay = NormalizedRelayUrl("wss://dm.relay.com/")
     private val trustedRelay = NormalizedRelayUrl("wss://trusted.relay.com/")
+    private val moneyRelay = NormalizedRelayUrl("wss://wallet.relay.com/")
 
     private fun buildEvaluation(
         torType: TorType = TorType.INTERNAL,
@@ -40,8 +41,10 @@ class TorRelayEvaluationTest {
         dmViaTor: Boolean = true,
         newViaTor: Boolean = true,
         trustedViaTor: Boolean = false,
+        moneyViaTor: Boolean = false,
         dmRelays: Set<NormalizedRelayUrl> = setOf(dmRelay),
         trustedRelays: Set<NormalizedRelayUrl> = setOf(trustedRelay),
+        moneyOpRelays: Set<NormalizedRelayUrl> = setOf(moneyRelay),
     ) = TorRelayEvaluation(
         torSettings =
             TorRelaySettings(
@@ -50,9 +53,11 @@ class TorRelayEvaluationTest {
                 dmRelaysViaTor = dmViaTor,
                 newRelaysViaTor = newViaTor,
                 trustedRelaysViaTor = trustedViaTor,
+                moneyOperationsViaTor = moneyViaTor,
             ),
         trustedRelayList = trustedRelays,
         dmRelayList = dmRelays,
+        moneyOpRelayList = moneyOpRelays,
     )
 
     // --- Tor OFF ---
@@ -106,6 +111,44 @@ class TorRelayEvaluationTest {
 
     @Test
     fun unknown_disabled_returnsFalse() = assertFalse(buildEvaluation(newViaTor = false).useTor(clearnetRelay))
+
+    // --- Money-operation relays ---
+    @Test
+    fun money_enabled_returnsTrue() = assertTrue(buildEvaluation(moneyViaTor = true).useTor(moneyRelay))
+
+    @Test
+    fun money_disabled_returnsFalse() = assertFalse(buildEvaluation(moneyViaTor = false).useTor(moneyRelay))
+
+    @Test
+    fun money_takesPrecedenceOverNew() {
+        // A money-op relay not in any other list must NOT fall through to the new-relay policy.
+        val eval = buildEvaluation(moneyViaTor = false, newViaTor = true, dmRelays = emptySet(), trustedRelays = emptySet())
+        assertFalse(eval.useTor(moneyRelay))
+    }
+
+    @Test
+    fun money_takesPrecedenceOverTrustedAndDm() {
+        // When the same relay is both a money-op relay and trusted/DM, money policy wins.
+        val both = NormalizedRelayUrl("wss://wallet-and-trusted.relay.com/")
+        val eval =
+            buildEvaluation(
+                moneyViaTor = true,
+                dmViaTor = false,
+                trustedViaTor = false,
+                dmRelays = setOf(both),
+                trustedRelays = setOf(both),
+                moneyOpRelays = setOf(both),
+            )
+        assertTrue(eval.useTor(both))
+    }
+
+    @Test
+    fun money_onionStillWins() {
+        // .onion reachability check precedes the money classification.
+        val onionMoney = NormalizedRelayUrl("wss://wallet.onion/")
+        val eval = buildEvaluation(onionViaTor = false, moneyViaTor = true, moneyOpRelays = setOf(onionMoney))
+        assertFalse(eval.useTor(onionMoney))
+    }
 
     // --- Priority ---
     @Test

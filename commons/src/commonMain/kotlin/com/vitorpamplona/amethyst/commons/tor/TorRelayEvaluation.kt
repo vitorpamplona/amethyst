@@ -28,6 +28,7 @@ class TorRelayEvaluation(
     val torSettings: TorRelaySettings,
     val trustedRelayList: Set<NormalizedRelayUrl>,
     val dmRelayList: Set<NormalizedRelayUrl>,
+    val moneyOpRelayList: Set<NormalizedRelayUrl> = emptySet(),
 ) {
     fun useTor(relay: NormalizedRelayUrl): Boolean =
         if (torSettings.torType == TorType.OFF) {
@@ -36,7 +37,14 @@ class TorRelayEvaluation(
             if (relay.isLocalHost()) {
                 false
             } else if (relay.isOnion()) {
+                // .onion is only reachable over Tor regardless of any other classification.
                 torSettings.onionRelaysViaTor
+            } else if (relay in moneyOpRelayList) {
+                // Relays used for money operations (NIP-47 wallets, CLINK offer/debit services)
+                // follow the dedicated money-operations preference, taking precedence over the
+                // generic DM/trusted/new classification so a payment never silently inherits a
+                // different Tor policy than the one the user set for money.
+                torSettings.moneyOperationsViaTor
             } else if (relay in dmRelayList) {
                 torSettings.dmRelaysViaTor
             } else if (relay in trustedRelayList) {
