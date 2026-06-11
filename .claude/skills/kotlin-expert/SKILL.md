@@ -807,6 +807,5 @@ Passing lambda to function?
 
 ---
 
-**Version:** 1.0.0
-**Last Updated:** 2025-12-30
-**Codebase Reference:** AmethystMultiplatform commit 258c4e011
+**Version:** 1.0.1
+**Last Updated:** 2026-06-10

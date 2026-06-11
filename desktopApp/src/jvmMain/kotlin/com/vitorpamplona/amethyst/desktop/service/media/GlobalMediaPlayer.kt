@@ -20,31 +20,21 @@
  */
 package com.vitorpamplona.amethyst.desktop.service.media
 
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.runtime.snapshotFlow
 import com.vitorpamplona.amethyst.desktop.ui.media.MediaType
+import io.github.kdroidfilter.composemediaplayer.VideoPlayerError
+import io.github.kdroidfilter.composemediaplayer.VideoPlayerState
+import io.github.kdroidfilter.composemediaplayer.createVideoPlayerState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import org.jetbrains.skia.Bitmap
-import org.jetbrains.skia.ColorAlphaType
-import org.jetbrains.skia.ImageInfo
-import uk.co.caprica.vlcj.player.base.MediaPlayer
-import uk.co.caprica.vlcj.player.base.MediaPlayerEventAdapter
-import uk.co.caprica.vlcj.player.embedded.EmbeddedMediaPlayer
-import uk.co.caprica.vlcj.player.embedded.videosurface.callback.BufferFormat
-import uk.co.caprica.vlcj.player.embedded.videosurface.callback.BufferFormatCallback
-import uk.co.caprica.vlcj.player.embedded.videosurface.callback.RenderCallback
-import uk.co.caprica.vlcj.player.embedded.videosurface.callback.format.RV32BufferFormat
-import java.nio.ByteBuffer
-import org.jetbrains.skia.Image as SkiaImage
 
 data class MediaPlaybackState(
     val url: String? = null,
@@ -57,221 +47,202 @@ data class MediaPlaybackState(
     val aspectRatio: Float = 16f / 9f,
     val volume: Int = 100,
     val isMuted: Boolean = false,
+    /** Last observed error from the engine, or null. JVM emits only SourceError/UnknownError. */
+    val errorReason: String? = null,
 )
 
+/**
+ * Singleton facade over kdroidFilter's [VideoPlayerState] (MIT, OS-native backends:
+ * Media Foundation on Windows, AVFoundation on macOS, GStreamer on Linux).
+ *
+ * Holds two engine instances (video + audio) for the lifetime of the JVM. The
+ * underlying [VideoPlayerState] exposes its state via Compose `mutableStateOf`;
+ * a [snapshotFlow] coroutine mirrors that into our public [MediaPlaybackState]
+ * `StateFlow`s so non-Compose consumers (and the existing UI) remain unchanged.
+ *
+ * UI surface for visible video frames is rendered by mounting
+ * `VideoPlayerSurface(playerState = [activeVideoPlayerState])` in the active
+ * `DesktopVideoPlayer` instance — see that file for the active/inactive dispatch.
+ */
 object GlobalMediaPlayer {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    // Video state
-    private val _videoFrame = MutableStateFlow<ImageBitmap?>(null)
-    val videoFrame: StateFlow<ImageBitmap?> = _videoFrame.asStateFlow()
+    // Engine handles. Constructed lazily on first playback request so that app
+    // start does not load the native library if the user never plays media.
+    @Volatile private var videoPlayer: VideoPlayerState? = null
+
+    @Volatile private var audioPlayer: VideoPlayerState? = null
+
+    private val initLock = Any()
+
+    /**
+     * The kdroidFilter player driving currently-active or last-played video, or
+     * `null` if the native player failed to initialize (e.g. missing GStreamer
+     * on Linux). UI code reads this lazily; consumers must handle null by
+     * showing the thumbnail/error fallback rather than mounting a surface.
+     */
+    val activeVideoPlayerState: VideoPlayerState?
+        get() = ensureVideoPlayer()
 
     private val _videoState = MutableStateFlow(MediaPlaybackState())
     val videoState: StateFlow<MediaPlaybackState> = _videoState.asStateFlow()
 
-    // Audio state
     private val _audioState = MutableStateFlow(MediaPlaybackState(type = MediaType.AUDIO))
     val audioState: StateFlow<MediaPlaybackState> = _audioState.asStateFlow()
 
-    // Fullscreen
     private val _isFullscreen = MutableStateFlow(false)
     val isFullscreen: StateFlow<Boolean> = _isFullscreen.asStateFlow()
 
-    // VLC players — kept alive between plays
-    private var videoPlayer: EmbeddedMediaPlayer? = null
-    private var audioPlayer: MediaPlayer? = null
+    // Stashed pre-mute volume (0..100). kdroidFilter has no isMuted concept, so
+    // we emulate by zeroing volume and remembering the prior value.
+    private var preMuteVideoVolume: Int = 100
+    private var preMuteAudioVolume: Int = 100
 
-    // Skia bitmap for video rendering
-    private var skBitmap: Bitmap? = null
-    private var pixelBytes: ByteArray? = null
+    private var videoSyncJob: Job? = null
+    private var audioSyncJob: Job? = null
 
-    // Position polling job
-    private var videoPollingJob: Job? = null
-    private var audioPollingJob: Job? = null
+    // --- Verbs ---------------------------------------------------------------
 
     fun playVideo(
         url: String,
         seekPosition: Float = 0f,
     ) {
-        // If already playing this URL, just seek
         val current = _videoState.value
-        if (current.url == url && videoPlayer != null) {
-            if (seekPosition > 0f) {
-                videoPlayer?.controls()?.setPosition(seekPosition)
+        val player =
+            ensureVideoPlayer() ?: run {
+                _videoState.value =
+                    MediaPlaybackState(
+                        url = url,
+                        type = MediaType.VIDEO,
+                        isBuffering = false,
+                        errorReason = "Video playback unavailable",
+                    )
+                return
             }
-            if (!current.isPlaying) {
-                videoPlayer?.controls()?.play()
-            }
+
+        if (current.url == url) {
+            if (seekPosition > 0f) player.seekTo(seekPosition * 1000f)
+            if (!current.isPlaying) player.play()
             return
         }
 
-        // Stop current video if different URL
-        if (current.url != null && current.url != url) {
-            videoPlayer?.controls()?.stop()
-        }
+        // Reset engine volume to match the UI's default for the new track. The
+        // kdroidFilter player retains `volume` across openUri calls, so a mute
+        // on the prior track would otherwise carry over while the UI shows the
+        // default 100% / unmuted state.
+        player.volume = 1f
 
-        _videoState.value =
-            MediaPlaybackState(
-                url = url,
-                type = MediaType.VIDEO,
-                isBuffering = true,
-            )
+        _videoState.value = MediaPlaybackState(url = url, type = MediaType.VIDEO, isBuffering = true)
 
         scope.launch(Dispatchers.IO) {
-            if (!VlcjPlayerPool.init()) {
-                _videoState.value = _videoState.value.copy(isBuffering = false)
-                return@launch
+            player.openUri(url)
+            // openUri auto-plays per InitialPlayerState.PLAY default. For an
+            // initial seek we wait for the first hasMedia=true emission then
+            // stop collecting (Flow.first terminates the collector cleanly,
+            // unlike `return@collect` which only exits the lambda).
+            if (seekPosition > 0f) {
+                snapshotFlow { player.hasMedia }.first { it }
+                player.seekTo(seekPosition * 1000f)
             }
-
-            val player =
-                videoPlayer ?: VlcjPlayerPool.acquire() ?: run {
-                    _videoState.value = _videoState.value.copy(isBuffering = false)
-                    return@launch
-                }
-
-            // Only set up surface on first acquisition
-            if (videoPlayer == null) {
-                setupVideoSurface(player)
-                setupVideoEventListener(player)
-                videoPlayer = player
-            }
-
-            var didSeek = seekPosition <= 0f
-
-            // Temporary listener for initial seek
-            if (!didSeek) {
-                val seekListener =
-                    object : MediaPlayerEventAdapter() {
-                        override fun playing(mediaPlayer: MediaPlayer) {
-                            if (!didSeek) {
-                                didSeek = true
-                                mediaPlayer.controls().setPosition(seekPosition)
-                                mediaPlayer.events().removeMediaPlayerEventListener(this)
-                            }
-                        }
-                    }
-                player.events().addMediaPlayerEventListener(seekListener)
-            }
-
-            val vol = _videoState.value.volume
-            player.media().play(url, ":start-volume=$vol")
-            startVideoPolling()
         }
     }
 
     fun playAudio(url: String) {
         val current = _audioState.value
-        if (current.url == url && audioPlayer != null) {
-            if (!current.isPlaying) {
-                audioPlayer?.controls()?.play()
+        val player =
+            ensureAudioPlayer() ?: run {
+                _audioState.value =
+                    MediaPlaybackState(
+                        url = url,
+                        type = MediaType.AUDIO,
+                        isBuffering = false,
+                        errorReason = "Audio playback unavailable",
+                    )
+                return
             }
+
+        if (current.url == url) {
+            if (!current.isPlaying) player.play()
             return
         }
 
-        if (current.url != null && current.url != url) {
-            audioPlayer?.controls()?.stop()
-        }
+        // Reset engine volume — see playVideo() for rationale.
+        player.volume = 1f
 
-        _audioState.value =
-            MediaPlaybackState(
-                url = url,
-                type = MediaType.AUDIO,
-                isBuffering = true,
-            )
+        _audioState.value = MediaPlaybackState(url = url, type = MediaType.AUDIO, isBuffering = true)
 
         scope.launch(Dispatchers.IO) {
-            val player =
-                audioPlayer ?: VlcjPlayerPool.acquireAudioPlayer() ?: run {
-                    _audioState.value = _audioState.value.copy(isBuffering = false)
-                    return@launch
-                }
-
-            if (audioPlayer == null) {
-                setupAudioEventListener(player)
-                audioPlayer = player
-            }
-
-            val vol = _audioState.value.volume
-            player.media().play(url, ":start-volume=$vol")
-            startAudioPolling()
+            player.openUri(url)
         }
     }
 
     fun toggleVideoPlayPause() {
         val player = videoPlayer ?: return
-        val state = _videoState.value
-        if (state.url == null) return
-
-        if (state.isPlaying) {
-            player.controls().pause()
-        } else {
-            if (state.position <= 0f && !player.status().isPlaying) {
-                state.url.let { player.media().play(it) }
-            } else {
-                player.controls().play()
-            }
-        }
+        if (_videoState.value.isPlaying) player.pause() else player.play()
     }
 
     fun toggleAudioPlayPause() {
         val player = audioPlayer ?: return
-        val state = _audioState.value
-        if (state.url == null) return
-
-        if (state.isPlaying) {
-            player.controls().pause()
-        } else {
-            if (state.position <= 0f && !player.status().isPlaying) {
-                state.url.let { player.media().play(it) }
-            } else {
-                player.controls().play()
-            }
-        }
+        if (_audioState.value.isPlaying) player.pause() else player.play()
     }
 
+    /** UI passes position in 0..1. kdroidFilter wants 0..1000. */
     fun seekVideo(position: Float) {
-        videoPlayer?.controls()?.setPosition(position)
+        videoPlayer?.seekTo((position * 1000f).coerceIn(0f, 1000f))
     }
 
     fun seekAudio(position: Float) {
-        audioPlayer?.controls()?.setPosition(position)
+        audioPlayer?.seekTo((position * 1000f).coerceIn(0f, 1000f))
     }
 
+    /** UI passes volume in 0..100. kdroidFilter wants 0..1. */
     fun setVideoVolume(volume: Int) {
-        videoPlayer?.audio()?.setVolume(volume)
-        _videoState.value = _videoState.value.copy(volume = volume)
+        videoPlayer?.volume = volume.coerceIn(0, 100) / 100f
+        val muted = _videoState.value.isMuted && volume == 0
+        _videoState.value = _videoState.value.copy(volume = volume, isMuted = muted)
+        if (volume > 0) preMuteVideoVolume = volume
     }
 
     fun setAudioVolume(volume: Int) {
-        audioPlayer?.audio()?.setVolume(volume)
-        _audioState.value = _audioState.value.copy(volume = volume)
+        audioPlayer?.volume = volume.coerceIn(0, 100) / 100f
+        val muted = _audioState.value.isMuted && volume == 0
+        _audioState.value = _audioState.value.copy(volume = volume, isMuted = muted)
+        if (volume > 0) preMuteAudioVolume = volume
     }
 
+    /** kdroidFilter has no mute concept — emulate by stashing volume. */
     fun toggleVideoMute() {
-        val muted = !_videoState.value.isMuted
-        videoPlayer?.audio()?.isMute = muted
-        _videoState.value = _videoState.value.copy(isMuted = muted)
+        val state = _videoState.value
+        if (state.isMuted) {
+            setVideoVolume(preMuteVideoVolume)
+            _videoState.value = _videoState.value.copy(isMuted = false)
+        } else {
+            preMuteVideoVolume = state.volume.coerceAtLeast(1)
+            videoPlayer?.volume = 0f
+            _videoState.value = _videoState.value.copy(isMuted = true, volume = 0)
+        }
     }
 
     fun toggleAudioMute() {
-        val muted = !_audioState.value.isMuted
-        audioPlayer?.audio()?.isMute = muted
-        _audioState.value = _audioState.value.copy(isMuted = muted)
+        val state = _audioState.value
+        if (state.isMuted) {
+            setAudioVolume(preMuteAudioVolume)
+            _audioState.value = _audioState.value.copy(isMuted = false)
+        } else {
+            preMuteAudioVolume = state.volume.coerceAtLeast(1)
+            audioPlayer?.volume = 0f
+            _audioState.value = _audioState.value.copy(isMuted = true, volume = 0)
+        }
     }
 
     fun stopVideo() {
-        videoPollingJob?.cancel()
-        videoPollingJob = null
-        videoPlayer?.controls()?.stop()
+        videoPlayer?.stop()
         _videoState.value = MediaPlaybackState()
-        _videoFrame.value = null
         _isFullscreen.value = false
     }
 
     fun stopAudio() {
-        audioPollingJob?.cancel()
-        audioPollingJob = null
-        audioPlayer?.controls()?.stop()
+        audioPlayer?.stop()
         _audioState.value = MediaPlaybackState(type = MediaType.AUDIO)
     }
 
@@ -283,215 +254,135 @@ object GlobalMediaPlayer {
         _isFullscreen.value = false
     }
 
+    /** Call on app exit. Disposes native handles owned by kdroidFilter. */
     fun shutdown() {
-        videoPollingJob?.cancel()
-        audioPollingJob?.cancel()
-
-        videoPlayer?.let { p ->
-            try {
-                p.controls().stop()
-            } catch (_: Exception) {
-            }
-            VlcjPlayerPool.release(p)
-        }
+        videoSyncJob?.cancel()
+        audioSyncJob?.cancel()
+        runCatching { videoPlayer?.stop() }
+        runCatching { videoPlayer?.dispose() }
+        runCatching { audioPlayer?.stop() }
+        runCatching { audioPlayer?.dispose() }
         videoPlayer = null
-
-        audioPlayer?.let { p ->
-            try {
-                p.controls().stop()
-            } catch (_: Exception) {
-            }
-            VlcjPlayerPool.releaseAudioPlayer(p)
-        }
         audioPlayer = null
-
         _videoState.value = MediaPlaybackState()
         _audioState.value = MediaPlaybackState(type = MediaType.AUDIO)
-        _videoFrame.value = null
         _isFullscreen.value = false
-
         scope.cancel()
     }
 
-    private fun setupVideoSurface(player: EmbeddedMediaPlayer) {
-        val bufferFormatCallback =
-            object : BufferFormatCallback {
-                override fun getBufferFormat(
-                    sourceWidth: Int,
-                    sourceHeight: Int,
-                ): BufferFormat {
-                    if (sourceHeight > 0) {
-                        _videoState.value =
-                            _videoState.value.copy(
-                                aspectRatio = sourceWidth.toFloat() / sourceHeight.toFloat(),
-                            )
-                    }
-                    val bmp = Bitmap()
-                    bmp.allocPixels(ImageInfo.makeN32(sourceWidth, sourceHeight, ColorAlphaType.PREMUL))
-                    skBitmap = bmp
-                    pixelBytes = ByteArray(sourceWidth * sourceHeight * 4)
-                    return RV32BufferFormat(sourceWidth, sourceHeight)
-                }
+    // --- Engine lifecycle ----------------------------------------------------
 
-                override fun allocatedBuffers(buffers: Array<out ByteBuffer>) {}
-            }
+    /**
+     * Returns the video player, creating it on first call. Returns `null` if
+     * native initialization throws (e.g. missing GStreamer on Linux, broken
+     * `libNativeVideoPlayer.dylib` extraction). On failure, subsequent calls
+     * keep returning `null` until the JVM is restarted — re-trying mid-session
+     * is unlikely to recover from a missing native dependency.
+     */
+    private fun ensureVideoPlayer(): VideoPlayerState? =
+        videoPlayer ?: synchronized(initLock) {
+            videoPlayer ?: runCatching { createVideoPlayerState() }
+                .onSuccess { startVideoSync(it) }
+                .onFailure { println("kdroidFilter: video engine init failed: ${it.message}") }
+                .getOrNull()
+                ?.also { videoPlayer = it }
+        }
 
-        val renderCallback =
-            RenderCallback { _, nativeBuffers, _ ->
-                val bmp = skBitmap ?: return@RenderCallback
-                val bytes = pixelBytes ?: return@RenderCallback
-                val buffer = nativeBuffers[0]
-                buffer.rewind()
-                buffer.get(bytes)
-                bmp.installPixels(bytes)
-                _videoFrame.value = SkiaImage.makeFromBitmap(bmp).toComposeImageBitmap()
-            }
+    private fun ensureAudioPlayer(): VideoPlayerState? =
+        audioPlayer ?: synchronized(initLock) {
+            audioPlayer ?: runCatching { createVideoPlayerState() }
+                .onSuccess { startAudioSync(it) }
+                .onFailure { println("kdroidFilter: audio engine init failed: ${it.message}") }
+                .getOrNull()
+                ?.also { audioPlayer = it }
+        }
 
-        val surface = VlcjPlayerPool.createVideoSurface(bufferFormatCallback, renderCallback)
-        player.videoSurface().set(surface)
-    }
-
-    private fun setupVideoEventListener(player: EmbeddedMediaPlayer) {
-        player.events().addMediaPlayerEventListener(
-            object : MediaPlayerEventAdapter() {
-                override fun playing(mediaPlayer: MediaPlayer) {
-                    val state = _videoState.value
-                    _videoState.value =
-                        state.copy(
-                            isPlaying = true,
-                            isBuffering = false,
-                            duration = mediaPlayer.status().length(),
-                        )
-                }
-
-                override fun paused(mediaPlayer: MediaPlayer) {
-                    _videoState.value = _videoState.value.copy(isPlaying = false)
-                }
-
-                override fun stopped(mediaPlayer: MediaPlayer) {
-                    _videoState.value = _videoState.value.copy(isPlaying = false, isBuffering = false)
-                }
-
-                override fun buffering(
-                    mediaPlayer: MediaPlayer,
-                    newCache: Float,
-                ) {
-                    _videoState.value = _videoState.value.copy(isBuffering = newCache < 100f)
-                }
-
-                override fun positionChanged(
-                    mediaPlayer: MediaPlayer,
-                    newPosition: Float,
-                ) {
-                    _videoState.value =
-                        _videoState.value.copy(
-                            position = newPosition,
-                            currentTime = (newPosition * _videoState.value.duration).toLong(),
-                        )
-                }
-
-                override fun finished(mediaPlayer: MediaPlayer) {
-                    _videoState.value =
-                        _videoState.value.copy(
-                            isPlaying = false,
-                            isBuffering = false,
-                            position = 0f,
-                            currentTime = 0L,
-                        )
-                }
-
-                override fun error(mediaPlayer: MediaPlayer) {
-                    _videoState.value = _videoState.value.copy(isBuffering = false)
-                    println("VLC: playback error for ${_videoState.value.url}")
-                }
-            },
-        )
-    }
-
-    private fun setupAudioEventListener(player: MediaPlayer) {
-        player.events().addMediaPlayerEventListener(
-            object : MediaPlayerEventAdapter() {
-                override fun playing(mediaPlayer: MediaPlayer) {
-                    _audioState.value =
-                        _audioState.value.copy(
-                            isPlaying = true,
-                            isBuffering = false,
-                            duration = mediaPlayer.status().length(),
-                        )
-                }
-
-                override fun paused(mediaPlayer: MediaPlayer) {
-                    _audioState.value = _audioState.value.copy(isPlaying = false)
-                }
-
-                override fun stopped(mediaPlayer: MediaPlayer) {
-                    _audioState.value = _audioState.value.copy(isPlaying = false, isBuffering = false)
-                }
-
-                override fun positionChanged(
-                    mediaPlayer: MediaPlayer,
-                    newPosition: Float,
-                ) {
-                    _audioState.value =
-                        _audioState.value.copy(
-                            position = newPosition,
-                            currentTime = (newPosition * _audioState.value.duration).toLong(),
-                        )
-                }
-
-                override fun finished(mediaPlayer: MediaPlayer) {
-                    _audioState.value =
-                        _audioState.value.copy(
-                            isPlaying = false,
-                            position = 0f,
-                            currentTime = 0L,
-                        )
-                }
-            },
-        )
-    }
-
-    private fun startVideoPolling() {
-        videoPollingJob?.cancel()
-        videoPollingJob =
+    private fun startVideoSync(player: VideoPlayerState) {
+        videoSyncJob?.cancel()
+        videoSyncJob =
             scope.launch {
-                while (true) {
-                    delay(500)
-                    val player = videoPlayer ?: break
-                    val state = _videoState.value
-                    if (state.isPlaying) {
-                        try {
-                            _videoState.value =
-                                state.copy(
-                                    position = player.status().position(),
-                                    currentTime = player.status().time(),
-                                )
-                        } catch (_: Exception) {
+                snapshotFlow {
+                    EngineSnapshot(
+                        isPlaying = player.isPlaying,
+                        isLoading = player.isLoading,
+                        hasMedia = player.hasMedia,
+                        currentTime = player.currentTime,
+                        duration = player.duration,
+                        aspectRatio = player.aspectRatio,
+                        errorMessage = player.error?.let(::describeError),
+                    )
+                }.collect { snap ->
+                    val current = _videoState.value
+                    val posFraction =
+                        if (snap.duration > 0.0) {
+                            (snap.currentTime / snap.duration).toFloat().coerceIn(0f, 1f)
+                        } else {
+                            current.position
                         }
-                    }
+                    _videoState.value =
+                        current.copy(
+                            isPlaying = snap.isPlaying,
+                            isBuffering = snap.isLoading,
+                            duration = (snap.duration * 1000.0).toLong().coerceAtLeast(0L),
+                            currentTime = (snap.currentTime * 1000.0).toLong().coerceAtLeast(0L),
+                            position = posFraction,
+                            aspectRatio = if (snap.aspectRatio > 0f) snap.aspectRatio else current.aspectRatio,
+                            errorReason = snap.errorMessage,
+                        )
                 }
             }
     }
 
-    private fun startAudioPolling() {
-        audioPollingJob?.cancel()
-        audioPollingJob =
+    private fun startAudioSync(player: VideoPlayerState) {
+        audioSyncJob?.cancel()
+        audioSyncJob =
             scope.launch {
-                while (true) {
-                    delay(500)
-                    val player = audioPlayer ?: break
-                    val state = _audioState.value
-                    if (state.isPlaying) {
-                        try {
-                            _audioState.value =
-                                state.copy(
-                                    position = player.status().position(),
-                                    currentTime = player.status().time(),
-                                )
-                        } catch (_: Exception) {
+                snapshotFlow {
+                    EngineSnapshot(
+                        isPlaying = player.isPlaying,
+                        isLoading = player.isLoading,
+                        hasMedia = player.hasMedia,
+                        currentTime = player.currentTime,
+                        duration = player.duration,
+                        aspectRatio = player.aspectRatio,
+                        errorMessage = player.error?.let(::describeError),
+                    )
+                }.collect { snap ->
+                    val current = _audioState.value
+                    val posFraction =
+                        if (snap.duration > 0.0) {
+                            (snap.currentTime / snap.duration).toFloat().coerceIn(0f, 1f)
+                        } else {
+                            current.position
                         }
-                    }
+                    _audioState.value =
+                        current.copy(
+                            isPlaying = snap.isPlaying,
+                            isBuffering = snap.isLoading,
+                            duration = (snap.duration * 1000.0).toLong().coerceAtLeast(0L),
+                            currentTime = (snap.currentTime * 1000.0).toLong().coerceAtLeast(0L),
+                            position = posFraction,
+                            errorReason = snap.errorMessage,
+                        )
                 }
             }
     }
+
+    private fun describeError(error: VideoPlayerError): String =
+        when (error) {
+            is VideoPlayerError.CodecError -> "Codec: ${error.message}"
+            is VideoPlayerError.NetworkError -> "Network: ${error.message}"
+            is VideoPlayerError.SourceError -> "Source: ${error.message}"
+            is VideoPlayerError.UnknownError -> error.message
+        }
+
+    private data class EngineSnapshot(
+        val isPlaying: Boolean,
+        val isLoading: Boolean,
+        val hasMedia: Boolean,
+        val currentTime: Double,
+        val duration: Double,
+        val aspectRatio: Float,
+        val errorMessage: String?,
+    )
 }

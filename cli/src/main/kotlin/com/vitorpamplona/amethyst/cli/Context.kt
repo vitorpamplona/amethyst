@@ -49,6 +49,7 @@ import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.selects.select
@@ -308,6 +309,43 @@ class Context(
             doneChannel.close()
         }
         return collected
+    }
+
+    /**
+     * Publish [request] to [relays], then wait for the FIRST event matching [responseFilter]
+     * — a live reply that arrives after our own EOSE, which [drain] would miss (it returns at
+     * EOSE). Verifies and stores the reply. Returns it, or null on timeout; always tears the
+     * subscription down. Used for request/response round-trips (e.g. a CLINK offer invoice).
+     */
+    suspend fun requestResponse(
+        request: Event,
+        relays: Set<NormalizedRelayUrl>,
+        responseFilter: Filter,
+        timeoutMs: Long = 15_000,
+    ): Event? {
+        if (relays.isEmpty()) return null
+        val reply = CompletableDeferred<Event>()
+        val subId = newSubId()
+        val filters = relays.associateWith { listOf(responseFilter) }
+        val listener =
+            object : SubscriptionListener {
+                override fun onEvent(
+                    event: Event,
+                    isLive: Boolean,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    if (!reply.isCompleted) reply.complete(event)
+                }
+            }
+        client.subscribe(subId, filters, listener)
+        return try {
+            publish(request, relays)
+            val event = withTimeoutOrNull(timeoutMs) { reply.await() } ?: return null
+            if (verifyAndStore(event)) event else null
+        } finally {
+            client.unsubscribe(subId)
+        }
     }
 
     /**

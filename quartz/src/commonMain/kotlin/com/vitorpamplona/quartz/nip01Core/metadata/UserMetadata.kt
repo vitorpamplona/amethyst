@@ -56,11 +56,17 @@ class UserMetadata {
     var lud06: String? = null
     var lud16: String? = null
 
+    /** CLINK Offers pointer (`noffer1…`) the user advertises to receive payments over Nostr. */
+    @SerialName("clink_offer")
+    var clinkOffer: String? = null
+
     var twitter: String? = null
 
     fun anyName(): String? = displayName ?: name
 
     fun lnAddress(): String? = lud16 ?: lud06
+
+    fun clinkOffer(): String? = clinkOffer?.takeIf { it.isNotBlank() }
 
     fun bestName(): String? = displayName ?: name
 
@@ -93,6 +99,7 @@ class UserMetadata {
         if (name?.isNotEmpty() == true) name = name?.trim()
         if (lud06?.isNotEmpty() == true) lud06 = lud06?.trim()
         if (lud16?.isNotEmpty() == true) lud16 = lud16?.trim()
+        if (clinkOffer?.isNotEmpty() == true) clinkOffer = clinkOffer?.trim()
         if (pronouns?.isNotEmpty() == true) pronouns = pronouns?.trim()
 
         if (banner?.isNotEmpty() == true) banner = banner?.trim()
@@ -105,6 +112,7 @@ class UserMetadata {
         if (name?.isBlank() == true) name = null
         if (lud06?.isBlank() == true) lud06 = null
         if (lud16?.isBlank() == true) lud16 = null
+        if (clinkOffer?.isBlank() == true) clinkOffer = null
 
         if (banner?.isBlank() == true) banner = null
         if (website?.isBlank() == true) website = null

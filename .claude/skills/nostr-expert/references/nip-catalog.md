@@ -1,4 +1,8 @@
-# NIP Catalog: 60 Standard + 8 Experimental NIPs in Quartz
+# NIP Catalog: Quartz NIP Packages
+
+As of 2026-06 Quartz has **87 standard `nip*` packages** plus **23 packages
+under `experimental/`**. The categorized list below may lag behind —
+`ls quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/` is ground truth.
 
 ## Standard NIPs by Category
 

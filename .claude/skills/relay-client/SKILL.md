@@ -24,17 +24,23 @@ relayClient/
 ├── assemblers/              # "Given these inputs, build this relay Filter"
 │   ├── MetadataFilterAssembler.kt      # kind 0 for N pubkeys
 │   ├── ReactionsFilterAssembler.kt     # kind 7 for N note ids
-│   └── FeedMetadataCoordinator.kt      # coordinates metadata loads for a feed
+│   ├── FeedMetadataCoordinator.kt      # coordinates metadata loads for a feed
+│   └── CashuMintDirectoryFilterAssembler.kt / CashuWalletFilterAssembler.kt
 ├── composeSubscriptionManagers/
 │   ├── ComposeSubscriptionManager.kt              # interface Subscribable<T>
 │   ├── MutableComposeSubscriptionManager.kt       # reference impl
 │   └── ComposeSubscriptionManagerControls.kt      # DisposableEffect-style controls
 ├── eoseManagers/            # EOSE tracking per subscription
+│   └── IEoseManager / BaseEoseManager / PerKeyEoseManager / SingleSubEoseManager
+├── nip17Dm/                 # gift-wrap DM plumbing
+│   └── FilterGiftWrapsToPubkey.kt / GiftWrapDecryptor.kt
 ├── preload/
 │   ├── MetadataPreloader.kt            # bulk-fetch metadata with rate limiting
 │   └── MetadataRateLimiter.kt          # token-bucket-ish limiter
 └── subscriptions/
-    └── KeyDataSourceSubscription.kt    # "this set of keys drives this filter"
+    ├── KeyDataSourceSubscription.kt    # "this set of keys drives this filter"
+    ├── LifecycleAwareKeyDataSourceSubscription.kt
+    └── PrioritizedSubscriptionQueue.kt / SubscriptionPriority.kt
 ```
 
 ## Core Concept: `Subscribable<T>`

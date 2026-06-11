@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.model.privacyOptions.EmptyRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privacyOptions.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
+import com.vitorpamplona.amethyst.service.ClinkDebitPayer
 import com.vitorpamplona.amethyst.service.OnlineChecker
 import com.vitorpamplona.amethyst.service.ZapPaymentHandler
 import com.vitorpamplona.amethyst.service.cashu.melt.MeltProcessor
@@ -73,6 +74,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscripti
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
+import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.components.toasts.ToastManager
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -87,6 +89,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.eventsync.EventSync
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.ReloadMintRequest
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.tor.TorSettingsFlow
+import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
+import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
@@ -1669,6 +1673,11 @@ class AccountViewModel(
         replyToInnerEventId: HexKey? = null,
         replyToInnerAuthorPubKey: HexKey? = null,
     ) {
+        // Rewrites @npub…/@nprofile… mentions into nostr: URIs and collects
+        // the referenced users as p-tags. Lives here (not in the composer) so
+        // every send path gets mention handling.
+        val tagger = NewMessageTagger(text, null, null, this)
+        tagger.run()
         // Inner event construction lives on MarmotManager so CLI and UI don't drift.
         // persistOwn=false because Account.sendMarmotGroupMessage routes the outer
         // event through LocalCache which already handles own-message display.
@@ -1676,10 +1685,11 @@ class AccountViewModel(
             account.marmotManager
                 ?.buildTextMessage(
                     nostrGroupId = nostrGroupId,
-                    text = text,
+                    text = tagger.message,
                     replyToEventId = replyToInnerEventId,
                     replyToAuthorPubKey = replyToInnerAuthorPubKey,
                     persistOwn = false,
+                    mentions = tagger.pTags?.map { it.toPTag() } ?: emptyList(),
                 )
                 ?: return
         val relays = account.marmotGroupRelays(nostrGroupId)
@@ -2067,6 +2077,22 @@ class AccountViewModel(
     ) = launchSigner {
         account.sendZapPaymentRequestFor(bolt11, zappedNote, onResponse)
         onSent()
+    }
+
+    /**
+     * Pays a single BOLT-11 through a CLINK debit pointer (kind 21002) — the debit-rail
+     * counterpart of [sendZapPaymentRequestFor]. [onResult] receives the decrypted
+     * response (`isOk()` with optional preimage, or a GFY failure), or null on timeout,
+     * delivered on the main dispatcher so UI callbacks (toasts, dialogs) are safe.
+     * Untested end-to-end.
+     */
+    fun payInvoiceViaClinkDebit(
+        pointer: NDebit,
+        bolt11: String,
+        onResult: (DebitResponse?) -> Unit,
+    ) = launchSigner {
+        val response = ClinkDebitPayer.payInvoice(account, pointer, bolt11)
+        withContext(Dispatchers.Main) { onResult(response) }
     }
 
     fun getInteractiveStoryReadingState(dATag: String): AddressableNote = LocalCache.getOrCreateAddressableNote(InteractiveStoryReadingStateEvent.createAddress(account.signer.pubKey, dATag))
