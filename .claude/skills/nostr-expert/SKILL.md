@@ -1,6 +1,6 @@
 ---
 name: nostr-expert
-description: Nostr protocol implementation patterns in Quartz (AmethystMultiplatform's KMP Nostr library). Use when working with: (1) Nostr events (creating, parsing, signing), (2) Event kinds and tags, (3) NIP implementations (57 NIPs in quartz/), (4) Event builders and TagArrayBuilder DSL, (5) Nostr cryptography (secp256k1, NIP-44 encryption), (6) Relay communication patterns, (7) Bech32 encoding (npub, nsec, note, nevent). Complements nostr-protocol agent (NIP specs) - this skill provides Quartz codebase patterns and implementation details.
+description: Nostr protocol implementation patterns in Quartz (AmethystMultiplatform's KMP Nostr library). Use when working with: (1) Nostr events (creating, parsing, signing), (2) Event kinds and tags, (3) NIP implementations (80+ NIP packages in quartz/), (4) Event builders and TagArrayBuilder DSL, (5) Nostr cryptography (secp256k1, NIP-44 encryption), (6) Relay communication patterns, (7) Bech32 encoding (npub, nsec, note, nevent). Complements nostr-protocol agent (NIP specs) - this skill provides Quartz codebase patterns and implementation details.
 ---
 
 # Nostr Protocol Expert (Quartz Implementation)
@@ -313,25 +313,23 @@ class LocalSigner(private val privateKey: ByteArray) : ISigner {
 ### Encryption (NIP-44)
 
 ```kotlin
-// Modern encryption (ChaCha20-Poly1305)
-object Nip44v2 {
-    fun encrypt(plaintext: String, privateKey: ByteArray, pubKey: HexKey): String
-    fun decrypt(ciphertext: String, privateKey: ByteArray, pubKey: HexKey): String
+// Modern encryption (ChaCha20-Poly1305) via the Nip44 facade
+// (nip44Encryption/Nip44.kt — picks the current version, decrypts any)
+object Nip44 {
+    fun encrypt(msg: String, privateKey: ByteArray, pubKey: ByteArray): Nip44v2.EncryptedInfo
+    fun decrypt(payload: String, privateKey: ByteArray, pubKey: ByteArray): String
 }
 
 // Usage
-val encrypted = Nip44v2.encrypt(
-    plaintext = "Secret message",
-    privateKey = myPrivateKey,
-    pubKey = recipientPubKey
-)
+val encrypted = Nip44.encrypt("Secret message", myPrivateKey, recipientPubKey)
+val payload = encrypted.encodePayload()  // base64 string for event content
 
-val decrypted = Nip44v2.decrypt(
-    ciphertext = encrypted,
-    privateKey = myPrivateKey,
-    pubKey = senderPubKey
-)
+val decrypted = Nip44.decrypt(payload, myPrivateKey, senderPubKey)
 ```
+
+Most code should not call `Nip44` directly — go through
+`signer.nip44Encrypt(plaintext, toPublicKey)` / `signer.nip44Decrypt(ciphertext, fromPublicKey)`
+so remote/external signers keep working.
 
 **Pattern**: Elliptic curve Diffie-Hellman + ChaCha20-Poly1305 AEAD.
 
@@ -345,44 +343,34 @@ object Nip04 {
 }
 ```
 
-**Note**: Use NIP-44 (Nip44v2) for new implementations. NIP-04 has security issues.
+**Note**: Use NIP-44 (`Nip44`) for new implementations. NIP-04 has security issues.
 
 ## Bech32 Encoding (NIP-19)
 
+Encoding uses extension functions on `ByteArray` (`nip19Bech32/ByteArrayExt.kt`);
+TLV entities carry relay hints via `create()` helpers on the entity classes in
+`nip19Bech32/entities/`. Decoding goes through `Nip19Parser`, whose
+`uriToRoute()` returns a `ParseReturn?` wrapping the parsed `Entity`.
+
 ```kotlin
-object Nip19 {
-    // Encode
-    fun npubEncode(pubkey: HexKey): String  // npub1...
-    fun nsecEncode(privateKey: ByteArray): String  // nsec1...
-    fun noteEncode(eventId: HexKey): String  // note1...
-    fun neventEncode(eventId: HexKey, relays: List<String> = emptyList()): String
-    fun nprofileEncode(pubkey: HexKey, relays: List<String> = emptyList()): String
-    fun naddrEncode(kind: Int, pubkey: HexKey, dTag: String, relays: List<String> = emptyList()): String
+// Encode simple entities: ByteArray extensions
+val npub = pubkeyBytes.toNpub()   // "npub1..."
+val nsec = privKeyBytes.toNsec()  // "nsec1..."
+val note = eventIdBytes.toNote()  // "note1..."
 
-    // Decode
-    fun decode(bech32: String): Nip19Result
-}
-
-sealed class Nip19Result {
-    data class NPub(val hex: HexKey) : Nip19Result()
-    data class NSec(val hex: HexKey) : Nip19Result()
-    data class Note(val hex: HexKey) : Nip19Result()
-    data class NEvent(val hex: HexKey, val relays: List<String>) : Nip19Result()
-    data class NProfile(val hex: HexKey, val relays: List<String>) : Nip19Result()
-    data class NAddr(val kind: Int, val pubkey: HexKey, val dTag: String, val relays: List<String>) : Nip19Result()
-}
+// Encode TLV entities with relay hints (relays: List<NormalizedRelayUrl>)
+val nevent = NEvent.create(eventIdHex, authorHex, kind, relays)
+val nprofile = NProfile.create(pubkeyHex, relays)
 ```
 
 **Usage**:
 ```kotlin
-// Encode
-val npub = Nip19.npubEncode(pubkeyHex)
-// Output: "npub1..."
-
-// Decode
-when (val result = Nip19.decode(npub)) {
-    is Nip19Result.NPub -> println("Pubkey: ${result.hex}")
-    is Nip19Result.NEvent -> println("Event: ${result.hex}, relays: ${result.relays}")
+// Decode (also accepts nostr: URIs); entity types live in nip19Bech32.entities
+when (val entity = Nip19Parser.uriToRoute(input)?.entity) {
+    is NPub -> println("Pubkey: ${entity.hex}")
+    is NEvent -> println("Event: ${entity.hex}, relays: ${entity.relay}")
+    is NAddress -> println("Address: ${entity.aTag()}")
+    null -> println("not a valid bech32 entity")
     else -> println("Other type")
 }
 ```

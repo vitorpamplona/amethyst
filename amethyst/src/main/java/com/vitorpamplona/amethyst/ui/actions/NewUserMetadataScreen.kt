@@ -303,6 +303,22 @@ fun NewUserMetadataScreen(
                     singleLine = true,
                 )
 
+                Spacer(modifier = Modifier.height(10.dp))
+
+                OutlinedTextField(
+                    label = { Text(text = stringRes(R.string.clink_offer_label)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    value = postViewModel.clinkOffer.value,
+                    onValueChange = { postViewModel.clinkOffer.value = it },
+                    placeholder = {
+                        Text(
+                            text = "noffer1…",
+                            color = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    },
+                    singleLine = true,
+                )
+
                 // -- Social Proofs --
                 ExpandableSection(
                     title = stringRes(R.string.social_proof),

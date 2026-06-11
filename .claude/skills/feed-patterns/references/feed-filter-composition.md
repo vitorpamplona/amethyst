@@ -7,11 +7,12 @@ Step-by-step recipe for composing a new feed. Assume the feed shows `Note`s filt
 | If… | Use |
 |-----|-----|
 | Membership is stable (e.g. "my follows") and you re-compute on change | `FeedFilter<Note>` |
-| New notes arrive one at a time and should slot into the list incrementally | `AdditiveComplexFeedFilter<Note, Set<Note>>` |
+| New notes arrive one at a time and should slot into the list incrementally | `AdditiveFeedFilter<Note>` |
+| Incoming items are a different type than the list rows | `AdditiveComplexFeedFilter<T, U>` (Android-only) |
 | The feed is a simple list that changes frequently (e.g. bookmarks, lists) | `FeedFilter<Note>` + `ListChangeFeedViewModel` |
 | The feed is a DM thread | `ChatroomFeedViewModel` (already provides filter machinery) |
 
-All live in `amethyst/src/main/java/com/vitorpamplona/amethyst/ui/dal/`.
+The bases live in `commons/src/commonMain/.../commons/ui/feeds/`; `AdditiveComplexFeedFilter` and the `FilterByListParams` / `DefaultFeedOrder` helpers in `amethyst/src/main/java/.../ui/dal/`.
 
 ## 2. Write the Filter
 
@@ -19,7 +20,7 @@ All live in `amethyst/src/main/java/com/vitorpamplona/amethyst/ui/dal/`.
 class HashtagFeedFilter(
     private val accountViewModel: AccountViewModel,
     private val hashtag: String,
-) : AdditiveComplexFeedFilter<Note, Set<Note>>() {
+) : AdditiveFeedFilter<Note>() {
 
     override fun feedKey(): String = "Hashtag-$hashtag"
 
@@ -28,7 +29,7 @@ class HashtagFeedFilter(
     override fun feed(): List<Note> {
         val params = FilterByListParams.create(
             excludeMuted = true,
-            hiddenUsers  = accountViewModel.hiddenUsersFlow.value,
+            hiddenUsers  = account.hiddenUsers.flow.value,
         )
         return LocalCache.hashtagIndex[hashtag]
             .orEmpty()
@@ -69,7 +70,7 @@ class HashtagFeedViewModel(
 )
 ```
 
-If membership changes aggressively (e.g. the user toggles a mute), use `ListChangeFeedViewModel` instead and hook into `Account.muteListFlow`.
+If membership changes aggressively (e.g. the user toggles a mute), use `ListChangeFeedViewModel` instead and hook into `account.muteList.flow`.
 
 ## 4. Wire Invalidation
 
@@ -78,7 +79,7 @@ If membership changes aggressively (e.g. the user toggles a mute), use `ListChan
 ```kotlin
 init {
     viewModelScope.launch {
-        accountViewModel.muteListFlow.collect { invalidateAll() }
+        account.muteList.flow.collect { invalidateAll() }
     }
 }
 ```

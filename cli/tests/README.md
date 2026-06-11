@@ -25,6 +25,11 @@ cli/tests/
     └── README.md                   # operator brief + per-test matrix
 ```
 
+The CLINK suite is local-only (no relay): `clink/clink-headless.sh` asserts that
+`amy offer info` / `amy debit info` decode the canonical interop vectors to the
+right fields, plus the argument-error paths. The round-trip verbs (`offer
+request`, `debit pay/budget`) need a live CLINK service and aren't covered here.
+
 The Marmot harnesses come in two flavours, same scenarios:
 
 - **`marmot/marmot-interop.sh`** — interactive. Drives B/C via `wn` and

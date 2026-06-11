@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
@@ -379,39 +380,57 @@ fun DvmPaymentActions(
     if (invoice != null) {
         val context = LocalContext.current
         Button(onClick = {
-            if (accountViewModel.account.nip47SignerState.hasWalletConnectSetup()) {
-                accountViewModel.sendZapPaymentRequestFor(
-                    bolt11 = invoice,
-                    zappedNote = null,
-                    onSent = {
-                        onStatusUpdate(nwcPaymentRequest)
-                    },
-                    onResponse = { response ->
+            when (val source = accountViewModel.account.settings.defaultPaymentSource()) {
+                is PaymentSource.ClinkDebit -> {
+                    onStatusUpdate(nwcPaymentRequest)
+                    accountViewModel.payInvoiceViaClinkDebit(source.wallet.pointer, invoice) { response ->
                         onStatusUpdate(
-                            if (response is PayInvoiceErrorResponse) {
-                                stringRes(
-                                    context,
-                                    R.string.wallet_connect_pay_invoice_error_error,
-                                    response.error?.message
-                                        ?: response.error?.code?.toString() ?: "Error parsing error message",
-                                )
-                            } else {
+                            if (response?.isOk() == true) {
                                 thankYou
+                            } else {
+                                response?.error?.takeIf { it.isNotBlank() }
+                                    ?: stringRes(context, R.string.clink_debit_no_response)
                             },
                         )
-                    },
-                )
-            } else {
-                payViaIntent(
-                    invoice,
-                    context,
-                    onPaid = {
-                        onStatusUpdate(thankYou)
-                    },
-                    onError = {
-                        onStatusUpdate(it)
-                    },
-                )
+                    }
+                }
+
+                is PaymentSource.Nwc -> {
+                    accountViewModel.sendZapPaymentRequestFor(
+                        bolt11 = invoice,
+                        zappedNote = null,
+                        onSent = {
+                            onStatusUpdate(nwcPaymentRequest)
+                        },
+                        onResponse = { response ->
+                            onStatusUpdate(
+                                if (response is PayInvoiceErrorResponse) {
+                                    stringRes(
+                                        context,
+                                        R.string.wallet_connect_pay_invoice_error_error,
+                                        response.error?.message
+                                            ?: response.error?.code?.toString() ?: "Error parsing error message",
+                                    )
+                                } else {
+                                    thankYou
+                                },
+                            )
+                        },
+                    )
+                }
+
+                null -> {
+                    payViaIntent(
+                        invoice,
+                        context,
+                        onPaid = {
+                            onStatusUpdate(thankYou)
+                        },
+                        onError = {
+                            onStatusUpdate(it)
+                        },
+                    )
+                }
             }
         }) {
             val amountInInvoice =

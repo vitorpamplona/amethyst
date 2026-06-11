@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.core.builder
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.AboutTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.BannerTag
+import com.vitorpamplona.quartz.nip01Core.metadata.tags.ClinkOfferTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.DisplayNameTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.Lud06Tag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.Lud16Tag
@@ -127,6 +128,7 @@ class MetadataEvent(
             twitter: String? = null,
             mastodon: String? = null,
             github: String? = null,
+            clinkOffer: String? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<MetadataEvent>.() -> Unit = {},
         ): EventTemplate<MetadataEvent> {
@@ -145,6 +147,7 @@ class MetadataEvent(
                 lnAddress,
                 lnURL,
                 pronouns,
+                clinkOffer,
             )
 
             val newJsonObject = JsonObject(currentMetadata)
@@ -182,6 +185,7 @@ class MetadataEvent(
             twitter: String? = null,
             mastodon: String? = null,
             github: String? = null,
+            clinkOffer: String? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<MetadataEvent>.() -> Unit = {},
         ): EventTemplate<MetadataEvent> {
@@ -200,6 +204,7 @@ class MetadataEvent(
                 lnAddress,
                 lnURL,
                 pronouns,
+                clinkOffer,
             )
 
             val newJsonObject = JsonObject(currentMetadata)
@@ -233,6 +238,7 @@ class MetadataEvent(
             lnAddress: String? = null,
             lnURL: String? = null,
             pronouns: String? = null,
+            clinkOffer: String? = null,
         ) {
             name?.let { addIfNotBlank(currentMetadata, NameTag.TAG_NAME, it) }
             displayName?.let { addIfNotBlank(currentMetadata, DisplayNameTag.TAG_NAME, it) }
@@ -244,6 +250,7 @@ class MetadataEvent(
             nip05?.let { addIfNotBlank(currentMetadata, Nip05Tag.TAG_NAME, it) }
             lnAddress?.let { addIfNotBlank(currentMetadata, Lud16Tag.TAG_NAME, it) }
             lnURL?.let { addIfNotBlank(currentMetadata, Lud06Tag.TAG_NAME, it) }
+            clinkOffer?.let { addIfNotBlank(currentMetadata, ClinkOfferTag.TAG_NAME, it) }
         }
 
         // For https://github.com/nostr-protocol/nips/pull/1770
@@ -258,6 +265,7 @@ class MetadataEvent(
             currentMetadata[Nip05Tag.TAG_NAME]?.let { nip05(it.text) } ?: run { remove(Nip05Tag.TAG_NAME) }
             currentMetadata[Lud16Tag.TAG_NAME]?.let { lud16(it.text) } ?: run { remove(Lud16Tag.TAG_NAME) }
             currentMetadata[Lud06Tag.TAG_NAME]?.let { lud06(it.text) } ?: run { remove(Lud06Tag.TAG_NAME) }
+            currentMetadata[ClinkOfferTag.TAG_NAME]?.let { clinkOffer(it.text) } ?: run { remove(ClinkOfferTag.TAG_NAME) }
         }
 
         private fun addIfNotBlank(

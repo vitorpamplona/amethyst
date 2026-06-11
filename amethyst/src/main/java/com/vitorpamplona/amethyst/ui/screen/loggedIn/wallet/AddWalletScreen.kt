@@ -105,6 +105,12 @@ fun AddWalletScreen(
                 description = stringRes(R.string.wallet_add_cashu_description),
                 onClick = { nav.popUpTo(Route.WalletAddCashu, Route.WalletAdd::class) },
             )
+            WalletTypeCard(
+                icon = MaterialSymbols.Bolt,
+                title = stringRes(R.string.wallet_add_clink_title),
+                description = stringRes(R.string.wallet_add_clink_description),
+                onClick = { nav.popUpTo(Route.WalletAddClinkDebit(), Route.WalletAdd::class) },
+            )
         }
     }
 }

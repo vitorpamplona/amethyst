@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.richtext
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
+import com.vitorpamplona.quartz.experimental.clink.pointers.NOffer
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
 
@@ -90,6 +91,12 @@ class WithdrawSegment(
 @Immutable
 class CashuSegment(
     segment: String,
+) : Segment(segment)
+
+@Immutable
+class ClinkOfferSegment(
+    segment: String,
+    val offer: NOffer,
 ) : Segment(segment)
 
 @Immutable

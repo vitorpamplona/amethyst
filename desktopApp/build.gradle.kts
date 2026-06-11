@@ -1,4 +1,3 @@
-import de.undercouch.gradle.tasks.download.Download
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import java.nio.file.Files
 
@@ -6,7 +5,6 @@ plugins {
     alias(libs.plugins.jetbrainsKotlinJvm)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.jetbrainsComposeCompiler)
-    id("ir.mahozad.vlc-setup") version "0.1.0"
 }
 
 // RPM rejects dashes in version strings — replace with tilde (~) which RPM uses
@@ -57,8 +55,14 @@ dependencies {
     implementation(libs.coil.okhttp)
     implementation(libs.coil.svg)
 
-    // Video playback
-    implementation(libs.vlcj)
+    // Video / audio playback — MIT, OS-native backends (MF / AVFoundation / GStreamer)
+    implementation(libs.composemediaplayer)
+
+    // Thumbnail extraction — JCodec (pure-Java H.264). LGPL FFmpeg subprocess
+    // for non-H.264 / HLS fallback is invoked via plain ProcessBuilder; no
+    // wrapper library needed (see VideoThumbnailCache.runFfmpegToImage).
+    implementation(libs.jcodec)
+    implementation(libs.jcodec.javase)
 
     // EXIF stripping (lossless)
     implementation(libs.commons.imaging)
@@ -94,9 +98,6 @@ compose.desktop {
 
         jvmArgs += "-Xmx2g"
 
-        // VLC plugin path fallback — used if JNA setenv and bundled discovery both fail
-        jvmArgs += "-Dvlc.plugin.path=\$APPDIR/resources/vlc/plugins"
-
         // Forward platform-preview overrides from the gradle invocation to the
         // launched app's JVM so `./gradlew :desktopApp:run -Damethyst.platform=GNOME`
         // works in addition to the env-var form (`AMETHYST_PLATFORM=GNOME`).
@@ -114,7 +115,7 @@ compose.desktop {
                 "java.prefs",        // java.util.prefs (desktop persistence)
                 "java.sql",          // JDBC metadata (Jackson, SQLite driver)
                 "jdk.security.auth", // JAAS authentication callbacks
-                "jdk.unsupported",   // sun.misc.Unsafe (VLCJ ByteBufferFactory)
+                "jdk.unsupported",   // sun.misc.Unsafe (secp256k1-kmp-jni-jvm, JNA)
             )
 
             packageName = "Amethyst"
@@ -138,7 +139,13 @@ compose.desktop {
                 menuGroup = "Network"
                 appCategory = "Network"
                 debMaintainer = "vitor@vitorpamplona.com"
-                rpmLicenseType = "MIT"
+                // SPDX compound expression. Bundled components:
+                //   MIT                  — Amethyst + kdroidFilter ComposeMediaPlayer
+                //   LGPL-2.1-or-later    — FFmpeg (LGPL build, bundled per OS for thumbnail fallback) +
+                //                          GStreamer (Linux runtime dep, system-installed)
+                //   BSD-2-Clause         — JCodec
+                //   Apache-2.0           — Jaffree + many transitive Java libraries
+                rpmLicenseType = "MIT AND LGPL-2.1-or-later AND BSD-2-Clause AND Apache-2.0"
                 // RPM version: replace dashes with tilde (1.08.0~rc1 < 1.08.0 per RPM ordering).
                 rpmPackageVersion = appVersion.replace("-", "~")
             }
@@ -149,8 +156,8 @@ compose.desktop {
         // problems with `-dontobfuscate` plus global `-keepnames` / `-keep enum`
         // rules (see `amethyst/proguard-rules.pro`). We mirror that strategy in
         // `compose-rules.pro` so the desktop release survives JNI callbacks
-        // (secp256k1-kmp, sqlite-bundled, jkeychain, VLCj) and reflection-heavy
-        // libraries (Jackson, JNA) without renaming.
+        // (secp256k1-kmp, sqlite-bundled, jkeychain, kdroidFilter native)
+        // and reflection-heavy libraries (Jackson, JNA) without renaming.
         //
         // Shrink and optimize stay ON. One ProGuard optimize sub-pass is
         // disabled in `compose-rules.pro` to avoid a generated okio bridge
@@ -163,61 +170,23 @@ compose.desktop {
     }
 }
 
-vlcSetup {
-    // Pinned to 3.0.20 because the Linux VLC plugins on Maven Central
-    // (ir.mahozad:vlc-plugins-linux) have not been republished for 3.0.21 — the
-    // latest there is 3.0.20-2. Using 3.0.21 makes vlcDownload 404 on Linux CI.
-    vlcVersion.set("3.0.20")
-    shouldCompressVlcFiles.set(true)
-    shouldIncludeAllVlcFiles.set(true)
-    pathToCopyVlcLinuxFilesTo.set(file("src/jvmMain/appResources/linux/vlc"))
-    pathToCopyVlcMacosFilesTo.set(file("src/jvmMain/appResources/macos/vlc"))
-    pathToCopyVlcWindowsFilesTo.set(file("src/jvmMain/appResources/windows/vlc"))
-}
-
-tasks.named("spotlessKotlin") {
-    mustRunAfter("vlcSetup")
-}
-
-// `ir.mahozad.vlc-setup` registers `vlcDownload` / `upxDownload` tasks that
-// extend `de.undercouch.gradle.tasks.download.Download`. Defaults are 0 retries
-// and a short read timeout, so a transient blip on get.videolan.org fails the
-// whole desktop build on CI (Windows MSI, macOS DMG, Linux DEB). Configure all
-// Download tasks in this project to retry with generous timeouts so flaky
-// network conditions do not break packaging jobs.
-tasks.withType<Download>().configureEach {
-    // 5 attempts total (initial + 4 retries) before failing the task.
-    retries(4)
-    // 30s to establish a TCP / TLS connection.
-    connectTimeout(30_000)
-    // 5 minutes per attempt for the body — VLC archives are 40-90 MB and
-    // get.videolan.org can be slow under load.
-    readTimeout(5 * 60_000)
-    // Stage to a temp file and rename only on full success, so a partial
-    // download from one attempt cannot poison the next.
-    tempAndMove(true)
-}
-
 // --- AppImage packaging (Linux) ---
 //
 // Compose Multiplatform's TargetFormat.AppImage is known-broken in 1.10.x (CMP-7101).
 // Instead: wrap `createReleaseDistributable` output with `appimagetool`, which
 // just packages an AppDir as-is. We deliberately avoid `linuxdeploy` here —
 // linuxdeploy auto-walks every binary in the AppDir with ldd to bundle deps,
-// but jpackage already ships a self-contained tree we don't want it touching:
-//   - The bundled JRE puts libjvm.so under usr/lib/runtime/lib/server/ while
-//     sibling libs (libmanagement.so, libawt_xawt.so, libfontmanager.so) have
-//     RPATH=$ORIGIN, so ldd cannot resolve libjvm.so without help.
-//   - The bundled VLC plugins are UPX-compressed; linuxdeploy aborts on those
-//     with "patchelf: no section headers" because they look like static ELFs.
-//   - Several VLC libs have RUNPATH that does not point at sibling libs in
-//     the same directory, so ldd errors with "Could not find dependency".
-// appimagetool sidesteps all of this — it only embeds the AppDir into a
-// SquashFS, runtime-prepended, signed AppImage. AppRun handles LD_LIBRARY_PATH
-// at launch.
+// but jpackage already ships a self-contained tree we don't want it touching
+// (the bundled JRE has libjvm.so under usr/lib/runtime/lib/server/ while sibling
+// libs use $ORIGIN RPATH — ldd can't resolve without help).
+// appimagetool sidesteps that — it only embeds the AppDir into a SquashFS,
+// runtime-prepended, signed AppImage. AppRun handles LD_LIBRARY_PATH at launch.
+//
+// kdroidFilter (video/audio) links against system GStreamer at runtime — the
+// AppImage does not bundle GStreamer; the host system must have it installed.
 //
 // Build inputs live in desktopApp/packaging/appimage/:
-//   - AppRun              shell launcher (sets LD_LIBRARY_PATH including bundled VLC)
+//   - AppRun              shell launcher
 //   - amethyst.desktop    XDG desktop entry
 //   - amethyst.png        512x512 icon
 //

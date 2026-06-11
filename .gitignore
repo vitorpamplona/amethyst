@@ -161,10 +161,20 @@ TASKS.md
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
 
-# Downloaded VLC binaries (vlc-setup plugin)
-desktopApp/src/jvmMain/appResources/linux/
-desktopApp/src/jvmMain/appResources/macos/
-desktopApp/src/jvmMain/appResources/windows/
+# Per-OS appResources slots — historically the ir.mahozad.vlc-setup plugin
+# populated these with VLC binaries (no longer used; superseded by
+# kdroidFilter ComposeMediaPlayer). We still ignore the directory contents
+# by default to keep stale workspaces from accidentally bundling old VLC
+# trees into local packages, but explicitly track the ffmpeg/README.md
+# drop-in slot for the LGPL FFmpeg binaries used by VideoThumbnailCache.
+desktopApp/src/jvmMain/appResources/linux/*
+desktopApp/src/jvmMain/appResources/macos/*
+desktopApp/src/jvmMain/appResources/windows/*
+!desktopApp/src/jvmMain/appResources/linux/ffmpeg/
+!desktopApp/src/jvmMain/appResources/macos/ffmpeg/
+!desktopApp/src/jvmMain/appResources/windows/ffmpeg/
+desktopApp/src/jvmMain/appResources/*/ffmpeg/*
+!desktopApp/src/jvmMain/appResources/*/ffmpeg/README.md
 
 # CI-fetched AppImage tooling (downloaded by create-release workflow; not committed)
 desktopApp/packaging/appimage/appimagetool-x86_64.AppImage

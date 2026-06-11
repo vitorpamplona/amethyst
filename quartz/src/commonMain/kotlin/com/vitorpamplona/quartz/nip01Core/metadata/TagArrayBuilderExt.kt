@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.metadata
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.AboutTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.BannerTag
+import com.vitorpamplona.quartz.nip01Core.metadata.tags.ClinkOfferTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.DisplayNameTag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.Lud06Tag
 import com.vitorpamplona.quartz.nip01Core.metadata.tags.Lud16Tag
@@ -51,3 +52,5 @@ fun TagArrayBuilder<MetadataEvent>.lud06(lud06: String) = addUnique(Lud06Tag.ass
 fun TagArrayBuilder<MetadataEvent>.banner(banner: String) = addUnique(BannerTag.assemble(banner))
 
 fun TagArrayBuilder<MetadataEvent>.pronouns(pronouns: String) = addUnique(PronounsTag.assemble(pronouns))
+
+fun TagArrayBuilder<MetadataEvent>.clinkOffer(offer: String) = addUnique(ClinkOfferTag.assemble(offer))

@@ -54,7 +54,6 @@ import com.vitorpamplona.amethyst.service.lnurl.CachedLnInvoiceParser
 import com.vitorpamplona.amethyst.service.lnurl.InvoiceAmount
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
-import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
@@ -89,7 +88,7 @@ fun MayBeInvoicePreview(
     LoadValueFromInvoice(lnbcWord = lnbcWord) { invoiceAmount ->
         CrossfadeIfEnabled(targetState = invoiceAmount, label = "MayBeInvoicePreview", accountViewModel = accountViewModel) {
             if (it != null) {
-                InvoicePreview(it.invoice, it.amount)
+                InvoicePreview(it.invoice, it.amount, accountViewModel)
             } else {
                 Text(
                     text = lnbcWord,
@@ -104,10 +103,12 @@ fun MayBeInvoicePreview(
 fun InvoicePreview(
     lnInvoice: String,
     amount: String?,
+    accountViewModel: AccountViewModel,
 ) {
     val context = LocalContext.current
 
     var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
+    var payingInvoice by remember { mutableStateOf<String?>(null) }
 
     if (showErrorMessageDialog != null) {
         ErrorMessageDialog(
@@ -116,6 +117,13 @@ fun InvoicePreview(
             onDismiss = { showErrorMessageDialog = null },
         )
     }
+
+    InvoicePaymentDispatcher(
+        bolt11 = payingInvoice,
+        accountViewModel = accountViewModel,
+        onClear = { payingInvoice = null },
+        onError = { showErrorMessageDialog = it },
+    )
 
     Column(
         modifier =
@@ -172,7 +180,7 @@ fun InvoicePreview(
                     Modifier
                         .fillMaxWidth()
                         .padding(vertical = 10.dp),
-                onClick = { payViaIntent(lnInvoice, context, { }) { showErrorMessageDialog = it } },
+                onClick = { payingInvoice = lnInvoice },
                 shape = QuoteBorder,
                 colors =
                     ButtonDefaults.buttonColors(

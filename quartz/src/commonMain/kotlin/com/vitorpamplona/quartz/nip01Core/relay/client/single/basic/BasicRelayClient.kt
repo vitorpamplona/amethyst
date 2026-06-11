@@ -212,12 +212,27 @@ open class BasicRelayClient(
     }
 
     override fun connectAndSyncFiltersIfDisconnected(ignoreRetryDelays: Boolean) {
-        if (!isConnectionStarted() && !connectingMutex.load()) {
-            // waits 60 seconds to reconnect after disconnected.
-            if (ignoreRetryDelays || TimeUtils.now() > lastConnectTentativeInSeconds + delayToConnectInSeconds) {
-                upRelayDelayToConnect()
+        if (connectingMutex.load()) return
+
+        if (isConnectionStarted()) {
+            // A socket already exists. Normally leave it alone, but if it was opened for the wrong
+            // transport — e.g. the relay's Tor classification changed since (a clearnet relay now routed
+            // through the Tor proxy, or vice-versa) — tear it down and rebuild on the current transport.
+            // Without this an in-flight dial on the wrong transport can never be preempted: a still-
+            // connecting socket leaves isConnectionStarted() true (so the old guard skipped it) yet
+            // isConnected() false (so RelayPool.reconnectIfNeedsTo's connected-relay branch never runs),
+            // and the request blocks until that hung dial finally times out.
+            if (socket?.needsReconnect() == true) {
+                disconnect()
                 connect()
             }
+            return
+        }
+
+        // waits 60 seconds to reconnect after disconnected.
+        if (ignoreRetryDelays || TimeUtils.now() > lastConnectTentativeInSeconds + delayToConnectInSeconds) {
+            upRelayDelayToConnect()
+            connect()
         }
     }
 
