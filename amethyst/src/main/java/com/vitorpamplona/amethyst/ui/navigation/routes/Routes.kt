@@ -220,6 +220,23 @@ sealed class Route {
 
     @Serializable object CashuWalletSettings : Route()
 
+    /**
+     * Unified profile payment screen: collects amount/message/zap type and pays
+     * through whichever rail (Lightning, CLINK offer, on-chain, Cashu) the
+     * profile supports. [method] preselects a rail (see ProfilePaymentMethod
+     * route keys); [lnAddressOverride] pays a specific lightning target instead
+     * of the profile's kind:0 lud16; [btcAddressOverride] makes the on-chain
+     * rail pay that announced address directly (plain send, no NIP-BC receipt)
+     * instead of the recipient's pubkey-derived Taproot address.
+     */
+    @Serializable
+    data class SendPayment(
+        val userHex: String,
+        val method: String? = null,
+        val lnAddressOverride: String? = null,
+        val btcAddressOverride: String? = null,
+    ) : Route()
+
     @Serializable object Search : Route()
 
     @Serializable object SecurityFilters : Route()

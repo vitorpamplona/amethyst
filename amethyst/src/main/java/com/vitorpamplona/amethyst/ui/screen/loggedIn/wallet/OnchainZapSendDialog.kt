@@ -101,7 +101,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.NumberFormat
 
-private enum class FeeTier(
+/** Shared with the profile Send Payment screen's on-chain rail. */
+internal enum class FeeTier(
     val label: String,
     val etaLabel: String,
 ) {
@@ -110,7 +111,7 @@ private enum class FeeTier(
     FAST("Fast", "~10 min"),
 }
 
-private fun FeeEstimates.rateFor(tier: FeeTier): Double =
+internal fun FeeEstimates.rateFor(tier: FeeTier): Double =
     when (tier) {
         FeeTier.SLOW -> slowSatPerVbyte
         FeeTier.NORMAL -> normalSatPerVbyte
