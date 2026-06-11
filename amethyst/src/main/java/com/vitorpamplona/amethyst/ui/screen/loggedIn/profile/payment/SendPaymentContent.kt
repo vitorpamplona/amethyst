@@ -107,6 +107,17 @@ data class ZapTypeOption(
 )
 
 /**
+ * One "Pay from" choice: an in-app wallet (NWC, CLINK debit, on-chain, cashu)
+ * or the hand-off to another wallet app on the system ([isExternal]).
+ */
+@Immutable
+data class PaymentFromUi(
+    val id: String,
+    val name: String,
+    val isExternal: Boolean = false,
+)
+
+/**
  * In-screen payment lifecycle. The screen never closes itself on send: it walks
  * Editing → InProgress (invoice request, then payment) → Success/Failure, and
  * only the user's Done tap leaves the screen.
@@ -158,6 +169,9 @@ fun SendPaymentContent(
     methods: ImmutableList<PaymentMethodUi>,
     selectedMethod: ProfilePaymentMethod?,
     onSelectMethod: (ProfilePaymentMethod) -> Unit,
+    fromSources: ImmutableList<PaymentFromUi>?,
+    selectedFromId: String?,
+    onSelectFrom: (String) -> Unit,
     presetAmounts: ImmutableList<Long>,
     amountInput: String,
     onAmountChange: (String) -> Unit,
@@ -211,6 +225,15 @@ fun SendPaymentContent(
             enabled = editing,
             onSelect = onSelectMethod,
         )
+
+        if (!fromSources.isNullOrEmpty()) {
+            FromSelector(
+                sources = fromSources,
+                selectedId = selectedFromId,
+                enabled = editing,
+                onSelect = onSelectFrom,
+            )
+        }
 
         AmountSection(
             presetAmounts = presetAmounts,
@@ -364,6 +387,55 @@ private fun MethodSelector(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+/**
+ * "Pay from" chips: the wallet that will be charged. A single entry renders
+ * as a disabled chip — it still tells the user where the money comes from,
+ * there's just nothing to choose. The external entry hands the invoice to
+ * another wallet app on the system (which confirms on its own).
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FromSelector(
+    sources: ImmutableList<PaymentFromUi>,
+    selectedId: String?,
+    enabled: Boolean,
+    onSelect: (String) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        SectionLabel(stringRes(R.string.send_payment_from))
+
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            sources.forEach { source ->
+                FilterChip(
+                    selected = selectedId == source.id,
+                    enabled = enabled && sources.size > 1,
+                    onClick = { onSelect(source.id) },
+                    leadingIcon = {
+                        Icon(
+                            symbol =
+                                if (source.isExternal) {
+                                    MaterialSymbols.AutoMirrored.OpenInNew
+                                } else {
+                                    MaterialSymbols.AccountBalanceWallet
+                                },
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    },
+                    label = { Text(source.name) },
+                    colors =
+                        FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                            selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
+                            disabledSelectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                        ),
+                )
+            }
         }
     }
 }
@@ -552,6 +624,13 @@ private val previewMethods =
         PaymentMethodUi(ProfilePaymentMethod.CASHU, "Spendable for this recipient: 4,200 sats"),
     )
 
+private val previewFromSources =
+    persistentListOf(
+        PaymentFromUi("nwc-1", "Alby Hub"),
+        PaymentFromUi("debit-1", "Coinos Debit"),
+        PaymentFromUi("external", "Another wallet app", isExternal = true),
+    )
+
 private val previewZapTypes =
     listOf(
         ZapTypeOption(LnZapEvent.ZapType.PUBLIC, "Public", "Everybody can see the transaction and message"),
@@ -591,6 +670,9 @@ private fun SendPaymentLightningPreview() {
             methods = previewMethods,
             selectedMethod = ProfilePaymentMethod.LIGHTNING,
             onSelectMethod = {},
+            fromSources = previewFromSources,
+            selectedFromId = "nwc-1",
+            onSelectFrom = {},
             presetAmounts = persistentListOf(100L, 500L, 1_000L, 5_000L),
             amountInput = "1000",
             onAmountChange = {},
@@ -624,6 +706,9 @@ private fun SendPaymentClinkFixedPreview() {
             methods = previewMethods,
             selectedMethod = ProfilePaymentMethod.CLINK,
             onSelectMethod = {},
+            fromSources = previewFromSources,
+            selectedFromId = "nwc-1",
+            onSelectFrom = {},
             presetAmounts = persistentListOf(100L, 500L, 1_000L),
             amountInput = "2100",
             onAmountChange = {},
@@ -657,6 +742,9 @@ private fun SendPaymentInProgressPreview() {
             methods = previewMethods,
             selectedMethod = ProfilePaymentMethod.CASHU,
             onSelectMethod = {},
+            fromSources = previewFromSources,
+            selectedFromId = "nwc-1",
+            onSelectFrom = {},
             presetAmounts = persistentListOf(100L, 500L),
             amountInput = "500",
             onAmountChange = {},
@@ -690,6 +778,9 @@ private fun SendPaymentSuccessPreview() {
             methods = previewMethods,
             selectedMethod = ProfilePaymentMethod.LIGHTNING,
             onSelectMethod = {},
+            fromSources = previewFromSources,
+            selectedFromId = "nwc-1",
+            onSelectFrom = {},
             presetAmounts = persistentListOf(100L, 500L),
             amountInput = "1000",
             onAmountChange = {},
@@ -723,6 +814,9 @@ private fun SendPaymentFailurePreview() {
             methods = previewMethods,
             selectedMethod = ProfilePaymentMethod.ONCHAIN,
             onSelectMethod = {},
+            fromSources = previewFromSources,
+            selectedFromId = "nwc-1",
+            onSelectFrom = {},
             presetAmounts = persistentListOf(10_000L, 50_000L),
             amountInput = "10000",
             onAmountChange = {},

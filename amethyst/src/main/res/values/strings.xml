@@ -140,6 +140,10 @@
 
     <string name="send_payment_title">Send Payment</string>
     <string name="send_payment_method">Pay with</string>
+    <string name="send_payment_from">Pay from</string>
+    <string name="send_payment_source_external">Another wallet app</string>
+    <string name="send_payment_source_onchain_wallet">On-chain wallet</string>
+    <string name="send_payment_source_cashu_wallet">Cashu wallet</string>
     <string name="send_payment_method_lightning">Lightning</string>
     <string name="send_payment_method_clink">CLINK Offer</string>
     <string name="send_payment_method_onchain">On-chain</string>

@@ -44,8 +44,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
+import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
 import com.vitorpamplona.amethyst.model.DEFAULT_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -165,6 +167,41 @@ private fun SendPaymentLoaded(
         remember(btcAddressOverride) {
             btcAddressOverride?.takeIf { SegwitAddress.isPayableMainnetAddress(it) }
         }
+
+    // ---- "Pay from" sources -------------------------------------------------
+    // The BOLT-11 rails (Lightning, CLINK offer) can be paid from any
+    // configured NWC wallet or CLINK debit, or handed off to another wallet
+    // app. On-chain and cashu are intrinsically tied to their own wallets,
+    // so they expose a single fixed entry that just states the source.
+    val nwcWallets by accountViewModel.account.settings.nwcWallets
+        .collectAsStateWithLifecycle()
+    val clinkDebitWallets by accountViewModel.account.settings.clinkDebitWallets
+        .collectAsStateWithLifecycle()
+    val externalWalletLabel = stringRes(R.string.send_payment_source_external)
+    val bolt11Sources =
+        remember(nwcWallets, clinkDebitWallets, externalWalletLabel) {
+            (
+                PaymentSourceResolver.all(nwcWallets, clinkDebitWallets).map { PaymentFromUi(it.id, it.name) } +
+                    PaymentFromUi(EXTERNAL_WALLET_SOURCE_ID, externalWalletLabel, isExternal = true)
+            ).toImmutableList()
+        }
+    var selectedBolt11SourceId by remember {
+        mutableStateOf(
+            accountViewModel.account.settings
+                .defaultPaymentSource()
+                ?.id ?: EXTERNAL_WALLET_SOURCE_ID,
+        )
+    }
+    // Re-resolve if the selected wallet disappears (e.g. removed in Settings
+    // while this screen is open).
+    LaunchedEffect(bolt11Sources) {
+        if (bolt11Sources.none { it.id == selectedBolt11SourceId }) {
+            selectedBolt11SourceId =
+                accountViewModel.account.settings
+                    .defaultPaymentSource()
+                    ?.id ?: EXTERNAL_WALLET_SOURCE_ID
+        }
+    }
 
     var stage by remember { mutableStateOf<PaymentFlowStage>(PaymentFlowStage.Editing) }
     var selectedMethod by remember { mutableStateOf<ProfilePaymentMethod?>(null) }
@@ -313,12 +350,22 @@ private fun SendPaymentLoaded(
     }
 
     /**
-     * Pays a BOLT-11 through the default payment source without an extra
-     * confirmation dialog — this screen already collected the explicit
-     * amount + Pay tap, so it IS the confirmation.
+     * Pays a BOLT-11 through the wallet picked in the "Pay from" selector
+     * without an extra confirmation dialog — this screen already collected
+     * the explicit amount + Pay tap, so it IS the confirmation. The external
+     * entry hands off to another wallet app (which confirms on its own).
      */
     fun payBolt11(invoice: String) {
-        when (val source = accountViewModel.account.settings.defaultPaymentSource()) {
+        val settings = accountViewModel.account.settings
+        val pickedSource =
+            if (selectedBolt11SourceId == EXTERNAL_WALLET_SOURCE_ID) {
+                null
+            } else {
+                PaymentSourceResolver
+                    .all(settings.nwcWallets.value, settings.clinkDebitWallets.value)
+                    .firstOrNull { it.id == selectedBolt11SourceId }
+            }
+        when (val source = pickedSource) {
             is PaymentSource.Nwc -> {
                 postStage(PaymentFlowStage.InProgress(stringRes(context, R.string.send_payment_paying_via, source.name)))
                 accountViewModel.sendZapPaymentRequestFor(invoice, null) { response ->
@@ -482,6 +529,25 @@ private fun SendPaymentLoaded(
             null
         }
 
+    val onchainWalletLabel = stringRes(R.string.send_payment_source_onchain_wallet)
+    val cashuWalletLabel = stringRes(R.string.send_payment_source_cashu_wallet)
+    val fromSources =
+        when (selectedMethod) {
+            ProfilePaymentMethod.LIGHTNING, ProfilePaymentMethod.CLINK -> bolt11Sources
+            ProfilePaymentMethod.ONCHAIN ->
+                remember(onchainWalletLabel) { persistentListOf(PaymentFromUi(ONCHAIN_WALLET_SOURCE_ID, onchainWalletLabel)) }
+            ProfilePaymentMethod.CASHU ->
+                remember(cashuWalletLabel) { persistentListOf(PaymentFromUi(CASHU_WALLET_SOURCE_ID, cashuWalletLabel)) }
+            null -> null
+        }
+    val selectedFromId =
+        when (selectedMethod) {
+            ProfilePaymentMethod.LIGHTNING, ProfilePaymentMethod.CLINK -> selectedBolt11SourceId
+            ProfilePaymentMethod.ONCHAIN -> ONCHAIN_WALLET_SOURCE_ID
+            ProfilePaymentMethod.CASHU -> CASHU_WALLET_SOURCE_ID
+            null -> null
+        }
+
     val receiptNote =
         when {
             selectedMethod == ProfilePaymentMethod.CLINK -> stringRes(R.string.send_payment_receipt_clink)
@@ -508,6 +574,14 @@ private fun SendPaymentLoaded(
         onSelectMethod = {
             userPickedMethod = true
             selectedMethod = it
+        },
+        fromSources = fromSources,
+        selectedFromId = selectedFromId,
+        onSelectFrom = { id ->
+            // Only the BOLT-11 rails have a real choice; the fixed on-chain /
+            // cashu entries are disabled chips and never call back, but guard
+            // anyway so a stray id can't corrupt the lightning selection.
+            if (bolt11Sources.any { it.id == id }) selectedBolt11SourceId = id
         },
         presetAmounts = presetAmounts,
         amountInput = clinkFixedPrice?.toString() ?: amountInput,
@@ -576,6 +650,13 @@ private fun SendPaymentLoaded(
 }
 
 private fun String.shortenMiddle(): String = if (length > 20) take(12) + "…" + takeLast(6) else this
+
+/** "Pay from" id for the hand-off to another wallet app (no in-app source). */
+private const val EXTERNAL_WALLET_SOURCE_ID = "external-wallet-app"
+
+/** Fixed "Pay from" ids for the rails that are bound to their own wallet. */
+private const val ONCHAIN_WALLET_SOURCE_ID = "onchain-wallet"
+private const val CASHU_WALLET_SOURCE_ID = "cashu-wallet"
 
 /**
  * The NIP-57 zap-type choices for the Lightning rail. Memoized because the
