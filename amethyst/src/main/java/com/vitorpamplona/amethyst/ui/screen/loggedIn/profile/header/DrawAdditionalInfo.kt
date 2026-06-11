@@ -218,8 +218,6 @@ fun DrawAdditionalInfo(
             }
         DisplayPaymentRailChips(baseUser, lud16, user, accountViewModel, nav)
 
-        DisplayPaymentTargets(baseUser, accountViewModel, nav)
-
         val website = user.info.website
         if (!website.isNullOrEmpty()) {
             Row(verticalAlignment = Alignment.CenterVertically) {

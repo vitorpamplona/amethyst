@@ -35,6 +35,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -54,27 +55,33 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip01Core.UserInfo
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.payment.ProfilePaymentMethod
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.payment.rememberProfileClinkOffer
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
+import com.vitorpamplona.quartz.experimental.clink.pointers.NOffer
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
+import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
 import kotlinx.coroutines.launch
 import androidx.compose.material3.Icon as M3Icon
 
 private val CashuPurple = Color(0xFFA855F7)
 
 /**
- * One FlowRow of tappable chips for every rail the Send Payment screen can pay
- * on this profile: Lightning (lud16, long-press copies the address), the CLINK
- * offer, the NIP-BC on-chain wallet, and Cashu nutzaps (shown only when the
- * logged-in user's cashu wallet shares a mint the recipient accepts). Each
- * chip opens the Send Payment screen with that rail preselected. The NIP-A3
- * payment-target chips render separately in [DisplayPaymentTargets].
+ * One FlowRow of tappable chips for every way to pay this profile: Lightning
+ * (lud16, long-press copies the address), the CLINK offer, the NIP-BC on-chain
+ * wallet, Cashu nutzaps (shown only when the logged-in user's cashu wallet
+ * shares a mint the recipient accepts), and the NIP-A3 payment-target chips.
+ * A single FlowRow so the chips wrap together with uniform spacing instead of
+ * stacking as separately padded rows.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -95,8 +102,50 @@ fun DisplayPaymentRailChips(
         }
     val onchainAvailable = LocalCache.onchainBackend != null
 
-    if (lud16.isNullOrEmpty() && clinkOffer == null && !onchainAvailable && !cashuAvailable) return
+    val address =
+        remember(baseUser.pubkeyHex) {
+            PaymentTargetsEvent.createAddress(baseUser.pubkeyHex)
+        }
 
+    LoadAddressableNote(address, accountViewModel) { note ->
+        val targets =
+            if (note != null) {
+                EventFinderFilterAssemblerSubscription(note, accountViewModel)
+                val event by observeNoteEvent<PaymentTargetsEvent>(note, accountViewModel)
+                remember(event) { event?.paymentTargets() ?: emptyList() }
+            } else {
+                emptyList()
+            }
+
+        if (lud16.isNullOrEmpty() && clinkOffer == null && !onchainAvailable && !cashuAvailable && targets.isEmpty()) {
+            return@LoadAddressableNote
+        }
+
+        RailAndTargetChips(
+            baseUser = baseUser,
+            lud16 = lud16,
+            clinkOffer = clinkOffer,
+            onchainAvailable = onchainAvailable,
+            cashuAvailable = cashuAvailable,
+            targets = targets,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun RailAndTargetChips(
+    baseUser: User,
+    lud16: String?,
+    clinkOffer: NOffer?,
+    onchainAvailable: Boolean,
+    cashuAvailable: Boolean,
+    targets: List<PaymentTarget>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     fun openSendPayment(method: ProfilePaymentMethod) {
         nav.nav(Route.SendPayment(baseUser.pubkeyHex, method.routeKey))
     }
@@ -169,6 +218,10 @@ fun DisplayPaymentRailChips(
                     modifier = Size16Modifier,
                 )
             }
+        }
+
+        targets.forEach { target ->
+            PaymentTargetChip(baseUser, target, accountViewModel, nav)
         }
     }
 }
