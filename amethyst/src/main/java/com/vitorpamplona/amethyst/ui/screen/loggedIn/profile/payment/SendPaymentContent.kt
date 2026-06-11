@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.FlowRowScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -43,6 +44,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -51,6 +53,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -62,6 +65,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
@@ -165,6 +169,25 @@ private fun ProfilePaymentMethod.symbol(): MaterialSymbol =
         ProfilePaymentMethod.ONCHAIN -> MaterialSymbols.CurrencyBitcoin
         ProfilePaymentMethod.CASHU -> MaterialSymbols.AccountBalanceWallet
     }
+
+/**
+ * FlowRow for the screen's chip groups with the same wrap gap as the
+ * Receive-on pills. Material chips reserve a 48dp interactive height around
+ * their 32dp visual, which inflates wrapped-row gaps to ~24dp; dropping the
+ * enforcement keeps wrapped rows exactly 8dp apart while the chips stay
+ * comfortably tappable.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun ChipFlowRow(content: @Composable FlowRowScope.() -> Unit) {
+    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            content = content,
+        )
+    }
+}
 
 /**
  * Leading icon of a rail chip. Cashu uses its own vector mark (a monochrome
@@ -401,10 +424,7 @@ private fun MethodSelector(
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         SectionLabel(stringRes(R.string.send_payment_method))
 
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
+        ChipFlowRow {
             methods.forEach { entry ->
                 MethodChip(
                     entry = entry,
@@ -497,10 +517,7 @@ private fun FromSelector(
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         SectionLabel(stringRes(R.string.send_payment_from))
 
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
+        ChipFlowRow {
             sources.forEach { source ->
                 FilterChip(
                     selected = selectedId == source.id,
@@ -555,10 +572,7 @@ private fun AmountSection(
         SectionLabel(stringRes(R.string.send_payment_amount))
 
         if (!locked && presetAmounts.isNotEmpty()) {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
+            ChipFlowRow {
                 presetAmounts.forEach { amount ->
                     SuggestionChip(
                         enabled = enabled,
@@ -606,10 +620,7 @@ private fun ReceiptSection(
         SectionLabel(stringRes(R.string.send_payment_receipt_section))
 
         if (zapTypes != null) {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
+            ChipFlowRow {
                 zapTypes.forEach { option ->
                     FilterChip(
                         selected = selectedZapType == option.type,
