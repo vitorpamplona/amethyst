@@ -81,6 +81,8 @@ sealed class Route {
 
     @Serializable object Pictures : Route()
 
+    @Serializable object Workouts : Route()
+
     @Serializable object SoftwareApps : Route()
 
     @Serializable data class SoftwareAppDetail(
@@ -590,6 +592,8 @@ sealed class Route {
     ) : Route()
 
     @Serializable data object NewGoal : Route()
+
+    @Serializable data object NewWorkout : Route()
 
     @Serializable
     data class NewLongFormPost(

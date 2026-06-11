@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats.datasource.Publ
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.shorts.datasource.ShortsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.datasource.SoftwareAppsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.datasource.WorkoutsFilterAssemblerSubscription
 
 /**
  * Activates the relay subscription for each feed the user has pinned to the bottom
@@ -89,6 +90,8 @@ private fun PreloadFor(
         NavBarItem.ARTICLES -> ArticlesFilterAssemblerSubscription(accountViewModel)
 
         NavBarItem.PICTURES -> PicturesFilterAssemblerSubscription(accountViewModel)
+
+        NavBarItem.WORKOUTS -> WorkoutsFilterAssemblerSubscription(accountViewModel)
 
         NavBarItem.SOFTWARE_APPS -> SoftwareAppsFilterAssemblerSubscription(accountViewModel)
 
