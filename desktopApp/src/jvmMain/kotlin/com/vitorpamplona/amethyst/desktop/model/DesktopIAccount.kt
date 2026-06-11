@@ -35,6 +35,8 @@ import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.ui.chats.DmSendTracker
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -197,18 +199,7 @@ class DesktopIAccount(
         val batch =
             result.wraps.map { wrap ->
                 val recipientKey = wrap.recipientPubKey()
-                val targetRelays =
-                    if (recipientKey != null) {
-                        val dmRelays =
-                            localCache
-                                .getOrCreateUser(recipientKey)
-                                .dmInboxRelays()
-                                ?.toSet()
-                        dmRelays?.ifEmpty { null }
-                            ?: relayManager.connectedRelays.value
-                    } else {
-                        relayManager.connectedRelays.value
-                    }
+                val targetRelays = resolveDmInboxRelaysStrict(recipientKey)
                 wrap to targetRelays
             }
 
@@ -228,18 +219,7 @@ class DesktopIAccount(
         val batch =
             result.wraps.map { wrap ->
                 val recipientKey = wrap.recipientPubKey()
-                val targetRelays =
-                    if (recipientKey != null) {
-                        val dmRelays =
-                            localCache
-                                .getOrCreateUser(recipientKey)
-                                .dmInboxRelays()
-                                ?.toSet()
-                        dmRelays?.ifEmpty { null }
-                            ?: relayManager.connectedRelays.value
-                    } else {
-                        relayManager.connectedRelays.value
-                    }
+                val targetRelays = resolveDmInboxRelaysStrict(recipientKey)
                 wrap to targetRelays
             }
 
@@ -250,22 +230,38 @@ class DesktopIAccount(
         val batch =
             wraps.map { wrap ->
                 val recipientKey = wrap.recipientPubKey()
-                val targetRelays =
-                    if (recipientKey != null) {
-                        val dmRelays =
-                            localCache
-                                .getOrCreateUser(recipientKey)
-                                .dmInboxRelays()
-                                ?.toSet()
-                        dmRelays?.ifEmpty { null }
-                            ?: relayManager.connectedRelays.value
-                    } else {
-                        relayManager.connectedRelays.value
-                    }
+                val targetRelays = resolveDmInboxRelaysStrict(recipientKey)
                 wrap to targetRelays
             }
 
         scope.launch { dmSendTracker.sendBatch(batch) }
+    }
+
+    /**
+     * NIP-17 inbox-relay resolution, strict variant — no fallback to the
+     * user's connected relays.
+     *
+     * Per NIP-17 §Publishing, a gift wrap MUST only land on relays advertised
+     * in the recipient's kind:10050. Falling back to the sender's connected
+     * relays when 10050 is missing publishes the wrap to relays the recipient
+     * does NOT consult — at best the message never arrives, at worst it leaks
+     * the conversation metadata (recipient pubkey + send timestamp) to relays
+     * outside the recipient's chosen inbox.
+     *
+     * Empty result means the wrap will not be sent; [DmSendTracker.sendBatch]
+     * surfaces this as a "No relays available" failure to the user. Indexer
+     * fan-out + a UI prompt for the missing-10050 case lands with the
+     * [DmInboxRelayResolver] (Phase 4); until then "no 10050 → cannot send"
+     * is the conservative position.
+     */
+    private fun resolveDmInboxRelaysStrict(recipientKey: HexKey?): Set<NormalizedRelayUrl> {
+        if (recipientKey == null) return emptySet()
+        return localCache
+            .getOrCreateUser(recipientKey)
+            .dmInboxRelays()
+            ?.toSet()
+            ?.ifEmpty { null }
+            ?: emptySet()
     }
 
     private fun addEventToChatroom(
