@@ -81,5 +81,26 @@ class NutzapEvent(
             recipient(recipientPubKey)
             initializer()
         }
+
+        /**
+         * Nutzap aimed at a profile rather than a specific event: carries only
+         * the `p` tag (no `e`/`k` tags), mirroring NIP-57's profile zaps.
+         */
+        fun buildToUser(
+            message: String,
+            proofs: List<String>,
+            mintUrl: String,
+            unit: String,
+            recipientPubKey: HexKey,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<NutzapEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, message, createdAt) {
+            alt(ALT_DESCRIPTION)
+            proofs(proofs)
+            mintUrl(mintUrl)
+            unit(unit)
+            recipient(recipientPubKey)
+            initializer()
+        }
     }
 }

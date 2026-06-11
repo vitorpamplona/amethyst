@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
@@ -178,6 +179,7 @@ class AccountSettings(
     val defaultDiscoveryFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultPollsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultPicturesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultWorkoutsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultCalendarsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultProductsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AroundMe),
     val defaultShortsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
@@ -615,6 +617,17 @@ class AccountSettings(
     fun changeDefaultPicturesFollowList(name: TopFilter) {
         if (defaultPicturesFollowList.value != name) {
             defaultPicturesFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultWorkoutsFollowList(name: FeedDefinition) {
+        changeDefaultWorkoutsFollowList(name.code)
+    }
+
+    fun changeDefaultWorkoutsFollowList(name: TopFilter) {
+        if (defaultWorkoutsFollowList.value != name) {
+            defaultWorkoutsFollowList.tryEmit(name)
             saveAccountSettings()
         }
     }
@@ -1199,6 +1212,17 @@ class AccountSettings(
             }
             saveAccountSettings()
         }
+    }
+
+    // ---
+    // pinned chatrooms
+    // ---
+
+    fun toggleChatroomPin(room: ChatroomKey) {
+        syncedSettings.chats.pinnedChatrooms.update {
+            if (room in it) it - room else it + room
+        }
+        saveAccountSettings()
     }
 
     // ---

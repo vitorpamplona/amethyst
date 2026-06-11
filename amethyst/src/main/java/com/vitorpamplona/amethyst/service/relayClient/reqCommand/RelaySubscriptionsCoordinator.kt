@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.datasource.Sof
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.ThreadFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.datasource.OnchainZapsFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.datasource.WorkoutsFilterAssembler
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.IAuthStatus
@@ -120,6 +121,7 @@ class RelaySubscriptionsCoordinator(
 
     val polls = PollsFilterAssembler(client)
     val pictures = PicturesFilterAssembler(client)
+    val workouts = WorkoutsFilterAssembler(client)
     val calendars = CalendarsFilterAssembler(client)
     val products = ProductsFilterAssembler(client)
     val shorts = ShortsFilterAssembler(client)
@@ -166,6 +168,7 @@ class RelaySubscriptionsCoordinator(
             discovery,
             polls,
             pictures,
+            workouts,
             calendars,
             products,
             shorts,

@@ -100,11 +100,6 @@ fun MarmotGroupChatView(
     newMessageModel.init(accountViewModel)
     newMessageModel.load(nostrGroupId)
 
-    DisposableEffect(nostrGroupId) {
-        newMessageModel.chatroom?.markAsRead()
-        onDispose { }
-    }
-
     // Resolve the navigation-supplied replyId (e.g. tapping reply on an MLS
     // message in the Notifications screen) into the actual Note once it has
     // landed in LocalCache. checkGetOrCreateNote is a no-op for unknown ids.
@@ -134,7 +129,7 @@ fun MarmotGroupChatView(
                 feedContentState = feedViewModel.feedState,
                 accountViewModel = accountViewModel,
                 nav = nav,
-                routeForLastRead = "MarmotGroup/$nostrGroupId",
+                routeForLastRead = marmotGroupLastReadRoute(nostrGroupId),
                 onWantsToReply = { note -> newMessageModel.reply(note) },
                 onWantsToEditDraft = { },
             )

@@ -49,35 +49,7 @@ class MarmotGroupList(
     ) {
         if (!isDisplayableFeedMessage(msg)) return
         val chatroom = getOrCreateGroup(nostrGroupId)
-        val isSelfAuthored = msg.author?.pubkeyHex == ownerPubKey
-        // Use the quiet path for our own messages so the relay round-trip
-        // doesn't mark the user's own outgoing message as unread.
-        val added =
-            if (isSelfAuthored) {
-                chatroom.restoreMessageSync(msg)
-            } else {
-                chatroom.addMessageSync(msg)
-            }
-        if (added) {
-            noteToGroupIndex.getOrCreate(msg.idHex) { nostrGroupId }
-            if (isSelfAuthored) {
-                chatroom.ownerSentMessage = true
-            }
-            _groupListChanges.tryEmit(nostrGroupId)
-        }
-    }
-
-    /**
-     * Add a message that was restored from persistent storage at app startup.
-     * Does not bump the chatroom's unread counter.
-     */
-    fun restoreMessage(
-        nostrGroupId: HexKey,
-        msg: Note,
-    ) {
-        if (!isDisplayableFeedMessage(msg)) return
-        val chatroom = getOrCreateGroup(nostrGroupId)
-        if (chatroom.restoreMessageSync(msg)) {
+        if (chatroom.addMessageSync(msg)) {
             noteToGroupIndex.getOrCreate(msg.idHex) { nostrGroupId }
             if (msg.author?.pubkeyHex == ownerPubKey) {
                 chatroom.ownerSentMessage = true

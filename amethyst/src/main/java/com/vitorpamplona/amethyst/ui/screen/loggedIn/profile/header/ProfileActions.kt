@@ -40,7 +40,7 @@ fun ProfileActions(
 ) {
     MessageButton(baseUser, accountViewModel, nav)
 
-    PaymentButton(baseUser, accountViewModel)
+    PaymentButton(baseUser, accountViewModel, nav)
 
     val isMe by
         remember(accountViewModel) { derivedStateOf { accountViewModel.userProfile() == baseUser } }

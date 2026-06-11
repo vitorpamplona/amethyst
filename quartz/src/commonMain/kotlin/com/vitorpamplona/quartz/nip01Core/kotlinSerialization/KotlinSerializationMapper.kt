@@ -20,6 +20,20 @@
  */
 package com.vitorpamplona.quartz.nip01Core.kotlinSerialization
 
+import com.vitorpamplona.quartz.experimental.clink.debits.DebitRequest
+import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
+import com.vitorpamplona.quartz.experimental.clink.kotlinSerialization.DebitRequestKSerializer
+import com.vitorpamplona.quartz.experimental.clink.kotlinSerialization.DebitResponseKSerializer
+import com.vitorpamplona.quartz.experimental.clink.kotlinSerialization.ManageRequestKSerializer
+import com.vitorpamplona.quartz.experimental.clink.kotlinSerialization.ManageResponseKSerializer
+import com.vitorpamplona.quartz.experimental.clink.kotlinSerialization.OfferReceiptKSerializer
+import com.vitorpamplona.quartz.experimental.clink.kotlinSerialization.OfferRequestKSerializer
+import com.vitorpamplona.quartz.experimental.clink.kotlinSerialization.OfferResponseKSerializer
+import com.vitorpamplona.quartz.experimental.clink.manage.ManageRequest
+import com.vitorpamplona.quartz.experimental.clink.manage.ManageResponse
+import com.vitorpamplona.quartz.experimental.clink.offers.OfferReceipt
+import com.vitorpamplona.quartz.experimental.clink.offers.OfferRequest
+import com.vitorpamplona.quartz.experimental.clink.offers.OfferResponse
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedSerializable
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
@@ -121,6 +135,34 @@ class KotlinSerializationMapper {
                     json.encodeToString(Nip47NotificationKSerializer, value)
                 }
 
+                is OfferRequest -> {
+                    json.encodeToString(OfferRequestKSerializer, value)
+                }
+
+                is OfferResponse -> {
+                    json.encodeToString(OfferResponseKSerializer, value)
+                }
+
+                is OfferReceipt -> {
+                    json.encodeToString(OfferReceiptKSerializer, value)
+                }
+
+                is DebitRequest -> {
+                    json.encodeToString(DebitRequestKSerializer, value)
+                }
+
+                is DebitResponse -> {
+                    json.encodeToString(DebitResponseKSerializer, value)
+                }
+
+                is ManageRequest -> {
+                    json.encodeToString(ManageRequestKSerializer, value)
+                }
+
+                is ManageResponse -> {
+                    json.encodeToString(ManageResponseKSerializer, value)
+                }
+
                 else -> {
                     throw IllegalArgumentException("Unsupported type: ${value::class}")
                 }
@@ -141,6 +183,13 @@ class KotlinSerializationMapper {
                     Response::class -> json.decodeFromString(Nip47ResponseKSerializer, jsonStr)
                     Request::class -> json.decodeFromString(Nip47RequestKSerializer, jsonStr)
                     Notification::class -> json.decodeFromString(Nip47NotificationKSerializer, jsonStr)
+                    OfferRequest::class -> json.decodeFromString(OfferRequestKSerializer, jsonStr)
+                    OfferResponse::class -> json.decodeFromString(OfferResponseKSerializer, jsonStr)
+                    OfferReceipt::class -> json.decodeFromString(OfferReceiptKSerializer, jsonStr)
+                    DebitRequest::class -> json.decodeFromString(DebitRequestKSerializer, jsonStr)
+                    DebitResponse::class -> json.decodeFromString(DebitResponseKSerializer, jsonStr)
+                    ManageRequest::class -> json.decodeFromString(ManageRequestKSerializer, jsonStr)
+                    ManageResponse::class -> json.decodeFromString(ManageResponseKSerializer, jsonStr)
                     else -> throw IllegalArgumentException("Unsupported type: ${T::class}")
                 }
             @Suppress("UNCHECKED_CAST")

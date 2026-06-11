@@ -178,6 +178,7 @@ import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip10Notes.threadRootIdOrSelf
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -525,6 +526,9 @@ class Account(
     val livePicturesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPicturesFollowList)
     val livePicturesFollowListsPerRelay = OutboxLoaderState(livePicturesFollowLists, cache, scope).flow
 
+    val liveWorkoutsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultWorkoutsFollowList)
+    val liveWorkoutsFollowListsPerRelay = OutboxLoaderState(liveWorkoutsFollowLists, cache, scope).flow
+
     val liveCalendarsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultCalendarsFollowList)
     val liveCalendarsFollowListsPerRelay = OutboxLoaderState(liveCalendarsFollowLists, cache, scope).flow
 
@@ -656,6 +660,11 @@ class Account(
         if (settings.changeAudioVisualizer(style)) {
             sendNewAppSpecificData()
         }
+    }
+
+    suspend fun toggleChatroomPin(room: ChatroomKey) {
+        settings.toggleChatroomPin(room)
+        sendNewAppSpecificData()
     }
 
     suspend fun updateZapAmounts(
@@ -909,6 +918,32 @@ class Account(
             comment = comment,
             zappedEvent = zappedEvent,
         ) { template -> signAndComputeBroadcast(template) }
+    }
+
+    /**
+     * Pay an explicit Bitcoin address (e.g. a profile's NIP-A3 `bitcoin`
+     * payment target) from the NIP-BC Taproot wallet. A plain wallet send —
+     * no kind:8333 receipt is published. See [OnchainZapSender.sendToAddress].
+     */
+    suspend fun sendOnchainToAddress(
+        recipientAddress: String,
+        amountSats: Long,
+        feeRateSatPerVByte: Double,
+    ): OnchainZapSendResult {
+        val backend =
+            cache.onchainBackend
+                ?: return OnchainZapSendResult.Failure(
+                    OnchainZapSendStage.LOADING_UTXOS,
+                    "Bitcoin chain backend is not configured",
+                )
+        return OnchainZapSender.sendToAddress(
+            backend = backend,
+            signer = signer,
+            senderPubKey = signer.pubKey,
+            recipientAddress = recipientAddress,
+            amountSats = amountSats,
+            feeRateSatPerVByte = feeRateSatPerVByte,
+        )
     }
 
     /**
@@ -3549,7 +3584,7 @@ class Account(
                                 if (isNew) {
                                     innerNote.event = innerEvent
                                 }
-                                marmotGroupList.restoreMessage(groupId, innerNote)
+                                marmotGroupList.addMessage(groupId, innerNote)
                             } catch (e: Exception) {
                                 Log.w(
                                     "Account",

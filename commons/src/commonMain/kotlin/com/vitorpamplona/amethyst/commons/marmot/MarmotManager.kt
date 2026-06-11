@@ -51,6 +51,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quote
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -88,6 +89,13 @@ class MarmotManager(
         try {
             groupManager.restoreAll()
             val activeIds = groupManager.activeGroupIds()
+            // Register restored groups with a seeded `since` BEFORE
+            // syncWithGroupManager fills in default (since = null) entries,
+            // so even the first filter set sent to relays skips the
+            // already-processed kind:445 backlog.
+            subscriptionSinceFromStoredMessages(activeIds).forEach { (groupId, since) ->
+                subscriptionManager.subscribeGroup(groupId, since)
+            }
             subscriptionManager.syncWithGroupManager(activeIds)
             // Also restore previously-published KeyPackage bundles so that
             // Welcomes referencing them remain processable across restarts.
@@ -96,6 +104,46 @@ class MarmotManager(
         } catch (e: Exception) {
             Log.e("MarmotManager", "Failed to restore Marmot state", e)
         }
+    }
+
+    /**
+     * Computes a per-group kind:445 subscription `since` from the newest
+     * persisted decrypted message of each group.
+     *
+     * Subscription state does not survive a restart, and neither does the
+     * application ratchet position (group state is persisted only at
+     * commits). Without a `since`, every restart re-downloads the group's
+     * full kind:445 backlog, and the rewound ratchet re-decrypts old
+     * application messages as if they had just arrived.
+     *
+     * [GROUP_EVENT_REFETCH_OVERLAP_SEC] of overlap is kept so late or
+     * out-of-order events published shortly before the newest stored message
+     * are still fetched; replays inside the window are deduplicated by the
+     * message store and by note identity in the chatroom.
+     */
+    private suspend fun subscriptionSinceFromStoredMessages(groupIds: Set<HexKey>): Map<HexKey, Long> {
+        if (messageStore == null) return emptyMap()
+        val result = mutableMapOf<HexKey, Long>()
+        for (groupId in groupIds) {
+            val newestStored =
+                loadStoredMessages(groupId).maxOfOrNull { json ->
+                    try {
+                        Event.fromJson(json).createdAt
+                    } catch (e: Exception) {
+                        Log.w("MarmotManager", "Unparseable persisted message for $groupId: ${e.message}", e)
+                        0L
+                    }
+                } ?: continue
+            // Clamp at wall-clock now: inner createdAt is sender-controlled,
+            // and a single future-dated message must not push `since` past
+            // the present — that would skip genuinely new events on every
+            // restart until a fresher message arrives.
+            val newest = minOf(newestStored, TimeUtils.now())
+            if (newest > GROUP_EVENT_REFETCH_OVERLAP_SEC) {
+                result[groupId] = newest - GROUP_EVENT_REFETCH_OVERLAP_SEC
+            }
+        }
+        return result
     }
 
     // --- Inbound Processing ---
@@ -703,6 +751,17 @@ class MarmotManager(
             "syncMetadataTo: group=${nostrGroupId.take(8)}… members $previousCount→${members.size} " +
                 "(leafs=${members.map { it.leafIndex }})"
         }
+    }
+
+    companion object {
+        /**
+         * Overlap window (seconds) subtracted from the newest persisted
+         * message's createdAt when seeding a restored group's kind:445
+         * subscription `since`. One day is generous: inner and outer events
+         * are timestamped at the same send, so the window only needs to
+         * absorb relay/system clock skew and out-of-order publishes.
+         */
+        internal val GROUP_EVENT_REFETCH_OVERLAP_SEC: Long = TimeUtils.ONE_DAY.toLong()
     }
 }
 

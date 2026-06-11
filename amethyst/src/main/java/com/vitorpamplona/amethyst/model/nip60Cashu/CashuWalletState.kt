@@ -1096,13 +1096,14 @@ class CashuWalletState(
 
     /**
      * Send a NIP-61 nutzap of [amountSats] to [recipientPubKey] referencing
-     * [zappedEvent]. Returns the resulting [NutzapSent] on success or throws
+     * [zappedEvent] (null for a profile nutzap that targets the person, not an
+     * event). Returns the resulting [NutzapSent] on success or throws
      * — callers should surface errors via [describeMintError].
      */
     suspend fun sendNutzap(
         amountSats: Long,
         recipientPubKey: HexKey,
-        zappedEvent: EventHintBundle<out Event>,
+        zappedEvent: EventHintBundle<out Event>?,
         message: String = "",
         preferredMintUrl: String? = null,
         onProgress: ((Float) -> Unit)? = null,

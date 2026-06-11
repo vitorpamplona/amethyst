@@ -146,6 +146,9 @@ class ThumbnailDiskCache(
                 }
 
             val tempFile = File(cacheDir, "$key.tmp")
+            // The cache dir can be wiped while the app runs (system cache trim,
+            // user "Clear cache"); recreate it or the write fails with ENOENT.
+            cacheDir.mkdirs()
             tempFile.outputStream().use { out ->
                 scaled.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
             }

@@ -218,6 +218,8 @@ private fun MultiWalletHomeContent(
 ) {
     val walletInfoList by walletViewModel.walletInfoList.collectAsState()
     val context = LocalContext.current
+    val budgetApprovedMsg = stringRes(R.string.clink_budget_approved)
+    val debitNoResponseMsg = stringRes(R.string.clink_debit_no_response)
 
     LaunchedEffect(Unit) {
         walletViewModel.fetchAllBalances()
@@ -261,9 +263,9 @@ private fun MultiWalletHomeContent(
                                 val error = response?.failureDetail()
                                 val msg =
                                     when {
-                                        response?.isOk() == true -> context.getString(R.string.clink_budget_approved)
+                                        response?.isOk() == true -> budgetApprovedMsg
                                         !error.isNullOrBlank() -> error
-                                        else -> context.getString(R.string.clink_debit_no_response)
+                                        else -> debitNoResponseMsg
                                     }
                                 Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                             }
