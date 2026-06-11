@@ -21,10 +21,10 @@
 package com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis
 
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class OwnedEmojiPackTest {
     private val publicEmoji = EmojiUrlTag("public_one", "https://example.com/public.png")

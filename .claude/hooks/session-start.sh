@@ -160,7 +160,7 @@ echo -e "\n504667f4c0de7af1a06de9f4b1727b84351f2910" >> "$ANDROID_SDK_DIR/licens
 echo -e "\nd975f751698a77b662f1254ddbeed3901e976f5a" > "$ANDROID_SDK_DIR/licenses/intel-android-extra-license"
 
 # Create local.properties if missing
-REPO_ROOT="$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || echo "${CLAUDE_PROJECT_DIR:-/home/user/Amber}")"
+REPO_ROOT="$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || echo "${CLAUDE_PROJECT_DIR:-$PWD}")"
 LOCAL_PROPS="$REPO_ROOT/local.properties"
 if [ ! -f "$LOCAL_PROPS" ]; then
   echo "sdk.dir=$ANDROID_SDK_DIR" > "$LOCAL_PROPS"

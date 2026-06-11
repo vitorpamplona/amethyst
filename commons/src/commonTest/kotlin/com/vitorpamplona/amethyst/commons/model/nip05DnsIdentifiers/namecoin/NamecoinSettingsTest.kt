@@ -23,12 +23,12 @@ package com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinBackend
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinCoreRpcConfig
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class NamecoinSettingsTest {
     // ── Server string parsing ──────────────────────────────────────────

@@ -194,7 +194,16 @@ open class NestNewMessageViewModel :
         this.canAddZapRaiser = hasLnAddress()
 
         this.userSuggestions?.reset()
-        this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05ClientBuilder())
+        this.userSuggestions =
+            UserSuggestionState(
+                accountVM.account,
+                accountVM.nip05ClientBuilder(),
+                priorityPubkeys = {
+                    (room?.event as? MeetingSpaceEvent)?.let { space ->
+                        space.participantKeys().toSet() + space.pubKey
+                    } ?: emptySet()
+                },
+            )
 
         this.emojiSuggestions?.reset()
         this.emojiSuggestions = EmojiSuggestionState(accountVM.account)

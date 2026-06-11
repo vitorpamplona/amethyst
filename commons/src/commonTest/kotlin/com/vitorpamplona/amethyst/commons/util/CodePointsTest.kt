@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.util
 
-import org.junit.Assert.assertArrayEquals
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertContentEquals
+import kotlin.test.assertEquals
 
 class CodePointsTest {
     // ---- codePointCharCount ----
@@ -44,30 +44,30 @@ class CodePointsTest {
 
     @Test
     fun toCharsRoundTripsAscii() {
-        assertArrayEquals(charArrayOf('A'), codePointToChars(0x0041))
+        assertContentEquals(charArrayOf('A'), codePointToChars(0x0041))
     }
 
     @Test
     fun toCharsRoundTripsLastBmp() {
-        assertArrayEquals(charArrayOf('￿'), codePointToChars(0xFFFF))
+        assertContentEquals(charArrayOf('￿'), codePointToChars(0xFFFF))
     }
 
     @Test
     fun toCharsProducesSurrogatePairForGrinningFace() {
         // U+1F600 (😀) is encoded as the surrogate pair (0xD83D, 0xDE00).
-        assertArrayEquals(charArrayOf('\uD83D', '\uDE00'), codePointToChars(0x1F600))
+        assertContentEquals(charArrayOf('\uD83D', '\uDE00'), codePointToChars(0x1F600))
     }
 
     @Test
     fun toCharsProducesSurrogatePairForFirstSupplementary() {
         // U+10000 -> (0xD800, 0xDC00).
-        assertArrayEquals(charArrayOf('\uD800', '\uDC00'), codePointToChars(0x10000))
+        assertContentEquals(charArrayOf('\uD800', '\uDC00'), codePointToChars(0x10000))
     }
 
     @Test
     fun toCharsProducesSurrogatePairForLastCodePoint() {
         // U+10FFFF -> (0xDBFF, 0xDFFF).
-        assertArrayEquals(charArrayOf('\uDBFF', '\uDFFF'), codePointToChars(0x10FFFF))
+        assertContentEquals(charArrayOf('\uDBFF', '\uDFFF'), codePointToChars(0x10FFFF))
     }
 
     // ---- String.codePointAtKmp ----
@@ -141,11 +141,11 @@ class CodePointsTest {
         for (cp in samples) {
             val chars = codePointToChars(cp)
             val asString = chars.concatToString()
-            assertEquals("round-trip code point U+${cp.toString(16).uppercase()}", cp, asString.codePointAtKmp(0))
+            assertEquals(cp, asString.codePointAtKmp(0), "round-trip code point U+${cp.toString(16).uppercase()}")
             assertEquals(
-                "char count for U+${cp.toString(16).uppercase()}",
                 chars.size,
                 codePointCharCount(cp),
+                "char count for U+${cp.toString(16).uppercase()}",
             )
         }
     }

@@ -46,6 +46,8 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quote
 import com.vitorpamplona.quartz.utils.Log
@@ -178,6 +180,11 @@ class MarmotManager(
      * `persistOwn = false`. Headless callers (CLI) should leave it at
      * the default.
      *
+     * [mentions] become p-tags on the inner kind:9 (users referenced via
+     * `nostr:npub…`/`nostr:nprofile…` in [text]), mirroring how NIP-17
+     * chat messages tag mentioned users. They stay inside the MLS
+     * ciphertext — the outer kind:445 never carries member pubkeys.
+     *
      * @return the signed kind:445 outer event together with the inner kind:9
      *   rumor id, so the caller can reference it for replies/reactions.
      */
@@ -187,10 +194,12 @@ class MarmotManager(
         replyToEventId: HexKey? = null,
         replyToAuthorPubKey: HexKey? = null,
         persistOwn: Boolean = true,
+        mentions: List<PTag> = emptyList(),
     ): TextMessageBundle {
         val template =
             com.vitorpamplona.quartz.nip01Core.signers
                 .eventTemplate<Event>(kind = 9, description = text) {
+                    pTags(mentions)
                     if (replyToEventId != null) {
                         // Mirror ChatEvent.reply(): NIP-18 q-tag references the
                         // parent inner kind:9 by id (+ optional author, no

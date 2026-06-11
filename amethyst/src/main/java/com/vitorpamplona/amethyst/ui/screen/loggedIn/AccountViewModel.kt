@@ -74,6 +74,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscripti
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.ui.actions.Dao
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
+import com.vitorpamplona.amethyst.ui.actions.NewMessageTagger
 import com.vitorpamplona.amethyst.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.ui.components.toasts.ToastManager
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
@@ -1630,6 +1631,11 @@ class AccountViewModel(
         replyToInnerEventId: HexKey? = null,
         replyToInnerAuthorPubKey: HexKey? = null,
     ) {
+        // Rewrites @npub…/@nprofile… mentions into nostr: URIs and collects
+        // the referenced users as p-tags. Lives here (not in the composer) so
+        // every send path gets mention handling.
+        val tagger = NewMessageTagger(text, null, null, this)
+        tagger.run()
         // Inner event construction lives on MarmotManager so CLI and UI don't drift.
         // persistOwn=false because Account.sendMarmotGroupMessage routes the outer
         // event through LocalCache which already handles own-message display.
@@ -1637,10 +1643,11 @@ class AccountViewModel(
             account.marmotManager
                 ?.buildTextMessage(
                     nostrGroupId = nostrGroupId,
-                    text = text,
+                    text = tagger.message,
                     replyToEventId = replyToInnerEventId,
                     replyToAuthorPubKey = replyToInnerAuthorPubKey,
                     persistOwn = false,
+                    mentions = tagger.pTags?.map { it.toPTag() } ?: emptyList(),
                 )
                 ?: return
         val relays = account.marmotGroupRelays(nostrGroupId)

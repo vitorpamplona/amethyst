@@ -79,82 +79,6 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
-      # Cache vlc-setup plugin downloads (VLC + UPX archives) keyed on the
-      # versions pinned in desktopApp/build.gradle.kts. Each OS gets its own
-      # cache namespace because the plugin downloads platform-specific archives.
-      # On a hit the vlcDownload / upxDownload tasks are up-to-date and we
-      # never touch get.videolan.org; on a miss (version bump or new runner)
-      # we fall back to fetching, which is what the in-build retry budget
-      # exists for.
-      - name: Cache vlc-setup downloads
-        uses: actions/cache@v5
-        with:
-          path: ~/.gradle/vlcSetup
-          key: vlcsetup-${{ runner.os }}-${{ hashFiles('desktopApp/build.gradle.kts') }}
-          restore-keys: |
-            vlcsetup-${{ runner.os }}-
-
-      # Pre-fetch VLC + UPX archives into ~/.gradle/vlcSetup before invoking
-      # Gradle. The vlc-setup plugin (ir.mahozad.vlc-setup 0.1.0) writes its
-      # downloads to ${gradleUserHomeDir}/vlcSetup/ and sets overwrite(false),
-      # so an existing file there makes vlcDownload / upxDownload up-to-date
-      # and Gradle never opens a socket to videolan.org.
-      #
-      # Why curl instead of relying on de.undercouch.gradle.tasks.download:
-      # curl --retry-all-errors with a long --retry-max-time tolerates a
-      # sustained get.videolan.org outage far better than the plugin's inner
-      # retry budget (retries(4) + 5min readTimeout in build.gradle.kts),
-      # which has been hitting SocketTimeoutException on Windows runners.
-      #
-      # Cache hit: the file is already on disk, fetch() short-circuits, this
-      # step takes <1s. Cache miss: curl downloads with aggressive retries,
-      # populating the cache for the next run.
-      #
-      # Versions are pinned to match desktopApp/build.gradle.kts (vlcVersion
-      # = 3.0.20) and the vlc-setup extension default (upxVersion = 4.2.4).
-      # NOTE: vlcVersion lags behind upstream VLC because the Linux plugins on
-      # Maven Central (ir.mahozad:vlc-plugins-linux) are only published for
-      # 3.0.20 / 3.0.20-2. Bump only after the Maven artifact is republished.
-      # macOS does not download UPX — UPX cannot compress .dylib files.
-      - name: Pre-fetch VLC + UPX archives
-        env:
-          VLC_VERSION: "3.0.20"
-          UPX_VERSION: "4.2.4"
-        run: |
-          set -euo pipefail
-          DEST="$HOME/.gradle/vlcSetup"
-          mkdir -p "$DEST"
-          fetch() {
-            local url="$1" out="$2"
-            if [[ -s "$out" ]]; then
-              echo "cached: $out"
-              return 0
-            fi
-            echo "fetching: $url"
-            curl -fL --retry 10 --retry-delay 5 --retry-all-errors \
-                 --retry-max-time 900 --connect-timeout 30 \
-                 -o "$out.part" "$url"
-            mv "$out.part" "$out"
-          }
-          case "${{ runner.os }}" in
-            Windows)
-              fetch "https://get.videolan.org/vlc/${VLC_VERSION}/win64/vlc-${VLC_VERSION}-win64.zip" \
-                    "$DEST/vlc-${VLC_VERSION}.zip"
-              fetch "https://github.com/upx/upx/releases/download/v${UPX_VERSION}/upx-${UPX_VERSION}-win64.zip" \
-                    "$DEST/upx-${UPX_VERSION}.zip"
-              ;;
-            Linux)
-              fetch "https://repo1.maven.org/maven2/ir/mahozad/vlc-plugins-linux/${VLC_VERSION}/vlc-plugins-linux-${VLC_VERSION}.jar" \
-                    "$DEST/vlc-${VLC_VERSION}.jar"
-              fetch "https://github.com/upx/upx/releases/download/v${UPX_VERSION}/upx-${UPX_VERSION}-amd64_linux.tar.xz" \
-                    "$DEST/upx-${UPX_VERSION}.tar.xz"
-              ;;
-            macOS)
-              fetch "https://get.videolan.org/vlc/${VLC_VERSION}/macosx/vlc-${VLC_VERSION}-universal.dmg" \
-                    "$DEST/vlc-${VLC_VERSION}.dmg"
-              ;;
-          esac
-
       # Compose UI smoke test (DesktopLaunchSmokeTest) uses Skiko which needs
       # a display server on Linux. xvfb provides a virtual framebuffer.
       - name: Install xvfb (Linux)
@@ -227,16 +151,22 @@ jobs:
             :quartz:compileTestKotlinIosArm64
 
       # :commons gained iosArm64 + iosSimulatorArm64 targets in Phase 2 of the
-      # iOS plan. Compile-only for now — actual UI / lifecycle wiring will
-      # land with the iosApp module in Phase 3. The container that runs Claude
-      # Code can't extract the Kotlin/Native LLVM toolchain (sandbox limit),
-      # so this is the first place commonMain Compose code is actually
-      # type-checked against an Apple Native frontend.
-      - name: Compile Commons for iOS
+      # iOS plan. Actual UI / lifecycle wiring will land with the iosApp module
+      # in Phase 3, but the shared commonMain + commonTest sources are already
+      # built here against an Apple Native frontend. Same two-task shape as
+      # quartz above:
+      # - iosSimulatorArm64Test compiles AND runs the shared commonTest suite
+      #   on the simulator. commonTest is built for every target, so a test
+      #   reaching for a JVM-only API (JUnit, javaClass, @JvmStatic, or a
+      #   jvmAndroid-only symbol) breaks the Apple build even though
+      #   :commons:jvmTest stays green — this is the job that catches it.
+      # - compileTestKotlinIosArm64 catches device-only compile drift
+      #   (iosArm64 = aarch64-apple-ios) without needing a physical device.
+      - name: Test Commons on iOS
         run: |
           ./gradlew \
-            :commons:compileKotlinIosSimulatorArm64 \
-            :commons:compileKotlinIosArm64
+            :commons:iosSimulatorArm64Test \
+            :commons:compileTestKotlinIosArm64
 
       - name: Upload iOS Test Reports
         uses: actions/upload-artifact@v7

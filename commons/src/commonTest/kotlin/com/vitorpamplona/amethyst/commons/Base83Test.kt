@@ -21,22 +21,22 @@
 package com.vitorpamplona.amethyst.commons
 
 import com.vitorpamplona.amethyst.commons.blurhash.Base83
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class Base83Test {
     @Test
     fun testEncodeDecode() {
         for (i in 0..820000) {
-            assertEquals("$i encode decode", i, Base83.decode(Base83.encode(i.toLong())))
+            assertEquals(i, Base83.decode(Base83.encode(i.toLong())), "$i encode decode")
         }
     }
 
     @Test
     fun testSingleDigits() {
         for (i in 0..82) {
-            val expected: String = String(Base83.ALPHABET, i, 1)
-            assertEquals("$i encodes", expected, Base83.encode(i.toLong(), 1))
+            val expected: String = Base83.ALPHABET.concatToString(i, i + 1)
+            assertEquals(expected, Base83.encode(i.toLong(), 1), "$i encodes")
         }
     }
 

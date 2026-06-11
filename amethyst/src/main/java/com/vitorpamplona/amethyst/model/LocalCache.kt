@@ -121,6 +121,7 @@ import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.BaseRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.decodeEventIdAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
@@ -784,11 +785,37 @@ object LocalCache : ILocalCache, ICacheProvider {
             // Counts the replies
             replyTo.forEach { it.addReply(note) }
 
+            // NIP-18 quote reposts: a note carrying a `q` tag is a quote-repost of the
+            // quoted note. Count it as a boost so it shows in the quoted note's repost
+            // counter alongside kind:6/kind:16 reposts. The quoted note is deliberately
+            // kept out of `replyTo` so the quote still renders as a root post in the home
+            // feed (see Note.isNewThread); deletion cleanup lives in unlinkAndRemove.
+            addQuoteBoosts(event, note, replyTo)
+
             refreshNewNoteObservers(note)
 
             true
         } else {
             false
+        }
+    }
+
+    /**
+     * Adds [note] as a boost of every event/address referenced by a NIP-18 `q` tag
+     * (a quote-repost). Targets already in [replyTo] are skipped so a note that both
+     * replies to and quotes the same note isn't counted twice, and self-quotes are
+     * ignored.
+     */
+    private fun addQuoteBoosts(
+        event: Event,
+        note: Note,
+        replyTo: List<Note>,
+    ) {
+        event.taggedQuoteIds().forEach { quotedId ->
+            val quoted = checkGetOrCreateNote(quotedId)
+            if (quoted != null && quoted != note && quoted !in replyTo) {
+                quoted.addBoost(note)
+            }
         }
     }
 
@@ -2833,6 +2860,12 @@ object LocalCache : ILocalCache, ICacheProvider {
         getAnyChannel(note)?.removeNote(note)
 
         val noteEvent = note.event
+
+        // Quote-repost boosts are tracked outside `replyTo` (see addQuoteBoosts), so
+        // detach this note from every quoted note's boosts here.
+        noteEvent?.taggedQuoteIds()?.forEach { quotedId ->
+            getNoteIfExists(quotedId)?.removeBoost(note)
+        }
 
         if (noteEvent is ReportEvent) {
             noteEvent.reportedAuthor().forEach {

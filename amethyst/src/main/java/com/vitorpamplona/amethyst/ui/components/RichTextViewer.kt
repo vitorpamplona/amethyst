@@ -109,11 +109,9 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
-import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.ClinkOfferPreview
 import com.vitorpamplona.amethyst.ui.note.creators.invoice.MayBeInvoicePreview
 import com.vitorpamplona.amethyst.ui.note.toShortDisplay
-import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
@@ -121,7 +119,6 @@ import com.vitorpamplona.amethyst.ui.theme.CashuCardBorders
 import com.vitorpamplona.amethyst.ui.theme.HalfVertPadding
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.inlinePlaceholder
-import com.vitorpamplona.amethyst.ui.theme.innerPostModifier
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
 import kotlinx.coroutines.Dispatchers
@@ -729,22 +726,9 @@ fun DisplayFullNote(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    NoteCompose(
-        baseNote = note,
-        modifier = MaterialTheme.colorScheme.innerPostModifier,
-        isQuotedNote = true,
-        unPackReply = ReplyRenderType.LINE,
-        quotesLeft = quotesLeft - 1,
-        parentBackgroundColor = backgroundColor,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
+    LocalInlineQuoteRenderer.current.Render(note, quotesLeft, backgroundColor, accountViewModel, nav)
 
-    extraChars?.let {
-        Text(
-            it,
-        )
-    }
+    extraChars?.let { Text(it) }
 }
 
 @Composable
@@ -1002,16 +986,7 @@ private fun DisplayNoteFromTag(
     nav: INav,
 ) {
     if (canPreview && quotesLeft > 0) {
-        NoteCompose(
-            baseNote = baseNote,
-            modifier = MaterialTheme.colorScheme.innerPostModifier,
-            isQuotedNote = true,
-            unPackReply = ReplyRenderType.LINE,
-            quotesLeft = quotesLeft - 1,
-            parentBackgroundColor = backgroundColor,
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
+        LocalInlineQuoteRenderer.current.Render(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
     } else {
         ClickableTextPrimary(
             text = "@${baseNote.idNote().toShortDisplay()}",

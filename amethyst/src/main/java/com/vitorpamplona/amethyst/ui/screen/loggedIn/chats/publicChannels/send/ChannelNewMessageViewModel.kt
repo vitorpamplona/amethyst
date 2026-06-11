@@ -188,7 +188,16 @@ open class ChannelNewMessageViewModel :
         this.canAddZapRaiser = hasLnAddress()
 
         this.userSuggestions?.reset()
-        this.userSuggestions = UserSuggestionState(accountVM.account, accountVM.nip05ClientBuilder())
+        this.userSuggestions =
+            UserSuggestionState(
+                accountVM.account,
+                accountVM.nip05ClientBuilder(),
+                priorityPubkeys = {
+                    // Public channels have no membership; recent posters are the
+                    // closest thing. The cutoff also bounds the note scan.
+                    channel?.participatingAuthors(TimeUtils.oneMonthAgo())?.mapTo(mutableSetOf()) { it.pubkeyHex } ?: emptySet()
+                },
+            )
 
         this.emojiSuggestions?.reset()
         this.emojiSuggestions = EmojiSuggestionState(accountVM.account)

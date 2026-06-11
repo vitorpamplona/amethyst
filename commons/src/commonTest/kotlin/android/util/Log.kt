@@ -22,13 +22,11 @@ package android.util
 
 class Log {
     companion object {
-        @JvmStatic
         fun isLoggable(
             tag: String?,
             msg: Int?,
         ): Boolean = true
 
-        @JvmStatic
         fun d(
             tag: String?,
             msg: String?,
@@ -37,7 +35,6 @@ class Log {
             return 0
         }
 
-        @JvmStatic
         fun i(
             tag: String?,
             msg: String?,
@@ -46,7 +43,6 @@ class Log {
             return 0
         }
 
-        @JvmStatic
         fun w(
             tag: String?,
             msg: String?,
@@ -55,7 +51,6 @@ class Log {
             return 0
         }
 
-        @JvmStatic
         fun w(
             tag: String?,
             msg: String?,
@@ -66,7 +61,6 @@ class Log {
             return 0
         }
 
-        @JvmStatic
         fun e(
             tag: String?,
             msg: String?,
@@ -75,7 +69,6 @@ class Log {
             return 0
         }
 
-        @JvmStatic
         fun e(
             tag: String?,
             msg: String?,

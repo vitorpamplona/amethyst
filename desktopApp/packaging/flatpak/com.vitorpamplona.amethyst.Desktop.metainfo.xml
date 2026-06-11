@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>com.vitorpamplona.amethyst.Desktop</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT AND LGPL-2.1-or-later AND BSD-2-Clause AND Apache-2.0</project_license>
+  <name>Amethyst Desktop</name>
+  <summary>Nostr client for desktop</summary>
+
+  <description>
+    <p>
+      Amethyst Desktop is a desktop client for the Nostr protocol.
+      Browse feeds, post notes, send zaps (Lightning Network), and
+      participate in NIP-53 live audio rooms.
+    </p>
+    <p>
+      Video playback uses your system's GStreamer (Linux), AVFoundation
+      (macOS), or Media Foundation (Windows). On Linux, install the
+      GStreamer plugin packages (good, bad, libav) for full codec coverage.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">com.vitorpamplona.amethyst.Desktop.desktop</launchable>
+
+  <url type="homepage">https://github.com/vitorpamplona/amethyst</url>
+  <url type="bugtracker">https://github.com/vitorpamplona/amethyst/issues</url>
+  <url type="vcs-browser">https://github.com/vitorpamplona/amethyst</url>
+
+  <developer id="com.vitorpamplona">
+    <name>Vitor Pamplona</name>
+  </developer>
+
+  <content_rating type="oars-1.1" />
+
+  <categories>
+    <category>Network</category>
+    <category>InstantMessaging</category>
+  </categories>
+
+  <screenshots>
+    <!-- Add at least one screenshot tagged with `<image>...</image>`
+         before Flathub submission. Suggested 1280x800 PNG. -->
+  </screenshots>
+
+  <releases>
+    <!-- Populated by release CI. Example:
+    <release version="0.0.0" date="2026-06-11">
+      <description>
+        <p>Initial Flathub release with kdroidFilter video playback.</p>
+      </description>
+    </release>
+    -->
+  </releases>
+</component>

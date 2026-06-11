@@ -1,93 +1,94 @@
-# Account StateFlow Catalog
+# Account State-Object Catalog
 
-`Account.kt` exposes dozens of `StateFlow` properties that mirror different facets of the current user. This is a map from flow → Nostr kind → model package.
+`Account.kt` composes ~50 **feature state objects** (not raw StateFlow
+properties). Each object pins its backing addressable note in `LocalCache`,
+exposes `val flow: StateFlow<…>` (decrypted + backup-merged + `stateIn`), and
+offers suspend mutation helpers that return signed events. Consumers read
+`account.<property>.flow`.
 
-(Flow names are exact as of the current `Account.kt`; if a flow has been renamed, grep `Account.kt` for the old name.)
+(Property and class names are exact as of the current `Account.kt`; if one has
+been renamed, grep `Account.kt` for the class name.)
 
 ## Identity & Contacts
 
-| Flow | Kind(s) | Source | Model package |
-|------|---------|--------|---------------|
-| `userProfile().liveMetadata` | 0 MetadataEvent | relay | `model/nip01UserMetadata/` |
-| `followListFlow` | 3 ContactListEvent | relay | `model/nip02FollowLists/` |
-| `followersFlow` | derived | LocalCache scan | — |
-| `muteListFlow` | 10000 NIP-51 | relay | `model/nip51Lists/` |
-| `blockListFlow` | 10000 list variant | relay | `model/nip51Lists/` |
+| Account property | State class | Kind | Package |
+|------------------|-------------|------|---------|
+| `userMetadata` | `UserMetadataState` | 0 | `amethyst/.../model/nip01UserMetadata/` |
+| `kind3FollowList` | `Kind3FollowListState` | 3 | `model/nip02FollowLists/` |
+| `muteList` (+ `muteListDecryptionCache`) | `MuteListState` | 10000 | `model/nip51Lists/muteList/` |
+| `blockPeopleList`, `peopleLists` | `BlockPeopleListState`, `PeopleListsState` | NIP-51 people sets | `model/nip51Lists/peopleList/` |
+| `followLists` | `FollowListsState` | NIP-51 follow sets | `model/nip51Lists/peopleList/` |
+| `hiddenUsers` | `HiddenUsersState` — derived from `muteList.flow` + `blockPeopleList.flow` | — | `model/nip51Lists/` |
+| `allFollows` | `MergedFollowListsState` — merges kind3 + people/follow/hashtag/geohash/community lists | — | `model/serverList/` |
 
-## Relays & Connectivity
+## Relay Lists
 
-| Flow | Kind | Package |
-|------|------|---------|
-| `relayListFlow` | 10002 RelayList (NIP-65) | `model/nip65RelayList/` |
-| `dmRelayListFlow` | 10050 | `model/nip65RelayList/` |
-| `searchRelayListFlow` | 10007 | `model/nip65RelayList/` |
-| `nip86RelayListFlow` | NIP-86 relay management | `model/nip86RelayManagement/` |
-| `proxyFlow`, `torStateFlow` | local preferences | `model/torState/`, `AccountSyncedSettings` |
+| Account property | State class | Kind | Package |
+|------------------|-------------|------|---------|
+| `nip65RelayList` | `Nip65RelayListState` | 10002 | `model/nip65RelayList/` |
+| `dmRelayList` | `DmRelayListState` | 10050 | `model/nip17Dms/` |
+| `searchRelayList` | `SearchRelayListState` | 10007 | `model/nip51Lists/searchRelays/` |
+| `blockedRelayList` | `BlockedRelayListState` | 10006 | `model/nip51Lists/blockedRelays/` |
+| `localRelayList` | `LocalRelayListState` | local | `model/localRelays/` |
+| `privateStorageRelayList` | `PrivateStorageRelayListState` | private storage | `model/edits/` |
+| `keyPackageRelayList`, `trustedRelayList`, `proxyRelayList`, `broadcastRelayList`, `indexerRelayList`, `relayFeedsList` | per-feature `…RelayListState` classes, each with a `DecryptionCache` sibling | custom relay sets | `model/nip51Lists/…` |
+
+Derived relay views (merge several of the above): `homeRelays`
+(`AccountHomeRelayState`), `outboxRelays`, `dmRelays`, `notificationRelays`,
+`trustedRelays`, `followPlusAllMineWithIndex`, `followPlusAllMineWithSearch`,
+`defaultGlobalRelays`.
 
 ## Content Lists
 
-| Flow | Kind | Package |
-|------|------|---------|
-| `bookmarkListFlow` | 10003 | `model/nip51Lists/` |
-| `privateBookmarksFlow` | encrypted list | `model/nip51Lists/` |
-| `topNavFeedsFlow` | custom | `model/topNavFeeds/` |
-| `customEmojisFlow` | 10030 NIP-30 | `model/nip30CustomEmojis/` |
-| `marmotGroupsFlow` | NIP-29 (marmot variant) | `model/marmot/` |
-| `nip72CommunitiesFlow` | 34550 (NIP-72) | `model/nip72Communities/` |
-| `nip64ChessFlow` | NIP-64 chess games | `model/nip64Chess/` |
+| Account property | State class | Kind | Package |
+|------------------|-------------|------|---------|
+| `bookmarkState` (and legacy `oldBookmarkState`) | `BookmarkListState` | 10003 | `model/nip51Lists/` |
+| `labeledBookmarkLists` | `LabeledBookmarkListsState` | NIP-51 bookmark sets | `model/nip51Lists/labeledBookmarkLists/` |
+| `pinState` | `PinListState` | NIP-51 | `model/nip51Lists/` |
+| `interestSets` | `InterestSetsState` | NIP-51 interest sets | `model/nip51Lists/interestSets/` |
+| `hashtagList` / `geohashList` | `HashtagListState` / `GeohashListState` | NIP-51 | `model/nip51Lists/hashtagLists/`, `…/geohashLists/` |
+| `communityList` | `CommunityListState` | NIP-72 communities | `model/nip72Communities/` |
+| `favoriteAlgoFeedsList` | `FavoriteAlgoFeedsListState` | NIP-51 | `model/nip51Lists/` |
+| `emoji`, `ownedEmojiPacks` | `EmojiPackState`, `OwnedEmojiPacksState` | 10030 | `commons/.../commons/model/nip30CustomEmojis/` |
+| `publicChatList` | `PublicChatListState` | NIP-28 | `commons/.../commons/model/nip28PublicChats/` |
+| `ephemeralChatList` | `EphemeralChatListState` | ephemeral chats | `commons/.../commons/model/emphChat/` |
+| `blossomServers` | `BlossomServerListState` | Blossom (BUD) | `model/nipB7Blossom/` |
 
-## Messaging
+## Other Feature State
 
-| Flow | Kind | Package |
-|------|------|---------|
-| `dmInboxFlow` | 14 / 1059 (NIP-17 / gift-wrap) | `model/nip17Dms/` |
-| `nwcSettingsFlow` | NIP-47 wallet connect | `model/nip47WalletConnect/` |
-| `paymentTargetsFlow` | NIP-A3 | `model/nipA3PaymentTargets/` |
-| `blossomServersFlow` | NIP-B7 blossom | `model/nipB7Blossom/` |
+| Account property | State class | Purpose | Package |
+|------------------|-------------|---------|---------|
+| `vanish` | `VanishRequestsState` | NIP-62 vanish requests | `model/nip62Vanish/` |
+| `appSpecific` | `AppSpecificState` | NIP-78 app data | `model/nip78AppSpecific/` |
+| `otsState` | `OtsState` | NIP-03 OpenTimestamps | `model/nip03Timestamp/` |
+| `live*FollowListsPerRelay` | `OutboxLoaderState(...).flow` — already a flow | per-feed outbox routing | `model/topNavFeeds/` |
+| `privateDMDecryptionCache`, `draftsDecryptionCache` | `PrivateDMCache`, `DraftEventCache` | NIP-44 decryption caches | — |
 
-## Settings & UI
-
-| Flow | Source | Package |
-|------|--------|---------|
-| `uiSettingsFlow` | local | `model/UiSettings.kt`, `UiSettingsFlow.kt` |
-| `antiSpamFilter` | local | `model/AntiSpamFilter.kt` |
-| `privacyOptionsFlow` | local | `model/privacyOptions/` |
-| `trustedAssertionsFlow` | derived | `model/trustedAssertions/` |
-| `defaultZapAmountsFlow`, `theme`, `language` | local preferences | `AccountSettings.kt`, `AccountSyncedSettings.kt` |
-
-## Advanced / Derived
-
-| Flow | Purpose | Package |
-|------|---------|---------|
-| `accountsCacheFlow` | multi-account switcher | `model/accountsCache/` |
-| `algoFeedsFlow` | custom algorithmic feeds | `model/algoFeeds/` |
-| `vanishFlow` | NIP-62 account vanish requests | `model/nip62Vanish/` |
-| `nip78AppSpecificFlow` | NIP-78 app-specific data | `model/nip78AppSpecific/` |
-| `serverListFlow` | media/upload servers | `model/serverList/` |
+Note the migration direction: newer/extracted state classes live in
+`commons/src/commonMain/.../commons/model/`, the rest still in
+`amethyst/src/main/java/.../model/`. Check both when looking for one.
 
 ## Publishing Mutations
 
-Every flow has a corresponding mutation method on `Account` that:
+State objects' mutation helpers (e.g. `MuteListState.hideUser(pubkey)`,
+`BookmarkListState` add/remove) **build and sign** the updated replaceable
+event via the quartz event class (`XEvent.add / remove / create`) and return
+it. The caller (usually a method on `Account`) is responsible for sending it
+through the client. Decryption results are cached in the paired
+`…DecryptionCache` so re-renders don't re-decrypt.
 
-1. Constructs the updated event using a `TagArrayBuilder`.
-2. Signs through the injected `NostrSigner` (see `auth-signers` skill).
-3. Publishes to the appropriate relay set.
-4. Updates the local StateFlow *before* relay round-trip (optimistic).
-5. Rolls back / reconciles on failure.
+## When a State Object Doesn't Exist Yet
 
-Examples of mutation methods (names may vary slightly in current code):
-- `follow(pubKey)` / `unfollow(pubKey)`
-- `addBookmark(noteId)` / `removeBookmark(noteId)`
-- `mute(pubKey)` / `unmute(pubKey)`
-- `updateRelayList(...)`, `updateDmRelayList(...)`
-- `sendPost(...)`, `sendReaction(...)`, `sendZap(...)`
+If you're adding a new NIP that's user-scoped, follow the pattern (full recipe
+in `SKILL.md`):
 
-## When a Flow Doesn't Exist Yet
-
-If you're adding a new NIP that's user-scoped, follow the pattern:
-
-1. Create `model/nipXX…/` with an optional `ExtState`/builder class.
-2. Add `private val _xFlow = MutableStateFlow(initial)` + `val xFlow: StateFlow<T> = _xFlow.asStateFlow()` to `Account`.
-3. Wire the relay subscription (see `relay-client` skill).
-4. Add the mutation method that builds, signs, and publishes.
-5. Update persistence if the setting is local-only (`AccountSettings.kt`).
+1. Create `model/nipXX…/XState.kt` modeled on `MuteListState` (encrypted) or
+   `BookmarkListState` (plain).
+2. Pin the note with `cache.getOrCreateAddressableNote(...)`, expose
+   `val flow: StateFlow<…>` via `stateIn(scope, Eagerly, default)`.
+3. Instantiate it in `Account.kt` (plus a `DecryptionCache` sibling if
+   private), and wire the relay subscription (see `relay-client` skill).
+4. Add mutation helpers that build, sign, and return the event; publish from
+   the calling site.
+5. Use `AccountSettings` for the local backup copy if the list must survive
+   relay loss.
