@@ -76,7 +76,7 @@ fun WorkoutsScreen(
         },
         floatingButton = {
             FabBottomBarPadded(nav) {
-                NewWorkoutButton(accountViewModel, workoutsFeedContentState::sendToTop)
+                NewWorkoutButton(nav)
             }
         },
         accountViewModel = accountViewModel,

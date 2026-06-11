@@ -33,6 +33,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -45,8 +47,12 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
+import com.vitorpamplona.quartz.experimental.fitness.workout.tags.DistanceTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.DurationTag
+import com.vitorpamplona.quartz.experimental.fitness.workout.tags.Elevation
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseType
+import com.vitorpamplona.quartz.experimental.fitness.workout.tags.WeightTag
+import kotlin.math.abs
 
 fun ExerciseType?.symbol(): MaterialSymbol =
     when (this) {
@@ -79,7 +85,7 @@ fun ExerciseType.labelRes(): Int =
         ExerciseType.FASTING -> R.string.exercise_fasting
     }
 
-private fun Double.trimmed(): String = if (this % 1.0 == 0.0) toInt().toString() else toString()
+private fun Double.trimmed(): String = if (this % 1.0 == 0.0 && abs(this) < 1e15) toLong().toString() else toString()
 
 private fun paceMinPerUnit(
     durationSeconds: Long,
@@ -89,17 +95,52 @@ private fun paceMinPerUnit(
     return "${secondsPerUnit / 60}:${(secondsPerUnit % 60).toString().padStart(2, '0')}"
 }
 
+/** One-shot snapshot of the parsed workout tags, so the feed doesn't re-scan the tag array on every recomposition. */
+@Immutable
+class WorkoutInfo(
+    val title: String?,
+    val type: ExerciseType?,
+    val exerciseRaw: String?,
+    val durationSeconds: Long?,
+    val distance: DistanceTag?,
+    val elevationGain: Elevation?,
+    val calories: Int?,
+    val steps: Int?,
+    val avgHeartRate: Int?,
+    val sets: Int?,
+    val reps: Int?,
+    val weight: WeightTag?,
+) {
+    companion object {
+        fun from(event: WorkoutRecordEvent) =
+            WorkoutInfo(
+                title = event.title(),
+                type = event.exerciseType(),
+                exerciseRaw = event.exercise(),
+                durationSeconds = event.durationSeconds(),
+                distance = event.distance(),
+                elevationGain = event.elevationGain(),
+                calories = event.calories(),
+                steps = event.steps(),
+                avgHeartRate = event.avgHeartRate(),
+                sets = event.sets(),
+                reps = event.reps(),
+                weight = event.weight(),
+            )
+    }
+}
+
 @Composable
 fun WorkoutDisplay(baseNote: Note) {
     val event = (baseNote.event as? WorkoutRecordEvent) ?: return
 
-    val type = event.exerciseType()
-    val typeLabel = type?.let { stringRes(it.labelRes()) } ?: event.exercise() ?: stringRes(R.string.workout)
+    val info = remember(baseNote) { WorkoutInfo.from(event) }
+    val typeLabel = info.type?.let { stringRes(it.labelRes()) } ?: info.exerciseRaw ?: stringRes(R.string.workout)
 
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 5.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                symbol = type.symbol(),
+                symbol = info.type.symbol(),
                 contentDescription = typeLabel,
                 modifier = Modifier.size(28.dp),
                 tint = MaterialTheme.colorScheme.primary,
@@ -109,11 +150,11 @@ fun WorkoutDisplay(baseNote: Note) {
 
             Column {
                 Text(
-                    text = event.title() ?: typeLabel,
+                    text = info.title ?: typeLabel,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.titleMedium,
                 )
-                if (event.title() != null) {
+                if (info.title != null) {
                     Text(
                         text = typeLabel,
                         style = MaterialTheme.typography.bodySmall,
@@ -123,17 +164,15 @@ fun WorkoutDisplay(baseNote: Note) {
             }
         }
 
-        Spacer(modifier = Modifier.width(8.dp))
-
-        WorkoutStatsRow(event)
+        WorkoutStatsRow(info)
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun WorkoutStatsRow(event: WorkoutRecordEvent) {
-    val duration = event.durationSeconds()
-    val distance = event.distance()
+private fun WorkoutStatsRow(info: WorkoutInfo) {
+    val duration = info.durationSeconds
+    val distance = info.distance
 
     FlowRow(
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -154,31 +193,31 @@ private fun WorkoutStatsRow(event: WorkoutRecordEvent) {
             )
         }
 
-        event.elevationGain()?.let {
+        info.elevationGain?.let {
             WorkoutStat("${it.value.trimmed()} ${it.unit}", stringRes(R.string.workout_elevation))
         }
 
-        event.calories()?.let {
+        info.calories?.let {
             WorkoutStat("$it kcal", stringRes(R.string.workout_calories))
         }
 
-        event.steps()?.let {
+        info.steps?.let {
             WorkoutStat("$it", stringRes(R.string.workout_steps))
         }
 
-        event.avgHeartRate()?.let {
+        info.avgHeartRate?.let {
             WorkoutStat("$it bpm", stringRes(R.string.workout_heart_rate))
         }
 
-        event.sets()?.let {
+        info.sets?.let {
             WorkoutStat("$it", stringRes(R.string.workout_sets))
         }
 
-        event.reps()?.let {
+        info.reps?.let {
             WorkoutStat("$it", stringRes(R.string.workout_reps))
         }
 
-        event.weight()?.let {
+        info.weight?.let {
             WorkoutStat("${it.value.trimmed()} ${it.unit}", stringRes(R.string.workout_weight))
         }
     }

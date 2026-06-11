@@ -211,6 +211,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletSendScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletTransactionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.WebBookmarksScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.NewWorkoutScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.WorkoutsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.AddAccountDialog
 import com.vitorpamplona.amethyst.ui.uriToRoute
@@ -497,6 +498,13 @@ fun BuildNavigation(
 
         composableFromBottom<Route.NewGoal> {
             NewGoalScreen(
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromBottom<Route.NewWorkout> {
+            NewWorkoutScreen(
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
