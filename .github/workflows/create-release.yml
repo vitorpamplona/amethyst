@@ -23,9 +23,9 @@ env:
   # Single source of truth in scripts/asset-name.sh.
   # appimagetool pinned release — bump via Dependabot, verify SHA256 via env var below.
   # We used to use linuxdeploy here, but it auto-walks the AppDir with ldd to
-  # bundle deps — that fights jpackage's self-contained JRE (libjvm.so RPATH
-  # mismatch) and the UPX-compressed VLC plugins. appimagetool only embeds the
-  # AppDir as-is, which is what we actually want.
+  # bundle deps — that fights jpackage's self-contained JRE (libjvm.so has
+  # $ORIGIN RPATH so ldd can't resolve it standalone). appimagetool only
+  # embeds the AppDir as-is, which is what we actually want.
   APPIMAGETOOL_URL: https://github.com/AppImage/appimagetool/releases/download/1.9.0/appimagetool-x86_64.AppImage
   APPIMAGETOOL_SHA256: 46fdd785094c7f6e545b61afcfb0f3d98d8eab243f644b4b17698c01d06083d1
 
