@@ -83,12 +83,16 @@ class UserSuggestionState(
             .map(::userSearchTermOrNull)
             .map { prefix ->
                 if (prefix != null) {
-                    // NIP-05 resolution: user@domain or bare .bit domain
+                    // NIP-05 resolution: full `name@domain` form, or bare
+                    // `.bit` domain synthesised as the wildcard `_@domain`.
+                    // Bare DNS domains aren't accepted here on purpose: a
+                    // `.com`/`.io`/etc. that happens to host nostr.json is
+                    // ambiguous with a regular URL the user might be typing.
                     val nip05 =
-                        if (prefix.contains('@')) {
+                        if (prefix.endsWith(".bit", ignoreCase = true) && !prefix.contains('@')) {
+                            Nip05Id.parseLenient(prefix)
+                        } else if (prefix.contains('@')) {
                             Nip05Id.parse(prefix)
-                        } else if (prefix.endsWith(".bit", ignoreCase = true)) {
-                            Nip05Id("_", prefix.lowercase())
                         } else {
                             null
                         }
@@ -201,7 +205,7 @@ class UserSuggestionState(
         item: User,
     ): TextFieldValue {
         val lastWordStart = message.selection.end - word.length
-        val wordToInsert = "@${item.pubkeyNpub()} "
+        val wordToInsert = mentionInsertion(word, item)
 
         return TextFieldValue(
             message.text.replaceRange(lastWordStart, message.selection.end, wordToInsert),
@@ -214,11 +218,43 @@ class UserSuggestionState(
         word: String,
         item: User,
     ) {
-        val wordToInsert = "@${item.pubkeyNpub()} "
+        val wordToInsert = mentionInsertion(word, item)
         state.edit {
             val lastWordStart = selection.end - word.length
             replace(lastWordStart, selection.end, wordToInsert)
             selection = TextRange(lastWordStart + wordToInsert.length, lastWordStart + wordToInsert.length)
+        }
+    }
+
+    /**
+     * The token to insert into the message text when the author picks [item]
+     * from the suggestion popover. When the author was typing a NIP-05
+     * mention (full `m@testls.bit` or bare-domain `.bit` form), we insert
+     * `nostr:nprofile1…` directly so the send-time tagger doesn't need to
+     * re-resolve anything — it parses the bech32 inline via its existing
+     * `nprofile1` branch, with no main-thread I/O. For every other path
+     * (search by name, typed npub/nprofile, hex) we keep the existing
+     * `@npub1…` form to preserve current behaviour.
+     *
+     * Pre-resolved NIP-05 hits already have their relay hints pushed into
+     * the account cache by [nip05ResolutionFlow] before this runs, so
+     * [User.toNProfile] picks them up automatically.
+     */
+    private fun mentionInsertion(
+        word: String,
+        item: User,
+    ): String {
+        val typed = userSearchTermOrNull(word)
+        val wasNip05Mention =
+            typed != null &&
+                (
+                    (typed.endsWith(".bit", ignoreCase = true) && !typed.contains('@')) ||
+                        (typed.contains('@') && Nip05Id.parse(typed) != null)
+                )
+        return if (wasNip05Mention) {
+            "nostr:${item.toNProfile()} "
+        } else {
+            "@${item.pubkeyNpub()} "
         }
     }
 }
