@@ -247,6 +247,10 @@ import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.WotTag
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.PlatformType
+import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.tags.RecommendationTag
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imetas
@@ -1607,6 +1611,106 @@ class Account(
             }
 
         client.publish(signedEvent, outboxRelays.flow.value)
+    }
+
+    /**
+     * Serializes read-modify-write of the per-kind app recommendation events
+     * (kind 31989, one addressable event per supported kind) so two rapid
+     * toggles can't race each other into losing updates.
+     */
+    private val appRecommendationsMutex = Mutex()
+
+    fun myAppRecommendationEvents(): List<AppRecommendationEvent> =
+        cache.addressables
+            .filterIntoSet(AppRecommendationEvent.KIND, signer.pubKey)
+            .mapNotNull { it.event as? AppRecommendationEvent }
+
+    fun isAppRecommended(app: AppDefinitionEvent): Boolean {
+        val address = app.addressTag()
+        return myAppRecommendationEvents().any { event ->
+            event.recommendationAddresses().any { it == address }
+        }
+    }
+
+    /**
+     * Returns a createdAt strictly greater than whatever AppRecommendationEvent
+     * currently sits in cache for this d-tag. Needed because
+     * LocalCache.consumeBaseReplaceable drops updates whose createdAt isn't
+     * strictly greater, and TimeUtils.now() has only second resolution.
+     */
+    private fun nextAppRecommendationCreatedAt(supportedKind: String): Long {
+        val address = Address(AppRecommendationEvent.KIND, signer.pubKey, supportedKind)
+        val latest = cache.getAddressableNoteIfExists(address)?.event?.createdAt ?: 0L
+        return maxOf(TimeUtils.now(), latest + 1)
+    }
+
+    private fun currentAppRecommendations(supportedKind: String): List<RecommendationTag> {
+        val address = Address(AppRecommendationEvent.KIND, signer.pubKey, supportedKind)
+        val event = cache.getAddressableNoteIfExists(address)?.event as? AppRecommendationEvent
+        return event?.recommendations() ?: emptyList()
+    }
+
+    /**
+     * Adds [app] to this user's public NIP-89 recommendations, one kind 31989
+     * event per event kind the app declares to handle via `k` tags.
+     */
+    suspend fun recommendApp(
+        app: AppDefinitionEvent,
+        relayHint: NormalizedRelayUrl?,
+    ) {
+        if (!isWriteable()) return
+
+        val kinds = app.supportedKinds()
+        if (kinds.isEmpty()) return
+
+        val newTag = RecommendationTag(app.address(), relayHint, PlatformType.ANDROID.code)
+
+        val signedEvents =
+            appRecommendationsMutex.withLock {
+                kinds.mapNotNull { kind ->
+                    val supportedKind = kind.toString()
+                    val current = currentAppRecommendations(supportedKind)
+                    if (current.any { it.address == app.address() }) return@mapNotNull null
+
+                    val template =
+                        AppRecommendationEvent.buildFromTags(
+                            supportedKind = supportedKind,
+                            recommendations = current + newTag,
+                            createdAt = nextAppRecommendationCreatedAt(supportedKind),
+                        )
+                    val signed = signer.sign(template)
+                    cache.justConsumeMyOwnEvent(signed)
+                    signed
+                }
+            }
+
+        signedEvents.forEach { client.publish(it, outboxRelays.flow.value) }
+    }
+
+    /** Removes the app at [address] from every kind 31989 recommendation event of this user. */
+    suspend fun unrecommendApp(address: Address) {
+        if (!isWriteable()) return
+
+        val signedEvents =
+            appRecommendationsMutex.withLock {
+                myAppRecommendationEvents().mapNotNull { event ->
+                    val current = event.recommendations()
+                    val updated = current.filterNot { it.address == address }
+                    if (updated.size == current.size) return@mapNotNull null
+
+                    val template =
+                        AppRecommendationEvent.buildFromTags(
+                            supportedKind = event.dTag(),
+                            recommendations = updated,
+                            createdAt = nextAppRecommendationCreatedAt(event.dTag()),
+                        )
+                    val signed = signer.sign(template)
+                    cache.justConsumeMyOwnEvent(signed)
+                    signed
+                }
+            }
+
+        signedEvents.forEach { client.publish(it, outboxRelays.flow.value) }
     }
 
     fun sendMyPublicAndPrivateOutbox(event: Event?) {

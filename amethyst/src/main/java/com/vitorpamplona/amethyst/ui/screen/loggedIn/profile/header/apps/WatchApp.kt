@@ -21,30 +21,43 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNote
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/**
+ * A compact pill with the app's logo and name, shown in the profile's
+ * "Apps" section. Tapping it opens the full app definition card.
+ */
 @Composable
-fun WatchApp(
+fun AppRecommendationChip(
     baseApp: Note,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -57,33 +70,42 @@ fun WatchApp(
     LaunchedEffect(key1 = appState) {
         withContext(Dispatchers.IO) {
             (appState.note.event as? AppDefinitionEvent)?.appMetaData()?.let { metaData ->
-                metaData.picture?.ifBlank { null }?.let { newLogo ->
+                metaData.profilePicture()?.ifBlank { null }?.let { newLogo ->
                     if (newLogo != appLogo) appLogo = newLogo
                 }
-                metaData.name?.ifBlank { null }?.let { newName ->
+                metaData.anyName()?.ifBlank { null }?.let { newName ->
                     if (newName != appName) appName = newName
                 }
             }
         }
     }
 
-    appLogo?.let {
-        Box(
-            remember {
-                Modifier
-                    .size(Size35dp)
-                    .clickable { nav.nav(Route.Note(baseApp.idHex)) }
-            },
+    if (appLogo == null && appName == null) return
+
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.clip(RoundedCornerShape(50)).clickable { nav.nav(Route.Note(baseApp.idHex)) },
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 6.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
         ) {
             AsyncImage(
                 model = appLogo,
                 contentDescription = appName,
                 modifier =
-                    remember {
-                        Modifier
-                            .size(Size35dp)
-                            .clip(shape = CircleShape)
-                    },
+                    Modifier
+                        .size(22.dp)
+                        .clip(shape = CircleShape),
+            )
+            Text(
+                text = appName ?: stringRes(R.string.app_definition_untitled),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 6.dp),
             )
         }
     }
