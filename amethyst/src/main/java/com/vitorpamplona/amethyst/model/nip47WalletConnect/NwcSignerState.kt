@@ -65,12 +65,10 @@ class NwcSignerState(
      * Flow of the default wallet's NWC URI, derived from multi-wallet settings.
      */
     val defaultWalletUri: StateFlow<Nip47WalletConnect.Nip47URINorm?> =
-        combine(settings.nwcWallets, settings.defaultNwcWalletId) { wallets, defaultId ->
-            if (defaultId != null) {
-                wallets.firstOrNull { it.id == defaultId }?.uri
-            } else {
-                wallets.firstOrNull()?.uri
-            }
+        combine(settings.nwcWallets, settings.defaultPaymentSourceId) { wallets, defaultId ->
+            // Use the NWC wallet the unified default points at; otherwise fall back to the
+            // first NWC wallet so NWC zap routing is unchanged for NWC-only users.
+            (wallets.firstOrNull { it.id == defaultId } ?: wallets.firstOrNull())?.uri
         }.flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, settings.defaultZapPaymentRequest())
 

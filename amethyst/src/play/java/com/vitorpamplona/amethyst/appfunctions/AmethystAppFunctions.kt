@@ -31,9 +31,12 @@ import com.vitorpamplona.amethyst.commons.actions.FollowActions
 import com.vitorpamplona.amethyst.commons.actions.SearchActions
 import com.vitorpamplona.amethyst.commons.actions.ZapActions
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
+import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull
 import com.vitorpamplona.amethyst.commons.service.lnurl.LightningAddressResolver
+import com.vitorpamplona.amethyst.service.ClinkDebitPayer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal.HomeNewThreadFeedFilter
+import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -1408,7 +1411,7 @@ class AmethystAppFunctions {
         // "I zapped Alice 21 sats" instead of "here's a BOLT11 invoice
         // for you to paste somewhere." Falls back to manual when NWC
         // isn't set up or the wallet declines.
-        val nwc = payViaNwcOrNull(account, invoice, null)
+        val nwc = payViaDefaultSourceOrNull(account, invoice, null)
 
         return ZapResult(
             chain = "lightning",
@@ -1633,7 +1636,7 @@ class AmethystAppFunctions {
                 // Try NWC for every invoice that came back. Failed splits
                 // stay as a manual invoice with nwcError set — the others
                 // still go through.
-                val nwc = invoice?.let { payViaNwcOrNull(account, it, note) }
+                val nwc = invoice?.let { payViaDefaultSourceOrNull(account, it, note) }
                 ZapInvoice(
                     recipientNpub = req.recipient.pubkey?.let { NPub.create(it) },
                     recipientPubkeyHex = req.recipient.pubkey,
@@ -1694,42 +1697,65 @@ class AmethystAppFunctions {
             ?.lnAddress()
     }
 
-    /** Internal result of [payViaNwcOrNull]. */
-    private data class NwcOutcome(
+    /** Internal result of [payViaDefaultSourceOrNull]. */
+    private data class PayOutcome(
         val success: Boolean,
         val preimage: String?,
         val errorMessage: String?,
     )
 
     /**
-     * Try to pay [bolt11] through the active account's Nostr Wallet
-     * Connect setup. Returns null when no NWC wallet is configured —
-     * caller should fall back to surfacing the invoice for manual
-     * payment. Returns an outcome with [NwcOutcome.success] = true on
-     * a wallet-confirmed payment, false (with [NwcOutcome.errorMessage]
-     * set) on rejection or timeout.
-     *
-     * The wallet's response can take a few seconds; bounded by
-     * [NWC_PAYMENT_TIMEOUT_MS] so a hung wallet can't stall the
-     * dispatch.
+     * Try to pay [bolt11] through the account's selected default payment source — an NWC
+     * wallet or a CLINK debit. Returns null when no in-app source is configured (caller
+     * should fall back to surfacing the invoice for manual payment), otherwise an outcome
+     * with [PayOutcome.success] = true on a wallet-confirmed payment, or false (with
+     * [PayOutcome.errorMessage]) on rejection or timeout.
      */
-    private suspend fun payViaNwcOrNull(
+    private suspend fun payViaDefaultSourceOrNull(
         account: com.vitorpamplona.amethyst.model.Account,
         bolt11: String,
         zappedNote: com.vitorpamplona.amethyst.model.Note?,
-    ): NwcOutcome? {
-        if (!account.nip47SignerState.hasWalletConnectSetup()) return null
+    ): PayOutcome? =
+        when (val source = account.settings.defaultPaymentSource()) {
+            is PaymentSource.Nwc -> payViaNwc(account, bolt11, zappedNote)
+            is PaymentSource.ClinkDebit -> payViaClinkDebit(account, source.wallet.pointer, bolt11)
+            null -> null
+        }
 
+    /** Pays [bolt11] via a CLINK debit pointer, mapping the kind-21002 reply to a [PayOutcome]. */
+    private suspend fun payViaClinkDebit(
+        account: com.vitorpamplona.amethyst.model.Account,
+        pointer: NDebit,
+        bolt11: String,
+    ): PayOutcome {
+        val response = ClinkDebitPayer.payInvoice(account, pointer, bolt11)
+        return when {
+            response == null ->
+                PayOutcome(false, null, "CLINK debit wallet didn't respond within ${ClinkDebitPayer.DEFAULT_TIMEOUT_MS / 1000}s")
+            response.isOk() -> PayOutcome(true, response.preimage, null)
+            else ->
+                PayOutcome(false, null, response.error?.takeIf { it.isNotBlank() } ?: "debit declined (code ${response.code})")
+        }
+    }
+
+    /**
+     * Pays [bolt11] via the default NWC wallet. The wallet's response can take a few
+     * seconds; bounded by [NWC_PAYMENT_TIMEOUT_MS] so a hung wallet can't stall dispatch.
+     */
+    private suspend fun payViaNwc(
+        account: com.vitorpamplona.amethyst.model.Account,
+        bolt11: String,
+        zappedNote: com.vitorpamplona.amethyst.model.Note?,
+    ): PayOutcome {
         val deferred = CompletableDeferred<Response?>()
-        // sendZapPaymentRequestFor fires onResponse exactly once when
-        // the wallet replies (success, error, or NwcError). On timeout
-        // we discard the late response.
+        // sendZapPaymentRequestFor fires onResponse exactly once when the wallet replies
+        // (success, error, or NwcError). On timeout we discard the late response.
         account.sendZapPaymentRequestFor(bolt11, zappedNote) { response ->
             if (!deferred.isCompleted) deferred.complete(response)
         }
         val response =
             withTimeoutOrNull(NWC_PAYMENT_TIMEOUT_MS) { deferred.await() }
-                ?: return NwcOutcome(
+                ?: return PayOutcome(
                     success = false,
                     preimage = null,
                     errorMessage =
@@ -1739,35 +1765,13 @@ class AmethystAppFunctions {
 
         return when (response) {
             is PayInvoiceSuccessResponse ->
-                NwcOutcome(
-                    success = true,
-                    preimage = response.result?.preimage,
-                    errorMessage = null,
-                )
+                PayOutcome(true, response.result?.preimage, null)
             is PayInvoiceErrorResponse ->
-                NwcOutcome(
-                    success = false,
-                    preimage = null,
-                    errorMessage =
-                        response.error?.message
-                            ?: response.error?.code?.name
-                            ?: "wallet returned an unspecified pay_invoice error",
-                )
+                PayOutcome(false, null, response.error?.message ?: response.error?.code?.name ?: "wallet returned an unspecified pay_invoice error")
             is NwcErrorResponse ->
-                NwcOutcome(
-                    success = false,
-                    preimage = null,
-                    errorMessage =
-                        response.error?.message
-                            ?: response.error?.code?.name
-                            ?: "wallet returned an NWC error",
-                )
+                PayOutcome(false, null, response.error?.message ?: response.error?.code?.name ?: "wallet returned an NWC error")
             else ->
-                NwcOutcome(
-                    success = false,
-                    preimage = null,
-                    errorMessage = "Unexpected NWC response type: ${response::class.simpleName}",
-                )
+                PayOutcome(false, null, "Unexpected NWC response type: ${response::class.simpleName}")
         }
     }
 

@@ -60,6 +60,7 @@ class NewUserMetadataViewModel : ViewModel() {
     val nip05 = mutableStateOf("")
     val lnAddress = mutableStateOf("")
     val lnURL = mutableStateOf("")
+    val clinkOffer = mutableStateOf("")
 
     val twitter = mutableStateOf("")
     val github = mutableStateOf("")
@@ -85,6 +86,7 @@ class NewUserMetadataViewModel : ViewModel() {
             nip05.value = it.info.nip05 ?: ""
             lnAddress.value = it.info.lud16 ?: ""
             lnURL.value = it.info.lud06 ?: ""
+            clinkOffer.value = it.info.clinkOffer ?: ""
         }
 
         twitter.value = ""
@@ -124,6 +126,7 @@ class NewUserMetadataViewModel : ViewModel() {
                 nip05 = nip05.value,
                 lnAddress = lnAddress.value,
                 lnURL = lnURL.value,
+                clinkOffer = clinkOffer.value,
             )
 
         val identities =
@@ -149,6 +152,7 @@ class NewUserMetadataViewModel : ViewModel() {
         nip05.value = ""
         lnAddress.value = ""
         lnURL.value = ""
+        clinkOffer.value = ""
         twitter.value = ""
         github.value = ""
         mastodon.value = ""

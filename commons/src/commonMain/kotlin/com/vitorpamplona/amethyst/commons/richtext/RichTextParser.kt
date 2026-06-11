@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.richtext
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.util.isValidUrl
+import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser
+import com.vitorpamplona.quartz.experimental.clink.pointers.NOffer
 import com.vitorpamplona.quartz.experimental.inlineMetadata.Nip54InlineMetadata
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip31Alts.AltTag
@@ -388,6 +390,10 @@ class RichTextParser {
         if (word.startsWith("lnurl", true)) return WithdrawSegment(word)
 
         if (word.startsWith("cashuA", true) || word.startsWith("cashuB", true)) return CashuSegment(word)
+
+        if (word.startsWith("noffer1", true)) {
+            (ClinkPointerParser.parse(word) as? NOffer)?.let { return ClinkOfferSegment(word, it) }
+        }
 
         if (word.startsWith('#')) return parseHash(word, tags)
 

@@ -68,6 +68,7 @@ class UserMetadataState(
         nip05: String? = null,
         lnAddress: String? = null,
         lnURL: String? = null,
+        clinkOffer: String? = null,
     ): MetadataEvent {
         val latest = getUserMetadataEvent()
 
@@ -85,6 +86,7 @@ class UserMetadataState(
                     nip05 = nip05,
                     lnAddress = lnAddress,
                     lnURL = lnURL,
+                    clinkOffer = clinkOffer,
                 )
             } else {
                 MetadataEvent.createNew(
@@ -98,6 +100,7 @@ class UserMetadataState(
                     nip05 = nip05,
                     lnAddress = lnAddress,
                     lnURL = lnURL,
+                    clinkOffer = clinkOffer,
                 )
             }
 

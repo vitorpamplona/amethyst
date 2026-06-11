@@ -63,11 +63,14 @@ object Output {
     fun error(
         code: String,
         detail: String? = null,
+        extra: Map<String, Any?> = emptyMap(),
     ): Int {
+        val cleanExtra = extra.filterValues { it != null }
         when (mode) {
             Mode.JSON -> {
-                val payload = mutableMapOf<String, Any>("error" to code)
+                val payload = mutableMapOf<String, Any?>("error" to code)
                 if (detail != null) payload["detail"] = detail
+                payload.putAll(cleanExtra)
                 System.err.println(mapper.writeValueAsString(payload))
             }
 
@@ -75,7 +78,9 @@ object Output {
                 val color = Ansi.forStream(isStderr = true)
                 val prefix = color.bold(color.red("error"))
                 val codePart = color.yellow(code)
-                System.err.println(if (detail != null) "$prefix: $codePart: $detail" else "$prefix: $codePart")
+                val base = if (detail != null) "$prefix: $codePart: $detail" else "$prefix: $codePart"
+                val suffix = if (cleanExtra.isEmpty()) "" else cleanExtra.entries.joinToString(", ", " (", ")") { "${it.key}=${it.value}" }
+                System.err.println(base + suffix)
             }
         }
         return 1

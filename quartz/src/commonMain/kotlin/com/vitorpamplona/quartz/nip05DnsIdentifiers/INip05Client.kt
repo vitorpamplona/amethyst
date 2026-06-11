@@ -33,6 +33,9 @@ interface INip05Client {
     suspend fun load(nip05: Nip05Id): KeyInfoSet?
 
     suspend fun list(domain: String): KeyInfoSet
+
+    /** The CLINK Offers pointer advertised in the NIP-05 `.well-known/nostr.json`, if any. */
+    suspend fun loadClinkOffer(nip05: Nip05Id): String? = null
 }
 
 class EmptyNip05Client : INip05Client {
