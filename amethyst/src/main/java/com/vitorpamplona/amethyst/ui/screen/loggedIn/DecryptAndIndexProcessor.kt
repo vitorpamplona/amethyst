@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.commons.model.nip59Giftwrap.RumorHosts
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.model.Account
@@ -417,7 +416,7 @@ class SealedRumorEventHandler(
             // broadcast can republish the wrap after a cache rebuild.
             // publicNote is the outermost event of this unwrap chain — the
             // kind-1059 wrap normally, the seal itself when it arrived bare.
-            publicNote.event?.let { envelope -> RumorHosts.put(rumorId, envelope) }
+            publicNote.event?.let { envelope -> cache.getOrCreateNote(rumorId).recordRumorHost(envelope) }
             processExistingSealedRumor(rumorId, publicNote)
         }
     }
@@ -443,16 +442,16 @@ class SealedRumorEventHandler(
 
         eventNote.event = event.copyNoContent()
 
-        // Remember which envelope delivered this rumor (publicNote is the
-        // kind-1059 wrap normally, the seal itself when it arrived bare).
-        // Consumers cite/broadcast/prune/evict through this index — the
-        // unsigned rumor itself must never be referenced publicly.
-        publicNote.event?.let { envelope -> RumorHosts.put(innerRumor.id, envelope) }
-
         cache.justConsume(innerRumor, null, true)
         cache.copyRelaysFromTo(publicNote, innerRumor)
 
         val innerRumorNote = cache.getOrCreateNote(innerRumor.id)
+
+        // Remember which envelope delivered this rumor (publicNote is the
+        // kind-1059 wrap normally, the seal itself when it arrived bare).
+        // Consumers cite/broadcast/prune/evict through this stub — the
+        // unsigned rumor itself must never be referenced publicly.
+        publicNote.event?.let { envelope -> innerRumorNote.recordRumorHost(envelope) }
 
         // Marmot Welcome: GiftWrap → Seal → WelcomeEvent. The Seal handler
         // is the actual point at which we see the kind:444 inner. Route it

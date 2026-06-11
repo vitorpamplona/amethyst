@@ -33,7 +33,6 @@ import com.vitorpamplona.amethyst.commons.model.cache.LargeSoftCache
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip53LiveActivities.LiveActivitiesChannel
-import com.vitorpamplona.amethyst.commons.model.nip59Giftwrap.RumorHosts
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtIdHexComparator
 import com.vitorpamplona.amethyst.commons.model.observables.EventListMatchingFilter
 import com.vitorpamplona.amethyst.commons.model.observables.NewEventMatchingFilter
@@ -1383,7 +1382,7 @@ object LocalCache : ILocalCache, ICacheProvider {
      * Rumors additionally drop the envelope notes that delivered them.
      */
     private fun deleteNote(deleteNote: Note) {
-        deleteNote.event?.let { deleteEnvelopes(it) }
+        deleteEnvelopes(deleteNote)
 
         deleteNote.detachFromChildren()
 
@@ -1391,13 +1390,13 @@ object LocalCache : ILocalCache, ICacheProvider {
     }
 
     /**
-     * Removes the envelope notes that delivered [rumor]: the indexed host
-     * (normally the kind-1059 wrap; a bare kind-13 seal otherwise) and,
-     * when the host is a wrap, the seal layer it carried. Public events
-     * have no envelopes and are ignored.
+     * Removes the envelope notes that delivered [rumorNote]'s rumor: its
+     * host (normally the kind-1059 wrap; a bare kind-13 seal otherwise)
+     * and, when the host is a wrap, the seal layer it carried. Public
+     * events have no envelopes and are ignored.
      */
-    fun deleteEnvelopes(rumor: Event) {
-        val host = RumorHosts.of(rumor) ?: return
+    fun deleteEnvelopes(rumorNote: Note) {
+        val host = rumorNote.rumorHost ?: return
 
         getNoteIfExists(host.id)?.let { hostNote ->
             (hostNote.event as? GiftWrapEvent)?.innerEventId?.let { sealId ->
@@ -1412,7 +1411,7 @@ object LocalCache : ILocalCache, ICacheProvider {
         }
 
         notes.remove(host.id)
-        RumorHosts.remove(rumor.id)
+        rumorNote.rumorHost = null
     }
 
     fun consume(
@@ -2710,7 +2709,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                     when (val ev = note.event) {
                         is BaseDMGroupEvent ->
                             if (giftWrapFloor != null) {
-                                val outerUntil = RumorHosts.get(ev.id)?.createdAt ?: ev.createdAt
+                                val outerUntil = note.rumorHost?.createdAt ?: ev.createdAt
                                 if (outerUntil < giftWrapFloor) note.relays.forEach { giftWrapPruned.merge(it, outerUntil, ::maxOf) }
                             }
                         is PrivateDmEvent -> {
@@ -2753,8 +2752,7 @@ object LocalCache : ILocalCache, ICacheProvider {
     }
 
     fun removeIfWrap(note: Note): List<Note> {
-        val noteEvent = note.event ?: return emptyList()
-        val host = RumorHosts.of(noteEvent) ?: return emptyList()
+        val host = note.rumorHost ?: return emptyList()
 
         val children = mutableListOf<Note>()
         getNoteIfExists(host.id)?.let { hostNote ->
@@ -2767,7 +2765,7 @@ object LocalCache : ILocalCache, ICacheProvider {
             unlinkAndRemove(hostNote)
             children.addAll(hostNote.clearChildLinks())
         }
-        RumorHosts.remove(noteEvent.id)
+        note.rumorHost = null
         return children
     }
 

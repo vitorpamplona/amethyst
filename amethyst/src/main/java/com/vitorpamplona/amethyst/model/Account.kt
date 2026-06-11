@@ -41,7 +41,6 @@ import com.vitorpamplona.amethyst.commons.model.nip51Lists.hashtagLists.HashtagL
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.muteList.MuteListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.ReportAction
-import com.vitorpamplona.amethyst.commons.model.nip59Giftwrap.RumorHosts
 import com.vitorpamplona.amethyst.commons.model.nip72Communities.CommunityListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.TrustProviderListDecryptionCache
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
@@ -224,7 +223,6 @@ import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.tags.ThumbTag
 import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.HostStub
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
@@ -1331,15 +1329,9 @@ class Account(
         }
     }
 
-    /**
-     * The envelope (kind-1059 gift wrap, or bare kind-13 seal) that
-     * delivered [event], when [event] is a rumor.
-     */
-    fun rumorHost(event: Event): HostStub? = RumorHosts.of(event)
-
     suspend fun broadcast(note: Note) {
         note.event?.let { noteEvent ->
-            val host = rumorHost(noteEvent)
+            val host = note.rumorHost
             if (host != null) {
                 // Rumors are rebroadcast as their delivering wrap:
                 // download the wrap and send it.

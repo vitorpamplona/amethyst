@@ -1138,7 +1138,7 @@ class AccountViewModel(
      */
     fun canBroadcast(note: Note): Boolean {
         val event = note.event ?: return false
-        return event.sig.isNotEmpty() || account.rumorHost(event) != null
+        return event.sig.isNotEmpty() || note.rumorHost != null
     }
 
     fun timestamp(note: Note) = launchSigner { account.otsState.timestamp(note) }

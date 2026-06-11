@@ -1364,6 +1364,9 @@ fun MainContent(
                                         if (innerNote.event == null) {
                                             innerNote.loadEvent(innerEvent, innerAuthor, emptyList())
                                         }
+                                        // Rumors are unsigned: citing or rebroadcasting them must
+                                        // go through the wrap that delivered them.
+                                        innerNote.recordRumorHost(event)
                                         iAccount.chatroomList.addMessage(
                                             innerEvent.chatroomKey(iAccount.pubKey),
                                             innerNote,
