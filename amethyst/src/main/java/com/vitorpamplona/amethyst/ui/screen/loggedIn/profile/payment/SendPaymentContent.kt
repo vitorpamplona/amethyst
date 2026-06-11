@@ -64,6 +64,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.hashtags.Cashu
+import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -79,6 +81,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
+import androidx.compose.material3.Icon as M3Icon
 
 /**
  * The payment rails the profile Send Payment screen can drive. [routeKey] is
@@ -121,12 +124,14 @@ data class ZapTypeOption(
 /**
  * One "Pay from" choice: an in-app wallet (NWC, CLINK debit, on-chain, cashu)
  * or the hand-off to another wallet app on the system ([isExternal]).
+ * [isCashu] swaps the generic wallet icon for the Cashu mark.
  */
 @Immutable
 data class PaymentFromUi(
     val id: String,
     val name: String,
     val isExternal: Boolean = false,
+    val isCashu: Boolean = false,
 )
 
 /**
@@ -160,6 +165,34 @@ private fun ProfilePaymentMethod.symbol(): MaterialSymbol =
         ProfilePaymentMethod.ONCHAIN -> MaterialSymbols.CurrencyBitcoin
         ProfilePaymentMethod.CASHU -> MaterialSymbols.AccountBalanceWallet
     }
+
+/**
+ * Leading icon of a rail chip. Cashu uses its own vector mark (a monochrome
+ * outline that must be tinted, like a Material Symbol) instead of the generic
+ * wallet symbol; the other rails use Material Symbols.
+ */
+@Composable
+private fun MethodIcon(
+    method: ProfilePaymentMethod,
+    tint: Color,
+    modifier: Modifier,
+) {
+    if (method == ProfilePaymentMethod.CASHU) {
+        M3Icon(
+            imageVector = CustomHashTagIcons.Cashu,
+            contentDescription = null,
+            tint = tint,
+            modifier = modifier,
+        )
+    } else {
+        Icon(
+            symbol = method.symbol(),
+            contentDescription = null,
+            tint = tint,
+            modifier = modifier,
+        )
+    }
+}
 
 @Composable
 private fun ProfilePaymentMethod.label(): String =
@@ -368,7 +401,10 @@ private fun MethodSelector(
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         SectionLabel(stringRes(R.string.send_payment_method))
 
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             methods.forEach { entry ->
                 MethodChip(
                     entry = entry,
@@ -430,9 +466,8 @@ private fun MethodChip(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
-            Icon(
-                symbol = entry.method.symbol(),
-                contentDescription = null,
+            MethodIcon(
+                method = entry.method,
                 tint = contentColor,
                 modifier = Modifier.size(18.dp),
             )
@@ -462,23 +497,34 @@ private fun FromSelector(
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         SectionLabel(stringRes(R.string.send_payment_from))
 
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             sources.forEach { source ->
                 FilterChip(
                     selected = selectedId == source.id,
                     enabled = enabled && sources.size > 1,
                     onClick = { onSelect(source.id) },
                     leadingIcon = {
-                        Icon(
-                            symbol =
-                                if (source.isExternal) {
-                                    MaterialSymbols.AutoMirrored.OpenInNew
-                                } else {
-                                    MaterialSymbols.AccountBalanceWallet
-                                },
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                        )
+                        if (source.isCashu) {
+                            M3Icon(
+                                imageVector = CustomHashTagIcons.Cashu,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        } else {
+                            Icon(
+                                symbol =
+                                    if (source.isExternal) {
+                                        MaterialSymbols.AutoMirrored.OpenInNew
+                                    } else {
+                                        MaterialSymbols.AccountBalanceWallet
+                                    },
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
                     },
                     label = { Text(source.name) },
                     colors =
@@ -509,7 +555,10 @@ private fun AmountSection(
         SectionLabel(stringRes(R.string.send_payment_amount))
 
         if (!locked && presetAmounts.isNotEmpty()) {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 presetAmounts.forEach { amount ->
                     SuggestionChip(
                         enabled = enabled,
@@ -557,7 +606,10 @@ private fun ReceiptSection(
         SectionLabel(stringRes(R.string.send_payment_receipt_section))
 
         if (zapTypes != null) {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 zapTypes.forEach { option ->
                     FilterChip(
                         selected = selectedZapType == option.type,

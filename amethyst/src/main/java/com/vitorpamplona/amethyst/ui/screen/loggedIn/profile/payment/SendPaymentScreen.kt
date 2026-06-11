@@ -546,7 +546,7 @@ private fun SendPaymentLoaded(
             ProfilePaymentMethod.ONCHAIN ->
                 remember(onchainWalletLabel) { persistentListOf(PaymentFromUi(ONCHAIN_WALLET_SOURCE_ID, onchainWalletLabel)) }
             ProfilePaymentMethod.CASHU ->
-                remember(cashuWalletLabel) { persistentListOf(PaymentFromUi(CASHU_WALLET_SOURCE_ID, cashuWalletLabel)) }
+                remember(cashuWalletLabel) { persistentListOf(PaymentFromUi(CASHU_WALLET_SOURCE_ID, cashuWalletLabel, isCashu = true)) }
             null -> null
         }
     val selectedFromId =
@@ -735,7 +735,10 @@ private fun OnchainFeeSection(
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             FeeTier.entries.forEach { tier ->
                 val rate = fees?.rateFor(tier)
                 FilterChip(
