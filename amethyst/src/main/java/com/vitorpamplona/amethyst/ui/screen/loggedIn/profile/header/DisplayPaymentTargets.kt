@@ -100,8 +100,10 @@ fun DisplayPaymentTargets(
     }
 }
 
-/** Lightning-family targets Amethyst can pay in-app through the Send Payment screen. */
-fun isLightningPaymentTarget(rawType: String): Boolean = rawType.trim().lowercase() in setOf("lightning", "ln", "lnurl")
+/** Lightning-family target types Amethyst can pay in-app through the Send Payment screen. */
+private val LIGHTNING_TARGET_TYPES = setOf("lightning", "ln", "lnurl")
+
+fun isLightningPaymentTarget(rawType: String): Boolean = rawType.trim().lowercase() in LIGHTNING_TARGET_TYPES
 
 @Composable
 private fun PaymentTargetChip(

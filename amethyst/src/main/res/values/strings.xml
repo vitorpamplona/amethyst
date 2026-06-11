@@ -159,6 +159,7 @@
     <string name="send_payment_success">Payment sent!</string>
     <string name="send_payment_failed">Payment failed</string>
     <string name="send_payment_try_again">Try again</string>
+    <string name="send_payment_message_recipient">Message the recipient about this</string>
     <string name="send_payment_done">Done</string>
     <string name="send_payment_pay_button">Pay %1$s sats</string>
     <string name="send_payment_pay_button_empty">Pay</string>

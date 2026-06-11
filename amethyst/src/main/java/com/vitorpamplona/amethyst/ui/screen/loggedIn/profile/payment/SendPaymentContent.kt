@@ -46,6 +46,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
@@ -178,6 +179,7 @@ fun SendPaymentContent(
     onDone: () -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    onMessageRecipient: (() -> Unit)? = null,
     extraSection: (@Composable ColumnScope.() -> Unit)? = null,
     recipientHeader: @Composable () -> Unit,
 ) {
@@ -303,6 +305,14 @@ fun SendPaymentContent(
                         modifier = Modifier.weight(1f),
                     ) {
                         Text(stringRes(R.string.send_payment_try_again))
+                    }
+                }
+                if (onMessageRecipient != null) {
+                    TextButton(
+                        onClick = onMessageRecipient,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringRes(R.string.send_payment_message_recipient))
                     }
                 }
             }

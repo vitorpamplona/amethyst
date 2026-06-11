@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.service.ClinkOfferPayer
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.observeUserInfo
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
@@ -62,6 +63,8 @@ import com.vitorpamplona.amethyst.ui.note.payViaIntent
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.FeeTier
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.rateFor
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.clink.common.SatRange
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferErrorCode
@@ -72,28 +75,13 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.FeeEstimates
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-private enum class OnchainFeeTier(
-    val label: String,
-    val etaLabel: String,
-) {
-    SLOW("Slow", "~1 hr"),
-    NORMAL("Normal", "~30 min"),
-    FAST("Fast", "~10 min"),
-}
-
-private fun FeeEstimates.rateFor(tier: OnchainFeeTier): Double =
-    when (tier) {
-        OnchainFeeTier.SLOW -> slowSatPerVbyte
-        OnchainFeeTier.NORMAL -> normalSatPerVbyte
-        OnchainFeeTier.FAST -> fastSatPerVbyte
-    }
 
 /**
  * Unified profile payment screen. Collects amount, optional message and zap
@@ -153,12 +141,18 @@ private fun SendPaymentLoaded(
             ?: userInfo?.info?.lud06?.trim()
 
     val clinkOffer = rememberProfileClinkOffer(userInfo, accountViewModel)
+    // Re-peek when the profile data refreshes: the recipient's kind:10019
+    // (nutzap info) often lands moments after the screen opens, and a one-shot
+    // peek would keep the Cashu rail hidden for the rest of the visit.
     val cashuFunding =
-        remember(user.pubkeyHex) {
+        remember(user.pubkeyHex, userInfo) {
             accountViewModel.account.cashuWalletState
                 .peekNutzapFunding(user.pubkeyHex)
         }
-    val onchainAvailable = remember { LocalCache.onchainBackend != null }
+    // Cheap read, intentionally not remembered: the chain backend is wired up
+    // asynchronously at boot and a frozen `remember {}` would hide the
+    // on-chain rail for the whole composition if the screen won the race.
+    val onchainAvailable = LocalCache.onchainBackend != null
 
     var stage by remember { mutableStateOf<PaymentFlowStage>(PaymentFlowStage.Editing) }
     var selectedMethod by remember { mutableStateOf<ProfilePaymentMethod?>(null) }
@@ -172,10 +166,14 @@ private fun SendPaymentLoaded(
     // Range the CLINK service reported back on an INVALID_AMOUNT reply.
     var clinkRange by remember { mutableStateOf<SatRange?>(null) }
     // The pointer actually paid: swapped if the service replies "Expired or
-    // Moved" with a replacement noffer.
-    var activeOffer by remember(clinkOffer) { mutableStateOf(clinkOffer) }
+    // Moved" with a replacement noffer. Only seeded from the resolved offer
+    // while unset, so a kind:0 refresh mid-flow can't discard a redirect.
+    var activeOffer by remember { mutableStateOf(clinkOffer) }
+    LaunchedEffect(clinkOffer) {
+        if (activeOffer == null) activeOffer = clinkOffer
+    }
 
-    var feeTier by remember { mutableStateOf(OnchainFeeTier.NORMAL) }
+    var feeTier by remember { mutableStateOf(FeeTier.NORMAL) }
     var fees by remember { mutableStateOf<FeeEstimates?>(null) }
 
     val methods =
@@ -254,7 +252,9 @@ private fun SendPaymentLoaded(
             clinkFixedPrice == null &&
             amountSats != null &&
             clinkRange?.let { range ->
-                (range.min != null && amountSats < range.min!!) || (range.max != null && amountSats > range.max!!)
+                val min = range.min
+                val max = range.max
+                (min != null && amountSats < min) || (max != null && amountSats > max)
             } == true
 
     val amountSupportText =
@@ -293,6 +293,13 @@ private fun SendPaymentLoaded(
     val invoiceErrorLabel = stringRes(R.string.error_dialog_pay_invoice_error)
     val parsingErrorLabel = stringRes(R.string.error_parsing_error_message)
 
+    // Payment callbacks arrive on IO/relay threads. Snapshot state writes are
+    // thread-safe, but every other payment flow in the app marshals UI state
+    // to Main (see ReusableZapButton's progress handling) — match that.
+    fun postStage(newStage: PaymentFlowStage) {
+        scope.launch { stage = newStage }
+    }
+
     /**
      * Pays a BOLT-11 through the default payment source without an extra
      * confirmation dialog — this screen already collected the explicit
@@ -301,41 +308,47 @@ private fun SendPaymentLoaded(
     fun payBolt11(invoice: String) {
         when (val source = accountViewModel.account.settings.defaultPaymentSource()) {
             is PaymentSource.Nwc -> {
-                stage = PaymentFlowStage.InProgress(stringRes(context, R.string.send_payment_paying_via, source.name))
+                postStage(PaymentFlowStage.InProgress(stringRes(context, R.string.send_payment_paying_via, source.name)))
                 accountViewModel.sendZapPaymentRequestFor(invoice, null) { response ->
                     when (response) {
-                        is PayInvoiceSuccessResponse -> stage = PaymentFlowStage.Success(successTitle)
+                        is PayInvoiceSuccessResponse -> postStage(PaymentFlowStage.Success(successTitle))
                         is PayInvoiceErrorResponse ->
-                            stage =
+                            postStage(
                                 PaymentFlowStage.Failure(
                                     response.error?.message
                                         ?: response.error?.code?.toString()
                                         ?: parsingErrorLabel,
-                                )
+                                ),
+                            )
                         else -> {}
                     }
                 }
             }
 
             is PaymentSource.ClinkDebit -> {
-                stage = PaymentFlowStage.InProgress(stringRes(context, R.string.send_payment_paying_via, source.name))
+                postStage(PaymentFlowStage.InProgress(stringRes(context, R.string.send_payment_paying_via, source.name)))
                 accountViewModel.payInvoiceViaClinkDebit(source.wallet.pointer, invoice) { response ->
-                    stage =
+                    postStage(
                         if (response?.isOk() == true) {
                             PaymentFlowStage.Success(successTitle)
                         } else {
                             PaymentFlowStage.Failure(response?.failureDetail() ?: clinkNoResponseLabel)
-                        }
+                        },
+                    )
                 }
             }
 
             null ->
-                payViaIntent(
-                    invoice,
-                    context,
-                    onPaid = { stage = PaymentFlowStage.Success(successTitle, sentToWalletLabel) },
-                    onError = { stage = PaymentFlowStage.Failure(it) },
-                )
+                // Hop to the Main scope: this branch can be reached from
+                // sendSats' IO callback, and startActivity belongs on Main.
+                scope.launch {
+                    payViaIntent(
+                        invoice,
+                        context,
+                        onPaid = { postStage(PaymentFlowStage.Success(successTitle, sentToWalletLabel)) },
+                        onError = { postStage(PaymentFlowStage.Failure(it)) },
+                    )
+                }
         }
     }
 
@@ -348,7 +361,7 @@ private fun SendPaymentLoaded(
             milliSats = amount * 1000,
             message = message,
             onNewInvoice = ::payBolt11,
-            onError = { _, msg -> stage = PaymentFlowStage.Failure(msg) },
+            onError = { _, msg -> postStage(PaymentFlowStage.Failure(msg)) },
             onProgress = {},
             context = context,
             zapType = zapType,
@@ -406,9 +419,9 @@ private fun SendPaymentLoaded(
             recipientPubKey = user.pubkeyHex,
             amountSats = amount,
             message = message,
-            onError = { _, msg, _ -> stage = PaymentFlowStage.Failure(msg) },
-            onProgress = { progress -> stage = PaymentFlowStage.InProgress(sendingNutzapLabel, progress) },
-            onSuccess = { stage = PaymentFlowStage.Success(successTitle) },
+            onError = { _, msg, _ -> postStage(PaymentFlowStage.Failure(msg)) },
+            onProgress = { progress -> postStage(PaymentFlowStage.InProgress(sendingNutzapLabel, progress)) },
+            onSuccess = { postStage(PaymentFlowStage.Success(successTitle)) },
         )
     }
 
@@ -416,14 +429,18 @@ private fun SendPaymentLoaded(
         val feeRate = fees?.rateFor(feeTier) ?: return
         stage = PaymentFlowStage.InProgress(buildingTxLabel)
         scope.launch {
+            // Off the Main thread: the on-chain sender signs the PSBT on the
+            // calling thread (only its network hops switch to IO internally).
             val result =
-                accountViewModel.account.sendOnchainZap(
-                    recipientPubKey = user.pubkeyHex,
-                    amountSats = amount,
-                    feeRateSatPerVByte = feeRate,
-                    comment = message.trim(),
-                    zappedEvent = null,
-                )
+                withContext(Dispatchers.IO) {
+                    accountViewModel.account.sendOnchainZap(
+                        recipientPubKey = user.pubkeyHex,
+                        amountSats = amount,
+                        feeRateSatPerVByte = feeRate,
+                        comment = message.trim(),
+                        zappedEvent = null,
+                    )
+                }
             stage =
                 when (result) {
                     is OnchainZapSendResult.Success ->
@@ -438,12 +455,7 @@ private fun SendPaymentLoaded(
 
     val zapTypeOptions =
         if (selectedMethod == ProfilePaymentMethod.LIGHTNING) {
-            persistentListOf(
-                ZapTypeOption(LnZapEvent.ZapType.PUBLIC, stringRes(R.string.zap_type_public), stringRes(R.string.zap_type_public_explainer)),
-                ZapTypeOption(LnZapEvent.ZapType.PRIVATE, stringRes(R.string.zap_type_private), stringRes(R.string.zap_type_private_explainer)),
-                ZapTypeOption(LnZapEvent.ZapType.ANONYMOUS, stringRes(R.string.zap_type_anonymous), stringRes(R.string.zap_type_anonymous_explainer)),
-                ZapTypeOption(LnZapEvent.ZapType.NONZAP, stringRes(R.string.zap_type_nonzap), stringRes(R.string.zap_type_nonzap_explainer)),
-            )
+            rememberLightningZapTypeOptions()
         } else {
             null
         }
@@ -507,6 +519,14 @@ private fun SendPaymentLoaded(
         },
         onDone = { nav.popBack() },
         onRetry = { stage = PaymentFlowStage.Editing },
+        onMessageRecipient = {
+            // Mirrors the old LN-address error dialog's affordance: open a DM
+            // with the recipient, prefilled with the failure detail.
+            val failureDetail = (stage as? PaymentFlowStage.Failure)?.message
+            nav.nav {
+                routeToMessage(user, failureDetail, accountViewModel = accountViewModel)
+            }
+        },
         modifier = modifier,
         extraSection =
             if (selectedMethod == ProfilePaymentMethod.ONCHAIN) {
@@ -528,6 +548,32 @@ private fun SendPaymentLoaded(
 }
 
 private fun String.toShortTxid(): String = if (length > 20) take(12) + "…" + takeLast(6) else this
+
+/**
+ * The NIP-57 zap-type choices for the Lightning rail. Memoized because the
+ * labels only change with the locale (which recreates the Activity), while
+ * this would otherwise be rebuilt on every keystroke of the amount field.
+ */
+@Composable
+private fun rememberLightningZapTypeOptions(): ImmutableList<ZapTypeOption> {
+    val publicLabel = stringRes(R.string.zap_type_public)
+    val publicExplainer = stringRes(R.string.zap_type_public_explainer)
+    val privateLabel = stringRes(R.string.zap_type_private)
+    val privateExplainer = stringRes(R.string.zap_type_private_explainer)
+    val anonymousLabel = stringRes(R.string.zap_type_anonymous)
+    val anonymousExplainer = stringRes(R.string.zap_type_anonymous_explainer)
+    val nonzapLabel = stringRes(R.string.zap_type_nonzap)
+    val nonzapExplainer = stringRes(R.string.zap_type_nonzap_explainer)
+
+    return remember {
+        persistentListOf(
+            ZapTypeOption(LnZapEvent.ZapType.PUBLIC, publicLabel, publicExplainer),
+            ZapTypeOption(LnZapEvent.ZapType.PRIVATE, privateLabel, privateExplainer),
+            ZapTypeOption(LnZapEvent.ZapType.ANONYMOUS, anonymousLabel, anonymousExplainer),
+            ZapTypeOption(LnZapEvent.ZapType.NONZAP, nonzapLabel, nonzapExplainer),
+        )
+    }
+}
 
 @Composable
 private fun RecipientHeader(
@@ -560,8 +606,8 @@ private fun RecipientHeader(
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun OnchainFeeSection(
-    feeTier: OnchainFeeTier,
-    onFeeTierChange: (OnchainFeeTier) -> Unit,
+    feeTier: FeeTier,
+    onFeeTierChange: (FeeTier) -> Unit,
     fees: FeeEstimates?,
     enabled: Boolean,
 ) {
@@ -572,7 +618,7 @@ private fun OnchainFeeSection(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OnchainFeeTier.entries.forEach { tier ->
+            FeeTier.entries.forEach { tier ->
                 val rate = fees?.rateFor(tier)
                 FilterChip(
                     selected = feeTier == tier,
