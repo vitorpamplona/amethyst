@@ -345,9 +345,11 @@ private fun UserRoomCompose(
     nav: INav,
 ) {
     var popupExpanded by remember { mutableStateOf(false) }
-    val pinnedRooms by accountViewModel.account.settings.pinnedChatrooms
-        .collectAsStateWithLifecycle()
-    val isPinned = room in pinnedRooms
+    // Kept as a State (no `by`) so `.value` is only read inside the firstRow and
+    // menu-text slots, confining pin-toggle invalidations to those scopes.
+    val pinnedRooms =
+        accountViewModel.account.settings.pinnedChatrooms
+            .collectAsStateWithLifecycle()
 
     ChatHeaderLayout(
         channelPicture = {
@@ -359,7 +361,7 @@ private fun UserRoomCompose(
         },
         firstRow = {
             RoomNameDisplay(room, Modifier.weight(1f), accountViewModel)
-            if (isPinned) {
+            if (room in pinnedRooms.value) {
                 Icon(
                     symbol = MaterialSymbols.PushPin,
                     contentDescription = stringRes(R.string.pinned_to_top),
@@ -408,7 +410,7 @@ private fun UserRoomCompose(
     ) {
         DropdownMenuItem(
             text = {
-                Text(stringRes(if (isPinned) R.string.unpin_conversation else R.string.pin_conversation))
+                Text(stringRes(if (room in pinnedRooms.value) R.string.unpin_conversation else R.string.pin_conversation))
             },
             onClick = {
                 accountViewModel.account.settings.toggleChatroomPin(room)
