@@ -32,7 +32,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
-import com.vitorpamplona.quartz.nip42RelayAuth.tags.RelayTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.PersistentMap
 import kotlinx.collections.immutable.persistentMapOf
@@ -106,8 +105,8 @@ class DesktopAuthCoordinator(
                 RelayAuthenticator(
                     client = relayManager.client,
                     scope = scope,
-                    signWithAllLoggedInUsers = { template ->
-                        val signed = signWithPolicy(account, template, policy)
+                    signWithAllLoggedInUsers = { relayUrl, template ->
+                        val signed = signWithPolicy(account, relayUrl, template, policy)
                         signed?.let { listOf(it) } ?: emptyList()
                     },
                 )
@@ -156,11 +155,11 @@ class DesktopAuthCoordinator(
 
     private suspend fun signWithPolicy(
         account: AccountState.LoggedIn,
+        relayUrl: NormalizedRelayUrl,
         template: EventTemplate<RelayAuthEvent>,
         policy: AuthApprovalPolicy,
-    ): RelayAuthEvent? {
-        val relayUrl = template.tags.firstNotNullOfOrNull(RelayTag::parse) ?: return null
-        return when (val decision = policy.classify(relayUrl)) {
+    ): RelayAuthEvent? =
+        when (val decision = policy.classify(relayUrl)) {
             AuthApprovalDecision.Allow -> account.signer.sign(template)
             AuthApprovalDecision.Block -> null
             is AuthApprovalDecision.Pending -> {
@@ -171,7 +170,6 @@ class DesktopAuthCoordinator(
                 if (resolved == AuthApprovalScope.BLOCKED) null else account.signer.sign(template)
             }
         }
-    }
 
     private data class ActiveAuth(
         val pubKeyHex: String,

@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.ProvideMaterialSymbols
 import com.vitorpamplona.amethyst.commons.moderation.LocalHashtagSpamSettings
 import com.vitorpamplona.amethyst.commons.moderation.LocalSpamExemptKeys
 import com.vitorpamplona.amethyst.commons.moderation.PreferencesHashtagSpamSettings
+import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthApprovalBanner
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull
 import com.vitorpamplona.amethyst.commons.wot.LocalWoTReady
 import com.vitorpamplona.amethyst.commons.wot.LocalWoTService
@@ -1283,32 +1284,41 @@ private fun AppInner(
                                 LocalNamecoinService provides namecoinService,
                                 LocalSpamExemptKeys provides spamExemptKeys,
                             ) {
-                                MainContent(
-                                    layoutMode = layoutMode,
-                                    deckState = deckState,
-                                    workspaceManager = workspaceManager,
-                                    singlePaneState = singlePaneState,
-                                    pinnedNavBarState = pinnedNavBarState,
-                                    relayManager = relayManager,
-                                    localCache = localCache,
-                                    accountManager = accountManager,
-                                    account = account,
-                                    nwcConnection = nwcConnection,
-                                    subscriptionsCoordinator = subscriptionsCoordinator,
-                                    indexRelaysStore = indexRelaysStore,
-                                    nip11Fetcher = nip11Fetcher,
-                                    appScope = scope,
-                                    torStatus = currentTorStatus,
-                                    onShowComposeDialog = onShowComposeDialog,
-                                    onShowReplyDialog = onShowReplyDialog,
-                                    onShowAppDrawer = onShowAppDrawer,
-                                    onOpenFeedsDrawer = {
-                                        appDrawerInitialTab =
-                                            com.vitorpamplona.amethyst.desktop.ui.deck.AppDrawerTab.FEEDS
-                                        onShowAppDrawer()
-                                    },
-                                    onShowImportFollowListDialog = onShowImportFollowListDialog,
-                                )
+                                val pendingAuthApprovals by authCoordinator.pendingApprovals.collectAsState()
+                                Column(modifier = Modifier.fillMaxSize()) {
+                                    AuthApprovalBanner(
+                                        pending = pendingAuthApprovals.values.toList(),
+                                        onResolve = { url, scope -> authCoordinator.resolve(url, scope) },
+                                    )
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        MainContent(
+                                            layoutMode = layoutMode,
+                                            deckState = deckState,
+                                            workspaceManager = workspaceManager,
+                                            singlePaneState = singlePaneState,
+                                            pinnedNavBarState = pinnedNavBarState,
+                                            relayManager = relayManager,
+                                            localCache = localCache,
+                                            accountManager = accountManager,
+                                            account = account,
+                                            nwcConnection = nwcConnection,
+                                            subscriptionsCoordinator = subscriptionsCoordinator,
+                                            indexRelaysStore = indexRelaysStore,
+                                            nip11Fetcher = nip11Fetcher,
+                                            appScope = scope,
+                                            torStatus = currentTorStatus,
+                                            onShowComposeDialog = onShowComposeDialog,
+                                            onShowReplyDialog = onShowReplyDialog,
+                                            onShowAppDrawer = onShowAppDrawer,
+                                            onOpenFeedsDrawer = {
+                                                appDrawerInitialTab =
+                                                    com.vitorpamplona.amethyst.desktop.ui.deck.AppDrawerTab.FEEDS
+                                                onShowAppDrawer()
+                                            },
+                                            onShowImportFollowListDialog = onShowImportFollowListDialog,
+                                        )
+                                    }
+                                }
 
                                 // Import Follow List dialog (triggered from File menu /
                                 // Cmd+Shift+I). Rendered inside this CompositionLocalProvider
