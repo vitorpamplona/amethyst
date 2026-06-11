@@ -197,6 +197,11 @@ fun DeckColumnContainer(
             hasLocalData = hasLocalData,
         )
 
+        // Unhealthy relays banner — flags relays unresponsive >7d, opens review popup
+        com.vitorpamplona.amethyst.desktop.ui.relay.health.UnhealthyRelayBannerHost(
+            onOpenDashboard = onNavigateToRelays,
+        )
+
         // Content runs edge-to-edge; each screen adds its own header padding
         Box(modifier = Modifier.fillMaxSize()) {
             // Always keep RootContent composed so state survives navigation
