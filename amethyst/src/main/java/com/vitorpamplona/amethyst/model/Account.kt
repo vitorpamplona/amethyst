@@ -120,6 +120,13 @@ import com.vitorpamplona.amethyst.service.uploads.FileHeader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.EventProcessor
 import com.vitorpamplona.quartz.experimental.bounties.BountyAddValueEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
+import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
+import com.vitorpamplona.quartz.experimental.fitness.workout.calories
+import com.vitorpamplona.quartz.experimental.fitness.workout.distance
+import com.vitorpamplona.quartz.experimental.fitness.workout.source
+import com.vitorpamplona.quartz.experimental.fitness.workout.tags.DistanceTag
+import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseType
+import com.vitorpamplona.quartz.experimental.fitness.workout.tags.SourceTag
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
@@ -524,6 +531,9 @@ class Account(
 
     val livePicturesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPicturesFollowList)
     val livePicturesFollowListsPerRelay = OutboxLoaderState(livePicturesFollowLists, cache, scope).flow
+
+    val liveWorkoutsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultWorkoutsFollowList)
+    val liveWorkoutsFollowListsPerRelay = OutboxLoaderState(liveWorkoutsFollowLists, cache, scope).flow
 
     val liveCalendarsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultCalendarsFollowList)
     val liveCalendarsFollowListsPerRelay = OutboxLoaderState(liveCalendarsFollowLists, cache, scope).flow
@@ -1765,6 +1775,25 @@ class Account(
             }
 
         signAndComputeBroadcast(template)
+    }
+
+    suspend fun sendWorkout(
+        exercise: ExerciseType,
+        durationSeconds: Long,
+        notes: String,
+        title: String?,
+        distanceValue: Double? = null,
+        distanceUnit: String = DistanceTag.KILOMETERS,
+        kcal: Int? = null,
+    ): WorkoutRecordEvent {
+        val template =
+            WorkoutRecordEvent.build(exercise, durationSeconds, notes, title) {
+                source(SourceTag.MANUAL)
+                distanceValue?.let { distance(it, distanceUnit) }
+                kcal?.let { calories(it) }
+            }
+
+        return signAndComputeBroadcast(template)
     }
 
     suspend fun sendHeader(
