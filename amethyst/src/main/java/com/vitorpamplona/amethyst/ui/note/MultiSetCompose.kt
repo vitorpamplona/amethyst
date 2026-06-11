@@ -84,6 +84,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.authorRouteFor
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeReplyTo
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
@@ -105,6 +106,7 @@ import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.ui.theme.overPictureBackground
 import com.vitorpamplona.amethyst.ui.theme.profile35dpModifier
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.claimedSatsTotal
 import kotlinx.collections.immutable.ImmutableList
@@ -527,7 +529,18 @@ private fun RenderState(
                 onClick = { click(content, nav) },
                 onLongClick = {
                     content.zapNote?.let { zap ->
-                        nav.nav { routeReplyTo(zap, accountViewModel.account) }
+                        nav.nav {
+                            val request = (zap.event as? LnZapEvent)?.zapRequest
+                            val sender = content.user
+                            if (request?.isPrivateZap() == true && sender != null && sender.pubkeyHex != request.pubKey) {
+                                // A public reply can't tag a private zapper without exposing
+                                // them. We hold the decrypted sender (we are the recipient),
+                                // so reply privately in their DM room instead.
+                                routeToMessage(sender, null, accountViewModel = accountViewModel)
+                            } else {
+                                routeReplyTo(zap, accountViewModel.account)
+                            }
+                        }
                     }
                 },
             ),
