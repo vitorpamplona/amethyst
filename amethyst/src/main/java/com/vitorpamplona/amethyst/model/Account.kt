@@ -912,6 +912,32 @@ class Account(
     }
 
     /**
+     * Pay an explicit Bitcoin address (e.g. a profile's NIP-A3 `bitcoin`
+     * payment target) from the NIP-BC Taproot wallet. A plain wallet send —
+     * no kind:8333 receipt is published. See [OnchainZapSender.sendToAddress].
+     */
+    suspend fun sendOnchainToAddress(
+        recipientAddress: String,
+        amountSats: Long,
+        feeRateSatPerVByte: Double,
+    ): OnchainZapSendResult {
+        val backend =
+            cache.onchainBackend
+                ?: return OnchainZapSendResult.Failure(
+                    OnchainZapSendStage.LOADING_UTXOS,
+                    "Bitcoin chain backend is not configured",
+                )
+        return OnchainZapSender.sendToAddress(
+            backend = backend,
+            signer = signer,
+            senderPubKey = signer.pubKey,
+            recipientAddress = recipientAddress,
+            amountSats = amountSats,
+            feeRateSatPerVByte = feeRateSatPerVByte,
+        )
+    }
+
+    /**
      * Send a NIP-BC onchain split zap: a single Bitcoin transaction paying
      * each recipient their precomputed share, plus one kind:8333 receipt per
      * recipient. See [OnchainZapSender.sendSplit] for failure semantics.

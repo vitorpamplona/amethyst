@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
@@ -65,6 +66,7 @@ import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
+import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.SegwitAddress
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -103,7 +105,36 @@ fun DisplayPaymentTargets(
 /** Lightning-family target types Amethyst can pay in-app through the Send Payment screen. */
 private val LIGHTNING_TARGET_TYPES = setOf("lightning", "ln", "lnurl")
 
+/** Bitcoin-family target types the in-app on-chain wallet can pay directly. */
+private val BITCOIN_TARGET_TYPES = setOf("bitcoin", "btc", "onchain")
+
 fun isLightningPaymentTarget(rawType: String): Boolean = rawType.trim().lowercase() in LIGHTNING_TARGET_TYPES
+
+/**
+ * Route into the in-app Send Payment screen when one of the user's wallets can
+ * pay [target] directly: lightning targets through the default lightning
+ * source (NWC / CLINK debit / wallet app), bitcoin targets through the NIP-BC
+ * on-chain wallet (native segwit mainnet addresses, and only when the chain
+ * backend is configured). Null means no in-app wallet can pay this target —
+ * callers fall back to the external URI handoff.
+ */
+fun inAppPaymentRouteFor(
+    userHex: String,
+    target: PaymentTarget,
+): Route.SendPayment? {
+    val type = target.type.trim().lowercase()
+    return when {
+        type in LIGHTNING_TARGET_TYPES ->
+            Route.SendPayment(userHex, ProfilePaymentMethod.LIGHTNING.routeKey, lnAddressOverride = target.authority)
+
+        type in BITCOIN_TARGET_TYPES &&
+            LocalCache.onchainBackend != null &&
+            SegwitAddress.isPayableMainnetAddress(target.authority.trim()) ->
+            Route.SendPayment(userHex, ProfilePaymentMethod.ONCHAIN.routeKey, btcAddressOverride = target.authority.trim())
+
+        else -> null
+    }
+}
 
 @Composable
 private fun PaymentTargetChip(
@@ -127,16 +158,13 @@ private fun PaymentTargetChip(
         modifier =
             Modifier.combinedClickable(
                 onClick = {
-                    if (isLightningPaymentTarget(target.type)) {
-                        // Lightning targets are paid in-app: the Send Payment screen
-                        // collects the amount and pays this exact target.
-                        nav.nav(
-                            Route.SendPayment(
-                                baseUser.pubkeyHex,
-                                ProfilePaymentMethod.LIGHTNING.routeKey,
-                                target.authority,
-                            ),
-                        )
+                    // Targets one of the user's in-app wallets can pay (lightning,
+                    // bitcoin) go to the Send Payment screen, which collects the
+                    // amount and pays this exact target; everything else hands off
+                    // to an external wallet app via its payment URI.
+                    val inAppRoute = inAppPaymentRouteFor(baseUser.pubkeyHex, target)
+                    if (inAppRoute != null) {
+                        nav.nav(inAppRoute)
                     } else {
                         runCatching { uriHandler.openUri(style.uriFor(target.authority)) }
                             .onFailure {

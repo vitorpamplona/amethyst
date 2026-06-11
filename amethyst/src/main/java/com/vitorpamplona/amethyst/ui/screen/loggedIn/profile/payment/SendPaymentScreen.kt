@@ -75,6 +75,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.FeeEstimates
+import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.SegwitAddress
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -99,6 +100,7 @@ fun SendPaymentScreen(
     userHex: String,
     initialMethodKey: String?,
     lnAddressOverride: String?,
+    btcAddressOverride: String?,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -112,6 +114,7 @@ fun SendPaymentScreen(
                     user = user,
                     initialMethodKey = initialMethodKey,
                     lnAddressOverride = lnAddressOverride,
+                    btcAddressOverride = btcAddressOverride,
                     accountViewModel = accountViewModel,
                     nav = nav,
                     modifier = Modifier.padding(top = pad.calculateTopPadding(), bottom = pad.calculateBottomPadding()),
@@ -127,6 +130,7 @@ private fun SendPaymentLoaded(
     user: User,
     initialMethodKey: String?,
     lnAddressOverride: String?,
+    btcAddressOverride: String?,
     accountViewModel: AccountViewModel,
     nav: INav,
     modifier: Modifier = Modifier,
@@ -153,6 +157,14 @@ private fun SendPaymentLoaded(
     // asynchronously at boot and a frozen `remember {}` would hide the
     // on-chain rail for the whole composition if the screen won the race.
     val onchainAvailable = LocalCache.onchainBackend != null
+    // When navigated from a `bitcoin` payment target, the on-chain rail pays
+    // that announced address directly (plain send, no NIP-BC receipt) instead
+    // of the recipient's pubkey-derived Taproot address. Re-validated here in
+    // case the route was built elsewhere with an unpayable address.
+    val onchainAddressTarget =
+        remember(btcAddressOverride) {
+            btcAddressOverride?.takeIf { SegwitAddress.isPayableMainnetAddress(it) }
+        }
 
     var stage by remember { mutableStateOf<PaymentFlowStage>(PaymentFlowStage.Editing) }
     var selectedMethod by remember { mutableStateOf<ProfilePaymentMethod?>(null) }
@@ -177,11 +189,11 @@ private fun SendPaymentLoaded(
     var fees by remember { mutableStateOf<FeeEstimates?>(null) }
 
     val methods =
-        remember(lud16, clinkOffer, cashuFunding, onchainAvailable) {
+        remember(lud16, clinkOffer, cashuFunding, onchainAvailable, onchainAddressTarget) {
             buildList {
                 if (!lud16.isNullOrEmpty()) add(PaymentMethodUi(ProfilePaymentMethod.LIGHTNING, lud16))
                 if (clinkOffer != null) add(PaymentMethodUi(ProfilePaymentMethod.CLINK))
-                if (onchainAvailable) add(PaymentMethodUi(ProfilePaymentMethod.ONCHAIN))
+                if (onchainAvailable) add(PaymentMethodUi(ProfilePaymentMethod.ONCHAIN, onchainAddressTarget?.shortenMiddle()))
                 if (cashuFunding != null) {
                     add(PaymentMethodUi(ProfilePaymentMethod.CASHU))
                 }
@@ -433,20 +445,30 @@ private fun SendPaymentLoaded(
             // calling thread (only its network hops switch to IO internally).
             val result =
                 withContext(Dispatchers.IO) {
-                    accountViewModel.account.sendOnchainZap(
-                        recipientPubKey = user.pubkeyHex,
-                        amountSats = amount,
-                        feeRateSatPerVByte = feeRate,
-                        comment = message.trim(),
-                        zappedEvent = null,
-                    )
+                    if (onchainAddressTarget != null) {
+                        // Pays the profile's announced bitcoin address directly —
+                        // a plain wallet send, no NIP-BC receipt exists for it.
+                        accountViewModel.account.sendOnchainToAddress(
+                            recipientAddress = onchainAddressTarget,
+                            amountSats = amount,
+                            feeRateSatPerVByte = feeRate,
+                        )
+                    } else {
+                        accountViewModel.account.sendOnchainZap(
+                            recipientPubKey = user.pubkeyHex,
+                            amountSats = amount,
+                            feeRateSatPerVByte = feeRate,
+                            comment = message.trim(),
+                            zappedEvent = null,
+                        )
+                    }
                 }
             stage =
                 when (result) {
                     is OnchainZapSendResult.Success ->
                         PaymentFlowStage.Success(
                             successTitle,
-                            stringRes(context, R.string.send_payment_onchain_txid, result.txid.toShortTxid()),
+                            stringRes(context, R.string.send_payment_onchain_txid, result.txid.shortenMiddle()),
                         )
                     is OnchainZapSendResult.Failure -> PaymentFlowStage.Failure(result.message)
                 }
@@ -461,10 +483,12 @@ private fun SendPaymentLoaded(
         }
 
     val receiptNote =
-        when (selectedMethod) {
-            ProfilePaymentMethod.CLINK -> stringRes(R.string.send_payment_receipt_clink)
-            ProfilePaymentMethod.ONCHAIN -> stringRes(R.string.send_payment_receipt_onchain)
-            ProfilePaymentMethod.CASHU -> stringRes(R.string.send_payment_receipt_cashu)
+        when {
+            selectedMethod == ProfilePaymentMethod.CLINK -> stringRes(R.string.send_payment_receipt_clink)
+            selectedMethod == ProfilePaymentMethod.ONCHAIN && onchainAddressTarget != null ->
+                stringRes(R.string.send_payment_receipt_onchain_address)
+            selectedMethod == ProfilePaymentMethod.ONCHAIN -> stringRes(R.string.send_payment_receipt_onchain)
+            selectedMethod == ProfilePaymentMethod.CASHU -> stringRes(R.string.send_payment_receipt_cashu)
             else -> null
         }
 
@@ -493,7 +517,11 @@ private fun SendPaymentLoaded(
         amountIsError = belowOnchainMin || cashuInsufficient || outsideClinkRange,
         message = message,
         onMessageChange = { message = it },
-        showMessageField = selectedMethod != ProfilePaymentMethod.CLINK,
+        // CLINK requests and plain address sends have no field that could
+        // carry a message to the recipient, so don't collect one.
+        showMessageField =
+            selectedMethod != ProfilePaymentMethod.CLINK &&
+                !(selectedMethod == ProfilePaymentMethod.ONCHAIN && onchainAddressTarget != null),
         messageLabel = messageLabel,
         zapTypes = zapTypeOptions,
         selectedZapType = zapType,
@@ -547,7 +575,7 @@ private fun SendPaymentLoaded(
     )
 }
 
-private fun String.toShortTxid(): String = if (length > 20) take(12) + "…" + takeLast(6) else this
+private fun String.shortenMiddle(): String = if (length > 20) take(12) + "…" + takeLast(6) else this
 
 /**
  * The NIP-57 zap-type choices for the Lightning rail. Memoized because the

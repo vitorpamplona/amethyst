@@ -63,11 +63,9 @@ import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.payment.ProfilePaymentMethod
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
@@ -129,17 +127,19 @@ fun PaymentButtonWithTargets(
         PaymentTargetsDialog(
             targets = targets,
             onDismiss = { expanded = false },
-            onPayLightning = { target ->
-                expanded = false
-                // Lightning targets are paid in-app: the Send Payment screen
-                // collects the amount and confirms in place — no extra dialog.
-                nav.nav(
-                    Route.SendPayment(
-                        user.pubkeyHex,
-                        ProfilePaymentMethod.LIGHTNING.routeKey,
-                        target.authority,
-                    ),
-                )
+            payInApp = { target ->
+                // Targets one of the user's wallets can pay (lightning, bitcoin)
+                // go to the Send Payment screen, which collects the amount and
+                // confirms in place — no extra dialog. Returns false when no
+                // in-app wallet applies so the dialog falls back to payto://.
+                val route = inAppPaymentRouteFor(user.pubkeyHex, target)
+                if (route != null) {
+                    expanded = false
+                    nav.nav(route)
+                    true
+                } else {
+                    false
+                }
             },
         )
     }
@@ -149,7 +149,8 @@ fun PaymentButtonWithTargets(
 fun PaymentTargetsDialog(
     targets: List<PaymentTarget>,
     onDismiss: () -> Unit,
-    onPayLightning: ((PaymentTarget) -> Unit)? = null,
+    /** Returns true when it handled the target with an in-app wallet. */
+    payInApp: ((PaymentTarget) -> Boolean)? = null,
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboard.current
@@ -186,9 +187,7 @@ fun PaymentTargetsDialog(
                             }
                         },
                         onPay = {
-                            if (onPayLightning != null && isLightningPaymentTarget(target.type)) {
-                                onPayLightning(target)
-                            } else {
+                            if (payInApp?.invoke(target) != true) {
                                 try {
                                     val intent = Intent(Intent.ACTION_VIEW, "payto://${target.type}/${target.authority}".toUri())
                                     intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK

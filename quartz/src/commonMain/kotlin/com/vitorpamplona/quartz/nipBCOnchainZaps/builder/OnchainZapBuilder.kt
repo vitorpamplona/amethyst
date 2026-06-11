@@ -139,9 +139,6 @@ object OnchainZapBuilder {
         allowUnconfirmed: Boolean = false,
     ): Result {
         require(recipients.isNotEmpty()) { "must have at least one recipient" }
-        require(recipients.all { it.second > 0 }) { "all amounts must be positive" }
-        require(recipients.all { it.second >= DUST_THRESHOLD_SATS }) { "a recipient amount is below the dust threshold" }
-        require(feeRateSatPerVByte > 0) { "fee rate must be positive" }
         require(recipients.none { it.first == senderPubKey }) { "cannot zap yourself" }
         // Distinct recipients keep the output set clean and make per-recipient
         // receipts unambiguous. Callers should merge weights upstream.
@@ -149,11 +146,48 @@ object OnchainZapBuilder {
             "recipients must be distinct"
         }
 
+        return buildToScripts(
+            senderPubKey = senderPubKey,
+            recipients =
+                recipients.map { (pubKey, sats) ->
+                    TaprootAddress.scriptPubKeyForRecipient(pubKey) to sats
+                },
+            feeRateSatPerVByte = feeRateSatPerVByte,
+            availableUtxos = availableUtxos,
+            allowUnconfirmed = allowUnconfirmed,
+        )
+    }
+
+    /**
+     * Build the unsigned PSBT paying arbitrary scriptPubKeys — the core shared
+     * by the NIP-BC pubkey paths above and by plain address sends (e.g. a
+     * profile's NIP-A3 `bitcoin` payment target, where the destination script
+     * comes from decoding the announced address instead of tweaking a pubkey).
+     *
+     * @param senderPubKey The sender's 32-byte x-only Nostr pubkey (hex).
+     * @param recipients Per-output (scriptPubKey, sats) pairs, in output order.
+     * @param feeRateSatPerVByte Target fee rate.
+     * @param availableUtxos UTXOs spendable from the sender's Taproot address.
+     * @param allowUnconfirmed See [build].
+     * @throws InsufficientFundsException when the UTXOs can't cover total + fee.
+     */
+    fun buildToScripts(
+        senderPubKey: HexKey,
+        recipients: List<Pair<ByteArray, Long>>,
+        feeRateSatPerVByte: Double,
+        availableUtxos: List<Utxo>,
+        allowUnconfirmed: Boolean = false,
+    ): Result {
+        require(recipients.isNotEmpty()) { "must have at least one recipient" }
+        require(recipients.all { it.second > 0 }) { "all amounts must be positive" }
+        require(recipients.all { it.second >= DUST_THRESHOLD_SATS }) { "a recipient amount is below the dust threshold" }
+        require(feeRateSatPerVByte > 0) { "fee rate must be positive" }
+
         val senderXOnly = senderPubKey.hexToByteArray()
         require(senderXOnly.size == 32) { "sender pubkey must be 32 bytes" }
         val senderScript = TaprootAddress.scriptPubKeyForRecipient(senderPubKey)
-        val recipientScripts =
-            recipients.map { (pubKey, _) -> TaprootAddress.scriptPubKeyForRecipient(pubKey) }
+        require(recipients.none { it.first.contentEquals(senderScript) }) { "cannot pay yourself" }
+        val recipientScripts = recipients.map { it.first }
         val totalRecipientSats = recipients.sumOf { it.second }
         val recipientOutputCount = recipients.size
 

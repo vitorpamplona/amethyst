@@ -149,6 +149,7 @@
     <string name="send_payment_receipt_section">Zap receipt</string>
     <string name="send_payment_receipt_clink">Direct Lightning payment — no zap receipt is published on Nostr.</string>
     <string name="send_payment_receipt_onchain">An on-chain zap receipt is published on Nostr so the recipient can find the payment.</string>
+    <string name="send_payment_receipt_onchain_address">Pays the profile\'s announced bitcoin address directly from your on-chain wallet — no zap receipt is published.</string>
     <string name="send_payment_receipt_cashu">The nutzap event delivers the ecash itself, so it is always published.</string>
     <string name="send_payment_requesting_invoice">Requesting invoice…</string>
     <string name="send_payment_requesting_invoice_nostr">Requesting invoice over Nostr…</string>
