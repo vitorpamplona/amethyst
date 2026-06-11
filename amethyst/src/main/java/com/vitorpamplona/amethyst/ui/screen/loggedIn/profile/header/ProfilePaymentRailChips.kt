@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.quartz.experimental.clink.pointers.NOffer
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
+import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.TaprootAddress
 import kotlinx.coroutines.launch
 import androidx.compose.material3.Icon as M3Icon
 
@@ -95,10 +96,12 @@ fun DisplayPaymentRailChips(
     val clinkOffer = rememberProfileClinkOffer(userInfo, accountViewModel)
     // Re-peeked when the profile data refreshes — the recipient's kind:10019
     // often lands moments after the profile opens.
-    val cashuAvailable =
+    val cashuMintUrl =
         remember(baseUser.pubkeyHex, userInfo) {
             accountViewModel.account.cashuWalletState
-                .peekNutzapFunding(baseUser.pubkeyHex) != null
+                .peekNutzapFunding(baseUser.pubkeyHex)
+                ?.target
+                ?.mintUrl
         }
     val onchainAvailable = LocalCache.onchainBackend != null
 
@@ -117,7 +120,7 @@ fun DisplayPaymentRailChips(
                 emptyList()
             }
 
-        if (lud16.isNullOrEmpty() && clinkOffer == null && !onchainAvailable && !cashuAvailable && targets.isEmpty()) {
+        if (lud16.isNullOrEmpty() && clinkOffer == null && !onchainAvailable && cashuMintUrl == null && targets.isEmpty()) {
             return@LoadAddressableNote
         }
 
@@ -126,7 +129,7 @@ fun DisplayPaymentRailChips(
             lud16 = lud16,
             clinkOffer = clinkOffer,
             onchainAvailable = onchainAvailable,
-            cashuAvailable = cashuAvailable,
+            cashuMintUrl = cashuMintUrl,
             targets = targets,
             accountViewModel = accountViewModel,
             nav = nav,
@@ -141,7 +144,7 @@ private fun RailAndTargetChips(
     lud16: String?,
     clinkOffer: NOffer?,
     onchainAvailable: Boolean,
-    cashuAvailable: Boolean,
+    cashuMintUrl: String?,
     targets: List<PaymentTarget>,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -176,6 +179,7 @@ private fun RailAndTargetChips(
             ProfilePaymentChip(
                 color = BitcoinOrange,
                 label = stringRes(R.string.clink_lightning_offer),
+                copyValue = remember(clinkOffer) { clinkOffer.encode() },
                 onClick = { openSendPayment(ProfilePaymentMethod.CLINK) },
             ) {
                 Icon(
@@ -191,6 +195,8 @@ private fun RailAndTargetChips(
             ProfilePaymentChip(
                 color = BitcoinOrange,
                 label = stringRes(R.string.send_payment_method_onchain),
+                // The NIP-BC destination derived from the profile's pubkey.
+                copyValue = remember(baseUser.pubkeyHex) { TaprootAddress.fromPubKey(baseUser.pubkeyHex) },
                 onClick = { openSendPayment(ProfilePaymentMethod.ONCHAIN) },
             ) {
                 Icon(
@@ -202,10 +208,11 @@ private fun RailAndTargetChips(
             }
         }
 
-        if (cashuAvailable) {
+        if (cashuMintUrl != null) {
             ProfilePaymentChip(
                 color = CashuPurple,
                 label = stringRes(R.string.send_payment_method_cashu),
+                copyValue = cashuMintUrl,
                 onClick = { openSendPayment(ProfilePaymentMethod.CASHU) },
             ) {
                 // The Cashu vector is a monochrome outline drawn in black,

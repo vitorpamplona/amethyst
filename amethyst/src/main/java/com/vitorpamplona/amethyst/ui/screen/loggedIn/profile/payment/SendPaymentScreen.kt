@@ -78,6 +78,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.FeeEstimates
 import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.SegwitAddress
+import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.TaprootAddress
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -225,14 +226,22 @@ private fun SendPaymentLoaded(
     var feeTier by remember { mutableStateOf(FeeTier.NORMAL) }
     var fees by remember { mutableStateOf<FeeEstimates?>(null) }
 
+    // What the on-chain rail actually pays: the announced target address, or
+    // the recipient's pubkey-derived Taproot address. Exposed via long-press
+    // copy on the rail chip since it's not rendered anywhere else.
+    val onchainDestination =
+        remember(user.pubkeyHex, onchainAddressTarget) {
+            onchainAddressTarget ?: TaprootAddress.fromPubKey(user.pubkeyHex)
+        }
+
     val methods =
-        remember(lud16, clinkOffer, cashuFunding, onchainAvailable, onchainAddressTarget) {
+        remember(lud16, clinkOffer, cashuFunding, onchainAvailable, onchainDestination) {
             buildList {
-                if (!lud16.isNullOrEmpty()) add(PaymentMethodUi(ProfilePaymentMethod.LIGHTNING, lud16))
-                if (clinkOffer != null) add(PaymentMethodUi(ProfilePaymentMethod.CLINK))
-                if (onchainAvailable) add(PaymentMethodUi(ProfilePaymentMethod.ONCHAIN, onchainAddressTarget?.shortenMiddle()))
+                if (!lud16.isNullOrEmpty()) add(PaymentMethodUi(ProfilePaymentMethod.LIGHTNING, copyValue = lud16))
+                if (clinkOffer != null) add(PaymentMethodUi(ProfilePaymentMethod.CLINK, copyValue = clinkOffer.encode()))
+                if (onchainAvailable) add(PaymentMethodUi(ProfilePaymentMethod.ONCHAIN, copyValue = onchainDestination))
                 if (cashuFunding != null) {
-                    add(PaymentMethodUi(ProfilePaymentMethod.CASHU))
+                    add(PaymentMethodUi(ProfilePaymentMethod.CASHU, copyValue = cashuFunding.target.mintUrl))
                 }
             }.toImmutableList()
         }
@@ -552,7 +561,7 @@ private fun SendPaymentLoaded(
         when {
             selectedMethod == ProfilePaymentMethod.CLINK -> stringRes(R.string.send_payment_receipt_clink)
             selectedMethod == ProfilePaymentMethod.ONCHAIN && onchainAddressTarget != null ->
-                stringRes(R.string.send_payment_receipt_onchain_address)
+                stringRes(R.string.send_payment_receipt_onchain_address, onchainAddressTarget.shortenMiddle())
             selectedMethod == ProfilePaymentMethod.ONCHAIN -> stringRes(R.string.send_payment_receipt_onchain)
             selectedMethod == ProfilePaymentMethod.CASHU -> stringRes(R.string.send_payment_receipt_cashu)
             else -> null

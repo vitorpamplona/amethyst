@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.payment
 
+import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -49,9 +52,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -61,6 +67,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
@@ -71,6 +78,7 @@ import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.launch
 
 /**
  * The payment rails the profile Send Payment screen can drive. [routeKey] is
@@ -91,11 +99,15 @@ enum class ProfilePaymentMethod(
     }
 }
 
-/** A selectable rail plus the short detail line shown under the selector. */
+/**
+ * A selectable rail of the "Receive on" selector. [copyValue] is the rail's
+ * destination (lightning address, noffer, bitcoin address, mint URL) —
+ * long-pressing the chip copies it.
+ */
 @Immutable
 data class PaymentMethodUi(
     val method: ProfilePaymentMethod,
-    val detail: String? = null,
+    val copyValue: String? = null,
 )
 
 /** One entry of the zap-type selector (Public / Private / Anonymous / Non-Zap). */
@@ -358,34 +370,76 @@ private fun MethodSelector(
 
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             methods.forEach { entry ->
-                FilterChip(
+                MethodChip(
+                    entry = entry,
                     selected = selected == entry.method,
                     enabled = enabled,
-                    onClick = { onSelect(entry.method) },
-                    leadingIcon = {
-                        Icon(
-                            symbol = entry.method.symbol(),
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    },
-                    label = { Text(entry.method.label()) },
-                    colors =
-                        FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                            selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
-                        ),
+                    onSelect = { onSelect(entry.method) },
                 )
             }
         }
+    }
+}
 
-        val detail = methods.firstOrNull { it.method == selected }?.detail
-        if (detail != null) {
+/**
+ * One "Receive on" chip. A custom pill rather than an M3 FilterChip because
+ * the chip also carries the rail's destination: long-pressing copies
+ * [PaymentMethodUi.copyValue] (lightning address, noffer, bitcoin address,
+ * mint URL), and FilterChip has no long-press support.
+ */
+@Composable
+private fun MethodChip(
+    entry: PaymentMethodUi,
+    selected: Boolean,
+    enabled: Boolean,
+    onSelect: () -> Unit,
+) {
+    val context = LocalContext.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+    val copyLabel = stringRes(R.string.copy_to_clipboard)
+    val copiedMessage = stringRes(R.string.copied_to_clipboard)
+
+    val containerColor =
+        if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
+    val contentColor =
+        if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = containerColor,
+        border = if (selected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        modifier =
+            Modifier.combinedClickable(
+                enabled = enabled,
+                onClick = onSelect,
+                onLongClick =
+                    entry.copyValue?.let { value ->
+                        {
+                            scope.launch {
+                                clipboard.setText(value)
+                                Toast.makeText(context, copiedMessage, Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                onLongClickLabel = entry.copyValue?.let { copyLabel },
+            ),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+        ) {
+            Icon(
+                symbol = entry.method.symbol(),
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(18.dp),
+            )
             Text(
-                text = detail,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = entry.method.label(),
+                color = contentColor,
+                style = MaterialTheme.typography.labelLarge,
             )
         }
     }
@@ -618,10 +672,10 @@ private fun SectionLabel(text: String) {
 
 private val previewMethods =
     persistentListOf(
-        PaymentMethodUi(ProfilePaymentMethod.LIGHTNING, "alice@walletofsatoshi.com"),
-        PaymentMethodUi(ProfilePaymentMethod.CLINK),
-        PaymentMethodUi(ProfilePaymentMethod.ONCHAIN),
-        PaymentMethodUi(ProfilePaymentMethod.CASHU, "Spendable for this recipient: 4,200 sats"),
+        PaymentMethodUi(ProfilePaymentMethod.LIGHTNING, copyValue = "alice@walletofsatoshi.com"),
+        PaymentMethodUi(ProfilePaymentMethod.CLINK, copyValue = "noffer1example"),
+        PaymentMethodUi(ProfilePaymentMethod.ONCHAIN, copyValue = "bc1pexample"),
+        PaymentMethodUi(ProfilePaymentMethod.CASHU, copyValue = "https://mint.example.com"),
     )
 
 private val previewFromSources =
