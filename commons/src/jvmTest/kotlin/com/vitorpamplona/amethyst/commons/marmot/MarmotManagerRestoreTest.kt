@@ -27,10 +27,13 @@ import com.vitorpamplona.quartz.marmot.mls.group.MlsGroupStateStore
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /**
  * Restart behavior of [MarmotManager.restoreAll].
@@ -80,6 +83,50 @@ class MarmotManagerRestoreTest {
                 bundle.innerEvent.createdAt - MarmotManager.GROUP_EVENT_REFETCH_OVERLAP_SEC,
                 filter.since,
                 "restored kind:445 filter must resume just behind the newest persisted message",
+            )
+        }
+    }
+
+    @Test
+    fun testRestoreAllClampsFutureDatedMessagesAtNow() {
+        runBlocking {
+            val signer = NostrSignerInternal(KeyPair())
+            val mlsStore = InMemoryStateStore()
+            val messageStore = InMemoryMessageStore()
+            val kpStore = InMemoryBundleStore()
+
+            val manager = MarmotManager(signer, mlsStore, messageStore, kpStore)
+            manager.createGroup(
+                nostrGroupId,
+                MarmotGroupData(
+                    nostrGroupId = nostrGroupId,
+                    name = "restore-clamp",
+                    relays = listOf(relay.url),
+                ),
+            )
+            // The inner createdAt is sender-controlled: a single future-dated
+            // message must not push the seeded `since` past wall-clock now,
+            // or the filter would skip genuinely new events after restart.
+            val futureCreatedAt = TimeUtils.now() + 30L * 24 * 60 * 60
+            val futureJson =
+                """{"id":"${"c".repeat(64)}","pubkey":"${"d".repeat(64)}","created_at":$futureCreatedAt,"kind":9,"tags":[],"content":"from the future","sig":""}"""
+            manager.persistDecryptedMessage(nostrGroupId, futureJson)
+
+            val beforeRestore = TimeUtils.now()
+            val restarted = MarmotManager(signer, mlsStore, messageStore, kpStore)
+            restarted.restoreAll()
+            val afterRestore = TimeUtils.now()
+
+            val since =
+                restarted.subscriptionManager
+                    .activeGroupFilters()
+                    .single()
+                    .since
+            assertNotNull(since, "a future-dated message must still seed a clamped since")
+            assertTrue(
+                since >= beforeRestore - MarmotManager.GROUP_EVENT_REFETCH_OVERLAP_SEC &&
+                    since <= afterRestore - MarmotManager.GROUP_EVENT_REFETCH_OVERLAP_SEC,
+                "since must be clamped to now - overlap, was $since",
             )
         }
     }

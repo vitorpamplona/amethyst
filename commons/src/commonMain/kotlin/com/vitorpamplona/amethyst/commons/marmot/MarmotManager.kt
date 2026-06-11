@@ -51,6 +51,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.pTags
 import com.vitorpamplona.quartz.nip18Reposts.quotes.QEventTag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quote
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -124,7 +125,7 @@ class MarmotManager(
         if (messageStore == null) return emptyMap()
         val result = mutableMapOf<HexKey, Long>()
         for (groupId in groupIds) {
-            val newest =
+            val newestStored =
                 loadStoredMessages(groupId).maxOfOrNull { json ->
                     try {
                         Event.fromJson(json).createdAt
@@ -133,6 +134,11 @@ class MarmotManager(
                         0L
                     }
                 } ?: continue
+            // Clamp at wall-clock now: inner createdAt is sender-controlled,
+            // and a single future-dated message must not push `since` past
+            // the present — that would skip genuinely new events on every
+            // restart until a fresher message arrives.
+            val newest = minOf(newestStored, TimeUtils.now())
             if (newest > GROUP_EVENT_REFETCH_OVERLAP_SEC) {
                 result[groupId] = newest - GROUP_EVENT_REFETCH_OVERLAP_SEC
             }
@@ -755,7 +761,7 @@ class MarmotManager(
          * are timestamped at the same send, so the window only needs to
          * absorb relay/system clock skew and out-of-order publishes.
          */
-        internal const val GROUP_EVENT_REFETCH_OVERLAP_SEC = 24L * 60 * 60
+        internal val GROUP_EVENT_REFETCH_OVERLAP_SEC: Long = TimeUtils.ONE_DAY.toLong()
     }
 }
 

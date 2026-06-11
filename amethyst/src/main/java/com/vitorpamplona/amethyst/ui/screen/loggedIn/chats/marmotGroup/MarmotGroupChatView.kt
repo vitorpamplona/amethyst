@@ -129,7 +129,7 @@ fun MarmotGroupChatView(
                 feedContentState = feedViewModel.feedState,
                 accountViewModel = accountViewModel,
                 nav = nav,
-                routeForLastRead = "MarmotGroup/$nostrGroupId",
+                routeForLastRead = marmotGroupLastReadRoute(nostrGroupId),
                 onWantsToReply = { note -> newMessageModel.reply(note) },
                 onWantsToEditDraft = { },
             )

@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.ui.note.ObserveDraftEvent
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupLastReadRoute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.LoadEphemeralChatChannel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -273,7 +274,7 @@ private fun MarmotGroupRoomCompose(
             stringRes(R.string.marmot_group_no_messages_yet)
         }
 
-    val lastReadTime by accountViewModel.account.loadLastReadFlow("MarmotGroup/${chatroom.nostrGroupId}").collectAsStateWithLifecycle()
+    val lastReadTime by accountViewModel.account.loadLastReadFlow(marmotGroupLastReadRoute(chatroom.nostrGroupId)).collectAsStateWithLifecycle()
 
     ChannelName(
         channelIdHex = chatroom.nostrGroupId,

@@ -226,11 +226,12 @@ fun MarmotGroupListItem(
     val memberPubkeys = remember(members) { members.map { it.pubkey } }
     val newestMessage = chatroom.newestMessage
 
-    val lastReadTime by accountViewModel.account.loadLastReadFlow("MarmotGroup/$groupId").collectAsStateWithLifecycle()
-    val unread =
-        remember(newestMessage, lastReadTime) {
-            chatroom.messages.count { (it.createdAt() ?: Long.MIN_VALUE) > lastReadTime }
-        }
+    val lastReadTime by accountViewModel.account.loadLastReadFlow(marmotGroupLastReadRoute(groupId)).collectAsStateWithLifecycle()
+    // Not remembered: chatroom.messages can shrink without newestMessage or
+    // lastReadTime changing (pruning, kind:5 deletion of an older message),
+    // so caching on those keys would serve a stale count. The set is pruned
+    // to ~100 entries, so counting per recomposition is cheap.
+    val unread = chatroom.messages.count { (it.createdAt() ?: Long.MIN_VALUE) > lastReadTime }
 
     Row(
         modifier =
