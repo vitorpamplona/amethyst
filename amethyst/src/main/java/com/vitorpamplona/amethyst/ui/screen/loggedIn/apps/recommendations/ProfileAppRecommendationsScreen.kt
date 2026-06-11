@@ -40,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -64,6 +65,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.apps.recommendations.datasource.ProfileAppRecommendationsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kindDisplayName
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import kotlinx.coroutines.Dispatchers
@@ -107,28 +109,38 @@ fun ProfileAppRecommendationsScreen(
                 .flatMapTo(mutableSetOf()) { event -> event.recommendations().map { it.address } }
         }
 
+    // The recommended set used for ORDERING only. It tracks recommendedAddresses
+    // while my 31989s stream in from relays, but freezes at the first toggle so
+    // rows don't jump around mid-edit. The next visit re-sorts with fresh data.
+    var userHasEdited by remember { mutableStateOf(false) }
+    var pinnedRecommended by remember { mutableStateOf(setOf<Address>()) }
+    LaunchedEffect(recommendedAddresses) {
+        if (!userHasEdited) pinnedRecommended = recommendedAddresses
+    }
+
+    val follows = remember(myPubkey) { accountViewModel.account.kind3FollowList.flow.value.authors }
+
     val apps =
-        remember(appDefinitionsTick) {
-            // recommendedAddresses is captured from the enclosing scope at this
-            // recomputation point; it is NOT part of the remember key, so
-            // subsequent toggles don't re-run this sort and the list stays in
-            // place while the user edits.
-            val initialRecommended = recommendedAddresses
+        remember(appDefinitionsTick, pinnedRecommended) {
             LocalCache.addressables
                 .filterIntoSet(AppDefinitionEvent.KIND) { _, note -> note.event is AppDefinitionEvent }
                 .sortedWith(
-                    // Recommended apps on top (at load time), then most recent first.
-                    compareByDescending<AddressableNote> { it.address in initialRecommended }
+                    // Apps I recommend on top, then apps authored by people I
+                    // follow, then the rest; most recent first within each tier.
+                    compareByDescending<AddressableNote> { it.address in pinnedRecommended }
+                        .thenByDescending { it.address.pubKeyHex in follows }
                         .thenByDescending { it.event?.createdAt ?: 0 },
                 )
         }
 
     // Apps I recommend whose kind 31990 definition hasn't arrived yet: still
     // listed so they can be turned off, while EventFinder fetches the details.
+    // Derived from the pinned set so a deselected row stays visible (switched
+    // off) instead of vanishing mid-edit.
     val missingRecommended =
-        remember(recommendationsTick, apps) {
+        remember(pinnedRecommended, apps) {
             val known = apps.mapTo(mutableSetOf()) { it.address }
-            recommendedAddresses
+            pinnedRecommended
                 .filterNot { it in known }
                 .map { LocalCache.getOrCreateAddressableNote(it) }
         }
@@ -163,6 +175,7 @@ fun ProfileAppRecommendationsScreen(
                         AppRow(
                             appNote = appNote,
                             isRecommended = appNote.address in recommendedAddresses,
+                            onUserEdited = { userHasEdited = true },
                             accountViewModel = accountViewModel,
                             nav = nav,
                         )
@@ -178,6 +191,7 @@ fun ProfileAppRecommendationsScreen(
 private fun AppRow(
     appNote: AddressableNote,
     isRecommended: Boolean,
+    onUserEdited: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -242,6 +256,7 @@ private fun AppRow(
             checked = isRecommended,
             enabled = canToggle,
             onCheckedChange = { checked ->
+                onUserEdited()
                 accountViewModel.launchSigner {
                     if (checked) {
                         val event = definition ?: return@launchSigner
