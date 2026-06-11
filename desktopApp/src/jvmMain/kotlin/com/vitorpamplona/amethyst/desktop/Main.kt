@@ -82,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.wot.LocalWoTReady
 import com.vitorpamplona.amethyst.commons.wot.LocalWoTService
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
+import com.vitorpamplona.amethyst.desktop.auth.DesktopAuthCoordinator
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.model.DesktopAccountRelays
 import com.vitorpamplona.amethyst.desktop.model.DesktopIAccount
@@ -953,11 +954,20 @@ private fun AppInner(
             ).also { it.startCleanupLoop() }
         }
 
+    // NIP-42 AUTH coordinator — wires relay-auth challenges through the
+    // tier classifier so own DM-inbox relays auto-sign and unknown relays
+    // surface a tier-2 banner approval via authCoordinator.pendingApprovals.
+    val authCoordinator =
+        remember(relayManager, localCache) {
+            DesktopAuthCoordinator(relayManager, localCache, scope)
+        }
+
     // Clear cache and subscriptions on logout or account switch
     var previousAccountPubKey by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(accountState) {
         when (val state = accountState) {
             is AccountState.LoggedOut -> {
+                authCoordinator.onLogout()
                 subscriptionsCoordinator.clear()
                 localCache.accountPubkey = null
                 localCache.clear()
@@ -970,6 +980,7 @@ private fun AppInner(
                 val currentPubKey = state.pubKeyHex
                 if (previousAccountPubKey != null && previousAccountPubKey != currentPubKey) {
                     // Account switched — clear old data so new feed loads fresh
+                    authCoordinator.onLogout()
                     subscriptionsCoordinator.clear()
                     localCache.accountPubkey = null
                     localCache.clear()
@@ -994,6 +1005,7 @@ private fun AppInner(
                 scope.launch(Dispatchers.IO) {
                     localRelayStore.hydrate(localCache)
                 }
+                authCoordinator.onLogin(state)
                 previousAccountPubKey = currentPubKey
             }
 
