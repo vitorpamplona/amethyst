@@ -25,6 +25,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.Immutable
 import androidx.core.content.edit
+import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntry
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntry
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.model.AccountSettings
@@ -124,7 +125,9 @@ private object PrefKeys {
     const val DEFAULT_FOLLOW_PACKS_FOLLOW_LIST = "defaultFollowPacksFollowList"
     const val ZAP_PAYMENT_REQUEST_SERVER = "zapPaymentServer" // legacy, kept for migration
     const val NWC_WALLETS = "nwcWallets"
-    const val DEFAULT_NWC_WALLET_ID = "defaultNwcWalletId"
+    const val DEFAULT_NWC_WALLET_ID = "defaultNwcWalletId" // legacy, migrated into DEFAULT_PAYMENT_SOURCE_ID
+    const val CLINK_DEBIT_WALLETS = "clinkDebitWallets"
+    const val DEFAULT_PAYMENT_SOURCE_ID = "defaultPaymentSourceId"
     const val LATEST_USER_METADATA = "latestUserMetadata"
     const val LATEST_CONTACT_LIST = "latestContactList"
     const val LATEST_DM_RELAY_LIST = "latestDMRelayList"
@@ -406,9 +409,19 @@ object LocalPreferences {
                     } else {
                         remove(PrefKeys.NWC_WALLETS)
                     }
-                    settings.defaultNwcWalletId.value?.let {
-                        putString(PrefKeys.DEFAULT_NWC_WALLET_ID, it)
-                    } ?: remove(PrefKeys.DEFAULT_NWC_WALLET_ID)
+
+                    val debitEntries = settings.clinkDebitWallets.value.map { it.denormalize() }
+                    if (debitEntries.isNotEmpty()) {
+                        putString(PrefKeys.CLINK_DEBIT_WALLETS, JsonMapper.toJson(debitEntries))
+                    } else {
+                        remove(PrefKeys.CLINK_DEBIT_WALLETS)
+                    }
+
+                    settings.defaultPaymentSourceId.value?.let {
+                        putString(PrefKeys.DEFAULT_PAYMENT_SOURCE_ID, it)
+                    } ?: remove(PrefKeys.DEFAULT_PAYMENT_SOURCE_ID)
+                    // Legacy NWC-only default key is superseded by DEFAULT_PAYMENT_SOURCE_ID.
+                    remove(PrefKeys.DEFAULT_NWC_WALLET_ID)
 
                     // Remove legacy key after migration
                     remove(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER)
@@ -579,6 +592,8 @@ object LocalPreferences {
                     val zapPaymentRequestServerStr = getString(PrefKeys.ZAP_PAYMENT_REQUEST_SERVER, null)
                     val nwcWalletsStr = getString(PrefKeys.NWC_WALLETS, null)
                     val defaultNwcWalletIdStr = getString(PrefKeys.DEFAULT_NWC_WALLET_ID, null)
+                    val clinkDebitWalletsStr = getString(PrefKeys.CLINK_DEBIT_WALLETS, null)
+                    val defaultPaymentSourceIdStr = getString(PrefKeys.DEFAULT_PAYMENT_SOURCE_ID, null)
                     val defaultFileServerStr = getString(PrefKeys.DEFAULT_FILE_SERVER, null)
 
                     val pendingAttestationsStr = getString(PrefKeys.PENDING_ATTESTATIONS, null)
@@ -632,6 +647,10 @@ object LocalPreferences {
                                     Pair(emptyList(), null)
                                 }
                             }
+                        }
+                    val clinkDebitsLoaded =
+                        async {
+                            parseOrNull<List<ClinkDebitWalletEntry>>(clinkDebitWalletsStr)?.mapNotNull { it.normalize() } ?: emptyList()
                         }
                     val defaultFileServer = async { parseOrNull<ServerName>(defaultFileServerStr) ?: DEFAULT_MEDIA_SERVERS[0] }
 
@@ -708,7 +727,15 @@ object LocalPreferences {
                         defaultCommunitiesFollowList = MutableStateFlow(followListPrefs.communities),
                         defaultFollowPacksFollowList = MutableStateFlow(followListPrefs.followPacks),
                         nwcWallets = MutableStateFlow(nwcWalletsLoaded.await().first),
-                        defaultNwcWalletId = MutableStateFlow(nwcWalletsLoaded.await().second),
+                        clinkDebitWallets = MutableStateFlow(clinkDebitsLoaded.await()),
+                        // Prefer the new unified default; migrate from the legacy NWC default;
+                        // else fall back to the first configured source (NWC before debits).
+                        defaultPaymentSourceId =
+                            MutableStateFlow(
+                                defaultPaymentSourceIdStr
+                                    ?: nwcWalletsLoaded.await().second
+                                    ?: clinkDebitsLoaded.await().firstOrNull()?.id,
+                            ),
                         hideDeleteRequestDialog = hideDeleteRequestDialog,
                         hideBlockAlertDialog = hideBlockAlertDialog,
                         hideNIP17WarningDialog = hideNIP17WarningDialog,

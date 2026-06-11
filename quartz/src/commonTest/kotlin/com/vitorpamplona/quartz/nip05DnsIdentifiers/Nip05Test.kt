@@ -46,6 +46,44 @@ class Nip05Test {
         """.trimIndent()
 
     @Test
+    fun `parse clink_offer for a name`() =
+        runTest {
+            val noffer = "noffer1qqsexampleclinkoffer"
+            val json = """{ "names": { "bob": "abc" }, "clink_offer": { "bob": "$noffer" } }"""
+            val nip05 = Nip05Id.parse("bob@domain.com")
+            assertNotNull(nip05)
+            assertEquals(noffer, parser.parseClinkOffer(nip05, json))
+        }
+
+    @Test
+    fun `parse clink_offer as a flat top-level string (bridgelet shape)`() =
+        runTest {
+            val noffer = "noffer1qqsexampleclinkoffer"
+            val json = """{ "names": { "bob": "abc" }, "clink_offer": "$noffer" }"""
+            val nip05 = Nip05Id.parse("bob@domain.com")
+            assertNotNull(nip05)
+            assertEquals(noffer, parser.parseClinkOffer(nip05, json))
+        }
+
+    @Test
+    fun `parse clink_offer absent yields null`() =
+        runTest {
+            val json = """{ "names": { "bob": "abc" } }"""
+            val nip05 = Nip05Id.parse("bob@domain.com")
+            assertNotNull(nip05)
+            assertNull(parser.parseClinkOffer(nip05, json))
+        }
+
+    @Test
+    fun `parse clink_offer for a missing name yields null`() =
+        runTest {
+            val json = """{ "clink_offer": { "alice": "noffer1abc" } }"""
+            val nip05 = Nip05Id.parse("bob@domain.com")
+            assertNotNull(nip05)
+            assertNull(parser.parseClinkOffer(nip05, json))
+        }
+
+    @Test
     fun `test with matching case on user name`() =
         runTest {
             // Set-up

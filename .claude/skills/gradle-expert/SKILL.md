@@ -5,11 +5,11 @@ description: Build optimization, dependency resolution, and multi-module KMP tro
 
 # Gradle Expert
 
-Build system expertise for AmethystMultiplatform's 4-module KMP architecture. Focus: practical troubleshooting, dependency resolution, and project-specific optimizations.
+Build system expertise for AmethystMultiplatform's 10-module KMP architecture (`amethyst`, `benchmark`, `quartz`, `geode`, `commons`, `quic`, `nestsClient`, `desktopApp`, `cli`, `quic-interop` — see `settings.gradle.kts`). Focus: practical troubleshooting, dependency resolution, and project-specific optimizations.
 
 ## Build Architecture Mental Model
 
-Think of this project as **4 layers**:
+The core app stack is **4 layers** (the other modules hang off it: `cli` and `geode` are JVM apps over `commons`/`quartz`, `nestsClient` sits on `quic`, `benchmark` and `quic-interop` are test harnesses):
 
 ```
 ┌─────────────┬─────────────┐
@@ -165,11 +165,11 @@ implementation(libs.jna)
 
 **The problem:** Two Compose ecosystems (Multiplatform + AndroidX) must align, or duplicate classes.
 
-**Current project config:**
+**Current project config** (always re-check `gradle/libs.versions.toml` — these drift):
 ```toml
-composeMultiplatform = "1.9.3"  # Plugin + runtime
-composeBom = "2025.12.01"       # AndroidX Compose BOM
-kotlin = "2.3.0"
+composeMultiplatform = "1.11.0"  # Plugin + runtime
+composeBom = "2026.05.01"        # AndroidX Compose BOM
+kotlin = "2.3.21"
 ```
 
 **Rule:** Compose Multiplatform version must be compatible with Kotlin version. Check: https://www.jetbrains.com/help/kotlin-multiplatform-dev/compose-compatibility-and-versioning.html

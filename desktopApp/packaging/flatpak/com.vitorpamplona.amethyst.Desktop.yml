@@ -1,0 +1,77 @@
+# Flathub manifest for Amethyst Desktop.
+#
+# Pattern based on flathub/com.jetpackduba.Gitnuro (Kotlin Compose Desktop).
+# Submission to Flathub is a separate operation — see
+# desktopApp/packaging/flatpak/README.md for the workflow.
+
+app-id: com.vitorpamplona.amethyst.Desktop
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.openjdk21
+command: amethyst-desktop
+
+add-extensions:
+  org.freedesktop.Platform.ffmpeg-full:
+    directory: lib/ffmpeg
+    version: '24.08'
+    add-ld-path: .
+    autodownload: true
+    autodelete: false
+
+cleanup-commands:
+  - mkdir -p /app/lib/ffmpeg
+
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --socket=pulseaudio
+  - --device=dri
+  - --filesystem=xdg-download
+  - --filesystem=xdg-pictures
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.freedesktop.secrets
+  # GStreamer plugin/cache paths (org.freedesktop.Platform exposes them by default).
+  - --env=GST_PLUGIN_SYSTEM_PATH=/usr/lib/x86_64-linux-gnu/gstreamer-1.0
+
+modules:
+  - name: openjdk
+    buildsystem: simple
+    build-commands:
+      - /usr/lib/sdk/openjdk21/install.sh
+
+  - name: amethyst-desktop
+    buildsystem: simple
+    build-commands:
+      # Drop the jpackage-emitted self-contained tree into /app/lib/Amethyst.
+      # Wrapper at /app/bin/amethyst-desktop forwards args.
+      - mkdir -p /app/lib/Amethyst
+      - cp -r ./Amethyst/* /app/lib/Amethyst/
+      - install -Dm755 amethyst-desktop.sh /app/bin/amethyst-desktop
+      - install -Dm644 com.vitorpamplona.amethyst.Desktop.metainfo.xml -t /app/share/metainfo/
+      - install -Dm644 com.vitorpamplona.amethyst.Desktop.desktop -t /app/share/applications/
+      - install -Dm644 icons/256/com.vitorpamplona.amethyst.Desktop.png -t /app/share/icons/hicolor/256x256/apps/
+    sources:
+      # Built artifact from `./gradlew :desktopApp:createReleaseDistributable`.
+      # Path matches Compose Multiplatform 1.11's output layout.
+      - type: dir
+        path: ../../build/compose/binaries/main-release/app
+        dest: ./
+
+      - type: script
+        dest-filename: amethyst-desktop.sh
+        commands:
+          - "#!/bin/sh"
+          - exec /app/lib/Amethyst/bin/Amethyst "$@"
+
+      - type: file
+        path: com.vitorpamplona.amethyst.Desktop.metainfo.xml
+
+      - type: file
+        path: com.vitorpamplona.amethyst.Desktop.desktop
+
+      - type: file
+        path: icons/256/com.vitorpamplona.amethyst.Desktop.png

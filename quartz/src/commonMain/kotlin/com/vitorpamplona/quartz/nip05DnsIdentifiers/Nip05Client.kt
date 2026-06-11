@@ -73,6 +73,14 @@ class Nip05Client(
 
     override suspend fun list(domain: String) = parser.parse(fetchNip05Data(domain))
 
+    override suspend fun loadClinkOffer(nip05: Nip05Id): String? =
+        try {
+            parser.parseClinkOffer(nip05, fetchNip05Data(nip05))
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
+        }
+
     suspend fun fetchNip05Data(nip05: Nip05Id): String {
         val url = nip05.toUserUrl()
 

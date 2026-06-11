@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
 import kotlinx.coroutines.launch
 
 enum class MediaType { AUDIO, VIDEO }
@@ -59,7 +60,6 @@ enum class MediaType { AUDIO, VIDEO }
 fun NowPlayingBar(modifier: Modifier = Modifier) {
     val videoState by GlobalMediaPlayer.videoState.collectAsState()
     val audioState by GlobalMediaPlayer.audioState.collectAsState()
-    val videoFrame by GlobalMediaPlayer.videoFrame.collectAsState()
 
     val hasVideo = videoState.url != null
     val hasAudio = audioState.url != null
@@ -86,11 +86,18 @@ fun NowPlayingBar(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // Mini video thumbnail or music icon
-            if (activeType == MediaType.VIDEO && videoFrame != null) {
+            // Mini thumbnail (cached frame, not a live VideoPlayerSurface).
+            // We deliberately render the cached thumbnail rather than mounting a
+            // second VideoPlayerSurface to avoid driving two simultaneous Skia
+            // draws against the same player's frame bitmap — kdroidFilter
+            // 0.10.0's macOS surface has a use-after-free race in that path
+            // (see PR review). The mini-preview UX is preserved via the
+            // poster frame extracted by VideoThumbnailCache.
+            val miniThumb = activeState.url?.let { VideoThumbnailCache.getCached(it) }
+            if (activeType == MediaType.VIDEO && miniThumb != null) {
                 Image(
-                    bitmap = videoFrame!!,
-                    contentDescription = "Video thumbnail",
+                    bitmap = miniThumb,
+                    contentDescription = "Now playing",
                     modifier =
                         Modifier
                             .size(width = 48.dp, height = 36.dp)

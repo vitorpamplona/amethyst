@@ -23,12 +23,14 @@ package com.vitorpamplona.amethyst.service
 import android.content.Context
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
@@ -44,8 +46,10 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.round
 
 class ZapPaymentHandler(
@@ -206,14 +210,27 @@ class ZapPaymentHandler(
             onProgress(0.75f)
         }
 
-        if (account.nip47SignerState.hasWalletConnectSetup()) {
-            payViaNWC(payables, note, onError = onError, onProgress = {
-                onProgress(it * 0.25f + 0.75f) // keeps within range.
-            }, context)
-            // onProgress(1f)
-        } else {
-            onPayViaIntent(payables.toImmutableList())
-            onProgress(0f)
+        // Route through the user's selected default payment source. A CLINK debit takes
+        // precedence over NWC when it is the chosen default; NWC-only users are unaffected
+        // (defaultPaymentSource() resolves to their NWC wallet). No source -> wallet app.
+        when (val source = account.settings.defaultPaymentSource()) {
+            is PaymentSource.ClinkDebit -> {
+                payViaClinkDebit(payables, source.wallet.pointer, onError = onError, onProgress = {
+                    onProgress(it * 0.25f + 0.75f)
+                }, context)
+            }
+
+            is PaymentSource.Nwc -> {
+                payViaNWC(payables, note, onError = onError, onProgress = {
+                    onProgress(it * 0.25f + 0.75f) // keeps within range.
+                }, context)
+                // onProgress(1f)
+            }
+
+            null -> {
+                onPayViaIntent(payables.toImmutableList())
+                onProgress(0f)
+            }
         }
     }
 
@@ -337,7 +354,7 @@ class ZapPaymentHandler(
         onProgress: (percent: Float) -> Unit,
         context: Context,
     ): List<Paid> {
-        var progressAllPayments = 0.00f
+        val progress = PaymentProgress(payables.size, onProgress)
 
         return mapNotNullAsync(
             items = payables,
@@ -346,9 +363,8 @@ class ZapPaymentHandler(
                     bolt11 = payable.invoice,
                     zappedNote = note,
                     onResponse = { response ->
+                        progress.step()
                         if (response is PayInvoiceErrorResponse) {
-                            progressAllPayments += 0.5f / payables.size
-                            onProgress(progressAllPayments)
                             onError(
                                 stringRes(context, R.string.error_dialog_pay_invoice_error),
                                 stringRes(
@@ -359,15 +375,68 @@ class ZapPaymentHandler(
                                 ),
                                 payable.info.user,
                             )
-                        } else {
-                            progressAllPayments += 0.5f / payables.size
-                            onProgress(progressAllPayments)
                         }
                     },
                 )
 
-                progressAllPayments += 0.5f / payables.size
-                onProgress(progressAllPayments)
+                progress.step()
+
+                Paid(payable, true)
+            },
+        )
+    }
+
+    /**
+     * Thread-safe progress accumulator for the parallel pay rails. Each payable advances in two
+     * half-steps (request dispatched, then response/settlement), reported as a 0..1 fraction.
+     * The counter is atomic because `mapNotNullAsync` runs the payables concurrently and the
+     * response half-step fires from an async callback, so plain `+=` would lose updates.
+     */
+    private class PaymentProgress(
+        payableCount: Int,
+        private val onProgress: (percent: Float) -> Unit,
+    ) {
+        private val totalSteps = (payableCount * 2).coerceAtLeast(1)
+        private val done = AtomicInteger(0)
+
+        fun step() = onProgress(done.incrementAndGet().toFloat() / totalSteps)
+    }
+
+    /**
+     * Pays each zap invoice by asking the user's CLINK debit service (kind 21002) to
+     * settle the BOLT-11. The service authorizes against the account identity.
+     *
+     * Fire-and-forget, like the NWC rail ([payViaNWC]): the request is dispatched on the
+     * account scope and each payable is reported paid optimistically so the zap UI completes
+     * promptly. A `GFY`/failure (or no reply within the debit timeout) surfaces later through
+     * [onError] rather than blocking the zap on the service's response.
+     */
+    suspend fun payViaClinkDebit(
+        payables: List<Payable>,
+        pointer: NDebit,
+        onError: (String, String, User?) -> Unit,
+        onProgress: (percent: Float) -> Unit,
+        context: Context,
+    ): List<Paid> {
+        val progress = PaymentProgress(payables.size, onProgress)
+
+        return mapNotNullAsync(
+            items = payables,
+            runRequestFor = { payable: Payable ->
+                account.scope.launch {
+                    val response = ClinkDebitPayer.payInvoice(account, pointer, payable.invoice)
+                    progress.step()
+                    if (response?.isOk() != true) {
+                        onError(
+                            stringRes(context, R.string.error_dialog_pay_invoice_error),
+                            response?.failureDetail()
+                                ?: stringRes(context, R.string.clink_debit_no_response),
+                            payable.info.user,
+                        )
+                    }
+                }
+
+                progress.step()
 
                 Paid(payable, true)
             },

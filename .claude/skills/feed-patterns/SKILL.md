@@ -1,6 +1,6 @@
 ---
 name: feed-patterns
-description: Feed composition and data-access layer patterns in Amethyst. Use when adding or modifying a feed (home, profile, hashtag, bookmarks, notifications, DMs, communities), working with `FeedFilter` / `AdditiveComplexFeedFilter` / `ChangesFlowFilter` / `FilterByListParams` in `amethyst/.../ui/dal/`, or extending the `FeedViewModel` family in `commons/.../viewmodels/`. Covers how feeds scan `LocalCache`, react to changes, apply ordering, and render through Compose.
+description: Feed composition and data-access layer patterns in Amethyst. Use when adding or modifying a feed (home, profile, hashtag, bookmarks, notifications, DMs, communities), working with the shared `FeedFilter` / `AdditiveFeedFilter` / `ChangesFlowFilter` / `FeedContentState` in `commons/.../ui/feeds/`, the Android-only `AdditiveComplexFeedFilter` / `FilterByListParams` in `amethyst/.../ui/dal/`, or extending the `FeedViewModel` family in `commons/.../viewmodels/`. Covers how feeds scan `LocalCache`, react to changes, apply ordering, and render through Compose.
 ---
 
 # Feed Patterns
@@ -24,27 +24,33 @@ Amethyst's "feed" abstraction is: a `FeedFilter` that decides which notes belong
 │                 ◄── ChatroomFeedViewModel                   │
 │                 ◄── MarmotGroupFeedViewModel                │
 │                                                             │
-│   FeedContentState — the flow the UI collects               │
+│                                                             │
+│ commons/.../ui/feeds/  (shared, KMP)                        │
+│   IFeedFilter / FeedFilter<T>  (abstract base)              │
+│   IAdditiveFeedFilter / AdditiveFeedFilter<T>               │
+│   ChangesFlowFilter                                         │
+│   FeedContentState, FeedState — the flow the UI collects    │
 └─────────────────────────────────────────────────────────────┘
               ▲
               │ uses
               │
 ┌─────────────────────────────────────────────────────────────┐
-│ amethyst/.../ui/dal/  (Android; feeds defined per screen)   │
-│   FeedFilter<T>   (abstract)                                │
+│ amethyst/.../ui/dal/  (Android-only additions)              │
 │   AdditiveComplexFeedFilter<T, U>                           │
-│   ChangesFlowFilter                                         │
 │   FilterByListParams                                        │
-│   DefaultFeedOrder                                          │
+│   DefaultFeedOrder (Note/Event/Card comparators)            │
+│   (FeedFilters.kt & ChangesFlowFilter.kt here are just      │
+│    back-compat typealiases re-exporting commons)            │
 │                                                             │
-│   Plus concrete feeds: HomeFeedFilter, HashtagFeedFilter,   │
-│   BookmarkListFeedFilter, NotificationFeedFilter, …         │
+│   Concrete feeds: HomeNewThreadFeedFilter,                  │
+│   HashtagFeedFilter, NotificationFeedFilter, … live in      │
+│   feature folders under ui/screen/loggedIn/*/dal/           │
 └─────────────────────────────────────────────────────────────┘
               ▲
               │ reads
               │
 ┌─────────────────────────────────────────────────────────────┐
-│ model/LocalCache.kt + Account.<featureFlow>                 │
+│ model/LocalCache.kt + account.<feature>.flow                │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -60,25 +66,33 @@ Amethyst's "feed" abstraction is: a `FeedFilter` that decides which notes belong
 - **`MarmotGroupFeedViewModel.kt`** — NIP-29 / marmot group feed.
 - **`LiveStreamTopZappersViewModel.kt`, `SearchBarState.kt`, `ChatNewMessageState.kt`** — narrower, non-feed states that share the plumbing.
 
-### Android DAL (the filters)
+### Shared filter bases (commons)
+
+`commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/ui/feeds/`:
+
+- **`FeedFilter.kt`** — `abstract class FeedFilter<T> : IFeedFilter<T>`. Has `feed(): List<T>` (the sync query against the cache), `feedKey(): String` (identity used to cache), `limit()`, and `loadTop()`.
+- **`AdditiveFeedFilter.kt`** — `abstract class AdditiveFeedFilter<T> : FeedFilter<T>(), IAdditiveFeedFilter<T>`. Adds incremental updates (the "additive" part): `updateListWith(oldList, newItems)` runs `applyFilter(newItems)` and grafts accepted items onto the existing list (re-`sort` + `take(limit())`) without recomputing everything.
+- **`ChangesFlowFilter.kt`** — wraps a filter with a coarse "state changed" signal so the ViewModel knows to re-query.
+- **`FeedContentState.kt` / `FeedState.kt`** — the reactive state the UI collects.
+
+### Android DAL (additions on top)
 
 `amethyst/src/main/java/com/vitorpamplona/amethyst/ui/dal/`:
 
-- **`FeedFilters.kt`** — `abstract class FeedFilter<T>`. Has `feed(): List<T>` (the sync query against `LocalCache`) and `feedKey(): String` (identity used to cache).
-- **`AdditiveComplexFeedFilter.kt`** — `abstract class AdditiveComplexFeedFilter<T, U> : FeedFilter<T>()`. Adds incremental updates (the "additive" part): when a single new event arrives, the filter can decide whether to graft it onto the existing list without recomputing everything.
-- **`ChangesFlowFilter.kt`** — wraps a filter with a coarse "Account state changed" signal so the ViewModel knows to re-query.
-- **`FilterByListParams.kt`** — common parameters (author set, exclude muted, limit, since/until) shared across many filters.
-- **`DefaultFeedOrder.kt`** — standard sort (by `createdAt` desc, plus tiebreakers for stable paging).
+- **`AdditiveComplexFeedFilter.kt`** — `abstract class AdditiveComplexFeedFilter<T, U> : FeedFilter<T>()`: like `AdditiveFeedFilter` but the incoming items (`Set<U>`) are a different type than the list rows (`T`).
+- **`FilterByListParams.kt`** — common parameters (top-nav filter, exclude muted, since/until) shared across many filters.
+- **`DefaultFeedOrder.kt`** — standard comparators (`createdAt` desc + id tiebreaker for stable paging) for `Note`, `Event`, and `Card`.
+- **`FeedFilters.kt` / `ChangesFlowFilter.kt`** — back-compat typealiases re-exporting the commons classes; don't add logic here.
 
-Concrete filters (Home, Hashtag, Profile, Bookmark, Notifications, Communities, etc.) live in feature subfolders under `amethyst/.../ui/screen/loggedIn/*/` — each extends `FeedFilter` or `AdditiveComplexFeedFilter`.
+Concrete filters (Home, Hashtag, Profile, Bookmark, Notifications, Communities, etc.) live in feature `dal/` subfolders under `amethyst/.../ui/screen/loggedIn/*/` — each extends `FeedFilter`, `AdditiveFeedFilter`, or `AdditiveComplexFeedFilter`. Desktop has its own in `desktopApp/.../feeds/DesktopFeedFilters.kt`.
 
 ## Adding a New Feed
 
-1. **Define the filter.** Extend `AdditiveComplexFeedFilter<Note, Set<HexKey>>` (or plain `FeedFilter<Note>` if additivity doesn't matter). Implement:
+1. **Define the filter.** Extend `AdditiveFeedFilter<Note>` (or plain `FeedFilter<Note>` if additivity doesn't matter; `AdditiveComplexFeedFilter<T, U>` if incoming items differ in type from list rows). Implement:
    - `feedKey()` — stable identity (e.g. hashtag name, account pubkey).
    - `feed()` — synchronous scan over `LocalCache` / `Account` state producing an ordered list.
    - `limit()` — pagination hint.
-   - If using `AdditiveComplexFeedFilter`: `applyFilter(collection: Set<Note>): Set<Note>` and `sort(collection: Set<Note>): List<Note>`.
+   - If additive: `applyFilter(collection: Set<Note>): Set<Note>` and `sort(collection: Set<Note>): List<Note>`.
 2. **Pick or write a ViewModel.** If the feed's membership shifts often (bookmarks, notifications), extend `ListChangeFeedViewModel`. Otherwise `FeedViewModel`.
 3. **Wire invalidation.** The ViewModel must observe the right `Account` flows + `LocalCacheFlow` so it re-queries when state changes.
 4. **Render.** In the composable, collect `viewModel.feedState.feedContent` and render with a `LazyColumn { items(..., key = { it.id }) { NoteCompose(it) } }`.
@@ -86,9 +100,9 @@ Concrete filters (Home, Hashtag, Profile, Bookmark, Notifications, Communities, 
 
 ## Filter Sharing (Android vs Desktop)
 
-- `FeedFilter` and the concrete filters currently live in `amethyst/.../ui/dal/` — **Android-only**. Desktop has parallel filters in `desktopApp/.../feeds/`.
-- ViewModels are in `commons/commonMain/` — **shared**. That's the boundary: filter is Android (could be extracted), ViewModel is shared.
-- When porting a new feed, extract the filter to a KMP-friendly location only if both platforms need it.
+- The filter **base classes** (`FeedFilter`, `AdditiveFeedFilter`, `ChangesFlowFilter`) and feed state (`FeedContentState`) are in `commons/.../ui/feeds/` — **shared**. ViewModels are in `commons/.../viewmodels/` — **shared**.
+- The **concrete** filters are platform-local: Android's in `amethyst/.../ui/screen/loggedIn/*/dal/`, Desktop's in `desktopApp/.../feeds/`. `amethyst/.../ui/dal/` keeps Android-only helpers (`AdditiveComplexFeedFilter`, `FilterByListParams`, `DefaultFeedOrder`) plus back-compat typealiases.
+- When porting a feed, share the concrete filter only if both platforms need identical inclusion rules.
 
 ## Gotchas
 
@@ -96,7 +110,7 @@ Concrete filters (Home, Hashtag, Profile, Bookmark, Notifications, Communities, 
 - **`feedKey()` is used as a cache key.** Two different semantic feeds must produce different keys, otherwise their state cross-contaminates.
 - **Additive updates must stay consistent with the full recompute.** If `applyFilter` accepts a note that `feed()` wouldn't include, UX drifts.
 - **Paging isn't free** — use `limit()` and `since/until` in `FilterByListParams` rather than trimming a giant scan.
-- **Notifications feed is special** — it inspects `Account.followListFlow` and `LocalCache` deletions to hide muted/deleted content; always run through `FilterByListParams.exclude*` paths rather than filtering post-hoc.
+- **Notifications feed is special** — it inspects the follow/mute state (`account.kind3FollowList.flow`, `account.hiddenUsers`) and `LocalCache` deletions to hide muted/deleted content; always run through the `FilterByListParams` exclusion paths rather than filtering post-hoc.
 
 ## References
 
