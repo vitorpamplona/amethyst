@@ -22,9 +22,9 @@ package com.vitorpamplona.amethyst.desktop.service.media
 
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jcodec.api.FrameGrab
 import org.jcodec.common.io.NIOUtils
@@ -47,28 +47,21 @@ import javax.imageio.ImageIO
  *
  * Cascade:
  *   1. **JCodec** (`org.jcodec:jcodec` + `jcodec-javase`, BSD-2) — pure-Java
- *      H.264 baseline/main/high decode. Handles ~80% of Nostr feed media (MP4/H.264).
- *   2. **Jaffree** (Apache-2) + **LGPL FFmpeg** subprocess — for everything else
- *      (HEVC, VP9, AV1, HLS, malformed faststart MP4s). Requires a bundled
- *      ffmpeg binary at `src/jvmMain/appResources/<os>/ffmpeg/ffmpeg(.exe)` or
- *      a system `ffmpeg` on `$PATH`.
+ *      H.264 baseline/main/high decode. Handles the bulk of Nostr feed media
+ *      (MP4/H.264).
+ *   2. **LGPL FFmpeg subprocess** (driven via raw `ProcessBuilder`) — for
+ *      everything else (HEVC, VP9, AV1, HLS, malformed faststart MP4s).
+ *      Requires either a system `ffmpeg` on `$PATH` or a bundled binary at
+ *      `src/jvmMain/appResources/<os>/ffmpeg/ffmpeg(.exe)`.
  *
  * Replaces the prior vlcj `RenderCallback` path. License moves from
- * GPL-3.0 (vlcj) to BSD-2 + Apache-2 + LGPL-2.1 native, MIT-dominant overall.
+ * GPL-3.0 (vlcj) to BSD-2 + LGPL-2.1, MIT-dominant overall.
  */
 object VideoThumbnailCache {
     private const val MAX_THUMB_BYTES = 4 * 1024 * 1024 // 4 MiB cap per thumbnail
 
     private val cache = ConcurrentHashMap<String, ImageBitmap>()
     private val pending = ConcurrentHashMap<String, Boolean>()
-
-    private val http: OkHttpClient by lazy {
-        OkHttpClient
-            .Builder()
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .build()
-    }
 
     private val downloadCacheDir: File by lazy {
         val base =
@@ -78,14 +71,22 @@ object VideoThumbnailCache {
     }
 
     private val ffmpegBinary: String? by lazy {
-        // 1. System ffmpeg on PATH.
+        // 1. System ffmpeg on PATH. Probe with `ffmpeg -version`; drain stdout
+        // so the child doesn't block on a full pipe, kill it if it overruns
+        // the probe budget so we don't leak the process when ffmpeg hangs.
         val onPath =
             runCatching {
-                ProcessBuilder("ffmpeg", "-version")
-                    .redirectErrorStream(true)
-                    .start()
-                    .also { it.inputStream.close() }
-                    .waitFor(2, TimeUnit.SECONDS)
+                val probe =
+                    ProcessBuilder("ffmpeg", "-version")
+                        .redirectErrorStream(true)
+                        .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                        .start()
+                val exited = probe.waitFor(2, TimeUnit.SECONDS)
+                if (!exited) {
+                    probe.destroyForcibly()
+                    return@runCatching false
+                }
+                probe.exitValue() == 0
             }.getOrDefault(false)
         if (onPath) return@lazy "ffmpeg"
 
@@ -121,19 +122,34 @@ object VideoThumbnailCache {
     }
 
     private fun extractFirstFrame(url: String): ImageBitmap? {
-        // For HLS we skip straight to Jaffree — JCodec can't read m3u8.
+        // For HLS we skip straight to ffmpeg — JCodec can't read m3u8.
         val isHls = url.contains(".m3u8", ignoreCase = true) || url.contains("/hls/", ignoreCase = true)
 
         if (!isHls) {
             val downloaded = runCatching { downloadFirstChunk(url) }.getOrNull()
             if (downloaded != null) {
-                tryJCodec(downloaded)?.let { return it }
-                tryJaffreeFile(downloaded)?.let { return it }
+                try {
+                    tryJCodec(downloaded.file)?.let { return it }
+                    tryFfmpegFile(downloaded.file)?.let { return it }
+                } finally {
+                    // Origins that ignore Range: served the full body and we
+                    // truncated to MAX_THUMB_BYTES; that file is unsuitable as
+                    // a persistent cache hit (decoders may fail on every
+                    // retry against a half-MP4). Discard so the next request
+                    // re-downloads from scratch.
+                    if (!downloaded.persistable) downloaded.file.delete()
+                }
             }
         }
 
-        return tryJaffreeUrl(url)
+        return tryFfmpegUrl(url)
     }
+
+    /** Local result of [downloadFirstChunk]: the bytes + whether they're a real Range slice. */
+    private data class Download(
+        val file: File,
+        val persistable: Boolean,
+    )
 
     /**
      * Downloads up to [MAX_THUMB_BYTES] to a cache file, returning the file (or null on failure).
@@ -146,17 +162,19 @@ object VideoThumbnailCache {
      *
      * Cleans up zero-byte cache files on failure so a transient empty response isn't sticky.
      */
-    private fun downloadFirstChunk(url: String): File? {
+    private fun downloadFirstChunk(url: String): Download? {
         val hash = sha1Hex(url)
         val cached = File(downloadCacheDir, "$hash.mp4")
-        if (cached.length() > 0L) return cached
+        if (cached.length() > 0L) return Download(cached, persistable = true)
         if (cached.exists()) cached.delete()
 
         var wrote = false
-        http.newCall(buildRangeRequest(url)).execute().use { resp ->
+        var rangeHonored = false
+        DesktopHttpClient.currentClient().newCall(buildRangeRequest(url)).execute().use { resp ->
             if (!resp.isSuccessful && resp.code != 206) return null
             val contentType = resp.header("Content-Type")?.lowercase().orEmpty()
             if (contentType.startsWith("text/") || "html" in contentType) return null
+            rangeHonored = resp.code == 206
             Files.newOutputStream(cached.toPath()).use { out ->
                 val copied = copyAtMost(resp.body.byteStream(), out, MAX_THUMB_BYTES.toLong())
                 wrote = copied > 0L
@@ -166,7 +184,7 @@ object VideoThumbnailCache {
             cached.delete()
             return null
         }
-        return cached
+        return Download(cached, persistable = rangeHonored)
     }
 
     private fun buildRangeRequest(url: String): Request =
@@ -205,16 +223,17 @@ object VideoThumbnailCache {
             }
         }.getOrNull()
 
-    private fun tryJaffreeFile(file: File): ImageBitmap? = runFfmpegToImage(file.absolutePath)
+    private fun tryFfmpegFile(file: File): ImageBitmap? = runFfmpegToImage(file.absolutePath)
 
-    private fun tryJaffreeUrl(url: String): ImageBitmap? = runFfmpegToImage(url)
+    private fun tryFfmpegUrl(url: String): ImageBitmap? = runFfmpegToImage(url)
 
     /**
      * Spawns `ffmpeg -ss 1 -i <input> -frames:v 1 -f image2pipe -c:v png -an pipe:1`,
      * reads PNG bytes from stdout, decodes with Skia.
      *
-     * Uses raw `ProcessBuilder` rather than the Jaffree DSL — fewer API guesses,
-     * easier to debug. Jaffree stays on the classpath as a future option.
+     * `redirectError(DISCARD)` so a chatty ffmpeg cannot fill the stderr pipe
+     * and stall our `copyTo`. `destroyForcibly()` runs on any unwind so we
+     * never leak a ffmpeg process.
      */
     private fun runFfmpegToImage(input: String): ImageBitmap? {
         val ffmpeg = ffmpegBinary ?: return null
@@ -240,20 +259,18 @@ object VideoThumbnailCache {
         val process =
             runCatching {
                 ProcessBuilder(cmd)
-                    .redirectErrorStream(false)
+                    .redirectError(ProcessBuilder.Redirect.DISCARD)
                     .start()
             }.getOrNull() ?: return null
         val out = ByteArrayOutputStream(256 * 1024)
         try {
             process.inputStream.use { it.copyTo(out) }
-            if (!process.waitFor(8, TimeUnit.SECONDS)) {
-                process.destroyForcibly()
-                return null
-            }
+            if (!process.waitFor(8, TimeUnit.SECONDS)) return null
             if (process.exitValue() != 0 || out.size() == 0) return null
         } catch (_: Exception) {
-            process.destroyForcibly()
             return null
+        } finally {
+            if (process.isAlive) process.destroyForcibly()
         }
         return runCatching {
             Image.makeFromEncoded(out.toByteArray()).toComposeImageBitmap()

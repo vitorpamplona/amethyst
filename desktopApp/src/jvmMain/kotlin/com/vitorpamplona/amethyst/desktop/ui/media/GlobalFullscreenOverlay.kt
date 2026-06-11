@@ -102,12 +102,16 @@ fun GlobalFullscreenOverlay() {
                 },
         contentAlignment = Alignment.Center,
     ) {
-        // Video frame — same player state as feed card; kdroidFilter draws to Canvas
-        VideoPlayerSurface(
-            playerState = GlobalMediaPlayer.activeVideoPlayerState,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Fit,
-        )
+        // Video frame — same player state as feed card; kdroidFilter draws to Canvas.
+        // If the engine failed to initialize, render a blank backdrop instead of
+        // crashing the overlay.
+        GlobalMediaPlayer.activeVideoPlayerState?.let { player ->
+            VideoPlayerSurface(
+                playerState = player,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit,
+            )
+        }
 
         // Video controls overlay
         VideoControls(

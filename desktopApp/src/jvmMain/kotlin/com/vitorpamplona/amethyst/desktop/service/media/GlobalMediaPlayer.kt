@@ -33,6 +33,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 data class MediaPlaybackState(
@@ -75,13 +76,12 @@ object GlobalMediaPlayer {
     private val initLock = Any()
 
     /**
-     * The kdroidFilter player driving currently-active or last-played video.
-     * Mounted into a `VideoPlayerSurface(...)` by [DesktopVideoPlayer] when the
-     * caller's `url` matches `videoState.value.url`.
-     *
-     * Lazy: first read constructs the underlying native player.
+     * The kdroidFilter player driving currently-active or last-played video, or
+     * `null` if the native player failed to initialize (e.g. missing GStreamer
+     * on Linux). UI code reads this lazily; consumers must handle null by
+     * showing the thumbnail/error fallback rather than mounting a surface.
      */
-    val activeVideoPlayerState: VideoPlayerState
+    val activeVideoPlayerState: VideoPlayerState?
         get() = ensureVideoPlayer()
 
     private val _videoState = MutableStateFlow(MediaPlaybackState())
@@ -108,7 +108,17 @@ object GlobalMediaPlayer {
         seekPosition: Float = 0f,
     ) {
         val current = _videoState.value
-        val player = ensureVideoPlayer()
+        val player =
+            ensureVideoPlayer() ?: run {
+                _videoState.value =
+                    MediaPlaybackState(
+                        url = url,
+                        type = MediaType.VIDEO,
+                        isBuffering = false,
+                        errorReason = "Video playback unavailable",
+                    )
+                return
+            }
 
         if (current.url == url) {
             if (seekPosition > 0f) player.seekTo(seekPosition * 1000f)
@@ -116,33 +126,48 @@ object GlobalMediaPlayer {
             return
         }
 
+        // Reset engine volume to match the UI's default for the new track. The
+        // kdroidFilter player retains `volume` across openUri calls, so a mute
+        // on the prior track would otherwise carry over while the UI shows the
+        // default 100% / unmuted state.
+        player.volume = 1f
+
         _videoState.value = MediaPlaybackState(url = url, type = MediaType.VIDEO, isBuffering = true)
 
         scope.launch(Dispatchers.IO) {
             player.openUri(url)
-            // openUri auto-plays per InitialPlayerState.PLAY default.
-            // For an initial seek we wait for hasMedia=true; cleanest is a
-            // one-shot snapshotFlow collector that seeks then completes.
+            // openUri auto-plays per InitialPlayerState.PLAY default. For an
+            // initial seek we wait for the first hasMedia=true emission then
+            // stop collecting (Flow.first terminates the collector cleanly,
+            // unlike `return@collect` which only exits the lambda).
             if (seekPosition > 0f) {
-                snapshotFlow { player.hasMedia }
-                    .collect { ready ->
-                        if (ready) {
-                            player.seekTo(seekPosition * 1000f)
-                            return@collect
-                        }
-                    }
+                snapshotFlow { player.hasMedia }.first { it }
+                player.seekTo(seekPosition * 1000f)
             }
         }
     }
 
     fun playAudio(url: String) {
         val current = _audioState.value
-        val player = ensureAudioPlayer()
+        val player =
+            ensureAudioPlayer() ?: run {
+                _audioState.value =
+                    MediaPlaybackState(
+                        url = url,
+                        type = MediaType.AUDIO,
+                        isBuffering = false,
+                        errorReason = "Audio playback unavailable",
+                    )
+                return
+            }
 
         if (current.url == url) {
             if (!current.isPlaying) player.play()
             return
         }
+
+        // Reset engine volume — see playVideo() for rationale.
+        player.volume = 1f
 
         _audioState.value = MediaPlaybackState(url = url, type = MediaType.AUDIO, isBuffering = true)
 
@@ -247,20 +272,29 @@ object GlobalMediaPlayer {
 
     // --- Engine lifecycle ----------------------------------------------------
 
-    private fun ensureVideoPlayer(): VideoPlayerState =
+    /**
+     * Returns the video player, creating it on first call. Returns `null` if
+     * native initialization throws (e.g. missing GStreamer on Linux, broken
+     * `libNativeVideoPlayer.dylib` extraction). On failure, subsequent calls
+     * keep returning `null` until the JVM is restarted — re-trying mid-session
+     * is unlikely to recover from a missing native dependency.
+     */
+    private fun ensureVideoPlayer(): VideoPlayerState? =
         videoPlayer ?: synchronized(initLock) {
-            videoPlayer ?: createVideoPlayerState().also {
-                videoPlayer = it
-                startVideoSync(it)
-            }
+            videoPlayer ?: runCatching { createVideoPlayerState() }
+                .onSuccess { startVideoSync(it) }
+                .onFailure { println("kdroidFilter: video engine init failed: ${it.message}") }
+                .getOrNull()
+                ?.also { videoPlayer = it }
         }
 
-    private fun ensureAudioPlayer(): VideoPlayerState =
+    private fun ensureAudioPlayer(): VideoPlayerState? =
         audioPlayer ?: synchronized(initLock) {
-            audioPlayer ?: createVideoPlayerState().also {
-                audioPlayer = it
-                startAudioSync(it)
-            }
+            audioPlayer ?: runCatching { createVideoPlayerState() }
+                .onSuccess { startAudioSync(it) }
+                .onFailure { println("kdroidFilter: audio engine init failed: ${it.message}") }
+                .getOrNull()
+                ?.also { audioPlayer = it }
         }
 
     private fun startVideoSync(player: VideoPlayerState) {

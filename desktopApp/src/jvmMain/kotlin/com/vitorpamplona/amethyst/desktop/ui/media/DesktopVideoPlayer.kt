@@ -109,12 +109,13 @@ fun DesktopVideoPlayer(
             contentAlignment = Alignment.Center,
         ) {
             val errorReason = if (isActiveVideo) videoState.errorReason else null
+            val activePlayer = if (isActiveVideo) GlobalMediaPlayer.activeVideoPlayerState else null
 
             if (errorReason != null) {
                 PlaybackErrorMessage(url = url, reason = errorReason)
-            } else if (isActiveVideo) {
+            } else if (isActiveVideo && activePlayer != null) {
                 VideoPlayerSurface(
-                    playerState = GlobalMediaPlayer.activeVideoPlayerState,
+                    playerState = activePlayer,
                     modifier = Modifier.fillMaxSize().clip(MaterialTheme.shapes.small),
                     contentScale = ContentScale.Fit,
                 )

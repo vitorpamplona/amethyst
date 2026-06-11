@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.desktop.ui.media
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -50,7 +51,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
-import io.github.kdroidfilter.composemediaplayer.VideoPlayerSurface
+import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
 import kotlinx.coroutines.launch
 
 enum class MediaType { AUDIO, VIDEO }
@@ -85,10 +86,18 @@ fun NowPlayingBar(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // Mini video preview or music icon
-            if (activeType == MediaType.VIDEO) {
-                VideoPlayerSurface(
-                    playerState = GlobalMediaPlayer.activeVideoPlayerState,
+            // Mini thumbnail (cached frame, not a live VideoPlayerSurface).
+            // We deliberately render the cached thumbnail rather than mounting a
+            // second VideoPlayerSurface to avoid driving two simultaneous Skia
+            // draws against the same player's frame bitmap — kdroidFilter
+            // 0.10.0's macOS surface has a use-after-free race in that path
+            // (see PR review). The mini-preview UX is preserved via the
+            // poster frame extracted by VideoThumbnailCache.
+            val miniThumb = activeState.url?.let { VideoThumbnailCache.getCached(it) }
+            if (activeType == MediaType.VIDEO && miniThumb != null) {
+                Image(
+                    bitmap = miniThumb,
+                    contentDescription = "Now playing",
                     modifier =
                         Modifier
                             .size(width = 48.dp, height = 36.dp)
