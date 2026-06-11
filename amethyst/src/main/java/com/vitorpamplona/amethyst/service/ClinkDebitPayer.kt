@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service
 
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.quartz.experimental.clink.client.DebitClient
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitEvent
@@ -28,6 +29,7 @@ import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CancellationException
@@ -104,7 +106,9 @@ object ClinkDebitPayer {
         val relays = client.pointer.relays.toSet()
 
         val reply = CompletableDeferred<DebitEvent>()
-        val subId = "clink-debit-${request.id}"
+        // A random short id: relays cap subscription ids at 64 chars (NIP-01); the reply is matched
+        // by request id in the listener, not by subId.
+        val subId = newSubId()
         val filters: Map<NormalizedRelayUrl, List<Filter>> = relays.associateWith { listOf(client.responseFilter(request.id)) }
 
         val listener =
@@ -121,6 +125,12 @@ object ClinkDebitPayer {
                 }
             }
 
+        // Saved debit wallets are already fed into the money-op relay set by AccountsTorStateConnector,
+        // but register here too so a freshly-added wallet paid before that flow propagates — and any
+        // non-saved debit pointer — still routes under the money-operations Tor preference rather than
+        // the generic `newRelaysViaTor` policy.
+        val torState = Amethyst.instance.torEvaluatorFlow
+        torState.registerMoneyOpRelays(relays)
         account.client.subscribe(subId, filters, listener)
         return try {
             account.client.publish(request, relays)
@@ -136,6 +146,7 @@ object ClinkDebitPayer {
             }
         } finally {
             account.client.unsubscribe(subId)
+            torState.unregisterMoneyOpRelays(relays)
         }
     }
 }
