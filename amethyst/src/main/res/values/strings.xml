@@ -139,7 +139,7 @@
     <string name="pay">Pay</string>
 
     <string name="send_payment_title">Send Payment</string>
-    <string name="send_payment_method">Pay with</string>
+    <string name="send_payment_method">Receive on</string>
     <string name="send_payment_from">Pay from</string>
     <string name="send_payment_source_external">Another wallet app</string>
     <string name="send_payment_source_onchain_wallet">On-chain wallet</string>
