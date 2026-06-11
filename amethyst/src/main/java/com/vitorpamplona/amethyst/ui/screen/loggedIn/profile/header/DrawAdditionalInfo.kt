@@ -21,9 +21,6 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
 import android.content.ClipData
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
@@ -31,11 +28,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -57,7 +52,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.nip01Core.UserInfo
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.Nip05State
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.model.User
@@ -76,12 +70,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.Display
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.apps.UserAppRecommendationsFeedViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.badges.DisplayBadges
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header.identity.UserExternalIdentitiesViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.payment.ProfilePaymentMethod
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.payment.rememberProfileClinkOffer
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy3dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -226,9 +216,7 @@ fun DrawAdditionalInfo(
                 userState?.info?.lud16?.trim()
                     ?: userState?.info?.lud06?.trim()
             }
-        DisplayLNAddress(lud16, baseUser, nav)
-
-        DisplayClinkOffer(baseUser, user, accountViewModel, nav)
+        DisplayPaymentRailChips(baseUser, lud16, user, accountViewModel, nav)
 
         DisplayPaymentTargets(baseUser, accountViewModel, nav)
 
@@ -389,63 +377,3 @@ fun getIdentityClaimDescription(identity: IdentityClaimTag): Int =
         is GitHubIdentity -> R.string.github
         else -> R.string.github
     }
-
-/**
- * Shows a profile's advertised CLINK Offer as a compact, tappable chip (preferring the kind-0
- * `clink_offer` field, falling back to the NIP-05 `.well-known` `clink_offer`, cached via
- * [rememberProfileClinkOffer]). Tapping the chip opens the unified Send Payment screen with
- * the CLINK rail preselected.
- */
-@Composable
-private fun DisplayClinkOffer(
-    baseUser: User,
-    userInfo: UserInfo,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val offer = rememberProfileClinkOffer(userInfo, accountViewModel)
-
-    if (offer != null) {
-        ClinkOfferChip {
-            nav.nav(Route.SendPayment(baseUser.pubkeyHex, ProfilePaymentMethod.CLINK.routeKey))
-        }
-    }
-}
-
-/**
- * Compact, payment-target-style chip for a profile's CLINK Offer. Tapping it opens the
- * Send Payment screen so the profile mirrors the other payment-target chips instead of
- * expanding a card in place.
- */
-@Composable
-private fun ClinkOfferChip(onClick: () -> Unit) {
-    val label = stringRes(R.string.clink_lightning_offer)
-    Surface(
-        shape = RoundedCornerShape(50),
-        color = BitcoinOrange.copy(alpha = 0.10f),
-        border = BorderStroke(1.dp, BitcoinOrange.copy(alpha = 0.35f)),
-        modifier =
-            Modifier
-                .padding(vertical = 4.dp)
-                .clickable(onClick = onClick),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-        ) {
-            Icon(
-                symbol = MaterialSymbols.Bolt,
-                contentDescription = label,
-                tint = BitcoinOrange,
-                modifier = Size16Modifier,
-            )
-            Text(
-                text = label,
-                color = BitcoinOrange,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-    }
-}
