@@ -613,7 +613,7 @@ class CashuWalletOps(
         amountSats: Long,
         recipientPubKey: HexKey,
         recipientP2pkPubkeyHex: String,
-        zappedEvent: EventHintBundle<out Event>,
+        zappedEvent: EventHintBundle<out Event>?,
         message: String,
         available: List<TokenEntry>,
         onProgress: ((Float) -> Unit)? = null,

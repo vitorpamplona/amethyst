@@ -975,6 +975,39 @@ class AccountViewModel(
         }
     }
 
+    /**
+     * NIP-61 nutzap aimed at a profile rather than an event: the kind:9321
+     * carries only the `p` tag. Used by the profile Send Payment screen, which
+     * needs explicit success/error callbacks to drive its in-screen feedback.
+     */
+    fun sendNutzapToUser(
+        recipientPubKey: HexKey,
+        amountSats: Long,
+        message: String,
+        onError: (String, String, User?) -> Unit,
+        onProgress: (Float) -> Unit = {},
+        onSuccess: () -> Unit = {},
+    ) = launchSigner {
+        try {
+            account.cashuWalletState.sendNutzap(
+                amountSats = amountSats,
+                recipientPubKey = recipientPubKey,
+                zappedEvent = null,
+                message = message,
+                onProgress = onProgress,
+            )
+            onSuccess()
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            onError(
+                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_title),
+                com.vitorpamplona.amethyst.model.nip60Cashu
+                    .describeMintError(e),
+                getUserIfExists(recipientPubKey),
+            )
+        }
+    }
+
     fun report(
         note: Note,
         type: ReportType,
@@ -2080,17 +2113,19 @@ class AccountViewModel(
         onError: (String, String) -> Unit,
         onProgress: (percent: Float) -> Unit,
         context: Context,
+        zapType: LnZapEvent.ZapType? = null,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                val effectiveZapType = zapType ?: defaultZapType()
                 val zapRequest =
-                    if (defaultZapType() != LnZapEvent.ZapType.NONZAP) {
+                    if (effectiveZapType != LnZapEvent.ZapType.NONZAP) {
                         // NIP-57 Appendix F: include amount + lnurl so the receipt can be validated.
                         val splitLnurl = LnurlForm.toUrl(lnAddress)?.let(LnurlForm::urlToBech32)
                         account.createZapRequestFor(
                             user = user,
                             message = message,
-                            zapType = defaultZapType(),
+                            zapType = effectiveZapType,
                             amountMillisats = milliSats,
                             lnurl = splitLnurl,
                         )

@@ -62,12 +62,16 @@ class NutzapEvent(
         const val KIND = 9321
         const val ALT_DESCRIPTION = "Nutzap"
 
+        /**
+         * [zappedEvent] is optional: a nutzap aimed at a profile rather than a
+         * specific event carries only the `p` tag (the `e`/`k` tags are omitted).
+         */
         fun build(
             message: String,
             proofs: List<String>,
             mintUrl: String,
             unit: String,
-            zappedEvent: EventHintBundle<out Event>,
+            zappedEvent: EventHintBundle<out Event>?,
             recipientPubKey: HexKey,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<NutzapEvent>.() -> Unit = {},
@@ -76,8 +80,10 @@ class NutzapEvent(
             proofs(proofs)
             mintUrl(mintUrl)
             unit(unit)
-            zappedEvent(zappedEvent)
-            zappedEventKind(zappedEvent.event.kind)
+            if (zappedEvent != null) {
+                zappedEvent(zappedEvent)
+                zappedEventKind(zappedEvent.event.kind)
+            }
             recipient(recipientPubKey)
             initializer()
         }

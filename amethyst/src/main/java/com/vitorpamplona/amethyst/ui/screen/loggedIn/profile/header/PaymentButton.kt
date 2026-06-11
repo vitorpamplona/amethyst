@@ -62,21 +62,26 @@ import com.vitorpamplona.amethyst.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.ui.components.M3ActionSection
 import com.vitorpamplona.amethyst.ui.components.util.setText
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.payment.ProfilePaymentMethod
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.ZeroPadding
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 @Composable
 fun PaymentButton(
     user: User,
     accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     val address =
         remember(user.pubkeyHex) {
@@ -92,14 +97,18 @@ fun PaymentButton(
                     event?.paymentTargets() ?: emptyList()
                 }
             if (targets.isNotEmpty()) {
-                PaymentButtonWithTargets(targets)
+                PaymentButtonWithTargets(user, targets, nav)
             }
         }
     }
 }
 
 @Composable
-fun PaymentButtonWithTargets(targets: List<PaymentTarget>) {
+fun PaymentButtonWithTargets(
+    user: User,
+    targets: List<PaymentTarget>,
+    nav: INav,
+) {
     var expanded by remember { mutableStateOf(false) }
 
     FilledTonalButton(
@@ -117,7 +126,22 @@ fun PaymentButtonWithTargets(targets: List<PaymentTarget>) {
     }
 
     if (expanded) {
-        PaymentTargetsDialog(targets = targets, onDismiss = { expanded = false })
+        PaymentTargetsDialog(
+            targets = targets,
+            onDismiss = { expanded = false },
+            onPayLightning = { target ->
+                expanded = false
+                // Lightning targets are paid in-app: the Send Payment screen
+                // collects the amount and confirms in place — no extra dialog.
+                nav.nav(
+                    Route.SendPayment(
+                        user.pubkeyHex,
+                        ProfilePaymentMethod.LIGHTNING.routeKey,
+                        target.authority,
+                    ),
+                )
+            },
+        )
     }
 }
 
@@ -125,6 +149,7 @@ fun PaymentButtonWithTargets(targets: List<PaymentTarget>) {
 fun PaymentTargetsDialog(
     targets: List<PaymentTarget>,
     onDismiss: () -> Unit,
+    onPayLightning: ((PaymentTarget) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboard.current
@@ -161,14 +186,18 @@ fun PaymentTargetsDialog(
                             }
                         },
                         onPay = {
-                            try {
-                                val intent = Intent(Intent.ACTION_VIEW, "payto://${target.type}/${target.authority}".toUri())
-                                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                context.startActivity(intent)
-                                onDismiss()
-                            } catch (e: Exception) {
-                                if (e is kotlinx.coroutines.CancellationException) throw e
-                                errorMessage = stringRes(context, R.string.no_payment_app_found)
+                            if (onPayLightning != null && isLightningPaymentTarget(target.type)) {
+                                onPayLightning(target)
+                            } else {
+                                try {
+                                    val intent = Intent(Intent.ACTION_VIEW, "payto://${target.type}/${target.authority}".toUri())
+                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                    context.startActivity(intent)
+                                    onDismiss()
+                                } catch (e: Exception) {
+                                    if (e is CancellationException) throw e
+                                    errorMessage = stringRes(context, R.string.no_payment_app_found)
+                                }
                             }
                         },
                     )

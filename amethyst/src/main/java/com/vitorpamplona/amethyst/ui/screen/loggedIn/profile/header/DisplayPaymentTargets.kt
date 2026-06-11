@@ -55,8 +55,11 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.util.setText
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.payment.ProfilePaymentMethod
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
@@ -69,6 +72,7 @@ import kotlinx.coroutines.launch
 fun DisplayPaymentTargets(
     baseUser: User,
     accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     val address =
         remember(baseUser.pubkeyHex) {
@@ -89,17 +93,22 @@ fun DisplayPaymentTargets(
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.padding(vertical = 4.dp),
                 ) {
-                    targets.forEach { target -> PaymentTargetChip(target, accountViewModel) }
+                    targets.forEach { target -> PaymentTargetChip(baseUser, target, accountViewModel, nav) }
                 }
             }
         }
     }
 }
 
+/** Lightning-family targets Amethyst can pay in-app through the Send Payment screen. */
+fun isLightningPaymentTarget(rawType: String): Boolean = rawType.trim().lowercase() in setOf("lightning", "ln", "lnurl")
+
 @Composable
 private fun PaymentTargetChip(
+    baseUser: User,
     target: PaymentTarget,
     accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     val style = remember(target.type) { paymentTargetStyleFor(target.type) }
     val uriHandler = LocalUriHandler.current
@@ -116,14 +125,26 @@ private fun PaymentTargetChip(
         modifier =
             Modifier.combinedClickable(
                 onClick = {
-                    runCatching { uriHandler.openUri(style.uriFor(target.authority)) }
-                        .onFailure {
-                            accountViewModel.toastManager.toast(
-                                R.string.error_dialog_payment_error,
-                                R.string.no_payment_app_found_for_type,
-                                style.label,
-                            )
-                        }
+                    if (isLightningPaymentTarget(target.type)) {
+                        // Lightning targets are paid in-app: the Send Payment screen
+                        // collects the amount and pays this exact target.
+                        nav.nav(
+                            Route.SendPayment(
+                                baseUser.pubkeyHex,
+                                ProfilePaymentMethod.LIGHTNING.routeKey,
+                                target.authority,
+                            ),
+                        )
+                    } else {
+                        runCatching { uriHandler.openUri(style.uriFor(target.authority)) }
+                            .onFailure {
+                                accountViewModel.toastManager.toast(
+                                    R.string.error_dialog_payment_error,
+                                    R.string.no_payment_app_found_for_type,
+                                    style.label,
+                                )
+                            }
+                    }
                 },
                 onLongClick = {
                     scope.launch {

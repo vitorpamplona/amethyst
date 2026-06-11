@@ -21,71 +21,32 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.header
 
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.ui.actions.InformationDialog
 import com.vitorpamplona.amethyst.ui.components.util.LongPressCopyText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
-import com.vitorpamplona.amethyst.ui.note.ErrorMessageDialog
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.LightningAddressIcon
-import com.vitorpamplona.amethyst.ui.note.creators.invoice.InvoiceRequestCard
-import com.vitorpamplona.amethyst.ui.note.payViaIntent
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.payment.ProfilePaymentMethod
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
-import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 
+/**
+ * Profile row showing the user's lightning address. Tapping it opens the
+ * unified Send Payment screen (amount + message + zap type, paid on the spot)
+ * preselecting the Lightning rail; long-press copies the address.
+ */
 @Composable
 fun DisplayLNAddress(
     lud16: String?,
     user: User,
-    accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val context = LocalContext.current
-    var zapExpanded by remember { mutableStateOf(false) }
-
-    var showErrorMessageDialog by remember { mutableStateOf<String?>(null) }
-
-    if (showErrorMessageDialog != null) {
-        ErrorMessageDialog(
-            title = stringRes(id = R.string.error_dialog_zap_error),
-            textContent = showErrorMessageDialog ?: "",
-            onClickStartMessage = {
-                nav.nav {
-                    routeToMessage(user, showErrorMessageDialog, accountViewModel = accountViewModel)
-                }
-            },
-            onDismiss = { showErrorMessageDialog = null },
-        )
-    }
-
-    var showInfoMessageDialog by remember { mutableStateOf<String?>(null) }
-    if (showInfoMessageDialog != null) {
-        InformationDialog(
-            title = stringRes(context, R.string.payment_successful),
-            textContent = showInfoMessageDialog ?: "",
-        ) {
-            showInfoMessageDialog = null
-        }
-    }
-
     if (!lud16.isNullOrEmpty()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             LightningAddressIcon(modifier = Size16Modifier, tint = BitcoinOrange)
@@ -93,60 +54,14 @@ fun DisplayLNAddress(
             LongPressCopyText(
                 displayText = lud16,
                 copyValue = lud16,
-                onClick = { zapExpanded = !zapExpanded },
+                onClick = {
+                    nav.nav(Route.SendPayment(user.pubkeyHex, ProfilePaymentMethod.LIGHTNING.routeKey))
+                },
                 overflow = TextOverflow.Ellipsis,
                 modifier =
                     Modifier
                         .padding(top = 1.dp, bottom = 1.dp, start = 5.dp),
             )
-        }
-
-        if (zapExpanded) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
-            ) {
-                InvoiceRequestCard(
-                    lud16,
-                    user,
-                    accountViewModel,
-                    onSuccess = { invoice ->
-                        zapExpanded = false
-                        // pay directly through the selected default payment source
-                        when (val source = accountViewModel.account.settings.defaultPaymentSource()) {
-                            is PaymentSource.ClinkDebit -> {
-                                accountViewModel.payInvoiceViaClinkDebit(source.wallet.pointer, invoice) { response ->
-                                    if (response?.isOk() == true) {
-                                        showInfoMessageDialog = stringRes(context, R.string.payment_successful)
-                                    } else {
-                                        showErrorMessageDialog =
-                                            response?.error?.takeIf { it.isNotBlank() }
-                                                ?: stringRes(context, R.string.clink_debit_no_response)
-                                    }
-                                }
-                            }
-
-                            is PaymentSource.Nwc -> {
-                                accountViewModel.sendZapPaymentRequestFor(invoice, null) { response ->
-                                    if (response is PayInvoiceSuccessResponse) {
-                                        showInfoMessageDialog = stringRes(context, R.string.payment_successful)
-                                    } else if (response is PayInvoiceErrorResponse) {
-                                        showErrorMessageDialog =
-                                            response.error?.message
-                                                ?: response.error?.code?.toString()
-                                                ?: stringRes(context, R.string.error_parsing_error_message)
-                                    }
-                                }
-                            }
-
-                            null -> {
-                                payViaIntent(invoice, context, { zapExpanded = false }, { showErrorMessageDialog = it })
-                            }
-                        }
-                    },
-                    onError = { title, message -> accountViewModel.toastManager.toast(title, message) },
-                )
-            }
         }
     }
 }
