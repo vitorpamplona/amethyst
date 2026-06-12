@@ -66,10 +66,14 @@ class BasicRelayClientTest {
 
     private class MessagelessException : Exception()
 
-    private fun connectAndCapture(
-        builder: FakeWebsocketBuilder,
-        listener: RecordingConnectionListener,
-    ): WebSocketListener {
+    private data class Harness(
+        val socketListener: WebSocketListener,
+        val connectionListener: RecordingConnectionListener,
+    )
+
+    private fun connectAndCapture(): Harness {
+        val builder = FakeWebsocketBuilder()
+        val listener = RecordingConnectionListener()
         val client =
             BasicRelayClient(
                 NormalizedRelayUrl("wss://relay.example.com/"),
@@ -79,15 +83,14 @@ class BasicRelayClientTest {
         client.connect()
         val socketListener = builder.capturedListener
         assertNotNull(socketListener)
-        return socketListener
+        return Harness(socketListener, listener)
     }
 
     @Test
     fun onFailureWithNullMessageReportsExceptionClassName() {
-        val builder = FakeWebsocketBuilder()
-        val listener = RecordingConnectionListener()
+        val (socket, listener) = connectAndCapture()
 
-        connectAndCapture(builder, listener).onFailure(MessagelessException(), null, null)
+        socket.onFailure(MessagelessException(), null, null)
 
         assertEquals(
             listOf("WebSocket Failure: MessagelessException"),
@@ -97,10 +100,9 @@ class BasicRelayClientTest {
 
     @Test
     fun onFailureWithMessageKeepsExistingFormat() {
-        val builder = FakeWebsocketBuilder()
-        val listener = RecordingConnectionListener()
+        val (socket, listener) = connectAndCapture()
 
-        connectAndCapture(builder, listener).onFailure(Exception("Connection reset"), null, null)
+        socket.onFailure(Exception("Connection reset"), null, null)
 
         assertEquals(
             listOf("WebSocket Failure: Connection reset"),
@@ -110,10 +112,9 @@ class BasicRelayClientTest {
 
     @Test
     fun serverMisconfiguredWithNullMessageReportsExceptionClassName() {
-        val builder = FakeWebsocketBuilder()
-        val listener = RecordingConnectionListener()
+        val (socket, listener) = connectAndCapture()
 
-        connectAndCapture(builder, listener).onFailure(MessagelessException(), 200, "OK")
+        socket.onFailure(MessagelessException(), 200, "OK")
 
         assertEquals(
             listOf("Server Misconfigured. Response: 200 OK. Exception: MessagelessException"),
