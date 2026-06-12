@@ -55,6 +55,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -108,8 +109,7 @@ fun RenderSoftwareApplication(
     val name = remember(event) { event.name() ?: event.appId().orEmpty() }
     val summary = remember(event) { event.summary() }
     val description = remember(event) { event.content.trim() }
-    val platforms = remember(event) { event.platforms() }
-    val license = remember(event) { event.license() }
+    val images = remember(event) { event.images() }
 
     val latestVersion by produceLatestReleaseVersion(event)
 
@@ -166,9 +166,9 @@ fun RenderSoftwareApplication(
             )
         }
 
-        if (platforms.isNotEmpty() || license != null) {
+        if (images.isNotEmpty()) {
             Spacer(StdVertSpacer)
-            PlatformLicenseRow(platforms = platforms, license = license)
+            ScreenshotsStrip(images, imageHeight = 200.dp)
         }
     }
 
@@ -316,12 +316,13 @@ fun TopicChipFlow(
 fun ScreenshotsStrip(
     images: List<String>,
     contentPadding: PaddingValues = PaddingValues(0.dp),
+    imageHeight: Dp = 180.dp,
 ) {
     if (images.isEmpty()) return
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         contentPadding = contentPadding,
-        modifier = Modifier.height(180.dp),
+        modifier = Modifier.height(imageHeight),
     ) {
         items(images) { imageUrl ->
             AsyncImage(
@@ -330,7 +331,7 @@ fun ScreenshotsStrip(
                 contentScale = ContentScale.Crop,
                 modifier =
                     Modifier
-                        .height(180.dp)
+                        .height(imageHeight)
                         .clip(RoundedCornerShape(8.dp))
                         .border(1.dp, MaterialTheme.colorScheme.subtleBorder, RoundedCornerShape(8.dp)),
             )
