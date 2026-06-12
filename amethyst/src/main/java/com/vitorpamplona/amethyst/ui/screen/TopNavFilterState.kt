@@ -87,7 +87,7 @@ class TopNavFilterState(
     val selectedFollow =
         FeedDefinition(
             code = TopFilter.Selected,
-            name = ResourceName(R.string.follow_list_selected),
+            name = ResourceName(R.string.follow_list_curated),
         )
 
     val aroundMe =
