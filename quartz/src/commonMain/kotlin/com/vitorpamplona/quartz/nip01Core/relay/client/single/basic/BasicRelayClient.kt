@@ -44,8 +44,11 @@ import kotlin.coroutines.cancellation.CancellationException
  * @property listener Interface to notify the application of relay events and errors.
  *
  * Reconnection Strategy:
- * - Uses exponential backoff to retry connections, starting with [DELAY_TO_RECONNECT_IN_SECS] (500ms).
+ * - Uses exponential backoff to retry connections, starting with [DELAY_TO_RECONNECT_IN_SECS].
  * - Doubles the delay between reconnection attempts in case of failure.
+ * - The backoff only resets after a connection stays open for at least
+ *   [STABLE_CONNECTION_IN_SECS], so relays that accept the handshake but
+ *   immediately drop the socket keep backing off instead of reconnecting in a loop.
  *
  * Message Handling:
  * - Processes relay messages (e.g., `EVENT`, `EOSE`, `OK`, `AUTH`) and delegates to appropriate callbacks.
@@ -56,10 +59,17 @@ open class BasicRelayClient(
     override val url: NormalizedRelayUrl,
     val socketBuilder: WebsocketBuilder,
     val listener: RelayConnectionListener,
+    val nowInSeconds: () -> Long = TimeUtils::now,
 ) : IRelayClient {
     companion object {
         // minimum wait time to reconnect: 1 second
         const val DELAY_TO_RECONNECT_IN_SECS = 1
+
+        // a connection must survive this long before a disconnect resets the
+        // reconnect backoff. Relays that accept the handshake and then
+        // immediately drop the socket would otherwise reset the backoff on
+        // every onOpen and reconnect in a tight ~3s loop forever.
+        const val STABLE_CONNECTION_IN_SECS = TimeUtils.ONE_MINUTE
     }
 
     private var socket: WebSocket? = null
@@ -73,6 +83,10 @@ open class BasicRelayClient(
     // having trouble or offline.
     private var lastConnectTentativeInSeconds: Long = 0L // the beginning of time.
     private var delayToConnectInSeconds = DELAY_TO_RECONNECT_IN_SECS
+
+    // when the current connection became ready; used to decide if the
+    // connection was stable enough to reset the backoff on disconnect.
+    private var connectedAtInSeconds: Long = 0L
 
     // Makes sure only one socket is open for each url
     private var connectingMutex = AtomicBoolean(false)
@@ -97,7 +111,7 @@ open class BasicRelayClient(
 
             listener.onConnecting(this)
 
-            lastConnectTentativeInSeconds = TimeUtils.now()
+            lastConnectTentativeInSeconds = nowInSeconds()
 
             socket = socketBuilder.build(url, MyWebsocketListener())
             socket?.connect()
@@ -193,12 +207,21 @@ open class BasicRelayClient(
     fun markConnectionAsReady(usingCompression: Boolean) {
         this.isReady = true
         this.usingCompression = usingCompression
+        this.connectedAtInSeconds = nowInSeconds()
 
-        // resets any extra delays added during on offline state
-        this.delayToConnectInSeconds = DELAY_TO_RECONNECT_IN_SECS
+        // The backoff delay is NOT reset here: a relay that accepts the
+        // handshake and then immediately fails would defeat the exponential
+        // backoff on every cycle. It resets in markConnectionAsClosed once
+        // the session proves stable (see STABLE_CONNECTION_IN_SECS).
     }
 
     fun markConnectionAsClosed() {
+        // resets any extra delays added while offline, but only if the
+        // session was stable; flapping relays keep their growing backoff.
+        if (isReady && nowInSeconds() - connectedAtInSeconds >= STABLE_CONNECTION_IN_SECS) {
+            this.delayToConnectInSeconds = DELAY_TO_RECONNECT_IN_SECS
+        }
+
         this.socket = null
         this.isReady = false
         this.usingCompression = false
@@ -232,7 +255,7 @@ open class BasicRelayClient(
         }
 
         // waits 60 seconds to reconnect after disconnected.
-        if (ignoreRetryDelays || TimeUtils.now() > lastConnectTentativeInSeconds + delayToConnectInSeconds) {
+        if (ignoreRetryDelays || nowInSeconds() > lastConnectTentativeInSeconds + delayToConnectInSeconds) {
             upRelayDelayToConnect()
             connect()
         }
