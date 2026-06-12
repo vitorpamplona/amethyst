@@ -50,7 +50,7 @@ class V3Parser {
                             totalAmount += proof.amount
                         }
 
-                        CashuToken(cashuToken, mint, totalAmount, proofs)
+                        CashuToken(cashuToken, mint, totalAmount, proofs, cashu.unit, cashu.memo?.takeIf { it.isNotBlank() })
                     }
 
                 return GenericLoadable.Loaded(converted.toImmutableList())

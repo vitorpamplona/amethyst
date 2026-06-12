@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst
 
 import com.vitorpamplona.amethyst.service.cashu.v4.V4Parser
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
@@ -41,7 +42,9 @@ class CashuV4ParserTest {
                 val list = outcome.loaded
                 assertTrue("Expected at least one CashuToken", list.isNotEmpty())
                 val first = list.first()
-                println("mint=${first.mint} totalAmount=${first.totalAmount} proofs=${first.proofs.size}")
+                assertEquals("https://mint.minibits.cash/Bitcoin", first.mint)
+                assertEquals("sat", first.unit)
+                assertEquals("TEST", first.memo)
             }
             is GenericLoadable.Error -> fail("V4Parser failed: ${outcome.errorMessage}")
             else -> fail("V4Parser returned $outcome")

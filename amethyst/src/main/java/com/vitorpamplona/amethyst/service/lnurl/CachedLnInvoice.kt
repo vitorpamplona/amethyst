@@ -30,6 +30,10 @@ import java.text.NumberFormat
 data class InvoiceAmount(
     val invoice: String,
     val amount: String?,
+    /** Free-text BOLT-11 description, when the invoice carries one. */
+    val description: String? = null,
+    /** Expiration as epoch seconds, when the invoice decodes. */
+    val expiresAt: Long? = null,
 )
 
 object CachedLnInvoiceParser {
@@ -49,7 +53,8 @@ object CachedLnInvoiceParser {
                     null
                 }
 
-            val lnInvoice = InvoiceAmount(myInvoice, myInvoiceAmount)
+            val details = LnInvoiceUtil.parseDetails(myInvoice)
+            val lnInvoice = InvoiceAmount(myInvoice, myInvoiceAmount, details?.description, details?.expiresAt())
 
             lnInvoicesCache.put(lnbcWord, lnInvoice)
 

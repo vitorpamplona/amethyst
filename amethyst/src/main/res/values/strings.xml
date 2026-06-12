@@ -112,7 +112,9 @@
     <string name="log_out">Logout</string>
     <string name="show_more">Show More</string>
     <string name="lightning_invoice">Lightning Invoice</string>
+    <string name="invoice_expired">Expired</string>
     <string name="clink_lightning_offer">CLINK Offer</string>
+    <string name="clink_offer_pay_to">To</string>
     <string name="clink_requesting_invoice">Requesting invoice…</string>
     <string name="clink_debit_no_response">The debit service did not complete the payment.</string>
     <string name="clink_confirm_payment_title">Confirm payment</string>
@@ -1554,6 +1556,7 @@
     <string name="default_limit">Default Limit (Events Returning)</string>
     <string name="max_subid_length">Max SubID Length</string>
     <string name="cashu">Cashu Token</string>
+    <string name="cashu_mint_label">Mint: %1$s</string>
     <string name="cashu_redeem">Redeem</string>
     <string name="cashu_redeem_to_zap">Send to Zap Wallet</string>
     <string name="cashu_redeem_to_cashu">Open in Cashu Wallet</string>

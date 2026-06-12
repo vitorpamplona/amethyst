@@ -507,7 +507,7 @@ private fun RenderWordWithoutPreview(
 
         // Decoding is local and the network round-trip only fires on the Pay tap,
         // so the offer card is safe to render even in the no-preview path.
-        is ClinkOfferSegment -> ClinkOfferPreview(word.offer, accountViewModel)
+        is ClinkOfferSegment -> ClinkOfferPreview(word.offer, accountViewModel, nav)
 
         is EmailSegment -> ClickableEmail(word.segmentText)
 
@@ -555,7 +555,7 @@ private fun RenderWordWithPreview(
         is InvoiceSegment -> MayBeInvoicePreview(word.segmentText, accountViewModel)
         is WithdrawSegment -> MayBeWithdrawal(word.segmentText, accountViewModel)
         is CashuSegment -> CashuPreview(word.segmentText, accountViewModel)
-        is ClinkOfferSegment -> ClinkOfferPreview(word.offer, accountViewModel)
+        is ClinkOfferSegment -> ClinkOfferPreview(word.offer, accountViewModel, nav)
         is EmailSegment -> ClickableEmail(word.segmentText)
         is SecretEmoji -> DisplaySecretEmoji(word, state, callbackUri, true, quotesLeft, backgroundColor, accountViewModel, nav)
         is MathSegment -> LatexEquation(word.latex, word.displayMode, word.leading, word.trailing)
