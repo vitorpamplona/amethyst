@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.model.nip51Lists.OldBookmarkListState
 import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListRepository
 import com.vitorpamplona.amethyst.commons.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
+import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.DmInboxRelayResolver
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
 import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
@@ -73,6 +74,7 @@ class DesktopIAccount(
     val dmSendTracker: DmSendTracker,
     private val scope: CoroutineScope,
     private val accountRelays: DesktopAccountRelays? = null,
+    private val dmInboxResolver: DmInboxRelayResolver? = null,
 ) : IAccount {
     override val signer: NostrSigner = NostrSignerWithClientTag(accountState.signer, CLIENT_TAG_NAME)
 
@@ -248,20 +250,30 @@ class DesktopIAccount(
      * the conversation metadata (recipient pubkey + send timestamp) to relays
      * outside the recipient's chosen inbox.
      *
+     * Three-layer lookup when a [dmInboxResolver] is injected (default in
+     * Main.kt):
+     *   1. LocalCache hit (fast, no I/O)
+     *   2. Resolver's in-memory LRU cache
+     *   3. Curated indexer fan-out via an unauthenticated NostrClient
+     *
+     * Without a resolver (legacy / tests), falls back to LocalCache-only.
+     *
      * Empty result means the wrap will not be sent; [DmSendTracker.sendBatch]
-     * surfaces this as a "No relays available" failure to the user. Indexer
-     * fan-out + a UI prompt for the missing-10050 case lands with the
-     * [DmInboxRelayResolver] (Phase 4); until then "no 10050 → cannot send"
-     * is the conservative position.
+     * surfaces this as a "No relays available" failure to the user.
      */
-    private fun resolveDmInboxRelaysStrict(recipientKey: HexKey?): Set<NormalizedRelayUrl> {
+    private suspend fun resolveDmInboxRelaysStrict(recipientKey: HexKey?): Set<NormalizedRelayUrl> {
         if (recipientKey == null) return emptySet()
-        return localCache
-            .getOrCreateUser(recipientKey)
-            .dmInboxRelays()
-            ?.toSet()
-            ?.ifEmpty { null }
-            ?: emptySet()
+        val resolver = dmInboxResolver
+        return if (resolver != null) {
+            resolver.resolve(recipientKey).toSet()
+        } else {
+            localCache
+                .getOrCreateUser(recipientKey)
+                .dmInboxRelays()
+                ?.toSet()
+                ?.ifEmpty { null }
+                ?: emptySet()
+        }
     }
 
     private fun addEventToChatroom(

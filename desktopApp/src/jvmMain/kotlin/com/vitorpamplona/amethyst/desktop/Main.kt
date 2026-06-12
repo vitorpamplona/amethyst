@@ -71,6 +71,7 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import com.vitorpamplona.amethyst.commons.defaults.DefaultDmIndexerRelays
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.icons.symbols.ProvideMaterialSymbols
@@ -78,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.moderation.LocalHashtagSpamSettings
 import com.vitorpamplona.amethyst.commons.moderation.LocalSpamExemptKeys
 import com.vitorpamplona.amethyst.commons.moderation.PreferencesHashtagSpamSettings
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthApprovalBanner
+import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.DmInboxRelayResolver
 import com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull
 import com.vitorpamplona.amethyst.commons.wot.LocalWoTReady
 import com.vitorpamplona.amethyst.commons.wot.LocalWoTService
@@ -126,9 +128,12 @@ import com.vitorpamplona.amethyst.desktop.ui.relay.RelayStatusCard
 import com.vitorpamplona.amethyst.desktop.ui.settings.ImageCompressionSettings
 import com.vitorpamplona.amethyst.desktop.ui.settings.MediaServerSettings
 import com.vitorpamplona.amethyst.desktop.ui.settings.NamecoinSettingsSection
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
@@ -924,6 +929,35 @@ private fun AppInner(
         }
     val nip11Fetcher = remember { Nip11Fetcher() }
 
+    // Dedicated unauthenticated NostrClient for kind:10050 lookups against
+    // curated indexer relays. MUST NOT have a RelayAuthenticator attached —
+    // an authenticated indexer query would extract identity-key signatures
+    // and turn "indexer learns who we want to DM" into "indexer learns user
+    // U wants to DM pubkey X" (security review F-01).
+    val indexerClient =
+        remember(httpClient) {
+            NostrClient(BasicOkHttpWebSocket.Builder(httpClient::getHttpClient)).also { it.connect() }
+        }
+    DisposableEffect(indexerClient) {
+        onDispose { indexerClient.disconnect() }
+    }
+
+    // Resolver consults LocalCache first, then its own LRU, then the indexer
+    // client. Strict kind:10050 only — no NIP-65 read-marker fallback.
+    val dmInboxResolver =
+        remember(indexerClient, localCache) {
+            DmInboxRelayResolver(
+                unauthenticatedClient = indexerClient,
+                indexerRelays =
+                    DefaultDmIndexerRelays.RELAYS
+                        .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+                        .toSet(),
+                localLookup = { pubkey ->
+                    localCache.getUserIfExists(pubkey)?.dmInboxRelays()
+                },
+            )
+        }
+
     // Start 1Hz metrics snapshot for relay dashboard
     LaunchedEffect(relayManager) {
         relayManager.startMetricsSnapshot(this)
@@ -1305,6 +1339,7 @@ private fun AppInner(
                                             subscriptionsCoordinator = subscriptionsCoordinator,
                                             indexRelaysStore = indexRelaysStore,
                                             nip11Fetcher = nip11Fetcher,
+                                            dmInboxResolver = dmInboxResolver,
                                             appScope = scope,
                                             torStatus = currentTorStatus,
                                             onShowComposeDialog = onShowComposeDialog,
@@ -1430,6 +1465,7 @@ fun MainContent(
     subscriptionsCoordinator: DesktopRelaySubscriptionsCoordinator,
     indexRelaysStore: com.vitorpamplona.amethyst.commons.relays.index.PreferencesIndexRelays,
     nip11Fetcher: Nip11Fetcher,
+    dmInboxResolver: DmInboxRelayResolver,
     appScope: CoroutineScope,
     torStatus: com.vitorpamplona.amethyst.commons.tor.TorServiceStatus,
     onShowComposeDialog: () -> Unit,
@@ -1456,8 +1492,8 @@ fun MainContent(
         }
 
     val iAccount =
-        remember(account, localCache, relayManager, dmSendTracker, accountRelays) {
-            DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope, accountRelays)
+        remember(account, localCache, relayManager, dmSendTracker, accountRelays, dmInboxResolver) {
+            DesktopIAccount(account, localCache, relayManager, dmSendTracker, scope, accountRelays, dmInboxResolver)
         }
 
     // When iAccount is replaced (account switch), the previous WoTService's
