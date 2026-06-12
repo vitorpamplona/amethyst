@@ -28,8 +28,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -54,25 +56,33 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
+import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.LinkIcon
+import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
+import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
@@ -81,6 +91,7 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.SoftwareR
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.asSoftwareRelease
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -103,8 +114,7 @@ fun RenderSoftwareApplication(
     val name = remember(event) { event.name() ?: event.appId().orEmpty() }
     val summary = remember(event) { event.summary() }
     val description = remember(event) { event.content.trim() }
-    val platforms = remember(event) { event.platforms() }
-    val license = remember(event) { event.license() }
+    val images = remember(event) { event.images() }
 
     val latestVersion by produceLatestReleaseVersion(event)
 
@@ -133,6 +143,7 @@ fun RenderSoftwareApplication(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
+                AppAuthorLine(note, accountViewModel, nav)
                 summary?.takeIf { it.isNotBlank() }?.let {
                     Text(
                         text = it,
@@ -160,9 +171,9 @@ fun RenderSoftwareApplication(
             )
         }
 
-        if (platforms.isNotEmpty() || license != null) {
+        if (images.isNotEmpty()) {
             Spacer(StdVertSpacer)
-            PlatformLicenseRow(platforms = platforms, license = license)
+            ScreenshotsStrip(images, accountViewModel, imageHeight = 200.dp)
         }
     }
 
@@ -231,12 +242,24 @@ fun AppIcon(
     name: String,
     sizeDp: Int = 56,
 ) {
+    val shape = RoundedCornerShape((sizeDp / 4).dp)
     Box(
         Modifier
             .size(sizeDp.dp)
-            .clip(RoundedCornerShape((sizeDp / 4).dp))
-            .border(1.dp, MaterialTheme.colorScheme.subtleBorder, RoundedCornerShape((sizeDp / 4).dp)),
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .border(1.dp, MaterialTheme.colorScheme.subtleBorder, shape),
+        contentAlignment = Alignment.Center,
     ) {
+        // Fallback underneath the image: visible when there is no icon url,
+        // while the icon downloads, and when the download fails (AsyncImage
+        // draws nothing in those states).
+        Text(
+            text = (name.firstOrNull() ?: '?').uppercase(),
+            fontSize = (sizeDp / 2).sp,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.grayText,
+        )
         icon?.let {
             AsyncImage(
                 model = it,
@@ -245,6 +268,29 @@ fun AppIcon(
                 modifier = Modifier.size(sizeDp.dp),
             )
         }
+    }
+}
+
+/**
+ * "by <author>" line with a small clickable profile picture. Shared between
+ * the app feed card and the app detail screen header.
+ */
+@Composable
+fun AppAuthorLine(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = stringRes(R.string.nip82_by_author),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.grayText,
+        )
+        Spacer(Modifier.width(4.dp))
+        NoteAuthorPicture(note, Size20dp, accountViewModel = accountViewModel, nav = nav)
+        Spacer(Modifier.width(4.dp))
+        NoteUsernameDisplay(note, Modifier.weight(1f, fill = false), accountViewModel = accountViewModel)
     }
 }
 
@@ -284,23 +330,44 @@ fun TopicChipFlow(
 }
 
 @Composable
-fun ScreenshotsStrip(images: List<String>) {
+fun ScreenshotsStrip(
+    images: List<String>,
+    accountViewModel: AccountViewModel,
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    imageHeight: Dp = 180.dp,
+) {
     if (images.isEmpty()) return
+
+    val mediaContents =
+        remember(images) {
+            images.map { MediaUrlImage(url = it) }.toImmutableList()
+        }
+
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
-        modifier = Modifier.height(180.dp),
+        contentPadding = contentPadding,
+        modifier = Modifier.height(imageHeight),
     ) {
-        items(images) { imageUrl ->
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier =
-                    Modifier
-                        .height(180.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .border(1.dp, MaterialTheme.colorScheme.subtleBorder, RoundedCornerShape(8.dp)),
-            )
+        items(mediaContents) { content ->
+            // Fixed-height tile whose width follows the image's aspect ratio
+            // once it is known; assumes a portrait phone screenshot before the
+            // first load fills the ratio cache.
+            val ratio = MediaAspectRatioCache.get(content.url) ?: (9f / 16f)
+            Box(
+                Modifier
+                    .height(imageHeight)
+                    .aspectRatio(ratio)
+                    .clip(RoundedCornerShape(8.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.subtleBorder, RoundedCornerShape(8.dp)),
+            ) {
+                ZoomableContentView(
+                    content = content,
+                    images = mediaContents,
+                    roundedCorner = false,
+                    contentScale = ContentScale.Crop,
+                    accountViewModel = accountViewModel,
+                )
+            }
         }
     }
 }

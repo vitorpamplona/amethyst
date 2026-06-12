@@ -721,6 +721,7 @@
     <string name="nip82_section_latest_release">Latest release</string>
     <string name="nip82_section_comments">Comments</string>
     <string name="nip82_no_comments">Be the first to comment.</string>
+    <string name="nip82_by_author">by</string>
     <string name="nip82_older_releases_show">Show older releases</string>
     <string name="nip82_older_releases_hide">Hide older releases</string>
     <string name="calendars">Calendars</string>
