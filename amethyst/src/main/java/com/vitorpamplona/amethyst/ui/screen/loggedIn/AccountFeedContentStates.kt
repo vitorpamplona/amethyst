@@ -127,7 +127,7 @@ class AccountFeedContentStates(
 
     val notifications = CardFeedContentState(NotificationFeedFilter(account), scope)
     val notificationsFollowing = CardFeedContentState(NotificationFeedFilter(account, TopFilter.AllFollows), scope)
-    val notificationsEveryone = CardFeedContentState(NotificationFeedFilter(account, TopFilter.Global), scope)
+    val notificationsEveryone = CardFeedContentState(NotificationFeedFilter(account, TopFilter.GlobalRaw), scope)
 
     val notificationsOpenPolls = OpenPollsState(account, scope)
     val notificationSummary = NotificationSummaryState(account)

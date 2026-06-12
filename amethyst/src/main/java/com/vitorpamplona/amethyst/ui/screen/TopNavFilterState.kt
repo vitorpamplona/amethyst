@@ -82,6 +82,20 @@ class TopNavFilterState(
             name = ResourceName(R.string.follow_list_global),
         )
 
+    // Notifications-only pair: the curated mode (TopFilter.Global) is shown as
+    // "Selected" while the raw every-p-tag mode takes the "Global" label.
+    val selectedFollow =
+        FeedDefinition(
+            code = TopFilter.Global,
+            name = ResourceName(R.string.follow_list_selected),
+        )
+
+    val globalRawFollow =
+        FeedDefinition(
+            code = TopFilter.GlobalRaw,
+            name = ResourceName(R.string.follow_list_global),
+        )
+
     val aroundMe =
         FeedDefinition(
             code = TopFilter.AroundMe,
@@ -107,6 +121,8 @@ class TopNavFilterState(
         )
 
     val defaultLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, muteListFollow)
+
+    val defaultNotificationLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, selectedFollow, globalRawFollow, muteListFollow)
 
     fun mergePeopleLists(
         peopleLists: List<AddressableNote>,
@@ -294,6 +310,18 @@ class TopNavFilterState(
             )
         }
 
+    private val _notificationLists =
+        livePeopleListsFlow.transform { peopleLists ->
+            checkNotInMainThread()
+            emit(
+                listOf(
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, selectedFollow, globalRawFollow),
+                    peopleLists,
+                    listOf(muteListFollow),
+                ).flatten().toImmutableList(),
+            )
+        }
+
     val kind3GlobalPeopleRoutes =
         _kind3GlobalPeopleRoutes
             .flowOn(Dispatchers.IO)
@@ -303,6 +331,11 @@ class TopNavFilterState(
         _kind3GlobalPeople
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, defaultLists)
+
+    val notificationLists =
+        _notificationLists
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, defaultNotificationLists)
 
     val badgeRoutes =
         _badgeRoutes

@@ -96,6 +96,15 @@ sealed class TopFilter(
     @Serializable
     object Global : TopFilter(" Global ")
 
+    /**
+     * Global without curation heuristics. Used by Notifications to show every
+     * event that p-tags the user, removing only hidden/reported authors and
+     * user-curated mutes — unlike [Global], which in Notifications (shown as
+     * "Selected") also applies per-kind relevance rules.
+     */
+    @Serializable
+    object GlobalRaw : TopFilter(" Global Raw ")
+
     @Serializable
     object AllFollows : TopFilter(" All Follows ")
 
