@@ -51,6 +51,7 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
  */
 object OfferCommands {
     private const val MAX_FOLLOW_HOPS = 3
+    private const val ERR_NOT_A_NOFFER = "not a valid noffer pointer"
 
     suspend fun dispatch(
         dataDir: DataDir,
@@ -113,7 +114,7 @@ object OfferCommands {
         val args = Args(rest)
         val offer =
             ClinkPointerParser.parse(args.positional(0, "noffer").trim()) as? NOffer
-                ?: return Output.error("bad_args", "not a valid noffer pointer")
+                ?: return Output.error("bad_args", ERR_NOT_A_NOFFER)
 
         Output.emit(
             mapOf(
@@ -139,7 +140,7 @@ object OfferCommands {
 
         var offer =
             ClinkPointerParser.parse(args.positional(0, "noffer").trim()) as? NOffer
-                ?: return Output.error("bad_args", "not a valid noffer pointer")
+                ?: return Output.error("bad_args", ERR_NOT_A_NOFFER)
 
         val ctx = Context.open(dataDir)
         try {
@@ -209,7 +210,7 @@ object OfferCommands {
 
         val offer =
             ClinkPointerParser.parse(args.positional(0, "noffer").trim()) as? NOffer
-                ?: return Output.error("bad_args", "not a valid noffer pointer")
+                ?: return Output.error("bad_args", ERR_NOT_A_NOFFER)
         val withFlag =
             args.flag("with")
                 ?: return Output.error("bad_args", "offer pay needs --with <ndebit> to settle the fetched invoice")

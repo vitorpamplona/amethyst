@@ -66,6 +66,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.FeeTier
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.rateFor
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.technicalDetail
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.userMessage
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.clink.common.SatRange
 import com.vitorpamplona.quartz.experimental.clink.offers.OfferErrorCode
@@ -525,7 +527,10 @@ private fun SendPaymentLoaded(
                             successTitle,
                             stringRes(context, R.string.send_payment_onchain_txid, result.txid.shortenMiddle()),
                         )
-                    is OnchainZapSendResult.Failure -> PaymentFlowStage.Failure(result.message)
+                    is OnchainZapSendResult.Failure ->
+                        PaymentFlowStage.Failure(
+                            listOfNotNull(result.userMessage(context), result.technicalDetail()).joinToString("\n"),
+                        )
                 }
         }
     }
@@ -744,9 +749,14 @@ private fun OnchainFeeSection(
                     label = {
                         Text(
                             if (rate != null) {
-                                "${tier.label} · ${"%.1f".format(rate)} sat/vB · ${tier.etaLabel}"
+                                stringRes(
+                                    R.string.onchain_send_fee_tier_label_rate_eta,
+                                    stringRes(tier.labelRes),
+                                    "%.1f".format(rate),
+                                    stringRes(tier.etaLabelRes),
+                                )
                             } else {
-                                tier.label
+                                stringRes(tier.labelRes)
                             },
                         )
                     },
