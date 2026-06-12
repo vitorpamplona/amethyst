@@ -168,6 +168,29 @@ class NotificationFeedFilter(
                     return true
                 }
 
+                if (event is CommentEvent) {
+                    // NIP-22 comments carry their root/parent authors as tags, so a
+                    // reply to the user's reaction stays detectable even when the
+                    // reaction event is not in the local cache (the replyTo-author
+                    // check above needs it loaded).
+                    if (event.rootAuthorKeys().contains(authorHex) || event.replyAuthorKeys().contains(authorHex)) {
+                        return true
+                    }
+
+                    // Replies to the user's zaps: the receipt — and therefore the
+                    // author tags above — is signed by the recipient's lightning
+                    // provider, not the zapper. The `k` tag (or the cached parent)
+                    // proves the comment targets a zap; the reply's explicit p tag
+                    // on the user marks it as theirs.
+                    val targetsZapReceipt =
+                        event.hasScopeKind(LnZapEvent.KIND.toString()) ||
+                            note.replyTo?.any { it.event is LnZapEvent } == true
+
+                    if (targetsZapReceipt && event.isTaggedUser(authorHex)) {
+                        return true
+                    }
+                }
+
                 if ((event is TextNoteEvent || event is CommentEvent)) {
                     val community =
                         event

@@ -43,6 +43,7 @@ fun RenderReaction(
             it,
             modifier = Modifier,
             isBoostedNote = true,
+            makeItShort = true,
             unPackReply = ReplyRenderType.NONE,
             quotesLeft = quotesLeft - 1,
             parentBackgroundColor = backgroundColor,
