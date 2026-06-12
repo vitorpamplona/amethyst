@@ -82,6 +82,14 @@ class TopNavFilterState(
             name = ResourceName(R.string.follow_list_global),
         )
 
+    // Notifications-only curated mode; in Notifications, Global itself shows
+    // every event that p-tags the user.
+    val selectedFollow =
+        FeedDefinition(
+            code = TopFilter.Selected,
+            name = ResourceName(R.string.follow_list_curated),
+        )
+
     val aroundMe =
         FeedDefinition(
             code = TopFilter.AroundMe,
@@ -107,6 +115,8 @@ class TopNavFilterState(
         )
 
     val defaultLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, muteListFollow)
+
+    val defaultNotificationLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, selectedFollow, globalFollow, muteListFollow)
 
     fun mergePeopleLists(
         peopleLists: List<AddressableNote>,
@@ -294,6 +304,18 @@ class TopNavFilterState(
             )
         }
 
+    private val _notificationLists =
+        livePeopleListsFlow.transform { peopleLists ->
+            checkNotInMainThread()
+            emit(
+                listOf(
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, selectedFollow, globalFollow),
+                    peopleLists,
+                    listOf(muteListFollow),
+                ).flatten().toImmutableList(),
+            )
+        }
+
     val kind3GlobalPeopleRoutes =
         _kind3GlobalPeopleRoutes
             .flowOn(Dispatchers.IO)
@@ -303,6 +325,11 @@ class TopNavFilterState(
         _kind3GlobalPeople
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, defaultLists)
+
+    val notificationLists =
+        _notificationLists
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, defaultNotificationLists)
 
     val badgeRoutes =
         _badgeRoutes

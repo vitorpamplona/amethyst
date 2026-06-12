@@ -96,6 +96,16 @@ sealed class TopFilter(
     @Serializable
     object Global : TopFilter(" Global ")
 
+    /**
+     * Notifications-only curated mode: like [Global] it admits authors the
+     * user doesn't follow, but it also applies per-kind relevance heuristics
+     * to remove less interesting notes (reactions/reposts that don't target
+     * the user's own notes, unrelated thread replies, etc.). In Notifications,
+     * [Global] shows every event that p-tags the user instead.
+     */
+    @Serializable
+    object Selected : TopFilter(" Selected ")
+
     @Serializable
     object AllFollows : TopFilter(" All Follows ")
 
@@ -175,7 +185,7 @@ class AccountSettings(
     val hideCommunityRulesViolations: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val defaultHomeFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
     val defaultStoriesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
-    val defaultNotificationFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultNotificationFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Selected),
     val defaultDiscoveryFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultPollsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultPicturesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
