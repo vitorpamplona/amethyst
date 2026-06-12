@@ -62,12 +62,11 @@ import com.vitorpamplona.amethyst.ui.components.RobohashAsyncImage
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.ui.note.types.ByAuthorChip
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.apps.recommendations.datasource.ProfileAppRecommendationsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kindDisplayName
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import kotlinx.coroutines.Dispatchers
@@ -114,8 +113,12 @@ fun ProfileAppRecommendationsScreen(
     // The recommended set used for ORDERING only. It tracks recommendedAddresses
     // while my 31989s stream in from relays, but freezes at the first toggle so
     // rows don't jump around mid-edit. The next visit re-sorts with fresh data.
+    // Both pins start from the data already in cache (not empty) so the first
+    // frame after returning to this screen sorts the same as the last one;
+    // otherwise the restored LazyListState anchors to a key that then jumps
+    // down the list when the tiers kick in, dragging the viewport with it.
     var userHasEdited by remember { mutableStateOf(false) }
-    var pinnedRecommended by remember { mutableStateOf(setOf<Address>()) }
+    var pinnedRecommended by remember { mutableStateOf(recommendedAddresses) }
     LaunchedEffect(recommendedAddresses) {
         if (!userHasEdited) pinnedRecommended = recommendedAddresses
     }
@@ -124,7 +127,7 @@ fun ProfileAppRecommendationsScreen(
     // opens), then freezes with the first toggle like pinnedRecommended.
     val followsState by accountViewModel.account.kind3FollowList.flow
         .collectAsStateWithLifecycle()
-    var pinnedFollows by remember { mutableStateOf(setOf<HexKey>()) }
+    var pinnedFollows by remember { mutableStateOf(accountViewModel.account.kind3FollowList.flow.value.authors) }
     LaunchedEffect(followsState) {
         if (!userHasEdited) pinnedFollows = followsState.authors
     }
@@ -244,6 +247,9 @@ private fun AppRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            Row(modifier = Modifier.padding(top = 2.dp, bottom = 2.dp)) {
+                ByAuthorChip(appNote.address.pubKeyHex, accountViewModel, nav)
+            }
             metadata?.about?.takeIf { it.isNotBlank() }?.let {
                 Text(
                     text = it,

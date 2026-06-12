@@ -633,6 +633,7 @@
     <string name="app_definition_recommend">Recommend</string>
     <string name="app_definition_recommended">Recommended</string>
     <string name="app_definition_handles">Handles</string>
+    <string name="app_definition_by">by</string>
     <string name="app_definition_available_on">Available on</string>
     <string name="platform_web">Web</string>
     <string name="platform_android">Android</string>

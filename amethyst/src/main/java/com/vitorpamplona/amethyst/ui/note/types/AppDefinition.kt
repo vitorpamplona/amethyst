@@ -24,6 +24,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,6 +45,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -80,13 +82,18 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.LinkIcon
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.KindChip
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip89AppHandlers.PlatformType
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppMetadata
@@ -242,6 +249,10 @@ fun RenderAppDefinition(
                     }
                 }
 
+                Row(modifier = Modifier.padding(top = 4.dp)) {
+                    ByAuthorChip(noteEvent.pubKey, accountViewModel, nav)
+                }
+
                 val website = remember(theAppMetadata) { theAppMetadata.website }
                 if (!website.isNullOrEmpty()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -359,6 +370,54 @@ private fun PlatformChip(platform: String) {
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSecondaryContainer,
         )
+    }
+}
+
+/**
+ * "by <picture> <name>" pill identifying the pubkey that published the app
+ * definition, so users can tell an app from a friend apart from a spammer
+ * impersonating the real one. The picture carries the following-checkmark
+ * overlay for people the account follows. Tapping opens the author's profile.
+ */
+@Composable
+fun ByAuthorChip(
+    authorHex: HexKey,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    LoadUser(baseUserHex = authorHex, accountViewModel = accountViewModel) { author ->
+        if (author == null) return@LoadUser
+
+        Surface(
+            shape = RoundedCornerShape(50),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            modifier =
+                Modifier
+                    .clip(RoundedCornerShape(50))
+                    .clickable { nav.nav(routeFor(author)) },
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(start = 8.dp, end = 10.dp, top = 3.dp, bottom = 3.dp),
+            ) {
+                Text(
+                    text = stringRes(R.string.app_definition_by),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.size(5.dp))
+                BaseUserPicture(author, 18.dp, accountViewModel)
+                Spacer(modifier = Modifier.size(5.dp))
+                ProvideTextStyle(MaterialTheme.typography.labelMedium) {
+                    UsernameDisplay(
+                        baseUser = author,
+                        fontWeight = FontWeight.SemiBold,
+                        textColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        accountViewModel = accountViewModel,
+                    )
+                }
+            }
+        }
     }
 }
 
