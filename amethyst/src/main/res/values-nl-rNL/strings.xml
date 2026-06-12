@@ -1606,6 +1606,7 @@
     <string name="wallet_invalid_uri">Ongeldige NWC-verbinding-URI</string>
     <string name="wallet_move_up">Omhoog verplaatsen</string>
     <string name="wallet_move_down">Omlaag verplaatsen</string>
+    <!-- Onchain zap send dialog -->
     <string name="route_security_filters">Beveiligingsfilters</string>
     <string name="route_import_follows">Volgers importeren</string>
     <string name="new_post">Nieuw bericht</string>

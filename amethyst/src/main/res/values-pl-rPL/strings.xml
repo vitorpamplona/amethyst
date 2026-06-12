@@ -1929,6 +1929,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="wallet_onchain_public_dialog_body">Twój adres Taproot jest generowany na podstawie Twojego klucza publicznego Nostr, więc każdy, kto zna Twój klucz npub, może sprawdzić saldo tego portfela oraz historię transakcji w łańcuchu bloków.\n\nAby zachować prywatność, zasilaj ten portfel i wypłacaj z niego środki wyłącznie z kont publicznych, takich jak giełdy. Nigdy nie mieszaj tych środków ze środkami z portfeli offline i traktuj je jako pieniądze, które możesz stracić, ponieważ każdy, kto ma dostęp do Twojego klucza nsec, może je wydać.</string>
     <string name="wallet_onchain_public_dialog_confirm">Rozumiem</string>
     <string name="wallet_onchain_copy_dialog_confirm">Skopiuj adres</string>
+    <!-- Onchain zap send dialog -->
     <string name="route_security_filters">Filtry bezpieczeństwa</string>
     <string name="route_import_follows">Import Obserwowanych</string>
     <string name="new_post">Nowy post</string>

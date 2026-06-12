@@ -1076,6 +1076,7 @@
     <string name="wallet_filter_all">Tout</string>
     <string name="wallet_filter_zaps">Zaps</string>
     <string name="wallet_filter_non_zaps">Non Zaps</string>
+    <!-- Onchain zap send dialog -->
     <string name="route_security_filters">Filtres de Sécurité</string>
     <string name="new_post">Nouveau Message</string>
     <string name="new_short">Nouveaux Shorts : images ou vidéos</string>
