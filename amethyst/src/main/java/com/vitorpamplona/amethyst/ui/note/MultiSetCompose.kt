@@ -81,10 +81,10 @@ import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.authorRouteFor
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeReplyTo
-import com.vitorpamplona.amethyst.ui.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
@@ -106,7 +106,6 @@ import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.ui.theme.overPictureBackground
 import com.vitorpamplona.amethyst.ui.theme.profile35dpModifier
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
-import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.claimedSatsTotal
 import kotlinx.collections.immutable.ImmutableList
@@ -259,7 +258,9 @@ fun RenderLikeGallery(
                 }
             }
 
-            AuthorGallery(likeEvents, nav, accountViewModel)
+            // Opens the reaction's own thread (where it can be replied to,
+            // boosted, or zapped) instead of the reactor's profile.
+            AuthorGallery(likeEvents, nav, accountViewModel) { Route.Note(it.idHex) }
         }
     }
 }
@@ -512,7 +513,14 @@ fun click(
     content: ZapAmountCommentNotification,
     nav: INav,
 ) {
-    content.user?.let { nav.nav(routeFor(it)) }
+    val zapNote = content.zapNote
+    if (zapNote != null) {
+        // Opens the zap's own thread, where anyone can reply, boost,
+        // zap, or share it. The sender's profile is one tap away there.
+        nav.nav(Route.Note(zapNote.idHex))
+    } else {
+        content.user?.let { nav.nav(routeFor(it)) }
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -529,18 +537,7 @@ private fun RenderState(
                 onClick = { click(content, nav) },
                 onLongClick = {
                     content.zapNote?.let { zap ->
-                        nav.nav {
-                            val request = (zap.event as? LnZapEvent)?.zapRequest
-                            val sender = content.user
-                            if (request?.isPrivateZap() == true && sender != null && sender.pubkeyHex != request.pubKey) {
-                                // A public reply can't tag a private zapper without exposing
-                                // them. We hold the decrypted sender (we are the recipient),
-                                // so reply privately in their DM room instead.
-                                routeToMessage(sender, null, accountViewModel = accountViewModel)
-                            } else {
-                                routeReplyTo(zap, accountViewModel.account)
-                            }
-                        }
+                        nav.nav { routeReplyTo(zap, accountViewModel.account) }
                     }
                 },
             ),
@@ -642,9 +639,10 @@ fun AuthorGallery(
     authorNotes: ImmutableList<Note>,
     nav: INav,
     accountViewModel: AccountViewModel,
+    clickRoute: (Note) -> Route? = ::authorRouteFor,
 ) {
     Column(modifier = StdStartPadding) {
-        FlowRow { authorNotes.forEach { note -> BoxedAuthor(note, nav, accountViewModel) } }
+        FlowRow { authorNotes.forEach { note -> BoxedAuthor(note, nav, accountViewModel, clickRoute) } }
     }
 }
 
@@ -667,8 +665,9 @@ private fun BoxedAuthor(
     note: Note,
     nav: INav,
     accountViewModel: AccountViewModel,
+    clickRoute: (Note) -> Route? = ::authorRouteFor,
 ) {
-    Box(modifier = Size35Modifier.clickable(onClick = { authorRouteFor(note)?.let { nav.nav(it) } })) {
+    Box(modifier = Size35Modifier.clickable(onClick = { clickRoute(note)?.let { nav.nav(it) } })) {
         WatchAuthorWithBlank(note, Size35Modifier, accountViewModel) { author ->
             WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
                 author,

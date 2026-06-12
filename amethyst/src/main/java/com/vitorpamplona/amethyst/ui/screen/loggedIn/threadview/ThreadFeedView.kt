@@ -106,6 +106,8 @@ import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.RenderApproveButton
 import com.vitorpamplona.amethyst.ui.note.RenderDraft
 import com.vitorpamplona.amethyst.ui.note.RenderRepost
+import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.ui.note.calculateBackgroundColor
 import com.vitorpamplona.amethyst.ui.note.creators.zapsplits.DisplayZapSplits
@@ -173,6 +175,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderMintRecommendation
 import com.vitorpamplona.amethyst.ui.note.types.RenderMusicPlaylist
 import com.vitorpamplona.amethyst.ui.note.types.RenderMusicTrack
 import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent
+import com.vitorpamplona.amethyst.ui.note.types.RenderNutzap
 import com.vitorpamplona.amethyst.ui.note.types.RenderOnchainZap
 import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPodcastEpisode
@@ -181,6 +184,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderPoll
 import com.vitorpamplona.amethyst.ui.note.types.RenderPostApproval
 import com.vitorpamplona.amethyst.ui.note.types.RenderPrivateMessage
 import com.vitorpamplona.amethyst.ui.note.types.RenderPublicMessage
+import com.vitorpamplona.amethyst.ui.note.types.RenderReaction
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayAddMember
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayDiscovery
 import com.vitorpamplona.amethyst.ui.note.types.RenderRelayJoinRequest
@@ -199,6 +203,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderZapPoll
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.ui.note.types.VoiceHeader
+import com.vitorpamplona.amethyst.ui.note.types.observeZapSender
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -255,6 +260,7 @@ import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
@@ -293,6 +299,7 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
@@ -511,22 +518,44 @@ private fun FullBleedNoteCompose(
     ) {
         val editState = observeEdits(baseNote = baseNote, accountViewModel = accountViewModel)
 
+        // Zap receipts are signed by the recipient's lightning provider; show the
+        // sender from the embedded zap request instead of the service key.
+        val zapSender =
+            if (noteEvent is LnZapEvent) {
+                observeZapSender(baseNote, accountViewModel).value
+            } else {
+                null
+            }
+
         Row(
             modifier =
                 Modifier
                     .padding(start = 12.dp, end = 12.dp)
-                    .clickable(onClick = { baseNote.author?.let { nav.nav(routeFor(it)) } }),
+                    .clickable(onClick = { (zapSender ?: baseNote.author)?.let { nav.nav(routeFor(it)) } }),
         ) {
-            NoteAuthorPicture(
-                baseNote = baseNote,
-                size = Size55dp,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
+            if (zapSender != null) {
+                UserPicture(
+                    user = zapSender,
+                    size = Size55dp,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            } else {
+                NoteAuthorPicture(
+                    baseNote = baseNote,
+                    size = Size55dp,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
 
             Column(modifier = Modifier.padding(start = 10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    NoteUsernameDisplay(baseNote, Modifier.weight(1f), accountViewModel = accountViewModel)
+                    if (zapSender != null) {
+                        UsernameDisplay(zapSender, Modifier.weight(1f), accountViewModel = accountViewModel)
+                    } else {
+                        NoteUsernameDisplay(baseNote, Modifier.weight(1f), accountViewModel = accountViewModel)
+                    }
 
                     if (isDraft) {
                         ObserveDraftEvent(baseNote, accountViewModel) { draftNote ->
@@ -715,8 +744,12 @@ private fun FullBleedNoteCompose(
                     DisplayNIP65RelayList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is LnZapEvent) {
                     RenderLnZap(baseNote, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is NutzapEvent) {
+                    RenderNutzap(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is OnchainZapEvent) {
                     RenderOnchainZap(baseNote, backgroundColor, accountViewModel, nav)
+                } else if (noteEvent is ReactionEvent) {
+                    RenderReaction(baseNote, quotesLeft = 3, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is SearchRelayListEvent) {
                     DisplaySearchRelayList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is BlockedRelayListEvent) {

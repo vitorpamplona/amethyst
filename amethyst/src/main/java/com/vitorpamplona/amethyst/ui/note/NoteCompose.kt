@@ -156,6 +156,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90ContentDiscoveryRespo
 import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90Status
 import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderNipContent
+import com.vitorpamplona.amethyst.ui.note.types.RenderNutzap
 import com.vitorpamplona.amethyst.ui.note.types.RenderOnchainZap
 import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPodcastEpisode
@@ -292,6 +293,7 @@ import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
@@ -1008,6 +1010,10 @@ private fun RenderNoteRow(
 
         is LnZapEvent -> {
             RenderLnZap(baseNote, backgroundColor, accountViewModel, nav)
+        }
+
+        is NutzapEvent -> {
+            RenderNutzap(baseNote, backgroundColor, accountViewModel, nav)
         }
 
         is OnchainZapEvent -> {

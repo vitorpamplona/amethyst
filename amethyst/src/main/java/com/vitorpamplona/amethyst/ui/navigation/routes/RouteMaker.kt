@@ -49,6 +49,7 @@ import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.FollowListEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.HasInnerEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
@@ -321,6 +322,25 @@ fun routeReplyTo(
                 Route.GeoPost(replyTo = note.idHex)
             } else if (noteEvent.isHashtagScoped()) {
                 Route.HashtagPost(replyTo = note.idHex)
+            } else {
+                Route.GenericCommentPost(replyTo = note.idHex)
+            }
+        }
+
+        is LnZapEvent -> {
+            // A public reply can't tag a private zapper without exposing them.
+            // When we hold the decrypted sender (we are the zap recipient), reply
+            // in their DM room instead of the public comment composer.
+            val request = noteEvent.zapRequest
+            val privateSender =
+                if (request?.isPrivateZap() == true) {
+                    account.privateZapsDecryptionCache.cachedPrivateZap(request)?.pubKey
+                } else {
+                    null
+                }
+
+            if (privateSender != null) {
+                routeToMessage(ChatroomKey(setOf(privateSender)), null, account = account)
             } else {
                 Route.GenericCommentPost(replyTo = note.idHex)
             }
