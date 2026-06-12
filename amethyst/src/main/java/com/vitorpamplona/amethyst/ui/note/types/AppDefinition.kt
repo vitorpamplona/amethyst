@@ -52,7 +52,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -69,12 +68,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
-import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.ui.components.CreateTextWithEmoji
@@ -97,7 +96,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip89AppHandlers.PlatformType
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppMetadata
-import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -431,16 +429,13 @@ private fun RecommendAppButton(
     note: Note,
     accountViewModel: AccountViewModel,
 ) {
-    val myPubkey = accountViewModel.userProfile().pubkeyHex
+    val myRecommendations by accountViewModel.account.myAppRecommendations.collectAsStateWithLifecycle()
 
-    val isRecommended by
-        produceState(initialValue = false, key1 = noteEvent) {
-            value = withContext(Dispatchers.IO) { accountViewModel.account.isAppRecommended(noteEvent) }
-            LocalCache.live.newEventBundles.collect { bundle ->
-                val touchesMine = bundle.any { (it.event as? AppRecommendationEvent)?.pubKey == myPubkey }
-                if (touchesMine) {
-                    value = withContext(Dispatchers.IO) { accountViewModel.account.isAppRecommended(noteEvent) }
-                }
+    val isRecommended =
+        remember(myRecommendations, noteEvent) {
+            val address = noteEvent.addressTag()
+            myRecommendations.any { event ->
+                event.recommendationAddresses().any { it == address }
             }
         }
 

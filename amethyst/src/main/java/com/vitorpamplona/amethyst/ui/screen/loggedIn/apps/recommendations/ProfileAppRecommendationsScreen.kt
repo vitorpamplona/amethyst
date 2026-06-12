@@ -68,7 +68,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.apps.recommendations.dataso
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kindDisplayName
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
-import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -83,31 +82,22 @@ fun ProfileAppRecommendationsScreen(
     // relays so the list below has candidates while this screen is open.
     ProfileAppRecommendationsFilterAssemblerSubscription(accountViewModel)
 
-    // Ticks whenever LocalCache emits a bundle that touches my recommendations
-    // or any app definition, so the snapshots below recompute.
-    var recommendationsTick by remember { mutableIntStateOf(0) }
+    // Ticks whenever LocalCache emits a bundle with a new app definition, so
+    // the candidate snapshot below recomputes.
     var appDefinitionsTick by remember { mutableIntStateOf(0) }
     LaunchedEffect(myPubkey) {
         launch(Dispatchers.IO) {
             LocalCache.live.newEventBundles.collect { bundle ->
-                var newRecommendations = false
-                var newDefinitions = false
-                bundle.forEach { note ->
-                    val event = note.event
-                    if (event is AppRecommendationEvent && event.pubKey == myPubkey) newRecommendations = true
-                    if (event is AppDefinitionEvent) newDefinitions = true
-                }
-                if (newRecommendations) recommendationsTick++
-                if (newDefinitions) appDefinitionsTick++
+                if (bundle.any { it.event is AppDefinitionEvent }) appDefinitionsTick++
             }
         }
     }
 
+    val myRecommendationEvents by accountViewModel.account.myAppRecommendations.collectAsStateWithLifecycle()
+
     val recommendedAddresses =
-        remember(recommendationsTick) {
-            accountViewModel.account
-                .myAppRecommendationEvents()
-                .flatMapTo(mutableSetOf()) { event -> event.recommendations().map { it.address } }
+        remember(myRecommendationEvents) {
+            myRecommendationEvents.flatMapTo(mutableSetOf()) { event -> event.recommendations().map { it.address } }
         }
 
     // The recommended set used for ORDERING only. It tracks recommendedAddresses

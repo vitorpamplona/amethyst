@@ -1620,17 +1620,27 @@ class Account(
      */
     private val appRecommendationsMutex = Mutex()
 
+    /**
+     * Synchronous cache scan, used to seed [myAppRecommendations] and by the
+     * read-modify-write publishers below, which must read current truth from
+     * the cache while holding [appRecommendationsMutex].
+     */
     fun myAppRecommendationEvents(): List<AppRecommendationEvent> =
         cache.addressables
             .filterIntoSet(AppRecommendationEvent.KIND, signer.pubKey)
             .mapNotNull { it.event as? AppRecommendationEvent }
 
-    fun isAppRecommended(app: AppDefinitionEvent): Boolean {
-        val address = app.addressTag()
-        return myAppRecommendationEvents().any { event ->
-            event.recommendationAddresses().any { it == address }
-        }
-    }
+    /**
+     * My kind 31989 recommendation events (one per handled kind), kept in
+     * sync as the cache consumes new versions. UI should collect this
+     * instead of rescanning the cache on every event bundle.
+     */
+    val myAppRecommendations: StateFlow<List<AppRecommendationEvent>> =
+        cache
+            .observeEvents<AppRecommendationEvent>(
+                Filter(kinds = listOf(AppRecommendationEvent.KIND), authors = listOf(signer.pubKey)),
+            ).flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.WhileSubscribed(30000), myAppRecommendationEvents())
 
     /**
      * Returns a createdAt strictly greater than whatever AppRecommendationEvent
