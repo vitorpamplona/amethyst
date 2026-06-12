@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleList
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.ReportAction
 import com.vitorpamplona.amethyst.commons.model.nip72Communities.CommunityListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.TrustProviderListDecryptionCache
+import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendError
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSender
@@ -908,6 +909,7 @@ class Account(
             cache.onchainBackend
                 ?: return OnchainZapSendResult.Failure(
                     OnchainZapSendStage.LOADING_UTXOS,
+                    OnchainZapSendError.BACKEND_NOT_CONFIGURED,
                     ONCHAIN_BACKEND_NOT_CONFIGURED,
                 )
         return OnchainZapSender.send(
@@ -936,6 +938,7 @@ class Account(
             cache.onchainBackend
                 ?: return OnchainZapSendResult.Failure(
                     OnchainZapSendStage.LOADING_UTXOS,
+                    OnchainZapSendError.BACKEND_NOT_CONFIGURED,
                     ONCHAIN_BACKEND_NOT_CONFIGURED,
                 )
         return OnchainZapSender.sendToAddress(
@@ -963,6 +966,7 @@ class Account(
             cache.onchainBackend
                 ?: return OnchainZapSendResult.Failure(
                     OnchainZapSendStage.LOADING_UTXOS,
+                    OnchainZapSendError.BACKEND_NOT_CONFIGURED,
                     ONCHAIN_BACKEND_NOT_CONFIGURED,
                 )
         return OnchainZapSender.sendSplit(

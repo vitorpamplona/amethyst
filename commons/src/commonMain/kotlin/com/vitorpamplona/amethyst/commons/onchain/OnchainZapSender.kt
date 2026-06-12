@@ -55,6 +55,35 @@ enum class OnchainZapSendStage {
     PUBLISHING,
 }
 
+/**
+ * Machine-readable reason for an [OnchainZapSendResult.Failure], so front ends
+ * can map the failure to a localized message. The English
+ * [OnchainZapSendResult.Failure.message] stays available for logs, tests, and
+ * the CLI.
+ */
+enum class OnchainZapSendError {
+    /** No [OnchainBackend] is configured for the account. */
+    BACKEND_NOT_CONFIGURED,
+
+    /** The chain backend could not return the sender's UTXOs. */
+    LOAD_UTXOS_FAILED,
+
+    /** Coin selection / PSBT assembly failed (e.g. insufficient funds). */
+    BUILD_FAILED,
+
+    /** A recipient's split share is below the dust threshold. */
+    RECIPIENT_BELOW_DUST,
+
+    /** Signing, signature verification, or finalization failed. */
+    SIGN_FAILED,
+
+    /** The signed transaction could not be broadcast. */
+    BROADCAST_FAILED,
+
+    /** The payment broadcast, but a kind:8333 receipt could not be published. */
+    RECEIPT_PUBLISH_FAILED,
+}
+
 /** Outcome of an [OnchainZapSender.send] attempt. */
 sealed interface OnchainZapSendResult {
     /**
@@ -85,6 +114,9 @@ sealed interface OnchainZapSendResult {
      */
     data class Failure(
         val stage: OnchainZapSendStage,
+        /** Machine-readable reason — map this to a localized message in UIs. */
+        val error: OnchainZapSendError,
+        /** English description for logs, tests, and the CLI. */
         val message: String,
         val cause: Throwable? = null,
         /** Non-null when the payment was broadcast but a later stage failed. */
@@ -95,6 +127,11 @@ sealed interface OnchainZapSendResult {
          * publishes that fail on the first receipt.
          */
         val publishedReceiptEventIds: List<HexKey> = emptyList(),
+        /**
+         * How many receipts a split zap intended to publish. Null when the
+         * failure did not happen while publishing split receipts.
+         */
+        val totalReceipts: Int? = null,
     ) : OnchainZapSendResult
 }
 
@@ -139,7 +176,7 @@ object OnchainZapSender {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
-                return fail(OnchainZapSendStage.LOADING_UTXOS, "Could not load your Bitcoin balance", e)
+                return fail(OnchainZapSendStage.LOADING_UTXOS, OnchainZapSendError.LOAD_UTXOS_FAILED, "Could not load your Bitcoin balance", e)
             }
 
         // 2. Coin-select and assemble the unsigned PSBT.
@@ -155,7 +192,7 @@ object OnchainZapSender {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
-                return fail(OnchainZapSendStage.BUILDING, e.message ?: "Could not build the transaction", e)
+                return fail(OnchainZapSendStage.BUILDING, OnchainZapSendError.BUILD_FAILED, e.message ?: "Could not build the transaction", e)
             }
 
         // 3. Sign, verify the signer didn't tamper, and finalize.
@@ -165,7 +202,7 @@ object OnchainZapSender {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
-                return fail(OnchainZapSendStage.SIGNING, e.message ?: "Could not sign the transaction", e)
+                return fail(OnchainZapSendStage.SIGNING, OnchainZapSendError.SIGN_FAILED, e.message ?: "Could not sign the transaction", e)
             }
 
         // 4. Broadcast.
@@ -175,7 +212,7 @@ object OnchainZapSender {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
-                return fail(OnchainZapSendStage.BROADCASTING, "Could not broadcast the transaction", e)
+                return fail(OnchainZapSendStage.BROADCASTING, OnchainZapSendError.BROADCAST_FAILED, "Could not broadcast the transaction", e)
             }
 
         // 5. Publish the kind:8333 receipt. The payment is already on-chain at
@@ -194,6 +231,7 @@ object OnchainZapSender {
             } catch (e: Throwable) {
                 return OnchainZapSendResult.Failure(
                     stage = OnchainZapSendStage.PUBLISHING,
+                    error = OnchainZapSendError.RECEIPT_PUBLISH_FAILED,
                     message = "Payment sent, but the zap receipt could not be published",
                     cause = e,
                     broadcastTxid = txid,
@@ -241,7 +279,7 @@ object OnchainZapSender {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
-                return fail(OnchainZapSendStage.LOADING_UTXOS, "Could not load your Bitcoin balance", e)
+                return fail(OnchainZapSendStage.LOADING_UTXOS, OnchainZapSendError.LOAD_UTXOS_FAILED, "Could not load your Bitcoin balance", e)
             }
 
         // 2. Coin-select and assemble the multi-output PSBT.
@@ -256,7 +294,7 @@ object OnchainZapSender {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
-                return fail(OnchainZapSendStage.BUILDING, e.message ?: "Could not build the transaction", e)
+                return fail(OnchainZapSendStage.BUILDING, OnchainZapSendError.BUILD_FAILED, e.message ?: "Could not build the transaction", e)
             }
 
         // 3. Sign, verify, and finalize. Same fund-safety contract as [send].
@@ -266,7 +304,7 @@ object OnchainZapSender {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
-                return fail(OnchainZapSendStage.SIGNING, e.message ?: "Could not sign the transaction", e)
+                return fail(OnchainZapSendStage.SIGNING, OnchainZapSendError.SIGN_FAILED, e.message ?: "Could not sign the transaction", e)
             }
 
         // 4. Broadcast.
@@ -276,7 +314,7 @@ object OnchainZapSender {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
-                return fail(OnchainZapSendStage.BROADCASTING, "Could not broadcast the transaction", e)
+                return fail(OnchainZapSendStage.BROADCASTING, OnchainZapSendError.BROADCAST_FAILED, "Could not broadcast the transaction", e)
             }
 
         // 5. Publish one receipt per recipient. If any one fails, surface the
@@ -297,12 +335,14 @@ object OnchainZapSender {
             } catch (e: Throwable) {
                 return OnchainZapSendResult.Failure(
                     stage = OnchainZapSendStage.PUBLISHING,
+                    error = OnchainZapSendError.RECEIPT_PUBLISH_FAILED,
                     message =
                         "Payment sent (${publishedIds.size} of ${recipients.size} receipts published), " +
                             "but the next receipt could not be published",
                     cause = e,
                     broadcastTxid = txid,
                     publishedReceiptEventIds = publishedIds.toList(),
+                    totalReceipts = recipients.size,
                 )
             }
         }
@@ -341,7 +381,7 @@ object OnchainZapSender {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
-                return fail(OnchainZapSendStage.LOADING_UTXOS, "Could not load your Bitcoin balance", e)
+                return fail(OnchainZapSendStage.LOADING_UTXOS, OnchainZapSendError.LOAD_UTXOS_FAILED, "Could not load your Bitcoin balance", e)
             }
 
         // 2. Decode the destination address and assemble the unsigned PSBT.
@@ -356,7 +396,7 @@ object OnchainZapSender {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
-                return fail(OnchainZapSendStage.BUILDING, e.message ?: "Could not build the transaction", e)
+                return fail(OnchainZapSendStage.BUILDING, OnchainZapSendError.BUILD_FAILED, e.message ?: "Could not build the transaction", e)
             }
 
         // 3. Sign, verify, and finalize. Same fund-safety contract as [send].
@@ -366,7 +406,7 @@ object OnchainZapSender {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
-                return fail(OnchainZapSendStage.SIGNING, e.message ?: "Could not sign the transaction", e)
+                return fail(OnchainZapSendStage.SIGNING, OnchainZapSendError.SIGN_FAILED, e.message ?: "Could not sign the transaction", e)
             }
 
         // 4. Broadcast. No receipt stage: an address send has nothing to publish.
@@ -376,7 +416,7 @@ object OnchainZapSender {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
-                return fail(OnchainZapSendStage.BROADCASTING, "Could not broadcast the transaction", e)
+                return fail(OnchainZapSendStage.BROADCASTING, OnchainZapSendError.BROADCAST_FAILED, "Could not broadcast the transaction", e)
             }
 
         return OnchainZapSendResult.Success(
@@ -426,7 +466,8 @@ object OnchainZapSender {
 
     private fun fail(
         stage: OnchainZapSendStage,
+        error: OnchainZapSendError,
         message: String,
         cause: Throwable? = null,
-    ) = OnchainZapSendResult.Failure(stage, message, cause)
+    ) = OnchainZapSendResult.Failure(stage, error, message, cause)
 }

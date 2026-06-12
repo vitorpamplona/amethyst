@@ -2219,6 +2219,72 @@
     <string name="wallet_onchain_public_dialog_body">Your Taproot address is derived from your Nostr public key, so anyone who knows your npub can see this wallet\'s balance and transaction history on the blockchain.\n\nTo preserve your privacy, fund and drain this wallet from and to non-private accounts, like exchanges. Never mix these funds with your cold wallets, and treat them as money you can lose, since anyone in control of your nsec can spend it.</string>
     <string name="wallet_onchain_public_dialog_confirm">Got it</string>
     <string name="wallet_onchain_copy_dialog_confirm">Copy address</string>
+
+    <!-- Onchain zap send dialog -->
+    <string name="onchain_send_title">Send onchain zap</string>
+    <string name="onchain_send_close">Close</string>
+    <string name="onchain_send_to">To</string>
+    <string name="onchain_send_post_author">Post author</string>
+    <string name="onchain_send_recipient">Recipient</string>
+    <string name="onchain_send_recipient_placeholder">name, NIP-05 or npub</string>
+    <string name="onchain_send_change_recipient">Change recipient</string>
+    <string name="onchain_send_amount">Amount</string>
+    <string name="onchain_send_sats_suffix">sats</string>
+    <string name="onchain_send_min_warning">Minimum on-chain zap is %1$s sats — smaller amounts are eaten by miner fees. Use a Lightning zap instead.</string>
+    <string name="onchain_send_comment_label">Comment (optional)</string>
+    <string name="onchain_send_priority">Priority</string>
+    <string name="onchain_send_fee_slow">Slow</string>
+    <string name="onchain_send_fee_normal">Normal</string>
+    <string name="onchain_send_fee_fast">Fast</string>
+    <string name="onchain_send_fee_eta_slow">~1 hr</string>
+    <string name="onchain_send_fee_eta_normal">~30 min</string>
+    <string name="onchain_send_fee_eta_fast">~10 min</string>
+    <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
+    <string name="onchain_send_loading_fees">Loading fee estimates…</string>
+    <string name="onchain_send_button_amount">Send %1$s sats</string>
+    <plurals name="onchain_send_button_amount_split">
+        <item quantity="one">Send %1$s sats, %2$d way</item>
+        <item quantity="other">Send %1$s sats, %2$d ways</item>
+    </plurals>
+    <plurals name="onchain_send_use_note_split">
+        <item quantity="one">Use this note\'s %1$d-way zap split</item>
+        <item quantity="other">Use this note\'s %1$d-way zap split</item>
+    </plurals>
+    <plurals name="onchain_send_splits_label">
+        <item quantity="one">Splits among %1$d recipient</item>
+        <item quantity="other">Splits among %1$d recipients</item>
+    </plurals>
+    <plurals name="onchain_send_splits_skipped">
+        <item quantity="one">Skipping %1$d Lightning-address-only recipient — on-chain needs a Nostr pubkey to derive the address.</item>
+        <item quantity="other">Skipping %1$d Lightning-address-only recipients — on-chain needs a Nostr pubkey to derive the address.</item>
+    </plurals>
+    <string name="onchain_send_dont_split">Don\'t split — pay one recipient instead</string>
+    <string name="onchain_send_sending">Building, signing and broadcasting…</string>
+    <string name="onchain_send_success">Onchain zap sent</string>
+    <string name="onchain_send_result_transaction">Transaction</string>
+    <string name="onchain_send_result_fee">Fee</string>
+    <string name="onchain_send_result_change">Change</string>
+    <string name="onchain_send_sats_amount">%1$s sats</string>
+    <string name="onchain_send_done">Done</string>
+    <string name="onchain_send_failed_at">Failed at: %1$s</string>
+    <string name="onchain_send_broadcast_no_receipt">Payment was broadcast (tx %1$s) but the receipt was not published.</string>
+    <string name="onchain_stage_loading_utxos">loading balance</string>
+    <string name="onchain_stage_building">building the transaction</string>
+    <string name="onchain_stage_signing">signing</string>
+    <string name="onchain_stage_broadcasting">broadcasting</string>
+    <string name="onchain_stage_publishing">publishing the receipt</string>
+    <string name="onchain_send_error_backend_not_configured">Bitcoin chain backend is not configured</string>
+    <string name="onchain_send_error_load_utxos">Could not load your Bitcoin balance</string>
+    <string name="onchain_send_error_build">Could not build the transaction</string>
+    <string name="onchain_send_error_recipient_dust">A recipient share is below dust</string>
+    <string name="onchain_send_error_sign">Could not sign the transaction</string>
+    <string name="onchain_send_error_broadcast">Could not broadcast the transaction</string>
+    <string name="onchain_send_error_publish_receipt">Payment sent, but the zap receipt could not be published</string>
+    <plurals name="onchain_send_error_publish_receipt_partial">
+        <item quantity="one">Payment sent (%1$d of %2$d receipt published), but the next receipt could not be published</item>
+        <item quantity="other">Payment sent (%1$d of %2$d receipts published), but the next receipt could not be published</item>
+    </plurals>
+
     <string name="route_security_filters">Security Filters</string>
     <string name="route_import_follows">Import Follows</string>
 
