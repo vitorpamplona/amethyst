@@ -43,7 +43,7 @@ fun SigningAwareButton(
     tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
 ) {
     when (signingState.state) {
-        is SigningOpState.Pending -> {
+        is SigningOpState.Pending, is SigningOpState.Progress -> {
             Box(modifier = modifier.size(32.dp), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(16.dp),
