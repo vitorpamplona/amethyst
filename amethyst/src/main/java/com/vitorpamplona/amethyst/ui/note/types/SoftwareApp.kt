@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -284,10 +285,14 @@ fun TopicChipFlow(
 }
 
 @Composable
-fun ScreenshotsStrip(images: List<String>) {
+fun ScreenshotsStrip(
+    images: List<String>,
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+) {
     if (images.isEmpty()) return
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
+        contentPadding = contentPadding,
         modifier = Modifier.height(180.dp),
     ) {
         items(images) { imageUrl ->
