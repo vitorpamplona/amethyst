@@ -252,6 +252,7 @@ import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.ClientTag
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
@@ -2380,6 +2381,13 @@ object LocalCache : ILocalCache, ICacheProvider {
                 note.event is AppSpecificDataEvent
         )
 
+    /**
+     * Tag names whose values should not match text searches. The `client` tag
+     * names the app that published the event, so searching for "Amethyst"
+     * would otherwise return every event posted through Amethyst.
+     */
+    private val excludedTagNamesFromSearch = setOf(ClientTag.TAG_NAME)
+
     fun findNotesStartingWith(
         text: String,
         hiddenUsers: HiddenUsersState,
@@ -2419,7 +2427,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 return@filter false
             }
 
-            if (note.event?.tags?.tagValueContains(text, true) == true ||
+            if (note.event?.tags?.tagValueContains(text, true, excludedTagNamesFromSearch) == true ||
                 note.idHex.startsWith(text, true)
             ) {
                 return@filter !note.isHiddenFor(hiddenUsers.flow.value)
@@ -2440,7 +2448,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                     return@filter false
                 }
 
-                if (addressable.event?.tags?.tagValueContains(text, true) == true ||
+                if (addressable.event?.tags?.tagValueContains(text, true, excludedTagNamesFromSearch) == true ||
                     addressable.idHex.startsWith(text, true)
                 ) {
                     return@filter !addressable.isHiddenFor(hiddenUsers.flow.value)
