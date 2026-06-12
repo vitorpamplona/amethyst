@@ -99,7 +99,7 @@ fun RenderOnchainZap(
     val sender = note.author?.pubkeyHex ?: event.pubKey
     val recipient = event.recipient() ?: return
 
-    RenderZappedPost(note, quotesLeft, backgroundColor, accountViewModel, nav)
+    RenderActionTarget(note, quotesLeft, backgroundColor, accountViewModel, nav)
     val sats = event.claimedAmountInSats() ?: 0L
     val txid = event.txid()
     val message = event.content.takeIf { it.isNotBlank() }

@@ -55,30 +55,32 @@ import com.vitorpamplona.amethyst.ui.theme.Size24Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
+import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
+import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
 /**
- * Shows the post a zap targets above the transfer card, mirroring how
- * reactions and reposts embed their target.
+ * Shows the post a reaction or zap targets, framed as a quote so it reads as
+ * subordinate to the activity card around it.
  */
 @Composable
-fun RenderZappedPost(
-    zapNote: Note,
+fun RenderActionTarget(
+    actionNote: Note,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    zapNote.replyTo?.lastOrNull()?.let {
+    actionNote.replyTo?.lastOrNull()?.let {
         NoteCompose(
             it,
-            modifier = Modifier,
-            isBoostedNote = true,
+            modifier = MaterialTheme.colorScheme.replyModifier,
+            isQuotedNote = true,
             makeItShort = true,
             unPackReply = ReplyRenderType.NONE,
             quotesLeft = quotesLeft - 1,
@@ -97,22 +99,19 @@ fun RenderLnZap(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val zapEvent = note.event as? LnZapEvent ?: return
+    if (note.event !is LnZapEvent) return
 
-    RenderZappedPost(note, quotesLeft, backgroundColor, accountViewModel, nav)
-
+    // The amount and sender render in the card header (ActivityActionChip plus
+    // the zap-sender attribution); the body is the zap comment, when present,
+    // over the quoted target post.
     val card by parseAuthorCommentAndAmount(note, accountViewModel)
 
-    val destinationKey = zapEvent.zappedAuthor().firstOrNull() ?: return
+    card.comment?.let {
+        CrossfadeToDisplayComment(it, backgroundColor, nav, accountViewModel)
+        Spacer(StdVertSpacer)
+    }
 
-    TransferCard(
-        card,
-        destinationKey,
-        backgroundColor,
-        Modifier,
-        accountViewModel,
-        nav,
-    )
+    RenderActionTarget(note, quotesLeft, backgroundColor, accountViewModel, nav)
 }
 
 /**
