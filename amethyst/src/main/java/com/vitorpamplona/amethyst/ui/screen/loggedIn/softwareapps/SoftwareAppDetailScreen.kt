@@ -66,7 +66,9 @@ import com.vitorpamplona.amethyst.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.note.types.AppIcon
 import com.vitorpamplona.amethyst.ui.note.types.AppLinksColumn
@@ -87,6 +89,7 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.PaddingHorizontal12Modifier
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
+import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -207,6 +210,18 @@ private fun SoftwareAppDetailBody(
                 summary = summary,
                 latestVersion = latestRelease?.version(),
             )
+        }
+
+        item(key = "author") {
+            Spacer(Modifier.height(12.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = PaddingHorizontal12Modifier,
+            ) {
+                NoteAuthorPicture(note, Size25dp, accountViewModel = accountViewModel, nav = nav)
+                Spacer(Modifier.width(8.dp))
+                NoteUsernameDisplay(note, Modifier.weight(1f), accountViewModel = accountViewModel)
+            }
         }
 
         if (images.isNotEmpty()) {
