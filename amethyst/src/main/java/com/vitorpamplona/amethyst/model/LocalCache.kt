@@ -106,6 +106,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.GenericETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUsers
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
@@ -147,6 +148,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip34Git.grasp.UserGraspListEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
@@ -2382,11 +2384,19 @@ object LocalCache : ILocalCache, ICacheProvider {
         )
 
     /**
-     * Tag names whose values should not match text searches. The `client` tag
-     * names the app that published the event, so searching for "Amethyst"
-     * would otherwise return every event posted through Amethyst.
+     * Tag names whose values should not match text searches: the `client` tag
+     * names the app that published the event (searching for "Amethyst" would
+     * otherwise return every event posted through Amethyst), and `p`/`e`/`a`/`alt`
+     * values are ids or descriptions of other events, not content of this one.
      */
-    private val excludedTagNamesFromSearch = setOf(ClientTag.TAG_NAME)
+    private val excludedTagNamesFromSearch =
+        setOf(
+            ClientTag.TAG_NAME,
+            PTag.TAG_NAME,
+            ETag.TAG_NAME,
+            ATag.TAG_NAME,
+            AltTag.TAG_NAME,
+        )
 
     fun findNotesStartingWith(
         text: String,

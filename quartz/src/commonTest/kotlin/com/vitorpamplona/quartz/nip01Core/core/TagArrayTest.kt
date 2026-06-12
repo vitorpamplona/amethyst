@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip01Core.core
 
+import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
+import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.ClientTag
 import kotlin.test.Test
 import kotlin.test.assertFalse
@@ -46,5 +50,16 @@ class TagArrayTest {
         assertFalse(tags.tagValueContains("amethyst", ignoreCase = true, exceptNames = setOf(ClientTag.TAG_NAME)))
         // other tags still match when the client tag is excluded
         assertTrue(tags.tagValueContains("recommendations", ignoreCase = true, exceptNames = setOf(ClientTag.TAG_NAME)))
+    }
+
+    @Test
+    fun skipsAllSearchExcludedTagNames() {
+        val excluded = setOf(ClientTag.TAG_NAME, PTag.TAG_NAME, ETag.TAG_NAME, ATag.TAG_NAME, AltTag.TAG_NAME)
+
+        assertFalse(tags.tagValueContains("amethyst", ignoreCase = true, exceptNames = excluded))
+        assertFalse(tags.tagValueContains("31990:460c25e6", ignoreCase = true, exceptNames = excluded))
+        assertFalse(tags.tagValueContains("recommendations", ignoreCase = true, exceptNames = excluded))
+        // non-excluded tags still match
+        assertTrue(tags.tagValueContains("30022", ignoreCase = true, exceptNames = excluded))
     }
 }
