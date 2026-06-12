@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleList
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.ReportAction
 import com.vitorpamplona.amethyst.commons.model.nip72Communities.CommunityListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.TrustProviderListDecryptionCache
+import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendError
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSender
@@ -102,6 +103,7 @@ import com.vitorpamplona.amethyst.model.nip62Vanish.VanishRequestsState
 import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListState
 import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState
+import com.vitorpamplona.amethyst.model.nip89AppHandlers.AppRecommendationsState
 import com.vitorpamplona.amethyst.model.nipA3PaymentTargets.NipA3PaymentTargetsState
 import com.vitorpamplona.amethyst.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowListsState
@@ -179,6 +181,7 @@ import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip10Notes.threadRootIdOrSelf
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
@@ -287,6 +290,8 @@ import kotlin.coroutines.cancellation.CancellationException
 import com.vitorpamplona.quartz.experimental.nip95.header.thumbhash as nip95thumbhash
 import com.vitorpamplona.quartz.experimental.profileGallery.thumbhash as galleryThumbhash
 
+private const val ONCHAIN_BACKEND_NOT_CONFIGURED = "Bitcoin chain backend is not configured"
+
 @OptIn(DelicateCoroutinesApi::class)
 @Stable
 class Account(
@@ -389,6 +394,7 @@ class Account(
 
     val labeledBookmarkLists = LabeledBookmarkListsState(signer, cache, scope)
     val interestSets = InterestSetsState(signer, cache, scope)
+    val appRecommendations = AppRecommendationsState(signer, cache, scope)
     val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
     val bookmarkState = BookmarkListState(signer, cache, scope)
     val pinState = PinListState(signer, cache, scope)
@@ -526,6 +532,9 @@ class Account(
     val livePicturesFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultPicturesFollowList)
     val livePicturesFollowListsPerRelay = OutboxLoaderState(livePicturesFollowLists, cache, scope).flow
 
+    val liveWorkoutsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultWorkoutsFollowList)
+    val liveWorkoutsFollowListsPerRelay = OutboxLoaderState(liveWorkoutsFollowLists, cache, scope).flow
+
     val liveCalendarsFollowLists: StateFlow<IFeedTopNavFilter> = topNavFilterFlow(settings.defaultCalendarsFollowList)
     val liveCalendarsFollowListsPerRelay = OutboxLoaderState(liveCalendarsFollowLists, cache, scope).flow
 
@@ -657,6 +666,11 @@ class Account(
         if (settings.changeAudioVisualizer(style)) {
             sendNewAppSpecificData()
         }
+    }
+
+    suspend fun toggleChatroomPin(room: ChatroomKey) {
+        settings.toggleChatroomPin(room)
+        sendNewAppSpecificData()
     }
 
     suspend fun updateZapAmounts(
@@ -883,6 +897,13 @@ class Account(
         return zapRequest
     }
 
+    private fun onchainBackendNotConfigured() =
+        OnchainZapSendResult.Failure(
+            OnchainZapSendStage.LOADING_UTXOS,
+            OnchainZapSendError.BACKEND_NOT_CONFIGURED,
+            ONCHAIN_BACKEND_NOT_CONFIGURED,
+        )
+
     /**
      * Send a NIP-BC onchain zap: build a Bitcoin transaction paying the recipient's
      * derived Taproot address, sign it, broadcast it, and publish the kind:8333
@@ -898,10 +919,7 @@ class Account(
     ): OnchainZapSendResult {
         val backend =
             cache.onchainBackend
-                ?: return OnchainZapSendResult.Failure(
-                    OnchainZapSendStage.LOADING_UTXOS,
-                    "Bitcoin chain backend is not configured",
-                )
+                ?: return onchainBackendNotConfigured()
         return OnchainZapSender.send(
             backend = backend,
             signer = signer,
@@ -912,6 +930,29 @@ class Account(
             comment = comment,
             zappedEvent = zappedEvent,
         ) { template -> signAndComputeBroadcast(template) }
+    }
+
+    /**
+     * Pay an explicit Bitcoin address (e.g. a profile's NIP-A3 `bitcoin`
+     * payment target) from the NIP-BC Taproot wallet. A plain wallet send —
+     * no kind:8333 receipt is published. See [OnchainZapSender.sendToAddress].
+     */
+    suspend fun sendOnchainToAddress(
+        recipientAddress: String,
+        amountSats: Long,
+        feeRateSatPerVByte: Double,
+    ): OnchainZapSendResult {
+        val backend =
+            cache.onchainBackend
+                ?: return onchainBackendNotConfigured()
+        return OnchainZapSender.sendToAddress(
+            backend = backend,
+            signer = signer,
+            senderPubKey = signer.pubKey,
+            recipientAddress = recipientAddress,
+            amountSats = amountSats,
+            feeRateSatPerVByte = feeRateSatPerVByte,
+        )
     }
 
     /**
@@ -927,10 +968,7 @@ class Account(
     ): OnchainZapSendResult {
         val backend =
             cache.onchainBackend
-                ?: return OnchainZapSendResult.Failure(
-                    OnchainZapSendStage.LOADING_UTXOS,
-                    "Bitcoin chain backend is not configured",
-                )
+                ?: return onchainBackendNotConfigured()
         return OnchainZapSender.sendSplit(
             backend = backend,
             signer = signer,
@@ -3609,7 +3647,7 @@ class Account(
                                 if (isNew) {
                                     innerNote.event = innerEvent
                                 }
-                                marmotGroupList.restoreMessage(groupId, innerNote)
+                                marmotGroupList.addMessage(groupId, innerNote)
                             } catch (e: Exception) {
                                 Log.w(
                                     "Account",

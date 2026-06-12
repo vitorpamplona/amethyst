@@ -396,6 +396,7 @@
     <string name="automatically_play_videos">自動的に動画を再生</string>
     <string name="automatically_show_url_preview">自動的にURLプレビューを表示</string>
     <string name="load_image">画像読み込み</string>
+    <!-- Onchain zap send dialog -->
     <!-- %1$s is replaced at runtime by an inline star icon, not text. Keep the placeholder. -->
     <!-- Kind display names for relay subscription filter chips -->
     <!-- M3 Action Dialog titles -->

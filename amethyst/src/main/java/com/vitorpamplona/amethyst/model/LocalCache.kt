@@ -59,6 +59,7 @@ import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
+import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
@@ -105,6 +106,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.GenericETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.isTaggedEvent
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUsers
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
@@ -147,6 +149,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiPackSelectionEvent
+import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip34Git.grasp.UserGraspListEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
@@ -251,6 +254,7 @@ import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.ClientTag
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.NIP90ContentDiscoveryRequestEvent
@@ -2388,6 +2392,21 @@ object LocalCache : ILocalCache, ICacheProvider {
                 note.event is AppSpecificDataEvent
         )
 
+    /**
+     * Tag names whose values should not match text searches: the `client` tag
+     * names the app that published the event (searching for "Amethyst" would
+     * otherwise return every event posted through Amethyst), and `p`/`e`/`a`/`alt`
+     * values are ids or descriptions of other events, not content of this one.
+     */
+    private val excludedTagNamesFromSearch =
+        setOf(
+            ClientTag.TAG_NAME,
+            PTag.TAG_NAME,
+            ETag.TAG_NAME,
+            ATag.TAG_NAME,
+            AltTag.TAG_NAME,
+        )
+
     fun findNotesStartingWith(
         text: String,
         hiddenUsers: HiddenUsersState,
@@ -2427,7 +2446,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                 return@filter false
             }
 
-            if (note.event?.tags?.tagValueContains(text, true) == true ||
+            if (note.event?.tags?.tagValueContains(text, true, excludedTagNamesFromSearch) == true ||
                 note.idHex.startsWith(text, true)
             ) {
                 return@filter !note.isHiddenFor(hiddenUsers.flow.value)
@@ -2448,7 +2467,7 @@ object LocalCache : ILocalCache, ICacheProvider {
                     return@filter false
                 }
 
-                if (addressable.event?.tags?.tagValueContains(text, true) == true ||
+                if (addressable.event?.tags?.tagValueContains(text, true, excludedTagNamesFromSearch) == true ||
                     addressable.idHex.startsWith(text, true)
                 ) {
                     return@filter !addressable.isHiddenFor(hiddenUsers.flow.value)
@@ -3971,6 +3990,10 @@ object LocalCache : ILocalCache, ICacheProvider {
 
                 is WikiNoteEvent -> {
                     consume(event, relay, wasVerified)
+                }
+
+                is WorkoutRecordEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
                 }
 
                 is PaymentTargetsEvent -> {

@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFind
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.apps.recommendations.datasource.ProfileAppRecommendationsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.datasource.ArticlesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.datasource.BadgesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.profile.datasource.ProfileBadgesFilterAssembler
@@ -70,6 +71,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.softwareapps.datasource.Sof
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.ThreadFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.video.datasource.VideoFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.datasource.OnchainZapsFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.datasource.WorkoutsFilterAssembler
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.IAuthStatus
@@ -120,6 +122,7 @@ class RelaySubscriptionsCoordinator(
 
     val polls = PollsFilterAssembler(client)
     val pictures = PicturesFilterAssembler(client)
+    val workouts = WorkoutsFilterAssembler(client)
     val calendars = CalendarsFilterAssembler(client)
     val products = ProductsFilterAssembler(client)
     val shorts = ShortsFilterAssembler(client)
@@ -138,6 +141,7 @@ class RelaySubscriptionsCoordinator(
     val softwareApps = SoftwareAppsFilterAssembler(client)
     val badges = BadgesFilterAssembler(client)
     val profileBadges = ProfileBadgesFilterAssembler(client)
+    val profileAppRecommendations = ProfileAppRecommendationsFilterAssembler(client)
     val browseEmojiSets = BrowseEmojiSetsFilterAssembler(client)
     val communitiesList = CommunitiesListFilterAssembler(client)
 
@@ -166,6 +170,7 @@ class RelaySubscriptionsCoordinator(
             discovery,
             polls,
             pictures,
+            workouts,
             calendars,
             products,
             shorts,
@@ -185,6 +190,7 @@ class RelaySubscriptionsCoordinator(
             softwareApps,
             badges,
             profileBadges,
+            profileAppRecommendations,
             browseEmojiSets,
             communitiesList,
             channelFinder,

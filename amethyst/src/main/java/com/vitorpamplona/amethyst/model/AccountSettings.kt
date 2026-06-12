@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip28PublicChat.list.ChannelListEvent
@@ -94,6 +95,16 @@ sealed class TopFilter(
 
     @Serializable
     object Global : TopFilter(" Global ")
+
+    /**
+     * Notifications-only curated mode: like [Global] it admits authors the
+     * user doesn't follow, but it also applies per-kind relevance heuristics
+     * to remove less interesting notes (reactions/reposts that don't target
+     * the user's own notes, unrelated thread replies, etc.). In Notifications,
+     * [Global] shows every event that p-tags the user instead.
+     */
+    @Serializable
+    object Selected : TopFilter(" Selected ")
 
     @Serializable
     object AllFollows : TopFilter(" All Follows ")
@@ -174,10 +185,11 @@ class AccountSettings(
     val hideCommunityRulesViolations: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val defaultHomeFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
     val defaultStoriesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
-    val defaultNotificationFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultNotificationFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Selected),
     val defaultDiscoveryFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultPollsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultPicturesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultWorkoutsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultCalendarsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultProductsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AroundMe),
     val defaultShortsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
@@ -615,6 +627,17 @@ class AccountSettings(
     fun changeDefaultPicturesFollowList(name: TopFilter) {
         if (defaultPicturesFollowList.value != name) {
             defaultPicturesFollowList.tryEmit(name)
+            saveAccountSettings()
+        }
+    }
+
+    fun changeDefaultWorkoutsFollowList(name: FeedDefinition) {
+        changeDefaultWorkoutsFollowList(name.code)
+    }
+
+    fun changeDefaultWorkoutsFollowList(name: TopFilter) {
+        if (defaultWorkoutsFollowList.value != name) {
+            defaultWorkoutsFollowList.tryEmit(name)
             saveAccountSettings()
         }
     }
@@ -1199,6 +1222,17 @@ class AccountSettings(
             }
             saveAccountSettings()
         }
+    }
+
+    // ---
+    // pinned chatrooms
+    // ---
+
+    fun toggleChatroomPin(room: ChatroomKey) {
+        syncedSettings.chats.pinnedChatrooms.update {
+            if (room in it) it - room else it + room
+        }
+        saveAccountSettings()
     }
 
     // ---

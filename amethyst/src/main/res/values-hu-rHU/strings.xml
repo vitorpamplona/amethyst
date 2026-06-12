@@ -1878,6 +1878,7 @@
     <string name="wallet_onchain_public_dialog_body">A Taproot-cím az Ön Nostr nyilvános kulcsából van levezetve, ezért bárki, aki ismeri az npub-ot, láthatja a pénztárca egyenlegét és tranzakciótörténetét a blokkláncon.\n\nAz adatvédelem megőrzése érdekében ezt a pénztárcát kizárólag nem privát számlákról, például kriptovaluta-váltókról töltse fel és ürítse ki. Soha ne keverje ezeket az összegeket a hideg pénztárcákkal, és olyan pénzként kezelje őket, amelyet elveszíthet, mivel bárki, aki hozzáfér az nsec-hez, elköltheti.</string>
     <string name="wallet_onchain_public_dialog_confirm">Megértettem</string>
     <string name="wallet_onchain_copy_dialog_confirm">Cím másolása</string>
+    <!-- Onchain zap send dialog -->
     <string name="route_security_filters">Biztonsági szűrők</string>
     <string name="route_import_follows">Követettek importálása</string>
     <string name="new_post">Új bejegyzés</string>

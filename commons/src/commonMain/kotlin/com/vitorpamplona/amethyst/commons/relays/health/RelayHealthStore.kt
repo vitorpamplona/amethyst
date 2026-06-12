@@ -1,0 +1,233 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.relays.health
+
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.collections.immutable.PersistentList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+/**
+ * Per-account, durable record of relay liveness used to drive the "unhealthy relay" review UI.
+ *
+ * Records are fed in from the quartz relay listener (via [recordIncoming] / [recordConnect])
+ * and the user's list-membership StateFlow (via [setListMembership]). The classifier runs:
+ *  - whenever inputs change, OR
+ *  - once every [TICK_SECONDS] so snoozes expire and lastSeenAny stays fresh.
+ *
+ * Persistence writes are debounced [PERSIST_DEBOUNCE_MS]ms.
+ *
+ * Lifecycle: the host (Android Account wiring / Desktop App() scope) is responsible
+ * for calling [close] when switching accounts so the internal scope cancels.
+ */
+class RelayHealthStore(
+    private val persistence: RelayHealthPersistence,
+    private val torEnabledProvider: () -> Boolean = { false },
+    parentScope: CoroutineScope? = null,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.Default,
+) {
+    companion object {
+        const val PERSIST_DEBOUNCE_MS: Long = 5_000L
+        const val TICK_SECONDS: Long = 60L
+    }
+
+    private val scope: CoroutineScope =
+        parentScope ?: CoroutineScope(SupervisorJob() + ioDispatcher)
+
+    private val ownsScope = parentScope == null
+
+    private val state =
+        MutableStateFlow(
+            persistence.load().let { loaded ->
+                // First-time observation: stamp firstScanAt now so newcomer-grace starts ticking.
+                if (loaded.firstScanAt == 0L) {
+                    loaded.copy(firstScanAt = TimeUtils.now())
+                } else {
+                    loaded
+                }
+            },
+        )
+
+    private val listMembership = MutableStateFlow<Map<NormalizedRelayUrl, Set<RelayListKind>>>(emptyMap())
+
+    private val _unhealthy = MutableStateFlow<PersistentList<UnhealthyRelay>>(persistentListOf())
+    val unhealthy: StateFlow<PersistentList<UnhealthyRelay>> = _unhealthy.asStateFlow()
+
+    private var persistJob: Job? = null
+    private var tickJob: Job? = null
+
+    init {
+        // Persist the firstScanAt seed if we just stamped it.
+        schedulePersist()
+
+        tickJob =
+            scope.launch {
+                while (true) {
+                    reclassify()
+                    delay(TICK_SECONDS * 1_000)
+                }
+            }
+    }
+
+    /** Called from RelayConnectionListener.onIncomingMessage. Non-suspending. */
+    fun recordIncoming(
+        url: NormalizedRelayUrl,
+        atSeconds: Long = TimeUtils.now(),
+    ) {
+        var changed = false
+        state.update { s ->
+            val now = atSeconds
+            val rec = s.records[url] ?: RelayHealthRecord()
+            // Bump only on real progress to avoid noise.
+            if (rec.lastIncomingAt >= now) return@update s
+            changed = true
+            val newRec = rec.copy(lastIncomingAt = now)
+            s.copy(
+                records = s.records + (url to newRec),
+                lastSeenAny = maxOf(s.lastSeenAny, now),
+            )
+        }
+        if (changed) {
+            reclassifyAsync()
+            schedulePersist()
+        }
+    }
+
+    /** Called from RelayConnectionListener.onConnected. Non-suspending. */
+    fun recordConnect(
+        url: NormalizedRelayUrl,
+        atSeconds: Long = TimeUtils.now(),
+    ) {
+        var changed = false
+        state.update { s ->
+            val now = atSeconds
+            val rec = s.records[url] ?: RelayHealthRecord()
+            if (rec.lastConnectAt >= now) return@update s
+            changed = true
+            val newRec = rec.copy(lastConnectAt = now)
+            s.copy(
+                records = s.records + (url to newRec),
+                lastSeenAny = maxOf(s.lastSeenAny, now),
+            )
+        }
+        if (changed) {
+            reclassifyAsync()
+            schedulePersist()
+        }
+    }
+
+    /** Called by the UI when the user's monitored relay lists change. */
+    fun setListMembership(membership: Map<NormalizedRelayUrl, Set<RelayListKind>>) {
+        listMembership.value = membership
+        reclassifyAsync()
+    }
+
+    /** Per-relay snooze (default 7d). */
+    fun snooze(
+        url: NormalizedRelayUrl,
+        untilSeconds: Long = TimeUtils.now() + RELAY_HEALTH_THRESHOLD_SECONDS,
+    ) {
+        state.update { s ->
+            val rec = s.records[url] ?: RelayHealthRecord()
+            s.copy(records = s.records + (url to rec.copy(snoozedUntil = untilSeconds)))
+        }
+        reclassifyAsync()
+        schedulePersist()
+    }
+
+    /** Snooze every relay currently flagged. */
+    fun snoozeAllCurrent(untilSeconds: Long = TimeUtils.now() + RELAY_HEALTH_THRESHOLD_SECONDS) {
+        val urls = _unhealthy.value.map { it.url }
+        if (urls.isEmpty()) return
+        state.update { s ->
+            val updates =
+                urls.associateWith { url ->
+                    (s.records[url] ?: RelayHealthRecord()).copy(snoozedUntil = untilSeconds)
+                }
+            s.copy(records = s.records + updates)
+        }
+        reclassifyAsync()
+        schedulePersist()
+    }
+
+    /** Run once at app start. Equivalent to a `recordIncoming`-driven reclassification. */
+    fun scanNow() {
+        reclassifyAsync()
+    }
+
+    private fun reclassifyAsync() {
+        scope.launch { reclassify() }
+    }
+
+    private suspend fun reclassify() {
+        val s = state.value
+        val membership = listMembership.value
+        val torEnabled = torEnabledProvider()
+        val now = TimeUtils.now()
+
+        // Allow lastSeenAny to "look offline" only if there are records at all.
+        val effectiveLastSeenAny = if (s.lastSeenAny == 0L) now else s.lastSeenAny
+
+        val flagged =
+            withContext(ioDispatcher) {
+                classifyRelayHealth(
+                    records = s.records,
+                    listMembership = membership,
+                    firstScanAt = s.firstScanAt,
+                    lastSeenAny = effectiveLastSeenAny,
+                    torEnabled = torEnabled,
+                    now = now,
+                )
+            }
+        _unhealthy.value = flagged
+    }
+
+    private fun schedulePersist() {
+        persistJob?.cancel()
+        persistJob =
+            scope.launch {
+                delay(PERSIST_DEBOUNCE_MS)
+                val snapshot = state.value
+                runCatching { persistence.save(snapshot) }
+            }
+    }
+
+    fun close() {
+        // Flush pending writes synchronously before tearing down.
+        persistJob?.cancel()
+        runCatching { persistence.save(state.value) }
+        tickJob?.cancel()
+        if (ownsScope) scope.cancel()
+    }
+}

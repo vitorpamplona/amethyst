@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -40,6 +42,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
@@ -63,12 +67,15 @@ import com.vitorpamplona.amethyst.ui.note.ObserveDraftEvent
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgoStyle
 import com.vitorpamplona.amethyst.ui.note.elements.ToggleableTimeAgoText
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.marmotGroup.marmotGroupLastReadRoute
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.privateDM.header.RoomNameDisplay
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.ephemChat.LoadEphemeralChatChannel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.AccountPictureModifier
 import com.vitorpamplona.amethyst.ui.theme.Height4dpModifier
+import com.vitorpamplona.amethyst.ui.theme.Size15Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
+import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.newItemBubbleModifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -260,7 +267,6 @@ private fun MarmotGroupRoomCompose(
     nav: INav,
 ) {
     val displayName by chatroom.displayName.collectAsStateWithLifecycle()
-    val unread by chatroom.unreadCount.collectAsStateWithLifecycle()
 
     val author = lastMessage.author
     val noteEvent = lastMessage.event
@@ -274,13 +280,15 @@ private fun MarmotGroupRoomCompose(
             stringRes(R.string.marmot_group_no_messages_yet)
         }
 
+    val lastReadTime by accountViewModel.account.loadLastReadFlow(marmotGroupLastReadRoute(chatroom.nostrGroupId)).collectAsStateWithLifecycle()
+
     ChannelName(
         channelIdHex = chatroom.nostrGroupId,
         channelPicture = null,
         channelTitle = { modifier -> ChannelTitleWithLabelInfo(groupName, R.string.marmot_group, modifier) },
         channelLastTime = lastMessage.createdAt(),
         channelLastContent = lastContent,
-        hasNewMessages = unread > 0,
+        hasNewMessages = (lastMessage.createdAt() ?: Long.MIN_VALUE) > lastReadTime,
         loadProfilePicture = accountViewModel.settings.showProfilePictures(),
         loadRobohash = accountViewModel.settings.isNotPerformanceMode(),
         autoPlayGif =
@@ -338,6 +346,11 @@ private fun UserRoomCompose(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    var popupExpanded by remember { mutableStateOf(false) }
+    // Kept as a State (no `by`) so `.value` is only read inside the firstRow and
+    // menu-text slots, confining pin-toggle invalidations to those scopes.
+    val pinnedRooms = accountViewModel.pinnedChatroomsFlow().collectAsStateWithLifecycle()
+
     ChatHeaderLayout(
         channelPicture = {
             NonClickableUserPictures(
@@ -348,6 +361,15 @@ private fun UserRoomCompose(
         },
         firstRow = {
             RoomNameDisplay(room, Modifier.weight(1f), accountViewModel)
+            if (room in pinnedRooms.value) {
+                Icon(
+                    symbol = MaterialSymbols.PushPin,
+                    contentDescription = stringRes(R.string.pinned_to_top),
+                    modifier = Size15Modifier,
+                    tint = MaterialTheme.colorScheme.placeholderText,
+                )
+                Spacer(modifier = StdHorzSpacer)
+            }
             TimeAgo(lastMessage.createdAt())
         },
         secondRow = {
@@ -379,7 +401,23 @@ private fun UserRoomCompose(
             }
         },
         onClick = { nav.nav(Route.Room(room)) },
+        onLongClick = { popupExpanded = true },
     )
+
+    DropdownMenu(
+        expanded = popupExpanded,
+        onDismissRequest = { popupExpanded = false },
+    ) {
+        DropdownMenuItem(
+            text = {
+                Text(stringRes(if (room in pinnedRooms.value) R.string.unpin_conversation else R.string.pin_conversation))
+            },
+            onClick = {
+                accountViewModel.toggleChatroomPin(room)
+                popupExpanded = false
+            },
+        )
+    }
 }
 
 @Composable

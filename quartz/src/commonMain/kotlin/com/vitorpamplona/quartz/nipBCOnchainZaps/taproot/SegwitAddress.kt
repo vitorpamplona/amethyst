@@ -128,4 +128,32 @@ object SegwitAddress {
 
         return Decoded(hrp, witnessVersion, program)
     }
+
+    /**
+     * scriptPubKey for a native segwit address: `OP_n PUSH(program)`.
+     * Witness v0 uses OP_0 (0x00); v1..v16 use OP_1..OP_16 (0x51..0x60).
+     *
+     * Mainnet only — paying a non-`bc` address from a mainnet wallet is
+     * always a mistake, so it is rejected here rather than at broadcast.
+     */
+    fun scriptPubKeyFor(address: String): ByteArray {
+        val decoded = decode(address)
+        require(decoded.hrp == HRP_MAINNET) {
+            "only mainnet (bc1…) addresses are supported"
+        }
+        val versionOpcode = if (decoded.witnessVersion == 0) 0x00 else 0x50 + decoded.witnessVersion
+        val script = ByteArray(2 + decoded.program.size)
+        script[0] = versionOpcode.toByte()
+        script[1] = decoded.program.size.toByte()
+        decoded.program.copyInto(script, 2)
+        return script
+    }
+
+    /** True when [address] is a native segwit mainnet address this codec can pay. */
+    fun isPayableMainnetAddress(address: String): Boolean =
+        try {
+            decode(address).hrp == HRP_MAINNET
+        } catch (_: Exception) {
+            false
+        }
 }

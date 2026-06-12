@@ -118,6 +118,7 @@ import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
+import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
@@ -645,6 +646,7 @@ fun kindDisplayName(kind: Int): Int =
         PeopleListEvent.KIND -> R.string.kind_people_lists
         ProfileBadgesEvent.KIND -> R.string.kind_profile_badges
         PictureEvent.KIND -> R.string.kind_pictures
+        WorkoutRecordEvent.KIND -> R.string.kind_workouts
         PinListEvent.KIND -> R.string.kind_pins
         ZapPollEvent.KIND -> R.string.kind_zap_poll
         PollEvent.KIND -> R.string.kind_poll

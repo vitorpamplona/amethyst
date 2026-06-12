@@ -56,7 +56,7 @@ class Nip05Test {
         }
 
     @Test
-    fun `parse clink_offer as a flat top-level string (bridgelet shape)`() =
+    fun `parse clink_offer as a flat top-level bridgelet-shaped string`() =
         runTest {
             val noffer = "noffer1qqsexampleclinkoffer"
             val json = """{ "names": { "bob": "abc" }, "clink_offer": "$noffer" }"""

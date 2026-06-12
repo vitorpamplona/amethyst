@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.ui.note.nip22Comments.ReplyCommentPostScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawerLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.apps.recommendations.ProfileAppRecommendationsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.ArticlesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.BadgesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.award.AwardBadgeScreen
@@ -156,6 +157,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.polls.PollsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.privacy.PrivacyOptionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.products.ProductsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.ProfileScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.payment.SendPaymentScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.publicChats.PublicChatsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.ShowQRScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.redirect.LoadRedirectScreen
@@ -211,6 +213,8 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletSendScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet.WalletTransactionsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.webBookmarks.WebBookmarksScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.NewWorkoutScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.WorkoutsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.AddAccountDialog
 import com.vitorpamplona.amethyst.ui.uriToRoute
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -275,8 +279,10 @@ fun BuildNavigation(
         composableFromEndArgs<Route.EditCommunity> { EditCommunityScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
         composableFromEnd<Route.Badges> { BadgesScreen(accountViewModel, nav) }
         composableFromEnd<Route.ProfileBadges> { ProfileBadgesScreen(accountViewModel, nav) }
+        composableFromEnd<Route.ProfileAppRecommendations> { ProfileAppRecommendationsScreen(accountViewModel, nav) }
         composableFromBottomArgs<Route.AwardBadge> { AwardBadgeScreen(it.kind, it.pubKeyHex, it.dTag, accountViewModel, nav) }
         composableFromEnd<Route.Pictures> { PicturesScreen(accountViewModel, nav) }
+        composableFromEnd<Route.Workouts> { WorkoutsScreen(accountViewModel, nav) }
         composableFromEnd<Route.SoftwareApps> { SoftwareAppsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.SoftwareAppDetail> { SoftwareAppDetailScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
         composableFromEnd<Route.Calendars> { CalendarsScreen(accountViewModel, nav) }
@@ -321,6 +327,7 @@ fun BuildNavigation(
         composableFromEndArgs<Route.WalletAddClinkDebit> { AddClinkDebitWalletScreen(accountViewModel, nav, it.ndebit) }
         composableFromEnd<Route.CashuWallet> { CashuWalletScreen(accountViewModel, nav) }
         composableFromEnd<Route.CashuWalletSettings> { CashuWalletSettingsScreen(accountViewModel, nav) }
+        composableFromBottomArgs<Route.SendPayment> { SendPaymentScreen(it.userHex, it.method, it.lnAddressOverride, it.btcAddressOverride, accountViewModel, nav) }
 
         composableFromEnd<Route.Lists> { ListOfPeopleListsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.MyPeopleListView> { PeopleListScreen(it.dTag, accountViewModel, nav) }
@@ -495,6 +502,13 @@ fun BuildNavigation(
 
         composableFromBottom<Route.NewGoal> {
             NewGoalScreen(
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+
+        composableFromBottom<Route.NewWorkout> {
+            NewWorkoutScreen(
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

@@ -103,7 +103,7 @@ open class BasicRelayClient(
             socket?.connect()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            listener.onCannotConnect(this, "Error when trying to connect: ${e.message}")
+            listener.onCannotConnect(this, "Error when trying to connect: ${e.message ?: e::class.simpleName}")
             listener.onDisconnected(this)
             dontTryAgainForALongTime()
             markConnectionAsClosed()
@@ -154,7 +154,9 @@ open class BasicRelayClient(
             } else {
                 socket?.disconnect()
 
+                // suppression rules below must match the raw message; displayMsg is for listener output only
                 val msg = t.message
+                val displayMsg = msg ?: t::class.simpleName
 
                 // checks if this is an actual failure. Closing the socket generates an onFailure as well.
                 // ignore tor errors.
@@ -167,9 +169,9 @@ open class BasicRelayClient(
                     )
                 ) {
                     if (code != null || response != null) {
-                        listener.onCannotConnect(this@BasicRelayClient, "Server Misconfigured. Response: $code $response. Exception: ${t.message}")
+                        listener.onCannotConnect(this@BasicRelayClient, "Server Misconfigured. Response: $code $response. Exception: $displayMsg")
                     } else {
-                        listener.onCannotConnect(this@BasicRelayClient, "WebSocket Failure: ${t.message}")
+                        listener.onCannotConnect(this@BasicRelayClient, "WebSocket Failure: $displayMsg")
                     }
                 } else {
                     // ignore local disconnect requests and tor errors

@@ -24,8 +24,6 @@ import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
@@ -51,55 +49,65 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.util.setText
-import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.profile.payment.ProfilePaymentMethod
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
 import com.vitorpamplona.quartz.experimental.nipA3.PaymentTarget
-import com.vitorpamplona.quartz.experimental.nipA3.PaymentTargetsEvent
+import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.SegwitAddress
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun DisplayPaymentTargets(
-    baseUser: User,
-    accountViewModel: AccountViewModel,
-) {
-    val address =
-        remember(baseUser.pubkeyHex) {
-            PaymentTargetsEvent.createAddress(baseUser.pubkeyHex)
-        }
+/** Lightning-family target types Amethyst can pay in-app through the Send Payment screen. */
+private val LIGHTNING_TARGET_TYPES = setOf("lightning", "ln", "lnurl")
 
-    LoadAddressableNote(address, accountViewModel) { note ->
-        if (note != null) {
-            EventFinderFilterAssemblerSubscription(note, accountViewModel)
-            val event by observeNoteEvent<PaymentTargetsEvent>(note, accountViewModel)
-            val targets =
-                remember(event) {
-                    event?.paymentTargets() ?: emptyList()
-                }
-            if (targets.isNotEmpty()) {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.padding(vertical = 4.dp),
-                ) {
-                    targets.forEach { target -> PaymentTargetChip(target, accountViewModel) }
-                }
-            }
-        }
+/** Bitcoin-family target types the in-app on-chain wallet can pay directly. */
+private val BITCOIN_TARGET_TYPES = setOf("bitcoin", "btc", "onchain")
+
+fun isLightningPaymentTarget(rawType: String): Boolean = rawType.trim().lowercase() in LIGHTNING_TARGET_TYPES
+
+/**
+ * Route into the in-app Send Payment screen when one of the user's wallets can
+ * pay [target] directly: lightning targets through the default lightning
+ * source (NWC / CLINK debit / wallet app), bitcoin targets through the NIP-BC
+ * on-chain wallet (native segwit mainnet addresses, and only when the chain
+ * backend is configured). Null means no in-app wallet can pay this target —
+ * callers fall back to the external URI handoff.
+ */
+fun inAppPaymentRouteFor(
+    userHex: String,
+    target: PaymentTarget,
+): Route.SendPayment? {
+    val type = target.type.trim().lowercase()
+    return when {
+        type in LIGHTNING_TARGET_TYPES ->
+            Route.SendPayment(userHex, ProfilePaymentMethod.LIGHTNING.routeKey, lnAddressOverride = target.authority)
+
+        type in BITCOIN_TARGET_TYPES &&
+            LocalCache.onchainBackend != null &&
+            SegwitAddress.isPayableMainnetAddress(target.authority.trim()) ->
+            Route.SendPayment(userHex, ProfilePaymentMethod.ONCHAIN.routeKey, btcAddressOverride = target.authority.trim())
+
+        else -> null
     }
 }
 
+/**
+ * Chip for a NIP-A3 payment target. Rendered inside [DisplayPaymentRailChips]'s
+ * FlowRow alongside the wallet-rail chips so all payment chips share one
+ * wrapping row and spacing.
+ */
 @Composable
-private fun PaymentTargetChip(
+fun PaymentTargetChip(
+    baseUser: User,
     target: PaymentTarget,
     accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     val style = remember(target.type) { paymentTargetStyleFor(target.type) }
     val uriHandler = LocalUriHandler.current
@@ -116,14 +124,23 @@ private fun PaymentTargetChip(
         modifier =
             Modifier.combinedClickable(
                 onClick = {
-                    runCatching { uriHandler.openUri(style.uriFor(target.authority)) }
-                        .onFailure {
-                            accountViewModel.toastManager.toast(
-                                R.string.error_dialog_payment_error,
-                                R.string.no_payment_app_found_for_type,
-                                style.label,
-                            )
-                        }
+                    // Targets one of the user's in-app wallets can pay (lightning,
+                    // bitcoin) go to the Send Payment screen, which collects the
+                    // amount and pays this exact target; everything else hands off
+                    // to an external wallet app via its payment URI.
+                    val inAppRoute = inAppPaymentRouteFor(baseUser.pubkeyHex, target)
+                    if (inAppRoute != null) {
+                        nav.nav(inAppRoute)
+                    } else {
+                        runCatching { uriHandler.openUri(style.uriFor(target.authority)) }
+                            .onFailure {
+                                accountViewModel.toastManager.toast(
+                                    R.string.error_dialog_payment_error,
+                                    R.string.no_payment_app_found_for_type,
+                                    style.label,
+                                )
+                            }
+                    }
                 },
                 onLongClick = {
                     scope.launch {

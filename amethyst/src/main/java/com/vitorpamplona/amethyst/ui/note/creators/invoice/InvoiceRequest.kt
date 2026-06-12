@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.invoice
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,7 +40,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -59,38 +57,6 @@ import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.ui.theme.subtleBorder
-
-@Composable
-fun InvoiceRequestCard(
-    lud16: String,
-    user: User,
-    accountViewModel: AccountViewModel,
-    titleText: String? = null,
-    buttonText: String? = null,
-    onSuccess: (String) -> Unit,
-    onError: (String, String) -> Unit,
-) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(start = 30.dp, end = 30.dp)
-                .clip(shape = QuoteBorder)
-                .border(1.dp, MaterialTheme.colorScheme.subtleBorder, QuoteBorder)
-                .padding(30.dp),
-    ) {
-        InvoiceRequest(
-            lud16,
-            user,
-            accountViewModel,
-            titleText,
-            buttonText,
-            onSuccess,
-            onError,
-        )
-    }
-}
 
 @Composable
 fun InvoiceRequest(

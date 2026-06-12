@@ -484,6 +484,10 @@ private fun RenderInvoiceCard(
         remember(invoice) {
             runCatching { LnInvoiceUtil.getAmountInSats(invoice) }.getOrNull()
         }
+    val description =
+        remember(invoice) {
+            LnInvoiceUtil.getDescription(invoice)
+        }
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -501,6 +505,16 @@ private fun RenderInvoiceCard(
                     text = if (amount != null) "$amount sats" else "Lightning Invoice",
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (description != null) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
             Spacer(Modifier.height(8.dp))

@@ -169,6 +169,7 @@
     <string name="failed_to_upload_with_message">Neizdevās augšupielādēt: %1$s</string>
     <string name="route_search">Meklēt</string>
     <string name="route_notifications">Paziņojumi</string>
+    <!-- Onchain zap send dialog -->
     <string name="new_post">Jauns ieraksts</string>
     <string name="thank_you">Paldies!</string>
     <string name="edit_post">Rediģēt ierakstu</string>

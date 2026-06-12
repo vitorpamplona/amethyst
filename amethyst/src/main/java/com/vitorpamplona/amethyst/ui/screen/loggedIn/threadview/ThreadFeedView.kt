@@ -143,6 +143,7 @@ import com.vitorpamplona.amethyst.ui.note.types.FileHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.ui.note.types.PictureDisplay
 import com.vitorpamplona.amethyst.ui.note.types.RenderAppDefinition
+import com.vitorpamplona.amethyst.ui.note.types.RenderAppRecommendation
 import com.vitorpamplona.amethyst.ui.note.types.RenderAttestation
 import com.vitorpamplona.amethyst.ui.note.types.RenderAttestationRequest
 import com.vitorpamplona.amethyst.ui.note.types.RenderAttestorProficiency
@@ -206,6 +207,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28P
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.utils.ThinSendButton
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.mockAccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.dal.LevelFeedViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.WorkoutDisplay
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.DoubleVertSpacer
@@ -233,6 +235,7 @@ import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
+import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
@@ -306,6 +309,7 @@ import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
+import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileHeaderEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
@@ -633,6 +637,8 @@ private fun FullBleedNoteCompose(
                     VideoDisplay(baseNote, makeItShort = false, canPreview = true, backgroundColor = backgroundColor, ContentScale.FillWidth, accountViewModel = accountViewModel, nav = nav)
                 } else if (noteEvent is PictureEvent) {
                     PictureDisplay(baseNote, roundedCorner = true, ContentScale.FillWidth, PaddingValues(vertical = Size5dp), backgroundColor, accountViewModel = accountViewModel, nav)
+                } else if (noteEvent is WorkoutRecordEvent) {
+                    WorkoutDisplay(baseNote)
                 } else if (noteEvent is BaseVoiceEvent) {
                     VoiceHeader(noteEvent, baseNote, accountViewModel, nav)
                 } else if (noteEvent is FileHeaderEvent) {
@@ -751,6 +757,8 @@ private fun FullBleedNoteCompose(
                     RenderGitIssueEvent(baseNote, makeItShort = false, canPreview = true, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
                 } else if (noteEvent is AppDefinitionEvent) {
                     RenderAppDefinition(baseNote, accountViewModel, nav)
+                } else if (noteEvent is AppRecommendationEvent) {
+                    RenderAppRecommendation(baseNote, accountViewModel, nav)
                 } else if (noteEvent is SoftwareApplicationEvent) {
                     RenderSoftwareApplication(baseNote, accountViewModel, nav)
                 } else if (noteEvent is SoftwareAssetEvent) {

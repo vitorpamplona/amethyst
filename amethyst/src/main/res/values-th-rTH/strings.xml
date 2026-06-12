@@ -680,6 +680,7 @@
     <string name="route_notifications">การแจ้งเตือน</string>
     <string name="route_global">ทั่วโลก</string>
     <string name="route_video">Shorts</string>
+    <!-- Onchain zap send dialog -->
     <string name="route_security_filters">ตัวกรองความปลอดภัย</string>
     <string name="new_post">โพสต์ใหม่</string>
     <string name="new_short">สร้าง Shorts: รูปภาพ/วิดีโอ</string>

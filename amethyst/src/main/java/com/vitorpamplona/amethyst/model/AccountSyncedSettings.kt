@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.model
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.equalImmutableLists
+import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -67,6 +68,10 @@ class AccountSyncedSettings(
         AccountMediaPreferences(
             MutableStateFlow(VisualizerStyle.fromName(internalSettings.media.audioVisualizer)),
         )
+    val chats =
+        AccountChatPreferences(
+            MutableStateFlow(internalSettings.chats.toChatroomKeys()),
+        )
 
     fun toInternal(): AccountSyncedSettingsInternal =
         AccountSyncedSettingsInternal(
@@ -98,6 +103,7 @@ class AccountSyncedSettings(
                 ),
             videoPlayer = AccountVideoPlayerPreferencesInternal(videoPlayer.buttonItems.value),
             media = AccountMediaPreferencesInternal(media.audioVisualizer.value.name),
+            chats = AccountChatPreferencesInternal(chats.pinnedChatrooms.value.map { it.users.sorted() }),
         )
 
     fun updateFrom(syncedSettingsInternal: AccountSyncedSettingsInternal) {
@@ -170,6 +176,11 @@ class AccountSyncedSettings(
         val newAudioVisualizer = VisualizerStyle.fromName(syncedSettingsInternal.media.audioVisualizer)
         if (media.audioVisualizer.value != newAudioVisualizer) {
             media.audioVisualizer.tryEmit(newAudioVisualizer)
+        }
+
+        val newPinnedChatrooms = syncedSettingsInternal.chats.toChatroomKeys()
+        if (chats.pinnedChatrooms.value != newPinnedChatrooms) {
+            chats.pinnedChatrooms.tryEmit(newPinnedChatrooms)
         }
     }
 
@@ -268,6 +279,13 @@ class AccountLanguagePreferences(
 class AccountMediaPreferences(
     val audioVisualizer: MutableStateFlow<VisualizerStyle>,
 )
+
+@Stable
+class AccountChatPreferences(
+    val pinnedChatrooms: MutableStateFlow<Set<ChatroomKey>>,
+)
+
+internal fun AccountChatPreferencesInternal.toChatroomKeys(): Set<ChatroomKey> = pinnedRooms.mapTo(mutableSetOf()) { ChatroomKey(it.toSet()) }
 
 @Stable
 class AccountSecurityPreferences(
