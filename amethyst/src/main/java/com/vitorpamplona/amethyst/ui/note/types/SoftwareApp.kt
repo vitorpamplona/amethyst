@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -60,11 +61,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.observeNoteEvent
 import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
+import com.vitorpamplona.amethyst.ui.components.ZoomableContentView
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.LinkIcon
@@ -87,6 +91,7 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.SoftwareR
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.asSoftwareRelease
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -168,7 +173,7 @@ fun RenderSoftwareApplication(
 
         if (images.isNotEmpty()) {
             Spacer(StdVertSpacer)
-            ScreenshotsStrip(images, imageHeight = 200.dp)
+            ScreenshotsStrip(images, accountViewModel, imageHeight = 200.dp)
         }
     }
 
@@ -327,26 +332,42 @@ fun TopicChipFlow(
 @Composable
 fun ScreenshotsStrip(
     images: List<String>,
+    accountViewModel: AccountViewModel,
     contentPadding: PaddingValues = PaddingValues(0.dp),
     imageHeight: Dp = 180.dp,
 ) {
     if (images.isEmpty()) return
+
+    val mediaContents =
+        remember(images) {
+            images.map { MediaUrlImage(url = it) }.toImmutableList()
+        }
+
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         contentPadding = contentPadding,
         modifier = Modifier.height(imageHeight),
     ) {
-        items(images) { imageUrl ->
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier =
-                    Modifier
-                        .height(imageHeight)
-                        .clip(RoundedCornerShape(8.dp))
-                        .border(1.dp, MaterialTheme.colorScheme.subtleBorder, RoundedCornerShape(8.dp)),
-            )
+        items(mediaContents) { content ->
+            // Fixed-height tile whose width follows the image's aspect ratio
+            // once it is known; assumes a portrait phone screenshot before the
+            // first load fills the ratio cache.
+            val ratio = MediaAspectRatioCache.get(content.url) ?: (9f / 16f)
+            Box(
+                Modifier
+                    .height(imageHeight)
+                    .aspectRatio(ratio)
+                    .clip(RoundedCornerShape(8.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.subtleBorder, RoundedCornerShape(8.dp)),
+            ) {
+                ZoomableContentView(
+                    content = content,
+                    images = mediaContents,
+                    roundedCorner = false,
+                    contentScale = ContentScale.Crop,
+                    accountViewModel = accountViewModel,
+                )
+            }
         }
     }
 }

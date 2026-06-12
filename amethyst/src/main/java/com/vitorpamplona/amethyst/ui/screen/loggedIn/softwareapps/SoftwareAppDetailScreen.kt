@@ -216,7 +216,7 @@ private fun SoftwareAppDetailBody(
         if (images.isNotEmpty()) {
             item(key = "screenshots") {
                 Spacer(Modifier.height(12.dp))
-                ScreenshotsStrip(images, contentPadding = PaddingValues(horizontal = 12.dp))
+                ScreenshotsStrip(images, accountViewModel, contentPadding = PaddingValues(horizontal = 12.dp))
             }
         }
 
