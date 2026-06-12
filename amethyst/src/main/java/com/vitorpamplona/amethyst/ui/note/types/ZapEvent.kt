@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.note.types
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -44,6 +46,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.CrossfadeToDisplayComment
+import com.vitorpamplona.amethyst.ui.note.DisplayBlankAuthor
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
@@ -99,20 +102,41 @@ fun RenderLnZap(
 ) {
     val zapEvent = note.event as? LnZapEvent ?: return
 
-    RenderZappedPost(note, quotesLeft, backgroundColor, accountViewModel, nav)
-
     val card by parseAuthorCommentAndAmount(note, accountViewModel)
+    val recipientKey = zapEvent.zappedAuthor().firstOrNull()
+    val orange = MaterialTheme.colorScheme.bitcoinColor
 
-    val destinationKey = zapEvent.zappedAuthor().firstOrNull() ?: return
+    ActivityCardFrame(orange) {
+        ActivityHeaderRow(
+            tint = orange,
+            pillLabel = "LIGHTNING",
+            badge = {
+                ActivityBadge(orange) {
+                    ZapIcon(Modifier.size(18.dp), Color.White)
+                }
+            },
+            senderAvatar = {
+                val sender = card.user
+                if (sender != null) {
+                    UserPicture(sender, Size25dp, Modifier, accountViewModel, nav)
+                } else {
+                    DisplayBlankAuthor(Size25dp, accountViewModel = accountViewModel)
+                }
+            },
+            recipientAvatar =
+                recipientKey?.let {
+                    { UserPicture(it, Size25dp, Modifier, accountViewModel, nav) }
+                },
+        )
 
-    TransferCard(
-        card,
-        destinationKey,
-        backgroundColor,
-        Modifier,
-        accountViewModel,
-        nav,
-    )
+        RenderZappedPost(note, quotesLeft, backgroundColor, accountViewModel, nav)
+
+        card.amount?.let { ActivityAmountRow(it, orange) }
+
+        card.comment?.let {
+            CrossfadeToDisplayComment(it, backgroundColor, nav, accountViewModel)
+        }
+    }
 }
 
 /**

@@ -99,7 +99,6 @@ fun RenderOnchainZap(
     val sender = note.author?.pubkeyHex ?: event.pubKey
     val recipient = event.recipient() ?: return
 
-    RenderZappedPost(note, quotesLeft, backgroundColor, accountViewModel, nav)
     val sats = event.claimedAmountInSats() ?: 0L
     val txid = event.txid()
     val message = event.content.takeIf { it.isNotBlank() }
@@ -143,6 +142,8 @@ fun RenderOnchainZap(
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
+
+            RenderZappedPost(note, quotesLeft, backgroundColor, accountViewModel, nav)
 
             AmountRow(sats = sats, orange = orange)
 

@@ -20,21 +20,31 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.hashtags.Cashu
+import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
+import com.vitorpamplona.amethyst.ui.note.CrossfadeToDisplayComment
+import com.vitorpamplona.amethyst.ui.note.DisplayBlankAuthor
+import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.theme.Size25dp
+import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.claimedSatsTotal
 import java.math.BigDecimal
 
 /**
- * Renders a NIP-61 nutzap (kind 9321) as a transfer card, like lightning zaps.
+ * Renders a NIP-61 nutzap (kind 9321) as an activity card, like lightning zaps.
  * Unlike kind 9735 receipts, the nutzap is signed by the sender, so [Note.author]
  * is already the right person to attribute.
  */
@@ -48,25 +58,43 @@ fun RenderNutzap(
 ) {
     val nutzapEvent = note.event as? NutzapEvent ?: return
 
-    val recipientKey = nutzapEvent.linkedPubKeys().firstOrNull() ?: return
+    val recipientKey = nutzapEvent.linkedPubKeys().firstOrNull()
+    val orange = MaterialTheme.colorScheme.bitcoinColor
 
-    RenderZappedPost(note, quotesLeft, backgroundColor, accountViewModel, nav)
+    ActivityCardFrame(orange) {
+        ActivityHeaderRow(
+            tint = orange,
+            pillLabel = "CASHU",
+            badge = {
+                ActivityBadge(orange) {
+                    Icon(
+                        imageVector = CustomHashTagIcons.Cashu,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+            },
+            senderAvatar = {
+                val sender = note.author
+                if (sender != null) {
+                    UserPicture(sender, Size25dp, Modifier, accountViewModel, nav)
+                } else {
+                    DisplayBlankAuthor(Size25dp, accountViewModel = accountViewModel)
+                }
+            },
+            recipientAvatar =
+                recipientKey?.let {
+                    { UserPicture(it, Size25dp, Modifier, accountViewModel, nav) }
+                },
+        )
 
-    val card =
-        remember(note) {
-            ZapAmountCommentNotification(
-                user = note.author,
-                comment = nutzapEvent.content.ifBlank { null },
-                amount = showAmount(BigDecimal(nutzapEvent.claimedSatsTotal())),
-                zapNote = note,
-            )
+        RenderZappedPost(note, quotesLeft, backgroundColor, accountViewModel, nav)
+
+        ActivityAmountRow(showAmount(BigDecimal(nutzapEvent.claimedSatsTotal())), orange)
+
+        nutzapEvent.content.ifBlank { null }?.let {
+            CrossfadeToDisplayComment(it, backgroundColor, nav, accountViewModel)
         }
-
-    TransferCard(
-        card,
-        recipientKey,
-        backgroundColor,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
+    }
 }
