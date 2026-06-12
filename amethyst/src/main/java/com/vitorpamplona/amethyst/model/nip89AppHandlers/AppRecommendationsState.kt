@@ -64,13 +64,19 @@ class AppRecommendationsState(
      * My kind 31989 recommendation events (one per handled kind), kept in
      * sync as the cache consumes new versions. UI should collect this
      * instead of rescanning the cache on every event bundle.
+     *
+     * Eagerly started on purpose, like the sibling account states: the
+     * registered observer holds strong references to these notes, pinning
+     * them in the soft-reference cache so the read-modify-write publishers
+     * below never rebuild a 31989 from a partially garbage-collected
+     * snapshot (which would silently drop previously recommended apps).
      */
     val flow: StateFlow<List<AppRecommendationEvent>> =
         cache
             .observeEvents<AppRecommendationEvent>(
                 Filter(kinds = listOf(AppRecommendationEvent.KIND), authors = listOf(signer.pubKey)),
             ).flowOn(Dispatchers.IO)
-            .stateIn(scope, SharingStarted.WhileSubscribed(30000), existingRecommendationEvents())
+            .stateIn(scope, SharingStarted.Eagerly, existingRecommendationEvents())
 
     /**
      * Serializes read-modify-write of the per-kind recommendation events so
