@@ -22,14 +22,12 @@ package com.vitorpamplona.amethyst.ui.components
 
 import android.content.Context
 import android.content.Intent
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Card
+import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
@@ -40,17 +38,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.hashtags.Cashu
@@ -58,23 +55,20 @@ import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuToken
 import com.vitorpamplona.amethyst.service.cashu.CachedCashuParser
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
-import com.vitorpamplona.amethyst.ui.components.util.setText
-import com.vitorpamplona.amethyst.ui.note.CopyIcon
 import com.vitorpamplona.amethyst.ui.note.OpenInNewIcon
 import com.vitorpamplona.amethyst.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.CashuCardBorders
+import com.vitorpamplona.amethyst.ui.theme.ButtonBorder
 import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20Modifier
-import com.vitorpamplona.amethyst.ui.theme.SmallishBorder
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
 import com.vitorpamplona.amethyst.ui.theme.ThemeComparisonColumn
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.NumberFormat
 
 @Composable
 fun CashuPreview(
@@ -129,10 +123,29 @@ fun CashuPreview(
 fun CashuPreviewPreview() {
     ThemeComparisonColumn {
         CashuPreviewNew(
-            token = CashuToken("token", "mint", 32400, listOf()),
+            token = CashuToken("token", "https://mint.example.com", 32400, listOf(), "sat", "Thanks for the coffee!"),
             melt = { _, _, _ -> },
             toast = { _, _ -> },
         )
+    }
+}
+
+/**
+ * Formats the token amount with its NUT-00 unit: sats stay sats, fiat units
+ * (denominated in minor units, e.g. usd = cents) are shown with two decimals,
+ * anything unknown is rendered verbatim rather than mislabeled as sats.
+ */
+private fun cashuAmountLabel(
+    token: CashuToken,
+    satsLabel: String,
+): Pair<String, String> {
+    val unit = token.unit
+    return when (unit) {
+        null, "sat" -> NumberFormat.getIntegerInstance().format(token.totalAmount) to satsLabel
+        "usd", "eur" ->
+            NumberFormat.getInstance().apply { minimumFractionDigits = 2 }.format(token.totalAmount / 100.0) to
+                unit.uppercase()
+        else -> NumberFormat.getIntegerInstance().format(token.totalAmount) to unit
     }
 }
 
@@ -144,107 +157,88 @@ fun CashuPreviewNew(
 ) {
     val context = LocalContext.current
 
-    Card(
-        modifier = CashuCardBorders,
+    PaymentCard(
+        title = stringRes(R.string.cashu),
+        icon = {
+            Icon(
+                imageVector = CustomHashTagIcons.Cashu,
+                contentDescription = null,
+                modifier = Size18Modifier,
+                tint = Color.Unspecified,
+            )
+        },
+        copyValue = token.token,
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
+        val satsLabel = stringRes(R.string.sats)
+        val (amount, unit) = remember(token) { cashuAmountLabel(token, satsLabel) }
+
+        PaymentCardAmount(amount = amount, unit = unit)
+
+        token.memo?.let {
+            PaymentCardDescription(it)
+        }
+
+        Text(
+            text = stringRes(R.string.cashu_mint_label, token.mint.removePrefix("https://")),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(10.dp),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = CustomHashTagIcons.Cashu,
-                    null,
-                    modifier = Modifier.size(13.dp),
-                )
+                    .padding(top = 6.dp),
+        )
 
-                Text(
-                    text = stringRes(R.string.cashu),
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(start = 5.dp, bottom = 1.dp),
-                )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp),
+        ) {
+            var isRedeeming by remember { mutableStateOf(false) }
+
+            Button(
+                onClick = {
+                    isRedeeming = true
+                    melt(token, context) { title, message ->
+                        toast(title, message)
+                        isRedeeming = false
+                    }
+                },
+                shape = ButtonBorder,
+                modifier = Modifier.weight(1f),
+            ) {
+                if (isRedeeming) {
+                    LoadingAnimation()
+                } else {
+                    ZapIcon(Size20Modifier, tint = MaterialTheme.colorScheme.onPrimary)
+                }
+                Spacer(StdHorzSpacer)
+
+                Text(stringRes(R.string.cashu_redeem))
             }
 
-            Text(
-                text = "${token.totalAmount} ${stringRes(id = R.string.sats)}",
-                fontSize = 20.sp,
-                modifier = Modifier.padding(top = 5.dp),
-            )
-            Text(
-                text = "Mint: " + token.mint.replace("https://", ""),
-                fontSize = 7.sp,
-                color = Color.Gray,
-                modifier = Modifier.padding(start = 5.dp, bottom = 1.dp),
-            )
+            Spacer(modifier = StdHorzSpacer)
 
-            Row(modifier = Modifier.padding(top = 5.dp)) {
-                var isRedeeming by remember { mutableStateOf(false) }
+            FilledTonalButton(
+                onClick = {
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW, "cashu://${token.token}".toUri())
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
 
-                FilledTonalButton(
-                    onClick = {
-                        isRedeeming = true
-                        melt(token, context) { title, message ->
-                            toast(title, message)
-                            isRedeeming = false
-                        }
-                    },
-                    shape = SmallishBorder,
-                ) {
-                    if (isRedeeming) {
-                        LoadingAnimation()
-                    } else {
-                        ZapIcon(Size20Modifier, tint = MaterialTheme.colorScheme.onBackground)
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        toast(stringRes(context, R.string.cashu), stringRes(context, R.string.cashu_no_wallet_found))
                     }
-                    Spacer(StdHorzSpacer)
-
-                    Text(
-                        "Redeem",
-                        fontSize = 16.sp,
-                    )
-                }
-
-                Spacer(modifier = StdHorzSpacer)
-
-                FilledTonalButton(
-                    onClick = {
-                        try {
-                            val intent = Intent(Intent.ACTION_VIEW, "cashu://${token.token}".toUri())
-                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-
-                            context.startActivity(intent)
-                        } catch (e: Exception) {
-                            if (e is CancellationException) throw e
-                            toast(stringRes(context, R.string.cashu), stringRes(context, R.string.cashu_no_wallet_found))
-                        }
-                    },
-                    shape = SmallishBorder,
-                    contentPadding = PaddingValues(0.dp),
-                ) {
-                    OpenInNewIcon(Size18Modifier)
-                }
-
-                Spacer(modifier = StdHorzSpacer)
-
-                val clipboardManager = LocalClipboard.current
-                val scope = rememberCoroutineScope()
-
-                FilledTonalButton(
-                    onClick = {
-                        scope.launch {
-                            // Copying the token to clipboard
-                            clipboardManager.setText(token.token)
-                        }
-                    },
-                    shape = SmallishBorder,
-                    contentPadding = PaddingValues(0.dp),
-                ) {
-                    CopyIcon(Size18Modifier)
-                }
+                },
+                shape = ButtonBorder,
+            ) {
+                OpenInNewIcon(Size18Modifier)
             }
         }
     }

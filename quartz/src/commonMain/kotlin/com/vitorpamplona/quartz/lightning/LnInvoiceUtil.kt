@@ -283,6 +283,112 @@ object LnInvoiceUtil {
 
     fun getAmountInSats(invoice: String): BigDecimal = getAmount(invoice).multiply(OneHundredK)
 
+    /** Tagged-field types from BOLT-11 (the bech32 value of the tag character). */
+    private const val TAG_DESCRIPTION = 13 // 'd'
+    private const val TAG_EXPIRY = 6 // 'x'
+
+    /** Default expiry per BOLT-11 when the `x` field is absent. */
+    private const val DEFAULT_EXPIRY_SECONDS = 3600L
+
+    /**
+     * The human-relevant tagged fields of a BOLT-11 invoice: when it was created,
+     * the free-text description (absent when the payee used a description hash),
+     * and how long it stays valid.
+     */
+    class Bolt11Details(
+        val timestamp: Long,
+        val description: String?,
+        val expirySeconds: Long?,
+    ) {
+        fun expiresAt(): Long = timestamp + (expirySeconds ?: DEFAULT_EXPIRY_SECONDS)
+    }
+
+    /**
+     * Parses the data part of a BOLT-11 invoice and returns its timestamp, description
+     * and expiry. Returns null if the string is not a checksum-valid invoice.
+     */
+    fun parseDetails(invoice: String): Bolt11Details? {
+        try {
+            decodeUnlimitedLength(invoice) // checksum must match
+        } catch (e: AddressFormatException) {
+            return null
+        }
+
+        val pos = invoice.lastIndexOf('1')
+        val dataPart = invoice.substring(pos + 1).lowercase()
+        // 7 chars of timestamp + 104 chars of signature + 6 chars of checksum is the minimum.
+        if (dataPart.length < 7 + 104 + 6) return null
+
+        val values = ByteArray(dataPart.length)
+        for (i in dataPart.indices) {
+            val code = dataPart[i].code
+            if (code >= CHARSET_REV.size || CHARSET_REV[code].toInt() == -1) return null
+            values[i] = CHARSET_REV[code]
+        }
+
+        var timestamp = 0L
+        for (i in 0 until 7) {
+            timestamp = (timestamp shl 5) or values[i].toLong()
+        }
+
+        // Tagged fields run from after the timestamp to before the 520-bit signature
+        // + recovery id (104 values) and the checksum (6 values).
+        val fieldsEnd = values.size - 104 - 6
+        var description: String? = null
+        var expiry: Long? = null
+
+        var i = 7
+        while (i + 3 <= fieldsEnd) {
+            val type = values[i].toInt()
+            val dataLength = values[i + 1].toInt() * 32 + values[i + 2].toInt()
+            val dataStart = i + 3
+            val dataEnd = dataStart + dataLength
+            if (dataEnd > fieldsEnd) break
+
+            when (type) {
+                TAG_DESCRIPTION -> description = fiveBitsToBytes(values, dataStart, dataEnd).decodeToString()
+                TAG_EXPIRY -> {
+                    var seconds = 0L
+                    for (j in dataStart until dataEnd) {
+                        seconds = (seconds shl 5) or values[j].toLong()
+                    }
+                    expiry = seconds
+                }
+            }
+
+            i = dataEnd
+        }
+
+        return Bolt11Details(timestamp, description?.takeIf { it.isNotBlank() }, expiry)
+    }
+
+    /**
+     * Returns the free-text description (`d` tagged field) of a BOLT-11 invoice, or null
+     * when the invoice is invalid, has no description, or carries only a description hash.
+     */
+    fun getDescription(invoice: String): String? = parseDetails(invoice)?.description
+
+    /** Regroups 5-bit bech32 values into 8-bit bytes, discarding incomplete trailing bits. */
+    private fun fiveBitsToBytes(
+        values: ByteArray,
+        from: Int,
+        to: Int,
+    ): ByteArray {
+        val result = ByteArray((to - from) * 5 / 8)
+        var acc = 0
+        var bits = 0
+        var index = 0
+        for (i in from until to) {
+            acc = (acc shl 5) or values[i].toInt()
+            bits += 5
+            if (bits >= 8) {
+                bits -= 8
+                result[index++] = ((acc ushr bits) and 0xFF).toByte()
+            }
+        }
+        return result
+    }
+
     private fun multiplier(multiplier: String): BigDecimal =
         when (multiplier.lowercase()) {
             "m" -> OneMili

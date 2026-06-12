@@ -29,6 +29,10 @@ data class CashuToken(
     val mint: String,
     val totalAmount: Long,
     val proofs: List<Proof>,
+    /** NUT-00 currency unit ("sat" when absent). Non-sat units are denominated in minor units (e.g. usd = cents). */
+    val unit: String? = null,
+    /** Free-text memo the sender attached to the token. */
+    val memo: String? = null,
 )
 
 @Serializable
