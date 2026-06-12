@@ -67,13 +67,17 @@ import com.vitorpamplona.amethyst.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.note.LinkIcon
+import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
+import com.vitorpamplona.amethyst.ui.note.NoteUsernameDisplay
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
+import com.vitorpamplona.amethyst.ui.theme.grayText
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.subtleBorder
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
@@ -134,6 +138,7 @@ fun RenderSoftwareApplication(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
+                AppAuthorLine(note, accountViewModel, nav)
                 summary?.takeIf { it.isNotBlank() }?.let {
                     Text(
                         text = it,
@@ -246,6 +251,29 @@ fun AppIcon(
                 modifier = Modifier.size(sizeDp.dp),
             )
         }
+    }
+}
+
+/**
+ * "by <author>" line with a small clickable profile picture. Shared between
+ * the app feed card and the app detail screen header.
+ */
+@Composable
+fun AppAuthorLine(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = stringRes(R.string.nip82_by_author),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.grayText,
+        )
+        Spacer(Modifier.width(4.dp))
+        NoteAuthorPicture(note, Size20dp, accountViewModel = accountViewModel, nav = nav)
+        Spacer(Modifier.width(4.dp))
+        NoteUsernameDisplay(note, Modifier.weight(1f, fill = false), accountViewModel = accountViewModel)
     }
 }
 
