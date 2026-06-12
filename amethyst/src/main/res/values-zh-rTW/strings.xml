@@ -667,6 +667,7 @@
     <string name="route_notifications">通知</string>
     <string name="route_global">全球</string>
     <string name="route_video">短篇</string>
+    <!-- Onchain zap send dialog -->
     <string name="route_security_filters">安全濾鏡</string>
     <string name="new_post">新帖子</string>
     <string name="new_short">新短篇：圖像或視頻</string>

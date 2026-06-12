@@ -113,6 +113,7 @@
     <string name="clink_offer_invalid_amount">Ange ett giltigt belopp för detta erbjudande.</string>
     <string name="clink_offer_amount_range">Tillåtet intervall: %1$s–%2$s sats</string>
     <string name="clink_offer_label">CLINK-erbjudande (noffer)</string>
+    <string name="clink_budget_set">Budget</string>
     <string name="clink_budget_title">Utgiftsbudget</string>
     <string name="clink_budget_amount_sats">Belopp (sats)</string>
     <string name="clink_budget_request">Begär</string>
@@ -122,6 +123,7 @@
     <string name="clink_budget_weekly">Veckovis</string>
     <string name="clink_budget_monthly">Månadsvis</string>
     <string name="clink_debit_pay_only">Endast betalning</string>
+    <string name="wallet_add_clink_title">CLINK Debit</string>
     <string name="wallet_add_clink_description">Betala och zappa från en plånbok som har förauktoriserat ditt konto. Endast utgifter — inget saldo eller historik.</string>
     <string name="wallet_add_clink_invalid">Ogiltig CLINK-debitpekare. En ndebit1…-sträng förväntades.</string>
     <string name="wallet_paste_ndebit">Klistra in ndebit-pekare</string>
@@ -132,7 +134,10 @@
     <string name="send_payment_source_external">En annan plånboksapp</string>
     <string name="send_payment_source_onchain_wallet">On-chain-plånbok</string>
     <string name="send_payment_source_cashu_wallet">Cashu-plånbok</string>
+    <string name="send_payment_method_lightning">Lightning</string>
     <string name="send_payment_method_clink">CLINK-erbjudande</string>
+    <string name="send_payment_method_onchain">On-chain</string>
+    <string name="send_payment_method_cashu">Cashu</string>
     <string name="send_payment_amount">Belopp</string>
     <string name="send_payment_fixed_price">Pris satt av erbjudandet</string>
     <string name="send_payment_receipt_section">Zap-kvitto</string>
@@ -647,6 +652,8 @@
     <string name="exercise_swimming">Simning</string>
     <string name="exercise_rowing">Rodd</string>
     <string name="exercise_strength">Styrketräning</string>
+    <string name="exercise_yoga">Yoga</string>
+    <string name="exercise_meditation">Meditation</string>
     <string name="exercise_diet">Kost</string>
     <string name="exercise_fasting">Fasta</string>
     <string name="software_apps">Appar</string>
@@ -1960,6 +1967,7 @@
     <string name="wallet_onchain_public_dialog_body">Din Taproot-adress härleds från din publika Nostr-nyckel, så alla som känner till din npub kan se denna plånboks saldo och transaktionshistorik på blockchainen.\n\nFör att bevara din integritet, fyll på denna plånbok från icke-privata konton (som börser) och skicka tillbaka medel dit. Blanda aldrig dessa medel med dina kalla plånböcker, och behandla dem som pengar du kan förlora, eftersom alla som har kontroll över din nsec kan spendera medlen.</string>
     <string name="wallet_onchain_public_dialog_confirm">Uppfattat</string>
     <string name="wallet_onchain_copy_dialog_confirm">Kopiera adress</string>
+    <!-- Onchain zap send dialog -->
     <string name="route_security_filters">Säkerhetsfilter</string>
     <string name="route_import_follows">Importera följare</string>
     <string name="new_post">Nytt inlägg</string>

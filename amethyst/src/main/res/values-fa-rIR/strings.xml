@@ -792,6 +792,7 @@
     <string name="route_notifications">اعلان‌ها</string>
     <string name="route_global">سراسری</string>
     <string name="route_video">کوتاه</string>
+    <!-- Onchain zap send dialog -->
     <string name="route_security_filters">فیلترهای ایمنی</string>
     <string name="new_post">نوشته جدید</string>
     <string name="new_short">رسانه های کوتاه جدید: تصاویر یا ویدئوها</string>

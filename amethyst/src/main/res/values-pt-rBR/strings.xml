@@ -134,7 +134,10 @@
     <string name="send_payment_source_external">Outro app de carteira</string>
     <string name="send_payment_source_onchain_wallet">Carteira on-chain</string>
     <string name="send_payment_source_cashu_wallet">Carteira Cashu</string>
+    <string name="send_payment_method_lightning">Lightning</string>
     <string name="send_payment_method_clink">Oferta CLINK</string>
+    <string name="send_payment_method_onchain">On-chain</string>
+    <string name="send_payment_method_cashu">Cashu</string>
     <string name="send_payment_amount">Valor</string>
     <string name="send_payment_fixed_price">Preço definido pela oferta</string>
     <string name="send_payment_receipt_section">Recibo de zap</string>
@@ -1965,6 +1968,7 @@
     <string name="wallet_onchain_public_dialog_body">Seu endereço Taproot é derivado da sua chave pública Nostr, então qualquer pessoa que conheça seu npub pode ver o saldo e o histórico de transações desta carteira no blockchain.\n\nPara preservar sua privacidade, abasteça esta carteira a partir de contas não privadas (como corretoras) e envie os fundos de volta para elas. Nunca misture esses fundos com suas carteiras frias e trate-os como dinheiro que você pode perder, pois qualquer um que controle seu nsec pode gastar os fundos.</string>
     <string name="wallet_onchain_public_dialog_confirm">Entendi</string>
     <string name="wallet_onchain_copy_dialog_confirm">Copiar endereço</string>
+    <!-- Onchain zap send dialog -->
     <string name="route_security_filters">Filtros de Segurança</string>
     <string name="route_import_follows">Importar Seguidos</string>
     <string name="new_post">Novo Post</string>

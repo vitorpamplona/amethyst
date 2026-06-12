@@ -1703,6 +1703,7 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
 Za ohranitev zasebnosti to denarnico polni in prazni prek ne-zasebnih računov, kot so borze. Teh sredstev nikoli ne mešaj s svojimi hladnimi denarnicami in z njimi ravnaj kot z denarjem, ki ga lahko izgubiš, saj lahko vsakdo, ki ima nadzor nad tvojim zasebnim ključem (nsec...), ta sredstva tudi porabi.</string>
     <string name="wallet_onchain_public_dialog_confirm">Razumem</string>
     <string name="wallet_onchain_copy_dialog_confirm">Kopiraj naslov</string>
+    <!-- Onchain zap send dialog -->
     <string name="route_security_filters">Varnostni filtri</string>
     <string name="route_import_follows">Uvozi sledilce</string>
     <string name="new_post">Nova objava</string>

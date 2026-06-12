@@ -138,7 +138,10 @@
     <string name="send_payment_source_external">Jiná peněženková aplikace</string>
     <string name="send_payment_source_onchain_wallet">On-chain peněženka</string>
     <string name="send_payment_source_cashu_wallet">Cashu peněženka</string>
+    <string name="send_payment_method_lightning">Lightning</string>
     <string name="send_payment_method_clink">Nabídka CLINK</string>
+    <string name="send_payment_method_onchain">On-chain</string>
+    <string name="send_payment_method_cashu">Cashu</string>
     <string name="send_payment_amount">Částka</string>
     <string name="send_payment_fixed_price">Cena stanovená nabídkou</string>
     <string name="send_payment_receipt_section">Potvrzení o zapu</string>
@@ -1993,6 +1996,7 @@
     <string name="wallet_onchain_public_dialog_body">Vaše Taproot adresa je odvozena z vašeho veřejného klíče Nostr, takže kdokoli, kdo zná váš npub, může vidět zůstatek této peněženky a historii transakcí na blockchainu.\n\nAbyste zachovali soukromí, vkládejte do této peněženky a vybírejte z ní prostředky z nesoukromých účtů, jako jsou burzy. Nikdy nemíchejte tyto prostředky se svými studenými peněženkami a zacházejte s nimi jako s penězi, které můžete ztratit, protože kdokoli, kdo má pod kontrolou váš nsec, je může utratit.</string>
     <string name="wallet_onchain_public_dialog_confirm">Rozumím</string>
     <string name="wallet_onchain_copy_dialog_confirm">Zkopírovat adresu</string>
+    <!-- Onchain zap send dialog -->
     <string name="route_security_filters">Bezpečnostní filtry</string>
     <string name="route_import_follows">Importovat sledované</string>
     <string name="new_post">Nový příspěvek</string>
