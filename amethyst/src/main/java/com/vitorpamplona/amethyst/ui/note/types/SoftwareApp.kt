@@ -237,12 +237,24 @@ fun AppIcon(
     name: String,
     sizeDp: Int = 56,
 ) {
+    val shape = RoundedCornerShape((sizeDp / 4).dp)
     Box(
         Modifier
             .size(sizeDp.dp)
-            .clip(RoundedCornerShape((sizeDp / 4).dp))
-            .border(1.dp, MaterialTheme.colorScheme.subtleBorder, RoundedCornerShape((sizeDp / 4).dp)),
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .border(1.dp, MaterialTheme.colorScheme.subtleBorder, shape),
+        contentAlignment = Alignment.Center,
     ) {
+        // Fallback underneath the image: visible when there is no icon url,
+        // while the icon downloads, and when the download fails (AsyncImage
+        // draws nothing in those states).
+        Text(
+            text = (name.firstOrNull() ?: '?').uppercase(),
+            fontSize = (sizeDp / 2).sp,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.grayText,
+        )
         icon?.let {
             AsyncImage(
                 model = it,
