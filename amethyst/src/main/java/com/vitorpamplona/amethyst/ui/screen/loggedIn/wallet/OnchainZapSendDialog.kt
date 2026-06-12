@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.wallet
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,14 +62,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.onchain.DustRecipientException
+import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendError
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapShare
@@ -84,6 +89,7 @@ import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.ShowUserSugge
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -103,12 +109,12 @@ import java.text.NumberFormat
 
 /** Shared with the profile Send Payment screen's on-chain rail. */
 internal enum class FeeTier(
-    val label: String,
-    val etaLabel: String,
+    @param:StringRes val labelRes: Int,
+    @param:StringRes val etaLabelRes: Int,
 ) {
-    SLOW("Slow", "~1 hr"),
-    NORMAL("Normal", "~30 min"),
-    FAST("Fast", "~10 min"),
+    SLOW(R.string.onchain_send_fee_slow, R.string.onchain_send_fee_eta_slow),
+    NORMAL(R.string.onchain_send_fee_normal, R.string.onchain_send_fee_eta_normal),
+    FAST(R.string.onchain_send_fee_fast, R.string.onchain_send_fee_eta_fast),
 }
 
 internal fun FeeEstimates.rateFor(tier: FeeTier): Double =
@@ -290,7 +296,7 @@ fun OnchainZapSendDialog(
                     ) {
                         SuccessBody(r)
                     }
-                    DoneButton(label = "Done", onClick = onDismiss)
+                    DoneButton(label = stringRes(R.string.onchain_send_done), onClick = onDismiss)
                 }
 
                 is OnchainZapSendResult.Failure -> {
@@ -303,7 +309,7 @@ fun OnchainZapSendDialog(
                     ) {
                         FailureBody(r)
                     }
-                    DoneButton(label = "Close", onClick = onDismiss)
+                    DoneButton(label = stringRes(R.string.onchain_send_close), onClick = onDismiss)
                 }
 
                 null -> {
@@ -356,7 +362,7 @@ fun OnchainZapSendDialog(
                                     TextButton(
                                         onClick = { useSplits = true },
                                     ) {
-                                        Text("Use this note's ${onchainSplits.size}-way zap split")
+                                        Text(pluralStringResource(R.plurals.onchain_send_use_note_split, onchainSplits.size, onchainSplits.size))
                                     }
                                 }
                             }
@@ -375,7 +381,7 @@ fun OnchainZapSendDialog(
                             OutlinedTextField(
                                 value = comment,
                                 onValueChange = { comment = it },
-                                label = { Text("Comment (optional)") },
+                                label = { Text(stringRes(R.string.onchain_send_comment_label)) },
                                 modifier = Modifier.fillMaxWidth(),
                             )
 
@@ -413,7 +419,9 @@ fun OnchainZapSendDialog(
                                                     result =
                                                         OnchainZapSendResult.Failure(
                                                             stage = OnchainZapSendStage.BUILDING,
+                                                            error = OnchainZapSendError.RECIPIENT_BELOW_DUST,
                                                             message = e.message ?: "A recipient share is below dust",
+                                                            cause = e,
                                                         )
                                                     return@launch
                                                 }
@@ -471,7 +479,7 @@ private fun Header(onClose: () -> Unit) {
             )
         }
         Text(
-            text = "Send onchain zap",
+            text = stringRes(R.string.onchain_send_title),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             modifier =
@@ -482,7 +490,7 @@ private fun Header(onClose: () -> Unit) {
         IconButton(onClick = onClose) {
             Icon(
                 symbol = MaterialSymbols.Close,
-                contentDescription = "Close",
+                contentDescription = stringRes(R.string.onchain_send_close),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -500,7 +508,7 @@ private fun RecipientSection(
     searchInput: String,
     onSearchChange: (String) -> Unit,
 ) {
-    SectionLabel("To")
+    SectionLabel(stringRes(R.string.onchain_send_to))
 
     if (recipientPubKey != null) {
         Surface(
@@ -519,7 +527,7 @@ private fun RecipientSection(
                     nav = EmptyNav(),
                 )
                 Text(
-                    text = "Post author",
+                    text = stringRes(R.string.onchain_send_post_author),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(start = 12.dp),
@@ -539,8 +547,8 @@ private fun RecipientSection(
     OutlinedTextField(
         value = searchInput,
         onValueChange = onSearchChange,
-        label = { Text("Recipient") },
-        placeholder = { Text("name, NIP-05 or npub") },
+        label = { Text(stringRes(R.string.onchain_send_recipient)) },
+        placeholder = { Text(stringRes(R.string.onchain_send_recipient_placeholder)) },
         singleLine = true,
         isError =
             searchInput.isNotBlank() &&
@@ -611,7 +619,7 @@ private fun SelectedRecipientChip(
             IconButton(onClick = onClear) {
                 Icon(
                     symbol = MaterialSymbols.Close,
-                    contentDescription = "Change recipient",
+                    contentDescription = stringRes(R.string.onchain_send_change_recipient),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -627,7 +635,7 @@ private fun AmountSection(
     presetAmounts: List<Long>,
     belowMinimum: Boolean,
 ) {
-    SectionLabel("Amount")
+    SectionLabel(stringRes(R.string.onchain_send_amount))
 
     if (presetAmounts.isNotEmpty()) {
         FlowRow(
@@ -651,7 +659,7 @@ private fun AmountSection(
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         placeholder = { Text("0") },
-        suffix = { Text("sats", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+        suffix = { Text(stringRes(R.string.onchain_send_sats_suffix), color = MaterialTheme.colorScheme.onSurfaceVariant) },
         isError = belowMinimum,
         modifier = Modifier.fillMaxWidth(),
     )
@@ -659,9 +667,7 @@ private fun AmountSection(
     if (belowMinimum) {
         Spacer(Modifier.height(4.dp))
         Text(
-            text =
-                "Minimum on-chain zap is ${NumberFormat.getNumberInstance().format(MIN_ONCHAIN_ZAP_SATS)} sats — " +
-                    "smaller amounts are eaten by miner fees. Use a Lightning zap instead.",
+            text = stringRes(R.string.onchain_send_min_warning, NumberFormat.getNumberInstance().format(MIN_ONCHAIN_ZAP_SATS)),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.error,
         )
@@ -675,7 +681,7 @@ private fun FeeSection(
     onFeeTierChange: (FeeTier) -> Unit,
     fees: FeeEstimates?,
 ) {
-    SectionLabel("Priority")
+    SectionLabel(stringRes(R.string.onchain_send_priority))
 
     FlowRow(
         modifier =
@@ -700,12 +706,17 @@ private fun FeeSection(
                         modifier = Modifier.padding(vertical = 4.dp),
                     ) {
                         Text(
-                            text = tier.label,
+                            text = stringRes(tier.labelRes),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
                         )
                         Text(
-                            text = if (rate != null) "${formatRate(rate)} sat/vB · ${tier.etaLabel}" else tier.etaLabel,
+                            text =
+                                if (rate != null) {
+                                    stringRes(R.string.onchain_send_fee_rate_eta, formatRate(rate), stringRes(tier.etaLabelRes))
+                                } else {
+                                    stringRes(tier.etaLabelRes)
+                                },
                             style = MaterialTheme.typography.labelSmall,
                         )
                     }
@@ -717,7 +728,7 @@ private fun FeeSection(
     if (fees == null) {
         Spacer(Modifier.height(4.dp))
         Text(
-            text = "Loading fee estimates…",
+            text = stringRes(R.string.onchain_send_loading_fees),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -760,9 +771,10 @@ private fun SendButton(
         Text(
             text =
                 when {
-                    sats != null && splitWays > 1 -> "Send $sats sats, $splitWays ways"
-                    sats != null -> "Send $sats sats"
-                    else -> "Send"
+                    sats != null && splitWays > 1 ->
+                        pluralStringResource(R.plurals.onchain_send_button_amount_split, splitWays, sats, splitWays)
+                    sats != null -> stringRes(R.string.onchain_send_button_amount, sats)
+                    else -> stringRes(R.string.send)
                 },
             fontWeight = FontWeight.SemiBold,
         )
@@ -777,7 +789,7 @@ private fun SplitsRecipientSection(
     onDisable: () -> Unit,
     accountViewModel: AccountViewModel,
 ) {
-    SectionLabel("Splits among ${splits.size} recipients")
+    SectionLabel(pluralStringResource(R.plurals.onchain_send_splits_label, splits.size, splits.size))
 
     val totalWeight = splits.sumOf { it.second }
     // Index the preview by pubkey once — the splits list scan would otherwise
@@ -833,11 +845,9 @@ private fun SplitsRecipientSection(
 
     if (skippedLnSplits.isNotEmpty()) {
         Spacer(Modifier.height(6.dp))
-        val word = if (skippedLnSplits.size == 1) "recipient" else "recipients"
+        val skipped = skippedLnSplits.size
         Text(
-            text =
-                "Skipping ${skippedLnSplits.size} Lightning-address-only $word — " +
-                    "on-chain needs a Nostr pubkey to derive the address.",
+            text = pluralStringResource(R.plurals.onchain_send_splits_skipped, skipped, skipped),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -845,7 +855,7 @@ private fun SplitsRecipientSection(
 
     Spacer(Modifier.height(4.dp))
     TextButton(onClick = onDisable) {
-        Text("Don't split — pay one recipient instead")
+        Text(stringRes(R.string.onchain_send_dont_split))
     }
 }
 
@@ -895,7 +905,7 @@ private fun SendingState() {
             color = MaterialTheme.colorScheme.bitcoinColor,
         )
         Text(
-            text = "Building, signing and broadcasting…",
+            text = stringRes(R.string.onchain_send_sending),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -914,15 +924,21 @@ private fun SuccessBody(result: OnchainZapSendResult.Success) {
             )
             Spacer(Modifier.size(8.dp))
             Text(
-                text = "Onchain zap sent",
+                text = stringRes(R.string.onchain_send_success),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )
         }
-        ResultRow("Transaction", result.txid)
-        ResultRow("Fee", "${NumberFormat.getNumberInstance().format(result.feeSats)} sats")
+        ResultRow(stringRes(R.string.onchain_send_result_transaction), result.txid)
+        ResultRow(
+            stringRes(R.string.onchain_send_result_fee),
+            stringRes(R.string.onchain_send_sats_amount, NumberFormat.getNumberInstance().format(result.feeSats)),
+        )
         if (result.changeSats > 0) {
-            ResultRow("Change", "${NumberFormat.getNumberInstance().format(result.changeSats)} sats")
+            ResultRow(
+                stringRes(R.string.onchain_send_result_change),
+                stringRes(R.string.onchain_send_sats_amount, NumberFormat.getNumberInstance().format(result.changeSats)),
+            )
         }
     }
 }
@@ -931,19 +947,26 @@ private fun SuccessBody(result: OnchainZapSendResult.Success) {
 private fun FailureBody(result: OnchainZapSendResult.Failure) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            text = result.message,
+            text = result.userMessage(LocalContext.current),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.error,
         )
+        result.technicalDetail()?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         result.broadcastTxid?.let {
             Text(
-                text = "Payment was broadcast (tx $it) but the receipt was not published.",
+                text = stringRes(R.string.onchain_send_broadcast_no_receipt, it),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Text(
-            text = "Failed at: ${result.stage.name.lowercase().replace('_', ' ')}",
+            text = stringRes(R.string.onchain_send_failed_at, stringRes(result.stage.labelRes())),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

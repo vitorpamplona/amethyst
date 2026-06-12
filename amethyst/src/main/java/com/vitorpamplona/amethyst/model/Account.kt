@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.model.nip51Lists.peopleList.PeopleList
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.ReportAction
 import com.vitorpamplona.amethyst.commons.model.nip72Communities.CommunityListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.TrustProviderListDecryptionCache
+import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendError
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendStage
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSender
@@ -102,6 +103,7 @@ import com.vitorpamplona.amethyst.model.nip62Vanish.VanishRequestsState
 import com.vitorpamplona.amethyst.model.nip65RelayList.Nip65RelayListState
 import com.vitorpamplona.amethyst.model.nip72Communities.CommunityListState
 import com.vitorpamplona.amethyst.model.nip78AppSpecific.AppSpecificState
+import com.vitorpamplona.amethyst.model.nip89AppHandlers.AppRecommendationsState
 import com.vitorpamplona.amethyst.model.nipA3PaymentTargets.NipA3PaymentTargetsState
 import com.vitorpamplona.amethyst.model.nipB7Blossom.BlossomServerListState
 import com.vitorpamplona.amethyst.model.serverList.MergedFollowListsState
@@ -287,6 +289,8 @@ import kotlin.coroutines.cancellation.CancellationException
 import com.vitorpamplona.quartz.experimental.nip95.header.thumbhash as nip95thumbhash
 import com.vitorpamplona.quartz.experimental.profileGallery.thumbhash as galleryThumbhash
 
+private const val ONCHAIN_BACKEND_NOT_CONFIGURED = "Bitcoin chain backend is not configured"
+
 @OptIn(DelicateCoroutinesApi::class)
 @Stable
 class Account(
@@ -389,6 +393,7 @@ class Account(
 
     val labeledBookmarkLists = LabeledBookmarkListsState(signer, cache, scope)
     val interestSets = InterestSetsState(signer, cache, scope)
+    val appRecommendations = AppRecommendationsState(signer, cache, scope)
     val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
     val bookmarkState = BookmarkListState(signer, cache, scope)
     val pinState = PinListState(signer, cache, scope)
@@ -889,6 +894,13 @@ class Account(
         return zapRequest
     }
 
+    private fun onchainBackendNotConfigured() =
+        OnchainZapSendResult.Failure(
+            OnchainZapSendStage.LOADING_UTXOS,
+            OnchainZapSendError.BACKEND_NOT_CONFIGURED,
+            ONCHAIN_BACKEND_NOT_CONFIGURED,
+        )
+
     /**
      * Send a NIP-BC onchain zap: build a Bitcoin transaction paying the recipient's
      * derived Taproot address, sign it, broadcast it, and publish the kind:8333
@@ -904,10 +916,7 @@ class Account(
     ): OnchainZapSendResult {
         val backend =
             cache.onchainBackend
-                ?: return OnchainZapSendResult.Failure(
-                    OnchainZapSendStage.LOADING_UTXOS,
-                    "Bitcoin chain backend is not configured",
-                )
+                ?: return onchainBackendNotConfigured()
         return OnchainZapSender.send(
             backend = backend,
             signer = signer,
@@ -932,10 +941,7 @@ class Account(
     ): OnchainZapSendResult {
         val backend =
             cache.onchainBackend
-                ?: return OnchainZapSendResult.Failure(
-                    OnchainZapSendStage.LOADING_UTXOS,
-                    "Bitcoin chain backend is not configured",
-                )
+                ?: return onchainBackendNotConfigured()
         return OnchainZapSender.sendToAddress(
             backend = backend,
             signer = signer,
@@ -959,10 +965,7 @@ class Account(
     ): OnchainZapSendResult {
         val backend =
             cache.onchainBackend
-                ?: return OnchainZapSendResult.Failure(
-                    OnchainZapSendStage.LOADING_UTXOS,
-                    "Bitcoin chain backend is not configured",
-                )
+                ?: return onchainBackendNotConfigured()
         return OnchainZapSender.sendSplit(
             backend = backend,
             signer = signer,

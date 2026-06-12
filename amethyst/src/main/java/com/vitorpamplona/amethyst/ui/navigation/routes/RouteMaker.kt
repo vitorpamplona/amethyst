@@ -101,7 +101,9 @@ fun routeForInner(
             if (noteEvent.includeKind(5300)) {
                 Route.ContentDiscovery(noteEvent.id)
             } else {
-                Route.Note(noteEvent.id)
+                // By address, not version id: the per-id note may have been
+                // evicted and relays don't serve replaceables by old ids.
+                Route.Note(noteEvent.addressTag())
             }
         }
 

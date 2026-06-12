@@ -25,18 +25,29 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
 import com.vitorpamplona.amethyst.ui.actions.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
@@ -50,6 +61,8 @@ fun DisplayAppRecommendations(
 
     LaunchedEffect(key1 = Unit) { appRecommendations.invalidateData() }
 
+    val isMe = appRecommendations.user.pubkeyHex == accountViewModel.userProfile().pubkeyHex
+
     CrossfadeIfEnabled(
         targetState = feedState,
         animationSpec = tween(durationMillis = 100),
@@ -57,10 +70,21 @@ fun DisplayAppRecommendations(
     ) { state ->
         when (state) {
             is FeedState.Loaded -> {
-                Column {
-                    Text(stringRes(id = R.string.recommended_apps))
+                Recommends(state, isMe, accountViewModel, nav)
+            }
 
-                    Recommends(state, accountViewModel, nav)
+            is FeedState.Empty -> {
+                // Owners see the section with the edit affordance even before
+                // their first recommendation, so the feature is discoverable.
+                if (isMe) {
+                    Column(modifier = Modifier.padding(vertical = 6.dp)) {
+                        AppsHeader(appCount = 0, isMe = true, nav = nav)
+                        Text(
+                            text = stringRes(R.string.profile_apps_empty_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
 
@@ -70,17 +94,62 @@ fun DisplayAppRecommendations(
 }
 
 @Composable
+private fun AppsHeader(
+    appCount: Int,
+    isMe: Boolean,
+    nav: INav,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            text =
+                if (appCount > 0) {
+                    stringRes(R.string.profile_apps_header, appCount)
+                } else {
+                    stringRes(R.string.profile_apps_header_empty)
+                },
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        if (isMe) {
+            IconButton(
+                onClick = { nav.nav(Route.ProfileAppRecommendations) },
+                modifier = Modifier.size(32.dp),
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.Settings,
+                    contentDescription = stringRes(R.string.profile_app_recommendations_title),
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 @OptIn(ExperimentalLayoutApi::class)
 fun Recommends(
     loaded: FeedState.Loaded,
+    isMe: Boolean,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
-    FlowRow(
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.padding(vertical = 5.dp),
-    ) {
-        items.list.forEach { app -> WatchApp(app, accountViewModel, nav) }
+
+    Column(modifier = Modifier.padding(vertical = 6.dp)) {
+        AppsHeader(appCount = items.list.size, isMe = isMe, nav = nav)
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items.list.forEach { app -> AppRecommendationChip(app, accountViewModel, nav) }
+        }
     }
 }

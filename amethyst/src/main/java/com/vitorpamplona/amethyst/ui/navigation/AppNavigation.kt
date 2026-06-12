@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.ui.note.nip22Comments.ReplyCommentPostScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawerLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.apps.recommendations.ProfileAppRecommendationsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.ArticlesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.BadgesScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.award.AwardBadgeScreen
@@ -278,6 +279,7 @@ fun BuildNavigation(
         composableFromEndArgs<Route.EditCommunity> { EditCommunityScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
         composableFromEnd<Route.Badges> { BadgesScreen(accountViewModel, nav) }
         composableFromEnd<Route.ProfileBadges> { ProfileBadgesScreen(accountViewModel, nav) }
+        composableFromEnd<Route.ProfileAppRecommendations> { ProfileAppRecommendationsScreen(accountViewModel, nav) }
         composableFromBottomArgs<Route.AwardBadge> { AwardBadgeScreen(it.kind, it.pubKeyHex, it.dTag, accountViewModel, nav) }
         composableFromEnd<Route.Pictures> { PicturesScreen(accountViewModel, nav) }
         composableFromEnd<Route.Workouts> { WorkoutsScreen(accountViewModel, nav) }

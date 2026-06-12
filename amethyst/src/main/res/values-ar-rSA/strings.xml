@@ -636,6 +636,7 @@
     <string name="route_home">الصفحة الرئيسية</string>
     <string name="route_search">البحث</string>
     <string name="route_messages">الرسائل</string>
+    <!-- Onchain zap send dialog -->
     <string name="route_security_filters">مرشحات الأمان</string>
     <string name="new_post">منشور جديد</string>
     <string name="new_community_note">منشور جديد للمجتمع</string>

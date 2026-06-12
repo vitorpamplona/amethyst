@@ -102,6 +102,11 @@ fun SinglePaneLayout(
                 hasLocalData = hasLocalData,
             )
 
+            // Unhealthy relays banner — flags relays unresponsive >7d, opens review popup
+            com.vitorpamplona.amethyst.desktop.ui.relay.health.UnhealthyRelayBannerHost(
+                onOpenDashboard = { singlePaneState.navigate(DeckColumnType.Relays) },
+            )
+
             // Content extends to the window edges; individual screens add their
             // own internal padding where appropriate (Messages uses full-bleed
             // panes to match native two-column chat apps).

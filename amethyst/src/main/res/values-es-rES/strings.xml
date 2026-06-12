@@ -1142,6 +1142,7 @@
     <string name="wallet_sats">sats</string>
     <string name="wallet_paste_invoice">Pegar una factura BOLT-11</string>
     <string name="wallet_pay">Pagar</string>
+    <!-- Onchain zap send dialog -->
     <string name="route_security_filters">Filtros de seguridad</string>
     <string name="route_import_follows">Importar seguidos</string>
     <string name="new_post">Nueva publicación</string>

@@ -1873,6 +1873,7 @@
     <string name="wallet_onchain_public_dialog_body">आपका टापरूट॰ पता आपकी नोस्टर ख्याप्यकुंचिका से व्युत्पन्न है। अतः जो भी आपका एनपुब॰ जानता है इस धनकोष की शेष राशि तथा लेनदेन इतिहास देख सकता है खण्डश्रृंखला पर।\n\n अपनी गोपनीयता बचा के रखने के लिए इस धनकोष का वित्तपोषण तथा अपवहन करें अनिजी लेखाओं के साथ जैसे विनिमयस्थानों में। कभी भी इस धन को अपने जालरहित धनकोष के साथ मिश्रण ना करें। तथा एसा व्यवहार करें जैसे कि इस धन को खो सकते हैं। क्योंकि आपके एनसेक॰ को जो भी नियन्त्रण करता है इस धन का व्यय कर सकेगा।</string>
     <string name="wallet_onchain_public_dialog_confirm">समझ गया</string>
     <string name="wallet_onchain_copy_dialog_confirm">पता अनुकृति</string>
+    <!-- Onchain zap send dialog -->
     <string name="route_security_filters">सुरक्षार्थ छलनियाँ</string>
     <string name="route_import_follows">अनुचरित आयात करें</string>
     <string name="new_post">नया पत्र प्रकाशन</string>

@@ -24,6 +24,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -54,6 +55,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.ui.thread.drawReplyLevel
 import com.vitorpamplona.amethyst.model.AddressableNote
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
@@ -66,6 +68,7 @@ import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.ReactionsRow
+import com.vitorpamplona.amethyst.ui.note.types.AppAuthorLine
 import com.vitorpamplona.amethyst.ui.note.types.AppIcon
 import com.vitorpamplona.amethyst.ui.note.types.AppLinksColumn
 import com.vitorpamplona.amethyst.ui.note.types.Chip
@@ -83,6 +86,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.Thre
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
+import com.vitorpamplona.amethyst.ui.theme.PaddingHorizontal12Modifier
 import com.vitorpamplona.amethyst.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.grayText
@@ -199,17 +203,20 @@ private fun SoftwareAppDetailBody(
     ) {
         item(key = "header") {
             AppDetailHeader(
+                note = note,
                 icon = icon,
                 name = name,
                 summary = summary,
                 latestVersion = latestRelease?.version(),
+                accountViewModel = accountViewModel,
+                nav = nav,
             )
         }
 
         if (images.isNotEmpty()) {
             item(key = "screenshots") {
                 Spacer(Modifier.height(12.dp))
-                ScreenshotsStrip(images)
+                ScreenshotsStrip(images, accountViewModel, contentPadding = PaddingValues(horizontal = 12.dp))
             }
         }
 
@@ -252,28 +259,18 @@ private fun SoftwareAppDetailBody(
             }
         }
 
-        item(key = "reactions") {
-            Spacer(Modifier.height(12.dp))
-            ReactionsRow(
-                baseNote = note,
-                showReactionDetail = true,
-                addPadding = false,
-                editState = null,
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-        }
-
         if (latestRelease != null) {
             item(key = "latest-release") {
                 Spacer(Modifier.height(12.dp))
-                SectionLabel(stringRes(R.string.nip82_section_latest_release))
-                RenderSoftwareReleaseBody(
-                    event = latestRelease,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                    showAppId = false,
-                )
+                Column(PaddingHorizontal12Modifier) {
+                    SectionLabel(stringRes(R.string.nip82_section_latest_release))
+                    RenderSoftwareReleaseBody(
+                        event = latestRelease,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        showAppId = false,
+                    )
+                }
             }
         }
 
@@ -292,25 +289,39 @@ private fun SoftwareAppDetailBody(
                     key = { "older-${it.id}" },
                 ) { release ->
                     Spacer(Modifier.height(8.dp))
-                    RenderSoftwareReleaseBody(
-                        event = release,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                        showAppId = false,
-                    )
+                    Column(PaddingHorizontal12Modifier) {
+                        RenderSoftwareReleaseBody(
+                            event = release,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                            showAppId = false,
+                        )
+                    }
                 }
             }
         }
 
-        item(key = "comments-header") {
-            Spacer(Modifier.height(16.dp))
-            SectionLabel(stringRes(R.string.nip82_section_comments))
-            if (comments.isEmpty()) {
-                Spacer(Modifier.height(4.dp))
+        item(key = "reactions") {
+            Spacer(Modifier.height(12.dp))
+            ReactionsRow(
+                baseNote = note,
+                showReactionDetail = true,
+                addPadding = true,
+                editState = null,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+            HorizontalDivider(thickness = DividerThickness)
+        }
+
+        if (comments.isEmpty()) {
+            item(key = "no-comments") {
+                Spacer(Modifier.height(8.dp))
                 Text(
                     text = stringRes(R.string.nip82_no_comments),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.placeholderText,
+                    modifier = PaddingHorizontal12Modifier,
                 )
             }
         }
@@ -320,8 +331,16 @@ private fun SoftwareAppDetailBody(
             key = { _, item -> item.idHex },
             contentType = { _, _ -> "comment" },
         ) { _, item ->
+            val level = threadViewModel.levelFlowForItem(item).collectAsStateWithLifecycle(0)
+
             NoteCompose(
                 baseNote = item,
+                modifier =
+                    Modifier.drawReplyLevel(
+                        level = level,
+                        color = MaterialTheme.colorScheme.placeholderText,
+                        selected = MaterialTheme.colorScheme.placeholderText,
+                    ),
                 isBoostedNote = false,
                 unPackReply = ReplyRenderType.NONE,
                 quotesLeft = 3,
@@ -335,12 +354,18 @@ private fun SoftwareAppDetailBody(
 
 @Composable
 private fun AppDetailHeader(
+    note: AddressableNote,
     icon: String?,
     name: String,
     summary: String?,
     latestVersion: String?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = PaddingHorizontal12Modifier,
+    ) {
         AppIcon(icon = icon, name = name, sizeDp = 72)
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
@@ -351,6 +376,7 @@ private fun AppDetailHeader(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
+            AppAuthorLine(note, accountViewModel, nav)
             summary?.takeIf { it.isNotBlank() }?.let {
                 Spacer(StdVertSpacer)
                 Text(
@@ -374,7 +400,7 @@ private fun Section(
     title: String,
     content: @Composable () -> Unit,
 ) {
-    Column {
+    Column(PaddingHorizontal12Modifier) {
         SectionLabel(title)
         Spacer(Modifier.height(6.dp))
         content()
@@ -401,6 +427,7 @@ private fun OlderReleasesToggle(
         modifier =
             Modifier
                 .fillMaxWidth()
+                .padding(horizontal = 12.dp)
                 .clip(QuoteBorder)
                 .border(1.dp, MaterialTheme.colorScheme.subtleBorder, QuoteBorder)
                 .clickable { onToggle() }

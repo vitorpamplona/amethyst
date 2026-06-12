@@ -75,5 +75,17 @@ class AppRecommendationEvent(
             alt(ALT_DESCRIPTION)
             initializer()
         }
+
+        fun buildFromTags(
+            supportedKind: String,
+            recommendations: List<RecommendationTag>,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<AppRecommendationEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, "", createdAt) {
+            dTag(supportedKind)
+            recommend(recommendations)
+            alt(ALT_DESCRIPTION)
+            initializer()
+        }
     }
 }

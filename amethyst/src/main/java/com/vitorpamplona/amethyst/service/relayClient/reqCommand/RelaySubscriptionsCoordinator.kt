@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.service.relayClient.reqCommand.event.EventFind
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.nwc.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssembler
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchFilterAssembler
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.apps.recommendations.datasource.ProfileAppRecommendationsFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.articles.datasource.ArticlesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.datasource.BadgesFilterAssembler
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.badges.profile.datasource.ProfileBadgesFilterAssembler
@@ -140,6 +141,7 @@ class RelaySubscriptionsCoordinator(
     val softwareApps = SoftwareAppsFilterAssembler(client)
     val badges = BadgesFilterAssembler(client)
     val profileBadges = ProfileBadgesFilterAssembler(client)
+    val profileAppRecommendations = ProfileAppRecommendationsFilterAssembler(client)
     val browseEmojiSets = BrowseEmojiSetsFilterAssembler(client)
     val communitiesList = CommunitiesListFilterAssembler(client)
 
@@ -188,6 +190,7 @@ class RelaySubscriptionsCoordinator(
             softwareApps,
             badges,
             profileBadges,
+            profileAppRecommendations,
             browseEmojiSets,
             communitiesList,
             channelFinder,

@@ -564,6 +564,7 @@
     <string name="route_discover">আবিস্কার</string>
     <string name="route_messages">বার্তা</string>
     <string name="route_notifications">অবহিতকরন</string>
+    <!-- Onchain zap send dialog -->
     <string name="route_security_filters">নিরাপত্তা-ফিল্টার</string>
     <string name="new_post">নতুন পোস্ট</string>
     <string name="reply_description">উত্তর</string>

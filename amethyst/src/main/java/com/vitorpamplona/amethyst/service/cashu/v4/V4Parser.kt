@@ -60,7 +60,7 @@ class V4Parser {
                             totalAmount += proof.amount
                         }
 
-                        CashuToken(cashuToken, mint, totalAmount, proofs)
+                        CashuToken(cashuToken, mint, totalAmount, proofs, v4Token.u, v4Token.d?.takeIf { it.isNotBlank() })
                     }
 
                 return GenericLoadable.Loaded(converted.toImmutableList())
