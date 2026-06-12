@@ -1424,11 +1424,68 @@ fun MainContent(
 
     val isImmersive by com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen.current
 
+    // Relay-health store: per-account, persists liveness + snooze; installs a
+    // RelayConnectionListener so quartz lifecycle drives the timestamps.
+    val torStateForHealth = com.vitorpamplona.amethyst.desktop.ui.tor.LocalTorState.current
+    val relayHealthStore =
+        remember(account.pubKeyHex) {
+            com.vitorpamplona.amethyst.commons.relays.health.RelayHealthStore(
+                persistence =
+                    com.vitorpamplona.amethyst.desktop.model.PreferencesRelayHealthPersistence(
+                        userPubKeyHex = account.pubKeyHex,
+                    ),
+                torEnabledProvider = {
+                    torStateForHealth.settings.torType != com.vitorpamplona.amethyst.commons.tor.TorType.OFF
+                },
+                parentScope = scope,
+            )
+        }
+    DisposableEffect(relayHealthStore, relayManager) {
+        val listener =
+            com.vitorpamplona.amethyst.commons.relays.health
+                .RelayHealthListener(relayHealthStore)
+        listener.installInto(relayManager.client)
+        onDispose {
+            listener.uninstallFrom(relayManager.client)
+            relayHealthStore.close()
+        }
+    }
+    // Build the relay-list mutator once per account (uses signer + the per-list states).
+    val relayListMutator =
+        remember(iAccount, accountRelays, relayManager) {
+            com.vitorpamplona.amethyst.desktop.model.DesktopRelayListMutator(
+                signer = iAccount.signer,
+                nip65State = iAccount.nip65RelayList,
+                accountRelays = accountRelays,
+                relayManager = relayManager,
+            )
+        }
+    // Push list-membership changes into the store so the classifier knows which relays count.
+    LaunchedEffect(relayHealthStore, iAccount.nip65RelayList, accountRelays) {
+        kotlinx.coroutines.flow
+            .combine(
+                iAccount.nip65RelayList.allFlowNoDefaults,
+                accountRelays.dmRelayList,
+                accountRelays.searchRelayList,
+                accountRelays.blockedRelayList,
+            ) { nip65, dm, search, blocked ->
+                com.vitorpamplona.amethyst.desktop.model
+                    .computeListMembership(nip65, dm, search, blocked)
+            }.collect { membership ->
+                relayHealthStore.setListMembership(membership)
+            }
+    }
+    LaunchedEffect(relayHealthStore) {
+        relayHealthStore.scanNow()
+    }
+
     CompositionLocalProvider(
         LocalRelayCategories provides relayCategories,
         com.vitorpamplona.amethyst.desktop.ui.relay.LocalAccountRelays provides accountRelays,
         com.vitorpamplona.amethyst.desktop.ui.deck.LocalDesktopCache provides localCache,
         com.vitorpamplona.amethyst.desktop.ui.deck.LocalRelayManager provides relayManager,
+        com.vitorpamplona.amethyst.desktop.ui.deck.LocalRelayHealthStore provides relayHealthStore,
+        com.vitorpamplona.amethyst.desktop.ui.deck.LocalRelayListMutator provides relayListMutator,
     ) {
         Box(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {

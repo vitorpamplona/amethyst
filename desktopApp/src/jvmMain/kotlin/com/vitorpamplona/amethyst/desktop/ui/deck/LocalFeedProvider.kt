@@ -85,3 +85,13 @@ val LocalLocalRelayStore =
     compositionLocalOf<com.vitorpamplona.amethyst.desktop.relay.LocalRelayStore?> {
         null
     }
+
+val LocalRelayHealthStore =
+    compositionLocalOf<com.vitorpamplona.amethyst.commons.relays.health.RelayHealthStore?> {
+        null
+    }
+
+val LocalRelayListMutator =
+    compositionLocalOf<com.vitorpamplona.amethyst.commons.relays.health.RelayListMutator?> {
+        null
+    }
