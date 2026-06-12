@@ -167,9 +167,9 @@ open class BasicRelayClient(
                     )
                 ) {
                     if (code != null || response != null) {
-                        listener.onCannotConnect(this@BasicRelayClient, "Server Misconfigured. Response: $code $response. Exception: ${t.message}")
+                        listener.onCannotConnect(this@BasicRelayClient, "Server Misconfigured. Response: $code $response. Exception: ${t.message ?: t::class.simpleName}")
                     } else {
-                        listener.onCannotConnect(this@BasicRelayClient, "WebSocket Failure: ${t.message}")
+                        listener.onCannotConnect(this@BasicRelayClient, "WebSocket Failure: ${t.message ?: t::class.simpleName}")
                     }
                 } else {
                     // ignore local disconnect requests and tor errors
