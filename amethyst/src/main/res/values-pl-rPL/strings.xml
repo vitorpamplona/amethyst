@@ -666,6 +666,12 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="exercise_cycling">Jazda na rowerze</string>
     <string name="exercise_hiking">Piesze wycieczki</string>
     <string name="exercise_swimming">Pływanie</string>
+    <string name="exercise_rowing">Wioślarstwo</string>
+    <string name="exercise_strength">Siła</string>
+    <string name="exercise_yoga">Joga</string>
+    <string name="exercise_meditation">Medytacja</string>
+    <string name="exercise_diet">Dieta</string>
+    <string name="exercise_fasting">Post</string>
     <string name="software_apps">Aplikacje</string>
     <string name="route_software_apps">Aplikacje</string>
     <string name="nip82_repository_label">Źródło: %1$s</string>
@@ -1995,6 +2001,17 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="wallet_onchain_public_dialog_confirm">Rozumiem</string>
     <string name="wallet_onchain_copy_dialog_confirm">Skopiuj adres</string>
     <!-- Onchain zap send dialog -->
+    <string name="onchain_send_close">Zamknij</string>
+    <string name="onchain_send_recipient">Odbiorca</string>
+    <string name="onchain_send_recipient_placeholder">nazwa, NIP-05 lub npub</string>
+    <string name="onchain_send_change_recipient">Zmień odbiorcę</string>
+    <string name="onchain_send_amount">Kwota</string>
+    <string name="onchain_send_sats_suffix">satosze</string>
+    <string name="onchain_send_comment_label">Komentarz (opcjonalnie)</string>
+    <string name="onchain_send_priority">Priorytet</string>
+    <string name="onchain_send_fee_slow">Wolne</string>
+    <string name="onchain_send_fee_normal">Normalne</string>
+    <string name="onchain_send_fee_fast">Szybkie</string>
     <string name="onchain_send_success">Wysłano zap Onchain</string>
     <string name="onchain_send_result_transaction">Transakcja</string>
     <string name="onchain_send_result_fee">Opłata</string>
