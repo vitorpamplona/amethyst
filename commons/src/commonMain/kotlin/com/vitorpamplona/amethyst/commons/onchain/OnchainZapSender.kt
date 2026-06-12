@@ -61,27 +61,35 @@ enum class OnchainZapSendStage {
  * [OnchainZapSendResult.Failure.message] stays available for logs, tests, and
  * the CLI.
  */
-enum class OnchainZapSendError {
+enum class OnchainZapSendError(
+    /**
+     * Whether [OnchainZapSendResult.Failure.cause] carries a message crafted
+     * for humans (insufficient funds, signer tampering, which share is below
+     * dust) as opposed to low-level exception text. UIs may surface the cause
+     * message as a diagnostic detail when this is true.
+     */
+    val causeIsUserFacing: Boolean,
+) {
     /** No [OnchainBackend] is configured for the account. */
-    BACKEND_NOT_CONFIGURED,
+    BACKEND_NOT_CONFIGURED(causeIsUserFacing = false),
 
     /** The chain backend could not return the sender's UTXOs. */
-    LOAD_UTXOS_FAILED,
+    LOAD_UTXOS_FAILED(causeIsUserFacing = false),
 
     /** Coin selection / PSBT assembly failed (e.g. insufficient funds). */
-    BUILD_FAILED,
+    BUILD_FAILED(causeIsUserFacing = true),
 
     /** A recipient's split share is below the dust threshold. */
-    RECIPIENT_BELOW_DUST,
+    RECIPIENT_BELOW_DUST(causeIsUserFacing = true),
 
     /** Signing, signature verification, or finalization failed. */
-    SIGN_FAILED,
+    SIGN_FAILED(causeIsUserFacing = true),
 
     /** The signed transaction could not be broadcast. */
-    BROADCAST_FAILED,
+    BROADCAST_FAILED(causeIsUserFacing = false),
 
     /** The payment broadcast, but a kind:8333 receipt could not be published. */
-    RECEIPT_PUBLISH_FAILED,
+    RECEIPT_PUBLISH_FAILED(causeIsUserFacing = false),
 }
 
 /** Outcome of an [OnchainZapSender.send] attempt. */

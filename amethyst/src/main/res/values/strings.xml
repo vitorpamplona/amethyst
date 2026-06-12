@@ -2240,6 +2240,7 @@
     <string name="onchain_send_fee_eta_normal">~30 min</string>
     <string name="onchain_send_fee_eta_fast">~10 min</string>
     <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
+    <string name="onchain_send_fee_tier_label_rate_eta">%1$s · %2$s sat/vB · %3$s</string>
     <string name="onchain_send_loading_fees">Loading fee estimates…</string>
     <string name="onchain_send_button_amount">Send %1$s sats</string>
     <plurals name="onchain_send_button_amount_split">

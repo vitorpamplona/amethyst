@@ -749,8 +749,12 @@ private fun OnchainFeeSection(
                     label = {
                         Text(
                             if (rate != null) {
-                                "${stringRes(tier.labelRes)} · " +
-                                    stringRes(R.string.onchain_send_fee_rate_eta, "%.1f".format(rate), stringRes(tier.etaLabelRes))
+                                stringRes(
+                                    R.string.onchain_send_fee_tier_label_rate_eta,
+                                    stringRes(tier.labelRes),
+                                    "%.1f".format(rate),
+                                    stringRes(tier.etaLabelRes),
+                                )
                             } else {
                                 stringRes(tier.labelRes)
                             },

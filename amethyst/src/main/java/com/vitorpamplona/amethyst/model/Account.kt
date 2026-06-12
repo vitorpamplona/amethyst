@@ -892,6 +892,13 @@ class Account(
         return zapRequest
     }
 
+    private fun onchainBackendNotConfigured() =
+        OnchainZapSendResult.Failure(
+            OnchainZapSendStage.LOADING_UTXOS,
+            OnchainZapSendError.BACKEND_NOT_CONFIGURED,
+            ONCHAIN_BACKEND_NOT_CONFIGURED,
+        )
+
     /**
      * Send a NIP-BC onchain zap: build a Bitcoin transaction paying the recipient's
      * derived Taproot address, sign it, broadcast it, and publish the kind:8333
@@ -907,11 +914,7 @@ class Account(
     ): OnchainZapSendResult {
         val backend =
             cache.onchainBackend
-                ?: return OnchainZapSendResult.Failure(
-                    OnchainZapSendStage.LOADING_UTXOS,
-                    OnchainZapSendError.BACKEND_NOT_CONFIGURED,
-                    ONCHAIN_BACKEND_NOT_CONFIGURED,
-                )
+                ?: return onchainBackendNotConfigured()
         return OnchainZapSender.send(
             backend = backend,
             signer = signer,
@@ -936,11 +939,7 @@ class Account(
     ): OnchainZapSendResult {
         val backend =
             cache.onchainBackend
-                ?: return OnchainZapSendResult.Failure(
-                    OnchainZapSendStage.LOADING_UTXOS,
-                    OnchainZapSendError.BACKEND_NOT_CONFIGURED,
-                    ONCHAIN_BACKEND_NOT_CONFIGURED,
-                )
+                ?: return onchainBackendNotConfigured()
         return OnchainZapSender.sendToAddress(
             backend = backend,
             signer = signer,
@@ -964,11 +963,7 @@ class Account(
     ): OnchainZapSendResult {
         val backend =
             cache.onchainBackend
-                ?: return OnchainZapSendResult.Failure(
-                    OnchainZapSendStage.LOADING_UTXOS,
-                    OnchainZapSendError.BACKEND_NOT_CONFIGURED,
-                    ONCHAIN_BACKEND_NOT_CONFIGURED,
-                )
+                ?: return onchainBackendNotConfigured()
         return OnchainZapSender.sendSplit(
             backend = backend,
             signer = signer,

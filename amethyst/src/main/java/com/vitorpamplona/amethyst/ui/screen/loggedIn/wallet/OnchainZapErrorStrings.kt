@@ -49,19 +49,11 @@ fun OnchainZapSendResult.Failure.userMessage(context: Context): String {
 }
 
 /**
- * Untranslated diagnostic detail worth showing under the localized headline:
- * build/sign/dust failures carry a crafted, specific reason (e.g. insufficient
- * funds, signer tampering, which share is below dust). Other stages only carry
- * low-level exception text, which we keep out of the UI.
+ * Untranslated diagnostic detail worth showing under the localized headline.
+ * Which errors carry a human-readable cause is a fact about the sender,
+ * declared on [OnchainZapSendError.causeIsUserFacing].
  */
-fun OnchainZapSendResult.Failure.technicalDetail(): String? =
-    when (error) {
-        OnchainZapSendError.BUILD_FAILED,
-        OnchainZapSendError.SIGN_FAILED,
-        OnchainZapSendError.RECIPIENT_BELOW_DUST,
-        -> cause?.message
-        else -> null
-    }
+fun OnchainZapSendResult.Failure.technicalDetail(): String? = if (error.causeIsUserFacing) cause?.message else null
 
 @StringRes
 private fun OnchainZapSendError.messageRes(): Int =
