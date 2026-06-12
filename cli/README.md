@@ -249,7 +249,7 @@ $ amy relay publish-lists      # broadcast updated kind:10002/10050/10051
 | Command | What it does |
 |---|---|
 | `amy offer info NOFFER` | Decode a `noffer1…` pointer (pubkey, relays, price type/amount). Local, no network. |
-| `amy offer request NOFFER [--amount SATS] [--timeout MS]` | kind:21001 round-trip: publish the request to the pointer's relays and print the returned BOLT11. `--amount` is required for spontaneous offers; fixed offers default to the pointer's price. |
+| `amy offer request NOFFER [--amount SATS] [--timeout MS] [--payer-data K=V,…]` | kind:21001 round-trip: publish the request to the pointer's relays and print the returned BOLT11. `--amount` is required for spontaneous offers; fixed offers default to the pointer's price. `--payer-data` attaches payer fields (e.g. `email=a@b.c`) for offers that require them — Lightning.Pub answers "Invalid Offer" (code 1) when they are missing. |
 
 ### CLINK Debits
 

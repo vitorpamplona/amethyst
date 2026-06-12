@@ -39,9 +39,10 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
  *
  * - `info <noffer>` decodes a pointer locally (no network).
  * - `discover <nip05>` resolves a profile's advertised offer from its NIP-05 `.well-known`.
- * - `request <noffer> [--amount N] [--timeout MS] [--follow]` runs the kind-21001 round-trip:
- *   publishes the request to the pointer's relays and prints the returned BOLT-11. With
- *   `--follow` it chases an "Expired or Moved" (code 3) reply to the `latest` pointer.
+ * - `request <noffer> [--amount N] [--timeout MS] [--follow] [--payer-data k=v,…]` runs the
+ *   kind-21001 round-trip: publishes the request to the pointer's relays and prints the
+ *   returned BOLT-11. With `--follow` it chases an "Expired or Moved" (code 3) reply to the
+ *   `latest` pointer. `--payer-data` attaches the payer fields some offers require.
  * - `pay <noffer> --with <ndebit> [--amount N]` fetches the invoice and settles it end-to-end
  *   through a CLINK debit pointer (offer round-trip → debit round-trip).
  *
@@ -137,6 +138,15 @@ object OfferCommands {
         val amount = args.flag("amount")?.toLongOrNull()
         val timeoutMs = args.longFlag("timeout", 15_000)
         val follow = args.bool("follow")
+        // Offers can be configured to require payer fields (e.g. email); Lightning.Pub
+        // rejects a request missing them as "Invalid Offer" (code 1), so the round-trip
+        // is untestable against such offers without a way to attach them.
+        val payerData: Map<String, Any?>? =
+            args.flag("payer-data")?.split(',')?.associate { pair ->
+                val idx = pair.indexOf('=')
+                if (idx <= 0) return Output.error("bad_args", "--payer-data expects key=value[,key2=value2…]")
+                pair.take(idx) to pair.substring(idx + 1)
+            }
 
         var offer =
             ClinkPointerParser.parse(args.positional(0, "noffer").trim()) as? NOffer
@@ -151,7 +161,7 @@ object OfferCommands {
                 if (relays.isEmpty()) return Output.error("bad_pointer", "noffer carries no relay to reach")
 
                 val client = OfferClient(offer, ctx.signer)
-                val requestEvent = client.requestInvoice(amountSats = amount)
+                val requestEvent = client.requestInvoice(amountSats = amount, payerData = payerData)
 
                 val reply = ctx.requestResponse(requestEvent, relays, client.responseFilter(requestEvent.id), timeoutMs)
                 if (reply == null) {
