@@ -429,7 +429,8 @@ private fun RecommendAppButton(
     note: Note,
     accountViewModel: AccountViewModel,
 ) {
-    val myRecommendations by accountViewModel.account.myAppRecommendations.collectAsStateWithLifecycle()
+    val myRecommendations by accountViewModel.account.appRecommendations.flow
+        .collectAsStateWithLifecycle()
 
     val isRecommended =
         remember(myRecommendations, noteEvent) {
@@ -446,7 +447,8 @@ private fun RecommendAppButton(
         OutlinedButton(
             onClick = {
                 accountViewModel.launchSigner {
-                    accountViewModel.account.unrecommendApp(noteEvent.address())
+                    val account = accountViewModel.account
+                    account.appRecommendations.unrecommendApp(noteEvent.address(), account)
                 }
             },
             modifier = compactHeight,
@@ -459,7 +461,8 @@ private fun RecommendAppButton(
             enabled = noteEvent.supportedKinds().isNotEmpty(),
             onClick = {
                 accountViewModel.launchSigner {
-                    accountViewModel.account.recommendApp(noteEvent, note.relayHintUrl())
+                    val account = accountViewModel.account
+                    account.appRecommendations.recommendApp(noteEvent, note.relayHintUrl(), account)
                 }
             },
             modifier = compactHeight,

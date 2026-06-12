@@ -93,7 +93,8 @@ fun ProfileAppRecommendationsScreen(
         }
     }
 
-    val myRecommendationEvents by accountViewModel.account.myAppRecommendations.collectAsStateWithLifecycle()
+    val myRecommendationEvents by accountViewModel.account.appRecommendations.flow
+        .collectAsStateWithLifecycle()
 
     val recommendedAddresses =
         remember(myRecommendationEvents) {
@@ -274,11 +275,12 @@ private fun AppRow(
             onCheckedChange = { checked ->
                 onUserEdited()
                 accountViewModel.launchSigner {
+                    val account = accountViewModel.account
                     if (checked) {
                         val event = definition ?: return@launchSigner
-                        accountViewModel.account.recommendApp(event, appNote.relayHintUrl())
+                        account.appRecommendations.recommendApp(event, appNote.relayHintUrl(), account)
                     } else {
-                        accountViewModel.account.unrecommendApp(appNote.address)
+                        account.appRecommendations.unrecommendApp(appNote.address, account)
                     }
                 }
             },
