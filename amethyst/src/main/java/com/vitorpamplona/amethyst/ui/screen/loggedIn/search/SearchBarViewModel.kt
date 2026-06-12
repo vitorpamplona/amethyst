@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.search.SearchSource
 import com.vitorpamplona.amethyst.commons.ui.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
 import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
@@ -43,6 +44,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.userUriPrefixes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.common.relaySetupInfoBuilder
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
@@ -57,6 +59,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
+import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Rfc3986
 import com.vitorpamplona.quartz.utils.startsWithAny
@@ -260,7 +263,7 @@ class SearchBarViewModel(
         ) { term, _, currentScope, order, follows ->
             if (currentScope == SearchScope.PEOPLE) return@combine emptyList()
 
-            val raw = LocalCache.findNotesStartingWith(term, account.hiddenUsers)
+            val raw = collapseAppRecommendations(LocalCache.findNotesStartingWith(term, account.hiddenUsers))
             val filtered = if (follows != null) raw.filter { it.author?.pubkeyHex in follows } else raw
 
             when (order) {
@@ -407,4 +410,31 @@ class SearchBarViewModel(
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T = SearchBarViewModel(account, nip05) as T
     }
+}
+
+/**
+ * NIP-89 splits a user's app recommendations into one kind 31989 event per
+ * handled kind, so a matching author floods the results with near-identical
+ * entries. Keep only the most recent one per author.
+ */
+private fun collapseAppRecommendations(notes: List<Note>): List<Note> {
+    val newestPerAuthor = mutableMapOf<HexKey, Note>()
+    val others = ArrayList<Note>(notes.size)
+
+    notes.forEach { note ->
+        if (note.event is AppRecommendationEvent) {
+            val author = note.author?.pubkeyHex ?: note.idHex
+            val newest = newestPerAuthor[author]
+            if (newest == null || (note.createdAt() ?: 0) > (newest.createdAt() ?: 0)) {
+                newestPerAuthor[author] = note
+            }
+        } else {
+            others.add(note)
+        }
+    }
+
+    if (newestPerAuthor.isEmpty()) return notes
+
+    others.addAll(newestPerAuthor.values)
+    return others
 }

@@ -50,6 +50,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.AddressableNote
@@ -66,6 +67,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.apps.recommendations.dataso
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.kindDisplayName
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import kotlinx.coroutines.Dispatchers
@@ -118,17 +120,32 @@ fun ProfileAppRecommendationsScreen(
         if (!userHasEdited) pinnedRecommended = recommendedAddresses
     }
 
-    val follows = remember(myPubkey) { accountViewModel.account.kind3FollowList.flow.value.authors }
+    // Tracks the follow list as it loads (it may not be ready when the screen
+    // opens), then freezes with the first toggle like pinnedRecommended.
+    val followsState by accountViewModel.account.kind3FollowList.flow
+        .collectAsStateWithLifecycle()
+    var pinnedFollows by remember { mutableStateOf(setOf<HexKey>()) }
+    LaunchedEffect(followsState) {
+        if (!userHasEdited) pinnedFollows = followsState.authors
+    }
 
     val apps =
-        remember(appDefinitionsTick, pinnedRecommended) {
+        remember(appDefinitionsTick, pinnedRecommended, pinnedFollows) {
             LocalCache.addressables
-                .filterIntoSet(AppDefinitionEvent.KIND) { _, note -> note.event is AppDefinitionEvent }
-                .sortedWith(
+                .filterIntoSet(AppDefinitionEvent.KIND) { _, note ->
+                    val event = note.event as? AppDefinitionEvent ?: return@filterIntoSet false
+                    // Unnamed apps are poor recommendation candidates; keep them
+                    // only when already recommended, so they can be turned off.
+                    note.address in pinnedRecommended ||
+                        event
+                            .appMetaData()
+                            ?.anyName()
+                            ?.isNotBlank() == true
+                }.sortedWith(
                     // Apps I recommend on top, then apps authored by people I
                     // follow, then the rest; most recent first within each tier.
                     compareByDescending<AddressableNote> { it.address in pinnedRecommended }
-                        .thenByDescending { it.address.pubKeyHex in follows }
+                        .thenByDescending { it.address.pubKeyHex in pinnedFollows }
                         .thenByDescending { it.event?.createdAt ?: 0 },
                 )
         }
@@ -195,8 +212,11 @@ private fun AppRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    // Ask relays for the definition if we don't have it yet, then watch.
-    EventFinderFilterAssemblerSubscription(appNote, accountViewModel)
+    // Ask relays for the definition only if we don't have it yet, then watch.
+    // Subscribing for every visible row floods relays for nothing.
+    if (appNote.event == null) {
+        EventFinderFilterAssemblerSubscription(appNote, accountViewModel)
+    }
     val definition by observeNoteEvent<AppDefinitionEvent>(appNote, accountViewModel)
 
     val metadata = definition?.appMetaData()

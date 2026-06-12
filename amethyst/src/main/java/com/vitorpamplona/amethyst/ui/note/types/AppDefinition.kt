@@ -30,11 +30,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -61,6 +63,7 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -211,7 +214,9 @@ fun RenderAppDefinition(
                     Spacer(Modifier.weight(1f))
 
                     Row(
-                        modifier = Modifier.padding(bottom = 3.dp),
+                        // Cancels the surrounding Column's horizontal padding so
+                        // the button's right edge lines up with the banner's.
+                        modifier = Modifier.padding(bottom = 3.dp).offset(x = 10.dp),
                     ) {
                         if (accountViewModel.account.isWriteable()) {
                             RecommendAppButton(noteEvent, note, accountViewModel)
@@ -308,11 +313,7 @@ fun RenderAppDefinition(
                         visible.forEach { KindChip(it) }
                         val overflow = supportedKinds.size - VISIBLE_SUPPORTED_KIND_LIMIT
                         if (overflow > 0) {
-                            Text(
-                                text = "+$overflow",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                            OverflowChip(overflow)
                         }
                     }
                 }
@@ -322,6 +323,22 @@ fun RenderAppDefinition(
 }
 
 private const val VISIBLE_SUPPORTED_KIND_LIMIT = 12
+
+/** Same shape and metrics as [KindChip] so it lines up with the kind chips. */
+@Composable
+private fun OverflowChip(count: Int) {
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+    ) {
+        Text(
+            text = "+$count",
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
 
 @Composable
 private fun PlatformChip(platform: String) {
@@ -368,6 +385,9 @@ private fun RecommendAppButton(
             }
         }
 
+    val compactHeight = Modifier.height(32.dp)
+    val compactPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp)
+
     if (isRecommended) {
         OutlinedButton(
             onClick = {
@@ -375,8 +395,10 @@ private fun RecommendAppButton(
                     accountViewModel.account.unrecommendApp(noteEvent.address())
                 }
             },
+            modifier = compactHeight,
+            contentPadding = compactPadding,
         ) {
-            Text(stringRes(R.string.app_definition_recommended))
+            Text(stringRes(R.string.app_definition_recommended), style = MaterialTheme.typography.labelMedium)
         }
     } else {
         Button(
@@ -386,8 +408,10 @@ private fun RecommendAppButton(
                     accountViewModel.account.recommendApp(noteEvent, note.relayHintUrl())
                 }
             },
+            modifier = compactHeight,
+            contentPadding = compactPadding,
         ) {
-            Text(stringRes(R.string.app_definition_recommend))
+            Text(stringRes(R.string.app_definition_recommend), style = MaterialTheme.typography.labelMedium)
         }
     }
 }
