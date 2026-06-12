@@ -124,7 +124,6 @@ import com.vitorpamplona.amethyst.ui.note.elements.ShowForkInformation
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.ui.note.observeEdits
 import com.vitorpamplona.amethyst.ui.note.showAmount
-import com.vitorpamplona.amethyst.ui.note.types.ActivityActionChip
 import com.vitorpamplona.amethyst.ui.note.types.AudioHeader
 import com.vitorpamplona.amethyst.ui.note.types.AudioTrackHeader
 import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
@@ -554,14 +553,10 @@ private fun FullBleedNoteCompose(
 
             Column(modifier = Modifier.padding(start = 10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                        if (zapSender != null) {
-                            UsernameDisplay(zapSender, Modifier.weight(1f, fill = false), accountViewModel = accountViewModel)
-                        } else {
-                            NoteUsernameDisplay(baseNote, Modifier.weight(1f, fill = false), accountViewModel = accountViewModel)
-                        }
-
-                        ActivityActionChip(baseNote, accountViewModel, nav)
+                    if (zapSender != null) {
+                        UsernameDisplay(zapSender, Modifier.weight(1f), accountViewModel = accountViewModel)
+                    } else {
+                        NoteUsernameDisplay(baseNote, Modifier.weight(1f), accountViewModel = accountViewModel)
                     }
 
                     if (isDraft) {

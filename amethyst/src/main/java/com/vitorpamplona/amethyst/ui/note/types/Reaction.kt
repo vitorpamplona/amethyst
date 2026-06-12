@@ -20,11 +20,14 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 
 @Composable
@@ -35,7 +38,25 @@ fun RenderReaction(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    // The reaction emoji renders in the card header (ActivityActionChip);
-    // the body is just the post being reacted to, framed as a quote.
-    RenderActionTarget(note, quotesLeft, backgroundColor, accountViewModel, nav)
+    note.replyTo?.lastOrNull()?.let {
+        NoteCompose(
+            it,
+            modifier = Modifier,
+            isBoostedNote = true,
+            makeItShort = true,
+            unPackReply = ReplyRenderType.NONE,
+            quotesLeft = quotesLeft - 1,
+            parentBackgroundColor = backgroundColor,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
+
+    // Reposts have trash in their contents.
+    val refactorReactionText = if (note.event?.content == "+") "❤" else note.event?.content ?: ""
+
+    Text(
+        text = refactorReactionText,
+        maxLines = 1,
+    )
 }

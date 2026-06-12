@@ -90,7 +90,6 @@ import com.vitorpamplona.amethyst.ui.note.elements.Reward
 import com.vitorpamplona.amethyst.ui.note.elements.ShowForkInformation
 import com.vitorpamplona.amethyst.ui.note.elements.StaleRelayHint
 import com.vitorpamplona.amethyst.ui.note.elements.TimeAgo
-import com.vitorpamplona.amethyst.ui.note.types.ActivityActionChip
 import com.vitorpamplona.amethyst.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBlockedRelayList
 import com.vitorpamplona.amethyst.ui.note.types.DisplayBroadcastRelayList
@@ -1737,22 +1736,18 @@ fun FirstUserInfoRow(
                 null
             }
 
-        Row(Modifier.weight(1f), verticalAlignment = CenterVertically) {
-            if (zapSender != null) {
-                if (showAuthorPicture) {
-                    UserPicture(zapSender, Size25dp, accountViewModel = accountViewModel, nav = nav)
-                    Spacer(HalfPadding)
-                }
-                UsernameDisplay(zapSender, Modifier.weight(1f, fill = false), textColor = textColor, accountViewModel = accountViewModel)
-            } else if (showAuthorPicture) {
-                NoteAuthorPicture(baseNote, Size25dp, accountViewModel = accountViewModel, nav = nav)
+        if (zapSender != null) {
+            if (showAuthorPicture) {
+                UserPicture(zapSender, Size25dp, accountViewModel = accountViewModel, nav = nav)
                 Spacer(HalfPadding)
-                NoteUsernameDisplay(baseNote, Modifier.weight(1f, fill = false), textColor = textColor, accountViewModel = accountViewModel)
-            } else {
-                NoteUsernameDisplay(baseNote, Modifier.weight(1f, fill = false), textColor = textColor, accountViewModel = accountViewModel)
             }
-
-            ActivityActionChip(baseNote, accountViewModel, nav)
+            UsernameDisplay(zapSender, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel)
+        } else if (showAuthorPicture) {
+            NoteAuthorPicture(baseNote, Size25dp, accountViewModel = accountViewModel, nav = nav)
+            Spacer(HalfPadding)
+            NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel)
+        } else {
+            NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel)
         }
 
         if (isDraft) {

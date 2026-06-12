@@ -20,23 +20,23 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.note.CrossfadeToDisplayComment
+import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
+import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.claimedSatsTotal
+import java.math.BigDecimal
 
 /**
- * Renders a NIP-61 nutzap (kind 9321) as an activity card, like lightning zaps.
+ * Renders a NIP-61 nutzap (kind 9321) as a transfer card, like lightning zaps.
  * Unlike kind 9735 receipts, the nutzap is signed by the sender, so [Note.author]
- * is already the right person to attribute; the amount and recipient render in
- * the card header (ActivityActionChip). The body is the comment, when present,
- * over the quoted target post.
+ * is already the right person to attribute.
  */
 @Composable
 fun RenderNutzap(
@@ -48,10 +48,25 @@ fun RenderNutzap(
 ) {
     val nutzapEvent = note.event as? NutzapEvent ?: return
 
-    nutzapEvent.content.ifBlank { null }?.let {
-        CrossfadeToDisplayComment(it, backgroundColor, nav, accountViewModel)
-        Spacer(StdVertSpacer)
-    }
+    val recipientKey = nutzapEvent.linkedPubKeys().firstOrNull() ?: return
 
-    RenderActionTarget(note, quotesLeft, backgroundColor, accountViewModel, nav)
+    RenderZappedPost(note, quotesLeft, backgroundColor, accountViewModel, nav)
+
+    val card =
+        remember(note) {
+            ZapAmountCommentNotification(
+                user = note.author,
+                comment = nutzapEvent.content.ifBlank { null },
+                amount = showAmount(BigDecimal(nutzapEvent.claimedSatsTotal())),
+                zapNote = note,
+            )
+        }
+
+    TransferCard(
+        card,
+        recipientKey,
+        backgroundColor,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
 }
