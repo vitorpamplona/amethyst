@@ -103,7 +103,28 @@ fun RenderLnZap(
     val zapEvent = note.event as? LnZapEvent ?: return
 
     val card by parseAuthorCommentAndAmount(note, accountViewModel)
-    val recipientKey = zapEvent.zappedAuthor().firstOrNull()
+
+    RenderLnZapCard(
+        note = note,
+        card = card,
+        recipientKey = zapEvent.zappedAuthor().firstOrNull(),
+        quotesLeft = quotesLeft,
+        backgroundColor = backgroundColor,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
+}
+
+@Composable
+fun RenderLnZapCard(
+    note: Note,
+    card: ZapAmountCommentNotification,
+    recipientKey: String?,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val orange = MaterialTheme.colorScheme.bitcoinColor
 
     ActivityCardFrame(orange) {
