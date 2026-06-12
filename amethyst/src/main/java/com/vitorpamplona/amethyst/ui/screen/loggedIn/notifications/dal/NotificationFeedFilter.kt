@@ -328,13 +328,13 @@ class NotificationFeedFilter(
         // Chess events bypass the follow filter — opponents may not be followed
         val isChessEvent = noteEvent is LiveChessGameAcceptEvent || noteEvent is LiveChessMoveEvent
 
-        // Raw global keeps every event that p-tags the user, skipping the
-        // per-kind relevance heuristics that the Selected mode applies.
-        val isRawGlobal = followList() is TopFilter.GlobalRaw
+        // Global keeps every event that p-tags the user; Selected (and the
+        // follow/list modes) also applies the per-kind relevance heuristics.
+        val isRawGlobal = followList() is TopFilter.Global
 
         return noteEvent?.kind in NOTIFICATION_KINDS &&
             (noteEvent is LnZapEvent || notifAuthor != loggedInUserHex) &&
-            (isRawGlobal || isChessEvent || filterParams.isGlobal() || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
+            (isChessEvent || filterParams.isGlobal() || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
             noteEvent?.isTaggedUser(loggedInUserHex) ?: false &&
             (filterParams.isHiddenList || notifAuthor == null || !account.isHidden(notifAuthor)) &&
             (noteEvent !is PrivateDmEvent || !account.isDecryptedContentHidden(noteEvent)) &&

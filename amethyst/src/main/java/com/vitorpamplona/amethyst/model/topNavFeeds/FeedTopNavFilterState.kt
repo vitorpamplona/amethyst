@@ -72,7 +72,7 @@ class FeedTopNavFilterState(
 ) {
     fun loadFlowsFor(listName: TopFilter): IFeedFlowsType =
         when (listName) {
-            TopFilter.Global, TopFilter.GlobalRaw -> {
+            TopFilter.Global, TopFilter.Selected -> {
                 GlobalFeedFlow(followsRelays, proxyRelays, relayFeeds)
             }
 

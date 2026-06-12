@@ -82,18 +82,12 @@ class TopNavFilterState(
             name = ResourceName(R.string.follow_list_global),
         )
 
-    // Notifications-only pair: the curated mode (TopFilter.Global) is shown as
-    // "Selected" while the raw every-p-tag mode takes the "Global" label.
+    // Notifications-only curated mode; in Notifications, Global itself shows
+    // every event that p-tags the user.
     val selectedFollow =
         FeedDefinition(
-            code = TopFilter.Global,
+            code = TopFilter.Selected,
             name = ResourceName(R.string.follow_list_selected),
-        )
-
-    val globalRawFollow =
-        FeedDefinition(
-            code = TopFilter.GlobalRaw,
-            name = ResourceName(R.string.follow_list_global),
         )
 
     val aroundMe =
@@ -122,7 +116,7 @@ class TopNavFilterState(
 
     val defaultLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, muteListFollow)
 
-    val defaultNotificationLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, selectedFollow, globalRawFollow, muteListFollow)
+    val defaultNotificationLists = persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, selectedFollow, globalFollow, muteListFollow)
 
     fun mergePeopleLists(
         peopleLists: List<AddressableNote>,
@@ -315,7 +309,7 @@ class TopNavFilterState(
             checkNotInMainThread()
             emit(
                 listOf(
-                    listOf(allFollows, userFollows, kind3Follows, aroundMe, selectedFollow, globalRawFollow),
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, selectedFollow, globalFollow),
                     peopleLists,
                     listOf(muteListFollow),
                 ).flatten().toImmutableList(),

@@ -367,7 +367,7 @@ private fun FeedDefinition.group(): FeedGroup =
             when (code) {
                 is TopFilter.AroundMe -> FeedGroup.LOCATIONS
                 is TopFilter.Global -> FeedGroup.RELAYS
-                is TopFilter.GlobalRaw -> FeedGroup.RELAYS
+                is TopFilter.Selected -> FeedGroup.RELAYS
                 is TopFilter.AllFavoriteAlgoFeeds -> FeedGroup.DVMS
                 else -> FeedGroup.FEEDS
             }
@@ -508,8 +508,8 @@ private fun FeedIcon(
                 MaterialSymbols.Public
             }
 
-            is TopFilter.GlobalRaw -> {
-                MaterialSymbols.Public
+            is TopFilter.Selected -> {
+                MaterialSymbols.FilterAlt
             }
 
             is TopFilter.AroundMe -> {

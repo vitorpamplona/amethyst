@@ -54,9 +54,10 @@ import org.junit.runner.RunWith
  * Asserts the three contracts the feature relies on:
  *   1. `feedKey` is mode-discriminated so each pinned tab caches independently.
  *   2. `followList()` honors `modeOverride` when set; falls back to the spinner setting otherwise.
- *   3. `buildFilterParams()` returns a GlobalTopNavFilter-backed FilterByListParams for
- *      `TopFilter.GlobalRaw` (so `isGlobal()` is true, allowing non-follower notifications through),
- *      and a non-Global filter for `TopFilter.AllFollows` (forcing the follow-membership gate).
+ *   3. `buildFilterParams()` returns a GlobalTopNavFilter-backed FilterByListParams for both
+ *      `TopFilter.Global` and `TopFilter.Selected` (so `isGlobal()` is true, allowing
+ *      non-follower notifications through), and a non-Global filter for `TopFilter.AllFollows`
+ *      (forcing the follow-membership gate).
  */
 @RunWith(AndroidJUnit4::class)
 class NotificationFeedFilterModeOverrideTest {
@@ -96,7 +97,7 @@ class NotificationFeedFilterModeOverrideTest {
     fun feedKeyDiffersByModeOverride() {
         val spinner = NotificationFeedFilter(account)
         val following = NotificationFeedFilter(account, TopFilter.AllFollows)
-        val everyone = NotificationFeedFilter(account, TopFilter.GlobalRaw)
+        val everyone = NotificationFeedFilter(account, TopFilter.Global)
 
         assertNotEquals(
             "Following tab's feedKey must differ from Everyone tab's so each caches independently",
@@ -104,8 +105,8 @@ class NotificationFeedFilterModeOverrideTest {
             everyone.feedKey(),
         )
         assertTrue(
-            "Everyone feedKey should encode the GlobalRaw filter code",
-            everyone.feedKey().endsWith(TopFilter.GlobalRaw.code),
+            "Everyone feedKey should encode the Global filter code",
+            everyone.feedKey().endsWith(TopFilter.Global.code),
         )
         assertTrue(
             "Following feedKey should encode the AllFollows filter code",
@@ -113,25 +114,25 @@ class NotificationFeedFilterModeOverrideTest {
         )
 
         // When override is null, feedKey reflects the spinner-selected default.
-        account.settings.defaultNotificationFollowList.value = TopFilter.GlobalRaw
+        account.settings.defaultNotificationFollowList.value = TopFilter.Global
         assertEquals(everyone.feedKey(), spinner.feedKey())
     }
 
     @Test
     fun followListHonorsModeOverride() {
         val following = NotificationFeedFilter(account, TopFilter.AllFollows)
-        val everyone = NotificationFeedFilter(account, TopFilter.GlobalRaw)
+        val everyone = NotificationFeedFilter(account, TopFilter.Global)
 
         assertEquals(TopFilter.AllFollows, following.followList())
-        assertEquals(TopFilter.GlobalRaw, everyone.followList())
+        assertEquals(TopFilter.Global, everyone.followList())
     }
 
     @Test
     fun followListFallsBackToSpinnerWhenOverrideNull() {
         val spinner = NotificationFeedFilter(account)
 
-        account.settings.defaultNotificationFollowList.value = TopFilter.Global
-        assertEquals(TopFilter.Global, spinner.followList())
+        account.settings.defaultNotificationFollowList.value = TopFilter.Selected
+        assertEquals(TopFilter.Selected, spinner.followList())
 
         account.settings.defaultNotificationFollowList.value = TopFilter.AllFollows
         assertEquals(TopFilter.AllFollows, spinner.followList())
@@ -139,29 +140,30 @@ class NotificationFeedFilterModeOverrideTest {
 
     @Test
     fun buildFilterParamsForGlobalOverrideReportsGlobal() {
-        val selected = NotificationFeedFilter(account, TopFilter.Global)
+        val everyone = NotificationFeedFilter(account, TopFilter.Global)
 
-        val params = selected.buildFilterParams(account)
+        val params = everyone.buildFilterParams(account)
 
         // isGlobal() short-circuits the follow-membership gate in acceptableEvent,
-        // which is how the Selected mode admits notifications from non-followed authors.
+        // which is how the Everyone tab admits notifications from non-followed authors.
         assertTrue(
-            "Selected mode's FilterByListParams must report isGlobal so non-followers pass the gate",
+            "Everyone tab's FilterByListParams must report isGlobal so non-followers pass the gate",
             params.isGlobal(),
         )
     }
 
     @Test
-    fun buildFilterParamsForGlobalRawOverrideReportsGlobal() {
-        val everyone = NotificationFeedFilter(account, TopFilter.GlobalRaw)
+    fun buildFilterParamsForSelectedOverrideReportsGlobal() {
+        val selected = NotificationFeedFilter(account, TopFilter.Selected)
 
-        val params = everyone.buildFilterParams(account)
+        val params = selected.buildFilterParams(account)
 
-        // GlobalRaw rides the same GlobalFeedFlow relay set as Global, so it must
-        // also report isGlobal and let non-followers through; the only difference
-        // is that acceptableEvent skips the per-kind relevance heuristics.
+        // Selected rides the same GlobalFeedFlow relay set as Global, so it must
+        // also report isGlobal and let non-followers through; the difference is
+        // that acceptableEvent applies the per-kind relevance heuristics, which
+        // Global skips.
         assertTrue(
-            "Everyone tab's FilterByListParams must report isGlobal so non-followers pass the gate",
+            "Selected mode's FilterByListParams must report isGlobal so non-followers pass the gate",
             params.isGlobal(),
         )
     }
