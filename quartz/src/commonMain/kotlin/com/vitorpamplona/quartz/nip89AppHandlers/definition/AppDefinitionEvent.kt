@@ -81,6 +81,8 @@ class AppDefinitionEvent(
 
     fun includeKind(kind: Int) = tags.isTaggedKind(kind)
 
+    fun platformLinks() = tags.mapNotNull(PlatformLinkTag::parse)
+
     override fun publishedAt(): Long? {
         val publishedAt = tags.firstNotNullOfOrNull(PublishedAtTag::parse)
 

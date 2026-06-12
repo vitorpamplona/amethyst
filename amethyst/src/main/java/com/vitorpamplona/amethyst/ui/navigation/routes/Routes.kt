@@ -67,6 +67,8 @@ sealed class Route {
 
     @Serializable object ProfileBadges : Route()
 
+    @Serializable object ProfileAppRecommendations : Route()
+
     @Serializable data class AwardBadge(
         val kind: Int,
         val pubKeyHex: HexKey,

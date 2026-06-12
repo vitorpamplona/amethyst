@@ -24,19 +24,30 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ProvideTextStyle
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -53,9 +64,11 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
@@ -68,20 +81,26 @@ import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.components.util.setText
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.ui.note.LinkIcon
+import com.vitorpamplona.amethyst.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.ui.painterRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.rooms.LoadUser
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.relays.KindChip
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.Size16Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip89AppHandlers.PlatformType
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppMetadata
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun RenderAppDefinition(
     note: Note,
@@ -200,11 +219,14 @@ fun RenderAppDefinition(
                     Spacer(Modifier.weight(1f))
 
                     Row(
-                        modifier =
-                            Modifier
-                                .height(Size35dp)
-                                .padding(bottom = 3.dp),
-                    ) {}
+                        // Cancels the surrounding Column's horizontal padding so
+                        // the button's right edge lines up with the banner's.
+                        modifier = Modifier.padding(bottom = 3.dp).offset(x = 10.dp),
+                    ) {
+                        if (accountViewModel.account.isWriteable()) {
+                            RecommendAppButton(noteEvent, note, accountViewModel)
+                        }
+                    }
                 }
 
                 val name = remember(theAppMetadata) { theAppMetadata.anyName() }
@@ -223,6 +245,10 @@ fun RenderAppDefinition(
                             fontSize = 25.sp,
                         )
                     }
+                }
+
+                Row(modifier = Modifier.padding(top = 4.dp)) {
+                    ByAuthorChip(noteEvent.pubKey, accountViewModel, nav)
                 }
 
                 val website = remember(theAppMetadata) { theAppMetadata.website }
@@ -261,7 +287,188 @@ fun RenderAppDefinition(
                         )
                     }
                 }
+
+                val platforms = remember(noteEvent) { noteEvent.platformLinks().map { it.platform }.distinct() }
+                if (platforms.isNotEmpty()) {
+                    Text(
+                        text = stringRes(R.string.app_definition_available_on),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.padding(top = 6.dp),
+                    ) {
+                        platforms.forEach { PlatformChip(it) }
+                    }
+                }
+
+                val supportedKinds = remember(noteEvent) { noteEvent.supportedKinds() }
+                if (supportedKinds.isNotEmpty()) {
+                    Text(
+                        text = stringRes(R.string.app_definition_handles),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.padding(top = 6.dp, bottom = 5.dp),
+                    ) {
+                        val visible = supportedKinds.take(VISIBLE_SUPPORTED_KIND_LIMIT)
+                        visible.forEach { KindChip(it) }
+                        val overflow = supportedKinds.size - VISIBLE_SUPPORTED_KIND_LIMIT
+                        if (overflow > 0) {
+                            OverflowChip(overflow)
+                        }
+                    }
+                }
             }
+        }
+    }
+}
+
+private const val VISIBLE_SUPPORTED_KIND_LIMIT = 12
+
+/** Same shape and metrics as [KindChip] so it lines up with the kind chips. */
+@Composable
+private fun OverflowChip(count: Int) {
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+    ) {
+        Text(
+            text = "+$count",
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun PlatformChip(platform: String) {
+    val name =
+        when (platform) {
+            PlatformType.WEB.code -> stringRes(R.string.platform_web)
+            PlatformType.ANDROID.code -> stringRes(R.string.platform_android)
+            PlatformType.IOS.code -> stringRes(R.string.platform_ios)
+            else -> platform
+        }
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+    ) {
+        Text(
+            text = name,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+    }
+}
+
+/**
+ * "by <picture> <name>" pill identifying the pubkey that published the app
+ * definition, so users can tell an app from a friend apart from a spammer
+ * impersonating the real one. The picture carries the following-checkmark
+ * overlay for people the account follows. Tapping opens the author's profile.
+ */
+@Composable
+fun ByAuthorChip(
+    authorHex: HexKey,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    LoadUser(baseUserHex = authorHex, accountViewModel = accountViewModel) { author ->
+        if (author == null) return@LoadUser
+
+        Surface(
+            shape = RoundedCornerShape(50),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            modifier =
+                Modifier
+                    .clip(RoundedCornerShape(50))
+                    .clickable { nav.nav(routeFor(author)) },
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(start = 8.dp, end = 10.dp, top = 3.dp, bottom = 3.dp),
+            ) {
+                Text(
+                    text = stringRes(R.string.app_definition_by),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.size(5.dp))
+                BaseUserPicture(author, 18.dp, accountViewModel)
+                Spacer(modifier = Modifier.size(5.dp))
+                ProvideTextStyle(MaterialTheme.typography.labelMedium) {
+                    UsernameDisplay(
+                        baseUser = author,
+                        fontWeight = FontWeight.SemiBold,
+                        textColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        accountViewModel = accountViewModel,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Shows whether the logged-in user publicly recommends this app (NIP-89,
+ * kind 31989) and toggles the recommendation on tap.
+ */
+@Composable
+private fun RecommendAppButton(
+    noteEvent: AppDefinitionEvent,
+    note: Note,
+    accountViewModel: AccountViewModel,
+) {
+    val myRecommendations by accountViewModel.account.appRecommendations.flow
+        .collectAsStateWithLifecycle()
+
+    val isRecommended =
+        remember(myRecommendations, noteEvent) {
+            val address = noteEvent.addressTag()
+            myRecommendations.any { event ->
+                event.recommendationAddresses().any { it == address }
+            }
+        }
+
+    val compactHeight = Modifier.height(32.dp)
+    val compactPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp)
+
+    if (isRecommended) {
+        OutlinedButton(
+            onClick = {
+                accountViewModel.launchSigner {
+                    val account = accountViewModel.account
+                    account.appRecommendations.unrecommendApp(noteEvent.address(), account)
+                }
+            },
+            modifier = compactHeight,
+            contentPadding = compactPadding,
+        ) {
+            Text(stringRes(R.string.app_definition_recommended), style = MaterialTheme.typography.labelMedium)
+        }
+    } else {
+        Button(
+            enabled = noteEvent.supportedKinds().isNotEmpty(),
+            onClick = {
+                accountViewModel.launchSigner {
+                    val account = accountViewModel.account
+                    account.appRecommendations.recommendApp(noteEvent, note.relayHintUrl(), account)
+                }
+            },
+            modifier = compactHeight,
+            contentPadding = compactPadding,
+        ) {
+            Text(stringRes(R.string.app_definition_recommend), style = MaterialTheme.typography.labelMedium)
         }
     }
 }
