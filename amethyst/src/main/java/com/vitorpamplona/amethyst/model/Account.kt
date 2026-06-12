@@ -287,6 +287,8 @@ import kotlin.coroutines.cancellation.CancellationException
 import com.vitorpamplona.quartz.experimental.nip95.header.thumbhash as nip95thumbhash
 import com.vitorpamplona.quartz.experimental.profileGallery.thumbhash as galleryThumbhash
 
+private const val ONCHAIN_BACKEND_NOT_CONFIGURED = "Bitcoin chain backend is not configured"
+
 @OptIn(DelicateCoroutinesApi::class)
 @Stable
 class Account(
@@ -906,7 +908,7 @@ class Account(
             cache.onchainBackend
                 ?: return OnchainZapSendResult.Failure(
                     OnchainZapSendStage.LOADING_UTXOS,
-                    "Bitcoin chain backend is not configured",
+                    ONCHAIN_BACKEND_NOT_CONFIGURED,
                 )
         return OnchainZapSender.send(
             backend = backend,
@@ -934,7 +936,7 @@ class Account(
             cache.onchainBackend
                 ?: return OnchainZapSendResult.Failure(
                     OnchainZapSendStage.LOADING_UTXOS,
-                    "Bitcoin chain backend is not configured",
+                    ONCHAIN_BACKEND_NOT_CONFIGURED,
                 )
         return OnchainZapSender.sendToAddress(
             backend = backend,
@@ -961,7 +963,7 @@ class Account(
             cache.onchainBackend
                 ?: return OnchainZapSendResult.Failure(
                     OnchainZapSendStage.LOADING_UTXOS,
-                    "Bitcoin chain backend is not configured",
+                    ONCHAIN_BACKEND_NOT_CONFIGURED,
                 )
         return OnchainZapSender.sendSplit(
             backend = backend,

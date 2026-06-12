@@ -733,6 +733,8 @@ private fun SectionLabel(text: String) {
 // Previews — fake data only; no account or network required.
 // ---------------------------------------------------------------------------
 
+private const val PREVIEW_MESSAGE_LABEL = "Add a public message"
+
 private val previewMethods =
     persistentListOf(
         PaymentMethodUi(ProfilePaymentMethod.LIGHTNING, copyValue = "alice@walletofsatoshi.com"),
@@ -799,7 +801,7 @@ private fun SendPaymentLightningPreview() {
             message = "Thank you for all your work!",
             onMessageChange = {},
             showMessageField = true,
-            messageLabel = "Add a public message",
+            messageLabel = PREVIEW_MESSAGE_LABEL,
             zapTypes = previewZapTypes,
             selectedZapType = LnZapEvent.ZapType.PUBLIC,
             onZapTypeChange = {},
@@ -871,7 +873,7 @@ private fun SendPaymentInProgressPreview() {
             message = "",
             onMessageChange = {},
             showMessageField = true,
-            messageLabel = "Add a public message",
+            messageLabel = PREVIEW_MESSAGE_LABEL,
             zapTypes = null,
             selectedZapType = LnZapEvent.ZapType.PUBLIC,
             onZapTypeChange = {},
@@ -907,7 +909,7 @@ private fun SendPaymentSuccessPreview() {
             message = "",
             onMessageChange = {},
             showMessageField = true,
-            messageLabel = "Add a public message",
+            messageLabel = PREVIEW_MESSAGE_LABEL,
             zapTypes = previewZapTypes,
             selectedZapType = LnZapEvent.ZapType.PUBLIC,
             onZapTypeChange = {},
