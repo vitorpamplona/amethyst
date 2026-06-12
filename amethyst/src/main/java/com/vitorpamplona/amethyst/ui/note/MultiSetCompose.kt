@@ -84,7 +84,6 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.authorRouteFor
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
-import com.vitorpamplona.amethyst.ui.navigation.routes.routeReplyTo
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.notifications.CombinedZap
@@ -523,7 +522,6 @@ fun click(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun RenderState(
     content: ZapAmountCommentNotification,
@@ -532,15 +530,7 @@ private fun RenderState(
     nav: INav,
 ) {
     Row(
-        modifier =
-            Modifier.combinedClickable(
-                onClick = { click(content, nav) },
-                onLongClick = {
-                    content.zapNote?.let { zap ->
-                        nav.nav { routeReplyTo(zap, accountViewModel.account) }
-                    }
-                },
-            ),
+        modifier = Modifier.clickable { click(content, nav) },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         DisplayAuthorCommentAndAmount(

@@ -27,6 +27,10 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
+import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.toImmutableSet
 
@@ -107,14 +111,23 @@ class ThreadAssembler(
         return if (note.event != null) {
             val thread = OnlyLatestVersionSet()
 
-            val threadRoot = searchRoot(note, thread) ?: note
+            if (anchorsItsOwnThread(note)) {
+                // Reactions and zaps anchor their own conversation: the event is
+                // the root and only its reply subtree is loaded — not the thread
+                // of the post it targeted (that post is embedded in the event's
+                // card). Replies and comments (kind 1 / 1111) keep loading the
+                // full parent thread below.
+                loadDown(note, thread)
+            } else {
+                val threadRoot = searchRoot(note, thread) ?: note
 
-            loadUp(note, thread)
+                loadUp(note, thread)
 
-            loadDown(threadRoot, thread)
-            // adds the replies of the note in case the search for Root
-            // did not added them.
-            note.replies.forEach { loadDown(it, thread) }
+                loadDown(threadRoot, thread)
+                // adds the replies of the note in case the search for Root
+                // did not added them.
+                note.replies.forEach { loadDown(it, thread) }
+            }
 
             ThreadInfo(
                 root = note,
@@ -127,6 +140,12 @@ class ThreadAssembler(
             )
         }
     }
+
+    private fun anchorsItsOwnThread(note: Note): Boolean =
+        when (note.event) {
+            is ReactionEvent, is LnZapEvent, is NutzapEvent, is OnchainZapEvent -> true
+            else -> false
+        }
 
     fun loadUp(
         note: Note,
