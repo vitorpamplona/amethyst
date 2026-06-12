@@ -1009,15 +1009,15 @@ private fun RenderNoteRow(
         }
 
         is LnZapEvent -> {
-            RenderLnZap(baseNote, backgroundColor, accountViewModel, nav)
+            RenderLnZap(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
         is NutzapEvent -> {
-            RenderNutzap(baseNote, backgroundColor, accountViewModel, nav)
+            RenderNutzap(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
         is OnchainZapEvent -> {
-            RenderOnchainZap(baseNote, backgroundColor, accountViewModel, nav)
+            RenderOnchainZap(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
         is LiveActivitiesClipEvent -> {

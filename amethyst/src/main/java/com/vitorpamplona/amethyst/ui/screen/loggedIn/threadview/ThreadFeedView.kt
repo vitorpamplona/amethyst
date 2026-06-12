@@ -743,11 +743,11 @@ private fun FullBleedNoteCompose(
                 } else if (noteEvent is AdvertisedRelayListEvent) {
                     DisplayNIP65RelayList(baseNote, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is LnZapEvent) {
-                    RenderLnZap(baseNote, backgroundColor, accountViewModel, nav)
+                    RenderLnZap(baseNote, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
                 } else if (noteEvent is NutzapEvent) {
-                    RenderNutzap(baseNote, backgroundColor, accountViewModel, nav)
+                    RenderNutzap(baseNote, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
                 } else if (noteEvent is OnchainZapEvent) {
-                    RenderOnchainZap(baseNote, backgroundColor, accountViewModel, nav)
+                    RenderOnchainZap(baseNote, quotesLeft = 3, backgroundColor = backgroundColor, accountViewModel = accountViewModel, nav = nav)
                 } else if (noteEvent is ReactionEvent) {
                     RenderReaction(baseNote, quotesLeft = 3, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is SearchRelayListEvent) {

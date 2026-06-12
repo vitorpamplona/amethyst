@@ -90,6 +90,7 @@ private const val MEMPOOL_TX_URL = "https://mempool.space/tx/"
 @Composable
 fun RenderOnchainZap(
     note: Note,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -97,6 +98,8 @@ fun RenderOnchainZap(
     val event = note.event as? OnchainZapEvent ?: return
     val sender = note.author?.pubkeyHex ?: event.pubKey
     val recipient = event.recipient() ?: return
+
+    RenderZappedPost(note, quotesLeft, backgroundColor, accountViewModel, nav)
     val sats = event.claimedAmountInSats() ?: 0L
     val txid = event.txid()
     val message = event.content.takeIf { it.isNotBlank() }

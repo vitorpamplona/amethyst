@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.CrossfadeToDisplayComment
+import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapIcon
@@ -61,14 +62,43 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
+/**
+ * Shows the post a zap targets above the transfer card, mirroring how
+ * reactions and reposts embed their target.
+ */
+@Composable
+fun RenderZappedPost(
+    zapNote: Note,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    zapNote.replyTo?.lastOrNull()?.let {
+        NoteCompose(
+            it,
+            modifier = Modifier,
+            isBoostedNote = true,
+            unPackReply = ReplyRenderType.NONE,
+            quotesLeft = quotesLeft - 1,
+            parentBackgroundColor = backgroundColor,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
+}
+
 @Composable
 fun RenderLnZap(
     note: Note,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val zapEvent = note.event as? LnZapEvent ?: return
+
+    RenderZappedPost(note, quotesLeft, backgroundColor, accountViewModel, nav)
 
     val card by parseAuthorCommentAndAmount(note, accountViewModel)
 

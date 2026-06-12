@@ -41,6 +41,7 @@ import java.math.BigDecimal
 @Composable
 fun RenderNutzap(
     note: Note,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -48,6 +49,8 @@ fun RenderNutzap(
     val nutzapEvent = note.event as? NutzapEvent ?: return
 
     val recipientKey = nutzapEvent.linkedPubKeys().firstOrNull() ?: return
+
+    RenderZappedPost(note, quotesLeft, backgroundColor, accountViewModel, nav)
 
     val card =
         remember(note) {
