@@ -491,9 +491,18 @@ class AccountViewModel(
         launchSigner {
             val currentReactions = note.allReactionsOfContentByAuthor(userProfile(), reaction)
             if (currentReactions.isNotEmpty()) {
-                account.delete(currentReactions)
+                // Gift-wrapped reactions are retracted with a gift-wrapped
+                // deletion to the same participants — a public NIP-09 would
+                // e-tag the private rumor id onto public relays.
+                val (privateRumors, publicReactions) = currentReactions.partition { it.isPrivateRumor() }
+                if (publicReactions.isNotEmpty()) {
+                    account.delete(publicReactions)
+                }
+                if (privateRumors.isNotEmpty()) {
+                    account.deletePrivately(privateRumors, note)
+                }
             } else {
-                if (settings.useTrackedBroadcasts() && note.event !is NIP17Group) {
+                if (settings.useTrackedBroadcasts() && note.event !is NIP17Group && !note.isPrivateRumor()) {
                     // Tracked broadcasting with progress feedback
                     account.createReactionEvent(note, reaction)?.let { (event, relays) ->
                         broadcastTracker.trackBroadcast(
@@ -905,6 +914,18 @@ class AccountViewModel(
         onPayViaIntent: (ImmutableList<ZapPaymentHandler.Payable>) -> Unit,
         zapType: LnZapEvent.ZapType? = null,
     ) = launchSigner {
+        val requestedType = zapType ?: defaultZapType()
+
+        // Zaps on private rumors are forced to PRIVATE so the sender and
+        // comment stay encrypted. NONZAP is kept: paying without a zap
+        // request produces no receipt at all, which is even more private.
+        val effectiveType =
+            if (note.isPrivateRumor() && requestedType != LnZapEvent.ZapType.NONZAP) {
+                LnZapEvent.ZapType.PRIVATE
+            } else {
+                requestedType
+            }
+
         ZapPaymentHandler(account).zap(
             note = note,
             amountMilliSats = amountInMillisats,
@@ -916,7 +937,7 @@ class AccountViewModel(
             onError = onError,
             onProgress = onProgress,
             onPayViaIntent = onPayViaIntent,
-            zapType = zapType ?: defaultZapType(),
+            zapType = effectiveType,
         )
     }
 
@@ -934,6 +955,16 @@ class AccountViewModel(
         onError: (String, String, User?) -> Unit,
         onProgress: (Float) -> Unit = {},
     ) = launchSigner {
+        // Nutzap events (kind 9321) are public and e-tag the zapped note —
+        // on a private rumor that would leak the rumor id to public relays.
+        if (baseNote.isPrivateRumor()) {
+            onError(
+                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_title),
+                stringRes(com.vitorpamplona.amethyst.Amethyst.instance.appContext, R.string.nutzap_failed_private_note),
+                baseNote.author,
+            )
+            return@launchSigner
+        }
         val recipient = baseNote.author?.pubkeyHex
         if (recipient == null) {
             onError(
@@ -1131,6 +1162,17 @@ class AccountViewModel(
     }
 
     fun broadcast(note: Note) = launchSigner { account.broadcast(note) }
+
+    /**
+     * Broadcast republishes public events directly and rumors as their
+     * delivering kind-1059 wrap. A rumor whose wrap is unknown can't be
+     * broadcast at all — publishing the unsigned event would disclose the
+     * private content.
+     */
+    fun canBroadcast(note: Note): Boolean {
+        val event = note.event ?: return false
+        return event.sig.isNotEmpty() || note.rumorHost != null
+    }
 
     fun timestamp(note: Note) = launchSigner { account.otsState.timestamp(note) }
 

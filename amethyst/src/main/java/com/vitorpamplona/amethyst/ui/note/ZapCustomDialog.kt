@@ -131,6 +131,10 @@ fun ZapCustomDialog(
 
     LaunchedEffect(accountViewModel) { postViewModel.load(accountViewModel.account) }
 
+    // Zaps on private rumors are forced private (AccountViewModel.zap), so
+    // only offer the choices that match what will actually be sent.
+    val isPrivateTarget = baseNote.isPrivateRumor()
+
     val zapTypes =
         listOf(
             Triple(
@@ -153,10 +157,21 @@ fun ZapCustomDialog(
                 stringRes(id = R.string.zap_type_nonzap),
                 stringRes(id = R.string.zap_type_nonzap_explainer),
             ),
-        )
+        ).filter {
+            !isPrivateTarget || it.first == LnZapEvent.ZapType.PRIVATE || it.first == LnZapEvent.ZapType.NONZAP
+        }
 
     var selectedZapType by
-        remember(accountViewModel) { mutableStateOf(accountViewModel.defaultZapType()) }
+        remember(accountViewModel, baseNote) {
+            val default = accountViewModel.defaultZapType()
+            mutableStateOf(
+                if (isPrivateTarget && default != LnZapEvent.ZapType.NONZAP) {
+                    LnZapEvent.ZapType.PRIVATE
+                } else {
+                    default
+                },
+            )
+        }
 
     val presetAmounts = remember(accountViewModel) { accountViewModel.zapAmountChoices() }
 

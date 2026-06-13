@@ -259,6 +259,13 @@ private fun InnerReactionRow(
         },
         reactions = reactionRowItems,
         renderReaction = { item ->
+            // Unsealed rumors (private replies/posts) must not receive public
+            // reposts or quotes: each would e-tag the private rumor id onto
+            // public relays. Replies, reactions, and zaps stay enabled because
+            // the composer locks private mode for rumor parents, ReactionAction
+            // gift-wraps reactions to empty-sig targets, and zaps are forced to
+            // the PRIVATE type with public rails suppressed.
+            val isPrivateRumor = baseNote.isPrivateRumor()
             when (item.action) {
                 ReactionRowAction.Reply -> {
                     ReplyReactionWithDialog(
@@ -273,7 +280,7 @@ private fun InnerReactionRow(
 
                 ReactionRowAction.Boost -> {
                     val isDM = baseNote.event is ChatroomKeyable
-                    if (!isDM) {
+                    if (!isDM && !isPrivateRumor) {
                         BoostWithDialog(
                             baseNote,
                             editState,
@@ -296,6 +303,9 @@ private fun InnerReactionRow(
                 }
 
                 ReactionRowAction.Zap -> {
+                    // Zaps stay enabled on private rumors: AccountViewModel.zap
+                    // forces the PRIVATE zap type, and the public nutzap/onchain
+                    // rails are suppressed for them.
                     ZapReaction(
                         baseNote,
                         MaterialTheme.colorScheme.placeholderText,
@@ -306,10 +316,12 @@ private fun InnerReactionRow(
                 }
 
                 ReactionRowAction.Share -> {
-                    ShareReaction(
-                        note = baseNote,
-                        grayTint = MaterialTheme.colorScheme.placeholderText,
-                    )
+                    if (!isPrivateRumor) {
+                        ShareReaction(
+                            note = baseNote,
+                            grayTint = MaterialTheme.colorScheme.placeholderText,
+                        )
+                    }
                 }
 
                 ReactionRowAction.Pay -> {
@@ -1242,10 +1254,16 @@ fun ZapReaction(
                         nav.nav(Route.UpdateZapAmount())
                     }
                 },
-                onOnchainAmount = { amount ->
-                    wantsToZap = false
-                    onchainZapRequest = OnchainZapRequest(amount)
-                },
+                onOnchainAmount =
+                    if (baseNote.isPrivateRumor()) {
+                        // Onchain zap events are public and would e-tag the rumor id.
+                        null
+                    } else {
+                        { amount ->
+                            wantsToZap = false
+                            onchainZapRequest = OnchainZapRequest(amount)
+                        }
+                    },
                 onError = { _, message, user ->
                     scope.launch {
                         zappingProgress = 0f

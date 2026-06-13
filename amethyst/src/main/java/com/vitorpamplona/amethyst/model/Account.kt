@@ -180,6 +180,7 @@ import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip10Notes.threadRootIdOrSelf
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
+import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.base.NIP17Group
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
@@ -225,8 +226,8 @@ import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.tags.ThumbTag
 import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.WrappedEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealedRumorEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
@@ -746,8 +747,10 @@ class Account(
 
         val eventHint = note.toEventHint<Event>() ?: return null
 
-        // For NIP-17 private groups, we don't support tracked mode (too complex)
-        if (eventHint.event is NIP17Group) return null
+        // For NIP-17 private groups, we don't support tracked mode (too complex).
+        // Unsealed rumors (empty sig) must never get a public reaction —
+        // the e-tag would leak the private rumor id to public relays.
+        if (eventHint.event is NIP17Group || eventHint.event.sig.isEmpty()) return null
 
         val event = ReactionAction.reactTo(eventHint, reaction, signer)
         val relays = computeRelayListToBroadcast(event)
@@ -981,7 +984,15 @@ class Account(
         note: Note,
         type: ReportType,
         content: String = "",
-    ) = sendMyPublicAndPrivateOutbox(ReportAction.report(note, type, content, userProfile(), signer))
+    ) {
+        if (note.isPrivateRumor()) {
+            // A kind-1984 e-tagging the rumor would leak the private id onto
+            // public relays. Report the author instead (p-tag only).
+            note.author?.let { report(it, type, content) }
+        } else {
+            sendMyPublicAndPrivateOutbox(ReportAction.report(note, type, content, userProfile(), signer))
+        }
+    }
 
     suspend fun report(
         user: User,
@@ -1009,6 +1020,28 @@ class Account(
                 cache.justConsumeMyOwnEvent(deletionEvent)
             }
         }
+    }
+
+    /**
+     * Retracts rumor-only events (private reactions/replies) with a
+     * gift-wrapped NIP-09 deletion delivered to the same participants as
+     * the [target] rumor they referenced. A public deletion would e-tag
+     * the private rumor ids onto public relays.
+     */
+    suspend fun deletePrivately(
+        notes: List<Note>,
+        target: Note,
+    ) {
+        if (!isWriteable()) return
+        val targetEvent = target.event ?: return
+
+        val myRumors = notes.filter { it.author == userProfile() }.mapNotNull { it.event }
+        if (myRumors.isEmpty()) return
+
+        val recipients = (targetEvent.taggedUserIds() + targetEvent.pubKey).distinct().minus(signer.pubKey)
+        broadcastPrivately(
+            NIP17Factory().createDeletionNIP17(DeletionEvent.build(myRumors), recipients, signer),
+        )
     }
 
     suspend fun delete(
@@ -1211,7 +1244,9 @@ class Account(
                 emptySet()
             }
         }
-        if (event is WrappedEvent) {
+        // Seals, inner DM messages, and unsigned rumors never get broadcast
+        // relays: they only travel inside gift wraps.
+        if (event is SealedRumorEvent || event is BaseDMGroupEvent || event.sig.isEmpty()) {
             return emptySet()
         }
 
@@ -1334,26 +1369,39 @@ class Account(
 
     suspend fun broadcast(note: Note) {
         note.event?.let { noteEvent ->
-            if (noteEvent is WrappedEvent && noteEvent.host != null) {
-                // download the event and send it.
-                noteEvent.host?.let { host ->
-                    client
-                        .fetchFirst(
-                            filters =
-                                note.relays.associateWith { _ ->
-                                    listOf(
-                                        Filter(
-                                            kinds = listOf(host.kind),
-                                            tags = mapOf("p" to listOf(pubKey)),
-                                            ids = listOf(host.id),
-                                        ),
-                                    )
-                                },
-                        )?.let { downloadedEvent ->
-                            val toRelays = computeRelayListToBroadcast(downloadedEvent)
-                            client.publish(downloadedEvent, toRelays)
-                        }
-                }
+            val host = note.rumorHost
+            if (host != null) {
+                // Rumors are rebroadcast as their delivering envelope: the
+                // cached copy is content-stripped, so download it and send it.
+                // A just-sent note has no relays until its self-wrap echoes
+                // back — fall back to our own DM inbox relays. Bare seals
+                // (kind 13) carry no p tag, so that filter is wrap-only.
+                val relays = note.relays.ifEmpty { dmRelays.flow.value.toList() }
+                val filter =
+                    if (host.kind == SealedRumorEvent.KIND) {
+                        Filter(
+                            kinds = listOf(host.kind),
+                            ids = listOf(host.id),
+                        )
+                    } else {
+                        Filter(
+                            kinds = listOf(host.kind),
+                            tags = mapOf("p" to listOf(pubKey)),
+                            ids = listOf(host.id),
+                        )
+                    }
+                client
+                    .fetchFirst(
+                        filters = relays.associateWith { _ -> listOf(filter) },
+                    )?.let { downloadedEvent ->
+                        val toRelays = computeRelayListToBroadcast(downloadedEvent)
+                        client.publish(downloadedEvent, toRelays)
+                    }
+            } else if (noteEvent.sig.isEmpty()) {
+                // Rumor with no known wrap: publishing it would disclose the
+                // private content to relays even though they reject the
+                // missing signature.
+                return
             } else {
                 client.publish(noteEvent, computeRelayListToBroadcast(note))
             }
@@ -2281,6 +2329,18 @@ class Account(
     override suspend fun sendNip17PrivateMessage(template: EventTemplate<ChatMessageEvent>) {
         val events = NIP17Factory().createMessageNIP17(template, signer)
         broadcastPrivately(events)
+    }
+
+    /**
+     * Publishes a kind-1 note privately: signs the template, then gift-wraps
+     * the rumor to every p-tagged user plus a self-copy and sends each wrap
+     * to the recipient's DM relays. Used for private replies (the parent's
+     * author and participants are already p-tagged) and for private posts
+     * (the Notify list is the audience). Nothing reaches public relays.
+     */
+    suspend fun sendPrivateNote(template: EventTemplate<TextNoteEvent>) {
+        if (!isWriteable()) return
+        broadcastPrivately(NIP17Factory().createNoteNIP17(template, signer))
     }
 
     override suspend fun sendGiftWraps(wraps: List<GiftWrapEvent>) {

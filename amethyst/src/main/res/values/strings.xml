@@ -984,6 +984,14 @@
     <string name="article_bookmark_management_title">Bookmark this article</string>
     <string name="public_bookmark_presence_indicator">is a public bookmark here</string>
     <string name="private_bookmark_presence_indicator">is a private bookmark here</string>
+    <string name="private_rumor_mark">Private — only visible to tagged participants</string>
+    <string name="private_note">Make private: gift-wrap the note to the notified users only</string>
+    <string name="disable_private_note">Make public</string>
+    <string name="private_note_locked">Replies to a private note always stay private</string>
+    <string name="private_note_visible_to">Visible to</string>
+    <string name="private_note_no_receivers">No receivers yet: only you will be able to see this note. Add people to share it with.</string>
+    <string name="notify_add_user">+ Add</string>
+    <string name="notify_search_and_add_user">Search and add a user to notify</string>
     <string name="bookmark_absence_indicator">is not a bookmark here</string>
     <string name="bookmark_remove_action_desc">Remove bookmark from list</string>
     <string name="bookmark_add_action_desc">Add bookmark to list</string>
@@ -2208,6 +2216,7 @@
     <string name="nutzap">Nutzap</string>
     <string name="nutzap_failed_title">Nutzap failed</string>
     <string name="nutzap_failed_no_recipient">No recipient pubkey on the note</string>
+    <string name="nutzap_failed_private_note">Nutzaps are public and would reveal this private note. Use a Lightning zap instead.</string>
     <string name="nutzap_failed_no_event">Cannot build event reference</string>
     <string name="cashu_create_token">Create token</string>
     <string name="cashu_redeem_button">Redeem</string>

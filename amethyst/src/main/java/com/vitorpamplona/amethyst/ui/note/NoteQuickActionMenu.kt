@@ -385,14 +385,19 @@ fun CardBody(
                 }
             }
 
-            VerticalDivider(color = primaryLight)
-            NoteQuickActionItem(
-                icon = MaterialSymbols.Dns,
-                label = stringRes(R.string.broadcast),
-            ) {
-                accountViewModel.broadcast(note)
-                // showSelectTextDialog = true
-                onDismiss()
+            // Rumors are rebroadcast as their delivering gift wrap; hidden
+            // when the wrap is unknown (the unsigned rumor must never be
+            // published).
+            if (accountViewModel.canBroadcast(note)) {
+                VerticalDivider(color = primaryLight)
+                NoteQuickActionItem(
+                    icon = MaterialSymbols.Dns,
+                    label = stringRes(R.string.broadcast),
+                ) {
+                    accountViewModel.broadcast(note)
+                    // showSelectTextDialog = true
+                    onDismiss()
+                }
             }
             VerticalDivider(color = primaryLight)
             if (isOwnNote && note.isDraft()) {
@@ -402,6 +407,9 @@ fun CardBody(
                 ) {
                     onWantsToEditDraft()
                 }
+            } else if (note.isPrivateRumor()) {
+                // No external share link for private rumors: nobody can
+                // resolve the id from relays and sharing it leaks the id.
             } else {
                 NoteQuickActionItem(
                     icon = MaterialSymbols.Share,

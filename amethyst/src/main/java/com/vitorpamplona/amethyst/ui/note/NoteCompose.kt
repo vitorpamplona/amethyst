@@ -1764,6 +1764,10 @@ fun FirstUserInfoRow(
             DisplayDraft()
         }
 
+        if (baseNote.isPrivateRumor()) {
+            PrivateRumorMark()
+        }
+
         if (isPinned) {
             PinnedMark()
         }
@@ -1787,6 +1791,16 @@ fun PinnedMark() {
     Icon(
         symbol = MaterialSymbols.PushPin,
         contentDescription = stringRes(R.string.pinned_notes),
+        modifier = Modifier.padding(start = 5.dp).size(16.dp),
+        tint = MaterialTheme.colorScheme.placeholderText,
+    )
+}
+
+@Composable
+fun PrivateRumorMark() {
+    Icon(
+        symbol = MaterialSymbols.Lock,
+        contentDescription = stringRes(R.string.private_rumor_mark),
         modifier = Modifier.padding(start = 5.dp).size(16.dp),
         tint = MaterialTheme.colorScheme.placeholderText,
     )

@@ -52,20 +52,23 @@ import kotlinx.collections.immutable.ImmutableList
 fun Notifying(
     baseMentions: ImmutableList<User>?,
     accountViewModel: AccountViewModel,
+    label: String? = null,
+    showWhenEmpty: Boolean = false,
+    onAddUser: (() -> Unit)? = null,
     onClick: (User) -> Unit,
 ) {
     val mentions = baseMentions?.toSet()
 
     FlowRow(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-        if (!mentions.isNullOrEmpty()) {
+        if (!mentions.isNullOrEmpty() || showWhenEmpty) {
             Text(
-                stringRes(R.string.reply_notify),
+                label ?: stringRes(R.string.reply_notify),
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.placeholderText,
                 modifier = Modifier.align(CenterVertically),
             )
 
-            mentions.forEachIndexed { _, user ->
+            mentions?.forEachIndexed { _, user ->
                 Button(
                     shape = ButtonBorder,
                     colors =
@@ -75,6 +78,23 @@ fun Notifying(
                     onClick = { onClick(user) },
                 ) {
                     DisplayUserNameWithDeleteMark(user, accountViewModel)
+                }
+            }
+
+            if (onAddUser != null) {
+                Button(
+                    shape = ButtonBorder,
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.mediumImportanceLink,
+                        ),
+                    onClick = onAddUser,
+                ) {
+                    Text(
+                        text = stringRes(R.string.notify_add_user),
+                        color = Color.White,
+                        textAlign = TextAlign.Center,
+                    )
                 }
             }
         }
