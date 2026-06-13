@@ -101,7 +101,9 @@
     <string name="log_out">退出</string>
     <string name="show_more">显示更多</string>
     <string name="lightning_invoice">闪电发票</string>
+    <string name="invoice_expired">已过期</string>
     <string name="clink_lightning_offer">CLINK 报价</string>
+    <string name="clink_offer_pay_to">到</string>
     <string name="clink_requesting_invoice">正在请求发票…</string>
     <string name="clink_debit_no_response">借记服务没有完成付款。</string>
     <string name="clink_confirm_payment_title">确认付款</string>
@@ -621,6 +623,22 @@
     <string name="profile_badges_header">徽章 · %1$d</string>
     <string name="profile_badges_description">选择要在个人资料中显示的已收到的徽章。</string>
     <string name="profile_badges_empty">您还没有收到任何徽章。</string>
+    <string name="profile_apps_header">应用 · %1$d</string>
+    <string name="profile_apps_header_empty">应用</string>
+    <string name="profile_apps_empty_hint">推荐您使用的Nostr应用，以便其他人能够发现它们。</string>
+    <string name="profile_app_recommendations_title">推荐的应用</string>
+    <string name="profile_app_recommendations_description">选择您公开推荐的Nostr应用。建议显示在您的个人资料上，并帮助他人发现此客户端无法打开的内容。</string>
+    <string name="profile_app_recommendations_empty">尚未找到应用。应用在您的中继上被发现时会出现在这里。</string>
+    <string name="app_definition_untitled">未命名应用</string>
+    <string name="app_definition_no_supported_kinds">不宣布它处理的内容</string>
+    <string name="app_definition_recommend">推荐</string>
+    <string name="app_definition_recommended">推荐的</string>
+    <string name="app_definition_handles">处理</string>
+    <string name="app_definition_by">方</string>
+    <string name="app_definition_available_on">可用版本</string>
+    <string name="platform_web">网页</string>
+    <string name="platform_android">安卓端</string>
+    <string name="platform_ios">iOS</string>
     <string name="pictures">图片</string>
     <string name="workouts">锻炼</string>
     <string name="workout">锻炼</string>
@@ -663,6 +681,7 @@
     <string name="nip82_section_latest_release">最新发布</string>
     <string name="nip82_section_comments">评论</string>
     <string name="nip82_no_comments">成为第一个评论者。</string>
+    <string name="nip82_by_author">方</string>
     <string name="nip82_older_releases_show">显示旧版本</string>
     <string name="nip82_older_releases_hide">隐藏旧版本</string>
     <string name="calendars">日历</string>
@@ -917,6 +936,13 @@
     <string name="article_bookmark_management_title">将此文章加入书签</string>
     <string name="public_bookmark_presence_indicator">在这里是一个公开书签</string>
     <string name="private_bookmark_presence_indicator">在这里是一个私密书签</string>
+    <string name="private_rumor_mark">不公开——只对标记的参与者可见</string>
+    <string name="private_note">设为私密：将笔记包装为礼物仅发给要通知的用户</string>
+    <string name="disable_private_note">设为公开</string>
+    <string name="private_note_locked">对私密笔记的回复总是不公开的</string>
+    <string name="private_note_visible_to">可见范围</string>
+    <string name="private_note_no_receivers">尚无接收方：只有您才能看到此笔记。添加分享对象。</string>
+    <string name="notify_search_and_add_user">搜索并添加要通知的用户</string>
     <string name="bookmark_absence_indicator">在这里不是书签</string>
     <string name="bookmark_remove_action_desc">从列表中删除书签</string>
     <string name="bookmark_add_action_desc">添加书签到列表</string>
@@ -1080,6 +1106,7 @@
     <string name="follow_list_kind3follows_proxy">通过代理关注</string>
     <string name="follow_list_aroundme">周围的人</string>
     <string name="follow_list_global">全球</string>
+    <string name="follow_list_curated">精选</string>
     <string name="follow_list_chess">国际象棋</string>
     <string name="follow_list_mine">我的</string>
     <string name="follow_list_mute_list">静音列表</string>
@@ -1421,6 +1448,7 @@
     <string name="default_limit">默认限制（返回事件）</string>
     <string name="max_subid_length">最大 SubID 长度</string>
     <string name="cashu">Cashu 代币</string>
+    <string name="cashu_mint_label">铸币厂：%1$s</string>
     <string name="cashu_redeem">兑换</string>
     <string name="cashu_redeem_to_zap">发送到打闪钱包</string>
     <string name="cashu_redeem_to_cashu">在 Cashu 钱包中打开</string>
@@ -1927,6 +1955,7 @@
     <string name="nutzap">Nutzap</string>
     <string name="nutzap_failed_title">Nutzap 失败</string>
     <string name="nutzap_failed_no_recipient">笔记上没有收件人的公钥</string>
+    <string name="nutzap_failed_private_note">Nutzaps 是公开的，将会透露该私密笔记。请使用闪电打闪代替。</string>
     <string name="nutzap_failed_no_event">无法构建事件参考</string>
     <string name="cashu_create_token">创建令牌</string>
     <string name="cashu_redeem_button">兑换</string>
@@ -1960,6 +1989,65 @@
     <string name="wallet_onchain_public_dialog_confirm">明白了</string>
     <string name="wallet_onchain_copy_dialog_confirm">复制地址</string>
     <!-- Onchain zap send dialog -->
+    <string name="onchain_send_title">发送链上打闪</string>
+    <string name="onchain_send_close">关闭</string>
+    <string name="onchain_send_to">到</string>
+    <string name="onchain_send_post_author">发帖作者</string>
+    <string name="onchain_send_recipient">收款人</string>
+    <string name="onchain_send_recipient_placeholder">名称，NIP-05 或 npub</string>
+    <string name="onchain_send_change_recipient">更改收款人</string>
+    <string name="onchain_send_amount">金额</string>
+    <string name="onchain_send_sats_suffix">sats</string>
+    <string name="onchain_send_min_warning">最小的链上打闪是 %1$s sats — 少于此金额无法覆盖矿工费。请使用闪电网络打闪代替。</string>
+    <string name="onchain_send_comment_label">留言（可选）</string>
+    <string name="onchain_send_priority">优先级</string>
+    <string name="onchain_send_fee_slow">慢</string>
+    <string name="onchain_send_fee_normal">正常</string>
+    <string name="onchain_send_fee_fast">快</string>
+    <string name="onchain_send_fee_eta_slow">约1小时</string>
+    <string name="onchain_send_fee_eta_normal">约30分钟</string>
+    <string name="onchain_send_fee_eta_fast">约10分钟</string>
+    <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
+    <string name="onchain_send_fee_tier_label_rate_eta">%1$s · %2$s sat/vB · %3$s</string>
+    <string name="onchain_send_loading_fees">正加载费用估算…</string>
+    <string name="onchain_send_button_amount">发送 %1$s sats</string>
+    <plurals name="onchain_send_button_amount_split">
+        <item quantity="other">发送 %1$s sats, %2$d 拆分</item>
+    </plurals>
+    <plurals name="onchain_send_use_note_split">
+        <item quantity="other">使用此记事的 %1$d 路打闪拆分</item>
+    </plurals>
+    <plurals name="onchain_send_splits_label">
+        <item quantity="other">在 %1$d 位收款人之间拆分</item>
+    </plurals>
+    <plurals name="onchain_send_splits_skipped">
+        <item quantity="other">正在跳过 %1$d 位仅闪电网络地址收款人 - 链上需 Nostr 公钥派生地址。</item>
+    </plurals>
+    <string name="onchain_send_dont_split">不要拆分 — 付给一个收款人</string>
+    <string name="onchain_send_sending">构建、签名和广播中…</string>
+    <string name="onchain_send_success">已发送链上打闪</string>
+    <string name="onchain_send_result_transaction">交易</string>
+    <string name="onchain_send_result_fee">费用</string>
+    <string name="onchain_send_result_change">更改</string>
+    <string name="onchain_send_sats_amount">%1$s sats</string>
+    <string name="onchain_send_done">完成</string>
+    <string name="onchain_send_failed_at">失败: %1$s</string>
+    <string name="onchain_send_broadcast_no_receipt">付款已广播(tx %1$s)，但收据未发布。</string>
+    <string name="onchain_stage_loading_utxos">加载余额</string>
+    <string name="onchain_stage_building">正在建立交易</string>
+    <string name="onchain_stage_signing">正签名</string>
+    <string name="onchain_stage_broadcasting">正在广播</string>
+    <string name="onchain_stage_publishing">发布收据中</string>
+    <string name="onchain_send_error_backend_not_configured">未配置比特币链后端</string>
+    <string name="onchain_send_error_load_utxos">无法加载您的比特币余额</string>
+    <string name="onchain_send_error_build">无法构建交易</string>
+    <string name="onchain_send_error_recipient_dust">收款人份额过低</string>
+    <string name="onchain_send_error_sign">无法签署交易</string>
+    <string name="onchain_send_error_broadcast">无法广播交易</string>
+    <string name="onchain_send_error_publish_receipt">付款已发送，但打闪收据无法发布</string>
+    <plurals name="onchain_send_error_publish_receipt_partial">
+        <item quantity="other">付款已发送(已发布 %1$d 份收据，共 %2$d 份)，但下一收据无法发布</item>
+    </plurals>
     <string name="route_security_filters">安全滤镜</string>
     <string name="route_import_follows">导入关注</string>
     <string name="new_post">新帖子</string>

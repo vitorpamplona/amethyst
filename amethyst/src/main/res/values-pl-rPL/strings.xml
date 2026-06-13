@@ -642,6 +642,22 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="profile_badges_header">Odznaki · %1$d</string>
     <string name="profile_badges_description">Wybierz, które z otrzymanych odznak pojawią się na Twoim profilu.</string>
     <string name="profile_badges_empty">Nie otrzymałeś jeszcze żadnych odznak.</string>
+    <string name="profile_apps_header">Aplikacje · %1$d</string>
+    <string name="profile_apps_header_empty">Aplikacje</string>
+    <string name="profile_apps_empty_hint">Poleć aplikacjom Nostr, których używasz, aby inni mogli je odkryć.</string>
+    <string name="profile_app_recommendations_title">Polecane aplikacje</string>
+    <string name="profile_app_recommendations_description">Wybierz aplikacje Nostr, które chcesz publicznie polecić. Twoje rekomendacje pojawią się na Twoim profilu i pomogą innym użytkownikom znaleźć aplikacje z treściami, których ten klient nie może otworzyć.</string>
+    <string name="profile_app_recommendations_empty">Nie znaleziono jeszcze żadnych aplikacji. Aplikacje będą się tu pojawiać w miarę ich wykrywania na Twoich transmiterach.</string>
+    <string name="app_definition_untitled">Aplikacja bez nazwy</string>
+    <string name="app_definition_no_supported_kinds">Nie podaje, jakie treści obsługuje</string>
+    <string name="app_definition_recommend">Poleć</string>
+    <string name="app_definition_recommended">Polecane</string>
+    <string name="app_definition_handles">Identyfikatory</string>
+    <string name="app_definition_by">przez</string>
+    <string name="app_definition_available_on">Dostępna w</string>
+    <string name="platform_web">Aplikacja webowa</string>
+    <string name="platform_android">Android</string>
+    <string name="platform_ios">iOS</string>
     <string name="pictures">Zdjęcia</string>
     <string name="workouts">Treningi</string>
     <string name="workout">Trening</string>
@@ -684,6 +700,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="nip82_section_latest_release">Najnowsze wydanie</string>
     <string name="nip82_section_comments">Komentarze</string>
     <string name="nip82_no_comments">Bądź pierwszym, który skomentuje.</string>
+    <string name="nip82_by_author">przez</string>
     <string name="nip82_older_releases_show">Pokaż starsze wersje</string>
     <string name="nip82_older_releases_hide">Ukryj starsze wersje</string>
     <string name="calendars">Kalendarze</string>
@@ -947,6 +964,13 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="article_bookmark_management_title">Dodaj ten artykuł do zakładek</string>
     <string name="public_bookmark_presence_indicator">jest zakładką publiczną</string>
     <string name="private_bookmark_presence_indicator">jest prywatną zakładką</string>
+    <string name="private_rumor_mark">Prywatny — widoczny tylko dla oznaczonych uczestników</string>
+    <string name="private_note">Ustaw jako prywatny: udostępnij wpis wyłącznie wskazanym użytkownikom</string>
+    <string name="disable_private_note">Upublicznij</string>
+    <string name="private_note_locked">Odpowiedzi na wpis prywatny zawsze pozostają prywatne</string>
+    <string name="private_note_visible_to">Widoczny dla</string>
+    <string name="private_note_no_receivers">Nie ma jeszcze odbiorców: ten wpis zobaczysz tylko Ty. Dodaj osoby, którym chcesz go udostępnić.</string>
+    <string name="notify_search_and_add_user">Wyszukaj i dodaj użytkownika do powiadomień</string>
     <string name="bookmark_absence_indicator">nie ma tu zakładki</string>
     <string name="bookmark_remove_action_desc">Usuń zakładkę z listy</string>
     <string name="bookmark_add_action_desc">Dodaj zakładkę do listy</string>
@@ -1110,6 +1134,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="follow_list_kind3follows_proxy">Obserwowani przez proxy</string>
     <string name="follow_list_aroundme">W pobliżu</string>
     <string name="follow_list_global">Wszystkie</string>
+    <string name="follow_list_curated">Wybrane</string>
     <string name="follow_list_chess">Szachy</string>
     <string name="follow_list_mine">Moje</string>
     <string name="follow_list_mute_list">Zablokowane</string>
@@ -1451,6 +1476,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="default_limit">Domyślny limit (Powracające zdarzenia)</string>
     <string name="max_subid_length">Maks. długość SubID</string>
     <string name="cashu">Cashu Token</string>
+    <string name="cashu_mint_label">Mint: %1$s</string>
     <string name="cashu_redeem">Wykup</string>
     <string name="cashu_redeem_to_zap">Wyślij do Zap Wallet</string>
     <string name="cashu_redeem_to_cashu">Otwórz w Portfelu Cashu</string>
@@ -1845,6 +1871,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="route_global">Wszystkie</string>
     <string name="route_video">Filmiki</string>
     <string name="route_pictures">Zdjęcia</string>
+    <string name="route_workouts">Treningi</string>
     <string name="route_calendars">Kalendarze</string>
     <string name="route_calendar_collections">Listy kalendarzy</string>
     <string name="route_chess">Szachy</string>
@@ -1968,6 +1995,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="nutzap">Nutzap</string>
     <string name="nutzap_failed_title">Nutzap nieudany</string>
     <string name="nutzap_failed_no_recipient">Brak pubkey odbiorcy w notatce</string>
+    <string name="nutzap_failed_private_note">Nutzaps jest publiczny i ujawniłby ten prywatny wpis. Zamiast tego użyj zap-u Lightning.</string>
     <string name="nutzap_failed_no_event">Nie można utworzyć odniesienia do wydarzenia</string>
     <string name="cashu_create_token">Utwórz token</string>
     <string name="cashu_redeem_button">Zrealizuj</string>
@@ -2001,17 +2029,54 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="wallet_onchain_public_dialog_confirm">Rozumiem</string>
     <string name="wallet_onchain_copy_dialog_confirm">Skopiuj adres</string>
     <!-- Onchain zap send dialog -->
+    <string name="onchain_send_title">Wyślij zap onchain</string>
     <string name="onchain_send_close">Zamknij</string>
+    <string name="onchain_send_to">Dla</string>
+    <string name="onchain_send_post_author">Autor postu</string>
     <string name="onchain_send_recipient">Odbiorca</string>
     <string name="onchain_send_recipient_placeholder">nazwa, NIP-05 lub npub</string>
     <string name="onchain_send_change_recipient">Zmień odbiorcę</string>
     <string name="onchain_send_amount">Kwota</string>
     <string name="onchain_send_sats_suffix">satosze</string>
+    <string name="onchain_send_min_warning">Minimalny zap on-chain to %1$s satoszy — mniejsze ilości pochłaniają opłaty górnika. Zamiast tego dokonaj transakcji Lightning.</string>
     <string name="onchain_send_comment_label">Komentarz (opcjonalnie)</string>
     <string name="onchain_send_priority">Priorytet</string>
     <string name="onchain_send_fee_slow">Wolne</string>
     <string name="onchain_send_fee_normal">Normalne</string>
     <string name="onchain_send_fee_fast">Szybkie</string>
+    <string name="onchain_send_fee_eta_slow">~1 godz.</string>
+    <string name="onchain_send_fee_eta_normal">~30 min</string>
+    <string name="onchain_send_fee_eta_fast">~10 min</string>
+    <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
+    <string name="onchain_send_fee_tier_label_rate_eta">%1$s · %2$s sat/vB · %3$s</string>
+    <string name="onchain_send_loading_fees">Ładowanie szacowanych opłat…</string>
+    <string name="onchain_send_button_amount">Wyślij %1$s satoszy</string>
+    <plurals name="onchain_send_button_amount_split">
+        <item quantity="one">Wyślij %1$s satoszy, %2$d kierunkowo</item>
+        <item quantity="few">Wyślij %1$s satoszy, %2$d kierunkowo</item>
+        <item quantity="many">Wyślij %1$s satoszy, %2$d kierunkowo</item>
+        <item quantity="other">Wyślij %1$s satoszy, %2$d kierunkowo</item>
+    </plurals>
+    <plurals name="onchain_send_use_note_split">
+        <item quantity="one">Użyj %1$d-kierunkowego podziału zapów dla tego wpisu</item>
+        <item quantity="few">Użyj %1$d-kierunkowego podziału zapów dla tego wpisu</item>
+        <item quantity="many">Użyj %1$d-kierunkowego podziału zapów dla tego wpisu</item>
+        <item quantity="other">Użyj %1$d-kierunkowego podziału zapów dla tego wpisu</item>
+    </plurals>
+    <plurals name="onchain_send_splits_label">
+        <item quantity="one">Podział na %1$d odbiorcę</item>
+        <item quantity="few">Podział na %1$d odbiorców</item>
+        <item quantity="many">Podział na %1$d odbiorców</item>
+        <item quantity="other">Podział na %1$d odbiorców</item>
+    </plurals>
+    <plurals name="onchain_send_splits_skipped">
+        <item quantity="one">Pominięto %1$d odbiorcę Lightning-address-only - on chain potrzebuje Nostr pubkey, aby uzyskać adres.</item>
+        <item quantity="few">Pominięto %1$d odbiorców Lightning-address-only - on chain potrzebuje Nostr pubkey, aby uzyskać adres.</item>
+        <item quantity="many">Pominięto %1$d odbiorców Lightning-address-only - on chain potrzebuje Nostr pubkey, aby uzyskać adres.</item>
+        <item quantity="other">Pominięto %1$d odbiorców Lightning-address-only - on chain potrzebuje Nostr pubkey, aby uzyskać adres.</item>
+    </plurals>
+    <string name="onchain_send_dont_split">Nie dziel płatności — zapłać jednemu odbiorcy</string>
+    <string name="onchain_send_sending">Tworzenie, podpisywanie i nadawanie…</string>
     <string name="onchain_send_success">Wysłano zap Onchain</string>
     <string name="onchain_send_result_transaction">Transakcja</string>
     <string name="onchain_send_result_fee">Opłata</string>
@@ -2117,6 +2182,12 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="calendar_collection_title">Tytuł</string>
     <string name="calendar_collection_description">Opis</string>
     <string name="calendar_collection_invalid">Tytuł jest wymagany.</string>
+    <plurals name="calendar_collection_count">
+        <item quantity="one">%1$d wydarzenie</item>
+        <item quantity="few">%1$d wydarzeń</item>
+        <item quantity="many">%1$d wydarzeń</item>
+        <item quantity="other">%1$d wydarzeń</item>
+    </plurals>
     <string name="calendar_collection_empty_members">Brak wydarzeń w tym kalendarzu.</string>
     <string name="calendar_rsvp_going">Będę</string>
     <string name="calendar_rsvp_maybe">Może</string>
@@ -2135,6 +2206,12 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="calendar_reminder_channel_name">Przypomnienia w kalendarzu</string>
     <string name="calendar_reminder_channel_description">Powiadomienie, gdy wydarzenie, w którym bierzesz udział, ma się właśnie rozpocząć.</string>
     <string name="calendar_reminder_default_title">Wydarzenie w kalendarzu</string>
+    <plurals name="calendar_reminder_body">
+        <item quantity="one">Rozpoczęcie za %1$d min.</item>
+        <item quantity="few">Rozpoczęcie za %1$d minut</item>
+        <item quantity="many">Rozpoczęcie za %1$d minut</item>
+        <item quantity="other">Rozpoczęcie za %1$d minut</item>
+    </plurals>
     <string name="calendar_add_to_calendar_action">Dodaj do jednego z kalendarzy</string>
     <string name="calendar_add_to_calendar_title">Dodaj do kalendarza</string>
     <string name="calendar_add_to_calendar_none">Nie utworzyłeś jeszcze żadnych kalendarzy.</string>
