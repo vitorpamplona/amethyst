@@ -718,6 +718,7 @@ class AccountViewModel(
                                     ?.content
                                     ?.ifBlank { null },
                                 showAmountInteger((it.response.event as? LnZapEvent)?.amount),
+                                it.response,
                             )
                     }.toMutableMap()
 
@@ -733,7 +734,7 @@ class AccountViewModel(
                     }
                 }
 
-            results.forEach { decrypted -> initialResults[decrypted.zapRequest] = decrypted.info }
+            results.forEach { decrypted -> initialResults[decrypted.zapRequest] = decrypted.info.copy(zapNote = decrypted.zapEvent) }
 
             onNewState(initialResults.values.toImmutableList())
         }
@@ -750,6 +751,7 @@ class AccountViewModel(
                             LocalCache.getUserIfExists(cachedPrivateRequest.pubKey) ?: it.request.author,
                             cachedPrivateRequest.content.ifBlank { null },
                             showAmountInteger((it.response.event as? LnZapEvent)?.amount),
+                            it.response,
                         )
                     } else {
                         ZapAmountCommentNotification(
@@ -758,6 +760,7 @@ class AccountViewModel(
                                 ?.content
                                 ?.ifBlank { null },
                             showAmountInteger((it.response.event as? LnZapEvent)?.amount),
+                            it.response,
                         )
                     }
                 } else {
@@ -767,6 +770,7 @@ class AccountViewModel(
                             ?.content
                             ?.ifBlank { null },
                         showAmountInteger((it.response.event as? LnZapEvent)?.amount),
+                        it.response,
                     )
                 }
             }.toImmutableList()
@@ -784,6 +788,7 @@ class AccountViewModel(
                             LocalCache.getUserIfExists(cachedPrivateRequest.pubKey) ?: it.first.author,
                             cachedPrivateRequest.content.ifBlank { null },
                             showAmountInteger((it.second?.event as? LnZapEvent)?.amount),
+                            it.second,
                         )
                     } else {
                         ZapAmountCommentNotification(
@@ -792,6 +797,7 @@ class AccountViewModel(
                                 ?.content
                                 ?.ifBlank { null },
                             showAmountInteger((it.second?.event as? LnZapEvent)?.amount),
+                            it.second,
                         )
                     }
                 } else {
@@ -801,6 +807,7 @@ class AccountViewModel(
                             ?.content
                             ?.ifBlank { null },
                         showAmountInteger((it.second?.event as? LnZapEvent)?.amount),
+                        it.second,
                     )
                 }
             }.toImmutableList()
@@ -823,6 +830,7 @@ class AccountViewModel(
                                     ?.content
                                     ?.ifBlank { null },
                                 showAmountInteger((it.second?.event as? LnZapEvent)?.amount),
+                                it.second,
                             )
                     }.toMutableMap()
 
@@ -841,7 +849,7 @@ class AccountViewModel(
                     }
                 }
 
-            decryptedInfo.forEach { decrypted -> initialResults[decrypted.zapRequest] = decrypted.info }
+            decryptedInfo.forEach { decrypted -> initialResults[decrypted.zapRequest] = decrypted.info.copy(zapNote = decrypted.zapEvent) }
 
             onNewState(initialResults.values.toImmutableList())
         }
@@ -853,7 +861,7 @@ class AccountViewModel(
         onNewState: (ZapAmountCommentNotification?) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            onNewState(innerDecryptAmountMessage(zapRequest, zapEvent))
+            onNewState(innerDecryptAmountMessage(zapRequest, zapEvent)?.copy(zapNote = zapEvent))
         }
     }
 
@@ -861,7 +869,7 @@ class AccountViewModel(
         val zapEvent = zapNote.event as? LnZapEvent ?: return null
         val zapRequest = zapEvent.zapRequest ?: return null
 
-        return innerDecryptAmountMessage(zapRequest, zapEvent)
+        return innerDecryptAmountMessage(zapRequest, zapEvent)?.copy(zapNote = zapNote)
     }
 
     suspend fun innerDecryptAmountMessage(

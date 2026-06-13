@@ -80,6 +80,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.hasGeohashes
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
@@ -96,6 +97,7 @@ import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitive
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplits
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiser
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
@@ -269,7 +271,25 @@ open class CommentPostViewModel :
     open fun reply(post: Note) {
         this.replyingTo = post
         this.externalIdentity = (post.event as? CommentEvent)?.scope()
+        (post.event as? LnZapEvent)?.let { zap ->
+            notifying = listOfNotNull(zapSenderToNotify(zap))
+        }
         observeCommunityRules(post)
+    }
+
+    /**
+     * Zap receipts (kind 9735) are signed by the recipient's lightning provider, so
+     * the reply tags built from the receipt alone would notify the custodian instead
+     * of the person who zapped. The actual sender is the author of the embedded zap
+     * request. Requests carrying an `anon` tag (anonymous or private zaps) are signed
+     * by an ephemeral key: skip those — tagging the throwaway key is useless, and
+     * tagging the decrypted sender would publicly expose a private zapper.
+     */
+    private fun zapSenderToNotify(zapEvent: LnZapEvent): User? {
+        val request = zapEvent.zapRequest ?: return null
+        if (request.hasAnonTag()) return null
+        if (request.pubKey == account.signer.pubKey) return null
+        return LocalCache.checkGetOrCreateUser(request.pubKey)
     }
 
     /**
@@ -433,6 +453,17 @@ open class CommentPostViewModel :
         notifying = draftEvent.rootAuthorKeys().mapNotNull { LocalCache.checkGetOrCreateUser(it) } +
             draftEvent.replyAuthorKeys().mapNotNull { LocalCache.checkGetOrCreateUser(it) }
 
+        // Replies to zaps notify the zap sender through a plain p tag (the receipt's
+        // author keys above are the lightning provider). Restore the sender chip only
+        // if the draft still tags them — its absence means the user removed it.
+        (replyingTo?.event as? LnZapEvent)?.let { zap ->
+            zapSenderToNotify(zap)?.let { sender ->
+                if (draftEvent.tags.mapNotNull(PTag::parseKey).contains(sender.pubkeyHex)) {
+                    notifying = (notifying ?: emptyList()) + sender
+                }
+            }
+        }
+
         if (forwardZapTo.value.items.isNotEmpty()) {
             wantsForwardZapTo = true
         }
@@ -528,6 +559,15 @@ open class CommentPostViewModel :
                                 } else {
                                     null
                                 }
+                            }
+                        } else if (replyingToEvent is LnZapEvent) {
+                            val sender = zapSenderToNotify(replyingToEvent)
+                            // notifying starts with the sender; a missing entry means the
+                            // user removed the chip, so respect that and don't tag them.
+                            if (sender != null && notifying?.contains(sender) != false) {
+                                listOf(sender.toPTag())
+                            } else {
+                                emptyList()
                             }
                         } else {
                             emptyList()

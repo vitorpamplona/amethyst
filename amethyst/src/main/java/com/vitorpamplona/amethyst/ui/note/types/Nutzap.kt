@@ -21,46 +21,58 @@
 package com.vitorpamplona.amethyst.ui.note.types
 
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.hashtags.Cashu
+import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.note.CrossfadeToDisplayComment
 import com.vitorpamplona.amethyst.ui.note.DisplayBlankAuthor
-import com.vitorpamplona.amethyst.ui.note.LikedIcon
 import com.vitorpamplona.amethyst.ui.note.UserPicture
+import com.vitorpamplona.amethyst.ui.note.showAmount
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.Size25dp
-import com.vitorpamplona.amethyst.ui.note.RenderReaction as RenderReactionEmoji
+import com.vitorpamplona.amethyst.ui.theme.bitcoinColor
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.claimedSatsTotal
+import java.math.BigDecimal
 
 /**
- * Renders a kind 7 reaction as an activity card, like the zap kinds, tinted
- * with the Liked heart color: badge + reactor → author on the first line and
- * the reacted-to post quoted inside the card.
+ * Renders a NIP-61 nutzap (kind 9321) as an activity card, like lightning zaps.
+ * Unlike kind 9735 receipts, the nutzap is signed by the sender, so [Note.author]
+ * is already the right person to attribute.
  */
 @Composable
-fun RenderReaction(
+fun RenderNutzap(
     note: Note,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val reactionType = note.event?.content ?: ""
+    val nutzapEvent = note.event as? NutzapEvent ?: return
 
-    ActivityCardFrame(LikeTint) {
+    val recipientKey = nutzapEvent.linkedPubKeys().firstOrNull()
+    val orange = MaterialTheme.colorScheme.bitcoinColor
+
+    ActivityCardFrame(orange) {
         ActivityHeaderRow(
-            tint = LikeTint,
-            pillLabel = "REACTION",
+            tint = orange,
+            pillLabel = "CASHU",
             badge = {
-                if (reactionType == "+" || reactionType.isBlank()) {
-                    ActivityBadge(LikeTint) {
-                        LikedIcon(Modifier.size(16.dp), Color.White)
-                    }
-                } else {
-                    RenderReactionEmoji(reactionType)
+                ActivityBadge(orange) {
+                    Icon(
+                        imageVector = CustomHashTagIcons.Cashu,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp),
+                    )
                 }
             },
             senderAvatar = {
@@ -72,11 +84,17 @@ fun RenderReaction(
                 }
             },
             recipientAvatar =
-                note.replyTo?.lastOrNull()?.author?.let {
+                recipientKey?.let {
                     { UserPicture(it, Size25dp, Modifier, accountViewModel, nav) }
                 },
         )
 
         RenderZappedPost(note, quotesLeft, backgroundColor, accountViewModel, nav)
+
+        ActivityAmountRow(showAmount(BigDecimal(nutzapEvent.claimedSatsTotal())), orange)
+
+        nutzapEvent.content.ifBlank { null }?.let {
+            CrossfadeToDisplayComment(it, backgroundColor, nav, accountViewModel)
+        }
     }
 }

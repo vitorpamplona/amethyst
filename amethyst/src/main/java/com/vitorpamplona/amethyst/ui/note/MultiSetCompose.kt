@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.ui.components.InLineIconRenderer
 import com.vitorpamplona.amethyst.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.authorRouteFor
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.elements.NoteDropDownMenu
@@ -256,7 +257,9 @@ fun RenderLikeGallery(
                 }
             }
 
-            AuthorGallery(likeEvents, nav, accountViewModel)
+            // Opens the reaction's own thread (where it can be replied to,
+            // boosted, or zapped) instead of the reactor's profile.
+            AuthorGallery(likeEvents, nav, accountViewModel) { Route.Note(it.idHex) }
         }
     }
 }
@@ -372,6 +375,7 @@ fun RenderNutzapGallery(
                         user = note.author,
                         comment = event?.content?.ifBlank { null },
                         amount = showAmount(java.math.BigDecimal(sats)),
+                        zapNote = note,
                     )
                 }.toImmutableList()
         }
@@ -469,6 +473,9 @@ data class ZapAmountCommentNotification(
     val user: User?,
     val comment: String?,
     val amount: String?,
+    // The zap receipt (kind 9735) note, when available, so the chip can offer
+    // actions that target the zap itself (e.g. replying to it).
+    val zapNote: Note? = null,
 )
 
 @Composable
@@ -485,6 +492,7 @@ private fun ParseAuthorCommentAndAmount(
                     user = zapRequest.author,
                     comment = null,
                     amount = null,
+                    zapNote = zapEvent,
                 ),
             )
         }
@@ -504,7 +512,14 @@ fun click(
     content: ZapAmountCommentNotification,
     nav: INav,
 ) {
-    content.user?.let { nav.nav(routeFor(it)) }
+    val zapNote = content.zapNote
+    if (zapNote != null) {
+        // Opens the zap's own thread, where anyone can reply, boost,
+        // zap, or share it. The sender's profile is one tap away there.
+        nav.nav(Route.Note(zapNote.idHex))
+    } else {
+        content.user?.let { nav.nav(routeFor(it)) }
+    }
 }
 
 @Composable
@@ -614,9 +629,10 @@ fun AuthorGallery(
     authorNotes: ImmutableList<Note>,
     nav: INav,
     accountViewModel: AccountViewModel,
+    clickRoute: (Note) -> Route? = ::authorRouteFor,
 ) {
     Column(modifier = StdStartPadding) {
-        FlowRow { authorNotes.forEach { note -> BoxedAuthor(note, nav, accountViewModel) } }
+        FlowRow { authorNotes.forEach { note -> BoxedAuthor(note, nav, accountViewModel, clickRoute) } }
     }
 }
 
@@ -639,8 +655,9 @@ private fun BoxedAuthor(
     note: Note,
     nav: INav,
     accountViewModel: AccountViewModel,
+    clickRoute: (Note) -> Route? = ::authorRouteFor,
 ) {
-    Box(modifier = Size35Modifier.clickable(onClick = { authorRouteFor(note)?.let { nav.nav(it) } })) {
+    Box(modifier = Size35Modifier.clickable(onClick = { clickRoute(note)?.let { nav.nav(it) } })) {
         WatchAuthorWithBlank(note, Size35Modifier, accountViewModel) { author ->
             WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
                 author,

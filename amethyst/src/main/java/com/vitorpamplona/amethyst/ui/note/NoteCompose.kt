@@ -157,6 +157,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90ContentDiscoveryRespo
 import com.vitorpamplona.amethyst.ui.note.types.RenderNIP90Status
 import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderNipContent
+import com.vitorpamplona.amethyst.ui.note.types.RenderNutzap
 import com.vitorpamplona.amethyst.ui.note.types.RenderOnchainZap
 import com.vitorpamplona.amethyst.ui.note.types.RenderPinListEvent
 import com.vitorpamplona.amethyst.ui.note.types.RenderPodcastEpisode
@@ -187,6 +188,7 @@ import com.vitorpamplona.amethyst.ui.note.types.RenderWikiContent
 import com.vitorpamplona.amethyst.ui.note.types.RenderZapPoll
 import com.vitorpamplona.amethyst.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.ui.note.types.VideoDisplay
+import com.vitorpamplona.amethyst.ui.note.types.observeZapSender
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.feed.types.RenderChatClip
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.RenderPublicChatChannelHeader
@@ -292,6 +294,7 @@ import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
@@ -1012,11 +1015,15 @@ private fun RenderNoteRow(
         }
 
         is LnZapEvent -> {
-            RenderLnZap(baseNote, backgroundColor, accountViewModel, nav)
+            RenderLnZap(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
+
+        is NutzapEvent -> {
+            RenderNutzap(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
         is OnchainZapEvent -> {
-            RenderOnchainZap(baseNote, backgroundColor, accountViewModel, nav)
+            RenderOnchainZap(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
         is LiveActivitiesClipEvent -> {
@@ -1720,7 +1727,22 @@ fun FirstUserInfoRow(
         val isDraft = baseNote.isDraft()
         val textColor = if (isRepost) MaterialTheme.colorScheme.grayText else Color.Unspecified
 
-        if (showAuthorPicture) {
+        // Zap receipts are signed by the recipient's lightning provider; show the
+        // sender from the embedded zap request instead of the service key.
+        val zapSender =
+            if (baseNote.event is LnZapEvent) {
+                observeZapSender(baseNote, accountViewModel).value
+            } else {
+                null
+            }
+
+        if (zapSender != null) {
+            if (showAuthorPicture) {
+                UserPicture(zapSender, Size25dp, accountViewModel = accountViewModel, nav = nav)
+                Spacer(HalfPadding)
+            }
+            UsernameDisplay(zapSender, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel)
+        } else if (showAuthorPicture) {
             NoteAuthorPicture(baseNote, Size25dp, accountViewModel = accountViewModel, nav = nav)
             Spacer(HalfPadding)
             NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel)

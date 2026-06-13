@@ -25,8 +25,13 @@ import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.threading.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
+import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.toImmutableSet
 
@@ -42,6 +47,11 @@ class ThreadAssembler(
         val noteEvent = note.event
 
         if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) return note
+
+        // Reactions and zaps anchor their own thread: their replyTo points at the
+        // post they reacted to, which lives in a different conversation. Stop here
+        // instead of climbing across that bridge into the targeted post's thread.
+        if (noteEvent.anchorsItsOwnThread()) return note
 
         testedNotes.add(note)
 
@@ -107,14 +117,23 @@ class ThreadAssembler(
         return if (note.event != null) {
             val thread = OnlyLatestVersionSet()
 
-            val threadRoot = searchRoot(note, thread) ?: note
+            if (note.event.anchorsItsOwnThread()) {
+                // Reactions and zaps anchor their own conversation: the event is
+                // the root and only its reply subtree is loaded — not the thread
+                // of the post it targeted (that post is embedded in the event's
+                // card). Replies and comments (kind 1 / 1111) keep loading the
+                // full parent thread below.
+                loadDown(note, thread)
+            } else {
+                val threadRoot = searchRoot(note, thread) ?: note
 
-            loadUp(note, thread)
+                loadUp(note, thread)
 
-            loadDown(threadRoot, thread)
-            // adds the replies of the note in case the search for Root
-            // did not added them.
-            note.replies.forEach { loadDown(it, thread) }
+                loadDown(threadRoot, thread)
+                // adds the replies of the note in case the search for Root
+                // did not added them.
+                note.replies.forEach { loadDown(it, thread) }
+            }
 
             ThreadInfo(
                 root = note,
@@ -135,7 +154,12 @@ class ThreadAssembler(
         if (note !in thread) {
             thread.add(note)
 
-            note.replyTo?.forEach { loadUp(it, thread) }
+            // A reaction/zap is a thread boundary: include the node itself, but do
+            // not climb its replyTo — that edge bridges into the targeted post's
+            // separate conversation (which must not be pulled into this thread).
+            if (!note.event.anchorsItsOwnThread()) {
+                note.replyTo?.forEach { loadUp(it, thread) }
+            }
         }
     }
 
@@ -150,6 +174,20 @@ class ThreadAssembler(
         }
     }
 }
+
+/**
+ * Reactions and zaps keep the post they target in [Note.replyTo] so the card can
+ * embed it, but that edge is a cross-reference, not a thread parent: it points
+ * into a different conversation. For thread traversal they behave as roots — their
+ * thread is the event plus its own reply subtree, never the thread of the post
+ * they reacted to. Used by [ThreadAssembler] (root search, upward load) and
+ * [ThreadLevelCalculator] (reply level), mirroring how reposts are treated.
+ */
+fun Event?.anchorsItsOwnThread(): Boolean =
+    when (this) {
+        is ReactionEvent, is LnZapEvent, is NutzapEvent, is OnchainZapEvent -> true
+        else -> false
+    }
 
 class OnlyLatestVersionSet : MutableSet<Note> {
     val map = hashMapOf<Address, Long>()

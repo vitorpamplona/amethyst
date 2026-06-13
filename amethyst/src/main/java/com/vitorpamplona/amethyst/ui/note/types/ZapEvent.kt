@@ -23,10 +23,12 @@ package com.vitorpamplona.amethyst.ui.note.types
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -35,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -43,6 +46,8 @@ import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.note.CrossfadeToDisplayComment
+import com.vitorpamplona.amethyst.ui.note.DisplayBlankAuthor
+import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.note.UserPicture
 import com.vitorpamplona.amethyst.ui.note.ZapAmountCommentNotification
 import com.vitorpamplona.amethyst.ui.note.ZapIcon
@@ -60,9 +65,37 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 
+/**
+ * Shows the post a zap targets above the transfer card, mirroring how
+ * reactions and reposts embed their target.
+ */
+@Composable
+fun RenderZappedPost(
+    zapNote: Note,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    zapNote.replyTo?.lastOrNull()?.let {
+        NoteCompose(
+            it,
+            modifier = Modifier,
+            isBoostedNote = true,
+            makeItShort = true,
+            unPackReply = ReplyRenderType.NONE,
+            quotesLeft = quotesLeft - 1,
+            parentBackgroundColor = backgroundColor,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
+}
+
 @Composable
 fun RenderLnZap(
     note: Note,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -71,17 +104,75 @@ fun RenderLnZap(
 
     val card by parseAuthorCommentAndAmount(note, accountViewModel)
 
-    val destinationKey = zapEvent.zappedAuthor().firstOrNull() ?: return
-
-    TransferCard(
-        card,
-        destinationKey,
-        backgroundColor,
-        Modifier,
-        accountViewModel,
-        nav,
+    RenderLnZapCard(
+        note = note,
+        card = card,
+        recipientKey = zapEvent.zappedAuthor().firstOrNull(),
+        quotesLeft = quotesLeft,
+        backgroundColor = backgroundColor,
+        accountViewModel = accountViewModel,
+        nav = nav,
     )
 }
+
+@Composable
+fun RenderLnZapCard(
+    note: Note,
+    card: ZapAmountCommentNotification,
+    recipientKey: String?,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val orange = MaterialTheme.colorScheme.bitcoinColor
+
+    ActivityCardFrame(orange) {
+        ActivityHeaderRow(
+            tint = orange,
+            pillLabel = "LIGHTNING",
+            badge = {
+                ActivityBadge(orange) {
+                    ZapIcon(Modifier.size(18.dp), Color.White)
+                }
+            },
+            senderAvatar = {
+                val sender = card.user
+                if (sender != null) {
+                    UserPicture(sender, Size25dp, Modifier, accountViewModel, nav)
+                } else {
+                    DisplayBlankAuthor(Size25dp, accountViewModel = accountViewModel)
+                }
+            },
+            recipientAvatar =
+                recipientKey?.let {
+                    { UserPicture(it, Size25dp, Modifier, accountViewModel, nav) }
+                },
+        )
+
+        RenderZappedPost(note, quotesLeft, backgroundColor, accountViewModel, nav)
+
+        card.amount?.let { ActivityAmountRow(it, orange) }
+
+        card.comment?.let {
+            CrossfadeToDisplayComment(it, backgroundColor, nav, accountViewModel)
+        }
+    }
+}
+
+/**
+ * Resolves the sender of a zap receipt — the author of the embedded kind 9734
+ * request, decrypted when it is a private zap — since the receipt itself is
+ * signed by the recipient's lightning provider, not by the sender.
+ */
+@Composable
+fun observeZapSender(
+    zapNote: Note,
+    accountViewModel: AccountViewModel,
+): State<User?> =
+    produceState<User?>(initialValue = null, key1 = zapNote) {
+        value = accountViewModel.innerDecryptAmountMessage(zapNote)?.user
+    }
 
 @Composable
 private fun parseAuthorCommentAndAmount(
