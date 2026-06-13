@@ -62,7 +62,7 @@ fun Notifying(
 
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         if (!mentions.isNullOrEmpty() || showWhenEmpty) {
             Text(
