@@ -29,12 +29,15 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.InputChipDefaults
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -72,12 +75,20 @@ fun Notifying(
                 modifier = Modifier.align(CenterVertically),
             )
 
-            mentions?.forEach { user ->
-                NotifyUserChip(user, accountViewModel) { onClick(user) }
-            }
+            // The chips render through a selectable Surface that enforces a 48dp minimum
+            // touch target, inflating each chip's measured height well above its visible
+            // 32dp pill. That invisible padding would dominate the gap between wrapped
+            // rows and make verticalArrangement barely noticeable. Disabling the minimum
+            // interactive size lets the chips measure at their visible height so the row
+            // spacing matches the horizontal spacing between chips.
+            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
+                mentions?.forEach { user ->
+                    NotifyUserChip(user, accountViewModel) { onClick(user) }
+                }
 
-            if (onAddUser != null) {
-                AddUserChip(onAddUser)
+                if (onAddUser != null) {
+                    AddUserChip(onAddUser)
+                }
             }
         }
     }
