@@ -71,6 +71,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.LinkAnnotation
@@ -140,6 +141,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import java.text.Collator
 
 @Composable
 fun DrawerContent(
@@ -542,7 +544,7 @@ fun ListContent(
     Column(modifier) {
         CatalogSection(R.string.drawer_section_you, DrawerYouItems, accountViewModel, nav)
         CatalogSection(R.string.drawer_section_navigate, DrawerNavigateItems, accountViewModel, nav)
-        CatalogSection(R.string.drawer_section_feeds, DrawerFeedsItems, accountViewModel, nav)
+        CatalogSection(R.string.drawer_section_feeds, DrawerFeedsItems, accountViewModel, nav, sortByLabel = true)
 
         CollapsibleSection(title = R.string.drawer_section_create) {
             NavigationRow(
@@ -592,6 +594,11 @@ fun ListContent(
 /**
  * Renders a drawer section by iterating [ids] and looking each one up in [NavBarCatalog].
  * Profile gets the primary-colored tint; every other item uses onBackground.
+ *
+ * When [sortByLabel] is true the rows are ordered alphabetically by their localized label
+ * using a locale-aware [Collator], so each user sees the list sorted in their own language's
+ * A–Z. This is the right default for long, unstructured sections (Feeds) where the user
+ * arrives knowing the name of the destination they want and just needs to jump to it.
  */
 @Composable
 fun CatalogSection(
@@ -599,12 +606,25 @@ fun CatalogSection(
     ids: List<NavBarItem>,
     accountViewModel: AccountViewModel,
     nav: INav,
+    sortByLabel: Boolean = false,
 ) {
     val primary = MaterialTheme.colorScheme.primary
     val onBackground = MaterialTheme.colorScheme.onBackground
 
+    val orderedIds =
+        if (sortByLabel) {
+            val locale = LocalConfiguration.current.locales.get(0)
+            val collator = remember(locale) { Collator.getInstance(locale) }
+            val labelled = ids.mapNotNull { id -> NavBarCatalog[id]?.let { id to stringRes(it.labelRes) } }
+            remember(labelled, collator) {
+                labelled.sortedWith(compareBy(collator) { it.second }).map { it.first }
+            }
+        } else {
+            ids
+        }
+
     CollapsibleSection(title = titleRes) {
-        ids.forEach { id ->
+        orderedIds.forEach { id ->
             NavBarCatalog[id]?.let { def ->
                 val tint = if (def.id == NavBarItem.PROFILE) primary else onBackground
                 if (def.id == NavBarItem.SCHEDULED_POSTS) {

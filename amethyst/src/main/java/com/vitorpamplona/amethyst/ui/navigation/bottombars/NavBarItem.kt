@@ -377,6 +377,10 @@ val DrawerYouItems: List<NavBarItem> =
         NavBarItem.WALLET,
     )
 
+// Membership for the drawer's "Feeds" section. Unlike the lists above, the order here is NOT
+// the display order: the drawer sorts these rows alphabetically by their localized label at
+// render time (see CatalogSection's sortByLabel), so each user sees them in their own language's
+// A–Z. Add/remove ids freely — position in this list has no effect.
 val DrawerFeedsItems: List<NavBarItem> =
     listOfNotNull(
         NavBarItem.COMMUNITIES,
