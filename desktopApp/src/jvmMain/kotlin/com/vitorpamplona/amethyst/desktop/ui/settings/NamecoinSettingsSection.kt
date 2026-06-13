@@ -77,6 +77,10 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinCoreRpcConf
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.RpcProbeResult
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ServerTestResult
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Locale
 
 /**
@@ -480,6 +484,7 @@ private fun NamecoinTestConnectionSection(
     val scope = rememberCoroutineScope()
     var isTesting by remember { mutableStateOf(false) }
     var testResults by remember { mutableStateOf<List<ServerTestResult>>(emptyList()) }
+    var lastTestTimestamp by remember { mutableStateOf<Long?>(null) }
     var pendingCerts by remember { mutableStateOf<List<PendingCertPin>>(emptyList()) }
     var confirmingCert by remember { mutableStateOf<PendingCertPin?>(null) }
 
@@ -561,6 +566,7 @@ private fun NamecoinTestConnectionSection(
                                 )
                             }
                         }
+                        lastTestTimestamp = System.currentTimeMillis()
                         isTesting = false
                         if (newCerts.isNotEmpty()) {
                             pendingCerts = newCerts
@@ -596,7 +602,156 @@ private fun NamecoinTestConnectionSection(
             testResults.forEach { result ->
                 NamecoinServerTestResultRow(result)
             }
+
+            if (isTesting && testResults.size < servers.size) {
+                Row(
+                    modifier = Modifier.padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(14.dp),
+                        strokeWidth = 2.dp,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Testing next server\u2026",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
+
+        // ── Diagnostic card ────────────────────────────────────
+        // Mirrors the Android section's diagnostic block so support
+        // requests carry the same fields on both platforms.
+        if (testResults.isNotEmpty() || lastTestTimestamp != null) {
+            Spacer(Modifier.height(16.dp))
+            NamecoinDiagnosticCard(
+                testResults = testResults,
+                lastTestTimestamp = lastTestTimestamp,
+            )
+        }
+    }
+}
+
+// ── Diagnostic Card ─────────────────────────────────────────────────
+
+private val DIAGNOSTIC_TIMESTAMP_FORMATTER =
+    DateTimeFormatter
+        .ofLocalizedDateTime(FormatStyle.MEDIUM)
+        .withLocale(Locale.getDefault())
+        .withZone(ZoneId.systemDefault())
+
+@Composable
+private fun NamecoinDiagnosticCard(
+    testResults: List<ServerTestResult>,
+    lastTestTimestamp: Long?,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            ),
+        shape = RoundedCornerShape(8.dp),
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                "Diagnostics",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(8.dp))
+
+            // Last test timestamp + pass/fail tally
+            if (lastTestTimestamp != null) {
+                val formatted =
+                    remember(lastTestTimestamp) {
+                        DIAGNOSTIC_TIMESTAMP_FORMATTER.format(
+                            Instant.ofEpochMilli(lastTestTimestamp),
+                        )
+                    }
+                val successCount = testResults.count { it.success }
+                val totalCount = testResults.size
+                NamecoinDiagnosticRow(
+                    label = "Last test",
+                    value = "$formatted ($successCount/$totalCount OK)",
+                )
+            } else {
+                NamecoinDiagnosticRow(
+                    label = "Last test",
+                    value = "\u2014",
+                )
+            }
+
+            Spacer(Modifier.height(4.dp))
+
+            // Host OS (desktop equivalent of Android's Build.MANUFACTURER/MODEL row)
+            val osName = System.getProperty("os.name") ?: "unknown"
+            val osVersion = System.getProperty("os.version") ?: ""
+            val osArch = System.getProperty("os.arch") ?: ""
+            NamecoinDiagnosticRow(
+                label = "Host",
+                value =
+                    listOf(osName, osVersion, osArch)
+                        .filter { it.isNotBlank() }
+                        .joinToString(" "),
+            )
+
+            Spacer(Modifier.height(4.dp))
+
+            // JVM info (desktop equivalent of Android's API-level row)
+            val jvmName = System.getProperty("java.vm.name") ?: "JVM"
+            val jvmVersion = System.getProperty("java.version") ?: "unknown"
+            NamecoinDiagnosticRow(
+                label = "Runtime",
+                value = "$jvmName $jvmVersion",
+            )
+
+            Spacer(Modifier.height(4.dp))
+
+            // TLS info from test results (identical to Android)
+            val tlsVersions =
+                testResults
+                    .mapNotNull { it.tlsVersion }
+                    .distinct()
+            val tlsDisplay =
+                if (tlsVersions.isNotEmpty()) {
+                    tlsVersions.joinToString(", ")
+                } else {
+                    "\u2014"
+                }
+            NamecoinDiagnosticRow(
+                label = "TLS",
+                value = tlsDisplay,
+            )
+        }
+    }
+}
+
+@Composable
+private fun NamecoinDiagnosticRow(
+    label: String,
+    value: String,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(0.35f),
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.labelSmall,
+            fontFamily = FontFamily.Monospace,
+            modifier = Modifier.weight(0.65f),
+        )
     }
 }
 
