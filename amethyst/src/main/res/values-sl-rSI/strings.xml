@@ -118,6 +118,16 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="log_out">Odjavi se</string>
     <string name="show_more">Pokaži več</string>
     <string name="lightning_invoice">Lightning račun</string>
+    <string name="invoice_expired">Poteklo</string>
+    <string name="clink_lightning_offer">CLINK ponudba</string>
+    <string name="clink_offer_pay_to">Za</string>
+    <string name="clink_requesting_invoice">Pridobivanje računa …</string>
+    <string name="clink_debit_no_response">Plačilo prek debetne storitve ni uspelo.</string>
+    <string name="clink_confirm_payment_title">Potrdi plačilo</string>
+    <string name="clink_confirm_pay_amount_via_source">Plačaj %1$s preko %2$s?</string>
+    <string name="clink_confirm_pay_via_source">Plačaj ta račun preko %1$s?</string>
+    <string name="clink_offer_amount_sats">Vsote(sat)</string>
+    <string name="clink_offer_invalid_amount"></string>
     <string name="pay">Plačaj</string>
     <string name="lightning_tips">Lightning napitnine</string>
     <string name="note_to_receiver">Sporočilo prejemniku</string>
