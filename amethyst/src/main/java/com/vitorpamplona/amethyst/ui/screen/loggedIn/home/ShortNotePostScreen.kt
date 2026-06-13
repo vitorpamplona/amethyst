@@ -320,6 +320,7 @@ private fun NewPostScreenBody(
                 }
 
                 if (postViewModel.wantsToAddNotifyUser) {
+                    Spacer(modifier = StdVertSpacer)
                     OutlinedThinPaddingTextField(
                         state = postViewModel.notifyUserSearchText,
                         onTextChanged = postViewModel::onNotifyUserSearchTextChanged,
