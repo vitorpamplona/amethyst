@@ -100,7 +100,10 @@ private fun NotifyUserChip(
                 accountViewModel = accountViewModel,
             )
         },
-        avatar = {
+        // Use the leadingIcon slot instead of avatar: InputChip clips the avatar slot
+        // to a circle, which would cut off the following badge that BaseUserPicture
+        // intentionally draws slightly outside the picture's circle.
+        leadingIcon = {
             BaseUserPicture(user, Size24dp, accountViewModel)
         },
         trailingIcon = {
