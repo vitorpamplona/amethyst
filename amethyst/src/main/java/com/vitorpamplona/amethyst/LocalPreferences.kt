@@ -152,6 +152,10 @@ private object PrefKeys {
     const val HIDE_NIP_17_WARNING_DIALOG = "hide_nip24_warning_dialog" // delete later
     const val ALWAYS_ON_NOTIFICATION_SERVICE = "always_on_notification_service"
     const val SPLIT_NOTIFICATIONS_ENABLED = "split_notifications_enabled"
+
+    // One-shot stamp: set once an account has gone through the notifications
+    // Global -> Selected (Curated) migration (or was created after it shipped).
+    const val NOTIF_GLOBAL_TO_CURATED_MIGRATED = "notif_global_to_curated_migrated"
     const val TOR_SETTINGS = "tor_settings"
     const val USE_PROXY = "use_proxy"
     const val PROXY_PORT = "proxy_port"
@@ -463,6 +467,11 @@ object LocalPreferences {
                     putBoolean(PrefKeys.CALLS_ENABLED, settings.callsEnabled.value)
                     putBoolean(PrefKeys.ALWAYS_ON_NOTIFICATION_SERVICE, settings.alwaysOnNotificationService.value)
                     putBoolean(PrefKeys.SPLIT_NOTIFICATIONS_ENABLED, settings.splitNotificationsEnabled.value)
+                    // Any account that reaches a save has its notification filter in its
+                    // post-split meaning, so stamp it as migrated. This keeps the one-shot
+                    // Global -> Selected rewrite from ever touching it again and preserves a
+                    // deliberate raw-Global choice (including on brand-new accounts).
+                    putBoolean(PrefKeys.NOTIF_GLOBAL_TO_CURATED_MIGRATED, true)
 
                     // migrating from previous design
                     remove(PrefKeys.USE_PROXY)
@@ -808,11 +817,35 @@ object LocalPreferences {
         val followPacks: TopFilter,
     )
 
+    /**
+     * One-shot migration of the notifications filter.
+     *
+     * The notifications "Global" mode was split into a raw [TopFilter.Global]
+     * (every event that p-tags the user) and a curated [TopFilter.Selected].
+     * Existing users who had selected the old, curated "Global" keep a value
+     * that now deserializes to the much-more-permissive raw Global. Move them to
+     * [TopFilter.Selected] exactly once, then stamp the account so a later,
+     * deliberate raw-Global choice is never reverted. Accounts created after the
+     * split are stamped at save time, so they are never touched here.
+     */
+    private fun SharedPreferences.migrateNotificationFilter(current: TopFilter): TopFilter {
+        if (getBoolean(PrefKeys.NOTIF_GLOBAL_TO_CURATED_MIGRATED, false)) return current
+
+        val migrated = if (current is TopFilter.Global) TopFilter.Selected else current
+        edit {
+            if (migrated !== current) {
+                putString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, JsonMapper.toJson(migrated))
+            }
+            putBoolean(PrefKeys.NOTIF_GLOBAL_TO_CURATED_MIGRATED, true)
+        }
+        return migrated
+    }
+
     private fun SharedPreferences.loadFollowListPrefs(): FollowListPrefs =
         FollowListPrefs(
             home = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_HOME_FOLLOW_LIST, null), TopFilter.AllFollows),
             stories = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_STORIES_FOLLOW_LIST, null), TopFilter.Global),
-            notification = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, null), TopFilter.Selected),
+            notification = migrateNotificationFilter(parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_NOTIFICATION_FOLLOW_LIST, null), TopFilter.Selected)),
             discovery = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_DISCOVERY_FOLLOW_LIST, null), TopFilter.Global),
             polls = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_POLLS_FOLLOW_LIST, null), TopFilter.Global),
             pictures = parseTopFilterOrDefault(getString(PrefKeys.DEFAULT_PICTURES_FOLLOW_LIST, null), TopFilter.Global),
