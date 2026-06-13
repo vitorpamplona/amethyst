@@ -32,7 +32,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.OkMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.bytesUsedInMemory
 
 class RelayStats(
@@ -65,7 +64,6 @@ class RelayStats(
                     pingInMs = pingMillis
                     compression = compressed
                     connectionCompleted()
-                    lastConnectAt = TimeUtils.now()
                 }
             }
 
@@ -93,7 +91,6 @@ class RelayStats(
                 val stat = get(relay.url)
 
                 stat.addBytesReceived(msgStr.bytesUsedInMemory())
-                stat.lastIncomingAt = TimeUtils.now()
 
                 when (msg) {
                     is NoticeMessage -> {
