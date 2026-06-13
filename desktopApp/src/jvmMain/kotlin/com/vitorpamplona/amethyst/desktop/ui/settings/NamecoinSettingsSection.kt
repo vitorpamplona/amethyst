@@ -123,6 +123,8 @@ fun NamecoinSettingsSection(
     onAddServer: (String) -> Unit,
     onRemoveServer: (String) -> Unit,
     onReset: () -> Unit,
+    onToggleHistoryWithinCurrentOwner: (Boolean) -> Unit = {},
+    onToggleHistoryAcrossExpiry: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
     onTestServer: (suspend (ElectrumxServer) -> ServerTestResult)? = null,
     onPinCert: ((String) -> Unit)? = null,
@@ -191,6 +193,18 @@ fun NamecoinSettingsSection(
                 )
 
                 Spacer(Modifier.height(16.dp))
+                // ── History display toggles ────────────────────────
+                NamecoinHistoryDisplayToggles(
+                    settings = settings,
+                    onToggleWithinCurrentOwner = onToggleHistoryWithinCurrentOwner,
+                    onToggleAcrossExpiry = onToggleHistoryAcrossExpiry,
+                )
+
+                Spacer(Modifier.height(12.dp))
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                )
+                Spacer(Modifier.height(12.dp))
 
                 // ── Active servers display ─────────────────────────
                 NamecoinActiveServersDisplay(settings = settings)
@@ -249,6 +263,84 @@ fun NamecoinSettingsSection(
 }
 
 // ── Sub-composables ────────────────────────────────────────────────────
+
+/**
+ * Two independent toggles for the "previous values" panel that
+ * appears under a resolved `.bit` name in search. Mirrors the Android
+ * counterpart in `NamecoinSettingsSection.kt`.
+ */
+@Composable
+private fun NamecoinHistoryDisplayToggles(
+    settings: NamecoinSettings,
+    onToggleWithinCurrentOwner: (Boolean) -> Unit,
+    onToggleAcrossExpiry: (Boolean) -> Unit,
+) {
+    Column {
+        Text(
+            "Previous values",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium,
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            "When a Namecoin name resolves in search, optionally show its prior " +
+                "Nostr pubkey values. Hidden by default to keep the UI quiet.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(8.dp))
+
+        NamecoinHistoryToggleRow(
+            title = "Current owner's previous values",
+            subtitle =
+                "Earlier Nostr pubkeys this name pointed at while held by the " +
+                    "current owner (no expiry between them).",
+            checked = settings.showHistoryWithinCurrentOwner,
+            onToggle = onToggleWithinCurrentOwner,
+        )
+        Spacer(Modifier.height(8.dp))
+        NamecoinHistoryToggleRow(
+            title = "Earlier owners (after expiry)",
+            subtitle =
+                "Pubkeys this name pointed at before it expired and was re-" +
+                    "registered — each entry is a different person, marked with a " +
+                    "divider.",
+            checked = settings.showHistoryAcrossExpiry,
+            onToggle = onToggleAcrossExpiry,
+        )
+    }
+}
+
+@Composable
+private fun NamecoinHistoryToggleRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onToggle: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onToggle,
+        )
+    }
+}
 
 @Composable
 private fun NamecoinSectionHeader(

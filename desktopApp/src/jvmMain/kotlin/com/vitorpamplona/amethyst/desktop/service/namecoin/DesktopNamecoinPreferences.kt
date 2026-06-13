@@ -97,6 +97,9 @@ class DesktopNamecoinPreferences(
         private const val KEY_CORE_RPC = "namecoin.coreRpc"
         private const val KEY_FALLBACK_CUSTOM_EX = "namecoin.fallback.customElectrumx"
         private const val KEY_FALLBACK_DEFAULT_EX = "namecoin.fallback.defaultElectrumx"
+        private const val KEY_HISTORY_WITHIN_CURRENT_OWNER =
+            "namecoin.showHistoryWithinCurrentOwner"
+        private const val KEY_HISTORY_ACROSS_EXPIRY = "namecoin.showHistoryAcrossExpiry"
     }
 
     private val _settings = MutableStateFlow(loadFromDisk())
@@ -116,6 +119,18 @@ class DesktopNamecoinPreferences(
 
     suspend fun setEnabled(enabled: Boolean) {
         val updated = current.copy(enabled = enabled)
+        persist(updated)
+    }
+
+    /** See [NamecoinSettings.showHistoryWithinCurrentOwner]. */
+    suspend fun setShowHistoryWithinCurrentOwner(value: Boolean) {
+        val updated = current.copy(showHistoryWithinCurrentOwner = value)
+        persist(updated)
+    }
+
+    /** See [NamecoinSettings.showHistoryAcrossExpiry]. */
+    suspend fun setShowHistoryAcrossExpiry(value: Boolean) {
+        val updated = current.copy(showHistoryAcrossExpiry = value)
         persist(updated)
     }
 
@@ -235,6 +250,11 @@ class DesktopNamecoinPreferences(
             prefs.put(KEY_CORE_RPC, mapper.writeValueAsString(settings.namecoinCoreRpc))
             prefs.putBoolean(KEY_FALLBACK_CUSTOM_EX, settings.fallbackToCustomElectrumx)
             prefs.putBoolean(KEY_FALLBACK_DEFAULT_EX, settings.fallbackToDefaultElectrumx)
+            prefs.putBoolean(
+                KEY_HISTORY_WITHIN_CURRENT_OWNER,
+                settings.showHistoryWithinCurrentOwner,
+            )
+            prefs.putBoolean(KEY_HISTORY_ACROSS_EXPIRY, settings.showHistoryAcrossExpiry)
             prefs.flush()
         } catch (e: Exception) {
             System.err.println("NamecoinPrefs: Error writing preferences: ${e.message}")
@@ -273,6 +293,8 @@ class DesktopNamecoinPreferences(
                 } ?: NamecoinCoreRpcConfig()
             val fallbackCustom = prefs.getBoolean(KEY_FALLBACK_CUSTOM_EX, false)
             val fallbackDefault = prefs.getBoolean(KEY_FALLBACK_DEFAULT_EX, false)
+            val showWithin = prefs.getBoolean(KEY_HISTORY_WITHIN_CURRENT_OWNER, false)
+            val showAcross = prefs.getBoolean(KEY_HISTORY_ACROSS_EXPIRY, false)
             NamecoinSettings(
                 enabled = enabled,
                 customServers = servers,
@@ -280,6 +302,8 @@ class DesktopNamecoinPreferences(
                 namecoinCoreRpc = coreRpc,
                 fallbackToCustomElectrumx = fallbackCustom,
                 fallbackToDefaultElectrumx = fallbackDefault,
+                showHistoryWithinCurrentOwner = showWithin,
+                showHistoryAcrossExpiry = showAcross,
             )
         } catch (e: Exception) {
             System.err.println("NamecoinPrefs: Error reading preferences: ${e.message}")

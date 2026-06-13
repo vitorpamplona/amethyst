@@ -80,7 +80,29 @@ data class NamecoinSettings(
      * defaults too instead of stopping after the custom list.
      */
     val fallbackToDefaultElectrumx: Boolean = false,
+    /**
+     * When true, the resolution UI shows previous Nostr pubkey values
+     * **still under the current owner**— i.e. updates the active owner
+     * made to the same name without an expiry gap in between. These are
+     * historical states of the same identity, so they're treated as
+     * lower-risk and are off by default to keep the UI quiet.
+     */
+    val showHistoryWithinCurrentOwner: Boolean = false,
+    /**
+     * When true, the resolution UI shows previous Nostr pubkey values
+     * from **earlier owners** — entries that sit on the other side of a
+     * name expiry from the currently-resolved value. Each one represents
+     * a *different person* who once held the name and may share zero
+     * relationship with the current holder; the panel delineates them
+     * with explicit "Name expired — registered again" dividers. Off by
+     * default because re-registrations are rare and the visual is heavier.
+     */
+    val showHistoryAcrossExpiry: Boolean = false,
 ) {
+    /** True iff either history toggle is on (i.e. the panel may render). */
+    val anyHistoryEnabled: Boolean
+        get() = showHistoryWithinCurrentOwner || showHistoryAcrossExpiry
+
     /** True when the user has configured at least one custom ElectrumX server. */
     val hasCustomServers: Boolean get() = customServers.isNotEmpty()
 
