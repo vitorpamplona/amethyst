@@ -41,17 +41,35 @@ import kotlin.test.assertTrue
  * post they target.
  */
 class ThreadAssemblerTest {
+    private val threadRootId = "9".repeat(64)
     private val originalId = "a".repeat(64)
     private val zapId = "b".repeat(64)
     private val reactionId = "c".repeat(64)
     private val replyToZapId = "d".repeat(64)
+    private val replyToReactionId = "8".repeat(64)
     private val authorKey = "e".repeat(64)
     private val sig = "f".repeat(128)
 
+    // Thread C: root <- original. `original` is a reply nested inside a thread,
+    // standing in for "a reply on another thread" that gets liked/zapped.
+    private val threadRoot =
+        Note(threadRootId).apply {
+            event = TextNoteEvent(threadRootId, authorKey, 999, arrayOf(arrayOf("t", "test")), "thread root", sig)
+            replyTo = emptyList()
+        }
+
     private val original =
         Note(originalId).apply {
-            event = TextNoteEvent(originalId, authorKey, 1000, arrayOf(arrayOf("t", "test")), "the zapped post", sig)
-            replyTo = emptyList()
+            event =
+                TextNoteEvent(
+                    originalId,
+                    authorKey,
+                    1000,
+                    arrayOf(arrayOf("e", threadRootId, "", "root")),
+                    "the zapped post",
+                    sig,
+                )
+            replyTo = listOf(threadRoot)
         }
 
     private val zap =
@@ -72,13 +90,21 @@ class ThreadAssemblerTest {
             replyTo = listOf(zap)
         }
 
+    private val replyToReaction =
+        Note(replyToReactionId).apply {
+            event = CommentEvent(replyToReactionId, authorKey, 1002, arrayOf(arrayOf("E", reactionId), arrayOf("e", reactionId)), "lol same", sig)
+            replyTo = listOf(reaction)
+        }
+
     private val cache =
         StubCache(
             mapOf(
+                threadRootId to threadRoot,
                 originalId to original,
                 zapId to zap,
                 reactionId to reaction,
                 replyToZapId to replyToZap,
+                replyToReactionId to replyToReaction,
             ),
         )
 
@@ -86,7 +112,9 @@ class ThreadAssemblerTest {
         // Mirrors LocalCache: replies link bidirectionally, but zaps and
         // reactions are credited via addZap/addReaction, not addReply, so the
         // original note's `replies` does not contain them.
+        threadRoot.addReply(original)
         zap.addReply(replyToZap)
+        reaction.addReply(replyToReaction)
     }
 
     @Test
@@ -109,13 +137,35 @@ class ThreadAssemblerTest {
     }
 
     @Test
-    fun commentReplyingToAZapStillLoadsTheFullParentThread() {
+    fun commentReplyingToAZapAnchorsAtTheZapNotTheZappedThread() {
         val info = ThreadAssembler(cache).findThreadFor(replyToZapId)!!
 
-        assertEquals(replyToZap, info.root)
         assertTrue(info.allNotes.contains(replyToZap))
-        assertTrue(info.allNotes.contains(zap), "parents load for replies/comments")
-        assertTrue(info.allNotes.contains(original), "parents load all the way to the thread root")
+        assertTrue(info.allNotes.contains(zap), "the zap is the root of this thread")
+        assertFalse(info.allNotes.contains(original), "the zapped post's conversation must not load")
+        assertFalse(info.allNotes.contains(threadRoot), "...nor its thread root")
+    }
+
+    @Test
+    fun commentReplyingToALikeAnchorsAtTheLikeNotTheLikedThread() {
+        // The user's scenario: reply A to like L, where L liked a reply (original)
+        // nested in thread C. Opening A's thread must show {L, A}, never thread C.
+        val info = ThreadAssembler(cache).findThreadFor(replyToReactionId)!!
+
+        assertTrue(info.allNotes.contains(replyToReaction))
+        assertTrue(info.allNotes.contains(reaction), "the like is the root of this thread")
+        assertFalse(info.allNotes.contains(original), "the liked post's conversation must not load")
+        assertFalse(info.allNotes.contains(threadRoot), "...nor its thread root")
+    }
+
+    @Test
+    fun replyLevelStopsAtTheReactionBoundary() {
+        // Without the boundary the level would climb reaction -> original -> root,
+        // burying the reply several levels deep; it must be a direct child of the like.
+        assertEquals(0, ThreadLevelCalculator.replyLevel(reaction))
+        assertEquals(1, ThreadLevelCalculator.replyLevel(replyToReaction))
+        assertEquals(0, ThreadLevelCalculator.replyLevel(zap))
+        assertEquals(1, ThreadLevelCalculator.replyLevel(replyToZap))
     }
 
     private class StubCache(

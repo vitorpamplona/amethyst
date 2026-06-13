@@ -61,7 +61,11 @@ object ThreadLevelCalculator {
         val noteAuthor = note.author
 
         if (
-            note.event is RepostEvent || note.event is GenericRepostEvent || replyTo == null || replyTo.isEmpty()
+            note.event is RepostEvent ||
+            note.event is GenericRepostEvent ||
+            note.event.anchorsItsOwnThread() ||
+            replyTo == null ||
+            replyTo.isEmpty()
         ) {
             return LevelSignature(
                 signature = "/" + formattedDateTime(createdAt) + note.idHex.substring(0, 8) + ";",
@@ -120,7 +124,11 @@ object ThreadLevelCalculator {
     ): Int {
         val replyTo = note.replyTo
         if (
-            note.event is RepostEvent || note.event is GenericRepostEvent || replyTo == null || replyTo.isEmpty()
+            note.event is RepostEvent ||
+            note.event is GenericRepostEvent ||
+            note.event.anchorsItsOwnThread() ||
+            replyTo == null ||
+            replyTo.isEmpty()
         ) {
             cachedLevels[note] = 0
             return 0
