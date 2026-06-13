@@ -69,6 +69,26 @@ data class Nip05Id(
             return Nip05Id(name, domain)
         }
 
+        /**
+         * Lenient parser used by mention/text-rendering paths. Accepts either:
+         *   - a full NIP-05 identifier (`name@domain.tld`), parsed as in [parse]; or
+         *   - a bare domain (`domain.tld`), synthesized as the wildcard form
+         *     `_@domain.tld` per NIP-05.
+         *
+         * Note that a bare-domain hit produces a [Nip05Id] whose [name] is `_`;
+         * use [hasLocalPart] / [toDisplayValue] when rendering.
+         */
+        fun parseLenient(candidate: String): Nip05Id? {
+            val trimmed = candidate.trim()
+            if (trimmed.isEmpty()) return null
+            if (trimmed.contains('@')) return parse(trimmed)
+            // Bare-domain form: synthesize the wildcard local-part.
+            val lower = trimmed.lowercase()
+            if (!DOMAIN_REGEX.matches(lower)) return null
+            if (lower.substringAfterLast('.').all { it.isDigit() }) return null
+            return Nip05Id("_", lower)
+        }
+
         fun assemble(
             name: String,
             domain: String,
