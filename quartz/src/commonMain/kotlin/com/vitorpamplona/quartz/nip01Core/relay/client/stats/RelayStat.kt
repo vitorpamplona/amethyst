@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.stats
 import androidx.collection.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlin.concurrent.Volatile
 
 @Stable
 class RelayStat(
@@ -36,12 +35,6 @@ class RelayStat(
     var connectionTentatives: Int = 0,
     var connectionCompleted: Int = 0,
 ) {
-    // Best-effort liveness signals (epoch seconds, 0 = never). The enclosing RelayStats LruCache
-    // can evict; durable per-relay history lives in commons RelayHealthStore.
-    @Volatile var lastConnectAt: Long = 0
-
-    @Volatile var lastIncomingAt: Long = 0
-
     val messages = LruCache<IRelayDebugMessage, IRelayDebugMessage>(100)
 
     fun newNotice(notice: String?) {
