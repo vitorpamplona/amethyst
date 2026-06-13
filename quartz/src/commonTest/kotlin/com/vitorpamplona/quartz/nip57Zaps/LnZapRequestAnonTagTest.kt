@@ -113,7 +113,7 @@ class LnZapRequestAnonTagTest {
         }
 
     @Test
-    fun `private zap request has anon tag, is private, and hides the sender key`() =
+    fun `private zap request has anon tag and is private and hides the sender key`() =
         runTest {
             val zapRequest = request(LnZapEvent.ZapType.PRIVATE)
 
