@@ -83,13 +83,16 @@ class Nav(
     override fun navBottomBar(route: Route) {
         navigationScope.launch {
             controller.navigate(route) {
-                // Clear sibling bottom-nav entries but keep Home (the start
-                // destination) below, so back-swipe from any tab returns to
-                // Home and back-swipe from Home leaves the app.
+                // Keep Home below tab roots, but save the popped tab stack so
+                // returning to Search/Notifications/etc resumes its input,
+                // scroll position, and nested detail route instead of
+                // rebuilding that tab from scratch.
                 popUpTo(Route.Home) {
                     inclusive = false
+                    saveState = true
                 }
                 launchSingleTop = true
+                restoreState = true
             }
             // Mark this entry as a tab root: hides the back arrow in canPop
             // and skips the horizontal slide in composableFromEnd.
