@@ -20,11 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.single.basic
 
-import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.EmptyConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -37,32 +35,6 @@ import kotlin.test.assertTrue
  */
 class BasicRelayClientBackoffTest {
     private val url = NormalizedRelayUrl("wss://flaky.example.com")
-
-    class FakeWebSocket : WebSocket {
-        override fun needsReconnect() = false
-
-        override fun connect() {}
-
-        override fun disconnect() {}
-
-        override fun send(msg: String) = true
-    }
-
-    class FakeWebsocketBuilder : WebsocketBuilder {
-        var connectAttempts = 0
-        lateinit var lastListener: WebSocketListener
-
-        override fun build(
-            url: NormalizedRelayUrl,
-            out: WebSocketListener,
-        ): WebSocket {
-            connectAttempts++
-            lastListener = out
-            return FakeWebSocket()
-        }
-    }
-
-    class NoopListener : RelayConnectionListener
 
     class MutableClock(
         var now: Long = 1_000_000L,
@@ -99,7 +71,7 @@ class BasicRelayClientBackoffTest {
     ) = BasicRelayClient(
         url = url,
         socketBuilder = builder,
-        listener = NoopListener(),
+        listener = EmptyConnectionListener,
         nowInSeconds = { clock.now },
     )
 
@@ -167,7 +139,7 @@ class BasicRelayClientBackoffTest {
         runTicks(client, builder, clock, totalSeconds = 15 * 60) { listener ->
             listener.onOpen(50, false)
         }
-        check(client.isConnected()) { "Test setup: relay should have reconnected and stayed up" }
+        assertTrue(client.isConnected(), "Test setup: relay should have reconnected and stayed up")
         clock.now += 10 * 60
         builder.lastListener.onClosed(1000, "server restart")
 

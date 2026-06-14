@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.concurrent.Volatile
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.coroutines.cancellation.CancellationException
@@ -75,18 +76,22 @@ open class BasicRelayClient(
     private var socket: WebSocket? = null
 
     // True if it has received the onOpen call from the socket.
-    private var isReady: Boolean = false
+    // @Volatile: written on the serialized socket-callback thread, read from the
+    // relay-pool/timer thread (see RelayLoadingCursors for the same pattern).
+    @Volatile private var isReady: Boolean = false
     private var usingCompression: Boolean = false
 
     // keeps increasing the delay to connect when errors happen.
     // This avoids the constant desire to connect when the server is
-    // having trouble or offline.
-    private var lastConnectTentativeInSeconds: Long = 0L // the beginning of time.
-    private var delayToConnectInSeconds = DELAY_TO_RECONNECT_IN_SECS
+    // having trouble or offline. @Volatile: read on the pool thread in
+    // connectAndSyncFiltersIfDisconnected, written on the socket-callback thread.
+    @Volatile private var lastConnectTentativeInSeconds: Long = 0L // the beginning of time.
+
+    @Volatile private var delayToConnectInSeconds = DELAY_TO_RECONNECT_IN_SECS
 
     // when the current connection became ready; used to decide if the
     // connection was stable enough to reset the backoff on disconnect.
-    private var connectedAtInSeconds: Long = 0L
+    @Volatile private var connectedAtInSeconds: Long = 0L
 
     // Makes sure only one socket is open for each url
     private var connectingMutex = AtomicBoolean(false)
@@ -230,6 +235,7 @@ open class BasicRelayClient(
     override fun disconnect() {
         lastConnectTentativeInSeconds = 0L // this is not an error, so prepare to reconnect as soon as requested.
         delayToConnectInSeconds = DELAY_TO_RECONNECT_IN_SECS
+        connectedAtInSeconds = 0L
         socket?.disconnect()
         socket = null
         isReady = false
