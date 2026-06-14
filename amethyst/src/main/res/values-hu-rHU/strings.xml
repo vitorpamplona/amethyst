@@ -952,6 +952,8 @@
     <string name="private_note_locked">A privát bejegyzésekre adott válaszok mindig privátak maradnak</string>
     <string name="private_note_visible_to">Látható a számára:</string>
     <string name="private_note_no_receivers">Még nincsenek címzettek: csak Ön fogja látni ezt a jegyzetet. Adjon hozzá embereket, akikkel megosztaná.</string>
+    <string name="notify_add_user">Hozzáadás</string>
+    <string name="notify_remove_user">Felhaszáló eltávolítása az értesítésekből</string>
     <string name="notify_search_and_add_user">Felhasználó keresése és hozzáadása értesítéshez</string>
     <string name="bookmark_absence_indicator">itt nem egy könyvjelző</string>
     <string name="bookmark_remove_action_desc">Könyvjelző eltávolítása a listáról</string>
