@@ -3113,4 +3113,100 @@
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Arte</string>
     <string name="nowhere_link_card_forum">Nowhere Fórum</string>
+    <!-- App definition / NIP-89 app recommendations. -->
+    <string name="app_definition_available_on">Disponível em</string>
+    <string name="app_definition_by">por</string>
+    <string name="app_definition_handles">Manipula</string>
+    <string name="app_definition_no_supported_kinds">Não informa qual conteúdo manipula</string>
+    <string name="app_definition_recommend">Recomendar</string>
+    <string name="app_definition_recommended">Recomendado</string>
+    <string name="app_definition_untitled">App sem nome</string>
+    <string name="cashu_mint_label">Mint: %1$s</string>
+    <string name="clink_offer_pay_to">Para</string>
+    <string name="disable_private_note">Tornar público</string>
+    <string name="follow_list_curated">Curada</string>
+    <string name="invoice_expired">Expirada</string>
+    <string name="nip82_by_author">por</string>
+    <string name="notify_add_user">Adicionar</string>
+    <string name="notify_remove_user">Remover usuário das notificações</string>
+    <string name="notify_search_and_add_user">Pesquisar e adicionar um usuário para notificar</string>
+    <string name="nutzap_failed_private_note">Nutzaps são públicos e revelariam esta nota privada. Use um zap Lightning em vez disso.</string>
+    <!-- On-chain zap send flow. -->
+    <string name="onchain_send_amount">Valor</string>
+    <string name="onchain_send_broadcast_no_receipt">O pagamento foi transmitido (tx %1$s), mas o recibo não foi publicado.</string>
+    <string name="onchain_send_button_amount">Enviar %1$s sats</string>
+    <string name="onchain_send_change_recipient">Alterar destinatário</string>
+    <string name="onchain_send_close">Fechar</string>
+    <string name="onchain_send_comment_label">Comentário (opcional)</string>
+    <string name="onchain_send_done">Concluído</string>
+    <string name="onchain_send_dont_split">Não dividir — pagar a apenas um destinatário</string>
+    <string name="onchain_send_error_backend_not_configured">O backend da cadeia Bitcoin não está configurado</string>
+    <string name="onchain_send_error_broadcast">Não foi possível transmitir a transação</string>
+    <string name="onchain_send_error_build">Não foi possível montar a transação</string>
+    <string name="onchain_send_error_load_utxos">Não foi possível carregar seu saldo Bitcoin</string>
+    <string name="onchain_send_error_publish_receipt">Pagamento enviado, mas o recibo do zap não pôde ser publicado</string>
+    <string name="onchain_send_error_recipient_dust">A parte de um destinatário está abaixo do limite de poeira</string>
+    <string name="onchain_send_error_sign">Não foi possível assinar a transação</string>
+    <string name="onchain_send_failed_at">Falhou em: %1$s</string>
+    <string name="onchain_send_fee_eta_fast">~10 min</string>
+    <string name="onchain_send_fee_eta_normal">~30 min</string>
+    <string name="onchain_send_fee_eta_slow">~1 h</string>
+    <string name="onchain_send_fee_fast">Rápida</string>
+    <string name="onchain_send_fee_normal">Normal</string>
+    <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
+    <string name="onchain_send_fee_slow">Lenta</string>
+    <string name="onchain_send_fee_tier_label_rate_eta">%1$s · %2$s sat/vB · %3$s</string>
+    <string name="onchain_send_loading_fees">Carregando estimativas de taxa…</string>
+    <string name="onchain_send_min_warning">O zap on-chain mínimo é %1$s sats — valores menores são consumidos pelas taxas dos mineradores. Use um zap Lightning em vez disso.</string>
+    <string name="onchain_send_post_author">Autor do post</string>
+    <string name="onchain_send_priority">Prioridade</string>
+    <string name="onchain_send_recipient">Destinatário</string>
+    <string name="onchain_send_recipient_placeholder">nome, NIP-05 ou npub</string>
+    <string name="onchain_send_result_change">Troco</string>
+    <string name="onchain_send_result_fee">Taxa</string>
+    <string name="onchain_send_result_transaction">Transação</string>
+    <string name="onchain_send_sats_amount">%1$s sats</string>
+    <string name="onchain_send_sats_suffix">sats</string>
+    <string name="onchain_send_sending">Montando, assinando e transmitindo…</string>
+    <string name="onchain_send_success">Zap on-chain enviado</string>
+    <string name="onchain_send_title">Enviar zap on-chain</string>
+    <string name="onchain_send_to">Para</string>
+    <string name="onchain_stage_broadcasting">transmitindo</string>
+    <string name="onchain_stage_building">montando a transação</string>
+    <string name="onchain_stage_loading_utxos">carregando saldo</string>
+    <string name="onchain_stage_publishing">publicando o recibo</string>
+    <string name="onchain_stage_signing">assinando</string>
+    <!-- Private (gift-wrapped) notes. -->
+    <string name="private_note">Tornar privado: empacotar a nota (gift-wrap) apenas para os usuários notificados</string>
+    <string name="private_note_locked">Respostas a uma nota privada permanecem sempre privadas</string>
+    <string name="private_note_no_receivers">Nenhum destinatário ainda: apenas você poderá ver esta nota. Adicione pessoas para compartilhá-la.</string>
+    <string name="private_note_visible_to">Visível para</string>
+    <string name="private_rumor_mark">Privado — visível apenas para os participantes marcados</string>
+    <!-- Profile app recommendations. -->
+    <string name="profile_app_recommendations_description">Escolha quais apps Nostr você recomenda publicamente. As recomendações aparecem no seu perfil e ajudam outras pessoas a descobrir apps para conteúdos que este cliente não consegue abrir.</string>
+    <string name="profile_app_recommendations_empty">Nenhum app encontrado ainda. Os apps aparecerão aqui à medida que forem descobertos nos seus relays.</string>
+    <string name="profile_app_recommendations_title">Apps recomendados</string>
+    <string name="profile_apps_empty_hint">Recomende os apps Nostr que você usa para que outras pessoas possam descobri-los.</string>
+    <string name="profile_apps_header">Apps · %1$d</string>
+    <string name="profile_apps_header_empty">Apps</string>
+    <plurals name="onchain_send_button_amount_split">
+        <item quantity="one">Enviar %1$s sats, dividido em %2$d parte</item>
+        <item quantity="other">Enviar %1$s sats, dividido em %2$d partes</item>
+    </plurals>
+    <plurals name="onchain_send_error_publish_receipt_partial">
+        <item quantity="one">Pagamento enviado (%1$d de %2$d recibo publicado), mas o próximo recibo não pôde ser publicado</item>
+        <item quantity="other">Pagamento enviado (%1$d de %2$d recibos publicados), mas o próximo recibo não pôde ser publicado</item>
+    </plurals>
+    <plurals name="onchain_send_splits_label">
+        <item quantity="one">Divide entre %1$d destinatário</item>
+        <item quantity="other">Divide entre %1$d destinatários</item>
+    </plurals>
+    <plurals name="onchain_send_splits_skipped">
+        <item quantity="one">Ignorando %1$d destinatário que só tem endereço Lightning — o on-chain precisa de uma chave pública Nostr para derivar o endereço.</item>
+        <item quantity="other">Ignorando %1$d destinatários que só têm endereço Lightning — o on-chain precisa de uma chave pública Nostr para derivar o endereço.</item>
+    </plurals>
+    <plurals name="onchain_send_use_note_split">
+        <item quantity="one">Usar a divisão de zap em %1$d partes desta nota</item>
+        <item quantity="other">Usar a divisão de zap em %1$d partes desta nota</item>
+    </plurals>
 </resources>
