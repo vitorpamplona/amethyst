@@ -26,6 +26,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.debugState
 import com.vitorpamplona.amethyst.model.Account
@@ -39,6 +42,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.elements.NowProvider
 import com.vitorpamplona.amethyst.ui.screen.AccountScreen
+import com.vitorpamplona.amethyst.ui.screen.AppLockGate
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -80,7 +84,13 @@ class MainActivity : AppCompatActivity() {
             StringResSetup()
             AmethystTheme {
                 NowProvider {
-                    AccountScreen(Amethyst.instance.sessionManager)
+                    Box(Modifier.fillMaxSize()) {
+                        AccountScreen(Amethyst.instance.sessionManager)
+                        // Overlays an opaque biometric/PIN lock over the whole app
+                        // (login and logged-in alike) whenever the app-lock setting
+                        // is on and the app has just opened or resumed after 5 min.
+                        AppLockGate()
+                    }
                 }
             }
         }

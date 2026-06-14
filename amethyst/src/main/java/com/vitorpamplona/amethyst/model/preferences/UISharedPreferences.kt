@@ -117,6 +117,7 @@ class UiSharedPreferences(
         val UI_SHOW_PROFILE_ZAP_RECEIVED_FEED = booleanPreferencesKey("ui.show_profile_zap_received_feed")
         val UI_SHOW_PROFILE_FOLLOWERS_FEED = booleanPreferencesKey("ui.show_profile_followers_feed")
         val UI_DONT_SHOW_ONCHAIN_PUBLIC_WARNING = booleanPreferencesKey("ui.dont_show_onchain_public_warning")
+        val UI_APP_LOCK = booleanPreferencesKey("ui.app_lock")
 
         suspend fun uiPreferences(context: Context): UiSettings? =
             try {
@@ -152,6 +153,7 @@ class UiSharedPreferences(
                     showProfileZapReceivedFeed = preferences[UI_SHOW_PROFILE_ZAP_RECEIVED_FEED] ?: true,
                     showProfileFollowersFeed = preferences[UI_SHOW_PROFILE_FOLLOWERS_FEED] ?: true,
                     dontShowOnchainPublicWarning = preferences[UI_DONT_SHOW_ONCHAIN_PUBLIC_WARNING] ?: false,
+                    appLock = preferences[UI_APP_LOCK] ?: false,
                 )
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -200,6 +202,7 @@ class UiSharedPreferences(
                     preferences[UI_SHOW_PROFILE_ZAP_RECEIVED_FEED] = sharedSettings.showProfileZapReceivedFeed
                     preferences[UI_SHOW_PROFILE_FOLLOWERS_FEED] = sharedSettings.showProfileFollowersFeed
                     preferences[UI_DONT_SHOW_ONCHAIN_PUBLIC_WARNING] = sharedSettings.dontShowOnchainPublicWarning
+                    preferences[UI_APP_LOCK] = sharedSettings.appLock
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

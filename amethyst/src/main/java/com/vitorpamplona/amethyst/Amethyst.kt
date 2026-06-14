@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst
 
 import android.app.Application
+import com.vitorpamplona.amethyst.service.applock.AppLockLifecycleHook
 import com.vitorpamplona.amethyst.service.logging.Logging
 import com.vitorpamplona.amethyst.service.nests.AppForegroundRecycleHook
 import com.vitorpamplona.quartz.utils.Log
@@ -52,6 +53,12 @@ class Amethyst : Application() {
         // network itself is still up. See `AppForegroundRecycleHook`'s
         // kdoc for the threshold rationale.
         registerActivityLifecycleCallbacks(AppForegroundRecycleHook())
+
+        // App-lock gate: re-lock the app when it returns to the foreground after
+        // more than 5 minutes in the background. The enabled flag and the
+        // cold-start lock are wired from the persisted setting in
+        // AppModules.initiate(). See AppLockController for the threshold rationale.
+        registerActivityLifecycleCallbacks(AppLockLifecycleHook())
 
         if (isDebug) {
             Logging.setup()

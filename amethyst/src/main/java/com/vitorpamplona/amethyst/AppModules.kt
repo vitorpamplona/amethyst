@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
 import com.vitorpamplona.amethyst.model.privacyOptions.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.model.torState.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.model.torState.TorRelayState
+import com.vitorpamplona.amethyst.service.applock.AppLockState
 import com.vitorpamplona.amethyst.service.cast.CastRegistry
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityManager
 import com.vitorpamplona.amethyst.service.connectivity.ConnectivityStatus
@@ -724,6 +725,15 @@ class AppModules(
 
         // forces initialization of uiPrefs in the main thread to avoid blinking themes
         uiPrefs
+
+        // App-lock gate: seed the controller from the persisted setting synchronously
+        // (before the first activity starts) so a cold start with the feature enabled
+        // paints the lock screen, then keep it in sync as the toggle changes.
+        AppLockState.setEnabled(uiPrefs.value.appLock.value)
+        AppLockState.lockIfEnabled()
+        applicationIOScope.launch {
+            uiPrefs.value.appLock.collect { AppLockState.setEnabled(it) }
+        }
 
         // initializes diskcache on an IO thread.
         applicationIOScope.launch {

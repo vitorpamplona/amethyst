@@ -53,6 +53,7 @@ class UiSettingsFlow(
     val showProfileZapReceivedFeed: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val showProfileFollowersFeed: MutableStateFlow<Boolean> = MutableStateFlow(true),
     val dontShowOnchainPublicWarning: MutableStateFlow<Boolean> = MutableStateFlow(false),
+    val appLock: MutableStateFlow<Boolean> = MutableStateFlow(false),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
@@ -80,6 +81,7 @@ class UiSettingsFlow(
             showProfileZapReceivedFeed,
             showProfileFollowersFeed,
             dontShowOnchainPublicWarning,
+            appLock,
         )
 
     // emits at every change in any of the propertyes.
@@ -111,6 +113,7 @@ class UiSettingsFlow(
                 flows[21] as Boolean,
                 flows[22] as Boolean,
                 flows[23] as Boolean,
+                flows[24] as Boolean,
             )
         }
 
@@ -140,6 +143,7 @@ class UiSettingsFlow(
             showProfileZapReceivedFeed.value,
             showProfileFollowersFeed.value,
             dontShowOnchainPublicWarning.value,
+            appLock.value,
         )
 
     fun update(torSettings: UiSettings): Boolean {
@@ -241,6 +245,10 @@ class UiSettingsFlow(
             dontShowOnchainPublicWarning.tryEmit(torSettings.dontShowOnchainPublicWarning)
             any = true
         }
+        if (appLock.value != torSettings.appLock) {
+            appLock.tryEmit(torSettings.appLock)
+            any = true
+        }
 
         return any
     }
@@ -290,6 +298,7 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.showProfileZapReceivedFeed),
                 MutableStateFlow(uiSettings.showProfileFollowersFeed),
                 MutableStateFlow(uiSettings.dontShowOnchainPublicWarning),
+                MutableStateFlow(uiSettings.appLock),
             )
     }
 }

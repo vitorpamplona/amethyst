@@ -1717,6 +1717,12 @@
     <string name="gallery_style">Profile Gallery Style</string>
     <string name="gallery_style_description">Choose the gallery style</string>
 
+    <string name="app_lock_title">App Lock</string>
+    <string name="app_lock_description">Require biometrics or your device PIN to open Amethyst. Locks when the app starts and after 5 minutes in the background.</string>
+    <string name="app_lock_screen_title">Amethyst is locked</string>
+    <string name="app_lock_unlock">Unlock</string>
+    <string name="app_lock_unlock_subtitle">Unlock Amethyst</string>
+
     <string name="load_image">Load Image</string>
 
     <string name="spamming_users">Spammers</string>
