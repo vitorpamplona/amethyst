@@ -641,6 +641,9 @@
     <string name="app_definition_handles">Hanterar</string>
     <string name="app_definition_by">av</string>
     <string name="app_definition_available_on">Tillgänglig på</string>
+    <string name="platform_web">Web</string>
+    <string name="platform_android">Android</string>
+    <string name="platform_ios">iOS</string>
     <string name="pictures">Bilder</string>
     <string name="workouts">Träningspass</string>
     <string name="workout">Träningspass</string>
@@ -1452,6 +1455,7 @@
     <string name="default_limit">Standardgräns (returnerade händelser)</string>
     <string name="max_subid_length">Max. SubID-längd</string>
     <string name="cashu">Cashu Token</string>
+    <string name="cashu_mint_label">Mint: %1$s</string>
     <string name="cashu_redeem">Inlösen</string>
     <string name="cashu_redeem_to_zap">Skicka till Zap Plånbok</string>
     <string name="cashu_redeem_to_cashu">Öppna i Cashu Plånbok</string>
@@ -2003,12 +2007,18 @@
     <string name="onchain_send_recipient_placeholder">namn, NIP-05 eller npub</string>
     <string name="onchain_send_change_recipient">Ändra mottagare</string>
     <string name="onchain_send_amount">Belopp</string>
+    <string name="onchain_send_sats_suffix">sats</string>
     <string name="onchain_send_min_warning">Minsta on-chain-zap är %1$s sats — mindre belopp äts upp av brytaravgifter. Använd en Lightning-zap istället.</string>
     <string name="onchain_send_comment_label">Kommentar (valfritt)</string>
     <string name="onchain_send_priority">Prioritet</string>
     <string name="onchain_send_fee_slow">Långsam</string>
+    <string name="onchain_send_fee_normal">Normal</string>
     <string name="onchain_send_fee_fast">Snabb</string>
     <string name="onchain_send_fee_eta_slow">~1 tim</string>
+    <string name="onchain_send_fee_eta_normal">~30 min</string>
+    <string name="onchain_send_fee_eta_fast">~10 min</string>
+    <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
+    <string name="onchain_send_fee_tier_label_rate_eta">%1$s · %2$s sat/vB · %3$s</string>
     <string name="onchain_send_loading_fees">Laddar avgiftsuppskattningar…</string>
     <string name="onchain_send_button_amount">Skicka %1$s sats</string>
     <plurals name="onchain_send_button_amount_split">
@@ -2033,6 +2043,7 @@
     <string name="onchain_send_result_transaction">Transaktion</string>
     <string name="onchain_send_result_fee">Avgift</string>
     <string name="onchain_send_result_change">Växel</string>
+    <string name="onchain_send_sats_amount">%1$s sats</string>
     <string name="onchain_send_done">Klar</string>
     <string name="onchain_send_failed_at">Misslyckades vid: %1$s</string>
     <string name="onchain_send_broadcast_no_receipt">Betalningen sändes ut (tx %1$s) men kvittot publicerades inte.</string>

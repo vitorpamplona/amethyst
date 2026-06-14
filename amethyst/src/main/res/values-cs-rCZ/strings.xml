@@ -655,6 +655,9 @@
     <string name="app_definition_handles">Zpracovává</string>
     <string name="app_definition_by">od</string>
     <string name="app_definition_available_on">Dostupné na</string>
+    <string name="platform_web">Web</string>
+    <string name="platform_android">Android</string>
+    <string name="platform_ios">iOS</string>
     <string name="pictures">Obrázky</string>
     <string name="workouts">Tréninky</string>
     <string name="workout">Trénink</string>
@@ -1473,6 +1476,7 @@
     <string name="default_limit">Výchozí limit (vracené události)</string>
     <string name="max_subid_length">Max. délka SubID</string>
     <string name="cashu">Cashu Token</string>
+    <string name="cashu_mint_label">Mint: %1$s</string>
     <string name="cashu_redeem">Vyměnit</string>
     <string name="cashu_redeem_to_zap">Poslat do Zap peněženky</string>
     <string name="cashu_redeem_to_cashu">Otevřít v Cashu Wallet</string>
@@ -2032,6 +2036,7 @@
     <string name="onchain_send_recipient_placeholder">jméno, NIP-05 nebo npub</string>
     <string name="onchain_send_change_recipient">Změnit příjemce</string>
     <string name="onchain_send_amount">Částka</string>
+    <string name="onchain_send_sats_suffix">sats</string>
     <string name="onchain_send_min_warning">Minimální on-chain zap je %1$s sats — menší částky pohltí poplatky těžařům. Použij raději Lightning zap.</string>
     <string name="onchain_send_comment_label">Komentář (nepovinné)</string>
     <string name="onchain_send_priority">Priorita</string>
@@ -2039,6 +2044,10 @@
     <string name="onchain_send_fee_normal">Normální</string>
     <string name="onchain_send_fee_fast">Rychlé</string>
     <string name="onchain_send_fee_eta_slow">~1 hod</string>
+    <string name="onchain_send_fee_eta_normal">~30 minut</string>
+    <string name="onchain_send_fee_eta_fast">~10 minut</string>
+    <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
+    <string name="onchain_send_fee_tier_label_rate_eta">%1$s · %2$s sat/vB · %3$s</string>
     <string name="onchain_send_loading_fees">Načítání odhadů poplatků…</string>
     <string name="onchain_send_button_amount">Odeslat %1$s sats</string>
     <plurals name="onchain_send_button_amount_split">
@@ -2071,6 +2080,7 @@
     <string name="onchain_send_result_transaction">Transakce</string>
     <string name="onchain_send_result_fee">Poplatek</string>
     <string name="onchain_send_result_change">Drobné</string>
+    <string name="onchain_send_sats_amount">%1$s sats</string>
     <string name="onchain_send_done">Hotovo</string>
     <string name="onchain_send_failed_at">Selhalo při: %1$s</string>
     <string name="onchain_send_broadcast_no_receipt">Platba byla odeslána (tx %1$s), ale potvrzení nebylo zveřejněno.</string>
