@@ -32,6 +32,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -64,6 +65,30 @@ fun AllPeopleListFeedView(
         state = listState,
         contentPadding = FeedPadding,
     ) {
+        item {
+            Row(
+                modifier = MaxWidthWithHorzPadding.padding(bottom = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = SpacedBy5dp,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringRes(R.string.follow_organizer_title),
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        text = stringRes(R.string.follow_organizer_card_explainer),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.grayText,
+                    )
+                }
+                OutlinedButton(onClick = { nav.nav(Route.FollowOrganizer) }) {
+                    Text(stringRes(R.string.follow_organizer_action))
+                }
+            }
+            HorizontalDivider(thickness = DividerThickness)
+        }
         stickyHeader {
             Row(
                 modifier = MaxWidthWithHorzPadding,

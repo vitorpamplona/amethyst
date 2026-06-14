@@ -216,6 +216,28 @@ class PeopleListsState(
         return dTag
     }
 
+    suspend fun addFollowListWithMembers(
+        listName: String,
+        listDescription: String?,
+        members: List<User>,
+        isPrivate: Boolean,
+        account: Account,
+    ): String {
+        val dTag = UUID.randomUUID().toString()
+        val tags = members.toSet().toUserTags()
+        val newList =
+            PeopleListEvent.createListWithDescription(
+                dTag = dTag,
+                title = listName,
+                description = listDescription,
+                publicMembers = if (!isPrivate) tags else emptyList(),
+                privateMembers = if (isPrivate) tags else emptyList(),
+                signer = account.signer,
+            )
+        account.sendMyPublicAndPrivateOutbox(newList)
+        return dTag
+    }
+
     suspend fun updateMetadata(
         listName: String?,
         listDescription: String?,

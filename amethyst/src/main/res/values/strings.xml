@@ -1207,6 +1207,33 @@
         \nTap below to refresh, or tap the add buttons to create a new one.
     </string>
     <string name="follow_set_create_btn_label">New</string>
+    <string name="follow_organizer_title">Organize Follows</string>
+    <string name="follow_organizer_action">Organize</string>
+    <string name="follow_organizer_card_explainer">Sort a large follow list into people lists automatically.</string>
+    <string name="follow_organizer_explainer">Group the people you follow into lists. Choose how to sort them, review the suggested groups, then create the ones you want.</string>
+    <string name="follow_organizer_by_activity">Last seen</string>
+    <string name="follow_organizer_by_content">Content type</string>
+    <string name="follow_organizer_by_topic">Topics</string>
+    <string name="follow_organizer_keep_private">Keep these lists private</string>
+    <string name="follow_organizer_analyzing">Analyzing your follows…</string>
+    <string name="follow_organizer_backfilling">Fetching recent activity from relays… %1$d/%2$d</string>
+    <string name="follow_organizer_empty">No groups to suggest yet. Browse your feeds to cache more activity from the people you follow, then try again.</string>
+    <plurals name="follow_organizer_create_n_lists">
+        <item quantity="one">Create %1$d list</item>
+        <item quantity="other">Create %1$d lists</item>
+    </plurals>
+    <plurals name="follow_organizer_created_n_lists">
+        <item quantity="one">Created %1$d list</item>
+        <item quantity="other">Created %1$d lists</item>
+    </plurals>
+    <plurals name="follow_organizer_member_count">
+        <item quantity="one">%1$d member</item>
+        <item quantity="other">%1$d members</item>
+    </plurals>
+    <plurals name="follow_organizer_data_coverage">
+        <item quantity="one">%1$d of %2$d follow has recent posts cached</item>
+        <item quantity="other">%1$d of %2$d follows have recent posts cached</item>
+    </plurals>
     <string name="follow_set_add_author_from_note_action">Add author to follow list</string>
     <string name="follow_set_profile_actions_menu_description">Add or remove user from lists, or create a new list with this user.</string>
     <string name="follow_set_icon_description">Icon for follow set</string>

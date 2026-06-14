@@ -368,6 +368,8 @@ sealed class Route {
 
     @Serializable object Lists : Route()
 
+    @Serializable object FollowOrganizer : Route()
+
     @Serializable data class MyPeopleListView(
         val dTag: String,
     ) : Route()
