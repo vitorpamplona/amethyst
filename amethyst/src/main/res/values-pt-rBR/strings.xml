@@ -628,6 +628,8 @@
     <string name="profile_badges_header">Selos · %1$d</string>
     <string name="profile_badges_description">Escolha quais dos selos que você recebeu aparecerão no seu perfil.</string>
     <string name="profile_badges_empty">Você ainda não recebeu nenhum selo.</string>
+    <string name="profile_apps_header">Apps · %1$d</string>
+    <string name="profile_apps_header_empty">Aplicativos</string>
     <string name="profile_apps_empty_hint">Recomende os apps Nostr que você usa para que outras pessoas possam descobri-los.</string>
     <string name="profile_app_recommendations_title">Apps recomendados</string>
     <string name="profile_app_recommendations_description">Escolha quais apps Nostr você recomenda publicamente. As recomendações aparecem no seu perfil e ajudam outras pessoas a descobrir apps para conteúdos que este cliente não consegue abrir.</string>
@@ -639,6 +641,9 @@
     <string name="app_definition_handles">Manipula</string>
     <string name="app_definition_by">por</string>
     <string name="app_definition_available_on">Disponível em</string>
+    <string name="platform_web">Web</string>
+    <string name="platform_android">Android</string>
+    <string name="platform_ios">iOS</string>
     <string name="pictures">Imagens</string>
     <string name="workouts">Treinos</string>
     <string name="workout">Treino</string>
@@ -1451,6 +1456,7 @@
     <string name="default_limit">Limite padrão (eventos retornados)</string>
     <string name="max_subid_length">Comprimento máx. do SubID</string>
     <string name="cashu">Token Cashu</string>
+    <string name="cashu_mint_label">Mint: %1$s</string>
     <string name="cashu_redeem">Resgatar</string>
     <string name="cashu_redeem_to_zap">Enviar para Zap Wallet</string>
     <string name="cashu_redeem_to_cashu">Abrir na Carteira Cashu</string>
@@ -2002,12 +2008,18 @@
     <string name="onchain_send_recipient_placeholder">nome, NIP-05 ou npub</string>
     <string name="onchain_send_change_recipient">Alterar destinatário</string>
     <string name="onchain_send_amount">Valor</string>
+    <string name="onchain_send_sats_suffix">sats</string>
     <string name="onchain_send_min_warning">O zap on-chain mínimo é %1$s sats — valores menores são consumidos pelas taxas dos mineradores. Use um zap Lightning em vez disso.</string>
     <string name="onchain_send_comment_label">Comentário (opcional)</string>
     <string name="onchain_send_priority">Prioridade</string>
     <string name="onchain_send_fee_slow">Lenta</string>
+    <string name="onchain_send_fee_normal">Normal</string>
     <string name="onchain_send_fee_fast">Rápida</string>
     <string name="onchain_send_fee_eta_slow">~1 h</string>
+    <string name="onchain_send_fee_eta_normal">~30 min</string>
+    <string name="onchain_send_fee_eta_fast">~10 min</string>
+    <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
+    <string name="onchain_send_fee_tier_label_rate_eta">%1$s · %2$s sat/vB · %3$s</string>
     <string name="onchain_send_loading_fees">Carregando estimativas de taxa…</string>
     <string name="onchain_send_button_amount">Enviar %1$s sats</string>
     <plurals name="onchain_send_button_amount_split">
@@ -2032,6 +2044,7 @@
     <string name="onchain_send_result_transaction">Transação</string>
     <string name="onchain_send_result_fee">Taxa</string>
     <string name="onchain_send_result_change">Troco</string>
+    <string name="onchain_send_sats_amount">%1$s sats</string>
     <string name="onchain_send_done">Concluído</string>
     <string name="onchain_send_failed_at">Falhou em: %1$s</string>
     <string name="onchain_send_broadcast_no_receipt">O pagamento foi transmitido (tx %1$s), mas o recibo não foi publicado.</string>

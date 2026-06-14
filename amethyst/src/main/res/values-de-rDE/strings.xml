@@ -634,6 +634,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="profile_badges_header">Abzeichen · %1$d</string>
     <string name="profile_badges_description">Wähle aus, welche deiner erhaltenen Abzeichen auf deinem Profil erscheinen sollen.</string>
     <string name="profile_badges_empty">Du hast noch keine Abzeichen erhalten.</string>
+    <string name="profile_apps_header">Apps · %1$d</string>
+    <string name="profile_apps_header_empty">Apps</string>
     <string name="profile_apps_empty_hint">Empfiehl die Nostr-Apps, die du nutzt, damit andere sie entdecken können.</string>
     <string name="profile_app_recommendations_title">Empfohlene Apps</string>
     <string name="profile_app_recommendations_description">Wähle aus, welche Nostr-Apps du öffentlich empfiehlst. Empfehlungen erscheinen in deinem Profil und helfen anderen, Apps für Inhalte zu finden, die dieser Client nicht öffnen kann.</string>
@@ -645,6 +647,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="app_definition_handles">Verarbeitet</string>
     <string name="app_definition_by">von</string>
     <string name="app_definition_available_on">Verfügbar auf</string>
+    <string name="platform_web">Web</string>
+    <string name="platform_android">Android</string>
+    <string name="platform_ios">iOS</string>
     <string name="pictures">Bilder</string>
     <string name="workouts">Workouts</string>
     <string name="workout">Workout</string>
@@ -1456,6 +1461,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="default_limit">Standardlimit (zurückgegebene Ereignisse)</string>
     <string name="max_subid_length">Max. SubID-Länge</string>
     <string name="cashu">Cashu-Token</string>
+    <string name="cashu_mint_label">Minze: %1$s</string>
     <string name="cashu_redeem">Einlösen</string>
     <string name="cashu_redeem_to_zap">An Zap Wallet senden</string>
     <string name="cashu_redeem_to_cashu">In Cashu Wallet öffnen</string>
@@ -2007,14 +2013,18 @@ anz der Bedingungen ist erforderlich</string>
     <string name="onchain_send_recipient_placeholder">Name, NIP-05 oder npub</string>
     <string name="onchain_send_change_recipient">Empfänger ändern</string>
     <string name="onchain_send_amount">Betrag</string>
+    <string name="onchain_send_sats_suffix">sats</string>
     <string name="onchain_send_min_warning">Der minimale On-Chain-Zap beträgt %1$s sats — kleinere Beträge werden von den Miner-Gebühren aufgezehrt. Nutze stattdessen einen Lightning-Zap.</string>
     <string name="onchain_send_comment_label">Kommentar (optional)</string>
     <string name="onchain_send_priority">Priorität</string>
     <string name="onchain_send_fee_slow">Langsam</string>
+    <string name="onchain_send_fee_normal">Normal</string>
     <string name="onchain_send_fee_fast">Schnell</string>
     <string name="onchain_send_fee_eta_slow">~1 Std.</string>
     <string name="onchain_send_fee_eta_normal">~30 Min.</string>
     <string name="onchain_send_fee_eta_fast">~10 Min.</string>
+    <string name="onchain_send_fee_rate_eta">%1$s sat/vB · %2$s</string>
+    <string name="onchain_send_fee_tier_label_rate_eta">%1$s · %2$s sat/vB · %3$s</string>
     <string name="onchain_send_loading_fees">Gebührenschätzungen werden geladen…</string>
     <string name="onchain_send_button_amount">%1$s sats senden</string>
     <plurals name="onchain_send_button_amount_split">
@@ -2039,6 +2049,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="onchain_send_result_transaction">Transaktion</string>
     <string name="onchain_send_result_fee">Gebühr</string>
     <string name="onchain_send_result_change">Wechselgeld</string>
+    <string name="onchain_send_sats_amount">%1$s sats</string>
     <string name="onchain_send_done">Fertig</string>
     <string name="onchain_send_failed_at">Fehlgeschlagen bei: %1$s</string>
     <string name="onchain_send_broadcast_no_receipt">Zahlung wurde gesendet (tx %1$s), aber die Quittung wurde nicht veröffentlicht.</string>
