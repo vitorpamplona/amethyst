@@ -147,6 +147,29 @@ class AppForegroundRecycleHookTest {
     }
 
     @Test
+    fun foregroundStateTracksOnlyZeroToOneAndOneToZeroTransitions() {
+        var fakeNow = 0L
+        val states = mutableListOf<Boolean>()
+        val counter =
+            AppForegroundCounter(
+                publishEvent = {},
+                nowMillis = { fakeNow },
+                updateForeground = { states.add(it) },
+            )
+
+        fakeNow = 1_000L
+        counter.onActivityStarted()
+        fakeNow = 2_000L
+        counter.onActivityStarted()
+        fakeNow = 3_000L
+        counter.onActivityStopped()
+        fakeNow = 4_000L
+        counter.onActivityStopped()
+
+        assertEquals(listOf(true, false), states)
+    }
+
+    @Test
     fun consecutiveLongBackgroundsEachPublishOnce() {
         // Two separate back-and-forth cycles must each fire exactly
         // one publish. A regression that misses to refresh the

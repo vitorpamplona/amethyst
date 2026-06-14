@@ -26,7 +26,9 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.util.LruCache
+import android.view.KeyEvent
 import androidx.annotation.OptIn
+import androidx.core.content.IntentCompat
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -37,7 +39,9 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.vitorpamplona.amethyst.service.AppForegroundState
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemCache
+import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.ui.MainActivity
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -235,6 +239,30 @@ class MediaSessionPool(
         val pool: MediaSessionPool,
         val appContext: Context,
     ) : MediaSession.Callback {
+        override fun onMediaButtonEvent(
+            session: MediaSession,
+            controllerInfo: MediaSession.ControllerInfo,
+            intent: Intent,
+        ): Boolean {
+            val keyEvent =
+                IntentCompat.getParcelableExtra(intent, Intent.EXTRA_KEY_EVENT, KeyEvent::class.java)
+            if (keyEvent?.action != KeyEvent.ACTION_DOWN) return false
+
+            if (AppForegroundState.isForeground || BackgroundMedia.bgInstance?.id == session.id) {
+                return false
+            }
+
+            val isResumeButton =
+                keyEvent.keyCode == KeyEvent.KEYCODE_MEDIA_PLAY ||
+                    keyEvent.keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE ||
+                    keyEvent.keyCode == KeyEvent.KEYCODE_HEADSETHOOK
+
+            if (!isResumeButton) return false
+
+            session.player.pause()
+            return true
+        }
+
         @OptIn(UnstableApi::class)
         override fun onAddMediaItems(
             mediaSession: MediaSession,

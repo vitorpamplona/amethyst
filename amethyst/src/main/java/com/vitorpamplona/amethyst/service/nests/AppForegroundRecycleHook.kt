@@ -24,6 +24,7 @@ import android.app.Activity
 import android.app.Application
 import android.os.Bundle
 import com.vitorpamplona.amethyst.commons.viewmodels.NestNetworkChangeBus
+import com.vitorpamplona.amethyst.service.AppForegroundState
 import com.vitorpamplona.quartz.utils.Log
 
 /**
@@ -42,6 +43,7 @@ class AppForegroundCounter(
     private val backgroundThresholdMs: Long = AppForegroundRecycleHook.DEFAULT_BACKGROUND_THRESHOLD_MS,
     private val publishEvent: () -> Unit = { NestNetworkChangeBus.publish() },
     private val nowMillis: () -> Long = { System.currentTimeMillis() },
+    private val updateForeground: (Boolean) -> Unit = {},
 ) {
     private var startedActivities = 0
     private var lastBackgroundedAtMillis: Long = -1L
@@ -65,6 +67,7 @@ class AppForegroundCounter(
         val wasBackgrounded = startedActivities == 0
         startedActivities++
         if (!wasBackgrounded) return
+        updateForeground(true)
         val backgroundedAt = lastBackgroundedAtMillis
         if (backgroundedAt < 0L) return
         val backgroundedFor = nowMillis() - backgroundedAt
@@ -91,6 +94,7 @@ class AppForegroundCounter(
         if (startedActivities <= 0) {
             startedActivities = 0
             lastBackgroundedAtMillis = nowMillis()
+            updateForeground(false)
         }
     }
 }
@@ -134,8 +138,9 @@ class AppForegroundRecycleHook(
     backgroundThresholdMs: Long = DEFAULT_BACKGROUND_THRESHOLD_MS,
     publishEvent: () -> Unit = { NestNetworkChangeBus.publish() },
     nowMillis: () -> Long = { System.currentTimeMillis() },
+    updateForeground: (Boolean) -> Unit = AppForegroundState::update,
 ) : Application.ActivityLifecycleCallbacks {
-    private val counter = AppForegroundCounter(backgroundThresholdMs, publishEvent, nowMillis)
+    private val counter = AppForegroundCounter(backgroundThresholdMs, publishEvent, nowMillis, updateForeground)
 
     override fun onActivityStarted(activity: Activity) {
         counter.onActivityStarted()
