@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.metadata
 
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.nullable
@@ -73,6 +74,7 @@ object BirthdayTolerantSerializer : KSerializer<Birthday?> {
         }
     }
 
+    @OptIn(ExperimentalSerializationApi::class)
     override fun serialize(
         encoder: Encoder,
         value: Birthday?,

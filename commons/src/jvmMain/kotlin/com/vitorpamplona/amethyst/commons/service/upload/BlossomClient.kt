@@ -76,8 +76,8 @@ open class BlossomClient(
                     val reason = it.headers["X-Reason"] ?: it.code.toString()
                     throw RuntimeException("Upload failed ($serverBaseUrl): $reason")
                 }
-                val body = it.body ?: throw RuntimeException("Upload to $serverBaseUrl returned no body")
-                JsonMapper.fromJson<BlossomUploadResult>(body.string())
+                val body = it.body.string().ifBlank { throw RuntimeException("Upload to $serverBaseUrl returned no body") }
+                JsonMapper.fromJson<BlossomUploadResult>(body)
             }
         }
 
@@ -108,8 +108,8 @@ open class BlossomClient(
                     val reason = it.headers["X-Reason"] ?: it.code.toString()
                     throw RuntimeException("Upload failed ($serverBaseUrl): $reason")
                 }
-                val body = it.body ?: throw RuntimeException("Upload to $serverBaseUrl returned no body")
-                JsonMapper.fromJson<BlossomUploadResult>(body.string())
+                val body = it.body.string().ifBlank { throw RuntimeException("Upload to $serverBaseUrl returned no body") }
+                JsonMapper.fromJson<BlossomUploadResult>(body)
             }
         }
 }

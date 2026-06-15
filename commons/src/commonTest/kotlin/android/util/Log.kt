@@ -20,13 +20,21 @@
  */
 package android.util
 
+import kotlin.jvm.JvmStatic
+
 class Log {
+    // @JvmStatic so the methods compile to real static methods on android.util.Log. Code compiled
+    // against the Android SDK (e.g. quartz's PlatformLog) emits `invokestatic Log.d(...)`; without
+    // @JvmStatic the companion methods would be instance methods and resolve to NoSuchMethodError
+    // when this fake shadows the SDK stub under :commons:testAndroidHostTest.
     companion object {
+        @JvmStatic
         fun isLoggable(
             tag: String?,
             msg: Int?,
         ): Boolean = true
 
+        @JvmStatic
         fun d(
             tag: String?,
             msg: String?,
@@ -35,6 +43,7 @@ class Log {
             return 0
         }
 
+        @JvmStatic
         fun i(
             tag: String?,
             msg: String?,
@@ -43,6 +52,7 @@ class Log {
             return 0
         }
 
+        @JvmStatic
         fun w(
             tag: String?,
             msg: String?,
@@ -51,6 +61,7 @@ class Log {
             return 0
         }
 
+        @JvmStatic
         fun w(
             tag: String?,
             msg: String?,
@@ -61,6 +72,7 @@ class Log {
             return 0
         }
 
+        @JvmStatic
         fun e(
             tag: String?,
             msg: String?,
@@ -69,6 +81,7 @@ class Log {
             return 0
         }
 
+        @JvmStatic
         fun e(
             tag: String?,
             msg: String?,

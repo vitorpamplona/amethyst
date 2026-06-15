@@ -109,7 +109,6 @@ they are shared across the GUI apps. Treat as GUI-shared, not strictly headless.
 |----------------|-----|---------|
 | `util`         | no  | KMP primitives: `KmpLock`, `WeakReference`, number/URL/codepoint helpers, list/debug helpers. **This is the only general-utility package** — there is no `utils`. |
 | `keystorage`   | no  | Secure key storage interface (Keystore / keychain / keyring actuals). |
-| `threading`    | no  | `checkNotInMainThread` assertion. |
 | `tor`          | no  | Tor manager interface + settings. |
 | `service`      | no  | Cross-cutting services: `BundledUpdate` batching (common); `service/upload` (JVM), `service/nwc`, `service/lnurl` (jvmAndroid). **Singular `service`** — there is no `services`. |
 
@@ -203,8 +202,7 @@ compiles: `commonMain` → `jvmAndroid` → platform-specific. See
    `<feature>` if feature-scoped). Keep it CLI-safe where practical.
 4. **Relay subscription / filter assembly**? → `relayClient`.
 5. **A domain model or per-NIP event wrapper**? → `model` (`model/nipNN…`).
-6. **A platform capability behind `expect`/`actual`** (storage, crypto,
-   threading)? → the matching abstraction package + actuals in platform sets.
+6. **A platform capability behind `expect`/`actual`** (storage, crypto)? → the matching abstraction package + actuals in platform sets.
 7. **A generic helper**? → `util`. (Resist creating a new top-level package for
    one file.)
 
@@ -229,7 +227,7 @@ These are intentionally *documented*, not silently tolerated. Fix opportunistica
   low-level EOSE bookkeeping, `relayClient` is the subscription client. Keep the
   distinction in mind when adding files.
 - Several **single-file feature packages** (`account`, `marmot`,
-  `nip53LiveActivities`, `keystorage`, `threading`) are kept as feature/abstraction
+  `nip53LiveActivities`, `keystorage`) are kept as feature/abstraction
   namespaces expected to grow; do not fold them into `util` just for size.
 - **`onchain`** (on-chain zap splitting) is `quartz`-adjacent but un-numbered;
   leave readable unless a clear NIP number lands.

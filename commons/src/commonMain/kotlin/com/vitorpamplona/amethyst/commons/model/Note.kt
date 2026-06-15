@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.commons.model
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponsesCache
-import com.vitorpamplona.amethyst.commons.threading.checkNotInMainThread
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.firstFullCharOrEmoji
 import com.vitorpamplona.amethyst.commons.util.replace
@@ -723,7 +722,6 @@ open class Note(
         zapPaymentRequest: Note,
         zapPayment: Note?,
     ) {
-        checkNotInMainThread()
         if (zapPayments[zapPaymentRequest] == null) {
             val inserted = innerAddZapPayment(zapPaymentRequest, zapPayment)
             if (inserted) {

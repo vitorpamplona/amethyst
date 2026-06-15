@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.model
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
-import com.vitorpamplona.amethyst.commons.threading.checkNotInMainThread
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -110,8 +109,6 @@ class ThreadAssembler(
     }
 
     fun findThreadFor(noteId: String): ThreadInfo? {
-        checkNotInMainThread()
-
         val note = cache.checkGetOrCreateNote(noteId) ?: return null
 
         return if (note.event != null) {

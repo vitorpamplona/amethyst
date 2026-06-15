@@ -193,7 +193,7 @@ class LightningAddressResolver(
                 val request = Request.Builder().url(url).build()
                 httpClient.newCall(request).execute().use { response ->
                     if (response.isSuccessful) {
-                        response.body?.string()
+                        response.body.string()
                     } else {
                         null
                     }
@@ -224,7 +224,7 @@ class LightningAddressResolver(
                 val request = Request.Builder().url(url).build()
                 httpClient.newCall(request).execute().use { response ->
                     // Return body even on error — caller extracts "reason" or "message" from JSON
-                    response.body?.string()
+                    response.body.string()
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

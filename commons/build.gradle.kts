@@ -37,7 +37,9 @@ kotlin {
 
         androidResources.enable = true
 
-        withHostTest {}
+        withHostTest {
+            isReturnDefaultValues = true
+        }
 
         withDeviceTest {
             instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

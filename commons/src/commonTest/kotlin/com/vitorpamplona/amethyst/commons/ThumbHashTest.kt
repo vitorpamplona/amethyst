@@ -41,7 +41,6 @@ class ThumbHashTest {
 
         val decoded = ThumbHashDecoder.decode(hashBytes)
         assertNotNull(decoded)
-        decoded!!
         assertTrue(decoded.width > 0, "decoded width should be positive")
         assertTrue(decoded.height > 0, "decoded height should be positive")
 
@@ -74,11 +73,9 @@ class ThumbHashTest {
 
         val viaBase64 = ThumbHashDecoder.decode(encoded)
         assertNotNull(viaBase64)
-        viaBase64!!
 
         val viaBytes = ThumbHashDecoder.decode(ThumbHashEncoder.encode(pixels, w, h))
         assertNotNull(viaBytes)
-        viaBytes!!
 
         assertEquals(viaBytes.width, viaBase64.width, "base64 path and raw path should agree on width")
         assertEquals(viaBytes.height, viaBase64.height, "base64 path and raw path should agree on height")
@@ -98,7 +95,6 @@ class ThumbHashTest {
         val pixels = IntArray(w * h) { 0xFF8080FF.toInt() } // opaque cornflower-ish
         val decoded = ThumbHashDecoder.decode(ThumbHashEncoder.encode(pixels, w, h))
         assertNotNull(decoded)
-        decoded!!
         for (p in decoded.pixels) {
             val a = (p ushr 24) and 0xff
             assertEquals(255, a, "alpha should be 255 for opaque encode")
@@ -113,7 +109,6 @@ class ThumbHashTest {
         val pixels = IntArray(w * h) { 0x00000000 }
         val decoded = ThumbHashDecoder.decode(ThumbHashEncoder.encode(pixels, w, h))
         assertNotNull(decoded)
-        decoded!!
         // The average alpha is 0, so every decoded alpha should be at or near 0.
         var maxAlpha = 0
         for (p in decoded.pixels) {
@@ -134,7 +129,6 @@ class ThumbHashTest {
             }
         val decoded = ThumbHashDecoder.decode(ThumbHashEncoder.encode(pixels, w, h))
         assertNotNull(decoded)
-        decoded!!
 
         var sumR = 0
         var sumG = 0
@@ -163,7 +157,7 @@ class ThumbHashTest {
         val hash = ThumbHashEncoder.encode(pixels, w, h)
         val ratio = ThumbHashDecoder.aspectRatio(hash)
         assertNotNull(ratio)
-        assertTrue(ratio!! > 1f, "landscape ratio should be > 1, got $ratio")
+        assertTrue(ratio > 1f, "landscape ratio should be > 1, got $ratio")
     }
 
     @Test
@@ -174,7 +168,7 @@ class ThumbHashTest {
         val hash = ThumbHashEncoder.encode(pixels, w, h)
         val ratio = ThumbHashDecoder.aspectRatio(hash)
         assertNotNull(ratio)
-        assertTrue(ratio!! < 1f, "portrait ratio should be < 1, got $ratio")
+        assertTrue(ratio < 1f, "portrait ratio should be < 1, got $ratio")
     }
 
     @Test
@@ -237,7 +231,6 @@ class ThumbHashTest {
             }
         val decoded = ThumbHashDecoder.decode(ThumbHashEncoder.encode(pixels, w, h))
         assertNotNull(decoded)
-        decoded!!
         assertTrue(
             decoded.width in 1..32 && decoded.height in 1..32,
             "expected output to fit in 32x32, got ${decoded.width}x${decoded.height}",

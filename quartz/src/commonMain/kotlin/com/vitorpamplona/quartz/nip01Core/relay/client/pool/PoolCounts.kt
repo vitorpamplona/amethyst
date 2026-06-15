@@ -109,8 +109,6 @@ class PoolCounts {
             val filters = filters[relay]
             if (!filters.isNullOrEmpty()) {
                 sync(CountCmd(subId, filters))
-            } else {
-                null
             }
         }
     }

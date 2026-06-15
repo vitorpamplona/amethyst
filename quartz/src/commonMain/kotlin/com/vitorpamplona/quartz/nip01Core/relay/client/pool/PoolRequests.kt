@@ -251,8 +251,6 @@ class PoolRequests {
             val filters = filters[relay]
             if (!filters.isNullOrEmpty()) {
                 sync(ReqCmd(subId, filters))
-            } else {
-                null
             }
         }
     }

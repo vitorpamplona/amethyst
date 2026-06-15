@@ -60,7 +60,7 @@ class OkHttpLnurlEndpointResolver(
                 val request = Request.Builder().url(url).build()
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) return@use null
-                    val body = response.body?.string() ?: return@use null
+                    val body = response.body.string()
                     val root = mapper.readTree(body) ?: return@use null
                     LnurlEndpointInfo(
                         nostrPubkey = root.get("nostrPubkey")?.asText()?.ifBlank { null },
