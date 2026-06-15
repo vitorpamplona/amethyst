@@ -23,36 +23,11 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.single.basic
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 
 class BasicRelayClientTest {
-    private class FakeWebSocket : WebSocket {
-        override fun needsReconnect() = false
-
-        override fun connect() {}
-
-        override fun disconnect() {}
-
-        override fun send(msg: String) = true
-    }
-
-    private class FakeWebsocketBuilder : WebsocketBuilder {
-        var capturedListener: WebSocketListener? = null
-
-        override fun build(
-            url: NormalizedRelayUrl,
-            out: WebSocketListener,
-        ): WebSocket {
-            capturedListener = out
-            return FakeWebSocket()
-        }
-    }
-
     private class RecordingConnectionListener : RelayConnectionListener {
         val cannotConnectMessages = mutableListOf<String>()
 
@@ -81,9 +56,7 @@ class BasicRelayClientTest {
                 listener,
             )
         client.connect()
-        val socketListener = builder.capturedListener
-        assertNotNull(socketListener)
-        return Harness(socketListener, listener)
+        return Harness(builder.lastListener, listener)
     }
 
     @Test
