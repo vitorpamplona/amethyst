@@ -36,6 +36,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -164,12 +165,27 @@ class NostrClient(
      * error code) would stay disconnected forever in the absence of any
      * subscription change. The per-relay [BasicRelayClient] backoff still
      * gates the actual reconnect attempt, so dead relays are not hammered.
+     *
+     * Also detects system sleep/resume by tracking wall-clock overshoot of the
+     * scheduled tick. If the [delay] returned far later than expected the host
+     * was almost certainly suspended (laptop lid closed, OS sleep), and the
+     * OkHttp websockets we held are dead even though [isConnected] still reads
+     * true until the next ping fails. In that case force a hard reconnect.
      */
     private val keepAliveJob =
         scope.launch {
+            var lastTickMs = TimeUtils.nowMillis()
             while (true) {
                 delay(KEEP_ALIVE_INTERVAL_MS)
-                if (this@NostrClient.isActive) {
+                if (!this@NostrClient.isActive) continue
+                val now = TimeUtils.nowMillis()
+                val elapsed = now - lastTickMs
+                lastTickMs = now
+                if (elapsed > KEEP_ALIVE_WAKE_THRESHOLD_MS) {
+                    // System likely resumed from sleep — force a hard reconnect.
+                    relayPool.disconnect()
+                    relayPool.connect()
+                } else {
                     relayPool.reconnectIfNeedsTo(ignoreRetryDelays = false)
                 }
             }
@@ -177,6 +193,11 @@ class NostrClient(
 
     companion object {
         private const val KEEP_ALIVE_INTERVAL_MS = 60_000L
+
+        // Treat any tick that overshoots the scheduled delay by more than this many
+        // milliseconds as a probable system-sleep resume. 5x interval (5 min) avoids
+        // firing on routine GC stalls or brief OS scheduler pauses.
+        private const val KEEP_ALIVE_WAKE_THRESHOLD_MS = 5 * KEEP_ALIVE_INTERVAL_MS
     }
 
     override fun reconnect(

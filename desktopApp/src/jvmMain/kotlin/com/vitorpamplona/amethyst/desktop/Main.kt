@@ -1441,6 +1441,8 @@ fun MainContent(
                     torStateForHealth.settings.torType != com.vitorpamplona.amethyst.commons.tor.TorType.OFF
                 },
                 parentScope = scope,
+                // `prefs.flush()` is blocking — keep it off the composition scope's Main dispatcher.
+                ioDispatcher = kotlinx.coroutines.Dispatchers.IO,
             )
         }
     DisposableEffect(relayHealthStore, relayManager) {
