@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -30,6 +31,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,6 +39,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -53,6 +56,7 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.tags.Elevation
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseType
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.WeightTag
 import kotlin.math.abs
+import kotlin.math.round
 
 fun ExerciseType?.symbol(): MaterialSymbol =
     when (this) {
@@ -95,18 +99,39 @@ private fun paceMinPerUnit(
     return "${secondsPerUnit / 60}:${(secondsPerUnit % 60).toString().padStart(2, '0')}"
 }
 
+/** Average speed, more natural than pace for wheeled/water sports. Returns e.g. `24.5 km/h` or `15.2 mph`. */
+private fun speed(
+    durationSeconds: Long,
+    distance: DistanceTag,
+): String {
+    val hours = durationSeconds / 3600.0
+    return if (distance.unit == DistanceTag.MILES) {
+        "${trimToOneDecimal(distance.value / hours)} mph"
+    } else {
+        "${trimToOneDecimal(distance.toKilometers() / hours)} km/h"
+    }
+}
+
+private fun trimToOneDecimal(value: Double): String {
+    val rounded = round(value * 10.0) / 10.0
+    return rounded.trimmed()
+}
+
 /** One-shot snapshot of the parsed workout tags, so the feed doesn't re-scan the tag array on every recomposition. */
 @Immutable
 class WorkoutInfo(
     val title: String?,
     val type: ExerciseType?,
     val exerciseRaw: String?,
+    val source: String?,
     val durationSeconds: Long?,
     val distance: DistanceTag?,
     val elevationGain: Elevation?,
+    val elevationLoss: Elevation?,
     val calories: Int?,
     val steps: Int?,
     val avgHeartRate: Int?,
+    val maxHeartRate: Int?,
     val sets: Int?,
     val reps: Int?,
     val weight: WeightTag?,
@@ -117,12 +142,15 @@ class WorkoutInfo(
                 title = event.title(),
                 type = event.exerciseType(),
                 exerciseRaw = event.exercise(),
+                source = event.workoutSource(),
                 durationSeconds = event.durationSeconds(),
                 distance = event.distance(),
                 elevationGain = event.elevationGain(),
+                elevationLoss = event.elevationLoss(),
                 calories = event.calories(),
                 steps = event.steps(),
                 avgHeartRate = event.avgHeartRate(),
+                maxHeartRate = event.maxHeartRate(),
                 sets = event.sets(),
                 reps = event.reps(),
                 weight = event.weight(),
@@ -148,7 +176,7 @@ fun WorkoutDisplay(baseNote: Note) {
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = info.title ?: typeLabel,
                     fontWeight = FontWeight.Bold,
@@ -161,6 +189,11 @@ fun WorkoutDisplay(baseNote: Note) {
                         color = MaterialTheme.colorScheme.placeholderText,
                     )
                 }
+            }
+
+            info.source?.let {
+                Spacer(modifier = Modifier.width(8.dp))
+                WorkoutSourceBadge(it)
             }
         }
 
@@ -187,14 +220,23 @@ private fun WorkoutStatsRow(info: WorkoutInfo) {
         }
 
         if (duration != null && distance != null && distance.value > 0.0) {
-            WorkoutStat(
-                "${paceMinPerUnit(duration, distance.value)} /${distance.unit}",
-                stringRes(R.string.workout_pace),
-            )
+            // Cycling is conventionally reported as speed; running/walking/etc. as pace.
+            if (info.type == ExerciseType.CYCLING) {
+                WorkoutStat(speed(duration, distance), stringRes(R.string.workout_speed))
+            } else {
+                WorkoutStat(
+                    "${paceMinPerUnit(duration, distance.value)} /${distance.unit}",
+                    stringRes(R.string.workout_pace),
+                )
+            }
         }
 
         info.elevationGain?.let {
             WorkoutStat("${it.value.trimmed()} ${it.unit}", stringRes(R.string.workout_elevation))
+        }
+
+        info.elevationLoss?.let {
+            WorkoutStat("${it.value.trimmed()} ${it.unit}", stringRes(R.string.workout_elevation_loss))
         }
 
         info.calories?.let {
@@ -209,6 +251,10 @@ private fun WorkoutStatsRow(info: WorkoutInfo) {
             WorkoutStat("$it bpm", stringRes(R.string.workout_heart_rate))
         }
 
+        info.maxHeartRate?.let {
+            WorkoutStat("$it bpm", stringRes(R.string.workout_max_heart_rate))
+        }
+
         info.sets?.let {
             WorkoutStat("$it", stringRes(R.string.workout_sets))
         }
@@ -221,6 +267,22 @@ private fun WorkoutStatsRow(info: WorkoutInfo) {
             WorkoutStat("${it.value.trimmed()} ${it.unit}", stringRes(R.string.workout_weight))
         }
     }
+}
+
+/** Small chip showing how the workout was recorded (e.g. GPS, RUNSTR, HEALTHKIT, MANUAL). */
+@Composable
+private fun WorkoutSourceBadge(source: String) {
+    Text(
+        text = source.uppercase(),
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.Medium,
+        color = MaterialTheme.colorScheme.primary,
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(4.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+                .padding(horizontal = 6.dp, vertical = 2.dp),
+    )
 }
 
 @Composable
