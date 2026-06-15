@@ -301,6 +301,27 @@ class UrlParserTest {
         )
 
     @Test
+    fun testIPv6UrlWithScheme() =
+        test(
+            "http://[302:68d0:f0d5:b88d::bdb]/08e31992c51b06d8f8ee4e40207ede11d4c69b0db2d268fb2783d45d69094c2b",
+            Urls(withScheme = setOf("http://[302:68d0:f0d5:b88d::bdb]/08e31992c51b06d8f8ee4e40207ede11d4c69b0db2d268fb2783d45d69094c2b")),
+        )
+
+    @Test
+    fun testIPv6UrlWithPort() =
+        test(
+            "http://[2001:db8::1]:8080/path",
+            Urls(withScheme = setOf("http://[2001:db8::1]:8080/path")),
+        )
+
+    @Test
+    fun testIPv6UrlInSentence() =
+        test(
+            "check this http://[2a01:5cc0:1:2::4] out",
+            Urls(withScheme = setOf("http://[2a01:5cc0:1:2::4]")),
+        )
+
+    @Test
     fun testBlossom() {
         val blossom = "blossom:b1674191a88ec5cdd733e4240a81803105dc412d6c6708d53ab94fc248f4f553.pdf?xs=cdn.satellite.earth"
         test(blossom, Urls(blossomUris = setOf(blossom)))

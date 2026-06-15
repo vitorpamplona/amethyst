@@ -668,7 +668,7 @@
     <string name="exercise_running">धावन</string>
     <string name="exercise_walking">पैदल</string>
     <string name="exercise_cycling">द्विचक्रिकाचालन</string>
-    <string name="exercise_hiking">औजसिकभ्रमण</string>
+    <string name="exercise_hiking">पगडण्डी पदयात्रा</string>
     <string name="exercise_swimming">तरण</string>
     <string name="exercise_rowing">खेना</string>
     <string name="exercise_strength">शक्ति</string>
@@ -952,6 +952,8 @@
     <string name="private_note_locked">निजी टीका के उत्तर सर्वदा निजी रहते हैं</string>
     <string name="private_note_visible_to">को दृश्य</string>
     <string name="private_note_no_receivers">कोई प्राप्तकर्ता नहीं अब तक। केवल आप इस टीका को देख सकेंगे। लोगों को जोडें इसे बाँटने के लिए।</string>
+    <string name="notify_add_user">जोडें</string>
+    <string name="notify_remove_user">प्रयोक्ता हटाएँ सूचनाओं से</string>
     <string name="notify_search_and_add_user">खोजें तथा जोडें प्रयोक्ता को जिसे सूचित करना है</string>
     <string name="bookmark_absence_indicator">स्मर्त्तव्य चिह्नित नहीं</string>
     <string name="bookmark_remove_action_desc">स्मर्त्तव्य सूची से हटाएँ</string>

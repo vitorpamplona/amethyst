@@ -942,6 +942,8 @@
     <string name="private_note_locked">对私密笔记的回复总是不公开的</string>
     <string name="private_note_visible_to">可见范围</string>
     <string name="private_note_no_receivers">尚无接收方：只有您才能看到此笔记。添加分享对象。</string>
+    <string name="notify_add_user">添加</string>
+    <string name="notify_remove_user">从通知中删除用户</string>
     <string name="notify_search_and_add_user">搜索并添加要通知的用户</string>
     <string name="bookmark_absence_indicator">在这里不是书签</string>
     <string name="bookmark_remove_action_desc">从列表中删除书签</string>

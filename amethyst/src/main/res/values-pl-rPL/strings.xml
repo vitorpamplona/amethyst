@@ -970,6 +970,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="private_note_locked">Odpowiedzi na wpis prywatny zawsze pozostają prywatne</string>
     <string name="private_note_visible_to">Widoczny dla</string>
     <string name="private_note_no_receivers">Nie ma jeszcze odbiorców: ten wpis zobaczysz tylko Ty. Dodaj osoby, którym chcesz go udostępnić.</string>
+    <string name="notify_add_user">Dodaj</string>
+    <string name="notify_remove_user">Usuń użytkownika z powiadomień</string>
     <string name="notify_search_and_add_user">Wyszukaj i dodaj użytkownika do powiadomień</string>
     <string name="bookmark_absence_indicator">nie ma tu zakładki</string>
     <string name="bookmark_remove_action_desc">Usuń zakładkę z listy</string>

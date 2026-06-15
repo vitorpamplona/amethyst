@@ -47,6 +47,11 @@ class UrlParser {
     fun Char.isAsciiLetter(): Boolean = (this in 'a'..'z' || this in 'A'..'Z')
 
     fun Url.isValidTopLevelDomain(): Boolean {
+        // IPv6 literal hosts are bracketed (e.g. [2001:db8::1]) and have no dotted TLD, so the
+        // letter-first TLD rule below would wrongly reject them. The detector already validated
+        // the bracketed address as a syntactically correct IPv6 literal, so accept it directly.
+        if (host.startsWith('[')) return true
+
         /*
         According to the TLD Applicant Guidebook published June 2012, ICANN does not allow numbers in TLDs.
          */
