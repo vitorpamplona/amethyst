@@ -27,7 +27,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.concurrent.Volatile
 import kotlin.test.Test
@@ -87,7 +89,12 @@ class RelayHealthStoreCloseTest {
                     ioDispatcher = dispatcher,
                 )
 
-            advanceUntilIdle()
+            // NB: the store's init launches an always-on `while(true){ reclassify(); delay(60s) }`
+            // ticker on this shared test scheduler. advanceUntilIdle() would chase that periodic
+            // delay forever (livelock). Advance just past the persist debounce instead so init's
+            // debounced save fires while the ticker stays parked at its 60s mark.
+            advanceTimeBy(RelayHealthStore.PERSIST_DEBOUNCE_MS + 1)
+            runCurrent()
             val baseline = persistence.saves
 
             store.close()
