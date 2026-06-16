@@ -34,22 +34,30 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.vitorpamplona.amethyst.ui.components.getActivityWindow
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import kotlin.math.max
 
 private enum class DisappearingSlot { Top, Bottom, Content, Fab }
 
@@ -87,8 +95,11 @@ fun DisappearingScaffold(
             )
         }
 
-    // Only wire the lifecycle observer when the scaffold actually moves its bars.
-    if (allowBarHide) ResetBarsOnResume(state)
+    // Only wire the lifecycle observer + system-bar control when the scaffold actually moves its bars.
+    if (allowBarHide) {
+        ResetBarsOnResume(state)
+        ImmersiveStatusBarEffect(state)
+    }
 
     // When bars are pinned, skip attaching the nested-scroll connection entirely.
     // The outer Surface provides the Material container color + onBackground as
@@ -253,5 +264,45 @@ private fun ResetBarsOnResume(state: DisappearingBarState) {
             }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+}
+
+/** Fraction at which the in-app bars are considered fully settled into the hidden edge. */
+private const val STATUS_BAR_HIDE_THRESHOLD = 0.999f
+
+/**
+ * Hides the OS status bar once the in-app bars have settled into the hidden edge, and shows it the
+ * moment they start coming back. The OS status bar is binary (cannot slide), so it is driven off the
+ * collapse fraction with a near-1 threshold, which means it toggles on settle rather than mid-drag.
+ *
+ * Only the top status bar is touched; the bottom OS navigation bar is left alone.
+ * BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE lets the user swipe to peek the status bar while immersed.
+ * The status bar is always restored on dispose so leaving an immersive screen can never strand a
+ * hidden bar.
+ */
+@Composable
+private fun ImmersiveStatusBarEffect(state: DisappearingBarState) {
+    val view = LocalView.current
+    if (view.isInEditMode) return
+    val window = getActivityWindow() ?: return
+    val controller = remember(window, view) { WindowInsetsControllerCompat(window, view) }
+
+    LaunchedEffect(controller, state) {
+        snapshotFlow {
+            max(state.topCollapsedFraction, state.bottomCollapsedFraction) >= STATUS_BAR_HIDE_THRESHOLD
+        }.distinctUntilChanged()
+            .collect { shouldHide ->
+                controller.systemBarsBehavior =
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                if (shouldHide) {
+                    controller.hide(WindowInsetsCompat.Type.statusBars())
+                } else {
+                    controller.show(WindowInsetsCompat.Type.statusBars())
+                }
+            }
+    }
+
+    DisposableEffect(controller) {
+        onDispose { controller.show(WindowInsetsCompat.Type.statusBars()) }
     }
 }
