@@ -53,6 +53,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -71,10 +72,13 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.net.toUri
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -204,6 +208,19 @@ fun ZoomableImageDialog(
             attributes.flags = attributes.flags and WindowManager.LayoutParams.FLAG_DIM_BEHIND.inv()
             attributes.screenBrightness = currentBrightness
             dialogWindow.attributes = attributes
+        }
+
+        // Go fully immersive while the full-screen media viewer is open: hide both OS bars and
+        // restore them when the dialog closes. BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE lets the user
+        // swipe to peek the bars. Applies to full-screen images and video alike (shared dialog).
+        val dialogView = LocalView.current
+        DisposableEffect(dialogWindow, dialogView) {
+            val controller = dialogWindow?.let { WindowInsetsControllerCompat(it, dialogView) }
+            controller?.apply {
+                systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                hide(WindowInsetsCompat.Type.systemBars())
+            }
+            onDispose { controller?.show(WindowInsetsCompat.Type.systemBars()) }
         }
 
         Box(modifier = Modifier.fillMaxSize()) {
