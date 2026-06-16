@@ -56,7 +56,16 @@ dependencies {
     implementation(libs.coil.svg)
 
     // Video / audio playback — MIT, OS-native backends (MF / AVFoundation / GStreamer)
-    implementation(libs.composemediaplayer)
+    // composemediaplayer 0.10.0 leaks kotlinx-coroutines-test as a *runtime* dependency
+    // in its published POM. That jar ships a META-INF/services registration for
+    // kotlinx.coroutines.CoroutineExceptionHandler -> ExceptionCollectorAsService; the
+    // release ProGuard pass strips the (unreferenced) provider class but keeps the
+    // services file, so the packaged dmg crashes at startup with a
+    // ServiceConfigurationError the first time the coroutine exception handler loads.
+    // It is test-only code that must never be on the production classpath — exclude it.
+    implementation(libs.composemediaplayer) {
+        exclude(group = "org.jetbrains.kotlinx", module = "kotlinx-coroutines-test")
+    }
 
     // Thumbnail extraction — JCodec (pure-Java H.264). LGPL FFmpeg subprocess
     // for non-H.264 / HLS fallback is invoked via plain ProcessBuilder; no
