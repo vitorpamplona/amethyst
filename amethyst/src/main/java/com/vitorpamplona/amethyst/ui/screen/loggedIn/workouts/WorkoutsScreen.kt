@@ -20,25 +20,18 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.ui.feeds.FeedLoaded
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
-import com.vitorpamplona.amethyst.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -90,33 +83,27 @@ fun WorkoutsScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        val scaffoldPadding = LocalDisappearingScaffoldPadding.current
-        Column(Modifier.fillMaxSize().padding(top = scaffoldPadding.calculateTopPadding())) {
-            // Health Connect detection banner: invites connect or offers detected workouts as kind 1301 posts.
-            // It sits inline above the feed (pushing it down) instead of overlaying the first items.
-            WorkoutSuggestions(
-                accountViewModel = accountViewModel,
-                nav = nav,
-            )
-
-            // The feed already merges the scaffold's top padding internally; the Column applied it
-            // above, so strip the top here (keeping the bottom for the bottom bar) to avoid doubling.
-            CompositionLocalProvider(
-                LocalDisappearingScaffoldPadding provides PaddingValues(bottom = scaffoldPadding.calculateBottomPadding()),
-            ) {
-                Box(Modifier.weight(1f)) {
-                    RefresheableBox(workoutsFeedContentState, true) {
-                        SaveableFeedContentState(workoutsFeedContentState, scrollStateKey = ScrollStateKeys.WORKOUTS_SCREEN) { listState ->
-                            RenderFeedContentState(
-                                feedContentState = workoutsFeedContentState,
-                                accountViewModel = accountViewModel,
-                                listState = listState,
-                                nav = nav,
-                                routeForLastRead = "WorkoutsFeed",
-                            )
-                        }
-                    }
-                }
+        RefresheableBox(workoutsFeedContentState, true) {
+            SaveableFeedContentState(workoutsFeedContentState, scrollStateKey = ScrollStateKeys.WORKOUTS_SCREEN) { listState ->
+                RenderFeedContentState(
+                    feedContentState = workoutsFeedContentState,
+                    accountViewModel = accountViewModel,
+                    listState = listState,
+                    nav = nav,
+                    routeForLastRead = "WorkoutsFeed",
+                    // Health Connect detection banner rides as the first feed item so it scrolls
+                    // with the list (invites connect, or offers detected workouts as kind 1301 posts).
+                    onLoaded = { loaded ->
+                        FeedLoaded(
+                            loaded = loaded,
+                            listState = listState,
+                            routeForLastRead = "WorkoutsFeed",
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                            header = { WorkoutSuggestions(accountViewModel, nav) },
+                        )
+                    },
+                )
             }
         }
     }
