@@ -652,10 +652,13 @@
     <string name="workout_duration">Varaktighet</string>
     <string name="workout_distance">Distans</string>
     <string name="workout_pace">Tempo</string>
+    <string name="workout_speed">Hastighet</string>
     <string name="workout_elevation">Höjdmeter</string>
+    <string name="workout_elevation_loss">Höjdminskning</string>
     <string name="workout_calories">Kalorier</string>
     <string name="workout_steps">Steg</string>
     <string name="workout_heart_rate">Puls</string>
+    <string name="workout_max_heart_rate">Maxpuls</string>
     <string name="workout_sets">Set</string>
     <string name="workout_reps">Repetitioner</string>
     <string name="workout_weight">Vikt</string>
@@ -3207,7 +3210,4 @@
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Konst</string>
     <string name="nowhere_link_card_forum">Nowhere Forum</string>
-    <string name="workout_elevation_loss">Höjdminskning</string>
-    <string name="workout_max_heart_rate">Maxpuls</string>
-    <string name="workout_speed">Hastighet</string>
 </resources>

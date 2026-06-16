@@ -666,10 +666,13 @@
     <string name="workout_duration">Doba trvání</string>
     <string name="workout_distance">Vzdálenost</string>
     <string name="workout_pace">Tempo</string>
+    <string name="workout_speed">Rychlost</string>
     <string name="workout_elevation">Převýšení</string>
+    <string name="workout_elevation_loss">Klesání</string>
     <string name="workout_calories">Kalorie</string>
     <string name="workout_steps">Kroky</string>
     <string name="workout_heart_rate">Tepová frekvence</string>
+    <string name="workout_max_heart_rate">Maximální tepová frekvence</string>
     <string name="workout_sets">Série</string>
     <string name="workout_reps">Opakování</string>
     <string name="workout_weight">Váha</string>
@@ -3274,7 +3277,4 @@
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Umění</string>
     <string name="nowhere_link_card_forum">Nowhere Fórum</string>
-    <string name="workout_elevation_loss">Klesání</string>
-    <string name="workout_max_heart_rate">Maximální tepová frekvence</string>
-    <string name="workout_speed">Rychlost</string>
 </resources>

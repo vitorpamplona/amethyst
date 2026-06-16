@@ -652,10 +652,13 @@
     <string name="workout_duration">Duração</string>
     <string name="workout_distance">Distância</string>
     <string name="workout_pace">Ritmo</string>
+    <string name="workout_speed">Velocidade</string>
     <string name="workout_elevation">Elevação</string>
+    <string name="workout_elevation_loss">Perda de elevação</string>
     <string name="workout_calories">Calorias</string>
     <string name="workout_steps">Passos</string>
     <string name="workout_heart_rate">Frequência cardíaca</string>
+    <string name="workout_max_heart_rate">Frequência cardíaca máxima</string>
     <string name="workout_sets">Séries</string>
     <string name="workout_reps">Repetições</string>
     <string name="workout_weight">Peso</string>
@@ -3208,7 +3211,4 @@
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Arte</string>
     <string name="nowhere_link_card_forum">Nowhere Fórum</string>
-    <string name="workout_elevation_loss">Perda de elevação</string>
-    <string name="workout_max_heart_rate">Frequência cardíaca máxima</string>
-    <string name="workout_speed">Velocidade</string>
 </resources>
