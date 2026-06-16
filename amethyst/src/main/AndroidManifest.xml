@@ -266,6 +266,22 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- Health Connect privacy-policy rationale on Android 14+. Without this activity-alias
+             the permission request fails silently (no dialog appears). The system launches it,
+             guarded by START_VIEW_PERMISSION_USAGE, to show our privacy policy; it routes into
+             MainActivity. Android 13 and lower use the ACTION_SHOW_PERMISSIONS_RATIONALE
+             intent-filter declared on MainActivity above. -->
+        <activity-alias
+            android:name="ViewPermissionUsageActivity"
+            android:exported="true"
+            android:targetActivity=".ui.MainActivity"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
+
         <activity
             android:name="com.journeyapps.barcodescanner.CaptureActivity"
             android:screenOrientation="fullSensor"
