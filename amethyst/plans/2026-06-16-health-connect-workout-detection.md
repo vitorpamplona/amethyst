@@ -111,7 +111,7 @@ never request on cold start.
 | `endTime − startTime` | `duration` (seconds) |
 | `startTime` (epoch s) | `workout_start_time` |
 | Σ `DistanceRecord` (m) | `distance` (km, 2-dp) |
-| Σ `TotalCaloriesBurnedRecord` (kcal) | `calories` |
+| Σ `ActiveCaloriesBurnedRecord`, fallback `TotalCaloriesBurnedRecord` (kcal) | `calories` |
 | avg/max `HeartRateRecord.bpm` | `avg_heart_rate` / `max_heart_rate` |
 | Σ `StepsRecord.count` | `steps` |
 | Σ `ElevationGainedRecord` (m) | `elevation_gain` |
@@ -119,6 +119,24 @@ never request on cold start.
 
 `source = "health_connect"` is added as a `SourceTag` constant in quartz
 (alongside `gps`/`manual`; other clients already publish free-form sources).
+
+### RUNSTR parity (verified 2026-06-16 against `healthConnectService.ts` +
+`workoutPublishingService.ts`)
+
+- **Calories**: RUNSTR reads `ActiveCaloriesBurned`. We match (prefer active,
+  fall back to total) so our figure lines up with theirs.
+- **Title**: RUNSTR always emits a `title`, generating it from the activity when
+  none exists. We default the pre-filled title to the activity name to match.
+- **Richer superset (RUNSTR still parses)**: we also publish
+  `avg/max_heart_rate` and `elevation_gain`, which RUNSTR reads but does not
+  publish from Health Connect. Optional tags, no conflict.
+- **Activity verbs**: RUNSTR buckets swimming/rowing/yoga into `gym`/`other` on
+  import; we map them to their own NIP-101e verbs (more specific, still in the
+  spec's verb set).
+- **Coverage gap (not an incompatibility)**: RUNSTR imports elliptical / HIIT /
+  pilates / dance / stairs as generic `gym`/`other`. Our `ExerciseType` enum has
+  no generic verb, so those sessions are skipped. Adding a generic verb to
+  quartz would close the gap — future work.
 
 ## 7. Future seam (out of scope now)
 

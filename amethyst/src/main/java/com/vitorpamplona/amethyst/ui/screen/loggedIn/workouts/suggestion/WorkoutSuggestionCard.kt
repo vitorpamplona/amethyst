@@ -135,11 +135,14 @@ fun WorkoutSuggestions(
         }
 
         suggestions.forEach { workout ->
+            // RUNSTR always emits a title; default to the activity name when Health
+            // Connect gives none, so every shared event carries one.
+            val routeTitle = workout.title ?: stringRes(workout.exercise.labelRes())
             WorkoutSuggestionRow(
                 workout = workout,
                 onShare = {
                     state.handle(workout.id)
-                    nav.nav(workout.toNewWorkoutRoute())
+                    nav.nav(workout.toNewWorkoutRoute(routeTitle))
                 },
                 onDismiss = { state.handle(workout.id) },
             )
@@ -340,7 +343,7 @@ private fun formatDuration(totalSeconds: Long): String {
     }
 }
 
-private fun DetectedWorkout.toNewWorkoutRoute() =
+private fun DetectedWorkout.toNewWorkoutRoute(title: String) =
     Route.NewWorkout(
         exercise = exercise.code,
         title = title,

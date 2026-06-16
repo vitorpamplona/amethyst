@@ -24,6 +24,7 @@ import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.aggregate.AggregationResult
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ElevationGainedRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
@@ -61,6 +62,7 @@ class HealthConnectManager(
             setOf(
                 HealthPermission.getReadPermission(ExerciseSessionRecord::class),
                 HealthPermission.getReadPermission(DistanceRecord::class),
+                HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
                 HealthPermission.getReadPermission(TotalCaloriesBurnedRecord::class),
                 HealthPermission.getReadPermission(HeartRateRecord::class),
                 HealthPermission.getReadPermission(StepsRecord::class),
@@ -121,7 +123,14 @@ class HealthConnectManager(
             startTimeEpochSeconds = session.startTime.epochSecond,
             durationSeconds = durationSeconds,
             distanceMeters = totals?.get(DistanceRecord.DISTANCE_TOTAL)?.inMeters,
-            calories = totals?.get(TotalCaloriesBurnedRecord.ENERGY_TOTAL)?.inKilocalories?.roundToInt(),
+            // Prefer active calories (what RUNSTR publishes); fall back to total for
+            // sources that only record total energy. Total includes basal burn, so it
+            // over-reports the workout if used as the primary figure.
+            calories =
+                (
+                    totals?.get(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)?.inKilocalories
+                        ?: totals?.get(TotalCaloriesBurnedRecord.ENERGY_TOTAL)?.inKilocalories
+                )?.roundToInt(),
             avgHeartRate = totals?.get(HeartRateRecord.BPM_AVG)?.toInt(),
             maxHeartRate = totals?.get(HeartRateRecord.BPM_MAX)?.toInt(),
             steps = totals?.get(StepsRecord.COUNT_TOTAL)?.toInt(),
@@ -137,6 +146,7 @@ class HealthConnectManager(
                     metrics =
                         setOf(
                             DistanceRecord.DISTANCE_TOTAL,
+                            ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL,
                             TotalCaloriesBurnedRecord.ENERGY_TOTAL,
                             HeartRateRecord.BPM_AVG,
                             HeartRateRecord.BPM_MAX,
