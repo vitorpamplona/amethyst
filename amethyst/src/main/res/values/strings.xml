@@ -3481,6 +3481,8 @@
     <string name="ai_writing_setting_description">Uses an on-device AI model to propose text corrections and tone changes.</string>
     <string name="tracked_broadcasts_setting_title">Tracked broadcasts</string>
     <string name="tracked_broadcasts_setting_description">Use the tracked broadcaster when sending events. Shows live progress and per-relay status while broadcasting.</string>
+    <string name="suggest_workouts_setting_title">Suggest workouts to share</string>
+    <string name="suggest_workouts_setting_description">Reads finished workouts from Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) and suggests sharing them as a post. Permission is requested only when you connect.</string>
     <string name="compose_settings">Compose Settings</string>
     <string name="auto_create_drafts_setting_title">Automatically create drafts</string>
     <string name="auto_create_drafts_setting_description">Saves a draft event automatically when you type or leave a composer with unsent text and sends to your private outbox relays.</string>

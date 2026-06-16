@@ -50,6 +50,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.service.workouts.health.DetectedWorkout
 import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectManager
 import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectStore
@@ -76,6 +77,10 @@ fun WorkoutSuggestions(
     val context = LocalContext.current
     val available = remember { HealthConnectManager.isAvailable(context) }
     if (!available) return
+
+    val suggestEnabled by accountViewModel.settings.uiSettingsFlow.suggestWorkoutsFromHealthConnect
+        .collectAsStateWithLifecycle()
+    if (suggestEnabled == BooleanType.NEVER) return
 
     val pubkeyHex = accountViewModel.account.signer.pubKey
     val state =
