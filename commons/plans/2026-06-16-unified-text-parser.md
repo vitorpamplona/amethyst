@@ -119,7 +119,9 @@ keeping Halilibo's AST resident.
   `RichTextViewerState`/persistent-list footprint.
 
 > Measure before/after with the existing benchmark module and a heap dump on a
-> loaded home feed. Memory reduction is the acceptance gate for the model.
+> loaded home feed. There is **no fixed heap target** — we track the footprint
+> across phases and keep it as small as possible; each phase should not regress
+> the previous one's measured footprint.
 
 ### 3. Our own Markdown block parser (#6)
 
@@ -130,6 +132,13 @@ A single-pass, allocation-lean block scanner derived from the CommonMark spec
   fenced/indented code, tables (GFM), thematic breaks. Reuse the proven trigger
   logic already in `CachedRichTextParser.isMarkdown()` — that scanner becomes
   the front half of the real parser, so detection and parsing share code.
+- **Footnotes are supported** (GFM-style): the block parser collects footnote
+  *definitions* (`[^id]: ...`, including their continuation/indented
+  paragraphs) into `ParsedContent`, and the inline tokenizer emits footnote
+  *reference* tokens (`[^id]`). The renderer shows references as superscript
+  links and renders the collected definitions as a footnotes block at the end
+  of the document, on the regular note stack. Definition bodies run through the
+  shared inline tokenizer like any other text.
 - Inline phase delegates to the **shared word tokenizer** (§1).
 - Emits `List<Block>` directly into `ParsedContent` — no intermediate AST tree
   retained.
@@ -191,8 +200,9 @@ wire content-kind `consume` paths to enqueue; renderers read-through to the
 Note. Achieves #1 + #4 for the regular path. Benchmark memory.
 
 **P2 — Memory model.** Switch inline tokens to offset-based value classes, drop
-persistent-list wrappers, add weak intern map. Acceptance gate: measured heap
-reduction vs P1. Achieves #5.
+persistent-list wrappers, add weak intern map. Track the measured footprint
+(no fixed target) and keep it as small as possible without regressing P1.
+Achieves #5.
 
 **P3 — Markdown merge.** In-repo block parser + block renderer in `commons`,
 rendering on the **regular note stack**; route markdown text nodes through the
@@ -217,9 +227,8 @@ images/video/OG/PDF. Achieves #2.
   (`android.util.LruCache` must not leak into commons — use a KMP cache).
 - **Markdown parity is structural, not visual.** Our parser must produce the
   right blocks + inline tokens for the current corpus (tables, nested quotes,
-  fenced code) before Halilibo is removed. The *rendering* moves to the regular
-  note stack and may look different — accepted. Footnotes may be descoped —
-  confirm.
+  fenced code, **footnotes**) before Halilibo is removed. The *rendering* moves
+  to the regular note stack and may look different — accepted.
 - **Throttling vs freshness.** A note rendered before the queue reaches it
   parses synchronously on the UI thread (same cost as today) — acceptable, but
   verify the queue keeps up under fast scroll.
