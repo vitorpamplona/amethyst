@@ -167,6 +167,90 @@ class TorManagerTest {
         }
 
     // ------------------------------------------------------------------
+    // onTorCircuitsDead — Active-but-failing self-heal
+    // ------------------------------------------------------------------
+
+    @Test
+    fun `onTorCircuitsDead wipes state and re-inits when Active`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val backend = FakeTorBackend()
+            val manager = buildManager(backend = backend, clock = { 1_000_000_000_000L })
+            advanceUntilIdle()
+            backend.setActive(17392)
+            advanceUntilIdle()
+
+            manager.onTorCircuitsDead()
+            advanceUntilIdle()
+
+            assertEquals("Active-but-failing recovery wipes state", 1, backend.resetWithCleanStateCount)
+            // resetEpoch bump re-enters INTERNAL → start() runs again.
+            assertTrue("re-init should call start() again", backend.startCount >= 2)
+        }
+
+    @Test
+    fun `onTorCircuitsDead is a no-op while not Active`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val backend = FakeTorBackend()
+            val manager = buildManager(backend = backend, clock = { 1_000_000_000_000L })
+            advanceUntilIdle()
+            // Still Connecting (never reached Active).
+            assertEquals(TorServiceStatus.Connecting, manager.status.value)
+
+            manager.onTorCircuitsDead()
+            advanceUntilIdle()
+
+            assertEquals(0, backend.resetWithCleanStateCount)
+        }
+
+    @Test
+    fun `onTorCircuitsDead is a no-op while bypassing`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val backend = FakeTorBackend()
+            val manager = buildManager(backend = backend, clock = { 1_000_000_000_000L })
+            advanceUntilIdle()
+            backend.setActive(17392)
+            advanceUntilIdle()
+            manager.sessionBypass.value = true
+            advanceUntilIdle()
+
+            manager.onTorCircuitsDead()
+            advanceUntilIdle()
+
+            assertEquals(0, backend.resetWithCleanStateCount)
+        }
+
+    @Test
+    fun `onTorCircuitsDead shares the self-heal cooldown`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val backend = FakeTorBackend()
+            var clockNow = 1_000_000_000_000L
+            val manager = buildManager(backend = backend, clock = { clockNow })
+            advanceUntilIdle()
+            backend.setActive(17392)
+            advanceUntilIdle()
+
+            manager.onTorCircuitsDead()
+            advanceUntilIdle()
+            assertEquals(1, backend.resetWithCleanStateCount)
+
+            // Backend is Active again (re-init bootstrapped). A second call inside the cooldown
+            // window must be suppressed.
+            backend.setActive(17392)
+            advanceUntilIdle()
+            manager.onTorCircuitsDead()
+            advanceUntilIdle()
+            assertEquals("cooldown should suppress the second self-heal", 1, backend.resetWithCleanStateCount)
+
+            // Past the cooldown it can fire again.
+            clockNow += TorManager.SELF_HEAL_COOLDOWN_MS + 1_000L
+            backend.setActive(17392)
+            advanceUntilIdle()
+            manager.onTorCircuitsDead()
+            advanceUntilIdle()
+            assertEquals("after cooldown elapses, self-heal fires again", 2, backend.resetWithCleanStateCount)
+        }
+
+    // ------------------------------------------------------------------
     // stuck-Connecting watchdog
     // ------------------------------------------------------------------
 
