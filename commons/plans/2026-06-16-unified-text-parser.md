@@ -66,28 +66,81 @@ Key tension: #4 (parse on receipt for all) vs #5 (minimum memory). Resolved by
 (a) parsing only content kinds, (b) throttling, (c) a compact model, and (d)
 soft-referenced Notes so retention is GC-bounded.
 
+## Module placement (two-layer split)
+
+The parser is split so that **external Quartz consumers get an integrated,
+UI-free parser**, while Amethyst's screens get an enriched layer on top.
+
+**Quartz — the integrated content parser + a plain data model. No UI elements
+at all** (no Compose, not even the `@Immutable`/`@Stable` stability
+annotations; plain data classes / `value class`es). This is what ships to
+external Quartz users. It contains:
+
+- the **inline tokenizer** (today's `wordIdentifier` logic): URLs, `nostr:` /
+  NIP-19 references (decoded to pointers), hashtags, NIP-30 custom-emoji refs,
+  lightning invoices, LNURL, cashu, clink offers, relay/blossom URIs, emails,
+  phones, math spans, plain text — as an allocation-lean, **offset-based** token
+  stream (#5 benefits external users too);
+- the **markdown block-structure parser** (headings, lists, quotes, fenced/
+  indented code, GFM tables, thematic breaks, footnote definitions +
+  references) — pure text→structure, no rendering;
+- a **`MediaRef`** carrying only protocol metadata from NIP-92/94 (url, mime,
+  dim, blurhash, thumbhash, hash, alt) — no bytes, no Coil/Exo, no UI.
+
+Everything it needs already lives in quartz (`nip19Bech32`, `nip21UriScheme`,
+`nip30CustomEmoji`, `nip92IMeta`, `nip94FileMetadata`). The three commons
+helpers it currently borrows move down: `EmojiCoder` → quartz, `isValidUrl` →
+reuse quartz's `Rfc3986`/`HttpUrlFormatter`, and `ImmutableListOfLists` →
+raw quartz tag arrays. Proposed home: a new cross-cutting
+`quartz/.../content/` package (content parsing spans many NIPs, so it isn't one
+NIP folder). External integration notes go in the `quartz-integration` skill.
+
+**Commons — the screen layer (all UI lives here).** Builds on quartz's parse
+and adds only what the screen needs:
+
+- the Compose **renderer** (block + inline composables) on the regular note
+  rendering stack;
+- presentation-only decisions: **gallery grouping** of image paragraphs,
+  `@Immutable` render wrappers, `MediaUrlContent` with UI/account fields
+  (`callbackUri`, `authorPubKey` for click routing);
+- the **`Note.parsedContent` cache**, the **receipt-time parse queue**, and
+  the **feed-driven media prefetch**.
+
+The cache on `Note` (commons) holds the screen model, which embeds the quartz
+core parse — so our UI gets everything and external users get the quartz core
+directly. quartz stays a pure function (`ContentParser.parse(content, tags)`);
+caching/lifecycle is a commons concern, since `Note` and `LocalCache` live in
+commons.
+
 ## Target architecture
 
-### 1. One parsed model, living on the Note
+### 1. One parsed model, split across the two layers
 
-Introduce `ParsedContent` in `commons/.../richtext/` and attach it to `Note`:
+Quartz exposes the **core** parse (UI-free); commons wraps it as the cached,
+renderable model attached to `Note`:
 
 ```kotlin
-// Note.kt
+// quartz/.../content/ — UI-free, shipped to external users
+class ContentParser { fun parse(content: String, tags: Array<Array<String>>): ParsedNote }
+
+// commons Note.kt — screen model embedding the quartz core
 @Volatile var parsedContent: ParsedContent? = null      // computed off-thread
 ```
 
-`ParsedContent` replaces `RichTextViewerState` as the rendered model and unifies
-markdown + regular:
+`ParsedNote` (quartz) is the UI-free structure; `ParsedContent` (commons) is the
+render model that embeds it and adds galleries + media wrappers. Together they
+replace `RichTextViewerState`, unifying markdown + regular:
 
 ```
-ParsedContent
+ParsedNote (quartz, no UI)
  ├─ blocks: List<Block>             // markdown gives >1; plain text gives paragraphs
  │   Block = Paragraph | Heading(level) | BlockQuote | ListBlock | CodeBlock
- │           | Table | ThematicBreak | ImageGallery
- │   each leaf block holds inline: List<Inline>   // the shared word model
- ├─ media:  Map<String, MediaRef>   // url -> lightweight ref (no bytes)
+ │           | Table | ThematicBreak | FootnoteDefs
+ │   each leaf block holds inline: List<Inline>   // the shared offset-based tokens
+ ├─ media:  Map<String, MediaRef>   // url -> protocol metadata (no bytes, no UI)
  └─ emoji:  Map<String, String>     // custom emoji shortcode -> url
+
+ParsedContent (commons, UI) = ParsedNote + ImageGallery grouping + MediaUrlContent
 ```
 
 The regular path emits a single implicit document of `Paragraph` blocks; the
@@ -95,6 +148,7 @@ markdown path emits real headings/lists/quotes/code/tables. **Both** funnel
 their text through the *same* inline tokenizer (today's `wordIdentifier` logic),
 so `nostr:` mentions, hashtags, emoji, invoices, cashu, links, etc. render
 identically inside or outside markdown — the core of merge goal #3.
+
 
 ### 2. Memory model (constraint #5)
 
@@ -105,16 +159,18 @@ keeping Halilibo's AST resident.
   the original `event.content` string (already retained on the Event) instead
   of allocating a new `String` per word. A token is a `@JvmInline value class`
   packing `start`/`end`/`type` where possible, or a small class with int
-  offsets. The renderer slices on demand.
+  offsets. The renderer slices on demand. (This lives in the quartz core, so
+  external users get the lean representation too.)
 - **Drop the per-paragraph `ImmutableList` wrappers** (`persistentListOf`) in
-  favor of plain arrays sized once; Compose stability comes from `@Immutable`
-  on the container, not from kotlinx persistent collections.
+  favor of plain arrays sized once. The quartz model carries no Compose
+  annotations; the commons render wrapper supplies `@Immutable` stability where
+  Compose needs it.
 - **`MediaRef` is metadata only** — url + dim + blurhash + thumbhash + mime +
   contentWarning. No bytes, no Coil/ExoPlayer objects. ~6 fields.
 - **Parse lazily-but-once per content**, deduped: identical content quoted in N
   notes shares one `ParsedContent` via a content-hash intern map *with weak
   values*, so retention still tracks live notes.
-- Target: a typical kind-1 note's `ParsedContent` should be a handful of small
+- Target: a typical kind-1 note's parse should be a handful of small
   objects + one int-array, materially below today's
   `RichTextViewerState`/persistent-list footprint.
 
@@ -126,7 +182,9 @@ keeping Halilibo's AST resident.
 ### 3. Our own Markdown block parser (#6)
 
 A single-pass, allocation-lean block scanner derived from the CommonMark spec
-(not a fork of commonmark-java's object-heavy AST):
+(not a fork of commonmark-java's object-heavy AST). The **parser** lives in the
+quartz core (UI-free, so external longform/NIP-23 clients get it); only the
+**renderer** is in commons:
 
 - Block starts: ATX/Setext headings, block quotes, bullet/ordered lists,
   fenced/indented code, tables (GFM), thematic breaks. Reuse the proven trigger
@@ -134,13 +192,13 @@ A single-pass, allocation-lean block scanner derived from the CommonMark spec
   the front half of the real parser, so detection and parsing share code.
 - **Footnotes are supported** (GFM-style): the block parser collects footnote
   *definitions* (`[^id]: ...`, including their continuation/indented
-  paragraphs) into `ParsedContent`, and the inline tokenizer emits footnote
+  paragraphs) into `ParsedNote`, and the inline tokenizer emits footnote
   *reference* tokens (`[^id]`). The renderer shows references as superscript
   links and renders the collected definitions as a footnotes block at the end
   of the document, on the regular note stack. Definition bodies run through the
   shared inline tokenizer like any other text.
 - Inline phase delegates to the **shared word tokenizer** (§1).
-- Emits `List<Block>` directly into `ParsedContent` — no intermediate AST tree
+- Emits `List<Block>` directly into `ParsedNote` — no intermediate AST tree
   retained.
 - New Compose renderer: block-level composables (`Heading`, `BlockQuote`,
   `BulletList`, `CodeBlock`, `MarkdownTable`) in `commons` replacing
@@ -156,8 +214,9 @@ markdown-only (code blocks, tables, quotes, headings) become first-class in the
 regular renderer. Expect minor visual differences from the old Halilibo output;
 this is an accepted goal, not a regression.
 
-Markdown vs plain is decided once at parse time (the `isMarkdown` result is
-stored on `ParsedContent`), not re-detected on every recomposition.
+Markdown vs plain is decided once at parse time in the quartz core (the
+`isMarkdown` result is stored on `ParsedNote`), not re-detected on every
+recomposition.
 
 ### 4. Receipt-time parse pipeline (#4)
 
@@ -189,24 +248,27 @@ A `ContentParseQueue` in `commons` (sibling of `MetadataRateLimiter`):
 
 ## Phasing (each phase ships independently, green build + tests)
 
-**P0 — Foundation (no behavior change).** Add `ParsedContent` model + shared
-inline tokenizer extracted from `RichTextParser.wordIdentifier`, with the
-regular path producing `ParsedContent` and an adapter back to the existing
-renderer. Unit tests porting current `RichTextParser` test cases. *No markdown,
-no Note field yet.*
+**P0 — Foundation (no behavior change).** In **quartz**, add the UI-free
+`ParsedNote` model + shared inline tokenizer (ported from
+`RichTextParser.wordIdentifier`), moving `EmojiCoder`/`isValidUrl` down and
+dropping `ImmutableListOfLists` for raw tag arrays. In **commons**, wrap it as
+`ParsedContent` with an adapter back to the existing renderer. Unit tests
+porting current `RichTextParser` test cases into quartz. *No markdown, no Note
+field yet.*
 
-**P1 — Note cache + receipt pipeline.** Add `Note.parsedContent` + `ContentParseQueue`;
-wire content-kind `consume` paths to enqueue; renderers read-through to the
-Note. Achieves #1 + #4 for the regular path. Benchmark memory.
+**P1 — Note cache + receipt pipeline.** Add `Note.parsedContent` (commons) +
+`ContentParseQueue` (commons); wire content-kind `consume` paths to enqueue;
+renderers read-through to the Note. Achieves #1 + #4 for the regular path.
+Benchmark memory.
 
-**P2 — Memory model.** Switch inline tokens to offset-based value classes, drop
-persistent-list wrappers, add weak intern map. Track the measured footprint
-(no fixed target) and keep it as small as possible without regressing P1.
-Achieves #5.
+**P2 — Memory model.** Switch the quartz tokens to offset-based value classes,
+drop persistent-list wrappers, add the weak intern map. Track the measured
+footprint (no fixed target) and keep it as small as possible without regressing
+P1. Achieves #5.
 
-**P3 — Markdown merge.** In-repo block parser + block renderer in `commons`,
-rendering on the **regular note stack**; route markdown text nodes through the
-shared tokenizer; delete Halilibo `richtext-*`. Achieves #3 + #6.
+**P3 — Markdown merge.** In-repo block parser in **quartz** + block renderer in
+**commons**, rendering on the **regular note stack**; route markdown text nodes
+through the shared tokenizer; delete Halilibo `richtext-*`. Achieves #3 + #6.
 **Structural** parity tests (correct blocks + inline tokens) against the
 existing markdown preview corpus in `RenderContentAsMarkdown.kt`; **visual**
 drift from the old Halilibo styling is accepted, not gated.
@@ -223,8 +285,14 @@ images/video/OG/PDF. Achieves #2.
 - **Hot path correctness.** `RichTextParser` has many edge cases (HLS mime,
   schemeless URLs, nowhere links, math spans, galleries, secret emoji). Every
   phase must keep the existing test corpus green; port tests before refactor.
-- **iOS / KMP.** Model + parser live in `commonMain`; no Android-only APIs
-  (`android.util.LruCache` must not leak into commons — use a KMP cache).
+- **iOS / KMP.** The quartz core parser + model live in `quartz/commonMain`
+  with **no UI / no Compose** (not even stability annotations); commons render
+  layer + cache live in `commons/commonMain`. No Android-only APIs in either
+  (`android.util.LruCache` must not leak down — use a KMP cache).
+- **External API surface.** quartz's `ContentParser`/`ParsedNote` becomes a
+  public, semver-relevant API for outside consumers — keep it stable, minimal,
+  and documented (update the `quartz-integration` skill). Don't expose
+  Amethyst-internal naming.
 - **Markdown parity is structural, not visual.** Our parser must produce the
   right blocks + inline tokens for the current corpus (tables, nested quotes,
   fenced code, **footnotes**) before Halilibo is removed. The *rendering* moves
@@ -237,10 +305,12 @@ images/video/OG/PDF. Achieves #2.
 
 ## Test strategy
 
-- Port `RichTextParserTest` / URL / math / gallery suites onto `ParsedContent`.
-- New `MarkdownBlockParserTest` against the preview corpus + CommonMark spec
-  subset we support — asserts **block structure + inline tokens**, not rendered
-  pixels (rendering moves to the shared note stack and is allowed to drift).
+- Port `RichTextParserTest` / URL / math / gallery suites onto the quartz
+  `ParsedNote` (parser tests move to quartz; gallery/render tests stay commons).
+- New `MarkdownBlockParserTest` (quartz) against the preview corpus + CommonMark
+  spec subset we support — asserts **block structure + inline tokens**, not
+  rendered pixels (rendering moves to the shared note stack and is allowed to
+  drift).
 - Memory: macrobenchmark + heap dump on a seeded home feed, P1 vs P2.
-- `amy` interop: a `parse` verb dumping `ParsedContent` as JSON for golden
-  tests (optional, aids regression).
+- `amy` interop: a `parse` verb dumping the parse as JSON for golden tests
+  (optional, aids regression) — drives the quartz parser directly.
