@@ -76,6 +76,7 @@ class CommunityPostApprovalEvent(
             Log.w(
                 "CommunityPostEvent",
                 "Failed to Parse Community Approval Contained Post of $id with $content",
+                e,
             )
             null
         }

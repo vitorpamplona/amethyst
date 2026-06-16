@@ -3651,7 +3651,8 @@ class Account(
                             } catch (e: Exception) {
                                 Log.w(
                                     "Account",
-                                    "Failed to restore persisted Marmot message for $groupId: ${e.message}",
+                                    "Failed to restore persisted Marmot message for $groupId",
+                                    e,
                                 )
                             }
                         }

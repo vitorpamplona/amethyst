@@ -2276,20 +2276,18 @@ object LocalCache : ILocalCache, ICacheProvider {
                     // the wallet service we sent the request to. The pending
                     // entry is left in place so the real response can still
                     // resolve it; we silently drop this one.
-                    Log.w(
-                        "LocalCache",
+                    Log.w("LocalCache") {
                         "Rejecting NWC response ${event.id}: expected author ${match.expected} but event was signed by ${match.actual}. " +
-                            "This may be a spoofed reply — keeping the request pending for the legitimate wallet response.",
-                    )
+                            "This may be a spoofed reply — keeping the request pending for the legitimate wallet response."
+                    }
                     return false
                 }
 
                 NwcPaymentTracker.MatchResult.NoMatch -> {
-                    Log.w(
-                        "LocalCache",
+                    Log.w("LocalCache") {
                         "NWC response ${event.id} from ${event.pubKey} references request e=$requestId but no pending request is registered. " +
-                            "The response was either delivered after timeout, the user holds a stale subscription, or the wallet service set the wrong e tag.",
-                    )
+                            "The response was either delivered after timeout, the user holds a stale subscription, or the wallet service set the wrong e tag."
+                    }
                     return false
                 }
             }
