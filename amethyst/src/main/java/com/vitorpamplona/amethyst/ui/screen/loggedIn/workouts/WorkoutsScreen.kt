@@ -20,9 +20,14 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
@@ -31,12 +36,14 @@ import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.AppBottomBar
 import com.vitorpamplona.amethyst.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.datasource.WorkoutsFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.suggestion.WorkoutSuggestions
 
 @Composable
 fun WorkoutsScreen(
@@ -81,16 +88,28 @@ fun WorkoutsScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        RefresheableBox(workoutsFeedContentState, true) {
-            SaveableFeedContentState(workoutsFeedContentState, scrollStateKey = ScrollStateKeys.WORKOUTS_SCREEN) { listState ->
-                RenderFeedContentState(
-                    feedContentState = workoutsFeedContentState,
-                    accountViewModel = accountViewModel,
-                    listState = listState,
-                    nav = nav,
-                    routeForLastRead = "WorkoutsFeed",
-                )
+        Box(Modifier.fillMaxSize()) {
+            RefresheableBox(workoutsFeedContentState, true) {
+                SaveableFeedContentState(workoutsFeedContentState, scrollStateKey = ScrollStateKeys.WORKOUTS_SCREEN) { listState ->
+                    RenderFeedContentState(
+                        feedContentState = workoutsFeedContentState,
+                        accountViewModel = accountViewModel,
+                        listState = listState,
+                        nav = nav,
+                        routeForLastRead = "WorkoutsFeed",
+                    )
+                }
             }
+
+            // Health Connect detection banner: invites connect or offers detected workouts as kind 1301 posts.
+            WorkoutSuggestions(
+                accountViewModel = accountViewModel,
+                nav = nav,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = LocalDisappearingScaffoldPadding.current.calculateTopPadding()),
+            )
         }
     }
 }

@@ -18,34 +18,31 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.fitness.workout.tags
+package com.vitorpamplona.amethyst.service.workouts.health
 
-import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.utils.ensure
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseType
 
 /**
- * How the workout was recorded. Known values: [GPS], [MANUAL], [HEALTH_CONNECT];
- * other clients also publish `healthkit` and `runstr`.
+ * A finished workout read from Health Connect and mapped to the fields Amethyst
+ * can publish as a NIP-101e kind 1301 event. Platform-neutral and free of any
+ * Health Connect types so it can feed the navigation route and the suggestion
+ * UI directly.
+ *
+ * [id] is the Health Connect record id, used to remember which sessions the
+ * user has already handled (accepted or dismissed) so each is offered once.
  */
-class SourceTag {
-    companion object {
-        const val TAG_NAME = "source"
-
-        const val GPS = "gps"
-        const val MANUAL = "manual"
-
-        /** Imported from Android Health Connect (Samsung Health, Google Fit, Fitbit, Garmin, …). */
-        const val HEALTH_CONNECT = "health_connect"
-
-        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
-
-        fun parse(tag: Array<String>): String? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            ensure(tag[1].isNotEmpty()) { return null }
-            return tag[1]
-        }
-
-        fun assemble(source: String) = arrayOf(TAG_NAME, source)
-    }
-}
+@Immutable
+data class DetectedWorkout(
+    val id: String,
+    val exercise: ExerciseType,
+    val title: String?,
+    val startTimeEpochSeconds: Long,
+    val durationSeconds: Long,
+    val distanceMeters: Double?,
+    val calories: Int?,
+    val avgHeartRate: Int?,
+    val maxHeartRate: Int?,
+    val steps: Int?,
+    val elevationGainMeters: Double?,
+)

@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -56,11 +57,13 @@ import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseType
 
 @Composable
 fun NewWorkoutScreen(
+    prefill: Route.NewWorkout,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val postViewModel: NewWorkoutViewModel = viewModel()
     postViewModel.init(accountViewModel)
+    postViewModel.prefill(prefill)
 
     BackHandler {
         postViewModel.cancel()

@@ -701,6 +701,13 @@
     <string name="workout_hours">Hours</string>
     <string name="workout_minutes">Minutes</string>
     <string name="workout_seconds">Seconds</string>
+    <string name="workout_suggestion_connect_title">Share your workouts</string>
+    <string name="workout_suggestion_connect_message">Let Amethyst read finished workouts from Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) and suggest a post.</string>
+    <string name="workout_suggestion_connect_button">Connect</string>
+    <string name="workout_suggestion_detected_title">New workout detected</string>
+    <string name="workout_suggestion_share">Share</string>
+    <string name="workout_suggestion_dismiss">Dismiss</string>
+    <string name="workout_suggestion_distance_km">%1$s km</string>
     <string name="exercise_running">Running</string>
     <string name="exercise_walking">Walking</string>
     <string name="exercise_cycling">Cycling</string>

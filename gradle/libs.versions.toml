@@ -26,6 +26,7 @@ espressoCore = "3.7.0"
 firebaseBom = "34.14.1"
 fragmentKtx = "1.8.9"
 gms = "4.4.4"
+healthConnect = "1.1.0"
 jacksonModuleKotlin = "2.22.0"
 javaKeyring = "1.0.4"
 kmpTorRuntime = "2.6.0"
@@ -216,6 +217,7 @@ androidx-sqlite = { group = "androidx.sqlite", name = "sqlite", version.ref = "s
 androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
 androidx-sqlite-bundled-jvm = { module = "androidx.sqlite:sqlite-bundled-jvm", version.ref = "sqlite" }
 androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workRuntime" }
+androidx-health-connect-client = { group = "androidx.health.connect", name = "connect-client", version.ref = "healthConnect" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

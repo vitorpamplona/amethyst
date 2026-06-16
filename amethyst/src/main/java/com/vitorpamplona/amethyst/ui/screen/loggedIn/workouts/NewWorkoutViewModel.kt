@@ -26,15 +26,22 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
+import com.vitorpamplona.quartz.experimental.fitness.workout.avgHeartRate
 import com.vitorpamplona.quartz.experimental.fitness.workout.calories
 import com.vitorpamplona.quartz.experimental.fitness.workout.distance
+import com.vitorpamplona.quartz.experimental.fitness.workout.elevationGain
+import com.vitorpamplona.quartz.experimental.fitness.workout.maxHeartRate
 import com.vitorpamplona.quartz.experimental.fitness.workout.source
+import com.vitorpamplona.quartz.experimental.fitness.workout.steps
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.DistanceTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseType
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.SourceTag
+import com.vitorpamplona.quartz.experimental.fitness.workout.workoutStartTime
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import kotlin.math.roundToInt
 
 @Stable
 class NewWorkoutViewModel : ViewModel() {
@@ -51,9 +58,51 @@ class NewWorkoutViewModel : ViewModel() {
     var calories by mutableStateOf("")
     var notes by mutableStateOf("")
 
+    // Source plus extra metrics carried from a detected workout. These are not
+    // editable in the simple form but are published when present (> 0).
+    private var source = SourceTag.MANUAL
+    private var avgHeartRate = 0
+    private var maxHeartRate = 0
+    private var steps = 0
+    private var elevationGainMeters = 0.0
+    private var workoutStartTime = 0L
+
+    private var hasPrefilled = false
+
     fun init(accountVM: AccountViewModel) {
         this.accountViewModel = accountVM
         this.account = accountVM.account
+    }
+
+    /**
+     * Pre-fills the form from a [Route.NewWorkout] (e.g. a Health Connect
+     * detection). Applied once per ViewModel so user edits are not overwritten
+     * on recomposition; a blank route leaves the empty manual form untouched.
+     */
+    fun prefill(route: Route.NewWorkout) {
+        if (hasPrefilled) return
+        hasPrefilled = true
+
+        route.exercise?.let { ExerciseType.parse(it) }?.let { exercise = it }
+        route.title?.let { title = it }
+
+        if (route.durationSeconds > 0) {
+            hours = (route.durationSeconds / 3600).toString()
+            minutes = ((route.durationSeconds % 3600) / 60).toString()
+            seconds = (route.durationSeconds % 60).toString()
+        }
+        if (route.distanceMeters > 0) {
+            distance = ((route.distanceMeters / 1000.0 * 100).roundToInt() / 100.0).toString()
+            distanceUnit = DistanceTag.KILOMETERS
+        }
+        if (route.calories > 0) calories = route.calories.toString()
+
+        route.source?.let { source = it }
+        avgHeartRate = route.avgHeartRate
+        maxHeartRate = route.maxHeartRate
+        steps = route.steps
+        elevationGainMeters = route.elevationGainMeters
+        workoutStartTime = route.startTime
     }
 
     fun durationSeconds(): Long =
@@ -73,6 +122,13 @@ class NewWorkoutViewModel : ViewModel() {
         distanceUnit = DistanceTag.KILOMETERS
         calories = ""
         notes = ""
+        source = SourceTag.MANUAL
+        avgHeartRate = 0
+        maxHeartRate = 0
+        steps = 0
+        elevationGainMeters = 0.0
+        workoutStartTime = 0L
+        hasPrefilled = false
     }
 
     suspend fun sendPostSync() {
@@ -94,9 +150,14 @@ class NewWorkoutViewModel : ViewModel() {
             notes = notes,
             title = title.ifBlank { null },
         ) {
-            source(SourceTag.MANUAL)
+            source(source)
             distanceValue?.let { distance(it, distanceUnit) }
             kcal?.let { calories(it) }
+            if (avgHeartRate > 0) avgHeartRate(avgHeartRate)
+            if (maxHeartRate > 0) maxHeartRate(maxHeartRate)
+            if (steps > 0) steps(steps)
+            if (elevationGainMeters > 0) elevationGain(elevationGainMeters)
+            if (workoutStartTime > 0) workoutStartTime(workoutStartTime)
         }
     }
 }

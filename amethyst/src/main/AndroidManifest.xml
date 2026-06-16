@@ -3,6 +3,11 @@
     xmlns:tools="http://schemas.android.com/tools">
     <queries>
         <package android:name="org.torproject.android"/>
+        <!-- Health Connect data store (Android 8–13 ships it as a separate system app) -->
+        <package android:name="com.google.android.apps.healthdata" />
+        <intent>
+            <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+        </intent>
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <category android:name="android.intent.category.BROWSABLE" />
@@ -73,6 +78,15 @@
     <!-- Adds Geohash to posts if active -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
+    <!-- Reads finished workouts from Health Connect to suggest a kind 1301 post.
+         Read-only; requested on demand, never on cold start. -->
+    <uses-permission android:name="android.permission.health.READ_EXERCISE" />
+    <uses-permission android:name="android.permission.health.READ_DISTANCE" />
+    <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.health.READ_ELEVATION_GAINED" />
+
     <!-- Old permission to access media -->
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
@@ -107,6 +121,11 @@
             <intent-filter android:label="Amethyst">
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Health Connect privacy-policy rationale (required by Google when reading health data) -->
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
             </intent-filter>
 
             <intent-filter android:label="Amethyst">

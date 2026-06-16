@@ -37,7 +37,7 @@ import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
 @Composable
 fun NewWorkoutButton(nav: INav) {
     FloatingActionButton(
-        onClick = { nav.nav(Route.NewWorkout) },
+        onClick = { nav.nav(Route.NewWorkout()) },
         modifier = Size55Modifier,
         shape = CircleShape,
         containerColor = MaterialTheme.colorScheme.primary,
