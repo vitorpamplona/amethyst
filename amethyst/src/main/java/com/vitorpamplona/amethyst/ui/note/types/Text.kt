@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.ui.note.ReplyNoteComposition
 import com.vitorpamplona.amethyst.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.DisplayExternalId
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources.PreloadThreadForReply
 import com.vitorpamplona.amethyst.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
@@ -82,6 +83,10 @@ fun RenderTextEvent(
     val noteEvent = note.event ?: return
 
     if (unPackReply != ReplyRenderType.NONE) {
+        // Eagerly pull the rest of this reply's thread while it's on screen, so opening
+        // the conversation finds it already loaded. No-op when the note is a root itself.
+        PreloadThreadForReply(note, accountViewModel)
+
         val canShowReply by
             remember(note) {
                 derivedStateOf {
