@@ -78,7 +78,16 @@ class HealthConnectManager(
 
     suspend fun grantedPermissions(): Set<String> = client.permissionController.getGrantedPermissions()
 
-    suspend fun hasAllPermissions(): Boolean = grantedPermissions().containsAll(PERMISSIONS)
+    suspend fun hasAllPermissions(): Boolean {
+        val granted = grantedPermissions()
+        val ok = granted.containsAll(PERMISSIONS)
+        if (!ok) {
+            Log.i(TAG) { "hasAllPermissions=false; missing=${PERMISSIONS - granted}" }
+        } else {
+            Log.i(TAG) { "hasAllPermissions=true (${granted.size} granted)" }
+        }
+        return ok
+    }
 
     /**
      * All exercise sessions that ended within [since]..[now], mapped to
@@ -90,7 +99,10 @@ class HealthConnectManager(
         since: Instant,
         now: Instant = Instant.now(),
     ): List<DetectedWorkout> {
-        if (!isAvailable(context)) return emptyList()
+        if (!isAvailable(context)) {
+            Log.i(TAG) { "readNewWorkouts: Health Connect unavailable (status=${HealthConnectClient.getSdkStatus(context)})" }
+            return emptyList()
+        }
 
         return try {
             val response =
@@ -100,7 +112,10 @@ class HealthConnectManager(
                         timeRangeFilter = TimeRangeFilter.between(since, now),
                     ),
                 )
-            response.records.mapNotNull { mapSession(it) }
+            Log.i(TAG) { "readNewWorkouts: ${response.records.size} exercise session(s) in window $since .. $now" }
+            val mapped = response.records.mapNotNull { mapSession(it) }
+            Log.i(TAG) { "readNewWorkouts: mapped ${mapped.size} workout(s) after type/duration filtering" }
+            mapped
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.w(TAG, "Failed to read workouts from Health Connect", e)
@@ -109,10 +124,25 @@ class HealthConnectManager(
     }
 
     private suspend fun mapSession(session: ExerciseSessionRecord): DetectedWorkout? {
-        val exercise = ExerciseTypeMapper.toExerciseType(session.exerciseType) ?: return null
+        val exercise = ExerciseTypeMapper.toExerciseType(session.exerciseType)
+        if (exercise == null) {
+            Log.i(TAG) {
+                "Skipping session: unmapped exerciseType=${session.exerciseType} " +
+                    "title='${session.title}' from ${session.metadata.dataOrigin.packageName}"
+            }
+            return null
+        }
 
         val durationSeconds = Duration.between(session.startTime, session.endTime).seconds
-        if (durationSeconds <= 0) return null
+        if (durationSeconds <= 0) {
+            Log.i(TAG) { "Skipping session: non-positive duration ($durationSeconds s) for exerciseType=${session.exerciseType}" }
+            return null
+        }
+
+        Log.i(TAG) {
+            "Mapped session: exerciseType=${session.exerciseType} -> $exercise, ${durationSeconds}s, " +
+                "from ${session.metadata.dataOrigin.packageName}"
+        }
 
         val totals = aggregate(session)
 
