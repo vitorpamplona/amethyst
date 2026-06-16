@@ -185,6 +185,11 @@ class TorService(
                 // setLogCallback and initialize are the first ArtiNative calls,
                 // which triggers System.loadLibrary on this IO thread.
                 if (initialized.compareAndSet(false, true)) {
+                    // Forward Arti's internal logs. The Active transition is NOT driven
+                    // from here: the "Sufficiently bootstrapped" line is emitted from a
+                    // tokio task that races startSocksProxy returning, so honoring it here
+                    // (gated on proxyRunning) intermittently dropped the transition. start()
+                    // now sets Active deterministically once the proxy is bound.
                     ArtiNative.setLogCallback { text ->
                         Log.d("TorService") {
                             val newLine = text.indexOf('\n')
@@ -192,21 +197,6 @@ class TorService(
                                 "Arti: ${text.substring(0, newLine)}"
                             } else {
                                 "Arti: $text"
-                            }
-                        }
-
-                        when {
-                            text.contains("Sufficiently bootstrapped", ignoreCase = true) -> {
-                                // Only honor the bootstrap signal while the proxy is
-                                // actually running. A reset/stop flips proxyRunning to
-                                // false; a late callback from a torn-down client must
-                                // not resurrect a stale Active status.
-                                if (proxyRunning.get()) {
-                                    _status.value = TorServiceStatus.Active(socksPort)
-                                    val startedAt = bootstrapStartedAtMs
-                                    val elapsed = if (startedAt > 0) System.currentTimeMillis() - startedAt else -1
-                                    Log.d("TorService") { "Arti SOCKS proxy active on port $socksPort (bootstrap took ${elapsed}ms)" }
-                                }
                             }
                         }
                     }
@@ -283,6 +273,22 @@ class TorService(
                 }
 
                 proxyRunning.set(true)
+
+                // Transition to Active deterministically here rather than relying on
+                // the "Sufficiently bootstrapped" log callback. That callback is emitted
+                // from a tokio task spawned inside the native startSocksProxy (see
+                // arti-android-wrapper lib.rs), which races the native call returning and
+                // this `proxyRunning.set(true)` above. When the task wins the race, the
+                // callback's `proxyRunning.get()` guard is still false, the Active
+                // transition is dropped, and status stays Connecting until the 60s
+                // connection-failure dialog fires. The client is bootstrapped (initialize
+                // returned 0) and the SOCKS proxy is bound, so this is the correct point
+                // to declare Active — and we hold lifecycleMutex, so a concurrent
+                // reset/stop can't clobber it.
+                val startedAt = bootstrapStartedAtMs
+                val elapsed = if (startedAt > 0) System.currentTimeMillis() - startedAt else -1
+                _status.value = TorServiceStatus.Active(socksPort)
+                Log.d("TorService") { "Arti SOCKS proxy active on port $socksPort (bootstrap took ${elapsed}ms)" }
             }
         }
 
