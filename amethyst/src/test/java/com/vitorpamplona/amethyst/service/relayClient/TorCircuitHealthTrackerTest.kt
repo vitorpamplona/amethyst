@@ -37,25 +37,56 @@ class TorCircuitHealthTrackerTest {
     private val torRelay = NormalizedRelayUrl("wss://torrelay.example/")
     private val clearRelay = NormalizedRelayUrl("wss://clearrelay.example/")
 
+    /**
+     * Drives a sustained, threshold-meeting failure streak: spreads count-1 failures in small
+     * continuous steps, then jumps the clock so the final failure pushes the span just past the
+     * floor — guaranteeing both the count and the SUSTAINED_MS span are met.
+     */
+    private fun Harness.sustainedFailures(count: Int = TorCircuitHealthTracker.FAIL_THRESHOLD) {
+        val start = now
+        repeat(count - 1) {
+            failTor()
+            now += 1_000 // small continuous gaps, well under SUSTAINED_MS
+        }
+        now = start + TorCircuitHealthTracker.SUSTAINED_MS + 1
+        failTor()
+    }
+
     @Test
-    fun `fires after threshold Tor failures with no success in window`() {
+    fun `fires on a sustained threshold-meeting failure streak`() {
         val h = Harness()
-        repeat(TorCircuitHealthTracker.FAIL_THRESHOLD) { h.failTor() }
+        h.sustainedFailures()
         assertEquals(1, h.deadCount)
     }
 
     @Test
-    fun `does not fire below threshold`() {
+    fun `does not fire on a short burst even past threshold`() {
         val h = Harness()
-        repeat(TorCircuitHealthTracker.FAIL_THRESHOLD - 1) { h.failTor() }
+        // 8+ failures but all within ~2s — the post-Active warmup burst that wrongly wiped the
+        // good client on device. Must NOT fire: the streak hasn't spanned SUSTAINED_MS.
+        repeat(TorCircuitHealthTracker.FAIL_THRESHOLD * 2) {
+            h.failTor()
+            h.now += 200
+        }
+        assertEquals("a short burst is warmup, not a dead transport", 0, h.deadCount)
+    }
+
+    @Test
+    fun `does not fire below threshold even when sustained`() {
+        val h = Harness()
+        // Spread a few failures across well over the span, but never reach the count.
+        repeat(TorCircuitHealthTracker.FAIL_THRESHOLD - 1) {
+            h.failTor()
+            h.now += TorCircuitHealthTracker.SUSTAINED_MS
+        }
         assertEquals(0, h.deadCount)
     }
 
     @Test
-    fun `a single Tor success disarms the window`() {
+    fun `a single Tor success ends the streak`() {
         val h = Harness()
-        repeat(TorCircuitHealthTracker.FAIL_THRESHOLD - 1) { h.failTor() }
-        h.succeedTor() // resets the failure window AND the no-success clock
+        h.sustainedFailures(count = TorCircuitHealthTracker.FAIL_THRESHOLD - 1)
+        h.succeedTor() // warmup completed — streak ends
         h.failTor()
         assertEquals("one success means circuits work — suppress", 0, h.deadCount)
     }
@@ -63,49 +94,55 @@ class TorCircuitHealthTrackerTest {
     @Test
     fun `clearnet relay outcomes are ignored`() {
         val h = Harness()
-        repeat(TorCircuitHealthTracker.FAIL_THRESHOLD * 2) { h.failClear() }
+        repeat(TorCircuitHealthTracker.FAIL_THRESHOLD * 4) {
+            h.failClear()
+            h.now += TorCircuitHealthTracker.SUSTAINED_MS
+        }
         assertEquals(0, h.deadCount)
     }
 
     @Test
     fun `does not fire when connectivity is down`() {
         val h = Harness(connectivityActive = false)
-        repeat(TorCircuitHealthTracker.FAIL_THRESHOLD) { h.failTor() }
+        h.sustainedFailures()
         assertEquals("general outage must not reset Tor", 0, h.deadCount)
     }
 
     @Test
     fun `does not fire when Tor is not Active`() {
         val h = Harness(torActive = false)
-        repeat(TorCircuitHealthTracker.FAIL_THRESHOLD) { h.failTor() }
+        h.sustainedFailures()
         assertEquals(0, h.deadCount)
     }
 
     @Test
-    fun `failures older than the window do not accumulate`() {
+    fun `a long gap restarts the streak`() {
         val h = Harness()
-        // Fill almost to threshold, then let the window slide fully past those failures.
-        repeat(TorCircuitHealthTracker.FAIL_THRESHOLD - 1) { h.failTor() }
-        h.now += TorCircuitHealthTracker.WINDOW_MS + 1
-        // The no-success clause holds (we never succeeded), but the stale failures must have aged
-        // out of the window, so a single fresh failure can't reach threshold.
+        // Almost reach the count, sustained...
+        repeat(TorCircuitHealthTracker.FAIL_THRESHOLD - 1) {
+            h.failTor()
+            h.now += 3_000
+        }
+        // ...then a gap longer than the span: the next failure starts a brand-new streak, so a
+        // single fresh failure can't reach threshold.
+        h.now += TorCircuitHealthTracker.SUSTAINED_MS + 1
         h.failTor()
         assertEquals(0, h.deadCount)
     }
 
     @Test
-    fun `re-arms after firing — needs a fresh window to fire again`() {
+    fun `re-arms after firing — needs a fresh sustained streak to fire again`() {
         val h = Harness()
-        repeat(TorCircuitHealthTracker.FAIL_THRESHOLD) { h.failTor() }
+        h.sustainedFailures()
         assertEquals(1, h.deadCount)
 
-        // Immediately after firing the window is cleared and the no-success clock reset, so the
-        // next failure can't re-fire until both the window refills and WINDOW_MS elapses.
+        // Immediately after firing the streak is reset, so the next failure can't re-fire until a
+        // new streak builds count AND spans the floor again.
         h.failTor()
         assertEquals(1, h.deadCount)
 
-        h.now += TorCircuitHealthTracker.WINDOW_MS + 1
-        repeat(TorCircuitHealthTracker.FAIL_THRESHOLD) { h.failTor() }
+        h.now += TorCircuitHealthTracker.SUSTAINED_MS + 1 // gap resets, then a fresh sustained streak
+        h.sustainedFailures()
         assertEquals(2, h.deadCount)
     }
 
