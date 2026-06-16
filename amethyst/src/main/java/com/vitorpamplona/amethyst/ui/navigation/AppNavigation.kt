@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.isSameRoute
 import com.vitorpamplona.amethyst.ui.note.PayViaIntentScreen
 import com.vitorpamplona.amethyst.ui.note.UpdateReactionTypeScreen
 import com.vitorpamplona.amethyst.ui.note.nip22Comments.ReplyCommentPostScreen
+import com.vitorpamplona.amethyst.ui.note.share.ShareNoteAsImageScreen
 import com.vitorpamplona.amethyst.ui.screen.AccountSessionManager
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountSwitcherAndLeftDrawerLayout
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -415,6 +416,7 @@ fun BuildNavigation(
         composableFromEndArgs<Route.ContentDiscovery> { DvmContentDiscoveryScreen(it.id, accountViewModel, nav) }
         composableFromEndArgs<Route.Profile> { ProfileScreen(it.id, accountViewModel, nav) }
         composableFromEndArgs<Route.Note> { ThreadScreen(it.id, accountViewModel, nav) }
+        composableFromEndArgs<Route.ShareNoteAsImage> { ShareNoteAsImageScreen(it.id, accountViewModel, nav) }
         composableFromEndArgs<Route.ContactListUsers> { ContactListUsersScreen(it.noteId, accountViewModel, nav) }
         composableFromEndArgs<Route.Hashtag> { HashtagScreen(it, accountViewModel, nav) }
         composableFromEndArgs<Route.Geohash> { GeoHashScreen(it, accountViewModel, nav) }

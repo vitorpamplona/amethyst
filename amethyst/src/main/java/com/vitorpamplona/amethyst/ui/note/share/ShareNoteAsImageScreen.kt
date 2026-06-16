@@ -24,12 +24,12 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -40,28 +40,28 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.layer.GraphicsLayer
-import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
@@ -69,7 +69,7 @@ import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
-import com.vitorpamplona.amethyst.ui.components.SetDialogToEdgeToEdge
+import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
@@ -86,19 +86,29 @@ import java.io.File
 import java.io.FileOutputStream
 
 /**
- * Renders [note] into a framed, shareable bitmap, uploads it to one of the user's Blossom
- * media servers, and then hands the resulting URL to the Android share sheet.
- *
- * The on-screen preview *is* the capture source: a [rememberGraphicsLayer] records exactly
- * what the user sees so there are no surprises between preview and the shared image.
+ * Full-screen flow that turns [id]'s note into a shareable image: it renders the post into a
+ * framed card, captures it to a bitmap, uploads the PNG to one of the user's Blossom media
+ * servers, and hands the resulting URL to the Android share sheet.
  */
+@Composable
+fun ShareNoteAsImageScreen(
+    id: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    LoadNote(id, accountViewModel) { note ->
+        if (note != null) {
+            ShareNoteAsImageScreen(note, accountViewModel, nav)
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ShareNoteAsImageDialog(
+fun ShareNoteAsImageScreen(
     note: Note,
     accountViewModel: AccountViewModel,
     nav: INav,
-    onDismiss: () -> Unit,
 ) {
     val account = accountViewModel.account
     val context = LocalContext.current
@@ -107,6 +117,8 @@ fun ShareNoteAsImageDialog(
     val graphicsLayer = rememberGraphicsLayer()
     val orchestrator = remember { UploadOrchestrator() }
 
+    // The captured bitmap that becomes the preview and, on share, the uploaded file.
+    var preview by remember { mutableStateOf<ImageBitmap?>(null) }
     var isProcessing by remember { mutableStateOf(false) }
 
     val fileServers by account.blossomServers.hostNameFlow.collectAsState()
@@ -125,16 +137,14 @@ fun ShareNoteAsImageDialog(
         }
 
     fun shareImage() {
+        val image = preview ?: return
         if (isProcessing) return
         isProcessing = true
         scope.launch {
-            // Capture must run on the composition thread before any IO work.
-            val imageBitmap = graphicsLayer.toImageBitmap()
             val server = selectedServer
-
             val finalState =
                 withContext(Dispatchers.IO) {
-                    val uri = saveBitmapToCache(context, imageBitmap.asAndroidBitmap())
+                    val uri = saveBitmapToCache(context, image.asAndroidBitmap())
                     orchestrator.upload(
                         uri = uri,
                         mimeType = PNG_MIME,
@@ -156,7 +166,7 @@ fun ShareNoteAsImageDialog(
                     if (result is UploadOrchestrator.OrchestratorResult.ServerResult) {
                         account.settings.changeDefaultFileServer(server)
                         startShareUrlIntent(context, result.url)
-                        onDismiss()
+                        nav.popBack()
                     } else {
                         accountViewModel.toastManager.toast(
                             R.string.failed_to_upload_media_no_details,
@@ -178,67 +188,71 @@ fun ShareNoteAsImageDialog(
         }
     }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties =
-            DialogProperties(
-                usePlatformDefaultWidth = false,
-                dismissOnClickOutside = false,
-                decorFitsSystemWindows = false,
-            ),
-    ) {
-        SetDialogToEdgeToEdge()
-        Scaffold(
-            topBar = {
-                ActionTopBar(
-                    postRes = R.string.quick_action_share,
-                    titleRes = R.string.share_as_image,
-                    isActive = { !isProcessing },
-                    onCancel = onDismiss,
-                    onPost = ::shareImage,
+    Scaffold(
+        topBar = {
+            ActionTopBar(
+                postRes = R.string.quick_action_share,
+                titleRes = R.string.share_as_image,
+                isActive = { preview != null && !isProcessing },
+                onCancel = { nav.popBack() },
+                onPost = ::shareImage,
+            )
+        },
+    ) { pad ->
+        Column(
+            Modifier
+                .padding(pad)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            SettingsRow(R.string.file_server, R.string.file_server_description) {
+                TextSpinner(
+                    label = "",
+                    placeholder = selectedServer.name,
+                    options = fileServerOptions,
+                    onSelect = { selectedServer = fileServers[it] },
                 )
-            },
-        ) { pad ->
-            Surface(
-                modifier =
-                    Modifier
-                        .padding(pad)
-                        .consumeWindowInsets(pad),
+            }
+
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center,
             ) {
-                Column(
-                    Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    SettingsRow(R.string.file_server, R.string.file_server_description) {
-                        TextSpinner(
-                            label = "",
-                            placeholder = selectedServer.name,
-                            options = fileServerOptions,
-                            onSelect = { selectedServer = fileServers[it] },
-                        )
+                val captured = preview
+                if (captured == null) {
+                    // Render the note off-screen into the graphics layer, then snapshot it.
+                    CaptureSource(
+                        note = note,
+                        graphicsLayer = graphicsLayer,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                    LaunchedEffect(note) {
+                        // Wait a couple of frames so the card is measured and drawn before capture.
+                        withFrameNanos {}
+                        withFrameNanos {}
+                        preview = graphicsLayer.toImageBitmap()
                     }
+                    CircularProgressIndicator()
+                } else {
+                    Image(
+                        bitmap = captured,
+                        contentDescription = stringRes(R.string.share_as_image),
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
 
-                    Box(contentAlignment = Alignment.Center) {
-                        ShareableNoteCard(
-                            note = note,
-                            graphicsLayer = graphicsLayer,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
-
-                        if (isProcessing) {
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .fillMaxSize()
-                                        .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.4f)),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                CircularProgressIndicator()
-                            }
+                    if (isProcessing) {
+                        Box(
+                            modifier =
+                                Modifier
+                                    .fillMaxSize()
+                                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.4f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator()
                         }
                     }
                 }
@@ -248,11 +262,12 @@ fun ShareNoteAsImageDialog(
 }
 
 /**
- * The framed card that is both shown to the user and recorded into [graphicsLayer]. The capture
- * modifier is placed first in the chain so the opaque background and border are part of the bitmap.
+ * The framed card that is recorded into [graphicsLayer] but not painted to the screen — the
+ * visible preview is the captured [ImageBitmap] instead. The capture modifier is first in the
+ * chain so the opaque background and border are part of the bitmap.
  */
 @Composable
-private fun ShareableNoteCard(
+private fun CaptureSource(
     note: Note,
     graphicsLayer: GraphicsLayer,
     accountViewModel: AccountViewModel,
@@ -265,7 +280,8 @@ private fun ShareableNoteCard(
                 .fillMaxWidth()
                 .drawWithContent {
                     graphicsLayer.record { this@drawWithContent.drawContent() }
-                    drawLayer(graphicsLayer)
+                    // Intentionally do not call drawLayer: this source stays invisible and only
+                    // feeds the snapshot; the user sees the resulting Image.
                 }.clip(shape)
                 .background(MaterialTheme.colorScheme.surface)
                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape)
