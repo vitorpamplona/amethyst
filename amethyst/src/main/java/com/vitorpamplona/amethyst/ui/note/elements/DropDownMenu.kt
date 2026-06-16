@@ -239,6 +239,11 @@ fun NoteDropDownMenu(
                     actContext.startActivity(shareIntent)
                     onDismiss()
                 }
+                M3ActionRow(icon = MaterialSymbols.Image, text = stringRes(R.string.share_as_image)) {
+                    val shareId = if (note is AddressableNote) note.address.toValue() else note.idHex
+                    nav.nav(Route.ShareNoteAsImage(shareId))
+                    onDismiss()
+                }
             }
         }
 
