@@ -36,6 +36,14 @@ Rewrite Amethyst's content parsers so that:
   dimensions, blurhash, mime) is extracted at parse time; byte downloads (video
   ranges, images, OG HTML, PDFs) fire only as a note approaches the feed
   window.
+- **Rendering unification (visual drift accepted)**: markdown now renders
+  through Amethyst's **own** components on the **same** rendering stack as
+  regular notes — shared typography (text size), color, and link/mention
+  styling. Block constructs that only existed in the markdown path (code
+  blocks, tables, block quotes, headings) get **brought into the regular
+  rendering stack** and may look slightly different from the old Halilibo
+  output. That is expected and acceptable: we hold **structural/content**
+  parity (the right blocks and inline tokens), **not pixel parity**.
 
 ## Current state (grounded)
 
@@ -127,9 +135,17 @@ A single-pass, allocation-lean block scanner derived from the CommonMark spec
   retained.
 - New Compose renderer: block-level composables (`Heading`, `BlockQuote`,
   `BulletList`, `CodeBlock`, `MarkdownTable`) in `commons` replacing
-  `BasicMarkdown`/`RichText`. This **removes the Halilibo `richtext-*`
-  dependencies** — confirm in `gradle/libs.versions.toml` and delete once the
-  renderer is at parity.
+  `BasicMarkdown`/`RichText`. These render on the **regular note rendering
+  stack** — same typography/color/link styling as a plain note, *not* a
+  separate `MarkdownTextStyle`/`markdownStyle`. This **removes the Halilibo
+  `richtext-*` dependencies** — confirm in `gradle/libs.versions.toml` and
+  delete once the renderer covers the supported block set (parity is
+  structural, not visual; see below).
+
+Because the two paths now share one rendering stack, block constructs that were
+markdown-only (code blocks, tables, quotes, headings) become first-class in the
+regular renderer. Expect minor visual differences from the old Halilibo output;
+this is an accepted goal, not a regression.
 
 Markdown vs plain is decided once at parse time (the `isMarkdown` result is
 stored on `ParsedContent`), not re-detected on every recomposition.
@@ -178,10 +194,12 @@ Note. Achieves #1 + #4 for the regular path. Benchmark memory.
 persistent-list wrappers, add weak intern map. Acceptance gate: measured heap
 reduction vs P1. Achieves #5.
 
-**P3 — Markdown merge.** In-repo block parser + block renderer in `commons`;
-route markdown text nodes through the shared tokenizer; delete Halilibo
-`richtext-*`. Achieves #3 + #6. Parity tests against the existing markdown
-preview corpus in `RenderContentAsMarkdown.kt`.
+**P3 — Markdown merge.** In-repo block parser + block renderer in `commons`,
+rendering on the **regular note stack**; route markdown text nodes through the
+shared tokenizer; delete Halilibo `richtext-*`. Achieves #3 + #6.
+**Structural** parity tests (correct blocks + inline tokens) against the
+existing markdown preview corpus in `RenderContentAsMarkdown.kt`; **visual**
+drift from the old Halilibo styling is accepted, not gated.
 
 **P4 — Feed media prefetch.** `OpenGraphCache` + feed-window prefetcher for
 images/video/OG/PDF. Achieves #2.
@@ -197,9 +215,11 @@ images/video/OG/PDF. Achieves #2.
   phase must keep the existing test corpus green; port tests before refactor.
 - **iOS / KMP.** Model + parser live in `commonMain`; no Android-only APIs
   (`android.util.LruCache` must not leak into commons — use a KMP cache).
-- **Markdown parity.** Our parser must match the current corpus
-  (tables, nested quotes, footnotes, fenced code) before Halilibo is removed;
-  footnotes may be descoped — confirm.
+- **Markdown parity is structural, not visual.** Our parser must produce the
+  right blocks + inline tokens for the current corpus (tables, nested quotes,
+  fenced code) before Halilibo is removed. The *rendering* moves to the regular
+  note stack and may look different — accepted. Footnotes may be descoped —
+  confirm.
 - **Throttling vs freshness.** A note rendered before the queue reaches it
   parses synchronously on the UI thread (same cost as today) — acceptable, but
   verify the queue keeps up under fast scroll.
@@ -210,7 +230,8 @@ images/video/OG/PDF. Achieves #2.
 
 - Port `RichTextParserTest` / URL / math / gallery suites onto `ParsedContent`.
 - New `MarkdownBlockParserTest` against the preview corpus + CommonMark spec
-  subset we support.
+  subset we support — asserts **block structure + inline tokens**, not rendered
+  pixels (rendering moves to the shared note stack and is allowed to drift).
 - Memory: macrobenchmark + heap dump on a seeded home feed, P1 vs P2.
 - `amy` interop: a `parse` verb dumping `ParsedContent` as JSON for golden
   tests (optional, aids regression).
