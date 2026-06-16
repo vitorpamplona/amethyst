@@ -11,7 +11,7 @@ on:
         type: boolean
         default: false
       test_tag:
-        description: 'Synthetic tag name for dry-run (e.g. v1.08.0-dryrun); ignored on tag push'
+        description: 'Synthetic tag name for dry-run (e.g. vX.YY.Z-dryrun); ignored on tag push'
         type: string
         default: 'v0.0.0-dryrun'
 

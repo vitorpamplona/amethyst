@@ -6,7 +6,7 @@ description: >-
 
 inputs:
   tag:
-    description: "Tag to validate (e.g. v1.08.0)"
+    description: "Tag to validate (e.g. vX.YY.Z)"
     required: true
   is_prerelease:
     description: "Whether the release is marked as prerelease (empty string treated as false)"

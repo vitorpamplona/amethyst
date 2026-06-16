@@ -76,9 +76,9 @@ android {
             libs.versions.android.targetSdk
                 .get()
                 .toInt()
-        versionCode = 447
+        versionCode = 448
         versionName = generateVersionName(libs.versions.app.get(), rootDir)
-        buildConfigField("String", "RELEASE_NOTES_ID", "\"8ec0d94550b5538115226c6858159b1115713c9c6ed942173bd4fd5d292d8ba6\"")
+        buildConfigField("String", "RELEASE_NOTES_ID", "\"40e817712e397c07ba31784a92fa474aa095896a828c0e2dea0d09c60d49ee1e\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -282,7 +282,7 @@ android {
         unitTests.all { test ->
             test.systemProperty(
                 "java.library.path",
-                "${projectDir}/src/test/native-libs/x86_64-linux",
+                "$projectDir/src/test/native-libs/x86_64-linux",
             )
             project
                 .findProperty("amethyst.arti.integration")

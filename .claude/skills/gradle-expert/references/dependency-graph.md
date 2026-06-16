@@ -212,7 +212,7 @@ implementation(compose.ui)              // Compose Multiplatform BOM
 implementation(compose.material3)
 
 // Version catalog alignment (re-check libs.versions.toml — these drift)
-composeMultiplatform = "1.11.0"
+composeMultiplatform = "1.12.0"
 composeBom = "2026.05.01"  // AndroidX Compose
 ```
 **Why:** Two Compose ecosystems (Multiplatform + AndroidX) must align

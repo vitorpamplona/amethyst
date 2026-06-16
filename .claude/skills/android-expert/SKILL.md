@@ -750,7 +750,7 @@ android {
         applicationId = "com.vitorpamplona.amethyst"
         minSdk = 26          // Android 8.0 (Oreo)
         targetSdk = 37       // android-targetSdk in libs.versions.toml
-        versionCode = 447
+        versionCode = 448
         versionName = generateVersionName(libs.versions.app.get(), rootDir)
 
         vectorDrawables {

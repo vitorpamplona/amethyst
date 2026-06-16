@@ -113,7 +113,7 @@ Where:
 
 | Field | Values                                                  |
 |---|---------------------------------------------------------|
-| `<version>` | Tag stripped of leading `v` (e.g. `1.11.0`)             |
+| `<version>` | Tag stripped of leading `v` (e.g. `1.12.0`)             |
 | `<family>` | `macos`, `windows`, `linux`                             |
 | `<arch>` | `x64`, `arm64`                                          |
 | `<ext>` | `dmg`, `msi`, `zip`, `deb`, `rpm`, `AppImage`, `tar.gz` |
@@ -124,10 +124,10 @@ any change is a breaking contract.
 
 Examples:
 
-- `amethyst-desktop-1.11.0-macos-x64.dmg`
-- `amethyst-desktop-1.11.0-macos-arm64.dmg`
-- `amethyst-desktop-1.11.0-windows-x64.msi`
-- `amethyst-desktop-1.11.0-linux-x64.AppImage`
+- `amethyst-desktop-1.12.0-macos-x64.dmg`
+- `amethyst-desktop-1.12.0-macos-arm64.dmg`
+- `amethyst-desktop-1.12.0-windows-x64.msi`
+- `amethyst-desktop-1.12.0-linux-x64.AppImage`
 
 ---
 
@@ -147,15 +147,15 @@ Quartz library in one pipeline.
    must increment even for same `versionName`):
 
    ```groovy
-   versionCode = 447
+   versionCode = 448
    versionName = generateVersionName(libs.versions.app.get())
    ```
 
 3. **Commit + tag + push**:
 
    ```bash
-   git commit -am "chore(release): 1.08.1"
-   git tag -s v1.08.1 -m "Release 1.08.1"
+   git commit -am "chore(release): 1.12.0"
+   git tag -s v1.12.0 -m "Release 1.12.0"
    git push && git push --tags
    ```
 
@@ -223,8 +223,8 @@ or equivalent issue tracker. On rotation, paste new token and run
 
 ```bash
 brew bump-cask-pr amethyst-nostr \
-  --version 1.11.0 \
-  --url "https://github.com/vitorpamplona/amethyst/releases/download/v1.11.0/amethyst-desktop-1.11.0-macos-arm64.dmg"
+  --version 1.12.0 \
+  --url "https://github.com/vitorpamplona/amethyst/releases/download/v1.12.0/amethyst-desktop-1.12.0-macos-arm64.dmg"
 ```
 
 The cask filename is `amethyst-nostr` (not `amethyst` — that's taken by a
@@ -235,7 +235,7 @@ auto-submits new version bumps on each stable release.
 
 ```bash
 wingetcreate new \
-  https://github.com/vitorpamplona/amethyst/releases/download/v1.11.0/amethyst-desktop-1.11.0-windows-x64.msi
+  https://github.com/vitorpamplona/amethyst/releases/download/v1.12.0/amethyst-desktop-1.12.0-windows-x64.msi
 ```
 
 Set `PackageIdentifier = VitorPamplona.Amethyst`. After the first manifest is
