@@ -43,7 +43,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,6 +55,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -112,7 +112,14 @@ fun WorkoutSuggestions(
             scope.launch { state.refresh() }
         }
 
-    LaunchedEffect(pubkeyHex) { state.refresh() }
+    // Scan on entry and every time the app returns to the foreground — a workout finished on
+    // a watch (Samsung Health → Health Connect) typically syncs while Amethyst is backgrounded,
+    // so coming back should pick it up. LifecycleResumeEffect runs on the initial RESUMED state
+    // too, so this also covers the first scan.
+    LifecycleResumeEffect(pubkeyHex) {
+        scope.launch { state.refresh() }
+        onPauseOrDispose {}
+    }
 
     val suggestions by state.suggestions.collectAsStateWithLifecycle()
     val hasPermission by state.hasPermission.collectAsStateWithLifecycle()
