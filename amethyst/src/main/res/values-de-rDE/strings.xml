@@ -658,10 +658,13 @@ anz der Bedingungen ist erforderlich</string>
     <string name="workout_duration">Dauer</string>
     <string name="workout_distance">Distanz</string>
     <string name="workout_pace">Tempo</string>
+    <string name="workout_speed">Geschwindigkeit</string>
     <string name="workout_elevation">Höhenmeter</string>
+    <string name="workout_elevation_loss">Höhenverlust</string>
     <string name="workout_calories">Kalorien</string>
     <string name="workout_steps">Schritte</string>
     <string name="workout_heart_rate">Herzfrequenz</string>
+    <string name="workout_max_heart_rate">Maximale Herzfrequenz</string>
     <string name="workout_sets">Sätze</string>
     <string name="workout_reps">Wiederholungen</string>
     <string name="workout_weight">Gewicht</string>
@@ -3213,7 +3216,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Kunst</string>
     <string name="nowhere_link_card_forum">Nowhere Forum</string>
-    <string name="workout_elevation_loss">Höhenverlust</string>
-    <string name="workout_max_heart_rate">Maximale Herzfrequenz</string>
-    <string name="workout_speed">Geschwindigkeit</string>
 </resources>
