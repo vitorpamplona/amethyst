@@ -29,9 +29,12 @@ import android.content.Context
  * SharedPreferences file keyed by npub.
  */
 class HealthConnectStore(
-    context: Context,
+    private val context: Context,
 ) {
-    private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    // Lazy so constructing the store touches no disk; the first getSharedPreferences (which
+    // hits the filesystem) happens on the IO dispatcher from the callers below, not in
+    // composition on the main thread.
+    private val prefs by lazy { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
 
     fun handledIds(npub: String): Set<String> = prefs.getStringSet(key(npub), emptySet()) ?: emptySet()
 

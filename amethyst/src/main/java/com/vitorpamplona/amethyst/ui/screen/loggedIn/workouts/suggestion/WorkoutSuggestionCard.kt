@@ -96,15 +96,16 @@ fun WorkoutSuggestions(
     if (suggestEnabled == BooleanType.NEVER) return
 
     val pubkeyHex = accountViewModel.account.signer.pubKey
+    val scope = rememberCoroutineScope()
     val state =
         remember(pubkeyHex) {
             WorkoutSuggestionState(
                 manager = HealthConnectManager(context),
                 store = HealthConnectStore(context),
                 pubkeyHex = pubkeyHex,
+                scope = scope,
             )
         }
-    val scope = rememberCoroutineScope()
 
     val permissionLauncher =
         rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) {

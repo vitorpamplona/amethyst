@@ -24,8 +24,12 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.service.workouts.health.DetectedWorkout
 import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectManager
 import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Duration
 import java.time.Instant
 
@@ -35,13 +39,16 @@ import java.time.Instant
  * user has not yet handled and exposes them for the suggestion banner.
  *
  * Remembered in composition (not a ViewModel) to match the codebase's
- * permission-launcher pattern; [refresh] is driven from a LaunchedEffect.
+ * permission-launcher pattern; [refresh] is driven from a LaunchedEffect. The
+ * SharedPreferences-backed [store] is only touched on [Dispatchers.IO] so it
+ * never reads disk on the main thread.
  */
 @Stable
 class WorkoutSuggestionState(
     private val manager: HealthConnectManager,
     private val store: HealthConnectStore,
     private val pubkeyHex: String,
+    private val scope: CoroutineScope,
 ) {
     private val _suggestions = MutableStateFlow<List<DetectedWorkout>>(emptyList())
     val suggestions = _suggestions.asStateFlow()
@@ -58,7 +65,7 @@ class WorkoutSuggestionState(
         }
 
         val since = Instant.now().minus(Duration.ofDays(HealthConnectStore.LOOKBACK_DAYS))
-        val handled = store.handledIds(pubkeyHex)
+        val handled = withContext(Dispatchers.IO) { store.handledIds(pubkeyHex) }
 
         _suggestions.value =
             manager
@@ -70,7 +77,7 @@ class WorkoutSuggestionState(
 
     /** Marks a workout handled (accepted or dismissed) so it is not offered again. */
     fun handle(workoutId: String) {
-        store.markHandled(pubkeyHex, workoutId)
         _suggestions.value = _suggestions.value.filterNot { it.id == workoutId }
+        scope.launch(Dispatchers.IO) { store.markHandled(pubkeyHex, workoutId) }
     }
 }
