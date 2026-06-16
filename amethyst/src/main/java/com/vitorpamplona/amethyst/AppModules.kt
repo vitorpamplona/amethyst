@@ -427,10 +427,19 @@ class AppModules(
 
     // Connects the INostrClient class with okHttp
     val websocketBuilder =
-        OkHttpWebSocket.Builder { url ->
-            val useTor = torEvaluatorFlow.shouldUseTorForRelay(url)
-            okHttpClientForRelays.getHttpClient(useTor)
-        }
+        OkHttpWebSocket.Builder(
+            httpClient = { url ->
+                val useTor = torEvaluatorFlow.shouldUseTorForRelay(url)
+                okHttpClientForRelays.getHttpClient(useTor)
+            },
+            // Don't dial Tor-routed relays until Tor's SOCKS port is up. Otherwise the
+            // whole Tor-routed relay set is hammered with doomed dials against the dead
+            // proxy during bootstrap. RelayProxyClientConnector reconnects them (with
+            // ignoreRetryDelays=true) the instant Tor flips to Active.
+            canDial = { url ->
+                !torEvaluatorFlow.shouldUseTorForRelay(url) || torManager.isSocksReady()
+            },
+        )
 
     // Caches all events in Memory
     val cache: LocalCache = LocalCache

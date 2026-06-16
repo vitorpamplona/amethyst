@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.concurrent.Volatile
 
 /**
  * Per-account, durable record of relay liveness used to drive the "unhealthy relay" review UI.
@@ -55,6 +56,10 @@ class RelayHealthStore(
     private val persistence: RelayHealthPersistence,
     private val torEnabledProvider: () -> Boolean = { false },
     parentScope: CoroutineScope? = null,
+    // Caller-supplied dispatcher used for both classification and persistence I/O.
+    // Default is `Dispatchers.Default` so commonMain stays iOS-compatible — JVM hosts
+    // (Android/Desktop) should pass `Dispatchers.IO` so `prefs.flush()` doesn't sit on
+    // a CPU-bound worker.
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) {
     companion object {
@@ -84,8 +89,11 @@ class RelayHealthStore(
     private val _unhealthy = MutableStateFlow<PersistentList<UnhealthyRelay>>(persistentListOf())
     val unhealthy: StateFlow<PersistentList<UnhealthyRelay>> = _unhealthy.asStateFlow()
 
-    private var persistJob: Job? = null
-    private var tickJob: Job? = null
+    @Volatile private var persistJob: Job? = null
+
+    @Volatile private var tickJob: Job? = null
+
+    @Volatile private var closed = false
 
     init {
         // Persist the firstScanAt seed if we just stamped it.
@@ -214,20 +222,38 @@ class RelayHealthStore(
     }
 
     private fun schedulePersist() {
+        if (closed) return
         persistJob?.cancel()
         persistJob =
             scope.launch {
                 delay(PERSIST_DEBOUNCE_MS)
                 val snapshot = state.value
-                runCatching { persistence.save(snapshot) }
+                withContext(ioDispatcher) {
+                    runCatching { persistence.save(snapshot) }
+                }
             }
     }
 
+    /**
+     * Tear down internal jobs and fire the final persist off-thread. Safe to call from
+     * the composition / Main thread: the blocking I/O is dispatched to [ioDispatcher]
+     * on a detached, self-cancelling scope so the last debounce window isn't lost when
+     * the parent composition scope is about to cancel.
+     */
     fun close() {
-        // Flush pending writes synchronously before tearing down.
+        if (closed) return
+        closed = true
         persistJob?.cancel()
-        runCatching { persistence.save(state.value) }
         tickJob?.cancel()
+        val finalSnapshot = state.value
+        val flushScope = CoroutineScope(SupervisorJob() + ioDispatcher)
+        flushScope.launch {
+            try {
+                runCatching { persistence.save(finalSnapshot) }
+            } finally {
+                flushScope.cancel()
+            }
+        }
         if (ownsScope) scope.cancel()
     }
 }

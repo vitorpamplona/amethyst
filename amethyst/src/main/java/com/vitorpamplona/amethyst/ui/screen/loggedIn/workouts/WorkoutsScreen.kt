@@ -89,14 +89,6 @@ fun WorkoutsScreen(
                     listState = listState,
                     nav = nav,
                     routeForLastRead = "WorkoutsFeed",
-                    onLoaded = { loaded ->
-                        WorkoutFeedLoaded(
-                            loaded = loaded,
-                            listState = listState,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
-                    },
                 )
             }
         }

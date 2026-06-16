@@ -3207,4 +3207,7 @@
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Konst</string>
     <string name="nowhere_link_card_forum">Nowhere Forum</string>
+    <string name="workout_elevation_loss">Höjdminskning</string>
+    <string name="workout_max_heart_rate">Maxpuls</string>
+    <string name="workout_speed">Hastighet</string>
 </resources>

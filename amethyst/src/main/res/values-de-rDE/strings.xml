@@ -3213,4 +3213,7 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Kunst</string>
     <string name="nowhere_link_card_forum">Nowhere Forum</string>
+    <string name="workout_elevation_loss">Höhenverlust</string>
+    <string name="workout_max_heart_rate">Maximale Herzfrequenz</string>
+    <string name="workout_speed">Geschwindigkeit</string>
 </resources>
