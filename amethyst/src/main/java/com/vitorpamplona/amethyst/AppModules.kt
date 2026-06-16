@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.service.playback.service.PlaybackServiceClient
 import com.vitorpamplona.amethyst.service.relayClient.CacheClientConnector
 import com.vitorpamplona.amethyst.service.relayClient.RelayProxyClientConnector
+import com.vitorpamplona.amethyst.service.relayClient.TorCircuitHealthTracker
 import com.vitorpamplona.amethyst.service.relayClient.authCommand.model.AuthCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.notifyCommand.model.NotifyCoordinator
 import com.vitorpamplona.amethyst.service.relayClient.reqCommand.RelaySubscriptionsCoordinator
@@ -480,6 +481,18 @@ class AppModules(
 
     // Provides a relay pool
     val client: INostrClient = NostrClient(websocketBuilder, applicationIOScope)
+
+    // Self-heals the "Tor Active but every circuit dead" state the lifecycle watchdogs can't
+    // see (they only arm while Connecting). Watches Tor-routed relay outcomes and, when enough
+    // fail with zero successes in the window, pokes TorManager to drop + re-init Arti.
+    val torCircuitHealthTracker =
+        TorCircuitHealthTracker(
+            client = client,
+            isTorRouted = { torEvaluatorFlow.shouldUseTorForRelay(it) },
+            isTorActive = { torManager.isSocksReady() },
+            isConnectivityActive = { connManager.status.value is ConnectivityStatus.Active },
+            onCircuitsDead = { torManager.onTorCircuitsDead() },
+        ).also { it.register() }
 
     // Watches for changes on Tor and Relay List Settings
     val relayProxyClientConnector =

@@ -287,6 +287,37 @@ class TorManager(
         }
     }
 
+    /**
+     * Tor is [TorServiceStatus.Active] (SOCKS proxy up, bootstrap "succeeded" off cached
+     * consensus) yet every Tor-routed relay is failing — no successful Tor open while exit
+     * failures pile up. The circuits behind the proxy are dead, but the lifecycle can't see
+     * it: the stuck-Connecting watchdog and the [connectionFailure] dialog only arm while
+     * status is [TorServiceStatus.Connecting], not Active. The relay layer (which knows both
+     * the per-relay success/failure outcome and the Tor-routing of each url) detects the
+     * all-failing condition and pokes us here — analogous to [onNetworkChange].
+     *
+     * Recovery mirrors the post-Active stuck-Connecting path: drop the client and wipe
+     * `arti/state/` (we *did* bootstrap, so a fully-dead exit set behind a healthy-looking
+     * guards.json points at a bad persisted guard/circuit sample worth rebuilding), then bump
+     * [resetEpoch] so the status combine re-enters the INTERNAL branch and runs a full
+     * re-init. Shares [lastSelfHealAtMs]/[SELF_HEAL_COOLDOWN_MS] with the Connecting watchdog
+     * so the two can't thrash — at most one self-heal per cooldown window. If circuits are
+     * still dead after the reset, the cooldown suppresses further resets and the 60s
+     * [connectionFailure] dialog still offers the user the bypass.
+     */
+    fun onTorCircuitsDead() {
+        if (sessionBypass.value) return
+        if (status.value !is TorServiceStatus.Active) return
+        val now = nowMs()
+        if (now - lastSelfHealAtMs < SELF_HEAL_COOLDOWN_MS) return
+        lastSelfHealAtMs = now
+        Log.w("TorManager") { "Tor Active but all circuits failing — self-healing (drop client + wipe state)" }
+        scope.launch(ioDispatcher) {
+            service.resetWithCleanState()
+            resetEpoch.update { it + 1 }
+        }
+    }
+
     fun isSocksReady() = status.value is TorServiceStatus.Active
 
     fun socksPort(): Int = (status.value as? TorServiceStatus.Active)?.port ?: 17392
