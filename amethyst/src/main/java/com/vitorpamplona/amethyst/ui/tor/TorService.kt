@@ -37,6 +37,13 @@ private const val DEFAULT_SOCKS_PORT = 17392
 private const val MAX_PORT_RETRIES = 10
 
 /**
+ * Return code from [ArtiNative.initialize] when the native bootstrap exceeds its
+ * internal timeout. The native side has already torn down the half-built client;
+ * we treat this differently from a hard failure (see [TorService.start]).
+ */
+private const val ARTI_ERROR_BOOTSTRAP_TIMEOUT = -4
+
+/**
  * Manages the Arti Tor client via custom JNI bindings.
  *
  * The native TorClient is initialized once and persists for the app's
@@ -220,6 +227,19 @@ class TorService(
                     Log.d("TorService") { "Initializing Arti with data dir: $dataDir" }
 
                     var initResult = ArtiNative.initialize(dataDir)
+
+                    if (initResult == ARTI_ERROR_BOOTSTRAP_TIMEOUT) {
+                        // The native bootstrap hit its timeout (hostile network) and
+                        // already tore down the half-built client. Don't wipe state or
+                        // retry inline — that would hold lifecycleMutex for another full
+                        // timeout. Drop the init flag and leave status at Connecting so
+                        // TorManager's self-heal watchdog resets and retries on its own
+                        // cadence (and the connection-failure dialog can still surface).
+                        Log.w("TorService") { "Arti bootstrap timed out — leaving Connecting for the self-heal watchdog to retry" }
+                        initialized.set(false)
+                        return@withContext
+                    }
+
                     if (initResult != 0) {
                         Log.e("TorService") { "Failed to initialize Arti: error $initResult, clearing data and retrying" }
                         clearAllArtiData()
