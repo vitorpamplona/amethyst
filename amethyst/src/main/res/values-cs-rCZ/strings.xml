@@ -3274,4 +3274,7 @@
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Umění</string>
     <string name="nowhere_link_card_forum">Nowhere Fórum</string>
+    <string name="workout_elevation_loss">Klesání</string>
+    <string name="workout_max_heart_rate">Maximální tepová frekvence</string>
+    <string name="workout_speed">Rychlost</string>
 </resources>
