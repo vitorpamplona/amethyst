@@ -62,6 +62,13 @@ class TorService(
     private val proxyRunning = AtomicBoolean(false)
 
     /**
+     * Wall-clock at which the current `initialize()` started, so the bootstrap log can
+     * report the elapsed time to "Sufficiently bootstrapped". -1 when no init is in flight.
+     * Diagnostic only.
+     */
+    @Volatile private var bootstrapStartedAtMs: Long = -1L
+
+    /**
      * Serializes every native lifecycle transition ([start], [stop], [reset],
      * [resetWithCleanState]). [ArtiNative] is a process-global singleton over a
      * single native Arti client, and `initialize`/`destroy` are blocking JNI
@@ -79,18 +86,11 @@ class TorService(
 
     private fun artiDataDir() = File(context.filesDir, "arti")
 
-    /**
-     * Clears the Arti cache directory (consensus, relay descriptors) while
-     * preserving the state directory (guard selection). This forces a fresh
-     * consensus download on the next bootstrap, preventing stale cached data
-     * from causing circuit failures.
-     */
-    private fun clearArtiCache() {
+    /** Diagnostic: total bytes of the consensus/descriptor cache, to correlate with bootstrap time. */
+    private fun cacheSizeBytes(): Long {
         val cacheDir = File(artiDataDir(), "cache")
-        if (cacheDir.exists()) {
-            cacheDir.deleteRecursively()
-            Log.d("TorService") { "Cleared Arti cache directory" }
-        }
+        if (!cacheDir.exists()) return 0
+        return cacheDir.walkBottomUp().filter { it.isFile }.sumOf { it.length() }
     }
 
     /**
@@ -203,15 +203,23 @@ class TorService(
                                 // not resurrect a stale Active status.
                                 if (proxyRunning.get()) {
                                     _status.value = TorServiceStatus.Active(socksPort)
-                                    Log.d("TorService") { "Arti SOCKS proxy active on port $socksPort" }
+                                    val startedAt = bootstrapStartedAtMs
+                                    val elapsed = if (startedAt > 0) System.currentTimeMillis() - startedAt else -1
+                                    Log.d("TorService") { "Arti SOCKS proxy active on port $socksPort (bootstrap took ${elapsed}ms)" }
                                 }
                             }
                         }
                     }
 
-                    // Clear cached consensus/descriptors so Arti bootstraps with
-                    // fresh network data, preventing stale guards/circuits.
-                    clearArtiCache()
+                    // Preserve the consensus/descriptor cache across cold starts. We used to
+                    // wipe it on every launch, which forced a full microdescriptor consensus
+                    // re-download and turned a ~7s warm bootstrap into ~24s. That wipe was an
+                    // early attempt at what turned out to be the wedged-guard problem (now
+                    // handled by [noUsableGuards]); it never actually helped, since guards live
+                    // in state/ — not cache/ — and Arti already validates consensus freshness
+                    // and refetches whatever has expired. The reset/clean-state paths still call
+                    // clearAllArtiData() for genuine corruption recovery.
+                    Log.d("TorService") { "Preserving Arti cache for warm bootstrap (cache size: ${cacheSizeBytes()} bytes)" }
 
                     // Self-heal the wedged guard sample (see [noUsableGuards]): if
                     // the persisted sample has no usable guard left, Arti can
@@ -226,6 +234,7 @@ class TorService(
                     val dataDir = artiDataDir().absolutePath
                     Log.d("TorService") { "Initializing Arti with data dir: $dataDir" }
 
+                    bootstrapStartedAtMs = System.currentTimeMillis()
                     var initResult = ArtiNative.initialize(dataDir)
 
                     if (initResult == ARTI_ERROR_BOOTSTRAP_TIMEOUT) {
