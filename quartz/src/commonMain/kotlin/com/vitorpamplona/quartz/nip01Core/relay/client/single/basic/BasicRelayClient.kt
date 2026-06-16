@@ -103,6 +103,12 @@ open class BasicRelayClient(
     override fun needsToReconnect() = socket?.needsReconnect() ?: true
 
     override fun connect() {
+        // Transport gate: skip the dial when the builder reports this relay's transport
+        // isn't ready (e.g. a Tor-routed relay while Tor's SOCKS port isn't up). Returning
+        // here before the mutex/socket/onConnecting means no doomed dial and no backoff
+        // growth; a later reconnect pass (fired when the transport becomes ready) will dial.
+        if (!socketBuilder.canConnect(url)) return
+
         // If there is a connection, don't wait.
         if (connectingMutex.exchange(true)) {
             return

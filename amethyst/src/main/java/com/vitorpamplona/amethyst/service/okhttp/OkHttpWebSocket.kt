@@ -133,12 +133,16 @@ class OkHttpWebSocket(
 
     class Builder(
         val httpClient: (NormalizedRelayUrl) -> OkHttpClient,
+        val canDial: (NormalizedRelayUrl) -> Boolean = { true },
     ) : WebsocketBuilder {
         // Called when connecting.
         override fun build(
             url: NormalizedRelayUrl,
             out: WebSocketListener,
         ) = OkHttpWebSocket(url, httpClient, out)
+
+        // Gates the dial — false skips it (e.g. a Tor-routed relay before Tor is ready).
+        override fun canConnect(url: NormalizedRelayUrl) = canDial(url)
     }
 
     override fun disconnect() {
