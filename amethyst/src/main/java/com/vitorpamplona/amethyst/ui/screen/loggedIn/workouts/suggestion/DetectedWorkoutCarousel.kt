@@ -1,0 +1,205 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.suggestion
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.model.BooleanType
+import com.vitorpamplona.amethyst.service.workouts.health.DetectedWorkout
+import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectManager
+import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectStore
+import com.vitorpamplona.amethyst.ui.navigation.routes.Route
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.labelRes
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.symbol
+import com.vitorpamplona.amethyst.ui.stringRes
+import kotlinx.coroutines.launch
+import java.time.Duration
+import java.time.Instant
+
+/**
+ * Horizontal list of workouts found in Health Connect in the last
+ * [HealthConnectStore.LOOKBACK_DAYS] days, shown at the top of the New Workout
+ * composer. Tapping one pre-loads the form with that workout via [onPick].
+ *
+ * Renders nothing when Health Connect is unavailable, the suggestion setting is
+ * off, permission is missing, or no workouts are found — so the manual form is
+ * untouched in those cases. Unlike the feed banner, this shows every workout in
+ * the window (it is not filtered by what was already shared or dismissed).
+ */
+@Composable
+fun DetectedWorkoutCarousel(
+    accountViewModel: AccountViewModel,
+    onPick: (Route.NewWorkout) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val available = remember { HealthConnectManager.isAvailable(context) }
+    if (!available) return
+
+    val enabled by accountViewModel.settings.uiSettingsFlow.suggestWorkoutsFromHealthConnect
+        .collectAsStateWithLifecycle()
+    if (enabled == BooleanType.NEVER) return
+
+    val manager = remember { HealthConnectManager(context) }
+    val scope = rememberCoroutineScope()
+    var workouts by remember { mutableStateOf<List<DetectedWorkout>>(emptyList()) }
+
+    LifecycleResumeEffect(Unit) {
+        scope.launch {
+            workouts =
+                if (manager.hasAllPermissions()) {
+                    val since = Instant.now().minus(Duration.ofDays(HealthConnectStore.LOOKBACK_DAYS))
+                    manager.readNewWorkouts(since).sortedByDescending { it.startTimeEpochSeconds }
+                } else {
+                    emptyList()
+                }
+        }
+        onPauseOrDispose {}
+    }
+
+    if (workouts.isEmpty()) return
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = stringRes(R.string.workout_from_health_connect),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 4.dp),
+        )
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(horizontal = 2.dp),
+        ) {
+            items(workouts, key = { it.id }) { workout ->
+                val label = workout.title ?: stringRes(workout.exercise.labelRes())
+                WorkoutChip(
+                    workout = workout,
+                    label = label,
+                    summary = summaryLine(workout),
+                    onClick = { onPick(workout.toNewWorkoutRoute(label)) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun summaryLine(workout: DetectedWorkout): String {
+    val parts = mutableListOf<String>()
+    workout.distanceMeters?.takeIf { it > 0 }?.let {
+        parts.add(stringRes(R.string.workout_suggestion_distance_km, "%.2f".format(it / 1000.0)))
+    }
+    parts.add(formatWorkoutDuration(workout.durationSeconds))
+    return parts.joinToString(" · ")
+}
+
+@Composable
+private fun WorkoutChip(
+    workout: DetectedWorkout,
+    label: String,
+    summary: String,
+    onClick: () -> Unit,
+) {
+    OutlinedCard(
+        onClick = onClick,
+        modifier = Modifier.width(150.dp),
+        shape = RoundedCornerShape(14.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            symbol = workout.exercise.symbol(),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
+                }
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Text(
+                text = summary,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = workoutRelativeTime(workout.startTimeEpochSeconds),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}

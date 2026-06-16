@@ -76,13 +76,21 @@ class NewWorkoutViewModel : ViewModel() {
 
     /**
      * Pre-fills the form from a [Route.NewWorkout] (e.g. a Health Connect
-     * detection). Applied once per ViewModel so user edits are not overwritten
-     * on recomposition; a blank route leaves the empty manual form untouched.
+     * detection) the first time only, so user edits are not overwritten on
+     * recomposition; a blank route leaves the empty manual form untouched.
      */
     fun prefill(route: Route.NewWorkout) {
         if (hasPrefilled) return
         hasPrefilled = true
+        applyPrefill(route)
+    }
 
+    /**
+     * Unconditionally fills the form from [route]. Used when the user taps a
+     * workout in the New Workout carousel and expects the fields to switch to
+     * that workout, overwriting whatever was there.
+     */
+    fun applyPrefill(route: Route.NewWorkout) {
         route.exercise?.let { ExerciseType.parse(it) }?.let { exercise = it }
         route.title?.let { title = it }
 

@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.suggestion
 
-import android.text.format.DateUtils
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
@@ -66,12 +65,10 @@ import com.vitorpamplona.amethyst.service.workouts.health.DetectedWorkout
 import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectManager
 import com.vitorpamplona.amethyst.service.workouts.health.HealthConnectStore
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.labelRes
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.symbol
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.experimental.fitness.workout.tags.SourceTag
 import kotlinx.coroutines.launch
 
 /**
@@ -229,7 +226,7 @@ private fun WorkoutSuggestionRow(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = relativeTime(workout.startTimeEpochSeconds),
+                    text = workoutRelativeTime(workout.startTimeEpochSeconds),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -270,7 +267,7 @@ private fun MetricChips(workout: DetectedWorkout) {
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        MetricChip(MaterialSymbols.Timer, formatDuration(workout.durationSeconds))
+        MetricChip(MaterialSymbols.Timer, formatWorkoutDuration(workout.durationSeconds))
         workout.distanceMeters?.takeIf { it > 0 }?.let {
             MetricChip(null, stringRes(R.string.workout_suggestion_distance_km, "%.2f".format(it / 1000.0)))
         }
@@ -335,37 +332,3 @@ private fun ActivityBadge(symbol: MaterialSymbol) {
         }
     }
 }
-
-private fun relativeTime(epochSeconds: Long): String =
-    DateUtils
-        .getRelativeTimeSpanString(
-            epochSeconds * 1000L,
-            System.currentTimeMillis(),
-            DateUtils.MINUTE_IN_MILLIS,
-        ).toString()
-
-private fun formatDuration(totalSeconds: Long): String {
-    val h = totalSeconds / 3600
-    val m = (totalSeconds % 3600) / 60
-    val s = totalSeconds % 60
-    return if (h > 0) {
-        "%d:%02d:%02d".format(h, m, s)
-    } else {
-        "%d:%02d".format(m, s)
-    }
-}
-
-private fun DetectedWorkout.toNewWorkoutRoute(title: String) =
-    Route.NewWorkout(
-        exercise = exercise.code,
-        title = title,
-        durationSeconds = durationSeconds,
-        distanceMeters = distanceMeters ?: 0.0,
-        calories = calories ?: 0,
-        avgHeartRate = avgHeartRate ?: 0,
-        maxHeartRate = maxHeartRate ?: 0,
-        steps = steps ?: 0,
-        elevationGainMeters = elevationGainMeters ?: 0.0,
-        startTime = startTimeEpochSeconds,
-        source = SourceTag.HEALTH_CONNECT,
-    )

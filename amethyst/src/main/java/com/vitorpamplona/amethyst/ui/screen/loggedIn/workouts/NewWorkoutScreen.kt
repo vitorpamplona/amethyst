@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.suggestion.DetectedWorkoutCarousel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.DistanceTag
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.ExerciseType
@@ -95,13 +96,16 @@ fun NewWorkoutScreen(
                     .consumeWindowInsets(pad)
                     .imePadding(),
         ) {
-            NewWorkoutBody(postViewModel)
+            NewWorkoutBody(postViewModel, accountViewModel)
         }
     }
 }
 
 @Composable
-private fun NewWorkoutBody(postViewModel: NewWorkoutViewModel) {
+private fun NewWorkoutBody(
+    postViewModel: NewWorkoutViewModel,
+    accountViewModel: AccountViewModel,
+) {
     Column(
         modifier =
             Modifier
@@ -110,6 +114,12 @@ private fun NewWorkoutBody(postViewModel: NewWorkoutViewModel) {
                 .padding(horizontal = 10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        // Tap a recent Health Connect workout to pre-load the form.
+        DetectedWorkoutCarousel(
+            accountViewModel = accountViewModel,
+            onPick = { postViewModel.applyPrefill(it) },
+        )
+
         ExerciseTypeSelector(postViewModel.exercise) { postViewModel.exercise = it }
 
         OutlinedTextField(
