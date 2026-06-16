@@ -43,7 +43,7 @@ fun NewWorkoutButton(nav: INav) {
         containerColor = MaterialTheme.colorScheme.primary,
     ) {
         Icon(
-            symbol = MaterialSymbols.DirectionsRun,
+            symbol = MaterialSymbols.Add,
             contentDescription = stringRes(id = R.string.new_workout),
             modifier = Size26Modifier,
             tint = Color.White,
