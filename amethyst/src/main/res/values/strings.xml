@@ -687,10 +687,13 @@
     <string name="workout_duration">Duration</string>
     <string name="workout_distance">Distance</string>
     <string name="workout_pace">Pace</string>
-    <string name="workout_elevation">Elevation</string>
+    <string name="workout_speed">Speed</string>
+    <string name="workout_elevation">Elevation gain</string>
+    <string name="workout_elevation_loss">Elevation loss</string>
     <string name="workout_calories">Calories</string>
     <string name="workout_steps">Steps</string>
     <string name="workout_heart_rate">Heart rate</string>
+    <string name="workout_max_heart_rate">Max heart rate</string>
     <string name="workout_sets">Sets</string>
     <string name="workout_reps">Reps</string>
     <string name="workout_weight">Weight</string>
