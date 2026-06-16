@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.ui.note.VerticalDotsIcon
 import com.vitorpamplona.amethyst.ui.note.externalLinkForNote
+import com.vitorpamplona.amethyst.ui.note.share.ShareNoteAsImageDialog
 import com.vitorpamplona.amethyst.ui.note.types.EditState
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.report.ReportNoteDialog
@@ -116,6 +117,7 @@ fun NoteDropDownMenu(
 ) {
     var reportDialogShowing by remember { mutableStateOf(false) }
     var addLabelDialogShowing by remember { mutableStateOf(false) }
+    var shareAsImageShowing by remember { mutableStateOf(false) }
 
     val state by observeBookmarksFollowsAndAccount(note, accountViewModel).collectAsStateWithLifecycle(
         DropDownParams(
@@ -238,6 +240,9 @@ fun NoteDropDownMenu(
                     val shareIntent = Intent.createChooser(sendIntent, stringRes(actContext, R.string.quick_action_share))
                     actContext.startActivity(shareIntent)
                     onDismiss()
+                }
+                M3ActionRow(icon = MaterialSymbols.Image, text = stringRes(R.string.share_as_image)) {
+                    shareAsImageShowing = true
                 }
             }
         }
@@ -421,6 +426,18 @@ fun NoteDropDownMenu(
             accountViewModel = accountViewModel,
             onDismiss = {
                 addLabelDialogShowing = false
+                onDismiss()
+            },
+        )
+    }
+
+    if (shareAsImageShowing) {
+        ShareNoteAsImageDialog(
+            note = note,
+            accountViewModel = accountViewModel,
+            nav = nav,
+            onDismiss = {
+                shareAsImageShowing = false
                 onDismiss()
             },
         )
