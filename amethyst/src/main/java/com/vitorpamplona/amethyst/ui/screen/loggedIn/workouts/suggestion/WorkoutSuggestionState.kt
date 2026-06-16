@@ -53,7 +53,10 @@ class WorkoutSuggestionState(
     private val _suggestions = MutableStateFlow<List<DetectedWorkout>>(emptyList())
     val suggestions = _suggestions.asStateFlow()
 
-    private val _hasPermission = MutableStateFlow(false)
+    // null = not checked yet. Kept distinct from false so the connect prompt is only shown
+    // once we actually know permission is missing, never during the async check (which would
+    // otherwise flash the prompt every time the screen opens for an already-granted user).
+    private val _hasPermission = MutableStateFlow<Boolean?>(null)
     val hasPermission = _hasPermission.asStateFlow()
 
     suspend fun refresh() {

@@ -125,7 +125,11 @@ fun WorkoutSuggestions(
     val hasPermission by state.hasPermission.collectAsStateWithLifecycle()
     var connectDismissed by rememberSaveable(pubkeyHex) { mutableStateOf(false) }
 
-    if (suggestions.isEmpty() && (hasPermission || connectDismissed)) return
+    // Not checked yet: render nothing so the connect prompt never flashes during the check.
+    val granted = hasPermission ?: return
+    val showConnect = !granted && !connectDismissed
+
+    if (suggestions.isEmpty() && !showConnect) return
 
     Column(
         modifier =
@@ -135,7 +139,7 @@ fun WorkoutSuggestions(
                 .animateContentSize(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        if (!hasPermission && !connectDismissed) {
+        if (showConnect) {
             ConnectHealthCard(
                 onConnect = { permissionLauncher.launch(HealthConnectManager.PERMISSIONS) },
                 onDismiss = { connectDismissed = true },
