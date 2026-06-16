@@ -30,16 +30,25 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,32 +63,40 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.vitorpamplona.amethyst.R
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.ui.actions.mediaServers.DEFAULT_MEDIA_SERVERS
+import com.vitorpamplona.amethyst.ui.actions.uploads.UploadProgressIndicator
 import com.vitorpamplona.amethyst.ui.components.LoadNote
 import com.vitorpamplona.amethyst.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.topbars.ActionTopBar
+import com.vitorpamplona.amethyst.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.amethyst.ui.theme.Size18Modifier
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -119,6 +136,8 @@ fun ShareNoteAsImageScreen(
 
     // The captured bitmap that becomes the preview and, on share, the uploaded file.
     var preview by remember { mutableStateOf<ImageBitmap?>(null) }
+    // Once true the off-screen capture source is disposed; [preview] holds the final bitmap.
+    var captureComplete by remember { mutableStateOf(false) }
     var isProcessing by remember { mutableStateOf(false) }
 
     val fileServers by account.blossomServers.hostNameFlow.collectAsState()
@@ -189,73 +208,156 @@ fun ShareNoteAsImageScreen(
     }
 
     Scaffold(
-        topBar = {
-            ActionTopBar(
-                postRes = R.string.quick_action_share,
-                titleRes = R.string.share_as_image,
-                isActive = { preview != null && !isProcessing },
-                onCancel = { nav.popBack() },
-                onPost = ::shareImage,
+        topBar = { TopBarWithBackButton(stringRes(R.string.share_as_image), nav) },
+        bottomBar = {
+            ShareBottomBar(
+                serverName = selectedServer.name,
+                serverOptions = fileServerOptions,
+                onSelectServer = { selectedServer = fileServers[it] },
+                shareEnabled = preview != null && !isProcessing,
+                onShare = ::shareImage,
             )
         },
     ) { pad ->
-        Column(
-            Modifier
-                .padding(pad)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+        Box(
+            modifier =
+                Modifier
+                    .padding(pad)
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.surface,
+                                MaterialTheme.colorScheme.surfaceVariant,
+                            ),
+                        ),
+                    ),
+            contentAlignment = Alignment.Center,
         ) {
-            SettingsRow(R.string.file_server, R.string.file_server_description) {
-                TextSpinner(
-                    label = "",
-                    placeholder = selectedServer.name,
-                    options = fileServerOptions,
-                    onSelect = { selectedServer = fileServers[it] },
+            // Keep the note rendered (but unpainted) until the snapshot is final, so async
+            // images have a chance to load into the layer before the second capture.
+            if (!captureComplete) {
+                CaptureSource(
+                    note = note,
+                    graphicsLayer = graphicsLayer,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
                 )
+                LaunchedEffect(note) {
+                    // Wait a couple of frames so the card is measured and drawn, snapshot a
+                    // first preview, then refine once network media has had time to settle.
+                    withFrameNanos {}
+                    withFrameNanos {}
+                    preview = graphicsLayer.toImageBitmap()
+                    delay(IMAGE_SETTLE_MS)
+                    preview = graphicsLayer.toImageBitmap()
+                    captureComplete = true
+                }
             }
 
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center,
+            val captured = preview
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
             ) {
-                val captured = preview
-                if (captured == null) {
-                    // Render the note off-screen into the graphics layer, then snapshot it.
-                    CaptureSource(
-                        note = note,
-                        graphicsLayer = graphicsLayer,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
-                    LaunchedEffect(note) {
-                        // Wait a couple of frames so the card is measured and drawn before capture.
-                        withFrameNanos {}
-                        withFrameNanos {}
-                        preview = graphicsLayer.toImageBitmap()
-                    }
-                    CircularProgressIndicator()
-                } else {
+                if (captured != null) {
                     Image(
                         bitmap = captured,
                         contentDescription = stringRes(R.string.share_as_image),
                         contentScale = ContentScale.FillWidth,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier =
+                            Modifier
+                                .widthIn(max = 460.dp)
+                                .fillMaxWidth()
+                                .shadow(18.dp, PreviewShape, clip = false)
+                                .clip(PreviewShape),
                     )
+                } else {
+                    GeneratingPreview()
+                }
+            }
 
-                    if (isProcessing) {
-                        Box(
-                            modifier =
-                                Modifier
-                                    .fillMaxSize()
-                                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.4f)),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            CircularProgressIndicator()
-                        }
+            if (isProcessing) {
+                Box(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Surface(
+                        shape = PreviewShape,
+                        tonalElevation = 6.dp,
+                    ) {
+                        UploadProgressIndicator(
+                            orchestrator,
+                            modifier = Modifier.widthIn(min = 160.dp).padding(horizontal = 24.dp),
+                        )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GeneratingPreview() {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        CircularProgressIndicator()
+        Text(
+            text = stringRes(R.string.share_as_image_generating),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ShareBottomBar(
+    serverName: String,
+    serverOptions: ImmutableList<TitleExplainer>,
+    onSelectServer: (Int) -> Unit,
+    shareEnabled: Boolean,
+    onShare: () -> Unit,
+) {
+    Surface(tonalElevation = 3.dp) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            TextSpinner(
+                label = stringRes(R.string.file_server),
+                placeholder = serverName,
+                options = serverOptions,
+                onSelect = onSelectServer,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Button(
+                onClick = onShare,
+                enabled = shareEnabled,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.Share,
+                    contentDescription = null,
+                    modifier = Size18Modifier,
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(stringRes(R.string.quick_action_share))
             }
         }
     }
@@ -273,19 +375,19 @@ private fun CaptureSource(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val shape = RoundedCornerShape(18.dp)
     Column(
         modifier =
             Modifier
+                .widthIn(max = 600.dp)
                 .fillMaxWidth()
                 .drawWithContent {
                     graphicsLayer.record { this@drawWithContent.drawContent() }
-                    // Intentionally do not call drawLayer: this source stays invisible and only
-                    // feeds the snapshot; the user sees the resulting Image.
-                }.clip(shape)
+                    // Intentionally no drawLayer: this source stays invisible and only feeds the
+                    // snapshot; the user sees the resulting Image.
+                }.clip(PreviewShape)
                 .background(MaterialTheme.colorScheme.surface)
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape)
-                .padding(8.dp),
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, PreviewShape)
+                .padding(14.dp),
     ) {
         NoteCompose(
             baseNote = note,
@@ -295,20 +397,38 @@ private fun CaptureSource(
             nav = nav,
         )
 
-        Text(
-            text = stringRes(R.string.share_as_image_watermark),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Medium,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp, end = 4.dp),
+        HorizontalDivider(
+            modifier = Modifier.padding(top = 12.dp, bottom = 8.dp),
+            color = MaterialTheme.colorScheme.outlineVariant,
         )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Image(
+                painter = painterResource(R.drawable.amethyst),
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = stringRes(R.string.share_as_image_watermark),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
 private const val PNG_MIME = "image/png"
+
+// Time given for async media to load into the off-screen card before the final snapshot.
+private const val IMAGE_SETTLE_MS = 900L
+
+private val PreviewShape = RoundedCornerShape(18.dp)
 
 private fun saveBitmapToCache(
     context: Context,
