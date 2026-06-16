@@ -839,6 +839,18 @@ fun App(
         relayManager.startMetricsSnapshot(this)
     }
 
+    // Detect host-machine sleep/wake: after a long delay overshoot the OkHttp
+    // sockets we held are dead even though needsToReconnect() still reads false,
+    // so force a hard disconnect+connect. See SleepResumeMonitor.kt.
+    LaunchedEffect(relayManager) {
+        com.vitorpamplona.amethyst.desktop.network.runSleepResumeMonitor {
+            relayManager.client.reconnect(
+                onlyIfChanged = false,
+                ignoreRetryDelays = true,
+            )
+        }
+    }
+
     // Subscriptions coordinator — uses default relay URLs for metadata indexing.
     // Feed subscriptions (inside MainContent) drive actual relay pool connections.
     val subscriptionsCoordinator =
