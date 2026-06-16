@@ -30,13 +30,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.Duration
-import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 
 /**
  * Foreground state holder for the Health Connect workout suggestions shown on
- * the Workouts screen. Scans Health Connect for recently finished workouts the
- * user has not yet handled and exposes them for the suggestion banner.
+ * the Workouts screen. Scans Health Connect for today's finished workouts the
+ * user has not yet handled and exposes them for the suggestion banner. Older
+ * workouts (back to [HealthConnectStore.LOOKBACK_DAYS]) are reachable from the
+ * New Workout composer's carousel instead, to keep the feed focused on today.
  *
  * Remembered in composition (not a ViewModel) to match the codebase's
  * permission-launcher pattern; [refresh] is driven from a LaunchedEffect. The
@@ -67,7 +69,7 @@ class WorkoutSuggestionState(
             return
         }
 
-        val since = Instant.now().minus(Duration.ofDays(HealthConnectStore.LOOKBACK_DAYS))
+        val since = LocalDate.now(ZoneId.systemDefault()).atStartOfDay(ZoneId.systemDefault()).toInstant()
         val handled = withContext(Dispatchers.IO) { store.handledIds(pubkeyHex) }
 
         _suggestions.value =
