@@ -22,8 +22,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.threadview.datasources
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import com.vitorpamplona.amethyst.commons.model.ThreadAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.LocalCache
+import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
@@ -51,4 +54,30 @@ fun ThreadFilterAssemblerSubscription(
         }
 
     LifecycleAwareKeyDataSourceSubscription(state, filterAssembler)
+}
+
+/**
+ * Eagerly pre-loads the whole thread of a reply that is visible in a feed.
+ *
+ * When a reply shows up in `NoteCompose`, this resolves the thread root and opens
+ * the same root subscription the thread screen uses (a filter on the root's `e`/`a`
+ * tag, covering NIP-10 and NIP-22 event/addressable roots), so tapping into the
+ * conversation finds it already loaded. Keying on the resolved root id means every
+ * visible reply that shares a root collapses onto a single subscription, and a note
+ * that is itself a root (no parent) is skipped — nothing to pre-load.
+ */
+@Composable
+fun PreloadThreadForReply(
+    note: Note,
+    accountViewModel: AccountViewModel,
+) {
+    val rootId =
+        remember(note) {
+            val root = ThreadAssembler(LocalCache).findRoot(note.idHex)
+            if (root != null && root != note) root.idHex else null
+        }
+
+    if (rootId != null) {
+        ThreadFilterAssemblerSubscription(rootId, accountViewModel)
+    }
 }
