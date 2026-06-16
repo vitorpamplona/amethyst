@@ -20,16 +20,26 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.suggestion
 
+import android.text.format.DateUtils
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -49,6 +59,7 @@ import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.model.BooleanType
 import com.vitorpamplona.amethyst.service.workouts.health.DetectedWorkout
@@ -58,6 +69,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.labelRes
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.symbol
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.SourceTag
 import kotlinx.coroutines.launch
@@ -66,7 +78,8 @@ import kotlinx.coroutines.launch
  * Banner shown above the Workouts feed. When Health Connect is available it
  * either invites the user to connect (first run) or surfaces workouts detected
  * since the last visit, each offering to open the pre-filled kind 1301 composer.
- * Renders nothing on devices without Health Connect.
+ * Renders nothing on devices without Health Connect or when the user disabled
+ * the suggestion in Compose settings.
  */
 @Composable
 fun WorkoutSuggestions(
@@ -107,7 +120,11 @@ fun WorkoutSuggestions(
     if (suggestions.isEmpty() && (hasPermission || connectDismissed)) return
 
     Column(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 10.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 8.dp)
+                .animateContentSize(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         if (!hasPermission && !connectDismissed) {
@@ -135,30 +152,39 @@ private fun ConnectHealthCard(
     onConnect: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+    ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 14.dp, top = 10.dp, bottom = 4.dp, end = 4.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 14.dp, end = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            ActivityBadge(MaterialSymbols.Favorite)
             Text(
                 text = stringRes(R.string.workout_suggestion_connect_title),
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f).padding(start = 14.dp),
             )
             IconButton(onClick = onDismiss) {
                 Icon(
                     symbol = MaterialSymbols.Close,
                     contentDescription = stringRes(R.string.workout_suggestion_dismiss),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
         Text(
             text = stringRes(R.string.workout_suggestion_connect_message),
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(horizontal = 14.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
         )
-        Row(modifier = Modifier.fillMaxWidth().padding(end = 8.dp), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onConnect) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            Button(onClick = onConnect) {
                 Text(stringRes(R.string.workout_suggestion_connect_button))
             }
         }
@@ -171,26 +197,24 @@ private fun WorkoutSuggestionRow(
     onShare: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+    ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 14.dp, top = 10.dp, end = 4.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 14.dp, end = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                symbol = MaterialSymbols.DirectionsRun,
-                contentDescription = null,
-                modifier = Modifier.size(28.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
+            ActivityBadge(workout.exercise.symbol())
+            Column(modifier = Modifier.weight(1f).padding(start = 14.dp)) {
                 Text(
-                    text = workout.title ?: stringRes(R.string.workout_suggestion_detected_title),
-                    style = MaterialTheme.typography.titleSmall,
+                    text = workout.title ?: stringRes(workout.exercise.labelRes()),
+                    style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = workout.summaryLine(),
+                    text = relativeTime(workout.startTimeEpochSeconds),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -201,27 +225,109 @@ private fun WorkoutSuggestionRow(
                 Icon(
                     symbol = MaterialSymbols.Close,
                     contentDescription = stringRes(R.string.workout_suggestion_dismiss),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
-        Row(modifier = Modifier.fillMaxWidth().padding(end = 8.dp), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onShare) {
+
+        MetricChips(workout)
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TextButton(onClick = onDismiss) {
+                Text(stringRes(R.string.workout_suggestion_dismiss))
+            }
+            FilledTonalButton(onClick = onShare) {
                 Text(stringRes(R.string.workout_suggestion_share))
             }
         }
     }
 }
 
-/** "Running · 5.20 km · 28:14" — activity, distance (if any), then duration. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun DetectedWorkout.summaryLine(): String {
-    val parts = mutableListOf(stringRes(exercise.labelRes()))
-    distanceMeters?.takeIf { it > 0 }?.let {
-        parts.add(stringRes(R.string.workout_suggestion_distance_km, "%.2f".format(it / 1000.0)))
+private fun MetricChips(workout: DetectedWorkout) {
+    FlowRow(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        MetricChip(MaterialSymbols.Timer, formatDuration(workout.durationSeconds))
+        workout.distanceMeters?.takeIf { it > 0 }?.let {
+            MetricChip(null, stringRes(R.string.workout_suggestion_distance_km, "%.2f".format(it / 1000.0)))
+        }
+        workout.avgHeartRate?.takeIf { it > 0 }?.let {
+            MetricChip(MaterialSymbols.Favorite, stringRes(R.string.workout_suggestion_heart_rate, it.toString()))
+        }
+        workout.calories?.takeIf { it > 0 }?.let {
+            MetricChip(MaterialSymbols.LocalFireDepartment, stringRes(R.string.workout_suggestion_calories, it.toString()))
+        }
+        workout.steps?.takeIf { it > 0 }?.let {
+            MetricChip(MaterialSymbols.DirectionsWalk, it.toString())
+        }
     }
-    parts.add(formatDuration(durationSeconds))
-    return parts.joinToString(" · ")
 }
+
+@Composable
+private fun MetricChip(
+    symbol: MaterialSymbol?,
+    text: String,
+) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            if (symbol != null) {
+                Icon(
+                    symbol = symbol,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/** Circular tinted badge holding the activity (or section) glyph. */
+@Composable
+private fun ActivityBadge(symbol: MaterialSymbol) {
+    Surface(
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        modifier = Modifier.size(40.dp),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                symbol = symbol,
+                contentDescription = null,
+                modifier = Modifier.size(22.dp),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        }
+    }
+}
+
+private fun relativeTime(epochSeconds: Long): String =
+    DateUtils
+        .getRelativeTimeSpanString(
+            epochSeconds * 1000L,
+            System.currentTimeMillis(),
+            DateUtils.MINUTE_IN_MILLIS,
+        ).toString()
 
 private fun formatDuration(totalSeconds: Long): String {
     val h = totalSeconds / 3600

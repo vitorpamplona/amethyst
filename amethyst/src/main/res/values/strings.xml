@@ -708,6 +708,8 @@
     <string name="workout_suggestion_share">Share</string>
     <string name="workout_suggestion_dismiss">Dismiss</string>
     <string name="workout_suggestion_distance_km">%1$s km</string>
+    <string name="workout_suggestion_heart_rate">%1$s bpm</string>
+    <string name="workout_suggestion_calories">%1$s kcal</string>
     <string name="exercise_running">Running</string>
     <string name="exercise_walking">Walking</string>
     <string name="exercise_cycling">Cycling</string>

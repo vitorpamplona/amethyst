@@ -21,12 +21,14 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
@@ -88,28 +90,34 @@ fun WorkoutsScreen(
         },
         accountViewModel = accountViewModel,
     ) {
-        Box(Modifier.fillMaxSize()) {
-            RefresheableBox(workoutsFeedContentState, true) {
-                SaveableFeedContentState(workoutsFeedContentState, scrollStateKey = ScrollStateKeys.WORKOUTS_SCREEN) { listState ->
-                    RenderFeedContentState(
-                        feedContentState = workoutsFeedContentState,
-                        accountViewModel = accountViewModel,
-                        listState = listState,
-                        nav = nav,
-                        routeForLastRead = "WorkoutsFeed",
-                    )
-                }
-            }
-
+        val scaffoldPadding = LocalDisappearingScaffoldPadding.current
+        Column(Modifier.fillMaxSize().padding(top = scaffoldPadding.calculateTopPadding())) {
             // Health Connect detection banner: invites connect or offers detected workouts as kind 1301 posts.
+            // It sits inline above the feed (pushing it down) instead of overlaying the first items.
             WorkoutSuggestions(
                 accountViewModel = accountViewModel,
                 nav = nav,
-                modifier =
-                    Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = LocalDisappearingScaffoldPadding.current.calculateTopPadding()),
             )
+
+            // The feed already merges the scaffold's top padding internally; the Column applied it
+            // above, so strip the top here (keeping the bottom for the bottom bar) to avoid doubling.
+            CompositionLocalProvider(
+                LocalDisappearingScaffoldPadding provides PaddingValues(bottom = scaffoldPadding.calculateBottomPadding()),
+            ) {
+                Box(Modifier.weight(1f)) {
+                    RefresheableBox(workoutsFeedContentState, true) {
+                        SaveableFeedContentState(workoutsFeedContentState, scrollStateKey = ScrollStateKeys.WORKOUTS_SCREEN) { listState ->
+                            RenderFeedContentState(
+                                feedContentState = workoutsFeedContentState,
+                                accountViewModel = accountViewModel,
+                                listState = listState,
+                                nav = nav,
+                                routeForLastRead = "WorkoutsFeed",
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
