@@ -101,8 +101,52 @@ jobs:
           fi
           chmod +x desktopApp/packaging/appimage/appimagetool-x86_64.AppImage
 
+      # macOS only: import the Developer ID Application cert into a throwaway
+      # keychain so jpackage's codesign pass can find it. Soft-gated — if the
+      # MAC_CERTIFICATE_P12 secret isn't set (forks, or before Apple creds are
+      # provisioned) the DMG is built UNSIGNED, exactly as before. notarytool
+      # runs as part of the gradle task when the identity env is exported below.
+      - name: Import Apple Developer ID certificate (macOS leg, if configured)
+        if: matrix.family == 'macos'
+        id: mac_keychain
+        env:
+          CERT_P12: ${{ secrets.MAC_CERTIFICATE_P12 }}
+          CERT_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${CERT_P12:-}" ]]; then
+            echo "::notice::MAC_CERTIFICATE_P12 not set — building UNSIGNED DMG."
+            echo "signing=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          KEYCHAIN="$RUNNER_TEMP/amethyst-signing.keychain-db"
+          KEYCHAIN_PWD="$(openssl rand -base64 24)"
+          CERT_PATH="$RUNNER_TEMP/developer_id.p12"
+          security create-keychain -p "$KEYCHAIN_PWD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PWD" "$KEYCHAIN"
+          echo "$CERT_P12" | base64 --decode > "$CERT_PATH"
+          security import "$CERT_PATH" -P "$CERT_PASSWORD" \
+            -k "$KEYCHAIN" -T /usr/bin/codesign -T /usr/bin/productsign
+          # Let codesign use the private key without an interactive UI prompt.
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PWD" "$KEYCHAIN" >/dev/null
+          # Prepend our keychain to the user search list so codesign sees it.
+          security list-keychains -d user -s "$KEYCHAIN" \
+            $(security list-keychains -d user | sed -e 's/[\"[:space:]]//g')
+          rm -f "$CERT_PATH"
+          echo "signing=true" >> "$GITHUB_OUTPUT"
+
       - name: Build desktop artifacts
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0
+        env:
+          # Empty on non-macOS legs and on the macOS leg when no cert is
+          # configured — the gradle macOS{} block skips signing when the
+          # identity is blank.
+          AMETHYST_MAC_SIGN_IDENTITY: ${{ steps.mac_keychain.outputs.signing == 'true' && secrets.MAC_SIGN_IDENTITY || '' }}
+          AMETHYST_NOTARY_APPLE_ID: ${{ secrets.MAC_NOTARY_APPLE_ID }}
+          AMETHYST_NOTARY_PASSWORD: ${{ secrets.MAC_NOTARY_PASSWORD }}
+          AMETHYST_NOTARY_TEAM_ID: ${{ secrets.MAC_NOTARY_TEAM_ID }}
         with:
           max_attempts: 2
           timeout_minutes: 15

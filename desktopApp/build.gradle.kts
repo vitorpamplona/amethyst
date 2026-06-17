@@ -135,6 +135,36 @@ compose.desktop {
             macOS {
                 bundleID = "com.vitorpamplona.amethyst.desktop"
                 iconFile.set(project.file("src/jvmMain/resources/icon.icns"))
+
+                // --- Developer ID code signing + notarization ---
+                // Required for Homebrew's main cask (unsigned casks rejected after
+                // 2026-09-01) and to clear macOS Gatekeeper without the right-click
+                // dance. Gated on the signing-identity env var so local dev builds
+                // and PR CI keep producing plain UNSIGNED DMGs exactly as before —
+                // signing only kicks in when the release workflow exports these
+                // (which it does only when the Apple secrets are present):
+                //
+                //   AMETHYST_MAC_SIGN_IDENTITY  "Developer ID Application: NAME (TEAMID)"
+                //   AMETHYST_NOTARY_APPLE_ID    Apple ID email of the notary account
+                //   AMETHYST_NOTARY_PASSWORD    app-specific password for that Apple ID
+                //   AMETHYST_NOTARY_TEAM_ID     10-char Apple Developer Team ID
+                //
+                // The Developer ID Application certificate must already be in the
+                // build host's keychain (CI imports it from a base64 .p12 secret).
+                // Compose ships default hardened-runtime entitlements that permit
+                // the JVM's JIT, so no custom entitlements file is needed.
+                val macSignIdentity = System.getenv("AMETHYST_MAC_SIGN_IDENTITY")
+                if (!macSignIdentity.isNullOrBlank()) {
+                    signing {
+                        sign.set(true)
+                        identity.set(macSignIdentity)
+                    }
+                    notarization {
+                        appleID.set(System.getenv("AMETHYST_NOTARY_APPLE_ID"))
+                        password.set(System.getenv("AMETHYST_NOTARY_PASSWORD"))
+                        teamID.set(System.getenv("AMETHYST_NOTARY_TEAM_ID"))
+                    }
+                }
             }
 
             windows {

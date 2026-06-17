@@ -250,13 +250,26 @@ provided automatically; everything else you set yourself.)
 | `SONATYPE_PASSWORD` | Maven Central user token password | Same |
 | `SIGNING_PRIVATE_KEY` | **GPG/PGP** private key, ASCII-armored | Signs the Maven artifacts (Central requires it) |
 | `SIGNING_PASSWORD` | Passphrase for that GPG key | Same |
+| `MAC_CERTIFICATE_P12` | Base64 of your **Apple Developer ID Application** cert (`.p12`, includes the private key) | Signs the macOS desktop **DMG** |
+| `MAC_CERTIFICATE_PASSWORD` | Password set when exporting the `.p12` | Imports the cert into the CI keychain |
+| `MAC_SIGN_IDENTITY` | Full identity string, e.g. `Developer ID Application: Your Name (TEAMID)` | The `codesign` identity to sign with |
+| `MAC_NOTARY_APPLE_ID` | Apple ID email of the notarization account | Apple notarization (`notarytool`) |
+| `MAC_NOTARY_PASSWORD` | **App-specific** password for that Apple ID (not the login password) | Same |
+| `MAC_NOTARY_TEAM_ID` | 10-char Apple Developer **Team ID** | Same |
 | `HOMEBREW_TOKEN` | PAT for `Homebrew/homebrew-cask` | Desktop cask bump (stable tags) |
 | `WINGET_TOKEN` | PAT for `microsoft/winget-pkgs` | Desktop winget bump (stable tags) |
 | `CROWDIN_PERSONAL_TOKEN`, `CROWDIN_PROJECT_ID` | Crowdin API creds | Translation sync (separate workflow, not the release) |
 
-Note the **two distinct signing identities** people often conflate:
+Note the **three distinct signing identities** people often conflate:
 `SIGNING_KEY` + `KEY_*` is the **Android keystore**; `SIGNING_PRIVATE_KEY` +
-`SIGNING_PASSWORD` is the **GPG key** for Maven Central. They are unrelated.
+`SIGNING_PASSWORD` is the **GPG key** for Maven Central; `MAC_CERTIFICATE_*` +
+`MAC_SIGN_IDENTITY` + `MAC_NOTARY_*` is the **Apple Developer ID** for the macOS
+desktop DMG. They are unrelated — each comes from a different authority.
+
+The macOS desktop signing secrets are **optional**: if `MAC_CERTIFICATE_P12` is
+unset the release workflow still builds the DMG, just **unsigned** (the previous
+behavior). Provision all six to switch signing + notarization on. Obtaining them
+requires Apple Developer Program membership ($99/yr).
 
 Generating the values:
 
@@ -269,6 +282,14 @@ base64 -i upload.jks | tr -d '\n'        # paste output into SIGNING_KEY
 # GPG key → armored private key for SIGNING_PRIVATE_KEY
 gpg --full-generate-key                  # create the key (once)
 gpg --armor --export-secret-keys <KEY_ID>   # paste output into SIGNING_PRIVATE_KEY
+
+# Apple Developer ID Application cert → base64 for MAC_CERTIFICATE_P12.
+# In Keychain Access, export the "Developer ID Application: ..." cert (with its
+# private key) as a .p12, setting an export password (-> MAC_CERTIFICATE_PASSWORD).
+base64 -i developer_id.p12 | tr -d '\n'  # paste output into MAC_CERTIFICATE_P12
+security find-identity -v -p codesigning  # shows the exact MAC_SIGN_IDENTITY string
+# MAC_NOTARY_PASSWORD is an app-specific password from https://appleid.apple.com
+# (Sign-In and Security -> App-Specific Passwords), NOT your Apple ID login.
 ```
 
 `SONATYPE_USERNAME`/`SONATYPE_PASSWORD` are a **user token** from
@@ -480,9 +501,17 @@ for the deprecation date. When it hits:
 Homebrew has committed to disabling unsigned casks in `Homebrew/homebrew-cask`
 on 2026-09-01. Before that date:
 
-**Option A**: Commit budget to Apple Developer Program ($99/yr), add
-`signing { sign.set(true) }` + `notarization {}` blocks to
-`desktopApp/build.gradle.kts`, wire Developer ID + notary creds into CI.
+**Option A (wiring done — needs Apple creds)**: The `signing { sign.set(true) }`
++ `notarization {}` blocks are already in `desktopApp/build.gradle.kts` (gated on
+the `AMETHYST_MAC_SIGN_IDENTITY` env var), and the macOS leg of
+`create-release.yml` imports a Developer ID cert into a throwaway keychain and
+exports the signing/notary env. It all stays a **no-op until the six
+`MAC_*`/notary secrets are provisioned** (see [§ Secrets the CI
+needs](#secrets-the-ci-needs)) — until then the DMG builds unsigned. To turn it
+on: join the Apple Developer Program ($99/yr), create a *Developer ID
+Application* certificate, generate an app-specific password, and set the six
+secrets. The first signed+notarized DMG is best validated with a
+`workflow_dispatch` dry-run before a real tag.
 
 **Option B**: Pivot to a private Homebrew tap:
 
