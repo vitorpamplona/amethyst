@@ -793,11 +793,21 @@ private fun ReceiveDialog(
                             Text(stringRes(R.string.cashu_copy_invoice))
                         }
                         Spacer(modifier = Modifier.height(4.dp))
+                        // The mint is polled every 3s in the background. We
+                        // keep the invoice on screen and only toggle this
+                        // status line between "waiting" and "checking" so the
+                        // dialog never swaps its whole body mid-poll.
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                stringRes(R.string.cashu_waiting_for_payment),
+                                stringRes(
+                                    if (s.checking) {
+                                        R.string.cashu_checking_mint
+                                    } else {
+                                        R.string.cashu_waiting_for_payment
+                                    },
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }

@@ -2241,6 +2241,7 @@
     <string name="cashu_done">Done</string>
     <string name="cashu_requesting_invoice">Asking mint for an invoice…</string>
     <string name="cashu_waiting_for_payment">Waiting for the invoice to be paid…</string>
+    <string name="cashu_checking_mint">Checking the mint…</string>
     <string name="cashu_completing_mint">Issuing proofs…</string>
     <string name="cashu_paying_invoice">Paying via mint…</string>
     <string name="cashu_building_token">Swapping proofs…</string>
