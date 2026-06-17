@@ -444,6 +444,9 @@ anz der Bedingungen ist erforderlich</string>
     <string name="quick_action_select">Auswählen</string>
     <string name="quick_action_share_browser_link">Browserlink teilen</string>
     <string name="quick_action_share">Teilen</string>
+    <string name="share_as_image">Als Bild teilen</string>
+    <string name="share_as_image_generating">Vorschau wird erstellt…</string>
+    <string name="share_as_image_watermark">Geteilt über Amethyst</string>
     <string name="quick_action_copy_user_id">Autoren-ID kopieren</string>
     <string name="quick_action_copy_note_id">Notiz-ID kopieren</string>
     <string name="quick_action_copy_text">Text kopieren</string>
@@ -672,6 +675,13 @@ anz der Bedingungen ist erforderlich</string>
     <string name="workout_hours">Stunden</string>
     <string name="workout_minutes">Minuten</string>
     <string name="workout_seconds">Sekunden</string>
+    <string name="workout_suggestion_connect_title">Teile deine Workouts</string>
+    <string name="workout_suggestion_connect_message">Lass Amethyst abgeschlossene Workouts aus Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) lesen und einen Beitrag vorschlagen.</string>
+    <string name="workout_suggestion_connect_button">Verbinden</string>
+    <string name="workout_suggestion_detected_title">Neues Workout erkannt</string>
+    <string name="workout_suggestion_share">Teilen</string>
+    <string name="workout_suggestion_dismiss">Verwerfen</string>
+    <string name="workout_from_health_connect">Aus Health Connect</string>
     <string name="exercise_running">Laufen</string>
     <string name="exercise_walking">Gehen</string>
     <string name="exercise_cycling">Radfahren</string>
@@ -3146,6 +3156,8 @@ anz der Bedingungen ist erforderlich</string>
     <string name="ai_writing_setting_description">Verwendet ein KI-Modell auf dem Gerät, um Textkorrekturen und Tonänderungen vorzuschlagen.</string>
     <string name="tracked_broadcasts_setting_title">Verfolgte Übertragungen</string>
     <string name="tracked_broadcasts_setting_description">Verwende den verfolgten Broadcaster beim Senden von Ereignissen. Zeigt Live-Fortschritt und Status pro Relay während der Übertragung.</string>
+    <string name="suggest_workouts_setting_title">Workouts zum Teilen vorschlagen</string>
+    <string name="suggest_workouts_setting_description">Liest abgeschlossene Workouts aus Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) und schlägt vor, sie als Beitrag zu teilen. Die Berechtigung wird nur beim Verbinden angefragt.</string>
     <string name="compose_settings">Editor-Einstellungen</string>
     <string name="auto_create_drafts_setting_title">Entwürfe automatisch erstellen</string>
     <string name="auto_create_drafts_setting_description">Speichert automatisch ein Entwurfsereignis, wenn du tippst oder den Editor mit ungesendetem Text verlässt, und sendet es an deine privaten ausgehenden Relays.</string>
@@ -3216,16 +3228,4 @@ anz der Bedingungen ist erforderlich</string>
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Kunst</string>
     <string name="nowhere_link_card_forum">Nowhere Forum</string>
-    <string name="share_as_image">Als Bild teilen</string>
-    <string name="share_as_image_generating">Vorschau wird erstellt…</string>
-    <string name="share_as_image_watermark">Geteilt über Amethyst</string>
-    <string name="suggest_workouts_setting_description">Liest abgeschlossene Workouts aus Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) und schlägt vor, sie als Beitrag zu teilen. Die Berechtigung wird nur beim Verbinden angefragt.</string>
-    <string name="suggest_workouts_setting_title">Workouts zum Teilen vorschlagen</string>
-    <string name="workout_from_health_connect">Aus Health Connect</string>
-    <string name="workout_suggestion_connect_button">Verbinden</string>
-    <string name="workout_suggestion_connect_message">Lass Amethyst abgeschlossene Workouts aus Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) lesen und einen Beitrag vorschlagen.</string>
-    <string name="workout_suggestion_connect_title">Teile deine Workouts</string>
-    <string name="workout_suggestion_detected_title">Neues Workout erkannt</string>
-    <string name="workout_suggestion_dismiss">Verwerfen</string>
-    <string name="workout_suggestion_share">Teilen</string>
 </resources>
