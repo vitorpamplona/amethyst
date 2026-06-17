@@ -227,6 +227,8 @@ sealed class Route {
 
     @Serializable object CashuWalletSettings : Route()
 
+    @Serializable object CashuMintRecommendations : Route()
+
     /**
      * Unified profile payment screen: collects amount/message/zap type and pays
      * through whichever rail (Lightning, CLINK offer, on-chain, Cashu) the

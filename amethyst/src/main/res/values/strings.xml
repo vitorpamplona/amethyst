@@ -2230,6 +2230,7 @@
     <string name="cashu_settings_edit_wallet">Edit wallet details</string>
     <string name="cashu_settings_edit_wallet_subtitle">Mints, nutzap key</string>
     <string name="cashu_settings_my_recommendations">My mint recommendations</string>
+    <string name="cashu_settings_recommendations_subtitle">Publicly vouch for mints you trust, and retract recommendations.</string>
     <string name="cashu_settings_no_recommendations">You haven\'t recommended any mints yet. Tap the thumbs-up next to a mint to publicly vouch for it.</string>
     <string name="cashu_settings_delete_recommendation">Delete recommendation</string>
     <string name="cashu_settings_delete_confirm_title">Retract recommendation?</string>
