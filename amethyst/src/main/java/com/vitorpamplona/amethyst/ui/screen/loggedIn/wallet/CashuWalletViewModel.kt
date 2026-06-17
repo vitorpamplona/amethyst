@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 sealed class CashuWalletCreateState {
     data object Idle : CashuWalletCreateState()
@@ -203,6 +204,33 @@ class CashuWalletViewModel : ViewModel() {
 
     fun resetMintPing() {
         _mintPingState.value = MintPingState.Idle
+    }
+
+    /**
+     * Per-mint reachability results for mints already in the wallet's list,
+     * keyed by normalized URL. Distinct from [mintPingState] (which backs the
+     * single "verify the URL I'm typing" button) so a user can re-check any
+     * already-added mint without clobbering the input-field result, and each
+     * row reflects its own status independently.
+     */
+    private val _mintVerifications = MutableStateFlow<Map<String, MintPingState>>(emptyMap())
+    val mintVerifications: StateFlow<Map<String, MintPingState>> = _mintVerifications.asStateFlow()
+
+    /** Ping an already-added mint and record the result under its normalized URL. */
+    fun verifyMint(url: String) {
+        val vm = accountViewModel ?: return
+        val key = url.trim().trimEnd('/')
+        if (key.isBlank()) return
+        _mintVerifications.update { it + (key to MintPingState.Pinging) }
+        vm.launchSigner {
+            val result =
+                try {
+                    MintPingState.Ok(ops.pingMint(key))
+                } catch (e: Exception) {
+                    MintPingState.Failed(describeMintError(e))
+                }
+            _mintVerifications.update { it + (key to result) }
+        }
     }
 
     /**

@@ -2188,6 +2188,7 @@
     <string name="cashu_mints">Mints</string>
     <string name="cashu_mint_url">Mint URL</string>
     <string name="cashu_remove_mint">Remove mint</string>
+    <string name="cashu_add_mint">Add mint</string>
     <string name="cashu_history">History</string>
     <string name="cashu_edit_wallet">Edit wallet</string>
     <string name="cashu_p2pk_section">Nutzap key (advanced)</string>
