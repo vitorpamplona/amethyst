@@ -2,8 +2,8 @@
 # Amethyst app version — single source of truth consumed by both Android (amethyst/)
 # and Desktop (desktopApp/). `appCode` is the Android versionCode: a monotonic
 # integer that must increment on every release, even when `app` is unchanged.
-app = "1.12.0"
-appCode = "448"
+app = "1.12.1"
+appCode = "449"
 accompanistAdaptive = "0.37.3"
 cachemapVersion = "0.2.4"
 composeMultiplatform = "1.11.1"

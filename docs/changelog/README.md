@@ -2,6 +2,7 @@
 
 Release notes for Amethyst, one file per version. Files are named with zero-padded version numbers so they sort correctly in any file browser. Use [`TEMPLATE.md`](TEMPLATE.md) as the starting point for the next release.
 
+- [v1.12.1 — Health Connect Workouts, Share as Image](v1.12.01.md)
 - [v1.12.0 — Payments, Private Posts & Workouts](v1.12.00.md)
 - [v1.11.0 — NIP-52 Calendars, On-Chain Zap Polish](v1.11.00.md)
 - [v1.10.0 — On-Chain zaps](v1.10.00.md)
