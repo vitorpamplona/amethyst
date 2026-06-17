@@ -153,6 +153,7 @@ fun NewMusicPlaylistScreen(
 
             CoverImagePicker(
                 cover = vm.coverMedia.value,
+                existingUrl = vm.coverUrl.value,
                 onPick = { wantsToPickCover = true },
                 onDelete = { vm.clearPickedCover() },
                 accountViewModel = accountViewModel,

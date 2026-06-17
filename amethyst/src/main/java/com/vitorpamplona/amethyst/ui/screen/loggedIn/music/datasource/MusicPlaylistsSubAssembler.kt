@@ -24,6 +24,8 @@ import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.subassemblies.MUSIC_PLAYLIST_KINDS
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.subassemblies.filterMusicEventsMine
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
@@ -52,6 +54,12 @@ class MusicPlaylistsSubAssembler(
         key: MusicPlaylistsQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
+        // "Mine" bypasses the follow-list machinery: query the user's own playlists by author
+        // against their outbox relays (same pattern as badges/communities).
+        if (key.listName() == TopFilter.Mine) {
+            val outbox = key.account.outboxRelays.flow.value
+            return filterMusicEventsMine(key.account.userProfile().pubkeyHex, MUSIC_PLAYLIST_KINDS, outbox, since)
+        }
         val feedSettings = key.followsPerRelay()
         // REQ now only asks for kind 34139 (playlists), keyed to this screen's follow
         // list selector — no cross-feed cursor min needed.

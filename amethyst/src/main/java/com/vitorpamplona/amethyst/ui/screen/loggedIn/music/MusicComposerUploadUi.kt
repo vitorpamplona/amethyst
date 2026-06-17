@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.music
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -31,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -39,9 +41,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import coil3.compose.rememberAsyncImagePainter
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -51,15 +56,22 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 
 /**
- * Square cover-image picker shared by the music track and playlist composers. When a file is
- * picked it shows the upload preview (tap to swap, close button to remove); otherwise it shows the
- * dashed upload placeholder. While an upload is in flight (`enabled = false`) the tap/delete
- * gestures are dropped so the user can't mutate the selection mid-upload, but the preview stays
- * visible so they can see what's being sent.
+ * Square cover-image picker shared by the music track and playlist composers.
+ *
+ * Three states, in priority order:
+ *  - a freshly picked local file ([cover]) → upload preview (tap to swap, close button to remove);
+ *  - otherwise an already-published cover ([existingUrl], set when editing) → the remote image with
+ *    the same tap-to-swap / remove affordances, so editing a track/playlist shows its current art;
+ *  - otherwise the dashed upload placeholder.
+ *
+ * While an upload is in flight (`enabled = false`) the tap/delete gestures are dropped so the user
+ * can't mutate the selection mid-upload, but the preview stays visible so they can see what's being
+ * sent.
  */
 @Composable
 fun CoverImagePicker(
     cover: MultiOrchestrator?,
+    existingUrl: String?,
     onPick: () -> Unit,
     onDelete: () -> Unit,
     accountViewModel: AccountViewModel,
@@ -67,22 +79,82 @@ fun CoverImagePicker(
     ctaRes: Int,
     hintRes: Int,
 ) {
-    if (cover != null) {
-        Box(modifier = if (enabled) Modifier.clickable(onClick = onPick) else Modifier) {
-            ShowImageUploadGallery(
-                list = cover,
-                onDelete = { if (enabled) onDelete() },
-                accountViewModel = accountViewModel,
+    when {
+        cover != null ->
+            Box(modifier = if (enabled) Modifier.clickable(onClick = onPick) else Modifier) {
+                ShowImageUploadGallery(
+                    list = cover,
+                    onDelete = { if (enabled) onDelete() },
+                    accountViewModel = accountViewModel,
+                )
+            }
+
+        !existingUrl.isNullOrBlank() ->
+            ExistingCoverPreview(
+                url = existingUrl,
+                onPick = onPick,
+                onDelete = onDelete,
+                enabled = enabled,
             )
-        }
-    } else {
-        UploadPlaceholder(
-            iconSymbol = MaterialSymbols.AddPhotoAlternate,
-            ctaRes = ctaRes,
-            hintRes = hintRes,
-            onClick = onPick,
-            enabled = enabled,
+
+        else ->
+            UploadPlaceholder(
+                iconSymbol = MaterialSymbols.AddPhotoAlternate,
+                ctaRes = ctaRes,
+                hintRes = hintRes,
+                onClick = onPick,
+                enabled = enabled,
+            )
+    }
+}
+
+/**
+ * Renders the already-published cover (a remote URL) as a square tile matching the upload preview:
+ * tap anywhere to pick a replacement, or use the corner button to clear it. Used in edit mode so
+ * the composer reflects the cover the event already carries instead of showing an empty placeholder.
+ */
+@Composable
+private fun ExistingCoverPreview(
+    url: String,
+    onPick: () -> Unit,
+    onDelete: () -> Unit,
+    enabled: Boolean,
+) {
+    val shape = RoundedCornerShape(12.dp)
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(shape)
+                .let { if (enabled) it.clickable(onClick = onPick) else it },
+    ) {
+        val painter = rememberAsyncImagePainter(model = url)
+        Image(
+            painter = painter,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.matchParentSize(),
         )
+        if (enabled) {
+            Box(
+                modifier =
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.55f))
+                        .clickable(onClick = onDelete)
+                        .padding(4.dp),
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.Close,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
     }
 }
 

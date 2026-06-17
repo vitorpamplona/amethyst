@@ -24,6 +24,8 @@ import com.vitorpamplona.amethyst.model.TopFilter
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.service.relays.SincePerRelayMap
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.subassemblies.MUSIC_TRACK_KINDS
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.datasource.subassemblies.filterMusicEventsMine
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.Subscription
@@ -42,6 +44,12 @@ class MusicTracksSubAssembler(
         key: MusicTracksQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
+        // "Mine" bypasses the follow-list machinery: query the user's own tracks by author
+        // against their outbox relays (same pattern as badges/communities).
+        if (key.listName() == TopFilter.Mine) {
+            val outbox = key.account.outboxRelays.flow.value
+            return filterMusicEventsMine(key.account.userProfile().pubkeyHex, MUSIC_TRACK_KINDS, outbox, since)
+        }
         val feedSettings = key.followsPerRelay()
         // REQ now only asks for kind 36787 (tracks), so the `since` cursor lines up with
         // the tracks feed alone — no cross-feed min needed.
