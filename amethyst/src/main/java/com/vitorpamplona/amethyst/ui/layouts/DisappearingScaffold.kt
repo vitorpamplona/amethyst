@@ -57,7 +57,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.theme.DividerThickness
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
-import kotlin.math.max
 
 private enum class DisappearingSlot { Top, Bottom, Content, Fab }
 
@@ -267,13 +266,20 @@ private fun ResetBarsOnResume(state: DisappearingBarState) {
     }
 }
 
-/** Fraction at which the in-app bars are considered fully settled into the hidden edge. */
+/** Fraction at which the tracked in-app bar is considered fully settled into the hidden edge. */
 private const val STATUS_BAR_HIDE_THRESHOLD = 0.999f
 
 /**
- * Hides the OS status bar once the in-app bars have settled into the hidden edge, and shows it the
- * moment they start coming back. The OS status bar is binary (cannot slide), so it is driven off the
- * collapse fraction with a near-1 threshold, which means it toggles on settle rather than mid-drag.
+ * Hides the OS status bar once the tracked in-app bar has settled into the hidden edge, and shows it
+ * the moment it starts coming back. The OS status bar is binary (cannot slide), so it is driven off
+ * the collapse fraction with a near-1 threshold, which means it toggles on settle rather than
+ * mid-drag.
+ *
+ * The status bar sits with the top in-app bar, so it tracks the top bar's collapse. The top and
+ * bottom bars can collapse at different rates (each clamps to its own height), so tracking the top
+ * fraction keeps the status bar in step with the chrome directly beneath it. On screens with no top
+ * bar (topHeightLimit == 0) it falls back to the bottom bar, so the status bar still hides in sync
+ * with the bottom navigation.
  *
  * Only the top status bar is touched; the bottom OS navigation bar is left alone.
  * BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE lets the user swipe to peek the status bar while immersed.
@@ -288,12 +294,13 @@ private fun ImmersiveStatusBarEffect(state: DisappearingBarState) {
     val controller = remember(window, view) { WindowInsetsControllerCompat(window, view) }
 
     LaunchedEffect(controller, state) {
+        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         snapshotFlow {
-            max(state.topCollapsedFraction, state.bottomCollapsedFraction) >= STATUS_BAR_HIDE_THRESHOLD
+            val fraction =
+                if (state.topHeightLimit > 0f) state.topCollapsedFraction else state.bottomCollapsedFraction
+            fraction >= STATUS_BAR_HIDE_THRESHOLD
         }.distinctUntilChanged()
             .collect { shouldHide ->
-                controller.systemBarsBehavior =
-                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                 if (shouldHide) {
                     controller.hide(WindowInsetsCompat.Type.statusBars())
                 } else {
