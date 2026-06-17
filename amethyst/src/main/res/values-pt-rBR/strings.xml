@@ -3211,4 +3211,16 @@
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Arte</string>
     <string name="nowhere_link_card_forum">Nowhere Fórum</string>
+    <string name="share_as_image">Compartilhar como imagem</string>
+    <string name="share_as_image_generating">Gerando prévia…</string>
+    <string name="share_as_image_watermark">Compartilhado via Amethyst</string>
+    <string name="suggest_workouts_setting_description">Lê treinos concluídos do Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) e sugere compartilhá-los como publicação. A permissão é solicitada apenas quando você conecta.</string>
+    <string name="suggest_workouts_setting_title">Sugerir treinos para compartilhar</string>
+    <string name="workout_from_health_connect">Do Health Connect</string>
+    <string name="workout_suggestion_connect_button">Conectar</string>
+    <string name="workout_suggestion_connect_message">Permita que o Amethyst leia treinos concluídos do Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) e sugira uma publicação.</string>
+    <string name="workout_suggestion_connect_title">Compartilhe seus treinos</string>
+    <string name="workout_suggestion_detected_title">Novo treino detectado</string>
+    <string name="workout_suggestion_dismiss">Dispensar</string>
+    <string name="workout_suggestion_share">Compartilhar</string>
 </resources>

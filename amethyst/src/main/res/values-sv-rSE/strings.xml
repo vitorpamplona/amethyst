@@ -3210,4 +3210,17 @@
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Konst</string>
     <string name="nowhere_link_card_forum">Nowhere Forum</string>
+    <string name="share_as_image">Dela som bild</string>
+    <string name="share_as_image_generating">Genererar förhandsvisning…</string>
+    <string name="share_as_image_watermark">Delad via Amethyst</string>
+    <string name="suggest_workouts_setting_description">Läser avslutade träningspass från Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) och föreslår att dela dem som ett inlägg. Behörighet begärs endast när du ansluter.</string>
+    <string name="suggest_workouts_setting_title">Föreslå träningspass att dela</string>
+    <string name="workout_from_health_connect">Från Health Connect</string>
+    <string name="workout_suggestion_connect_button">Anslut</string>
+    <string name="workout_suggestion_connect_message">Låt Amethyst läsa avslutade träningspass från Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) och föreslå ett inlägg.</string>
+    <string name="workout_suggestion_connect_title">Dela dina träningspass</string>
+    <string name="workout_suggestion_detected_title">Nytt träningspass upptäckt</string>
+    <string name="workout_suggestion_dismiss">Avvisa</string>
+    <string name="workout_suggestion_share">Dela</string>
+    <string name="workout_suggestion_heart_rate">%1$s slag/min</string>
 </resources>

@@ -3277,4 +3277,17 @@
     <string name="nowhere_link_card_drop">Nowhere Drop</string>
     <string name="nowhere_link_card_art">Nowhere Umění</string>
     <string name="nowhere_link_card_forum">Nowhere Fórum</string>
+    <string name="share_as_image">Sdílet jako obrázek</string>
+    <string name="share_as_image_generating">Generování náhledu…</string>
+    <string name="share_as_image_watermark">Sdíleno přes Amethyst</string>
+    <string name="suggest_workouts_setting_description">Načítá dokončené tréninky z Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) a navrhuje jejich sdílení jako příspěvek. O oprávnění se žádá pouze při připojení.</string>
+    <string name="suggest_workouts_setting_title">Navrhovat tréninky ke sdílení</string>
+    <string name="workout_from_health_connect">Z Health Connect</string>
+    <string name="workout_suggestion_connect_button">Připojit</string>
+    <string name="workout_suggestion_connect_message">Nechte Amethyst číst dokončené tréninky z Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) a navrhnout příspěvek.</string>
+    <string name="workout_suggestion_connect_title">Sdílejte své tréninky</string>
+    <string name="workout_suggestion_detected_title">Zjištěn nový trénink</string>
+    <string name="workout_suggestion_dismiss">Zavřít</string>
+    <string name="workout_suggestion_share">Sdílet</string>
+    <string name="workout_suggestion_heart_rate">%1$s tep/min</string>
 </resources>
