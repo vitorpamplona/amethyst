@@ -50,6 +50,7 @@ import com.vitorpamplona.quartz.nip19Bech32.pubKeys
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.takeKeepingSurrogatePairs
 
 @Immutable
 class TextNoteEvent(
@@ -127,7 +128,10 @@ class TextNoteEvent(
 
         private fun shortedMessageForAlt(msg: String): String {
             if (msg.length < 50) return ALT + msg
-            return ALT + msg.take(50) + "..."
+            // takeKeepingSurrogatePairs avoids leaving a lone surrogate (e.g. half
+            // of an emoji) in the alt tag, which would be unencodable as UTF-8 and
+            // corrupt the event id on the wire.
+            return ALT + msg.takeKeepingSurrogatePairs(50) + "..."
         }
 
         fun build(

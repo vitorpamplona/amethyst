@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.takeKeepingSurrogatePairs
 
 /**
  * High-level CLINK Offers payer.
@@ -73,7 +74,9 @@ class OfferClient(
                 expires_in_seconds = expiresInSeconds,
                 // The spec caps the invoice description at 100 chars; trim so an over-long
                 // value doesn't get the whole request rejected by the service.
-                description = description?.take(100),
+                // Surrogate-aware so the trim never leaves half an emoji (a lone
+                // surrogate is unencodable as UTF-8 and would corrupt the payload).
+                description = description?.takeKeepingSurrogatePairs(100),
             )
         return OfferEvent.createRequest(request, servicePubKey, signer, createdAt)
     }
