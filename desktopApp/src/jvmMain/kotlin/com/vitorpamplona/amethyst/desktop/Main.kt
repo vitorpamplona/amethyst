@@ -63,8 +63,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.BitmapPainter
-import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyShortcut
 import androidx.compose.ui.unit.dp
@@ -216,13 +214,7 @@ fun main() {
     // on macOS the logo is then wrapped in a squircle so it matches
     // first-party dock icons.
     try {
-        val bytes = Unit::class.java.getResourceAsStream("/icon.png")!!.readBytes()
-        val raw = javax.imageio.ImageIO.read(java.io.ByteArrayInputStream(bytes))
-        val adapted =
-            raw?.let {
-                com.vitorpamplona.amethyst.desktop.platform.PlatformAppIcon
-                    .adaptForHost(it)
-            }
+        val adapted = com.vitorpamplona.amethyst.desktop.platform.IconResources.adaptedBufferedImage
         if (adapted != null && java.awt.Taskbar.isTaskbarSupported()) {
             val taskbar = java.awt.Taskbar.getTaskbar()
             if (taskbar.isSupported(java.awt.Taskbar.Feature.ICON_IMAGE)) {
@@ -297,21 +289,7 @@ fun main() {
         // Window title-bar / taskbar thumbnail icon. On macOS the source logo
         // is wrapped in a squircle so it matches every other dock icon; on
         // other platforms the raw transparent logo is used as-is.
-        val appIcon =
-            remember {
-                val bytes = Unit::class.java.getResourceAsStream("/icon.png")!!.readBytes()
-                val raw = javax.imageio.ImageIO.read(java.io.ByteArrayInputStream(bytes))
-                val adapted =
-                    com.vitorpamplona.amethyst.desktop.platform.PlatformAppIcon
-                        .adaptForHost(raw)
-                val buf = java.io.ByteArrayOutputStream()
-                javax.imageio.ImageIO.write(adapted, "png", buf)
-                val bitmap =
-                    org.jetbrains.skia.Image
-                        .makeFromEncoded(buf.toByteArray())
-                        .toComposeImageBitmap()
-                BitmapPainter(bitmap)
-            }
+        val appIcon = com.vitorpamplona.amethyst.desktop.platform.IconResources.adaptedBitmapPainter
 
         Window(
             onCloseRequest = ::exitApplication,
@@ -713,15 +691,7 @@ fun App(
     val torStatus by torManager.status.collectAsState()
     val isTorExpected = torSettings.torType != com.vitorpamplona.amethyst.commons.tor.TorType.OFF
     if (isTorExpected && torStatus !is com.vitorpamplona.amethyst.commons.tor.TorServiceStatus.Active) {
-        val splashIcon =
-            remember {
-                val bytes = Unit::class.java.getResourceAsStream("/icon.png")!!.readBytes()
-                val bitmap =
-                    org.jetbrains.skia.Image
-                        .makeFromEncoded(bytes)
-                        .toComposeImageBitmap()
-                BitmapPainter(bitmap)
-            }
+        val splashIcon = com.vitorpamplona.amethyst.desktop.platform.IconResources.rawBitmapPainter
         androidx.compose.foundation.layout.Box(
             modifier =
                 androidx.compose.ui.Modifier
@@ -984,15 +954,7 @@ fun App(
                     when (accountState) {
                         is AccountState.Loading -> {
                             // Branded loading screen while accounts load from storage
-                            val loadingIcon =
-                                remember {
-                                    val bytes = Unit::class.java.getResourceAsStream("/icon.png")!!.readBytes()
-                                    val bitmap =
-                                        org.jetbrains.skia.Image
-                                            .makeFromEncoded(bytes)
-                                            .toComposeImageBitmap()
-                                    BitmapPainter(bitmap)
-                                }
+                            val loadingIcon = com.vitorpamplona.amethyst.desktop.platform.IconResources.rawBitmapPainter
                             Box(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center,
