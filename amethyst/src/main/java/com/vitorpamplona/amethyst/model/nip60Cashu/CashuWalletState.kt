@@ -237,6 +237,22 @@ class CashuWalletState(
         }.flowOn(Dispatchers.Default)
             .stateIn(scope, SharingStarted.Eagerly, emptyList())
 
+    /**
+     * Mints we hold a spendable balance at but never configured in our
+     * kind:17375 wallet — keyed by mint URL → balance in sats. Almost
+     * always coins auto-redeemed from a NIP-61 nutzap that was sent on a
+     * mint outside our kind:10019. Surfaced so the wallet can highlight
+     * them and nudge the user to move the funds to a mint they trust (or
+     * out to Lightning): holding ecash at an unvetted mint means trusting
+     * an issuer the user never chose. Empty in the common case where every
+     * mint we hold is also configured.
+     */
+    val unconfiguredMintBalances: StateFlow<Map<String, Long>> =
+        combine(_mints, mintBalances) { configured, balances ->
+            balances.filterKeys { it !in configured }.filterValues { it > 0 }
+        }.flowOn(Dispatchers.Default)
+            .stateIn(scope, SharingStarted.Eagerly, emptyMap())
+
     private val _history = MutableStateFlow<List<CashuSpendingHistoryEvent>>(emptyList())
     val history: StateFlow<List<CashuSpendingHistoryEvent>> = _history.asStateFlow()
 

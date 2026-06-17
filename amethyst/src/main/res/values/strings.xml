@@ -3294,6 +3294,13 @@
     <string name="cashu_pending_quotes_subtitle">Tap to resume and check status.</string>
     <string name="cashu_pending_quotes_resume">Resume</string>
 
+    <plurals name="cashu_untrusted_mint_title">
+        <item quantity="one">Funds held at %1$d mint you don\'t use</item>
+        <item quantity="other">Funds held at %1$d mints you don\'t use</item>
+    </plurals>
+    <string name="cashu_untrusted_mint_subtitle">These coins arrived from a nutzap. Move them to a mint you trust or withdraw to Lightning to keep them safe.</string>
+    <string name="cashu_untrusted_mint_badge">Not in your wallet</string>
+
     <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Connecting</string>
     <string name="event_sync_status_downloading">Downloading</string>

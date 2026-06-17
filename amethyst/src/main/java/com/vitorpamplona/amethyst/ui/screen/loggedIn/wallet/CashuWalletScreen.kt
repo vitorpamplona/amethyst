@@ -118,6 +118,10 @@ fun CashuWalletScreen(
     // per-mint rows below sum to the full balance.
     val mints by viewModel.mints.collectAsState()
     val displayMints by viewModel.displayMints.collectAsState()
+    // Mints we hold a balance at but never configured (typically coins from a
+    // nutzap auto-redeemed on a mint outside our kind:10019). Highlighted so
+    // the user can move them somewhere they trust.
+    val unconfiguredMintBalances by viewModel.unconfiguredMintBalances.collectAsState()
     val balanceSats by viewModel.balanceSats.collectAsState()
     val mintBalances by viewModel.mintBalances.collectAsState()
     val history by viewModel.history.collectAsState()
@@ -173,6 +177,7 @@ fun CashuWalletScreen(
                     balanceSats = balanceSats,
                     mints = displayMints,
                     mintBalances = mintBalances,
+                    unconfiguredMints = unconfiguredMintBalances.keys,
                     history = history,
                     pendingQuoteCount = pendingQuotes.size,
                     accountViewModel = accountViewModel,
@@ -311,6 +316,7 @@ private fun CashuWalletContent(
     balanceSats: Long,
     mints: List<String>,
     mintBalances: Map<String, Long>,
+    unconfiguredMints: Set<String>,
     history: List<CashuSpendingHistoryEvent>,
     pendingQuoteCount: Int,
     accountViewModel: AccountViewModel,
@@ -338,6 +344,10 @@ private fun CashuWalletContent(
             item { PendingQuoteBanner(count = pendingQuoteCount, onResume = onResumePendingQuote) }
         }
 
+        if (unconfiguredMints.isNotEmpty()) {
+            item { UntrustedMintBanner(count = unconfiguredMints.size) }
+        }
+
         item {
             ActionRow(
                 onReceive = onReceive,
@@ -356,7 +366,12 @@ private fun CashuWalletContent(
             )
         }
         items(mints, key = { it }) { mint ->
-            MintRow(mint = mint, balanceSats = mintBalances[mint] ?: 0L, onTopUp = { onTopUpMint(mint) })
+            MintRow(
+                mint = mint,
+                balanceSats = mintBalances[mint] ?: 0L,
+                untrusted = mint in unconfiguredMints,
+                onTopUp = { onTopUpMint(mint) },
+            )
         }
 
         if (history.isNotEmpty()) {
@@ -433,6 +448,53 @@ private fun PendingQuoteBanner(
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
             )
+        }
+    }
+}
+
+/**
+ * Surfaced above the mint list when we hold a balance at one or more mints
+ * the user never configured — almost always coins auto-redeemed from a
+ * NIP-61 nutzap sent on a mint outside our kind:10019. Informational for
+ * now (it explains the situation and recommends moving the funds); the
+ * per-mint "move coins off this mint" action lands in a follow-up.
+ */
+@Composable
+private fun UntrustedMintBanner(count: Int) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                symbol = MaterialSymbols.Warning,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text =
+                        pluralStringResource(
+                            R.plurals.cashu_untrusted_mint_title,
+                            count,
+                            count,
+                        ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                )
+                Text(
+                    text = stringRes(R.string.cashu_untrusted_mint_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f),
+                )
+            }
         }
     }
 }
@@ -543,6 +605,7 @@ private fun ActionTile(
 private fun MintRow(
     mint: String,
     balanceSats: Long,
+    untrusted: Boolean,
     onTopUp: () -> Unit,
 ) {
     val formattedBalance =
@@ -551,7 +614,15 @@ private fun MintRow(
         }
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    if (untrusted) {
+                        MaterialTheme.colorScheme.errorContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    },
+            ),
     ) {
         Row(
             modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
@@ -563,7 +634,16 @@ private fun MintRow(
                 modifier = Modifier.size(20.dp),
             )
             Spacer(modifier = Modifier.width(12.dp))
-            Text(text = mint, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = mint, style = MaterialTheme.typography.bodyMedium)
+                if (untrusted) {
+                    Text(
+                        text = stringRes(R.string.cashu_untrusted_mint_badge),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "$formattedBalance ${stringRes(R.string.wallet_sats)}",
