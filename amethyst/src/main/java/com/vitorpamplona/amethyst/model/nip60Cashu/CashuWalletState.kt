@@ -563,6 +563,11 @@ class CashuWalletState(
             // Any wallet event resolves the "discovering" state — whether it
             // came from cache backfill or a fresh relay delivery.
             _discovering.value = false
+            // The NUT-13 seed is derived from the wallet's P2PK key. A new
+            // kind:17375 may carry a rotated key (our own recreateNutzapKey, or
+            // a rotation from another client), so drop the cached seed and let
+            // ensureSeed re-derive from whatever key the live event now holds.
+            cachedSeed = null
             walletEventInternal?.let { evt ->
                 _mints.value =
                     runCatching { evt.mints(signer) }
@@ -838,10 +843,9 @@ class CashuWalletState(
             p2pkPrivkeyHex = manualPrivkeyHex?.takeIf { it.isNotBlank() },
             nutzapRelays = outboxRelaysFlow.value.toList(),
         )
-        // The NUT-13 seed is derived from the P2PK key, which just changed —
-        // drop the cache so the next mint op re-derives from the new key
-        // (re-populated lazily by ensureSeed once the new kind:17375 lands).
-        cachedSeed = null
+        // The NUT-13 seed (derived from the P2PK key) is invalidated by
+        // applyEvents when the new kind:17375 round-trips in, so it re-derives
+        // from the rotated key. No need to reset it here.
     }
 
     // ============================================================

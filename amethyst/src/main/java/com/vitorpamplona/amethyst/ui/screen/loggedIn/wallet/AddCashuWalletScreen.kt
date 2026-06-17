@@ -99,7 +99,11 @@ fun AddCashuWalletScreen(
     // suggestions on first open instead of waiting for the next relay
     // round-trip. Cheap (one sweep over the existing cache); idempotent.
     LaunchedEffect(Unit) { LocalCache.ensureMintDirectoryBackfilled() }
-    var keyMode by remember {
+    // Keyed on isEditMode so that if the wallet is delivered AFTER this screen
+    // first composes (existingWallet null → non-null), keyMode flips to
+    // KeepCurrent. Otherwise a cold open with an undelivered wallet would keep
+    // AutoGenerate and silently rotate the key on save, orphaning nutzaps.
+    var keyMode by remember(isEditMode) {
         mutableStateOf(
             if (isEditMode) CashuWalletViewModel.P2pkKeyMode.KeepCurrent else CashuWalletViewModel.P2pkKeyMode.AutoGenerate,
         )
