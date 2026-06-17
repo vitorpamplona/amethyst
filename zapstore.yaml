@@ -34,12 +34,107 @@ website: https://amethyst.social/
 # ═══════════════════════════════════════════════════════════════════
 # MEDIA
 # ═══════════════════════════════════════════════════════════════════
+
+# App icon (local path or URL). 512x512 Play Store launcher icon.
+icon: ./amethyst/src/main/ic_launcher-playstore.png
+
 # Screenshots (local paths or URLs)
 images:
   - ./docs/screenshots/home.png
   - ./docs/screenshots/messages.png
   - ./docs/screenshots/notifications.png
   - ./docs/screenshots/replies.png
+
+# ═══════════════════════════════════════════════════════════════════
+# NOSTR METADATA
+# ═══════════════════════════════════════════════════════════════════
+
+# NIPs implemented by the app (shown on the Zapstore listing). Kept in sync
+# with the "Supported NIPs" checklist in README.md (only the checked items).
+supported_nips:
+  - "01" # Basic protocol flow
+  - "02" # Follow List
+  - "03" # OpenTimestamps Attestations
+  - "04" # Encrypted Direct Message
+  - "05" # DNS-based Identifiers
+  - "06" # Key Derivation from Mnemonic
+  - "08" # Handling Mentions
+  - "09" # Event Deletion Request
+  - "10" # Text Notes and Threads
+  - "11" # Relay Information Document
+  - "13" # Proof of Work
+  - "14" # Subject Tag in Text Events
+  - "15" # Nostr Marketplace
+  - "17" # Private Direct Messages
+  - "18" # Reposts
+  - "19" # bech32-encoded Entities
+  - "21" # nostr: URI Scheme
+  - "22" # Comment
+  - "23" # Long-form Content
+  - "24" # Extra Metadata Fields and Tags
+  - "25" # Reactions
+  - "26" # Delegated Event Signing
+  - "27" # Text Note References
+  - "28" # Public Chat
+  - "29" # Relay-based Groups
+  - "30" # Custom Emoji
+  - "31" # Dealing with Unknown Events
+  - "32" # Labeling
+  - "34" # git stuff
+  - "35" # Torrents
+  - "36" # Sensitive Content
+  - "37" # Draft Events
+  - "38" # User Statuses
+  - "39" # External Identities in Profiles
+  - "40" # Expiration Timestamp
+  - "42" # Authentication of Clients to Relays
+  - "43" # Relay Access Metadata and Requests
+  - "44" # Encrypted Payloads / Versioned
+  - "45" # Counting Results
+  - "46" # Nostr Remote Signing
+  - "47" # Nostr Wallet Connect
+  - "48" # Proxy Tags
+  - "49" # Private Key Encryption
+  - "50" # Search Capability
+  - "51" # Lists
+  - "52" # Calendar Events
+  - "53" # Live Activities
+  - "54" # Wiki
+  - "55" # Android Signer Application
+  - "56" # Reporting
+  - "57" # Lightning Zaps
+  - "58" # Badges
+  - "59" # Gift Wrap
+  - "5A" # Pubkey Static Websites
+  - "60" # Cashu Wallet
+  - "61" # Nutzaps
+  - "62" # Request to Vanish
+  - "64" # Chess / PGN
+  - "65" # Relay List Metadata
+  - "66" # Relay Discovery and Liveness Monitoring
+  - "68" # Picture-first Feeds
+  - "69" # Peer-to-peer Order Events
+  - "70" # Protected Events
+  - "71" # Video Events
+  - "72" # Moderated Communities
+  - "73" # External Content IDs
+  - "75" # Zap Goals
+  - "77" # Negentropy Syncing
+  - "78" # Application-specific Data
+  - "7D" # Threads
+  - "84" # Highlights
+  - "85" # Trusted Assertions
+  - "86" # Relay Management API
+  - "87" # Ecash Mint Discoverability
+  - "88" # Polls
+  - "89" # Recommended Application Handlers
+  - "90" # Data Vending Machines
+  - "92" # Media Attachments
+  - "94" # File Metadata
+  - "95" # Binary Blobs (Draft)
+  - "96" # HTTP File Storage Integration
+  - "98" # HTTP Auth
+  - "99" # Classified Listings
 
 # ═══════════════════════════════════════════════════════════════════
 # VARIANTS
@@ -49,3 +144,16 @@ images:
 variants:
   fdroid: ".*-fdroid-.*\\.apk$"
   google: ".*-googleplay-.*\\.apk$"
+
+# ═══════════════════════════════════════════════════════════════════
+# PUBLISHING RELAYS
+# ═══════════════════════════════════════════════════════════════════
+# Relays are NOT configured in this file. `zsp` reads them from the
+# RELAY_URLS environment variable (comma-separated) and falls back to
+# wss://relay.zapstore.dev when it is unset. To publish the release event
+# to additional relays, set RELAY_URLS before running `zsp publish`, e.g.:
+#
+#   RELAY_URLS="wss://relay.zapstore.dev,wss://relay.damus.io,wss://nos.lol" \
+#     SIGN_WITH=<amethyst-nsec> zsp publish
+#
+# See RELEASE_OPS.md for the maintainer publishing checklist.

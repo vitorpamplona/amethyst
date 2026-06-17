@@ -122,9 +122,10 @@ few days): <https://f-droid.org/packages/com.vitorpamplona.amethyst/>.
 ### Zapstore — `zsp publish` with Amethyst's nsec
 [Zapstore](https://zapstore.dev/) is a Nostr-native app store. The `zsp` CLI
 reads [`zapstore.yaml`](zapstore.yaml) at the repo root (name, summary,
-description, tags, license, screenshots, and the `variants` regexes that match
-our `*-fdroid-*.apk` / `*-googleplay-*.apk` GH-release assets), then publishes a
-signed software-release event to Nostr relays.
+description, tags, license, `icon`, screenshots, `supported_nips`, and the
+`variants` regexes that match our `*-fdroid-*.apk` / `*-googleplay-*.apk`
+GH-release assets), then publishes a signed software-release event to Nostr
+relays.
 
 ```bash
 # from the repo root, after the GH Release assets exist
@@ -132,7 +133,20 @@ zsp publish
 ```
 
 It signs with **Amethyst's nsec** — provide the key the way `zsp` expects
-(env var / prompt / its own config), never commit it.
+(`SIGN_WITH` env var / prompt / its own config), never commit it.
+
+**Relays.** `zsp` does *not* take relays from `zapstore.yaml`; it reads the
+`RELAY_URLS` env var (comma-separated) and defaults to `wss://relay.zapstore.dev`
+when unset. To fan the release event out to more relays for discoverability,
+set `RELAY_URLS` for the run:
+
+```bash
+RELAY_URLS="wss://relay.zapstore.dev,wss://relay.damus.io,wss://nos.lol,wss://vitor.nostr1.com" \
+  SIGN_WITH=<amethyst-nsec> zsp publish
+```
+
+Keep `wss://relay.zapstore.dev` in the list — that is the relay the Zapstore app
+itself reads from.
 
 ### Homebrew + Winget — automatic
 `bump-homebrew.yml` and `bump-winget.yml` fire on stable tags and open PRs
