@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip60Cashu.mintApi
 
+import com.vitorpamplona.quartz.nip60Cashu.token.CashuProof
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -89,5 +90,63 @@ class NutTwoInputFeeTest {
     @Test
     fun `negative ppk treated as zero — defensive against bad mint payloads`() {
         assertEquals(0L, CashuMintOperations.computeInputFee(numInputs = 10, inputFeePpk = -5L))
+    }
+
+    // --- Per-keyset variant: fees follow each input proof's OWN keyset ---
+
+    private fun proof(
+        keysetId: String,
+        amount: Long,
+    ) = CashuProof(id = keysetId, amount = amount, secret = "s-$keysetId-$amount", c = "c")
+
+    @Test
+    fun `proofs on a zero-fee keyset cost nothing even when another keyset charges`() {
+        // Reproduces the mint.coinos.io report: the wallet's proofs sit on the
+        // mint's old keyset (0 ppk) while the active keyset charges 100 ppk.
+        // The fee must be priced from the proofs' own keyset, so it is 0 — not
+        // ceil(N*100/1000). Pricing from the active keyset reserved a fee the
+        // mint never took, leaving outputs one sat short ("inputs 84 - fees 0
+        // vs output (83) are not balanced").
+        val oldKeyset = "004f7adf2a04356c"
+        val activeKeyset = "007311aa2fa58cc8"
+        val feePpkByKeyset = mapOf(oldKeyset to 0L, activeKeyset to 100L)
+        val inputs = List(20) { proof(oldKeyset, 4L) } // 80 sat across 20 proofs on the 0-fee keyset
+
+        assertEquals(0L, CashuMintOperations.computeInputFee(inputs, feePpkByKeyset))
+    }
+
+    @Test
+    fun `proofs on a fee-charging keyset are billed per spec ceiling`() {
+        val activeKeyset = "007311aa2fa58cc8"
+        val feePpkByKeyset = mapOf(activeKeyset to 100L)
+        // 11 inputs * 100 ppk = 1100 → ceil(1100/1000) = 2
+        val inputs = List(11) { proof(activeKeyset, 1L) }
+
+        assertEquals(2L, CashuMintOperations.computeInputFee(inputs, feePpkByKeyset))
+    }
+
+    @Test
+    fun `mixed keysets sum per-input ppk then ceil once`() {
+        val zeroKeyset = "004f7adf2a04356c"
+        val feeKeyset = "007311aa2fa58cc8"
+        val feePpkByKeyset = mapOf(zeroKeyset to 0L, feeKeyset to 100L)
+        // 5 fee-charging inputs (5*100=500 ppk) + 5 zero-fee inputs (0) = 500 ppk
+        // ceil(500/1000) = 1. Ceiling is applied once to the SUM, not per input.
+        val inputs = List(5) { proof(feeKeyset, 1L) } + List(5) { proof(zeroKeyset, 1L) }
+
+        assertEquals(1L, CashuMintOperations.computeInputFee(inputs, feePpkByKeyset))
+    }
+
+    @Test
+    fun `unknown keyset (mint dropped it) contributes zero`() {
+        val feePpkByKeyset = mapOf("known" to 100L)
+        val inputs = List(50) { proof("rotated-out-and-gone", 1L) }
+
+        assertEquals(0L, CashuMintOperations.computeInputFee(inputs, feePpkByKeyset))
+    }
+
+    @Test
+    fun `empty inputs cost nothing`() {
+        assertEquals(0L, CashuMintOperations.computeInputFee(emptyList(), mapOf("k" to 100L)))
     }
 }

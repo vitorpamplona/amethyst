@@ -139,9 +139,15 @@ class CashuMintOperations(
 
         val keyset = fetchKeyset()
 
-        // NUT-02: reserve per-input fees from the output total. Without
-        // this, fee-charging mints reject the swap with "amount mismatch".
-        val feeAtoms = computeInputFee(proofs.size, keyset.inputFeePpk)
+        // NUT-02: reserve per-input fees from the output total. Fees are
+        // charged per the keyset of EACH input proof — which may be an
+        // inactive, rotated-out keyset whose fee differs from the active
+        // output keyset — so price them from /v1/keysets, not from
+        // `keyset.inputFeePpk`. Without this, a wallet holding proofs on a
+        // 0-fee keyset against a mint whose active keyset charges a fee
+        // (e.g. mint.coinos.io) reserves a fee the mint doesn't take and
+        // the mint rejects the swap as "inputs/outputs not balanced".
+        val feeAtoms = computeInputFee(proofs, fetchInputFeePpkByKeyset())
         val outputTotal = total - feeAtoms
         if (targetSplit != null && targetSplit > outputTotal) {
             throw IllegalArgumentException("Target split $targetSplit exceeds outputs after fee ($outputTotal)")
@@ -228,9 +234,10 @@ class CashuMintOperations(
         if (targetSplit > total) throw IllegalArgumentException("Target split exceeds available proofs")
 
         val keyset = fetchKeyset()
-        // NUT-02: reserve per-input fees; change shrinks by the fee, send
-        // amount stays whole (the recipient gets exactly targetSplit sats).
-        val feeAtoms = computeInputFee(proofs.size, keyset.inputFeePpk)
+        // NUT-02: reserve per-input fees (priced per each input proof's own
+        // keyset — see [swap]); change shrinks by the fee, send amount stays
+        // whole (the recipient gets exactly targetSplit sats).
+        val feeAtoms = computeInputFee(proofs, fetchInputFeePpkByKeyset())
         val keepAmount = total - targetSplit - feeAtoms
         if (keepAmount < 0L) {
             throw IllegalArgumentException("Inputs $total don't cover send $targetSplit + fee $feeAtoms")
@@ -289,8 +296,11 @@ class CashuMintOperations(
         val keyset = fetchKeyset()
         // NUT-02 input fee — separate from quote.feeReserve, which is the
         // upper bound on LN routing fees. The mint subtracts both from
-        // inputs before paying the invoice; we must reserve both.
-        val inputFee = computeInputFee(inputs.size, keyset.inputFeePpk)
+        // inputs before paying the invoice; we must reserve both. Fees are
+        // priced per each input proof's own keyset (which may be an
+        // inactive, rotated-out keyset — see [swap]), so read them from
+        // /v1/keysets rather than the active output keyset.
+        val inputFee = computeInputFee(inputs, fetchInputFeePpkByKeyset())
         val required = quote.amount + quote.feeReserve + inputFee
         if (total < required) throw IllegalArgumentException("Inputs total $total < required $required")
 
@@ -581,6 +591,18 @@ class CashuMintOperations(
             ?: throw IllegalStateException("Mint exposes no keysets")
     }
 
+    /**
+     * NUT-02 per-keyset input fees from /v1/keysets. Unlike /v1/keys
+     * (active keysets only), /v1/keysets lists EVERY keyset the mint has
+     * ever published — active and inactive — each with its own
+     * `input_fee_ppk`. That distinction matters: input proofs are
+     * frequently minted under a keyset the mint has since rotated out,
+     * and the fee charged on a spend follows the proof's own keyset, not
+     * whatever keyset is active now. Maps keyset id → input_fee_ppk
+     * (absent / null → 0).
+     */
+    private suspend fun fetchInputFeePpkByKeyset(): Map<String, Long> = client.keysets().keysets.associate { it.id to (it.inputFeePpk ?: 0L) }
+
     private fun createBlindedOutputs(
         amount: Long,
         keyset: KeysetDto,
@@ -746,6 +768,28 @@ class CashuMintOperations(
             val ppk = inputFeePpk ?: 0L
             if (ppk <= 0L || numInputs <= 0) return 0L
             return (numInputs.toLong() * ppk + 999L) / 1000L
+        }
+
+        /**
+         * NUT-02 input-fee math for a heterogeneous set of input proofs.
+         *
+         * Each proof is charged the `input_fee_ppk` of *its own* keyset —
+         * NOT the wallet's currently-active keyset. A mint that rotated
+         * keysets and changed its fee policy (mint.coinos.io: old keyset
+         * 0 ppk, new keyset 100 ppk) charges per the keyset the proof was
+         * minted under. The total fee is `ceil(sum(input_fee_ppk_i) / 1000)`,
+         * with the ceiling applied once to the SUM (per spec), not per input.
+         *
+         * [feePpkByKeyset] maps keyset id → its `input_fee_ppk`; a proof
+         * whose keyset is absent (mint dropped it entirely) contributes 0.
+         */
+        fun computeInputFee(
+            proofs: List<CashuProof>,
+            feePpkByKeyset: Map<String, Long>,
+        ): Long {
+            val sumPpk = proofs.sumOf { (feePpkByKeyset[it.id] ?: 0L).coerceAtLeast(0L) }
+            if (sumPpk <= 0L) return 0L
+            return (sumPpk + 999L) / 1000L
         }
     }
 
