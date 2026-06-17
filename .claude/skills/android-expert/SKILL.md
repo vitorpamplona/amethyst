@@ -738,125 +738,29 @@ fun SignerIntegration(accountViewModel: AccountViewModel) {
 
 ## 6. Build Configuration
 
-### Android Block
+Build files — the `android {}` block, the version catalog, dependencies,
+Proguard/R8, and Desktop packaging — are **gradle-expert's** domain. Use
+`/gradle-expert` instead of duplicating that guidance here. In particular, the
+app version and the Android `versionCode` both live in
+`gradle/libs.versions.toml` (`app` / `appCode`); `amethyst/build.gradle.kts`
+reads both from the catalog, so a release bump is a single-file edit.
 
-**build.gradle (Amethyst pattern):**
+The one build detail that is genuinely Android-specific — not generic Gradle —
+is the **product-flavor split** that ships two channels from one codebase:
+
 ```gradle
-android {
-    namespace = 'com.vitorpamplona.amethyst'
-    compileSdk = 37      // from libs.versions.toml android-compileSdk — check there, it drifts
-
-    defaultConfig {
-        applicationId = "com.vitorpamplona.amethyst"
-        minSdk = 26          // Android 8.0 (Oreo)
-        targetSdk = 37       // android-targetSdk in libs.versions.toml
-        versionCode = 448
-        versionName = generateVersionName(libs.versions.app.get(), rootDir)
-
-        vectorDrawables {
-            useSupportLibrary = true
-        }
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-    }
-
-    buildFeatures {
-        compose = true
-        buildConfig = true   // Enable BuildConfig access
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = libs.versions.compose.compiler.get()
-    }
-
-    packaging {
-        resources {
-            excludes += '/META-INF/{AL2.0,LGPL2.1}'
-        }
-    }
-
-    // Product flavors for Play Store vs F-Droid
-    flavorDimensions = ["channel"]
-    productFlavors {
-        create("play") {
-            dimension = "channel"
-            // Firebase, Google services
-        }
-        create("fdroid") {
-            dimension = "channel"
-            // UnifiedPush, open-source alternatives
-        }
-    }
-}
-
-kotlin {
-    compilerOptions {
-        jvmTarget = JvmTarget.JVM_21
-    }
+flavorDimensions = ["channel"]
+productFlavors {
+    create("play")   { dimension = "channel" } // Firebase, Google services
+    create("fdroid") { dimension = "channel" } // UnifiedPush, open-source only
 }
 ```
 
-### Dependencies
+`play` carries Firebase/Google services; `fdroid` swaps them for UnifiedPush and
+open-source alternatives so the F-Droid build stays proprietary-free.
 
-**Key Android Dependencies:**
-```gradle
-dependencies {
-    // Compose BOM
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.ui.tooling.preview)
-
-    // Navigation
-    implementation(libs.androidx.navigation.compose)
-
-    // Lifecycle
-    implementation(libs.androidx.lifecycle.runtime.compose)
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
-
-    // Activity
-    implementation(libs.androidx.activity.compose)
-
-    // Accompanist
-    implementation(libs.accompanist.permissions)
-
-    // Shared module
-    implementation(project(":commons"))
-    implementation(project(":quartz"))
-}
-```
-
-### Proguard Rules
-
-**Common Rules for Amethyst:**
-```proguard
-# Keep Kotlin metadata
--keep class kotlin.Metadata { *; }
-
-# Keep Nostr event classes
--keep class com.vitorpamplona.quartz.events.** { *; }
-
-# Keep serialization
--keepattributes *Annotation*, InnerClasses
--dontnote kotlinx.serialization.AnnotationsKt
-
-# OkHttp
--dontwarn okhttp3.**
--keep class okhttp3.** { *; }
-
-# Compose
--keep class androidx.compose.** { *; }
--dontwarn androidx.compose.**
-```
-
-**Reference:** See `references/proguard-rules.md` for complete Proguard configuration.
-
-### APK Optimization
-
-**Reference:** See `scripts/analyze-apk-size.sh` for APK size analysis.
+Proguard/R8 rules: see `references/proguard-rules.md`. APK size analysis:
+`scripts/analyze-apk-size.sh`.
 
 ## 7. KMP Android Source Sets
 

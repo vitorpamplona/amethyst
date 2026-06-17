@@ -167,7 +167,7 @@ implementation(libs.jna)
 
 **Current project config** (always re-check `gradle/libs.versions.toml` — these drift):
 ```toml
-composeMultiplatform = "1.12.0"  # Plugin + runtime
+composeMultiplatform = "1.11.1"  # Plugin + runtime
 composeBom = "2026.05.01"        # AndroidX Compose BOM
 kotlin = "2.3.21"
 ```
