@@ -2197,7 +2197,7 @@
     <string name="cashu_p2pk_autogen_warning_edit">Will invalidate any pending nutzaps locked to the current key.</string>
     <string name="cashu_p2pk_keep_current">Keep current key</string>
     <string name="cashu_p2pk_manual_label">P2PK private key (hex)</string>
-    <string name="wallet_edit_cashu_title">Edit Cashu wallet</string>
+    <string name="wallet_edit_cashu_title">Edit mints</string>
     <string name="wallet_save_changes">Save changes</string>
     <string name="cashu_mint_no_recs">No recommendations yet</string>
     <string name="cashu_mint_recommended_by">Recommended by</string>
@@ -2227,8 +2227,8 @@
     <string name="cashu_history_incoming">Received</string>
     <string name="cashu_history_outgoing">Sent</string>
     <string name="cashu_settings_title">Cashu Wallet Settings</string>
-    <string name="cashu_settings_edit_wallet">Edit wallet details</string>
-    <string name="cashu_settings_edit_wallet_subtitle">Mints, nutzap key</string>
+    <string name="cashu_settings_edit_wallet">My mints</string>
+    <string name="cashu_settings_edit_wallet_subtitle">Add or remove the mints your wallet uses.</string>
     <string name="cashu_settings_my_recommendations">My mint recommendations</string>
     <string name="cashu_settings_recommendations_subtitle">Publicly vouch for mints you trust, and retract recommendations.</string>
     <string name="cashu_settings_no_recommendations">You haven\'t recommended any mints yet. Tap the thumbs-up next to a mint to publicly vouch for it.</string>

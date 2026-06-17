@@ -65,6 +65,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.R
@@ -162,67 +163,27 @@ fun AddCashuWalletScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            val verifications by viewModel.mintVerifications.collectAsState()
             mints.forEachIndexed { index, mint ->
-                val verifyState = verifications[mint.trim().trimEnd('/')]
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 ) {
-                    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = mint,
-                                modifier = Modifier.weight(1f),
-                                style = MaterialTheme.typography.bodyMedium,
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = mint,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        IconButton(onClick = { mints.removeAt(index) }) {
+                            Icon(
+                                symbol = MaterialSymbols.Delete,
+                                contentDescription = stringRes(R.string.cashu_remove_mint),
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.error,
                             )
-                            OutlinedButton(
-                                onClick = { viewModel.verifyMint(mint) },
-                                enabled = verifyState !is MintPingState.Pinging,
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-                                modifier = Modifier.height(32.dp),
-                            ) {
-                                if (verifyState is MintPingState.Pinging) {
-                                    CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-                                } else {
-                                    Text(
-                                        stringRes(R.string.cashu_verify),
-                                        style = MaterialTheme.typography.labelMedium,
-                                    )
-                                }
-                            }
-                            IconButton(onClick = { mints.removeAt(index) }) {
-                                Icon(
-                                    symbol = MaterialSymbols.Delete,
-                                    contentDescription = stringRes(R.string.cashu_remove_mint),
-                                    modifier = Modifier.size(18.dp),
-                                    tint = MaterialTheme.colorScheme.error,
-                                )
-                            }
-                        }
-                        when (val vs = verifyState) {
-                            is MintPingState.Ok -> {
-                                Text(
-                                    text =
-                                        if (vs.name.isNullOrBlank()) {
-                                            stringRes(R.string.cashu_mint_reachable)
-                                        } else {
-                                            stringRes(R.string.cashu_mint_reachable_named, vs.name)
-                                        },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(bottom = 4.dp),
-                                )
-                            }
-                            is MintPingState.Failed -> {
-                                Text(
-                                    text = stringRes(R.string.cashu_mint_unreachable, vs.message),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.padding(bottom = 4.dp),
-                                )
-                            }
-                            else -> Unit
                         }
                     }
                 }
@@ -243,7 +204,13 @@ fun AddCashuWalletScreen(
                         viewModel.resetMintPing()
                     },
                     label = { Text(stringRes(R.string.cashu_mint_url)) },
-                    placeholder = { Text("https://mint.example.com") },
+                    placeholder = {
+                        Text(
+                            "https://mint.example.com",
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
                     singleLine = true,
                     modifier = Modifier.weight(1f),
                 )
@@ -318,10 +285,13 @@ fun AddCashuWalletScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
+                val verifications by viewModel.mintVerifications.collectAsState()
                 MintSuggestionList(
                     suggestions = suggestions,
                     accountViewModel = accountViewModel,
                     nav = nav,
+                    verifications = verifications,
+                    onVerify = { url -> viewModel.verifyMint(url) },
                     onAdd = { entry ->
                         val trimmed = entry.url.trim().trimEnd('/')
                         if (trimmed.isNotEmpty() && trimmed !in mints) {
@@ -465,9 +435,9 @@ private fun P2pkRadio(
  * Mint directory autocomplete rendered inline under the mint input.
  * Each row uses [MintDirectoryRow] so the user sees follower avatars
  * and recommendation counts the same way they would in a dedicated
- * picker. Each row carries a `+` button that adds the mint straight to
- * the wallet's mint list — the per-mint Verify button in that list lets
- * the user check reachability afterwards.
+ * picker. Each row carries a small Verify button (to check the mint is
+ * reachable) and, to its right, a `+` button that adds the mint straight
+ * to the wallet's mint list. The verify result renders under the row.
  *
  * Rows are visually separated by an outlined surface and divider so
  * a long list reads as discrete entries instead of merging into a
@@ -478,6 +448,8 @@ private fun MintSuggestionList(
     suggestions: List<CashuMintDirectoryEntry>,
     accountViewModel: AccountViewModel,
     nav: INav,
+    verifications: Map<String, MintPingState>,
+    onVerify: (String) -> Unit,
     onAdd: (CashuMintDirectoryEntry) -> Unit,
 ) {
     OutlinedCard(
@@ -490,18 +462,61 @@ private fun MintSuggestionList(
                 if (index > 0) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 }
-                MintDirectoryRow(
-                    entry = entry,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                ) {
-                    IconButton(onClick = { onAdd(entry) }) {
-                        Icon(
-                            symbol = MaterialSymbols.Add,
-                            contentDescription = stringRes(R.string.cashu_add_mint),
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
+                val verifyState = verifications[entry.url.trim().trimEnd('/')]
+                Column {
+                    MintDirectoryRow(
+                        entry = entry,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    ) {
+                        OutlinedButton(
+                            onClick = { onVerify(entry.url) },
+                            enabled = verifyState !is MintPingState.Pinging,
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                            modifier = Modifier.height(32.dp),
+                        ) {
+                            if (verifyState is MintPingState.Pinging) {
+                                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                            } else {
+                                Text(
+                                    stringRes(R.string.cashu_verify),
+                                    style = MaterialTheme.typography.labelMedium,
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                        IconButton(onClick = { onAdd(entry) }) {
+                            Icon(
+                                symbol = MaterialSymbols.Add,
+                                contentDescription = stringRes(R.string.cashu_add_mint),
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                    when (val vs = verifyState) {
+                        is MintPingState.Ok -> {
+                            Text(
+                                text =
+                                    if (vs.name.isNullOrBlank()) {
+                                        stringRes(R.string.cashu_mint_reachable)
+                                    } else {
+                                        stringRes(R.string.cashu_mint_reachable_named, vs.name)
+                                    },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
+                            )
+                        }
+                        is MintPingState.Failed -> {
+                            Text(
+                                text = stringRes(R.string.cashu_mint_unreachable, vs.message),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
+                            )
+                        }
+                        else -> Unit
                     }
                 }
             }

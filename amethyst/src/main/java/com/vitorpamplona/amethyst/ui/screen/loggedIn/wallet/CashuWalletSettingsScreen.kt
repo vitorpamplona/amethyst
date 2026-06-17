@@ -423,8 +423,8 @@ fun SettingsRowEditWalletPreview() {
     ThemeComparisonColumn {
         SettingsRow(
             icon = MaterialSymbols.Edit,
-            title = "Edit wallet details",
-            subtitle = "Mints, nutzap key",
+            title = "My mints",
+            subtitle = "Add or remove the mints your wallet uses.",
             onClick = {},
         )
     }
