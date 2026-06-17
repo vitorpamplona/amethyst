@@ -436,6 +436,10 @@ sealed class Route {
         val id: String,
     ) : Route()
 
+    @Serializable data class ShareNoteAsImageFile(
+        val id: String,
+    ) : Route()
+
     @Serializable data class ContactListUsers(
         val noteId: String,
     ) : Route()
