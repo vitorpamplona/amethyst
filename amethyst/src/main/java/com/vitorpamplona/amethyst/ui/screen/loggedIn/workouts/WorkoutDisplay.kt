@@ -117,6 +117,30 @@ private fun trimToOneDecimal(value: Double): String {
     return rounded.trimmed()
 }
 
+/** Distance in the viewer's preferred unit (miles or km), rounded to 2 decimals. */
+private fun DistanceTag.toDisplay(miles: Boolean): DistanceTag =
+    if (miles) {
+        DistanceTag(round(toMeters() / DistanceTag.METERS_PER_MILE * 100.0) / 100.0, DistanceTag.MILES)
+    } else {
+        DistanceTag(round(toKilometers() * 100.0) / 100.0, DistanceTag.KILOMETERS)
+    }
+
+/** Elevation in the viewer's preferred unit (feet or metres), rounded to whole units. */
+private fun Elevation.toDisplay(miles: Boolean): Elevation =
+    if (miles) {
+        Elevation(round(toMeters() / Elevation.METERS_PER_FOOT), Elevation.FEET)
+    } else {
+        Elevation(round(toMeters()), Elevation.METERS)
+    }
+
+/** Weight in the viewer's preferred unit (lbs or kg), rounded to 1 decimal. */
+private fun WeightTag.toDisplay(miles: Boolean): WeightTag =
+    if (miles) {
+        WeightTag(round(toKilograms() / WeightTag.KILOGRAMS_PER_POUND * 10.0) / 10.0, WeightTag.POUNDS)
+    } else {
+        WeightTag(round(toKilograms() * 10.0) / 10.0, WeightTag.KILOGRAMS)
+    }
+
 /** One-shot snapshot of the parsed workout tags, so the feed doesn't re-scan the tag array on every recomposition. */
 @Immutable
 class WorkoutInfo(
@@ -136,6 +160,26 @@ class WorkoutInfo(
     val reps: Int?,
     val weight: WeightTag?,
 ) {
+    /** Rewrites the unit-bearing metrics into the viewer's preferred system (miles/feet/lbs vs km/m/kg). */
+    fun inUnits(miles: Boolean) =
+        WorkoutInfo(
+            title = title,
+            type = type,
+            exerciseRaw = exerciseRaw,
+            source = source,
+            durationSeconds = durationSeconds,
+            distance = distance?.toDisplay(miles),
+            elevationGain = elevationGain?.toDisplay(miles),
+            elevationLoss = elevationLoss?.toDisplay(miles),
+            calories = calories,
+            steps = steps,
+            avgHeartRate = avgHeartRate,
+            maxHeartRate = maxHeartRate,
+            sets = sets,
+            reps = reps,
+            weight = weight?.toDisplay(miles),
+        )
+
     companion object {
         fun from(event: WorkoutRecordEvent) =
             WorkoutInfo(
@@ -172,7 +216,8 @@ private class Stat(
 fun WorkoutDisplay(baseNote: Note) {
     val event = (baseNote.event as? WorkoutRecordEvent) ?: return
 
-    val info = remember(baseNote) { WorkoutInfo.from(event) }
+    val miles = remember { phonePrefersMiles() }
+    val info = remember(baseNote, miles) { WorkoutInfo.from(event).inUnits(miles) }
     val typeLabel = info.type?.let { stringRes(it.labelRes()) } ?: info.exerciseRaw ?: stringRes(R.string.workout)
 
     val duration = info.durationSeconds
@@ -258,6 +303,15 @@ fun WorkoutDisplay(baseNote: Note) {
         }
 
         WorkoutStatsGrid(secondaryStats)
+
+        val notes = event.content.trim()
+        if (notes.isNotEmpty()) {
+            Text(
+                text = notes,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 12.dp),
+            )
+        }
     }
 }
 
