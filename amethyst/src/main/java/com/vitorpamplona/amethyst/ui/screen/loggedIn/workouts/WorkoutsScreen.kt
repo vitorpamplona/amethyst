@@ -25,6 +25,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.ui.feeds.FeedLoaded
 import com.vitorpamplona.amethyst.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.ui.feeds.RenderFeedContentState
 import com.vitorpamplona.amethyst.ui.feeds.SaveableFeedContentState
@@ -37,6 +38,7 @@ import com.vitorpamplona.amethyst.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.datasource.WorkoutsFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.suggestion.WorkoutConnectBanner
 
 @Composable
 fun WorkoutsScreen(
@@ -89,6 +91,18 @@ fun WorkoutsScreen(
                     listState = listState,
                     nav = nav,
                     routeForLastRead = "WorkoutsFeed",
+                    // Connect-only Health Connect prompt as the first feed item. Detected
+                    // workouts themselves are offered in the New Workout composer, not here.
+                    onLoaded = { loaded ->
+                        FeedLoaded(
+                            loaded = loaded,
+                            listState = listState,
+                            routeForLastRead = "WorkoutsFeed",
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                            header = { WorkoutConnectBanner(accountViewModel) },
+                        )
+                    },
                 )
             }
         }

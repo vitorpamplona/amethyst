@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.suggestion
 
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,7 +33,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
@@ -50,7 +48,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.R
@@ -68,14 +65,13 @@ import java.time.Duration
 import java.time.Instant
 
 /**
- * Health Connect integration for the New Workout composer. With permission it
- * shows a horizontal list of workouts from the last
- * [HealthConnectManager.LOOKBACK_DAYS] days; tapping one pre-loads the form via
- * [onPick]. Without permission it shows a Connect prompt — this is the only
- * place the app requests Health Connect access now that the feed banner is gone.
+ * Horizontal list of workouts found in Health Connect over the last
+ * [HealthConnectManager.LOOKBACK_DAYS] days, shown at the top of the New Workout
+ * composer. Tapping one pre-loads the form via [onPick].
  *
  * Renders nothing when Health Connect is unavailable, the suggestion setting is
- * off, or (once granted) no workouts are found.
+ * off, permission is missing, or no workouts are found. Granting permission is
+ * handled by the connect prompt on the Workouts feed, not here.
  */
 @Composable
 fun DetectedWorkoutCarousel(
@@ -93,91 +89,45 @@ fun DetectedWorkoutCarousel(
 
     val manager = remember { HealthConnectManager(context) }
     val scope = rememberCoroutineScope()
-    var granted by remember { mutableStateOf<Boolean?>(null) }
     var workouts by remember { mutableStateOf<List<DetectedWorkout>>(emptyList()) }
 
-    val reload: suspend () -> Unit = {
-        val ok = manager.hasAllPermissions()
-        granted = ok
-        workouts =
-            if (ok) {
-                val since = Instant.now().minus(Duration.ofDays(HealthConnectManager.LOOKBACK_DAYS))
-                manager.readNewWorkouts(since).sortedByDescending { it.startTimeEpochSeconds }
-            } else {
-                emptyList()
-            }
-    }
-
-    val permissionLauncher =
-        rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) {
-            scope.launch { reload() }
-        }
-
     LifecycleResumeEffect(Unit) {
-        scope.launch { reload() }
+        scope.launch {
+            workouts =
+                if (manager.hasAllPermissions()) {
+                    val since = Instant.now().minus(Duration.ofDays(HealthConnectManager.LOOKBACK_DAYS))
+                    manager.readNewWorkouts(since).sortedByDescending { it.startTimeEpochSeconds }
+                } else {
+                    emptyList()
+                }
+        }
         onPauseOrDispose {}
     }
 
-    when (granted) {
-        null -> return // not checked yet — render nothing so nothing flashes
-        false -> ConnectCard(modifier) { permissionLauncher.launch(HealthConnectManager.PERMISSIONS) }
-        true -> {
-            if (workouts.isEmpty()) return
-            Column(
-                modifier = modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Text(
-                    text = stringRes(R.string.workout_from_health_connect),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 4.dp),
-                )
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(horizontal = 2.dp),
-                ) {
-                    items(workouts, key = { it.id }) { workout ->
-                        val label = workout.title ?: stringRes(workout.exercise.labelRes())
-                        WorkoutChip(
-                            workout = workout,
-                            label = label,
-                            summary = summaryLine(workout),
-                            onClick = { onPick(workout.toNewWorkoutRoute(label)) },
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
+    if (workouts.isEmpty()) return
 
-@Composable
-private fun ConnectCard(
-    modifier: Modifier,
-    onConnect: () -> Unit,
-) {
-    OutlinedCard(
+    Column(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+        Text(
+            text = stringRes(R.string.workout_from_health_connect),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 4.dp),
+        )
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(horizontal = 2.dp),
         ) {
-            Text(
-                text = stringRes(R.string.workout_suggestion_connect_title),
-                style = MaterialTheme.typography.titleSmall,
-            )
-            Text(
-                text = stringRes(R.string.workout_suggestion_connect_message),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                Button(onClick = onConnect) {
-                    Text(stringRes(R.string.workout_suggestion_connect_button))
-                }
+            items(workouts, key = { it.id }) { workout ->
+                val label = workout.title ?: stringRes(workout.exercise.labelRes())
+                WorkoutChip(
+                    workout = workout,
+                    label = label,
+                    summary = summaryLine(workout),
+                    onClick = { onPick(workout.toNewWorkoutRoute(label)) },
+                )
             }
         }
     }
