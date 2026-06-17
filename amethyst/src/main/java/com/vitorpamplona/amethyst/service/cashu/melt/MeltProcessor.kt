@@ -21,22 +21,30 @@
 package com.vitorpamplona.amethyst.service.cashu.melt
 
 import android.content.Context
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuToken
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.quartz.utils.asTextOrNull
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaType
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.CashuMintOperations
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpClient
+import com.vitorpamplona.quartz.nip60Cashu.token.CashuProof
 import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.coroutines.executeAsync
 import kotlin.coroutines.cancellation.CancellationException
 
+/**
+ * Redeems an externally-received cashu token straight to a Lightning address
+ * via NUT-05 melt (`POST /v1/melt/quote/bolt11` + `POST /v1/melt/bolt11`).
+ *
+ * This is the "Redeem" button on a received cashu token preview — distinct
+ * from the NIP-60 wallet's own send-LN flow ([com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletOps.meltToLightning]),
+ * which spends the user's stored proofs and rolls change back into the wallet.
+ * Here there is no wallet: the proofs come straight off the pasted token and
+ * any leftover stays with the mint.
+ *
+ * Migrated off the deprecated pre-v1 `/melt` + `/checkfees` endpoints (gone on
+ * CDK and other modern mints) onto the same NUT-05 client the wallet uses, so
+ * it also picks up NUT-02 per-input fee handling for free.
+ */
 class MeltProcessor {
     suspend fun melt(
         token: CashuToken,
@@ -44,187 +52,66 @@ class MeltProcessor {
         okHttpClient: (String) -> OkHttpClient,
         context: Context,
     ): MeltResult {
-        val baseInvoice =
-            LightningAddressResolver().lnAddressInvoice(
-                lnAddress = lud16,
-                // Make invoice and leave room for fees
-                milliSats = token.totalAmount * 1000,
-                message = "Calculate Fees for Cashu",
-                okHttpClient = okHttpClient,
-                onProgress = {},
-                context = context,
-            )
-
-        val fees =
-            feeCalculator(
-                mintAddress = token.mint,
-                invoice = baseInvoice,
-                okHttpClient = okHttpClient,
-                context = context,
-            )
-
-        val invoice =
-            LightningAddressResolver().lnAddressInvoice(
-                lnAddress = lud16,
-                // Make invoice and leave room for fees
-                milliSats = (token.totalAmount - fees) * 1000,
-                message = "Redeem Cashu",
-                okHttpClient = okHttpClient,
-                onProgress = {},
-                context = context,
-            )
-
-        meltInvoice(token, invoice, okHttpClient, context)
-
-        return MeltResult(
-            token = token,
-            invoice = invoice,
-            fees = fees,
-        )
-    }
-
-    fun melt(
-        token: CashuToken,
-        lud16: String,
-        okHttpClient: (String) -> OkHttpClient,
-        onSuccess: (String, String) -> Unit,
-        onError: (String, String) -> Unit,
-        context: Context,
-    ) {
-        // TODO: Implement Cashu token melting via Lightning invoice
-    }
-
-    suspend fun feeCalculator(
-        mintAddress: String,
-        invoice: String,
-        okHttpClient: (String) -> OkHttpClient,
-        context: Context,
-    ): Int =
         try {
-            val url = "$mintAddress/checkfees" // Melt cashu tokens at Mint
-            val client = okHttpClient(url)
-
-            val factory = JsonNodeFactory.instance
-
-            val jsonObject = factory.objectNode()
-            jsonObject.put("pr", invoice)
-
-            val mediaType = "application/json; charset=utf-8".toMediaType()
-            val requestBody = jsonObject.toString().toRequestBody(mediaType)
-            val request =
-                Request
-                    .Builder()
-                    .url(url)
-                    .post(requestBody)
-                    .build()
-
-            client.newCall(request).executeAsync().use { response ->
-                withContext(Dispatchers.IO) {
-                    val body = response.body.string()
-                    val tree = jacksonObjectMapper().readTree(body)
-
-                    val feeCost = tree?.get("fee")?.asInt()
-
-                    if (feeCost == null) {
-                        val msg =
-                            tree
-                                ?.get("detail")
-                                ?.asTextOrNull()
-                                ?.split('.')
-                                ?.getOrNull(0)
-                                ?.ifBlank { null }
-
-                        throw LightningAddressResolver.LightningAddressError(
-                            stringRes(context, R.string.cashu_failed_redemption),
-                            if (msg != null) {
-                                stringRes(context, R.string.cashu_failed_redemption_explainer_error_msg, msg)
-                            } else {
-                                stringRes(context, R.string.cashu_failed_redemption_explainer_error_msg)
-                            },
-                        )
-                    }
-
-                    feeCost
+            val ops = CashuMintOperations(MintHttpClient(token.mint, okHttpClient))
+            val proofs =
+                token.proofs.map {
+                    CashuProof(id = it.id, amount = it.amount.toLong(), secret = it.secret, c = it.C)
                 }
+
+            // A Lightning address must commit to an amount before we know the
+            // fees, so probe with an invoice for the full token value to learn
+            // the LN fee_reserve, then add the NUT-02 input fee the mint
+            // charges on these proofs.
+            val probeInvoice =
+                LightningAddressResolver().lnAddressInvoice(
+                    lnAddress = lud16,
+                    milliSats = token.totalAmount * 1000,
+                    message = "Calculate Fees for Cashu",
+                    okHttpClient = okHttpClient,
+                    onProgress = {},
+                    context = context,
+                )
+            val probeQuote = ops.requestMeltQuote(probeInvoice)
+            val fees = probeQuote.feeReserve + ops.inputFeeFor(proofs)
+
+            val sendable = token.totalAmount - fees
+            if (sendable <= 0) {
+                throw LightningAddressResolver.LightningAddressError(
+                    stringRes(context, R.string.cashu_failed_redemption),
+                    stringRes(
+                        context,
+                        R.string.cashu_failed_redemption_explainer_error_msg,
+                        "Token value ${token.totalAmount} does not cover fees $fees",
+                    ),
+                )
             }
+
+            // Real invoice for (total − fees), quote it, then melt without
+            // requesting change — there is no wallet to hold leftover proofs,
+            // so the unused fee_reserve stays with the mint.
+            val invoice =
+                LightningAddressResolver().lnAddressInvoice(
+                    lnAddress = lud16,
+                    milliSats = sendable * 1000,
+                    message = "Redeem Cashu",
+                    okHttpClient = okHttpClient,
+                    onProgress = {},
+                    context = context,
+                )
+            val quote = ops.requestMeltQuote(invoice)
+            ops.meltProofs(quote, proofs, requestChange = false)
+
+            return MeltResult(
+                token = token,
+                invoice = invoice,
+                fees = fees.toInt(),
+            )
         } catch (e: Exception) {
             if (e is CancellationException) throw e
+            if (e is LightningAddressResolver.LightningAddressError) throw e
             throw LightningAddressResolver.LightningAddressError(
                 stringRes(context, R.string.cashu_failed_redemption),
-                stringRes(context, R.string.cashu_failed_redemption_explainer_error_msg, e.message),
-            )
-        }
-
-    private suspend fun meltInvoice(
-        token: CashuToken,
-        invoice: String,
-        okHttpClient: (String) -> OkHttpClient,
-        context: Context,
-    ) {
-        try {
-            val url = token.mint + "/melt" // Melt cashu tokens at Mint
-            val client = okHttpClient(url)
-
-            val factory = JsonNodeFactory.instance
-
-            val jsonObject = factory.objectNode()
-
-            jsonObject.replace(
-                "proofs",
-                factory.arrayNode(token.proofs.size).apply {
-                    token.proofs.forEach {
-                        addObject().apply {
-                            put("amount", it.amount)
-                            put("id", it.id)
-                            put("secret", it.secret)
-                            put("C", it.C)
-                        }
-                    }
-                },
-            )
-
-            jsonObject.put("pr", invoice)
-
-            val mediaType = "application/json; charset=utf-8".toMediaType()
-            val requestBody = jsonObject.toString().toRequestBody(mediaType)
-            val request =
-                Request
-                    .Builder()
-                    .url(url)
-                    .post(requestBody)
-                    .build()
-
-            client.newCall(request).executeAsync().use { response ->
-                withContext(Dispatchers.IO) {
-                    val body = response.body.string()
-                    val tree = jacksonObjectMapper().readTree(body)
-
-                    val successful = tree?.get("paid")?.asText() == "true"
-
-                    if (!successful) {
-                        val msg =
-                            tree
-                                ?.get("detail")
-                                ?.asTextOrNull()
-                                ?.split('.')
-                                ?.getOrNull(0)
-                                ?.ifBlank { null }
-
-                        throw LightningAddressResolver.LightningAddressError(
-                            stringRes(context, R.string.cashu_failed_redemption),
-                            if (msg != null) {
-                                stringRes(context, R.string.cashu_failed_redemption_explainer_error_msg, msg)
-                            } else {
-                                stringRes(context, R.string.cashu_failed_redemption_explainer_error_msg)
-                            },
-                        )
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            throw LightningAddressResolver.LightningAddressError(
-                stringRes(context, R.string.cashu_successful_redemption),
                 stringRes(context, R.string.cashu_failed_redemption_explainer_error_msg, e.message),
             )
         }

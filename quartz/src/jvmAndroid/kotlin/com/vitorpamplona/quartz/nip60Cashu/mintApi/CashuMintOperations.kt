@@ -301,6 +301,14 @@ class CashuMintOperations(
     }
 
     /**
+     * NUT-02 input fee the mint would charge to spend [proofs], priced per
+     * each proof's own keyset (active or inactive). Lets a caller size an LN
+     * invoice / target amount so the subsequent [meltProofs] or [swap] isn't
+     * left short by the fee.
+     */
+    suspend fun inputFeeFor(proofs: List<CashuProof>): Long = computeInputFee(proofs, fetchInputFeePpkByKeyset())
+
+    /**
      * Pay the bolt11 invoice. Spends [inputs], which must total at least
      * `quote.amount + quote.fee_reserve`. Any change is returned blinded so the
      * mint signs unused fee proofs that the wallet can later spend.
@@ -308,6 +316,15 @@ class CashuMintOperations(
     suspend fun meltProofs(
         quote: MeltQuoteBolt11ResponseDto,
         inputs: List<CashuProof>,
+        /**
+         * NUT-08: whether to send blinded change outputs so the mint can
+         * return the unused portion of the fee_reserve as fresh proofs.
+         * The NIP-60 wallet keeps this on (default) and rolls the change
+         * into a new kind:7375. A one-shot redemption with nowhere to store
+         * proofs (e.g. melting a received token straight to a Lightning
+         * address) sets it false and lets the mint keep the unused reserve.
+         */
+        requestChange: Boolean = true,
     ): MeltResult {
         val total = inputs.sumOf { it.amount }
         val keyset = fetchKeyset()
@@ -326,7 +343,7 @@ class CashuMintOperations(
         // excludes the (already-paid) NUT-02 input fee.
         val changeAmount = total - quote.amount - inputFee
         val changeOutputs =
-            if (changeAmount > 0) secretOutputsFor(splitAmounts(changeAmount), keyset) else emptyList()
+            if (requestChange && changeAmount > 0) secretOutputsFor(splitAmounts(changeAmount), keyset) else emptyList()
 
         val response =
             client.meltBolt11(
