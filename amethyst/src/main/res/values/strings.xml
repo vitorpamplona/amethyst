@@ -1790,6 +1790,18 @@
     <string name="music_track_uploading">Uploading…</string>
     <string name="music_track_uploading_banner">Uploading cover + audio and publishing. This will keep going even if you leave the screen.</string>
     <string name="music_track_upload_failed">Upload failed: %1$s</string>
+    <string name="edit_music_playlist">Edit playlist</string>
+    <string name="music_playlist_edit_action">Edit playlist</string>
+    <string name="music_playlist_title_label">Title</string>
+    <string name="music_playlist_description_label">Description (optional)</string>
+    <string name="music_playlist_notes_label">Notes (optional)</string>
+    <string name="music_playlist_cover_upload_cta">Upload a cover image</string>
+    <string name="music_playlist_cover_upload_hint">Pick a square image to be the artwork for this playlist.</string>
+    <string name="music_playlist_private_hint">Hide this playlist from your public profile.</string>
+    <string name="music_playlist_collaborative_hint">Let others add tracks to this playlist.</string>
+    <string name="music_playlist_delete">Delete this playlist</string>
+    <string name="music_playlist_delete_confirm">Publish a NIP-09 deletion for this playlist?</string>
+    <string name="music_playlist_uploading_banner">Uploading cover and publishing. This will keep going even if you leave the screen.</string>
 
 
     <string name="loading_location">Loading location</string>

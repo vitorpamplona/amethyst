@@ -176,6 +176,11 @@ sealed class Route {
     ) : Route()
 
     @Serializable
+    data class NewMusicPlaylist(
+        val dTag: String? = null,
+    ) : Route()
+
+    @Serializable
     data class AddToMusicPlaylist(
         val trackAddress: String,
     ) : Route()

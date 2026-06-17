@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.experimental.music.playlist.tags.CollaborativeTa
 import com.vitorpamplona.quartz.experimental.music.playlist.tags.DescriptionTag
 import com.vitorpamplona.quartz.experimental.music.playlist.tags.ImageTag
 import com.vitorpamplona.quartz.experimental.music.playlist.tags.PrivateTag
+import com.vitorpamplona.quartz.experimental.music.playlist.tags.PublicTag
 import com.vitorpamplona.quartz.experimental.music.playlist.tags.TitleTag
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -136,6 +137,57 @@ class MusicPlaylistEvent(
             if (isCollaborative) collaborative(true)
 
             initializer()
+        }
+
+        /**
+         * Builds a replacement event from an existing one, updating only the metadata fields the
+         * composer surfaces (`title`, `image`, `description`, the long-form `content`, the
+         * public/private flag and the `collaborative` flag) while preserving every other tag —
+         * crucially the `a` track references, plus any extra `t` hashtags or custom metadata the
+         * composer doesn't expose.
+         *
+         * `title` always replaces. The composer owns `image` and `description`, so a null/blank
+         * value means "remove that tag" rather than "keep whatever was there". Visibility is
+         * re-asserted from scratch: both `public` and `private` are dropped first, then exactly
+         * one is re-added, so a public→private switch (or vice versa) never leaves a stale flag
+         * behind. The new event keeps the same `d` tag as `earlierVersion`, so relays treat the
+         * publish as the next version of the same addressable. Always re-derives `alt` from the
+         * new title.
+         */
+        fun edit(
+            earlierVersion: MusicPlaylistEvent,
+            title: String,
+            content: String,
+            image: String?,
+            description: String?,
+            isPrivate: Boolean,
+            isCollaborative: Boolean,
+            createdAt: Long = TimeUtils.now(),
+        ): EventTemplate<MusicPlaylistEvent> {
+            val newTags =
+                earlierVersion.tags.builder<MusicPlaylistEvent> {
+                    title(title)
+                    alt("$ALT_DESCRIPTION_PREFIX: $title")
+                    setOrRemove(image, ImageTag.TAG_NAME, ::image)
+                    setOrRemove(description, DescriptionTag.TAG_NAME, ::description)
+
+                    // Re-assert exactly one visibility flag. Drop both first so switching
+                    // public↔private doesn't leave the previous flag lingering on the event.
+                    remove(PublicTag.TAG_NAME)
+                    remove(PrivateTag.TAG_NAME)
+                    if (isPrivate) private(true) else public(true)
+
+                    if (isCollaborative) collaborative(true) else remove(CollaborativeTag.TAG_NAME)
+                }
+            return EventTemplate(createdAt, KIND, newTags, content)
+        }
+
+        private fun TagArrayBuilder<MusicPlaylistEvent>.setOrRemove(
+            value: String?,
+            tagName: String,
+            setter: (String) -> Unit,
+        ) {
+            if (value.isNullOrBlank()) remove(tagName) else setter(value)
         }
 
         /**

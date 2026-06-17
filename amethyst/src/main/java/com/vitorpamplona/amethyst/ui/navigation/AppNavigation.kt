@@ -141,6 +141,7 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.longs.LongsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.AddToMusicPlaylistSheet
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.MusicPlaylistsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.MusicTracksScreen
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.NewMusicPlaylistScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.music.NewMusicTrackScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.NestsScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.lobby.NestLobbyScreen
@@ -312,6 +313,7 @@ fun BuildNavigation(
         composableFromEnd<Route.Podcasts> { PodcastsScreen(accountViewModel, nav) }
         composableFromEndArgs<Route.Podcast> { PodcastScreen(it.pubkey, accountViewModel, nav) }
         composableFromEndArgs<Route.NewMusicTrack> { NewMusicTrackScreen(editDTag = it.dTag, accountViewModel = accountViewModel, nav = nav) }
+        composableFromEndArgs<Route.NewMusicPlaylist> { NewMusicPlaylistScreen(editDTag = it.dTag, accountViewModel = accountViewModel, nav = nav) }
         composableFromEndArgs<Route.AddToMusicPlaylist> { AddToMusicPlaylistSheet(trackAddress = it.trackAddress, accountViewModel = accountViewModel, nav = nav) }
         composableFromEnd<Route.NewHlsVideo> { NewHlsVideoScreen(accountViewModel, nav) }
         composable<Route.Chess> { ChessLobbyScreen(accountViewModel, nav) }
