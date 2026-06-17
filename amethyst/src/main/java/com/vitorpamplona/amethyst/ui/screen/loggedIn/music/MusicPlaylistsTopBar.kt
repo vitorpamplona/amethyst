@@ -63,8 +63,9 @@ private fun MusicPlaylistsTopNavFilterBar(
     onChange: (FeedDefinition) -> Unit,
 ) {
     // Same route catalog as MusicTracks (and Articles / Longs): All Follows, Your Follows,
-    // kind3 Follows, Around Me, Global, custom people lists, interest sets, mute list.
-    val allLists by followListsModel.kind3GlobalPeopleRoutes.collectAsStateWithLifecycle()
+    // kind3 Follows, Around Me, Global, custom people lists, interest sets, mute list — plus
+    // "Mine" for the user's own published playlists.
+    val allLists by followListsModel.musicRoutes.collectAsStateWithLifecycle()
 
     FeedFilterSpinner(
         placeholderCode = listName,

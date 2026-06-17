@@ -155,6 +155,9 @@ class NewMusicTrackViewModel : ViewModel() {
 
     fun clearPickedCover() {
         coverMedia.value = null
+        // Also drop the already-published cover URL so the remove gesture removes the existing
+        // artwork on save (MusicTrackEvent.edit treats a blank image as "remove the tag").
+        coverUrl.value = ""
     }
 
     fun setPickedAudio(

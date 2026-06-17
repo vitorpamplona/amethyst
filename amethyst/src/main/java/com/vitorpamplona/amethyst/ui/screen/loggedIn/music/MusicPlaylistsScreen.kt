@@ -88,7 +88,7 @@ fun MusicPlaylistsScreen(
         },
         floatingButton = {
             FabBottomBarPadded(nav) {
-                NewMusicPlaylistFab(accountViewModel)
+                NewMusicPlaylistFab(nav)
             }
         },
         accountViewModel = accountViewModel,

@@ -146,6 +146,9 @@ fun MusicPlaylistHeader(
     val trackAddresses = remember(noteEvent) { noteEvent.trackAddresses() }
     val isCollaborative = remember(noteEvent) { noteEvent.isCollaborative() }
     val isPrivate = remember(noteEvent) { noteEvent.isPrivate() }
+    // The composer can only resolve and edit a playlist the logged-in user authored (it loads the
+    // addressable from their own pubkey), so only surface the edit affordance for owned playlists.
+    val isOwnPlaylist = remember(note) { accountViewModel.isLoggedUser(note.author) }
 
     Column(MaterialTheme.colorScheme.replyModifier) {
         MusicPlaylistCover(image, note, trackAddresses.size, accountViewModel)
@@ -168,7 +171,10 @@ fun MusicPlaylistHeader(
                 )
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Icon(
                     symbol = MaterialSymbols.AutoMirrored.PlaylistAdd,
                     contentDescription = null,
@@ -187,6 +193,20 @@ fun MusicPlaylistHeader(
                 }
                 if (isPrivate) {
                     PlaylistTag(text = stringRes(R.string.music_playlist_private))
+                }
+                if (isOwnPlaylist) {
+                    Spacer(Modifier.weight(1f))
+                    Icon(
+                        symbol = MaterialSymbols.Edit,
+                        contentDescription = stringRes(R.string.music_playlist_edit_action),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier =
+                            Modifier
+                                .clip(CircleShape)
+                                .clickable { nav.nav(Route.NewMusicPlaylist(dTag = noteEvent.dTag())) }
+                                .padding(4.dp)
+                                .size(20.dp),
+                    )
                 }
             }
 

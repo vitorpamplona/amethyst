@@ -292,6 +292,24 @@ class TopNavFilterState(
             )
         }
 
+    private val _musicRoutes =
+        combineTransform(
+            livePeopleListsFlow,
+            liveInterestFlows,
+        ) { peopleLists, interests ->
+            checkNotInMainThread()
+            emit(
+                listOf(
+                    // Same content-style catalog as kind3GlobalPeopleRoutes, plus "Mine" so the
+                    // music + playlists screens can show only the user's own published items.
+                    listOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, mineFollow),
+                    peopleLists,
+                    interests,
+                    listOf(muteListFollow),
+                ).flatten().toImmutableList(),
+            )
+        }
+
     private val _kind3GlobalPeople =
         livePeopleListsFlow.transform { peopleLists ->
             checkNotInMainThread()
@@ -340,6 +358,11 @@ class TopNavFilterState(
         _communityRoutes
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow, muteListFollow))
+
+    val musicRoutes =
+        _musicRoutes
+            .flowOn(Dispatchers.IO)
+            .stateIn(scope, SharingStarted.Eagerly, persistentListOf(allFollows, userFollows, kind3Follows, aroundMe, globalFollow, mineFollow, muteListFollow))
 
     fun destroy() {
         Log.d("Init") { "OnCleared: ${this.javaClass.simpleName}" }
