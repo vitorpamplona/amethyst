@@ -70,6 +70,14 @@ class NewMusicPlaylistViewModel : ViewModel() {
     val isCollaborative = mutableStateOf(false)
 
     /**
+     * Working, ordered list of track addresses the editor mutates (reorder / remove). Seeded from
+     * the loaded event in edit mode; published in this order on save. Adding *new* tracks still
+     * happens through the per-song "Add to playlist" sheet — this screen only manages the tracks
+     * already in the playlist.
+     */
+    val tracks = mutableStateOf<List<Address>>(emptyList())
+
+    /**
      * Single in-flight flag covering both the cover upload and the subsequent publish. Drives the
      * Send button's spinner, gates double-tap, and overlays the picker with a progress indicator.
      */
@@ -124,6 +132,7 @@ class NewMusicPlaylistViewModel : ViewModel() {
                 coverUrl.value = existing.image().orEmpty()
                 isPrivate.value = existing.isPrivate()
                 isCollaborative.value = existing.isCollaborative()
+                tracks.value = existing.trackAddresses()
             }
             // If the lookup fails, dTag stays null and the screen renders as create-mode.
         }
@@ -137,6 +146,33 @@ class NewMusicPlaylistViewModel : ViewModel() {
         coverMedia.value = null
         // Also drop any previously-published cover so "remove" sticks when editing.
         coverUrl.value = ""
+    }
+
+    /** Swap the track at [index] with the one above it. No-op at the top or out of bounds. */
+    fun moveTrackUp(index: Int) {
+        val current = tracks.value
+        if (index <= 0 || index >= current.size) return
+        tracks.value =
+            current.toMutableList().apply {
+                add(index - 1, removeAt(index))
+            }
+    }
+
+    /** Swap the track at [index] with the one below it. No-op at the bottom or out of bounds. */
+    fun moveTrackDown(index: Int) {
+        val current = tracks.value
+        if (index < 0 || index >= current.size - 1) return
+        tracks.value =
+            current.toMutableList().apply {
+                add(index + 1, removeAt(index))
+            }
+    }
+
+    /** Drop the track at [index] from the working list. No-op when out of bounds. */
+    fun removeTrackAt(index: Int) {
+        val current = tracks.value
+        if (index < 0 || index >= current.size) return
+        tracks.value = current.toMutableList().apply { removeAt(index) }
     }
 
     /** A title is the only hard requirement; everything else is optional. */
@@ -171,6 +207,7 @@ class NewMusicPlaylistViewModel : ViewModel() {
                 title = title.value.trim(),
                 description = description.value.trim().ifBlank { null },
                 notes = notes.value,
+                tracks = tracks.value,
                 isPrivate = isPrivate.value,
                 isCollaborative = isCollaborative.value,
                 coverOrchestrator = coverMedia.value,
@@ -217,6 +254,7 @@ class NewMusicPlaylistViewModel : ViewModel() {
         val title: String,
         val description: String?,
         val notes: String,
+        val tracks: List<Address>,
         val isPrivate: Boolean,
         val isCollaborative: Boolean,
         val coverOrchestrator: MultiOrchestrator?,
@@ -283,6 +321,7 @@ class NewMusicPlaylistViewModel : ViewModel() {
                     content = snapshot.notes,
                     image = coverUrl,
                     description = snapshot.description,
+                    tracks = snapshot.tracks,
                     isPrivate = snapshot.isPrivate,
                     isCollaborative = snapshot.isCollaborative,
                 )
@@ -292,6 +331,7 @@ class NewMusicPlaylistViewModel : ViewModel() {
                     content = snapshot.notes,
                     image = coverUrl,
                     description = snapshot.description,
+                    tracks = snapshot.tracks,
                     isPrivate = snapshot.isPrivate,
                     isCollaborative = snapshot.isCollaborative,
                 )
