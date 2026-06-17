@@ -36,17 +36,24 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.ui.components.SensitivityWarning
+import com.vitorpamplona.amethyst.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
@@ -213,7 +220,14 @@ private class Stat(
 )
 
 @Composable
-fun WorkoutDisplay(baseNote: Note) {
+fun WorkoutDisplay(
+    baseNote: Note,
+    backgroundColor: MutableState<Color>,
+    canPreview: Boolean,
+    quotesLeft: Int,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val event = (baseNote.event as? WorkoutRecordEvent) ?: return
 
     val miles = remember { phonePrefersMiles() }
@@ -304,13 +318,26 @@ fun WorkoutDisplay(baseNote: Note) {
 
         WorkoutStatsGrid(secondaryStats)
 
+        // Route the note (event content) through the same kind-1 pipeline: rich text with
+        // links/mentions/hashtags, embeds, sensitivity warning and inline translations.
         val notes = event.content.trim()
         if (notes.isNotEmpty()) {
-            Text(
-                text = notes,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(top = 12.dp),
-            )
+            val callbackUri = remember(baseNote) { baseNote.toNostrUri() }
+            val tags = remember(baseNote) { event.tags.toImmutableListOfLists() }
+            SensitivityWarning(note = baseNote, accountViewModel = accountViewModel) {
+                TranslatableRichTextViewer(
+                    content = notes,
+                    canPreview = canPreview,
+                    quotesLeft = quotesLeft,
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                    tags = tags,
+                    backgroundColor = backgroundColor,
+                    id = baseNote.idHex,
+                    callbackUri = callbackUri,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
         }
     }
 }

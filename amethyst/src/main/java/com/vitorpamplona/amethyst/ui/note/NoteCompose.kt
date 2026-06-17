@@ -1379,7 +1379,7 @@ private fun RenderNoteRow(
         }
 
         is WorkoutRecordEvent -> {
-            WorkoutDisplay(baseNote)
+            WorkoutDisplay(baseNote, backgroundColor, canPreview, quotesLeft, accountViewModel, nav)
         }
 
         is BaseVoiceEvent -> {
