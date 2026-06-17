@@ -409,15 +409,22 @@ class CashuWalletOps(
 
         val ops = ops(mintUrl)
         val required = quote.amount + quote.feeReserve
+        // The melt mints its inputs on the active keyset (via the swap-down
+        // below) and the mint then charges a NUT-02 input fee on them on top
+        // of amount + fee_reserve. Reserve it up front so neither proof
+        // selection nor the swap-down leaves the melt short — otherwise
+        // meltProofs throws "Inputs total X < required Y" the moment the
+        // active keyset charges a per-input fee (e.g. mint.coinos.io).
+        val target = required + ops.activeKeysetInputFeeFor(required)
 
-        val (selected, _) = selectProofsCovering(available, required)
+        val (selected, _) = selectProofsCovering(available, target)
         val spendingProofs = selected.flatMap { it.content.proofs }
         val total = spendingProofs.sumOf { it.amount }
 
-        // If the selected proofs overshoot, swap them down to (required) first.
-        val (inputs, prePaidChangeEvent) =
-            if (total > required) {
-                val swap = ops.swap(spendingProofs, targetSplit = required)
+        // If the selected proofs overshoot, swap them down to (target) first.
+        val (inputs, prePaidChangeEvent, prePaidChangeAmount) =
+            if (total > target) {
+                val swap = ops.swap(spendingProofs, targetSplit = target)
                 // The keep-side from the pre-swap is the "extra change" we
                 // didn't burn into the melt — publish it now so a crashed
                 // melt doesn't lose those proofs.
@@ -431,9 +438,9 @@ class CashuWalletOps(
                     } else {
                         null
                     }
-                swap.send to keepEvent
+                Triple(swap.send, keepEvent, swap.keep.sumOf { it.amount })
             } else {
-                spendingProofs to null
+                Triple(spendingProofs, null, 0L)
             }
 
         val meltResult = ops.meltProofs(quote, inputs)
@@ -485,7 +492,11 @@ class CashuWalletOps(
         return MeltCompleted(
             preimage = meltResult.preimage,
             paidAmount = quote.amount,
-            fees = total - meltResult.changeProofs.sumOf { it.amount } - quote.amount,
+            // Fee = proofs we spent − change we got back (both the pre-paid
+            // swap keep and the melt's own change) − the invoice amount. The
+            // pre-paid keep was split off before the melt and never burned,
+            // so it must not be counted as a fee.
+            fees = total - prePaidChangeAmount - meltResult.changeProofs.sumOf { it.amount } - quote.amount,
             historyEvent = historyEvent,
             deleteEvent = deleteEvent,
             newTokenEvent = finalChangeEvent,

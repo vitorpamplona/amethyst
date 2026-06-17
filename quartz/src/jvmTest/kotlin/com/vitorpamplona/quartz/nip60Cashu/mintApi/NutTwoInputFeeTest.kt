@@ -149,4 +149,38 @@ class NutTwoInputFeeTest {
     fun `empty inputs cost nothing`() {
         assertEquals(0L, CashuMintOperations.computeInputFee(emptyList(), mapOf("k" to 100L)))
     }
+
+    // --- Melt headroom: the fee the active keyset charges on the swapped-down
+    //     send proofs, which meltToLightning must reserve on top of
+    //     amount + fee_reserve. Mirrors CashuMintOperations.activeKeysetInputFeeFor,
+    //     which is `computeInputFee(splitAmounts(amount).size, activePpk)`. ---
+
+    private fun activeKeysetFeeFor(
+        amount: Long,
+        ppk: Long,
+    ) = CashuMintOperations.computeInputFee(
+        numInputs = CashuMintOperations.splitAmounts(amount).size,
+        inputFeePpk = ppk,
+    )
+
+    @Test
+    fun `melt headroom on a zero-fee active keyset is zero`() {
+        assertEquals(0L, activeKeysetFeeFor(amount = 83, ppk = 0L))
+    }
+
+    @Test
+    fun `melt headroom reserves the active keyset fee — coinos case`() {
+        // splitAmounts(83) = [1,2,16,64] → 4 proofs → ceil(4*100/1000) = 1.
+        // Without this 1-sat headroom, swapping down to exactly 83 leaves the
+        // melt one sat short of amount+fee_reserve+input_fee.
+        assertEquals(4, CashuMintOperations.splitAmounts(83).size)
+        assertEquals(1L, activeKeysetFeeFor(amount = 83, ppk = 100L))
+    }
+
+    @Test
+    fun `melt headroom grows with proof count on a fee keyset`() {
+        // splitAmounts(1023) = 10 set bits → 10 proofs → ceil(10*100/1000) = 1.
+        assertEquals(10, CashuMintOperations.splitAmounts(1023).size)
+        assertEquals(1L, activeKeysetFeeFor(amount = 1023, ppk = 100L))
+    }
 }

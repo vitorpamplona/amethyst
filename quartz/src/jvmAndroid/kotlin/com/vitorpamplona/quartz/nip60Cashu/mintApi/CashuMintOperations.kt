@@ -284,6 +284,23 @@ class CashuMintOperations(
     suspend fun meltQuoteStatus(quote: String): MeltQuoteBolt11ResponseDto = client.meltQuoteBolt11Status(quote)
 
     /**
+     * NUT-02 input fee the active (output) keyset would charge to spend a
+     * proof set worth [amount] sats once it's split into power-of-two
+     * denominations.
+     *
+     * [CashuWalletOps.meltToLightning] swaps its inputs down onto the
+     * active keyset and the mint then charges this fee on top of
+     * `amount + fee_reserve`. Sizing selection + the swap-down with this
+     * fee included keeps the subsequent [meltProofs] from coming up short
+     * ("Inputs total X < required Y").
+     */
+    suspend fun activeKeysetInputFeeFor(amount: Long): Long {
+        if (amount <= 0L) return 0L
+        val keyset = fetchKeyset()
+        return computeInputFee(splitAmounts(amount).size, keyset.inputFeePpk)
+    }
+
+    /**
      * Pay the bolt11 invoice. Spends [inputs], which must total at least
      * `quote.amount + quote.fee_reserve`. Any change is returned blinded so the
      * mint signs unused fee proofs that the wallet can later spend.
