@@ -509,8 +509,9 @@ fun BuildNavigation(
             )
         }
 
-        composableFromBottom<Route.NewWorkout> {
+        composableFromBottomArgs<Route.NewWorkout> {
             NewWorkoutScreen(
+                prefill = it,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )

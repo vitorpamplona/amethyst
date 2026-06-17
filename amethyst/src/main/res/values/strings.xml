@@ -704,6 +704,16 @@
     <string name="workout_hours">Hours</string>
     <string name="workout_minutes">Minutes</string>
     <string name="workout_seconds">Seconds</string>
+    <string name="workout_suggestion_connect_title">Share your workouts</string>
+    <string name="workout_suggestion_connect_message">Let Amethyst read finished workouts from Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) and suggest a post.</string>
+    <string name="workout_suggestion_connect_button">Connect</string>
+    <string name="workout_suggestion_detected_title">New workout detected</string>
+    <string name="workout_suggestion_share">Share</string>
+    <string name="workout_suggestion_dismiss">Dismiss</string>
+    <string name="workout_suggestion_distance_km">%1$s km</string>
+    <string name="workout_suggestion_heart_rate">%1$s bpm</string>
+    <string name="workout_suggestion_calories">%1$s kcal</string>
+    <string name="workout_from_health_connect">From Health Connect</string>
     <string name="exercise_running">Running</string>
     <string name="exercise_walking">Walking</string>
     <string name="exercise_cycling">Cycling</string>
@@ -3477,6 +3487,8 @@
     <string name="ai_writing_setting_description">Uses an on-device AI model to propose text corrections and tone changes.</string>
     <string name="tracked_broadcasts_setting_title">Tracked broadcasts</string>
     <string name="tracked_broadcasts_setting_description">Use the tracked broadcaster when sending events. Shows live progress and per-relay status while broadcasting.</string>
+    <string name="suggest_workouts_setting_title">Suggest workouts to share</string>
+    <string name="suggest_workouts_setting_description">Reads finished workouts from Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) and suggests sharing them as a post. Permission is requested only when you connect.</string>
     <string name="compose_settings">Compose Settings</string>
     <string name="auto_create_drafts_setting_title">Automatically create drafts</string>
     <string name="auto_create_drafts_setting_description">Saves a draft event automatically when you type or leave a composer with unsent text and sends to your private outbox relays.</string>

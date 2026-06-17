@@ -616,7 +616,25 @@ sealed class Route {
 
     @Serializable data object NewGoal : Route()
 
-    @Serializable data object NewWorkout : Route()
+    /**
+     * Manual workout composer. All fields are optional pre-fill, used when a
+     * workout is detected from Health Connect and the user accepts the
+     * suggestion; a blank [NewWorkout] opens the empty manual form.
+     */
+    @Serializable
+    data class NewWorkout(
+        val exercise: String? = null,
+        val title: String? = null,
+        val durationSeconds: Long = 0,
+        val distanceMeters: Double = 0.0,
+        val calories: Int = 0,
+        val avgHeartRate: Int = 0,
+        val maxHeartRate: Int = 0,
+        val steps: Int = 0,
+        val elevationGainMeters: Double = 0.0,
+        val startTime: Long = 0,
+        val source: String? = null,
+    ) : Route()
 
     @Serializable
     data class NewLongFormPost(

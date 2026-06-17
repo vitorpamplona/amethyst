@@ -20,33 +20,28 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts
 
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
-import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.amethyst.ui.stringRes
-import com.vitorpamplona.amethyst.ui.theme.Size26Modifier
-import com.vitorpamplona.amethyst.ui.theme.Size55Modifier
+import android.icu.util.LocaleData
+import android.icu.util.ULocale
+import java.util.Locale
 
-@Composable
-fun NewWorkoutButton(nav: INav) {
-    FloatingActionButton(
-        onClick = { nav.nav(Route.NewWorkout()) },
-        modifier = Size55Modifier,
-        shape = CircleShape,
-        containerColor = MaterialTheme.colorScheme.primary,
-    ) {
-        Icon(
-            symbol = MaterialSymbols.Add,
-            contentDescription = stringRes(id = R.string.new_workout),
-            modifier = Size26Modifier,
-            tint = Color.White,
-        )
+/**
+ * Whether the phone's measurement preference favours miles for distance.
+ *
+ * Honours the Android 14+ "Regional preferences → Measurement system" override,
+ * which the platform surfaces through the default locale's Unicode `-u-ms-`
+ * extension (`metric` / `ussystem` / `uksystem`). When no explicit override is
+ * set it falls back to ICU's locale-derived measurement system (US and UK both
+ * use miles for distance), available since API 24.
+ */
+fun phonePrefersMiles(): Boolean {
+    val locale = Locale.getDefault(Locale.Category.FORMAT)
+
+    locale.getUnicodeLocaleType("ms")?.let { ms ->
+        return ms == "ussystem" || ms == "uksystem"
+    }
+
+    return when (LocaleData.getMeasurementSystem(ULocale.forLocale(locale))) {
+        LocaleData.MeasurementSystem.US, LocaleData.MeasurementSystem.UK -> true
+        else -> false
     }
 }

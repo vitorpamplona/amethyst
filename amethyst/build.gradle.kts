@@ -365,6 +365,9 @@ dependencies {
     // Background Work
     implementation(libs.androidx.work.runtime.ktx)
 
+    // Reads workouts from Android Health Connect (Samsung Health, Google Fit, Fitbit, Garmin, …)
+    implementation(libs.androidx.health.connect.client)
+
     // Websockets API
     implementation(libs.okhttp)
     implementation(libs.okhttpCoroutines)

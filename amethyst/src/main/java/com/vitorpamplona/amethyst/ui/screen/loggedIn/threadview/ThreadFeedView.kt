@@ -667,7 +667,7 @@ private fun FullBleedNoteCompose(
                 } else if (noteEvent is PictureEvent) {
                     PictureDisplay(baseNote, roundedCorner = true, ContentScale.FillWidth, PaddingValues(vertical = Size5dp), backgroundColor, accountViewModel = accountViewModel, nav)
                 } else if (noteEvent is WorkoutRecordEvent) {
-                    WorkoutDisplay(baseNote)
+                    WorkoutDisplay(baseNote, backgroundColor, canPreview = true, quotesLeft = 3, accountViewModel = accountViewModel, nav = nav)
                 } else if (noteEvent is BaseVoiceEvent) {
                     VoiceHeader(noteEvent, baseNote, accountViewModel, nav)
                 } else if (noteEvent is FileHeaderEvent) {
