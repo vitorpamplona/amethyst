@@ -399,10 +399,16 @@ class CashuWalletViewModel : ViewModel() {
     val restoreState = _restoreState.asStateFlow()
 
     /**
-     * NUT-09 wallet restore — scans every mint in the wallet's mint list
-     * for proofs the user previously minted but whose kind:7375 events
-     * have been lost. Recovered unspent proofs are republished as fresh
-     * kind:7375 + kind:7376 IN history rows.
+     * NUT-09 wallet restore — scans every mint we know of for proofs the
+     * user previously minted but whose kind:7375 events have been lost.
+     * Recovered unspent proofs are republished as fresh kind:7375 + kind:7376
+     * IN history rows.
+     *
+     * Scans [CashuWalletState.displayMints] (configured kind:17375 mints plus
+     * any mint we currently hold tokens at), not just the configured list —
+     * so a mint dropped from the wallet config while it still holds tokens,
+     * or one a nutzap was auto-redeemed on, is still recovered rather than
+     * silently skipped.
      *
      * Best-effort across mints: a failure on one mint logs and moves to
      * the next. The total reported in [RestoreFlowState.Completed]
@@ -414,7 +420,7 @@ class CashuWalletViewModel : ViewModel() {
         _restoreState.value = RestoreFlowState.Running
         vm.launchSigner {
             try {
-                val mintsToScan = state.mints.value
+                val mintsToScan = state.displayMints.value
                 var totalSats = 0L
                 var totalProofs = 0
                 for (mint in mintsToScan) {
