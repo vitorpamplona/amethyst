@@ -58,6 +58,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -265,9 +266,10 @@ fun CashuWalletSettingsScreen(
                 item {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = stringRes(R.string.cashu_settings_danger_zone),
+                        text = stringRes(R.string.danger_zone),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.error,
                     )
                 }
                 item {
@@ -275,6 +277,7 @@ fun CashuWalletSettingsScreen(
                         icon = MaterialSymbols.Block,
                         title = stringRes(R.string.cashu_settings_stop_nutzaps),
                         subtitle = stringRes(R.string.cashu_settings_stop_nutzaps_subtitle),
+                        isDanger = true,
                         onClick = { showStopNutzapsConfirm = true },
                     )
                 }
@@ -283,6 +286,7 @@ fun CashuWalletSettingsScreen(
                         icon = MaterialSymbols.DeleteForever,
                         title = stringRes(R.string.cashu_settings_delete_wallet),
                         subtitle = stringRes(R.string.cashu_settings_delete_wallet_subtitle),
+                        isDanger = true,
                         onClick = { showDeleteWalletConfirm = true },
                     )
                 }
@@ -374,6 +378,7 @@ private fun SettingsRow(
     title: String,
     subtitle: String?,
     onClick: () -> Unit,
+    isDanger: Boolean = false,
 ) {
     Card(
         modifier =
@@ -391,7 +396,7 @@ private fun SettingsRow(
                 symbol = icon,
                 contentDescription = null,
                 modifier = Modifier.size(22.dp),
-                tint = MaterialTheme.colorScheme.primary,
+                tint = if (isDanger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
             )
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -399,6 +404,7 @@ private fun SettingsRow(
                     text = title,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
+                    color = if (isDanger) MaterialTheme.colorScheme.error else Color.Unspecified,
                 )
                 if (subtitle != null) {
                     Text(

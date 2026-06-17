@@ -2239,7 +2239,6 @@
     <string name="cashu_settings_restore_running">Scanning mints…</string>
     <string name="cashu_settings_restore_nothing_found">No recoverable proofs found.</string>
     <string name="cashu_settings_restore_result">Recovered %1$s sats across %2$s proofs.</string>
-    <string name="cashu_settings_danger_zone">Danger zone</string>
     <string name="cashu_settings_stop_nutzaps">Stop receiving nutzaps</string>
     <string name="cashu_settings_stop_nutzaps_subtitle">Withdraw your kind:10019 so others can no longer send you nutzaps. Your wallet and balance stay put.</string>
     <string name="cashu_settings_stop_nutzaps_confirm_title">Stop receiving nutzaps?</string>
