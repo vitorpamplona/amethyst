@@ -563,6 +563,11 @@ class CashuWalletState(
             // Any wallet event resolves the "discovering" state — whether it
             // came from cache backfill or a fresh relay delivery.
             _discovering.value = false
+            // The NUT-13 seed is derived from the wallet's P2PK key. A new
+            // kind:17375 may carry a rotated key (our own recreateNutzapKey, or
+            // a rotation from another client), so drop the cached seed and let
+            // ensureSeed re-derive from whatever key the live event now holds.
+            cachedSeed = null
             walletEventInternal?.let { evt ->
                 _mints.value =
                     runCatching { evt.mints(signer) }
@@ -633,8 +638,16 @@ class CashuWalletState(
         if (dirtyWallet) {
             _walletEvent.value = null
             _mints.value = emptyList()
+            // The cached kind:17375 mirrors the live event; once it's deleted
+            // (our own teardown or an external NIP-09) drop the backup too, or
+            // the next launch would re-consume it from settings and resurrect
+            // the wallet.
+            settings.clearCashuWallet()
         }
-        if (dirtyNutzapInfo) _nutzapInfoEvent.value = null
+        if (dirtyNutzapInfo) {
+            _nutzapInfoEvent.value = null
+            settings.clearNutzapInfo()
+        }
         if (dirtyTokens) recomputeUnspent()
         if (dirtyHistory) _history.value = historyEvents.values.sortedByDescending { it.createdAt }
         if (dirtyQuotes || dirtyHistory) recomputePending()
@@ -763,6 +776,76 @@ class CashuWalletState(
         } finally {
             redeemMutex.unlock()
         }
+    }
+
+    // ============================================================
+    // Stop receiving nutzaps / delete wallet
+    // ============================================================
+
+    /**
+     * Stop receiving NIP-61 nutzaps: replace kind:10019 with an empty version
+     * and NIP-09 delete it (see [CashuWalletOps.stopNutzaps]). Leaves the
+     * kind:17375 wallet and held proofs intact — the wallet keeps sending.
+     *
+     * Clears the local index + on-disk backup immediately so the change is
+     * effective without waiting for the kind:5 round-trip; the deletion bundle
+     * arriving later via [removeEvents] is then a no-op.
+     */
+    suspend fun stopNutzaps() {
+        check(started) { NOT_STARTED_MESSAGE }
+        ops.stopNutzaps()
+        nutzapInfoEventInternal = null
+        _nutzapInfoEvent.value = null
+        settings.clearNutzapInfo()
+    }
+
+    /**
+     * Delete the whole Cashu wallet: withdraws the nutzap advertisement and
+     * NIP-09 deletes the kind:17375 (see [CashuWalletOps.deleteWallet]). Held
+     * kind:7375 proofs are NOT deleted — that ecash still exists at the mint —
+     * but with the P2PK key gone any unredeemed inbound nutzaps and any
+     * remaining balance may become unrecoverable. The UI must warn first.
+     *
+     * No-op when no wallet is loaded. Clears local indexes + backups inline so
+     * the wallet screen drops straight to its empty/create state.
+     */
+    suspend fun deleteWallet() {
+        check(started) { NOT_STARTED_MESSAGE }
+        val wallet = walletEventInternal ?: return
+        ops.deleteWallet(wallet)
+
+        walletEventInternal = null
+        _walletEvent.value = null
+        _mints.value = emptyList()
+        nutzapInfoEventInternal = null
+        _nutzapInfoEvent.value = null
+        settings.clearCashuWallet()
+        settings.clearNutzapInfo()
+    }
+
+    /**
+     * Rotate the wallet's NIP-61 P2PK key: re-publish kind:17375 + kind:10019
+     * with a fresh (or supplied) key, keeping the current mint list. After
+     * this, senders lock nutzaps to the NEW key — any inbound nutzap still
+     * locked to the OLD key that hasn't been redeemed yet becomes
+     * unrecoverable. Rarely needed (key exposure, or restoring a specific key
+     * from a backup), which is why it lives behind the settings Danger Zone.
+     *
+     * [manualPrivkeyHex] null/blank → generate a fresh random key; otherwise
+     * adopt the supplied hex key (e.g. importing a backup).
+     */
+    suspend fun recreateNutzapKey(manualPrivkeyHex: String? = null) {
+        check(started) { NOT_STARTED_MESSAGE }
+        val currentMints = _mints.value
+        require(currentMints.isNotEmpty()) { "Wallet has no mints to re-publish" }
+        ops.publishWalletEvents(
+            mints = currentMints,
+            p2pkPrivkeyHex = manualPrivkeyHex?.takeIf { it.isNotBlank() },
+            nutzapRelays = outboxRelaysFlow.value.toList(),
+        )
+        // The NUT-13 seed (derived from the P2PK key) is invalidated by
+        // applyEvents when the new kind:17375 round-trips in, so it re-derives
+        // from the rotated key. No need to reset it here.
     }
 
     // ============================================================

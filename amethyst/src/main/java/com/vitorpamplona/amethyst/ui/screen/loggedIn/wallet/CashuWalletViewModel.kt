@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 sealed class CashuWalletCreateState {
     data object Idle : CashuWalletCreateState()
@@ -206,6 +207,33 @@ class CashuWalletViewModel : ViewModel() {
     }
 
     /**
+     * Per-mint reachability results for mints already in the wallet's list,
+     * keyed by normalized URL. Distinct from [mintPingState] (which backs the
+     * single "verify the URL I'm typing" button) so a user can re-check any
+     * already-added mint without clobbering the input-field result, and each
+     * row reflects its own status independently.
+     */
+    private val _mintVerifications = MutableStateFlow<Map<String, MintPingState>>(emptyMap())
+    val mintVerifications: StateFlow<Map<String, MintPingState>> = _mintVerifications.asStateFlow()
+
+    /** Ping an already-added mint and record the result under its normalized URL. */
+    fun verifyMint(url: String) {
+        val vm = accountViewModel ?: return
+        val key = url.trim().trimEnd('/')
+        if (key.isBlank()) return
+        _mintVerifications.update { it + (key to MintPingState.Pinging) }
+        vm.launchSigner {
+            val result =
+                try {
+                    MintPingState.Ok(ops.pingMint(key))
+                } catch (e: Exception) {
+                    MintPingState.Failed(describeMintError(e))
+                }
+            _mintVerifications.update { it + (key to result) }
+        }
+    }
+
+    /**
      * Reference to the account-scoped NIP-87 mint directory state. The picker
      * UI calls .open()/.close() on entry/exit and observes .entries directly.
      */
@@ -252,6 +280,58 @@ class CashuWalletViewModel : ViewModel() {
                 .onFailure {
                     Log.w("CashuWallet", "deleteRecommendation failed: ${describeMintError(it)}", it)
                 }
+        }
+    }
+
+    /**
+     * Stop receiving NIP-61 nutzaps — replaces kind:10019 with an empty event
+     * and NIP-09 deletes it. The wallet itself stays put. [onDone] fires after
+     * the publish attempt (success or logged failure) so the UI can dismiss.
+     */
+    fun stopNutzaps(onDone: () -> Unit = {}) {
+        val vm = accountViewModel ?: return
+        vm.launchSigner {
+            runCatching { state.stopNutzaps() }
+                .onFailure { Log.w("CashuWallet", "stopNutzaps failed: ${describeMintError(it)}", it) }
+            onDone()
+        }
+    }
+
+    /**
+     * Delete the whole Cashu wallet (kind:17375) and stop nutzaps in one go.
+     * Destructive — the caller must confirm with the user first. [onDone] fires
+     * after the publish attempt so the screen can navigate away.
+     */
+    fun deleteWallet(onDone: () -> Unit = {}) {
+        val vm = accountViewModel ?: return
+        vm.launchSigner {
+            runCatching { state.deleteWallet() }
+                .onFailure { Log.w("CashuWallet", "deleteWallet failed: ${describeMintError(it)}", it) }
+            onDone()
+        }
+    }
+
+    /**
+     * Rotate the wallet's NIP-61 P2PK key (Danger Zone). [manualPrivkey] null
+     * generates a fresh key; a non-blank hex string imports it. [onResult]
+     * reports null on success or an error message on failure so the dialog can
+     * surface a bad key paste instead of silently dismissing.
+     */
+    fun recreateNutzapKey(
+        manualPrivkey: String? = null,
+        onResult: (String?) -> Unit = {},
+    ) {
+        val vm = accountViewModel ?: return
+        vm.launchSigner {
+            val error =
+                try {
+                    state.recreateNutzapKey(manualPrivkey)
+                    null
+                } catch (e: Exception) {
+                    Log.w("CashuWallet", "recreateNutzapKey failed: ${describeMintError(e)}", e)
+                    describeMintError(e)
+                }
+            onResult(error)
         }
     }
 

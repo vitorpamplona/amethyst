@@ -942,8 +942,37 @@ class AccountSettings(
 
     fun updateNutzapInfo(newNutzapInfo: NutzapInfoEvent?) {
         if (newNutzapInfo == null || newNutzapInfo.tags.isEmpty()) return
+        // A mints-less kind:10019 is the "stop receiving nutzaps" tombstone
+        // (an empty replacement carrying only an `alt` tag). Don't restore it
+        // on next launch — backing it up would undo clearNutzapInfo() once the
+        // empty event round-trips back through LocalCache.
+        if (newNutzapInfo.mints().isEmpty()) {
+            clearNutzapInfo()
+            return
+        }
         if (backupNutzapInfo?.id != newNutzapInfo.id) {
             backupNutzapInfo = newNutzapInfo
+            saveAccountSettings()
+        }
+    }
+
+    /**
+     * Drop the cached kind:17375 so a relaunch doesn't restore a wallet the
+     * user just deleted. Called when the wallet event is NIP-09 deleted —
+     * without this the [backupCashuWallet] would be re-consumed into
+     * LocalCache on next launch and resurrect the deleted wallet.
+     */
+    fun clearCashuWallet() {
+        if (backupCashuWallet != null) {
+            backupCashuWallet = null
+            saveAccountSettings()
+        }
+    }
+
+    /** Drop the cached kind:10019. Mirror of [clearCashuWallet] for the nutzap info. */
+    fun clearNutzapInfo() {
+        if (backupNutzapInfo != null) {
+            backupNutzapInfo = null
             saveAccountSettings()
         }
     }
