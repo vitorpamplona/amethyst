@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts.suggestion
 import android.text.format.DateUtils
 import com.vitorpamplona.amethyst.service.workouts.health.DetectedWorkout
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
-import com.vitorpamplona.quartz.experimental.fitness.workout.tags.SourceTag
 
 /** Builds the pre-filled composer route for a detected workout. Shared by the
  * feed suggestion banner and the New Workout carousel so they never drift. */
@@ -39,7 +38,7 @@ internal fun DetectedWorkout.toNewWorkoutRoute(title: String) =
         steps = steps ?: 0,
         elevationGainMeters = elevationGainMeters ?: 0.0,
         startTime = startTimeEpochSeconds,
-        source = SourceTag.HEALTH_CONNECT,
+        source = source,
     )
 
 internal fun formatWorkoutDuration(totalSeconds: Long): String {

@@ -60,6 +60,20 @@ class HealthConnectManager(
         /** How far back the New Workout carousel looks for workouts to offer. */
         const val LOOKBACK_DAYS = 7L
 
+        private const val DEFAULT_SOURCE = "Health Connect"
+
+        /** Friendly names for well-known writers when their app isn't installed to read a label from. */
+        private val KNOWN_SOURCES =
+            mapOf(
+                "com.sec.android.app.shealth" to "Samsung Health",
+                "com.google.android.apps.fitness" to "Google Fit",
+                "com.google.android.apps.healthdata" to "Health Connect",
+                "com.fitbit.FitbitMobile" to "Fitbit",
+                "com.garmin.android.apps.connectmobile" to "Garmin Connect",
+                "com.strava" to "Strava",
+                "com.nike.plusgps" to "Nike Run Club",
+            )
+
         /** Read permissions needed to map a workout. */
         val PERMISSIONS =
             setOf(
@@ -168,7 +182,23 @@ class HealthConnectManager(
             maxHeartRate = totals?.get(HeartRateRecord.BPM_MAX)?.toInt(),
             steps = totals?.get(StepsRecord.COUNT_TOTAL)?.toInt(),
             elevationGainMeters = totals?.get(ElevationGainedRecord.ELEVATION_GAINED_TOTAL)?.inMeters,
+            source = resolveSourceName(session.metadata.dataOrigin.packageName),
         )
+    }
+
+    /**
+     * Friendly name of the app/device that wrote the record. Resolves the
+     * Health Connect data-origin package to the installed app's label
+     * ("Samsung Health", "Google Fit", …); falls back to a known-package map,
+     * then the raw package, then "Health Connect" when nothing is available.
+     */
+    private fun resolveSourceName(packageName: String): String {
+        if (packageName.isBlank()) return DEFAULT_SOURCE
+        runCatching {
+            val pm = context.packageManager
+            return pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString()
+        }
+        return KNOWN_SOURCES[packageName] ?: packageName
     }
 
     /** Aggregates the optional metrics over the session window. Null if aggregation fails. */

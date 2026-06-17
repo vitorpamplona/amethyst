@@ -45,4 +45,6 @@ data class DetectedWorkout(
     val maxHeartRate: Int?,
     val steps: Int?,
     val elevationGainMeters: Double?,
+    /** Human-readable name of the app/device that wrote the record (e.g. "Samsung Health"). */
+    val source: String,
 )
