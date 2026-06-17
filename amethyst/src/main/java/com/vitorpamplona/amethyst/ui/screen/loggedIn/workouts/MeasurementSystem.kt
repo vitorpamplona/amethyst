@@ -22,7 +22,11 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.workouts
 
 import android.icu.util.LocaleData
 import android.icu.util.ULocale
+import android.os.Build
 import java.util.Locale
+
+/** Countries that use miles for road distance (imperial / US customary). */
+private val MILES_COUNTRIES = setOf("US", "GB", "LR", "MM")
 
 /**
  * Whether the phone's measurement preference favours miles for distance.
@@ -31,7 +35,8 @@ import java.util.Locale
  * which the platform surfaces through the default locale's Unicode `-u-ms-`
  * extension (`metric` / `ussystem` / `uksystem`). When no explicit override is
  * set it falls back to ICU's locale-derived measurement system (US and UK both
- * use miles for distance), available since API 24.
+ * use miles for distance), available since API 28; on older releases it falls
+ * back to a country-code check.
  */
 fun phonePrefersMiles(): Boolean {
     val locale = Locale.getDefault(Locale.Category.FORMAT)
@@ -40,8 +45,12 @@ fun phonePrefersMiles(): Boolean {
         return ms == "ussystem" || ms == "uksystem"
     }
 
-    return when (LocaleData.getMeasurementSystem(ULocale.forLocale(locale))) {
-        LocaleData.MeasurementSystem.US, LocaleData.MeasurementSystem.UK -> true
-        else -> false
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        when (LocaleData.getMeasurementSystem(ULocale.forLocale(locale))) {
+            LocaleData.MeasurementSystem.US, LocaleData.MeasurementSystem.UK -> true
+            else -> false
+        }
+    } else {
+        locale.country.uppercase(Locale.ROOT) in MILES_COUNTRIES
     }
 }
