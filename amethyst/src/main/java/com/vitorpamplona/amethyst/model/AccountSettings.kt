@@ -949,6 +949,27 @@ class AccountSettings(
     }
 
     /**
+     * Drop the cached kind:17375 so a relaunch doesn't restore a wallet the
+     * user just deleted. Called when the wallet event is NIP-09 deleted —
+     * without this the [backupCashuWallet] would be re-consumed into
+     * LocalCache on next launch and resurrect the deleted wallet.
+     */
+    fun clearCashuWallet() {
+        if (backupCashuWallet != null) {
+            backupCashuWallet = null
+            saveAccountSettings()
+        }
+    }
+
+    /** Drop the cached kind:10019. Mirror of [clearCashuWallet] for the nutzap info. */
+    fun clearNutzapInfo() {
+        if (backupNutzapInfo != null) {
+            backupNutzapInfo = null
+            saveAccountSettings()
+        }
+    }
+
+    /**
      * NUT-13 keyset counters live in [CashuPreferences], a dedicated
      * SharedPreferences file with synchronous (`commit = true`) writes.
      * AccountSettings goes through a 1-second debounce on its own save

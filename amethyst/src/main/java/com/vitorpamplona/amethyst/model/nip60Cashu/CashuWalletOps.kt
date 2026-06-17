@@ -174,6 +174,57 @@ class CashuWalletOps(
     }
 
     /**
+     * Stop advertising that this user accepts NIP-61 nutzaps.
+     *
+     * Two steps, in order:
+     *   1. Replace kind:10019 with an EMPTY version (no mints / relays / P2PK
+     *      pubkey). Replaceable-event replacement is honored by every relay,
+     *      so even relays that ignore NIP-09 will stop senders — a reader's
+     *      nutzap funding resolves against the recipient's kind:10019 and
+     *      bails when it has no shared mint or no P2PK pubkey. This is the
+     *      durable signal.
+     *   2. NIP-09 delete the now-empty kind:10019 by its address coordinate
+     *      (DeletionEvent.build adds the `a` tag automatically because the
+     *      event is replaceable) so relays that DO honor deletions drop it
+     *      entirely. Deletions are optional on Nostr, which is why step 1
+     *      runs first as the fallback.
+     *
+     * Leaves the kind:17375 wallet and the user's proofs untouched — only the
+     * inbound-nutzap advertisement goes away; the wallet still sends and holds
+     * ecash. Use [deleteWallet] for a full teardown.
+     */
+    suspend fun stopNutzaps() {
+        val emptyTemplate = NutzapInfoEvent.buildEmpty()
+        val emptyEvent = signer.sign(emptyTemplate)
+        publish(emptyEvent)
+
+        val delTemplate = DeletionEvent.build(listOf(emptyEvent))
+        val delEvent = signer.sign(delTemplate)
+        publish(delEvent)
+    }
+
+    /**
+     * Delete the NIP-60 Cashu wallet entirely.
+     *
+     * First withdraws the nutzap advertisement via [stopNutzaps] (empty
+     * kind:10019 + its NIP-09 delete) — a wallet-less user must not keep
+     * advertising a receiving address it can no longer redeem against — then
+     * NIP-09 deletes the kind:17375 wallet definition itself.
+     *
+     * Does NOT delete the kind:7375 token events: that ecash still exists at
+     * the mint. The caller's UI must warn that any balance left in the wallet,
+     * and any inbound nutzaps locked to the discarded P2PK key that haven't
+     * been redeemed yet, may become unrecoverable once the key is gone.
+     */
+    suspend fun deleteWallet(walletEvent: CashuWalletEvent) {
+        stopNutzaps()
+
+        val delTemplate = DeletionEvent.build(listOf(walletEvent))
+        val delEvent = signer.sign(delTemplate)
+        publish(delEvent)
+    }
+
+    /**
      * Mint phase 1: ask the mint for a bolt11 invoice and persist the quote
      * id as a kind:7374 event so we can resume on next launch.
      */

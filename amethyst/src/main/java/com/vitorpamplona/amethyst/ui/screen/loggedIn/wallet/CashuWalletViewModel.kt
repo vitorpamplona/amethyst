@@ -255,6 +255,34 @@ class CashuWalletViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Stop receiving NIP-61 nutzaps — replaces kind:10019 with an empty event
+     * and NIP-09 deletes it. The wallet itself stays put. [onDone] fires after
+     * the publish attempt (success or logged failure) so the UI can dismiss.
+     */
+    fun stopNutzaps(onDone: () -> Unit = {}) {
+        val vm = accountViewModel ?: return
+        vm.launchSigner {
+            runCatching { state.stopNutzaps() }
+                .onFailure { Log.w("CashuWallet", "stopNutzaps failed: ${describeMintError(it)}", it) }
+            onDone()
+        }
+    }
+
+    /**
+     * Delete the whole Cashu wallet (kind:17375) and stop nutzaps in one go.
+     * Destructive — the caller must confirm with the user first. [onDone] fires
+     * after the publish attempt so the screen can navigate away.
+     */
+    fun deleteWallet(onDone: () -> Unit = {}) {
+        val vm = accountViewModel ?: return
+        vm.launchSigner {
+            runCatching { state.deleteWallet() }
+                .onFailure { Log.w("CashuWallet", "deleteWallet failed: ${describeMintError(it)}", it) }
+            onDone()
+        }
+    }
+
     // -------- NUT-09 restore --------
 
     sealed class RestoreFlowState {

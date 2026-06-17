@@ -102,8 +102,11 @@ fun CashuWalletSettingsScreen(
     viewModel.init(accountViewModel)
 
     val recommendations by viewModel.ownRecommendations.collectAsState()
+    val walletEvent by viewModel.walletEvent.collectAsState()
     var pendingDelete by remember { mutableStateOf<MintRecommendationEvent?>(null) }
     var newRecommendationInput by remember { mutableStateOf("") }
+    var showStopNutzapsConfirm by remember { mutableStateOf(false) }
+    var showDeleteWalletConfirm by remember { mutableStateOf(false) }
 
     // Kick the one-shot directory backfill so the autocomplete is useful
     // on first screen open instead of waiting for new relay deliveries.
@@ -257,8 +260,82 @@ fun CashuWalletSettingsScreen(
                 }
             }
 
+            // Destructive actions — only meaningful when a wallet exists.
+            if (walletEvent != null) {
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringRes(R.string.cashu_settings_danger_zone),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+                item {
+                    SettingsRow(
+                        icon = MaterialSymbols.Block,
+                        title = stringRes(R.string.cashu_settings_stop_nutzaps),
+                        subtitle = stringRes(R.string.cashu_settings_stop_nutzaps_subtitle),
+                        onClick = { showStopNutzapsConfirm = true },
+                    )
+                }
+                item {
+                    SettingsRow(
+                        icon = MaterialSymbols.DeleteForever,
+                        title = stringRes(R.string.cashu_settings_delete_wallet),
+                        subtitle = stringRes(R.string.cashu_settings_delete_wallet_subtitle),
+                        onClick = { showDeleteWalletConfirm = true },
+                    )
+                }
+            }
+
             item { Spacer(modifier = Modifier.height(24.dp)) }
         }
+    }
+
+    if (showStopNutzapsConfirm) {
+        AlertDialog(
+            onDismissRequest = { showStopNutzapsConfirm = false },
+            title = { Text(stringRes(R.string.cashu_settings_stop_nutzaps_confirm_title)) },
+            text = { Text(stringRes(R.string.cashu_settings_stop_nutzaps_confirm_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.stopNutzaps()
+                        showStopNutzapsConfirm = false
+                    },
+                ) { Text(stringRes(R.string.cashu_settings_stop_nutzaps)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showStopNutzapsConfirm = false }) {
+                    Text(stringRes(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (showDeleteWalletConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteWalletConfirm = false },
+            title = { Text(stringRes(R.string.cashu_settings_delete_wallet_confirm_title)) },
+            text = { Text(stringRes(R.string.cashu_settings_delete_wallet_confirm_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteWalletConfirm = false
+                        // Tear down the wallet, then drop back to the wallet
+                        // screen, which re-renders to its empty/create state
+                        // once walletEvent flips to null.
+                        viewModel.deleteWallet(onDone = {})
+                        nav.popBack()
+                    },
+                ) { Text(stringRes(R.string.cashu_settings_delete_wallet)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteWalletConfirm = false }) {
+                    Text(stringRes(R.string.cancel))
+                }
+            },
+        )
     }
 
     val target = pendingDelete

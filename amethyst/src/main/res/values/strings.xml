@@ -2239,6 +2239,15 @@
     <string name="cashu_settings_restore_running">Scanning mints…</string>
     <string name="cashu_settings_restore_nothing_found">No recoverable proofs found.</string>
     <string name="cashu_settings_restore_result">Recovered %1$s sats across %2$s proofs.</string>
+    <string name="cashu_settings_danger_zone">Danger zone</string>
+    <string name="cashu_settings_stop_nutzaps">Stop receiving nutzaps</string>
+    <string name="cashu_settings_stop_nutzaps_subtitle">Withdraw your kind:10019 so others can no longer send you nutzaps. Your wallet and balance stay put.</string>
+    <string name="cashu_settings_stop_nutzaps_confirm_title">Stop receiving nutzaps?</string>
+    <string name="cashu_settings_stop_nutzaps_confirm_body">We\'ll replace your nutzap-info event with an empty one and request its deletion. People will no longer be able to nutzap you. You can turn it back on by editing your wallet. Your balance is not affected.</string>
+    <string name="cashu_settings_delete_wallet">Delete wallet</string>
+    <string name="cashu_settings_delete_wallet_subtitle">Remove the wallet and stop nutzaps. Any remaining balance may become unrecoverable.</string>
+    <string name="cashu_settings_delete_wallet_confirm_title">Delete this wallet?</string>
+    <string name="cashu_settings_delete_wallet_confirm_body">This requests deletion of your kind:17375 wallet and your kind:10019 nutzap info. Your ecash proofs are not deleted from the mints, but with the wallet key gone any remaining balance and any unredeemed nutzaps may become unrecoverable. Make sure you\'ve spent or moved your funds first. This cannot be undone.</string>
     <string name="cashu_pay_invoice">Pay invoice</string>
     <string name="cashu_get_quote">Get quote</string>
     <string name="cashu_getting_quote">Asking mint for a quote…</string>

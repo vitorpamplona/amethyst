@@ -65,5 +65,24 @@ class NutzapInfoEvent(
             p2pkPubkey(p2pkPubkey)
             initializer()
         }
+
+        /**
+         * Build an empty kind:10019 — no mints, no relays, no P2PK pubkey,
+         * just the alt tag. Publishing this replaces a prior nutzap-info
+         * event and signals to other clients that this user no longer
+         * advertises any way to receive nutzaps: a reader has no shared mint
+         * and no pubkey to lock proofs against, so it cannot build a nutzap.
+         *
+         * Used by the "stop receiving nutzaps" flow as the durable signal
+         * (replaceable-event replacement is honored by every relay) ahead of
+         * the optional NIP-09 deletion, which relays may or may not apply.
+         */
+        fun buildEmpty(
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<NutzapInfoEvent>.() -> Unit = {},
+        ) = eventTemplate(KIND, "", createdAt) {
+            alt(ALT_DESCRIPTION)
+            initializer()
+        }
     }
 }

@@ -633,8 +633,16 @@ class CashuWalletState(
         if (dirtyWallet) {
             _walletEvent.value = null
             _mints.value = emptyList()
+            // The cached kind:17375 mirrors the live event; once it's deleted
+            // (our own teardown or an external NIP-09) drop the backup too, or
+            // the next launch would re-consume it from settings and resurrect
+            // the wallet.
+            settings.clearCashuWallet()
         }
-        if (dirtyNutzapInfo) _nutzapInfoEvent.value = null
+        if (dirtyNutzapInfo) {
+            _nutzapInfoEvent.value = null
+            settings.clearNutzapInfo()
+        }
         if (dirtyTokens) recomputeUnspent()
         if (dirtyHistory) _history.value = historyEvents.values.sortedByDescending { it.createdAt }
         if (dirtyQuotes || dirtyHistory) recomputePending()
@@ -763,6 +771,51 @@ class CashuWalletState(
         } finally {
             redeemMutex.unlock()
         }
+    }
+
+    // ============================================================
+    // Stop receiving nutzaps / delete wallet
+    // ============================================================
+
+    /**
+     * Stop receiving NIP-61 nutzaps: replace kind:10019 with an empty version
+     * and NIP-09 delete it (see [CashuWalletOps.stopNutzaps]). Leaves the
+     * kind:17375 wallet and held proofs intact — the wallet keeps sending.
+     *
+     * Clears the local index + on-disk backup immediately so the change is
+     * effective without waiting for the kind:5 round-trip; the deletion bundle
+     * arriving later via [removeEvents] is then a no-op.
+     */
+    suspend fun stopNutzaps() {
+        check(started) { NOT_STARTED_MESSAGE }
+        ops.stopNutzaps()
+        nutzapInfoEventInternal = null
+        _nutzapInfoEvent.value = null
+        settings.clearNutzapInfo()
+    }
+
+    /**
+     * Delete the whole Cashu wallet: withdraws the nutzap advertisement and
+     * NIP-09 deletes the kind:17375 (see [CashuWalletOps.deleteWallet]). Held
+     * kind:7375 proofs are NOT deleted — that ecash still exists at the mint —
+     * but with the P2PK key gone any unredeemed inbound nutzaps and any
+     * remaining balance may become unrecoverable. The UI must warn first.
+     *
+     * No-op when no wallet is loaded. Clears local indexes + backups inline so
+     * the wallet screen drops straight to its empty/create state.
+     */
+    suspend fun deleteWallet() {
+        check(started) { NOT_STARTED_MESSAGE }
+        val wallet = walletEventInternal ?: return
+        ops.deleteWallet(wallet)
+
+        walletEventInternal = null
+        _walletEvent.value = null
+        _mints.value = emptyList()
+        nutzapInfoEventInternal = null
+        _nutzapInfoEvent.value = null
+        settings.clearCashuWallet()
+        settings.clearNutzapInfo()
     }
 
     // ============================================================
