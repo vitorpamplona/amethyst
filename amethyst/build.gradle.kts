@@ -48,6 +48,66 @@ fun generateVersionName(
     return "$baseVersion-$cleanBranch"
 }
 
+/**
+ * Resolves the parallel-install "slot" — a short token that lets several debug
+ * builds (one per branch/worktree) coexist on a single emulator. When a slot is
+ * present the debug build installs as `com.vitorpamplona.amethyst.debug.<slot>`
+ * with its own launcher name and a deterministic icon tint, so nothing clobbers
+ * anything else.
+ *
+ * Resolution order: `-Pslot=<x>`  >  env `AMETHYST_SLOT`  >  current git branch.
+ * Base branches (main/master/develop), detached HEAD, and the explicit values
+ * none/off/base resolve to *no slot*, so the historical `installDebug` on those
+ * branches keeps its plain `.debug` applicationId and white icon untouched.
+ */
+fun resolveSlot(workingDir: java.io.File): String {
+    val raw =
+        (findProperty("slot") as String?)
+            ?: System.getenv("AMETHYST_SLOT")
+            ?: getCurrentBranch(workingDir)
+
+    val lower = raw.trim().lowercase()
+    if (lower.isEmpty() || lower in setOf("none", "off", "base", "main", "master", "develop", "unknown", "head")) {
+        return ""
+    }
+
+    // Keep only the last path segment of a branch like "claude/adoring-fermi".
+    var slot = lower.substringAfterLast('/').replace(Regex("[^a-z0-9]"), "_").trim('_')
+    if (slot.isEmpty()) return ""
+    // applicationId segments must start with a letter.
+    if (!slot.first().isLetter()) slot = "s$slot"
+    if (slot.length > 16) slot = slot.substring(0, 16).trim('_')
+    return slot
+}
+
+/** Deterministic pastel icon-background color (#RRGGBB) for a slot so each parallel install looks distinct. */
+fun slotColor(slot: String): String {
+    if (slot.isEmpty()) return "#FFFFFF"
+    val hue = (slot.hashCode().toLong() and 0xFFFFFFFFL).toFloat() % 360f
+    val s = 0.45f
+    val v = 0.92f
+    val c = v * s
+    val hp = (hue / 60f) % 2 - 1
+    val x = c * (1 - if (hp < 0) -hp else hp)
+    val m = v - c
+    val rgb: Triple<Float, Float, Float> =
+        when {
+            hue < 60 -> Triple(c, x, 0f)
+            hue < 120 -> Triple(x, c, 0f)
+            hue < 180 -> Triple(0f, c, x)
+            hue < 240 -> Triple(0f, x, c)
+            hue < 300 -> Triple(x, 0f, c)
+            else -> Triple(c, 0f, x)
+        }
+    fun channel(f: Float) =
+        ((f + m) * 255)
+            .toInt()
+            .coerceIn(0, 255)
+            .toString(16)
+            .padStart(2, '0')
+    return "#${channel(rgb.first)}${channel(rgb.second)}${channel(rgb.third)}"
+}
+
 // Workaround: stability.analyzer plugin doesn't declare task dependencies properly for Gradle 9.x
 afterEvaluate {
     val stabilityNames = tasks.names.filter { it.contains("StabilityCheck") }
@@ -206,9 +266,17 @@ android {
             isMinifyEnabled = !skipMapping
         }
         getByName("debug") {
-            applicationIdSuffix = ".debug"
-            versionNameSuffix = "-DEBUG"
-            resValue("string", "app_name", "@string/app_name_debug")
+            // `slot` lets several branches/worktrees install side-by-side on one
+            // emulator (see resolveSlot). Empty slot == the historical plain debug build.
+            val slot = resolveSlot(rootDir)
+            applicationIdSuffix = ".debug" + if (slot.isEmpty()) "" else ".$slot"
+            versionNameSuffix = "-DEBUG" + if (slot.isEmpty()) "" else "-${slot.uppercase()}"
+            if (slot.isEmpty()) {
+                resValue("string", "app_name", "@string/app_name_debug")
+            } else {
+                resValue("string", "app_name", "Amy ${slot.replace('_', ' ')}")
+                resValue("color", "ic_launcher_background", slotColor(slot))
+            }
         }
         create("benchmark") {
             initWith(getByName("release"))
@@ -509,4 +577,17 @@ dependencies {
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.view)
     implementation(libs.androidx.camera.extensions)
+}
+
+// Prints the resolved debug applicationId for the current slot, e.g.
+//   ./gradlew -q :amethyst:printDebugAppId  ->  com.vitorpamplona.amethyst.debug.my_branch
+// The parallel-streams tooling (tools/parallel-streams) uses this to launch /
+// query the right install without re-implementing resolveSlot in shell.
+tasks.register("printDebugAppId") {
+    doLast {
+        val slot = resolveSlot(rootDir)
+        val base = android.defaultConfig.applicationId
+        val suffix = ".debug" + if (slot.isEmpty()) "" else ".$slot"
+        println(base + suffix)
+    }
 }

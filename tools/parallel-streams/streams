@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+#
+# streams — manage a fleet of parallel Claude Code sessions, one git worktree
+# each, all testable on a single emulator via per-branch "slots"
+# (see tools/parallel-streams/README.md and amethyst/build.gradle.kts resolveSlot).
+#
+# Each worktree lives under .worktrees/ (gitignored) and gets its own tmux window
+# running `claude`. Because every branch installs under its own applicationId,
+# you can deploy any of them to the same emulator without clobbering the others.
+#
+# Commands:
+#   streams up <branch>...     create a worktree + tmux window + claude per branch
+#   streams ls                 list stream worktrees and their branches
+#   streams installed          show which slot builds are on the emulator now
+#   streams deploy [dir]       build+install+launch a worktree's slot (default: cwd)
+#   streams attach             attach to the tmux session
+#   streams down <branch>...   remove the worktree + tmux window (and uninstall slot)
+#
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+WORKTREE_DIR="${STREAMS_DIR:-$REPO_ROOT/.worktrees}"
+TMUX_SESSION="${STREAMS_TMUX:-amethyst}"
+HERE="$REPO_ROOT/tools/parallel-streams"
+
+# A filesystem-safe directory name for a branch ("claude/foo" -> "claude__foo").
+dirname_for() { echo "$1" | sed 's#/#__#g'; }
+
+ensure_session() {
+  if ! tmux has-session -t "$TMUX_SESSION" 2>/dev/null; then
+    tmux new-session -d -s "$TMUX_SESSION" -n root -c "$REPO_ROOT"
+  fi
+}
+
+cmd_up() {
+  [[ $# -ge 1 ]] || { echo "usage: streams up <branch>..." >&2; exit 2; }
+  command -v tmux >/dev/null || { echo "streams: tmux not installed" >&2; exit 1; }
+  ensure_session
+  mkdir -p "$WORKTREE_DIR"
+  for branch in "$@"; do
+    local dir="$WORKTREE_DIR/$(dirname_for "$branch")"
+    if [[ -d "$dir" ]]; then
+      echo "• $branch already checked out at $dir"
+    elif git show-ref --verify --quiet "refs/heads/$branch"; then
+      git worktree add "$dir" "$branch"
+    else
+      # New branch off the remote default (fall back to current HEAD).
+      local base; base="$(git rev-parse --abbrev-ref origin/HEAD 2>/dev/null || git rev-parse --abbrev-ref HEAD)"
+      git worktree add -b "$branch" "$dir" "$base"
+    fi
+    local win; win="$(echo "$branch" | sed 's#.*/##')"
+    if ! tmux list-windows -t "$TMUX_SESSION" -F '#W' 2>/dev/null | grep -qx "$win"; then
+      tmux new-window -t "$TMUX_SESSION" -n "$win" -c "$dir" 'claude'
+    fi
+    echo "✔ stream '$branch' ready ($dir)"
+  done
+  echo "→ attach with: tmux attach -t $TMUX_SESSION   (or: streams attach)"
+}
+
+cmd_ls() {
+  printf '%-28s %s\n' "BRANCH" "WORKTREE"
+  git worktree list --porcelain | awk -v root="$WORKTREE_DIR" '
+    /^worktree /  { wt=$2 }
+    /^branch /    { br=$2; sub("refs/heads/","",br);
+                    if (index(wt, root)==1) printf "%-28s %s\n", br, wt }'
+}
+
+cmd_installed() {
+  local adb; adb="$(command -v adb || echo "${ANDROID_HOME:-}/platform-tools/adb")"
+  echo "Slots installed on ${ANDROID_SERIAL:-the connected device}:"
+  "$adb" shell pm list packages 2>/dev/null | sed 's/package://' \
+    | grep -E 'com\.vitorpamplona\.amethyst\.debug' | sort | sed 's/^/  /' \
+    || echo "  (none / no device)"
+}
+
+cmd_deploy() {
+  local dir="${1:-$PWD}"
+  ( cd "$dir" && "$HERE/deploy-slot.sh" )
+}
+
+cmd_attach() {
+  ensure_session
+  tmux attach -t "$TMUX_SESSION"
+}
+
+cmd_down() {
+  [[ $# -ge 1 ]] || { echo "usage: streams down <branch>..." >&2; exit 2; }
+  for branch in "$@"; do
+    local dir="$WORKTREE_DIR/$(dirname_for "$branch")"
+    local win; win="$(echo "$branch" | sed 's#.*/##')"
+    tmux kill-window -t "$TMUX_SESSION:$win" 2>/dev/null || true
+    if [[ -d "$dir" ]]; then
+      git worktree remove "$dir" 2>/dev/null || git worktree remove --force "$dir"
+      echo "✔ removed worktree $dir"
+    fi
+  done
+}
+
+case "${1:-}" in
+  up)        shift; cmd_up "$@" ;;
+  ls)        shift; cmd_ls ;;
+  installed) shift; cmd_installed ;;
+  deploy)    shift; cmd_deploy "$@" ;;
+  attach)    shift; cmd_attach ;;
+  down)      shift; cmd_down "$@" ;;
+  *) sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+esac
