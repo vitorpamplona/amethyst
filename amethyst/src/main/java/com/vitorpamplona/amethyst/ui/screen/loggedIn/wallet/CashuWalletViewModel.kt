@@ -124,6 +124,24 @@ sealed class CashuSendTokenFlowState {
     ) : CashuSendTokenFlowState()
 }
 
+sealed class CashuRebalanceFlowState {
+    data object Idle : CashuRebalanceFlowState()
+
+    /** Funds are moving — progress in [0f, 1f] from CashuWalletState.rebalance. */
+    data class Working(
+        val progress: Float,
+    ) : CashuRebalanceFlowState()
+
+    data class Completed(
+        val movedSats: Long,
+        val targetMintUrl: String,
+    ) : CashuRebalanceFlowState()
+
+    data class Error(
+        val message: String,
+    ) : CashuRebalanceFlowState()
+}
+
 sealed class CashuRedeemFlowState {
     data object Idle : CashuRedeemFlowState()
 
@@ -154,6 +172,8 @@ class CashuWalletViewModel : ViewModel() {
 
     val walletEvent get() = state.walletEvent
     val mints get() = state.mints
+    val displayMints get() = state.displayMints
+    val unconfiguredMintBalances get() = state.unconfiguredMintBalances
     val balanceSats get() = state.balanceSats
     val mintBalances get() = state.mintBalances
     val tokenEntries: StateFlow<List<TokenEntry>> get() = state.tokenEntries
@@ -174,6 +194,9 @@ class CashuWalletViewModel : ViewModel() {
     private val _sendTokenState = MutableStateFlow<CashuSendTokenFlowState>(CashuSendTokenFlowState.Idle)
     val sendTokenState = _sendTokenState.asStateFlow()
 
+    private val _rebalanceState = MutableStateFlow<CashuRebalanceFlowState>(CashuRebalanceFlowState.Idle)
+    val rebalanceState = _rebalanceState.asStateFlow()
+
     private val _redeemState = MutableStateFlow<CashuRedeemFlowState>(CashuRedeemFlowState.Idle)
     val redeemState = _redeemState.asStateFlow()
 
@@ -185,6 +208,25 @@ class CashuWalletViewModel : ViewModel() {
         this.account = accountViewModel.account
         // No subscription / observer / refresh here — CashuWalletState owns
         // that lifecycle and is alive for the whole login session.
+    }
+
+    /**
+     * Reconcile every mint we hold tokens at against its NUT-07 `/checkstate`
+     * — not just the mint a spend targets. Wired to the wallet screen opening
+     * so a balance auto-redeemed from a mint we never configured (e.g. a
+     * nutzap on a mint not in our kind:10019) still gets its stale proofs
+     * swept. Safe to call repeatedly; no-ops when nothing is stale or the
+     * wallet hasn't started yet.
+     */
+    fun refresh() {
+        val vm = accountViewModel ?: return
+        vm.launchSigner {
+            try {
+                state.syncAllMints()
+            } catch (e: Exception) {
+                Log.w("CashuWallet", "wallet refresh sync failed", e)
+            }
+        }
     }
 
     /** Verify a mint URL is reachable + speaks Cashu v1. */
@@ -357,10 +399,16 @@ class CashuWalletViewModel : ViewModel() {
     val restoreState = _restoreState.asStateFlow()
 
     /**
-     * NUT-09 wallet restore — scans every mint in the wallet's mint list
-     * for proofs the user previously minted but whose kind:7375 events
-     * have been lost. Recovered unspent proofs are republished as fresh
-     * kind:7375 + kind:7376 IN history rows.
+     * NUT-09 wallet restore — scans every mint we know of for proofs the
+     * user previously minted but whose kind:7375 events have been lost.
+     * Recovered unspent proofs are republished as fresh kind:7375 + kind:7376
+     * IN history rows.
+     *
+     * Scans [CashuWalletState.displayMints] (configured kind:17375 mints plus
+     * any mint we currently hold tokens at), not just the configured list —
+     * so a mint dropped from the wallet config while it still holds tokens,
+     * or one a nutzap was auto-redeemed on, is still recovered rather than
+     * silently skipped.
      *
      * Best-effort across mints: a failure on one mint logs and moves to
      * the next. The total reported in [RestoreFlowState.Completed]
@@ -372,7 +420,7 @@ class CashuWalletViewModel : ViewModel() {
         _restoreState.value = RestoreFlowState.Running
         vm.launchSigner {
             try {
-                val mintsToScan = state.mints.value
+                val mintsToScan = state.displayMints.value
                 var totalSats = 0L
                 var totalProofs = 0
                 for (mint in mintsToScan) {
@@ -736,6 +784,51 @@ class CashuWalletViewModel : ViewModel() {
 
     fun resetSendTokenState() {
         _sendTokenState.value = CashuSendTokenFlowState.Idle
+    }
+
+    // -------- Move coins between mints (rebalance) --------
+
+    /**
+     * Move [sats] from [sourceMintUrl] to [targetMintUrl] with no new
+     * Lightning sats entering the wallet — the evacuation path for coins
+     * sitting at a mint the user doesn't trust. Backed by the tested
+     * [CashuWalletState.rebalance], which fetches its own melt quote and
+     * refuses to spend if the source can't cover amount + fees.
+     */
+    fun rebalanceOut(
+        sourceMintUrl: String,
+        targetMintUrl: String,
+        sats: Long,
+    ) {
+        val vm = accountViewModel ?: return
+        if (sats <= 0) {
+            _rebalanceState.value = CashuRebalanceFlowState.Error("Amount must be positive")
+            return
+        }
+        if (sourceMintUrl == targetMintUrl) {
+            _rebalanceState.value = CashuRebalanceFlowState.Error("Pick a different destination mint")
+            return
+        }
+        _rebalanceState.value = CashuRebalanceFlowState.Working(0f)
+        vm.launchSigner {
+            try {
+                val result =
+                    state.rebalance(
+                        sourceMintUrl = sourceMintUrl,
+                        targetMintUrl = targetMintUrl,
+                        sats = sats,
+                        onProgress = { p -> _rebalanceState.value = CashuRebalanceFlowState.Working(p) },
+                    )
+                _rebalanceState.value =
+                    CashuRebalanceFlowState.Completed(result.movedSats, targetMintUrl)
+            } catch (e: Exception) {
+                _rebalanceState.value = CashuRebalanceFlowState.Error(describeMintError(e))
+            }
+        }
+    }
+
+    fun resetRebalanceState() {
+        _rebalanceState.value = CashuRebalanceFlowState.Idle
     }
 
     // -------- Redeem inbound cashuB / cashuA --------

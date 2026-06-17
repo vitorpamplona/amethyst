@@ -3294,6 +3294,25 @@
     <string name="cashu_pending_quotes_subtitle">Tap to resume and check status.</string>
     <string name="cashu_pending_quotes_resume">Resume</string>
 
+    <plurals name="cashu_untrusted_mint_title">
+        <item quantity="one">Funds held at %1$d mint you don\'t use</item>
+        <item quantity="other">Funds held at %1$d mints you don\'t use</item>
+    </plurals>
+    <string name="cashu_untrusted_mint_subtitle">These coins arrived from a nutzap. Move them to a mint you trust or withdraw to Lightning to keep them safe.</string>
+    <string name="cashu_untrusted_mint_badge">Not in your wallet</string>
+    <string name="cashu_untrusted_mint_move">Move</string>
+
+    <string name="cashu_move_coins_title">Move coins out</string>
+    <string name="cashu_move_coins_body">%2$s sat at a mint you don\'t use (%1$s). Move them somewhere you trust.</string>
+    <string name="cashu_move_coins_to_mint">Move to a mint you trust</string>
+    <string name="cashu_move_coins_move">Move</string>
+    <string name="cashu_move_coins_fee_hint">A small Lightning fee is taken from this mint, so you may need to send a little less than the full balance.</string>
+    <string name="cashu_move_coins_no_trusted">Add a mint to your wallet first to move these coins between mints, or use the options below.</string>
+    <string name="cashu_move_coins_withdraw_ln">Withdraw via Lightning…</string>
+    <string name="cashu_move_coins_export_token">Export as Cashu token…</string>
+    <string name="cashu_move_coins_working">Moving coins…</string>
+    <string name="cashu_move_coins_done">Moved %1$s sat to %2$s.</string>
+
     <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Connecting</string>
     <string name="event_sync_status_downloading">Downloading</string>
