@@ -62,6 +62,14 @@ sealed class CashuMintFlowState {
         val flow: MintQuoteStarted,
         val mintUrl: String,
         val amountSats: Long,
+        /**
+         * True while a background poll is asking the mint whether the
+         * invoice has been paid. The receive dialog keeps the invoice on
+         * screen and shows a small inline indicator instead of swapping to
+         * the [Completing] body, so the routine 3s check no longer flickers
+         * the whole dialog.
+         */
+        val checking: Boolean = false,
     ) : CashuMintFlowState()
 
     data object Completing : CashuMintFlowState()
@@ -419,21 +427,29 @@ class CashuWalletViewModel : ViewModel() {
     fun checkAndCompleteMint() {
         val vm = accountViewModel ?: return
         val current = _mintState.value as? CashuMintFlowState.AwaitingPayment ?: return
-        // Atomic flip to Completing so a concurrent poll (the receive
+        // Already polling — don't stack a second request.
+        if (current.checking) return
+        // Atomic flip to checking=true so a concurrent poll (the receive
         // dialog fires this every 3s) can't both reach
         // completeMintFromLightning. Without the gate, poll 1 consumed
-        // the mint quote and poll 2 hit "outputs already signed".
-        if (!_mintState.compareAndSet(current, CashuMintFlowState.Completing)) return
+        // the mint quote and poll 2 hit "outputs already signed". We stay
+        // in AwaitingPayment so the invoice keeps showing — the dialog
+        // renders an inline "checking the mint" indicator off `checking`
+        // instead of swapping its whole body, which used to flicker.
+        if (!_mintState.compareAndSet(current, current.copy(checking = true))) return
         vm.launchSigner {
             try {
                 val status = ops.checkMintQuote(current.mintUrl, current.flow.mintQuote.quote)
                 val paid = status.isSettled()
                 if (!paid) {
-                    // Roll back to AwaitingPayment so the polling
-                    // LaunchedEffect picks up again on the next tick.
+                    // Clear the checking flag so the polling LaunchedEffect
+                    // picks up again on the next tick, invoice still on screen.
                     _mintState.value = current
                     return@launchSigner
                 }
+                // Payment confirmed — now it's worth showing the full
+                // "issuing proofs" body while we finalize the mint.
+                _mintState.value = CashuMintFlowState.Completing
                 ops.completeMintFromLightning(current.mintUrl, current.flow.quoteEvent, current.amountSats)
                 _mintState.value = CashuMintFlowState.Completed(current.amountSats)
             } catch (e: Exception) {
