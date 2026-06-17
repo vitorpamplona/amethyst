@@ -78,7 +78,7 @@ class Chatroom : NotesGatherer {
 
                 msg.author?.let { author ->
                     if (author !in activeSenders) {
-                        activeSenders + author
+                        activeSenders = activeSenders + author
                     }
                 }
 
