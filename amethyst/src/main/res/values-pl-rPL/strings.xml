@@ -443,6 +443,9 @@
     <string name="quick_action_select">Wybierz</string>
     <string name="quick_action_share_browser_link">Udostępnij link przeglądarki</string>
     <string name="quick_action_share">Przekaż</string>
+    <string name="share_as_image">Udostępnij jako obrazek</string>
+    <string name="share_as_image_generating">Generowanie podglądu…</string>
+    <string name="share_as_image_watermark">Udostępnione przez Ametyst</string>
     <string name="quick_action_copy_user_id">ID autora</string>
     <string name="quick_action_copy_note_id">ID wpisu</string>
     <string name="quick_action_copy_text">Skopiuj tekst</string>
@@ -666,10 +669,13 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="workout_duration">Czas trwania</string>
     <string name="workout_distance">Odległość</string>
     <string name="workout_pace">Tempo</string>
+    <string name="workout_speed">Szybkość</string>
     <string name="workout_elevation">Wzrost</string>
+    <string name="workout_elevation_loss">Spadek</string>
     <string name="workout_calories">Kalorie</string>
     <string name="workout_steps">Kroki</string>
     <string name="workout_heart_rate">Tętno</string>
+    <string name="workout_max_heart_rate">Maksymalne tętno</string>
     <string name="workout_sets">Zestawy</string>
     <string name="workout_reps">Powtórzenia</string>
     <string name="workout_weight">Waga</string>
@@ -677,6 +683,16 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="workout_hours">Godziny</string>
     <string name="workout_minutes">Minuty</string>
     <string name="workout_seconds">Sekundy</string>
+    <string name="workout_suggestion_connect_title">Współdziel treningi</string>
+    <string name="workout_suggestion_connect_message">Niech aplikacja Amethyst odczytuje zakończone treningi z serwisu Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) i proponuje wpis.</string>
+    <string name="workout_suggestion_connect_button">Połącz</string>
+    <string name="workout_suggestion_detected_title">Wykryto nowy trening</string>
+    <string name="workout_suggestion_share">Udostępnij</string>
+    <string name="workout_suggestion_dismiss">Odrzuć</string>
+    <string name="workout_suggestion_distance_km">%1$s km</string>
+    <string name="workout_suggestion_heart_rate">%1$s uderzeń na minutę</string>
+    <string name="workout_suggestion_calories">%1$s kcal</string>
+    <string name="workout_from_health_connect">Z Health Connect</string>
     <string name="exercise_running">Bieganie</string>
     <string name="exercise_walking">Spacer</string>
     <string name="exercise_cycling">Jazda na rowerze</string>
@@ -945,7 +961,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="interest_set_name_placeholder">Moje zainteresowania</string>
     <string name="interest_set_hashtag_add_placeholder">Dodaj hasztag</string>
     <string name="interest_set_hashtag_private_toggle">Prywatna</string>
-    <string name="interest_set_hashtag_count">%1$d hasztagi</string>
+    <string name="interest_set_hashtag_count">Hasztagów: %1$d</string>
     <string name="interest_set_actions_dialog_title">Opcje Grupy Zainteresowań</string>
     <string name="interest_set_rename">Zmień nazwę</string>
     <string name="interest_set_clone">Sklonuj</string>
@@ -2918,7 +2934,7 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="ots_explorer_settings">Eksplorator Bitcoin (OTS)</string>
     <string name="events">wydarzeń</string>
     <string name="events_from_you">wydarzenia od Ciebie</string>
-    <string name="events_to_you">wydarzenia dla Ciebie</string>
+    <string name="events_to_you">wydarzeń dla Ciebie</string>
     <string name="searchable_events">wydarzenia podlegające wyszukiwaniu</string>
     <string name="dms">DMs</string>
     <string name="profiles">profile</string>
@@ -3207,6 +3223,8 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="ai_writing_setting_description">Używa modelu sztucznej inteligencji wbudowanego w urządzenie, proponując poprawki tekstu i zmiany tonu wypowiedzi.</string>
     <string name="tracked_broadcasts_setting_title">Monitorowane transmisje</string>
     <string name="tracked_broadcasts_setting_description">Podczas wysyłania zdarzeń korzystaj z monitora transmisji. Pokazuje postęp na żywo i status transmisji podczas nadawania.</string>
+    <string name="suggest_workouts_setting_title">Zaproponuj treningi, którymi warto się podzielić</string>
+    <string name="suggest_workouts_setting_description">Odczytuje zakończone treningi z aplikacji Health Connect (Samsung Health, Google Fit, Fitbit, Garmin…) i proponuje udostępnienie ich w formie wpisu. O zgodę prosi się wyłącznie podczas nawiązywania połączenia.</string>
     <string name="compose_settings">Skonfiguruj ustawienia</string>
     <string name="auto_create_drafts_setting_title">Automatycznie twórz wersje robocze</string>
     <string name="auto_create_drafts_setting_description">Automatycznie zapisuje wersję roboczą wiadomości podczas pisania lub po zamknięciu okna edycji z niewysłanym tekstem i umieszcza ją w prywatnej skrzynce wysyłkowej transmiterów.</string>
