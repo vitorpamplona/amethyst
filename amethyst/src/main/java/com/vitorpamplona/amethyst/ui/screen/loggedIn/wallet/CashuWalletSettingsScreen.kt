@@ -131,10 +131,20 @@ fun CashuWalletSettingsScreen(
                 )
             }
 
+            item {
+                SettingsRow(
+                    icon = MaterialSymbols.ThumbUp,
+                    title = stringRes(R.string.cashu_settings_my_recommendations),
+                    subtitle = stringRes(R.string.cashu_settings_recommendations_subtitle),
+                    onClick = { nav.nav(Route.CashuMintRecommendations) },
+                )
+            }
+
             // NUT-09 recovery: ask every mint in our list which blind
             // signatures it has previously issued for our seed and
             // republish them as fresh kind:7375 events. Useful after a
-            // device loss or rogue-relay NIP-09 of our token events.
+            // device loss or rogue-relay NIP-09 of our token events. Kept
+            // last before the Danger Zone as an occasional maintenance action.
             item {
                 val restoreState by viewModel.restoreState.collectAsState()
                 val restoreSubtitle =
@@ -164,15 +174,6 @@ fun CashuWalletSettingsScreen(
                             viewModel.restoreFromAllMints()
                         }
                     },
-                )
-            }
-
-            item {
-                SettingsRow(
-                    icon = MaterialSymbols.ThumbUp,
-                    title = stringRes(R.string.cashu_settings_my_recommendations),
-                    subtitle = stringRes(R.string.cashu_settings_recommendations_subtitle),
-                    onClick = { nav.nav(Route.CashuMintRecommendations) },
                 )
             }
 

@@ -163,27 +163,67 @@ fun AddCashuWalletScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
 
+            val verifications by viewModel.mintVerifications.collectAsState()
             mints.forEachIndexed { index, mint ->
+                val verifyState = verifications[mint.trim().trimEnd('/')]
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = mint,
-                            modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        IconButton(onClick = { mints.removeAt(index) }) {
-                            Icon(
-                                symbol = MaterialSymbols.Delete,
-                                contentDescription = stringRes(R.string.cashu_remove_mint),
-                                modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.error,
+                    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = mint,
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodyMedium,
                             )
+                            OutlinedButton(
+                                onClick = { viewModel.verifyMint(mint) },
+                                enabled = verifyState !is MintPingState.Pinging,
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                                modifier = Modifier.height(32.dp),
+                            ) {
+                                if (verifyState is MintPingState.Pinging) {
+                                    CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                                } else {
+                                    Text(
+                                        stringRes(R.string.cashu_verify),
+                                        style = MaterialTheme.typography.labelMedium,
+                                    )
+                                }
+                            }
+                            IconButton(onClick = { mints.removeAt(index) }) {
+                                Icon(
+                                    symbol = MaterialSymbols.Delete,
+                                    contentDescription = stringRes(R.string.cashu_remove_mint),
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
+                            }
+                        }
+                        when (val vs = verifyState) {
+                            is MintPingState.Ok -> {
+                                Text(
+                                    text =
+                                        if (vs.name.isNullOrBlank()) {
+                                            stringRes(R.string.cashu_mint_reachable)
+                                        } else {
+                                            stringRes(R.string.cashu_mint_reachable_named, vs.name)
+                                        },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(bottom = 4.dp),
+                                )
+                            }
+                            is MintPingState.Failed -> {
+                                Text(
+                                    text = stringRes(R.string.cashu_mint_unreachable, vs.message),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.padding(bottom = 4.dp),
+                                )
+                            }
+                            else -> Unit
                         }
                     }
                 }
@@ -285,7 +325,6 @@ fun AddCashuWalletScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                val verifications by viewModel.mintVerifications.collectAsState()
                 MintSuggestionList(
                     suggestions = suggestions,
                     accountViewModel = accountViewModel,
