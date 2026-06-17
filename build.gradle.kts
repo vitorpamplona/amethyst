@@ -16,7 +16,7 @@ plugins {
 }
 
 // Shared app version for all subprojects — read from gradle/libs.versions.toml.
-// Android versionCode stays local in amethyst/build.gradle.kts (must be monotonic int).
+// Android versionCode is the `appCode` entry in the same catalog (must be monotonic int).
 // Desktop packageVersion inherits via project.version in desktopApp/build.gradle.kts.
 val appVersion = libs.versions.app.get()
 

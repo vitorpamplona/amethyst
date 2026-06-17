@@ -449,7 +449,9 @@ mavenPublishing {
     coordinates(
         groupId = "com.vitorpamplona.quartz",
         artifactId = "quartz",
-        version = "1.12.0",
+        // Library version tracks the app version in gradle/libs.versions.toml,
+        // bumped in lockstep with each release.
+        version = libs.versions.app.get(),
     )
 
     // Configure publishing to Maven Central
