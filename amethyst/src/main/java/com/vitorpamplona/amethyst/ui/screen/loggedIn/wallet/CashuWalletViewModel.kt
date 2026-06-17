@@ -154,6 +154,7 @@ class CashuWalletViewModel : ViewModel() {
 
     val walletEvent get() = state.walletEvent
     val mints get() = state.mints
+    val displayMints get() = state.displayMints
     val balanceSats get() = state.balanceSats
     val mintBalances get() = state.mintBalances
     val tokenEntries: StateFlow<List<TokenEntry>> get() = state.tokenEntries
@@ -185,6 +186,25 @@ class CashuWalletViewModel : ViewModel() {
         this.account = accountViewModel.account
         // No subscription / observer / refresh here — CashuWalletState owns
         // that lifecycle and is alive for the whole login session.
+    }
+
+    /**
+     * Reconcile every mint we hold tokens at against its NUT-07 `/checkstate`
+     * — not just the mint a spend targets. Wired to the wallet screen opening
+     * so a balance auto-redeemed from a mint we never configured (e.g. a
+     * nutzap on a mint not in our kind:10019) still gets its stale proofs
+     * swept. Safe to call repeatedly; no-ops when nothing is stale or the
+     * wallet hasn't started yet.
+     */
+    fun refresh() {
+        val vm = accountViewModel ?: return
+        vm.launchSigner {
+            try {
+                state.syncAllMints()
+            } catch (e: Exception) {
+                Log.w("CashuWallet", "wallet refresh sync failed", e)
+            }
+        }
     }
 
     /** Verify a mint URL is reachable + speaks Cashu v1. */

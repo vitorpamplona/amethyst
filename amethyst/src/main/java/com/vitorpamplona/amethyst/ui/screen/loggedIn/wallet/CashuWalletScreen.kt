@@ -113,11 +113,24 @@ fun CashuWalletScreen(
 
     val walletEvent by viewModel.walletEvent.collectAsState()
     val discovering by viewModel.discovering.collectAsState()
+    // `mints` is the configured (kind:17375) list — used by the send/receive
+    // dialogs. `displayMints` adds any mint we merely hold tokens at so the
+    // per-mint rows below sum to the full balance.
     val mints by viewModel.mints.collectAsState()
+    val displayMints by viewModel.displayMints.collectAsState()
     val balanceSats by viewModel.balanceSats.collectAsState()
     val mintBalances by viewModel.mintBalances.collectAsState()
     val history by viewModel.history.collectAsState()
     val pendingQuotes by viewModel.pendingQuotes.collectAsState()
+
+    // Reconcile every mint we hold tokens at whenever the wallet opens —
+    // sweeps stale proofs across all mints, not just the one a spend
+    // targets, so a balance auto-redeemed from a mint not in our configured
+    // list (e.g. a nutzap on a mint outside our kind:10019) still gets
+    // checked. No-ops when the wallet is empty or nothing is stale.
+    LaunchedEffect(walletEvent != null) {
+        if (walletEvent != null) viewModel.refresh()
+    }
 
     var receiveOpen by remember { mutableStateOf(false) }
     var sendLnOpen by remember { mutableStateOf(false) }
@@ -158,7 +171,7 @@ fun CashuWalletScreen(
                 CashuWalletContent(
                     modifier = Modifier.padding(padding),
                     balanceSats = balanceSats,
-                    mints = mints,
+                    mints = displayMints,
                     mintBalances = mintBalances,
                     history = history,
                     pendingQuoteCount = pendingQuotes.size,

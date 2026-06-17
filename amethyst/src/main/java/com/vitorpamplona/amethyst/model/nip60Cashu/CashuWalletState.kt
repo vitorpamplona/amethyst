@@ -55,6 +55,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -218,6 +219,23 @@ class CashuWalletState(
                     .mapValues { (_, byMint) -> byMint.sumOf { it.content.totalAmount() } }
             }.flowOn(Dispatchers.Default)
             .stateIn(scope, SharingStarted.Eagerly, emptyMap())
+
+    /**
+     * Mints to surface in the wallet screen's per-mint list: the union of
+     * our configured mints (kind:17375 — listed even at zero balance so the
+     * user can top them up) and every mint we actually hold tokens at
+     * (token-derived, via [mintBalances]). The token-derived half is what
+     * keeps the per-mint rows summing to [balanceSats]: a balance
+     * auto-redeemed from a mint we never configured (e.g. a nutzap on a mint
+     * not in our kind:10019) contributes to the total, so without a row for
+     * it the displayed mint balances would silently under-count the wallet.
+     * Configured mints come first; extra token-only mints follow.
+     */
+    val displayMints: StateFlow<List<String>> =
+        combine(_mints, mintBalances) { configured, balances ->
+            (configured + balances.keys).distinct()
+        }.flowOn(Dispatchers.Default)
+            .stateIn(scope, SharingStarted.Eagerly, emptyList())
 
     private val _history = MutableStateFlow<List<CashuSpendingHistoryEvent>>(emptyList())
     val history: StateFlow<List<CashuSpendingHistoryEvent>> = _history.asStateFlow()
@@ -1141,6 +1159,25 @@ class CashuWalletState(
             // and shouldn't be selected for the next swap.
             removeEvents(staleIds)
         }
+    }
+
+    /**
+     * Proactively reconcile *every* mint we currently hold tokens at against
+     * its NUT-07 `/checkstate` — not just the one mint a spend happens to
+     * target. [scrubLocallyStaleProofs] with a null filter already iterates
+     * the token-derived mint set ([mintBalances]), so proofs auto-redeemed
+     * from a mint we never configured (e.g. a nutzap on a mint not in our
+     * kind:10019) get their spent state checked here too, instead of sitting
+     * unverified until the user happens to spend from that mint.
+     *
+     * Non-destructive (it only prunes proofs the mint reports SPENT) and
+     * idempotent — safe to call on every wallet-screen open. Deliberately
+     * does NOT run [migrateStaleKeysets]; that swap-then-publish sequence
+     * isn't atomic and stays user-driven.
+     */
+    suspend fun syncAllMints() {
+        if (!started) return
+        scrubLocallyStaleProofs()
     }
 
     /**
