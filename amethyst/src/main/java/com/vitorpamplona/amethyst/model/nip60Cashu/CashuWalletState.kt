@@ -818,6 +818,32 @@ class CashuWalletState(
         settings.clearNutzapInfo()
     }
 
+    /**
+     * Rotate the wallet's NIP-61 P2PK key: re-publish kind:17375 + kind:10019
+     * with a fresh (or supplied) key, keeping the current mint list. After
+     * this, senders lock nutzaps to the NEW key — any inbound nutzap still
+     * locked to the OLD key that hasn't been redeemed yet becomes
+     * unrecoverable. Rarely needed (key exposure, or restoring a specific key
+     * from a backup), which is why it lives behind the settings Danger Zone.
+     *
+     * [manualPrivkeyHex] null/blank → generate a fresh random key; otherwise
+     * adopt the supplied hex key (e.g. importing a backup).
+     */
+    suspend fun recreateNutzapKey(manualPrivkeyHex: String? = null) {
+        check(started) { NOT_STARTED_MESSAGE }
+        val currentMints = _mints.value
+        require(currentMints.isNotEmpty()) { "Wallet has no mints to re-publish" }
+        ops.publishWalletEvents(
+            mints = currentMints,
+            p2pkPrivkeyHex = manualPrivkeyHex?.takeIf { it.isNotBlank() },
+            nutzapRelays = outboxRelaysFlow.value.toList(),
+        )
+        // The NUT-13 seed is derived from the P2PK key, which just changed —
+        // drop the cache so the next mint op re-derives from the new key
+        // (re-populated lazily by ensureSeed once the new kind:17375 lands).
+        cachedSeed = null
+    }
+
     // ============================================================
     // Send nutzap
     // ============================================================

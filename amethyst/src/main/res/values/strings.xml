@@ -2244,6 +2244,17 @@
     <string name="cashu_settings_stop_nutzaps_subtitle">Withdraw your kind:10019 so others can no longer send you nutzaps. Your wallet and balance stay put.</string>
     <string name="cashu_settings_stop_nutzaps_confirm_title">Stop receiving nutzaps?</string>
     <string name="cashu_settings_stop_nutzaps_confirm_body">We\'ll replace your nutzap-info event with an empty one and request its deletion. People will no longer be able to nutzap you. You can turn it back on by editing your wallet. Your balance is not affected.</string>
+    <string name="cashu_settings_recreate_key">Recreate nutzap key</string>
+    <string name="cashu_settings_recreate_key_subtitle">Generate a brand-new key for receiving nutzaps. Rarely needed — typically only if your current key was exposed. Nutzaps already sent to your old key but not yet redeemed will be lost.</string>
+    <string name="cashu_settings_recreate_key_confirm_title">Recreate nutzap key?</string>
+    <string name="cashu_settings_recreate_key_confirm_body">A fresh P2PK key will be generated and published in your kind:10019 and kind:17375, keeping your current mints. Senders will start locking nutzaps to the new key. Any nutzaps already sent to your old key that you haven\'t redeemed yet will become unrecoverable. This is rarely needed.</string>
+    <string name="cashu_settings_recreate_key_action">Recreate key</string>
+    <string name="cashu_settings_import_key">Import nutzap key</string>
+    <string name="cashu_settings_import_key_subtitle">Replace your nutzap key with one you paste in — e.g. to restore a wallet from a backup. Rarely needed. Nutzaps locked to your old key will no longer be redeemable.</string>
+    <string name="cashu_settings_import_key_confirm_title">Import nutzap key?</string>
+    <string name="cashu_settings_import_key_confirm_body">Paste the P2PK private key (hex) to use for receiving nutzaps. Your kind:10019 and kind:17375 will be re-published with it, keeping your current mints. Nutzaps locked to your current key will no longer be redeemable unless that key matches. This is rarely needed.</string>
+    <string name="cashu_settings_import_key_field">P2PK private key (hex)</string>
+    <string name="cashu_settings_import_key_action">Import key</string>
     <string name="cashu_settings_delete_wallet">Delete wallet</string>
     <string name="cashu_settings_delete_wallet_subtitle">Remove the wallet and stop nutzaps. Any remaining balance may become unrecoverable.</string>
     <string name="cashu_settings_delete_wallet_confirm_title">Delete this wallet?</string>

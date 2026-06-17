@@ -357,50 +357,48 @@ fun AddCashuWalletScreen(
                 else -> Unit
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            // The nutzap (P2PK) key is only chosen at creation. In edit mode
+            // keyMode stays KeepCurrent so saving never rotates the key — the
+            // (rare, destructive) rotation lives in the settings Danger Zone
+            // instead, so editing mints can't orphan inbound nutzaps.
+            if (!isEditMode) {
+                Spacer(modifier = Modifier.height(24.dp))
 
-            Text(
-                text = stringRes(R.string.cashu_p2pk_section),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = stringRes(R.string.cashu_p2pk_explainer),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (isEditMode) {
-                P2pkRadio(
-                    label = stringRes(R.string.cashu_p2pk_keep_current),
-                    selected = keyMode == CashuWalletViewModel.P2pkKeyMode.KeepCurrent,
-                    onSelect = { keyMode = CashuWalletViewModel.P2pkKeyMode.KeepCurrent },
+                Text(
+                    text = stringRes(R.string.cashu_p2pk_section),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
                 )
-            }
-            P2pkRadio(
-                label = stringRes(R.string.cashu_p2pk_autogen),
-                sub = if (isEditMode) stringRes(R.string.cashu_p2pk_autogen_warning_edit) else null,
-                selected = keyMode == CashuWalletViewModel.P2pkKeyMode.AutoGenerate,
-                onSelect = { keyMode = CashuWalletViewModel.P2pkKeyMode.AutoGenerate },
-            )
-            P2pkRadio(
-                label = stringRes(R.string.cashu_p2pk_manual_label),
-                selected = keyMode == CashuWalletViewModel.P2pkKeyMode.Manual,
-                onSelect = { keyMode = CashuWalletViewModel.P2pkKeyMode.Manual },
-            )
-
-            if (keyMode == CashuWalletViewModel.P2pkKeyMode.Manual) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = stringRes(R.string.cashu_p2pk_explainer),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = manualPrivkey,
-                    onValueChange = { manualPrivkey = it },
-                    label = { Text(stringRes(R.string.cashu_p2pk_manual_label)) },
-                    placeholder = { Text("hex…") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+
+                P2pkRadio(
+                    label = stringRes(R.string.cashu_p2pk_autogen),
+                    selected = keyMode == CashuWalletViewModel.P2pkKeyMode.AutoGenerate,
+                    onSelect = { keyMode = CashuWalletViewModel.P2pkKeyMode.AutoGenerate },
                 )
+                P2pkRadio(
+                    label = stringRes(R.string.cashu_p2pk_manual_label),
+                    selected = keyMode == CashuWalletViewModel.P2pkKeyMode.Manual,
+                    onSelect = { keyMode = CashuWalletViewModel.P2pkKeyMode.Manual },
+                )
+
+                if (keyMode == CashuWalletViewModel.P2pkKeyMode.Manual) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = manualPrivkey,
+                        onValueChange = { manualPrivkey = it },
+                        label = { Text(stringRes(R.string.cashu_p2pk_manual_label)) },
+                        placeholder = { Text("hex…") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
 
             val err = (createState as? CashuWalletCreateState.Error)?.message
@@ -444,7 +442,6 @@ private fun P2pkRadio(
     label: String,
     selected: Boolean,
     onSelect: () -> Unit,
-    sub: String? = null,
 ) {
     Row(
         modifier =
@@ -456,16 +453,11 @@ private fun P2pkRadio(
     ) {
         RadioButton(selected = selected, onClick = onSelect)
         Spacer(modifier = Modifier.width(8.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(label, style = MaterialTheme.typography.bodyMedium)
-            if (sub != null) {
-                Text(
-                    sub,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
-        }
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 

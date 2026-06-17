@@ -311,6 +311,30 @@ class CashuWalletViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Rotate the wallet's NIP-61 P2PK key (Danger Zone). [manualPrivkey] null
+     * generates a fresh key; a non-blank hex string imports it. [onResult]
+     * reports null on success or an error message on failure so the dialog can
+     * surface a bad key paste instead of silently dismissing.
+     */
+    fun recreateNutzapKey(
+        manualPrivkey: String? = null,
+        onResult: (String?) -> Unit = {},
+    ) {
+        val vm = accountViewModel ?: return
+        vm.launchSigner {
+            val error =
+                try {
+                    state.recreateNutzapKey(manualPrivkey)
+                    null
+                } catch (e: Exception) {
+                    Log.w("CashuWallet", "recreateNutzapKey failed: ${describeMintError(e)}", e)
+                    describeMintError(e)
+                }
+            onResult(error)
+        }
+    }
+
     // -------- NUT-09 restore --------
 
     sealed class RestoreFlowState {

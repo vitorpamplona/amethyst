@@ -39,6 +39,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -107,6 +108,8 @@ fun CashuWalletSettingsScreen(
     var pendingDelete by remember { mutableStateOf<MintRecommendationEvent?>(null) }
     var newRecommendationInput by remember { mutableStateOf("") }
     var showStopNutzapsConfirm by remember { mutableStateOf(false) }
+    var showRecreateKeyConfirm by remember { mutableStateOf(false) }
+    var showImportKeyDialog by remember { mutableStateOf(false) }
     var showDeleteWalletConfirm by remember { mutableStateOf(false) }
 
     // Kick the one-shot directory backfill so the autocomplete is useful
@@ -283,6 +286,24 @@ fun CashuWalletSettingsScreen(
                 }
                 item {
                     SettingsRow(
+                        icon = MaterialSymbols.Refresh,
+                        title = stringRes(R.string.cashu_settings_recreate_key),
+                        subtitle = stringRes(R.string.cashu_settings_recreate_key_subtitle),
+                        isDanger = true,
+                        onClick = { showRecreateKeyConfirm = true },
+                    )
+                }
+                item {
+                    SettingsRow(
+                        icon = MaterialSymbols.ContentPaste,
+                        title = stringRes(R.string.cashu_settings_import_key),
+                        subtitle = stringRes(R.string.cashu_settings_import_key_subtitle),
+                        isDanger = true,
+                        onClick = { showImportKeyDialog = true },
+                    )
+                }
+                item {
+                    SettingsRow(
                         icon = MaterialSymbols.DeleteForever,
                         title = stringRes(R.string.cashu_settings_delete_wallet),
                         subtitle = stringRes(R.string.cashu_settings_delete_wallet_subtitle),
@@ -311,6 +332,87 @@ fun CashuWalletSettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showStopNutzapsConfirm = false }) {
+                    Text(stringRes(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (showRecreateKeyConfirm) {
+        AlertDialog(
+            onDismissRequest = { showRecreateKeyConfirm = false },
+            title = { Text(stringRes(R.string.cashu_settings_recreate_key_confirm_title)) },
+            text = { Text(stringRes(R.string.cashu_settings_recreate_key_confirm_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.recreateNutzapKey()
+                        showRecreateKeyConfirm = false
+                    },
+                ) { Text(stringRes(R.string.cashu_settings_recreate_key_action)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRecreateKeyConfirm = false }) {
+                    Text(stringRes(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (showImportKeyDialog) {
+        var keyInput by remember { mutableStateOf("") }
+        var working by remember { mutableStateOf(false) }
+        var error by remember { mutableStateOf<String?>(null) }
+        AlertDialog(
+            onDismissRequest = { if (!working) showImportKeyDialog = false },
+            title = { Text(stringRes(R.string.cashu_settings_import_key_confirm_title)) },
+            text = {
+                Column {
+                    Text(stringRes(R.string.cashu_settings_import_key_confirm_body))
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = keyInput,
+                        onValueChange = {
+                            keyInput = it
+                            error = null
+                        },
+                        label = { Text(stringRes(R.string.cashu_settings_import_key_field)) },
+                        placeholder = { Text("hex…") },
+                        singleLine = true,
+                        isError = error != null,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    error?.let {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = it,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = keyInput.isNotBlank() && !working,
+                    onClick = {
+                        working = true
+                        error = null
+                        viewModel.recreateNutzapKey(manualPrivkey = keyInput.trim()) { err ->
+                            working = false
+                            if (err == null) showImportKeyDialog = false else error = err
+                        }
+                    },
+                ) {
+                    if (working) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text(stringRes(R.string.cashu_settings_import_key_action))
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showImportKeyDialog = false }, enabled = !working) {
                     Text(stringRes(R.string.cancel))
                 }
             },
