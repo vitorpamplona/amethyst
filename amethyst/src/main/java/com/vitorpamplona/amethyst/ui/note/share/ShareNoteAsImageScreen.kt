@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note.share
 
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -120,6 +121,89 @@ fun ShareNoteAsImageScreen(
     }
 }
 
+/**
+ * Renders [id]'s note into the same framed card as [ShareNoteAsImageScreen], captures it to a
+ * bitmap, writes it to the cache as a PNG and hands the local file straight to the Android share
+ * sheet — no preview, no upload. The screen only shows a brief progress indicator while the card
+ * is being captured.
+ */
+@Composable
+fun ShareNoteAsImageFileScreen(
+    id: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    LoadNote(id, accountViewModel) { note ->
+        if (note != null) {
+            ShareNoteAsImageFileScreen(note, accountViewModel, nav)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ShareNoteAsImageFileScreen(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val context = LocalContext.current
+    val graphicsLayer = rememberGraphicsLayer()
+
+    // Guards against capturing/sharing more than once across recompositions.
+    var shared by remember { mutableStateOf(false) }
+
+    Scaffold(
+        topBar = { TopBarWithBackButton(stringRes(R.string.share_as_image), nav) },
+    ) { pad ->
+        Box(
+            modifier =
+                Modifier
+                    .padding(pad)
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.surface,
+                                MaterialTheme.colorScheme.surfaceVariant,
+                            ),
+                        ),
+                    ),
+            contentAlignment = Alignment.Center,
+        ) {
+            // Rendered (but unpainted) only to feed the snapshot; the user never sees this card.
+            CaptureSource(
+                note = note,
+                graphicsLayer = graphicsLayer,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+
+            GeneratingPreview()
+
+            LaunchedEffect(note) {
+                // Wait a couple of frames so the card is measured and drawn, then let network
+                // media settle before the final snapshot.
+                withFrameNanos {}
+                withFrameNanos {}
+                graphicsLayer.toImageBitmap()
+                delay(IMAGE_SETTLE_MS)
+                val bitmap = graphicsLayer.toImageBitmap()
+
+                if (!shared) {
+                    shared = true
+                    val uri =
+                        withContext(Dispatchers.IO) {
+                            saveBitmapToCache(context, bitmap.asAndroidBitmap())
+                        }
+                    startShareImageFileIntent(context, uri)
+                    nav.popBack()
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShareNoteAsImageScreen(
@@ -208,7 +292,7 @@ fun ShareNoteAsImageScreen(
     }
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(R.string.share_as_image), nav) },
+        topBar = { TopBarWithBackButton(stringRes(R.string.share_as_image_url), nav) },
         bottomBar = {
             ShareBottomBar(
                 serverName = selectedServer.name,
@@ -450,6 +534,24 @@ private fun startShareUrlIntent(
             action = Intent.ACTION_SEND
             type = "text/plain"
             putExtra(Intent.EXTRA_TEXT, url)
+        }
+    val shareIntent = Intent.createChooser(sendIntent, stringRes(context, R.string.share_as_image_url))
+    context.startActivity(shareIntent)
+}
+
+private fun startShareImageFileIntent(
+    context: Context,
+    uri: Uri,
+) {
+    val sendIntent =
+        Intent().apply {
+            action = Intent.ACTION_SEND
+            type = PNG_MIME
+            putExtra(Intent.EXTRA_STREAM, uri)
+            // Attaching the URI as ClipData (not just EXTRA_STREAM) lets the system share sheet
+            // itself read the file so it can render the image thumbnail preview at the top.
+            clipData = ClipData.newUri(context.contentResolver, "Image", uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
     val shareIntent = Intent.createChooser(sendIntent, stringRes(context, R.string.share_as_image))
     context.startActivity(shareIntent)
