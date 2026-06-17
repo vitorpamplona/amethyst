@@ -54,7 +54,7 @@ class NewWorkoutViewModel : ViewModel() {
     var minutes by mutableStateOf("")
     var seconds by mutableStateOf("")
     var distance by mutableStateOf("")
-    var distanceUnit by mutableStateOf(DistanceTag.KILOMETERS)
+    var distanceUnit by mutableStateOf(if (phonePrefersMiles()) DistanceTag.MILES else DistanceTag.KILOMETERS)
     var calories by mutableStateOf("")
     var notes by mutableStateOf("")
 
@@ -100,8 +100,10 @@ class NewWorkoutViewModel : ViewModel() {
             seconds = (route.durationSeconds % 60).toString()
         }
         if (route.distanceMeters > 0) {
-            distance = ((route.distanceMeters / 1000.0 * 100).roundToInt() / 100.0).toString()
-            distanceUnit = DistanceTag.KILOMETERS
+            val miles = phonePrefersMiles()
+            distanceUnit = if (miles) DistanceTag.MILES else DistanceTag.KILOMETERS
+            val value = if (miles) route.distanceMeters / DistanceTag.METERS_PER_MILE else route.distanceMeters / 1000.0
+            distance = ((value * 100).roundToInt() / 100.0).toString()
         }
         if (route.calories > 0) calories = route.calories.toString()
 
@@ -127,7 +129,7 @@ class NewWorkoutViewModel : ViewModel() {
         minutes = ""
         seconds = ""
         distance = ""
-        distanceUnit = DistanceTag.KILOMETERS
+        distanceUnit = if (phonePrefersMiles()) DistanceTag.MILES else DistanceTag.KILOMETERS
         calories = ""
         notes = ""
         source = SourceTag.MANUAL
