@@ -9,6 +9,17 @@ deepened: 2026-06-17
 
 # App Launch Optimization (Desktop, Foundation-first)
 
+## Progress Log
+
+| Date       | Phase | Outcome                                                                                  | Commit      |
+|------------|-------|------------------------------------------------------------------------------------------|-------------|
+| 2026-06-17 | 1.1   | `AccountManagerLoadStateTransitionsTest` — 2 tests pass                                  | `ff55898ab` |
+| 2026-06-17 | 1.2   | `LocalRelayStoreHydrationTest` — 5 tests pass                                            | `ff55898ab` |
+| 2026-06-17 | 1.3   | `LocalRelayStore` gains `homeDir` ctor param (default unchanged)                         | `ff55898ab` |
+| 2026-06-17 | 5.1   | `IconResources` collapses 4 sites + 2 `ImageIO.read` calls into one lazy each; 5 tests   | `b338d7db4` |
+
+**Next on the critical path:** Phase 1.4 (App() Compose smoke test — needs DeckState / WorkspaceManager / TorManager mocks) → Phase 2 (in-process relay seam in `:quartz` testFixtures) → Phase 3 (benchmark harness) → Phase 4 (baseline) → Phase 5.2 (feed bootstrap gate fix). Phase 5.1 has already landed but its end-to-end delta will be measured once Phase 3 is in place.
+
 ## Enhancement Summary
 
 **Deepened:** 2026-06-17 — 5 review agents (code-simplicity, architecture-strategist, performance-oracle, pattern-recognition, spec-flow-analyzer) plus repo-research-analyst.
@@ -489,9 +500,9 @@ Five scenarios unit tests with mocks won't catch:
 
 ### Functional Requirements
 
-- [ ] **Phase 1.1**: 2 tests (ViewOnly happy + decode failure) pass using repo's existing pattern (`backgroundScope.launch(UnconfinedTestDispatcher(testScheduler))` + `advanceUntilIdle()`).
-- [ ] **Phase 1.2**: 5 `LocalRelayStoreHydrationTest` cases pass.
-- [ ] **Phase 1.3**: `LocalRelayStore` accepts optional `homeDir`; existing callers unchanged; `LocalRelayMaintenance` untouched.
+- [x] **Phase 1.1**: 2 tests (ViewOnly happy + decode failure) pass using repo's existing pattern (`backgroundScope.launch(UnconfinedTestDispatcher(testScheduler))` + `advanceUntilIdle()`). _Landed 2026-06-17 — `AccountManagerLoadStateTransitionsTest` (commit `ff55898ab`)._
+- [x] **Phase 1.2**: 5 `LocalRelayStoreHydrationTest` cases pass. _Landed 2026-06-17 (commit `ff55898ab`)._
+- [x] **Phase 1.3**: `LocalRelayStore` accepts optional `homeDir`; existing callers unchanged; `LocalRelayMaintenance` untouched. _Landed 2026-06-17 (commit `ff55898ab`)._
 - [ ] **Phase 1.4**: 3 `AppStateMachineTest` Compose UI tests pass via `createComposeRule()`, ≤ 5s each, with `MaterialTheme {}` wrap.
 - [ ] **Phase 2.1**: `InProcessWebsocketBuilder` in `quartz/src/testFixtures/`; round-trip test passes.
 - [ ] **Phase 2.2**: `FixtureNostrServer` correctly matches `Filter`, always emits EOSE (incl. empty match), fails fast on malformed JSONL via `FixtureParseException`, per-connection Mutex.
@@ -500,7 +511,7 @@ Five scenarios unit tests with mocks won't catch:
 - [ ] **Phase 3.1**: `LaunchMarkers` produces 4 named markers within 10s of a fixture cold boot. `NoteCardTags.ROOT` in `commons/commonMain`. NoteCard `Modifier.testTag().onPlacedHook()` added; production cost ≤ 1 SemanticsModifier allocation per card.
 - [ ] **Phase 3.2**: Cold harness (shell-script, fork per sample, N=10) and warm harness (single JVM, N=20, discard 5 warmup) both run reproducibly. Pinned JVM flags. Output headers include git SHA, JVM/OS/arch. Control benchmark (`setContent { Box {} }`) reports harness floor.
 - [ ] **Phase 4**: `desktopApp/benchmarks/baseline-main-cold.txt` and `-warm.txt` committed; plan updated with numbers. Re-run delta ≤ 15% median-to-median.
-- [ ] **Phase 5.1**: icon decoded exactly once per process (unit test); microbench delta reported; end-to-end delta reported.
+- [x] **Phase 5.1**: icon decoded exactly once per process (unit test); microbench delta reported; end-to-end delta reported. _Code + unit test landed 2026-06-17 (commit `b338d7db4`). Delta numbers pending Phase 3 benchmark harness._
 - [ ] **Phase 5.2**: bootstrap subscription fires before any relay reaches CONNECTED state OR Pool queues pre-connect (whichever investigation shows). 4 new tests: `slowRelayDoesNotStallFeed`, `noRelaysAvailableShowsErrorState`, `relayListArrivesLateStartsSubscriptionThen`, `relaysAddedMidLoadDoNotDoubleSubscribe`. Home + DM share single helper.
 
 ### Non-Functional Requirements
