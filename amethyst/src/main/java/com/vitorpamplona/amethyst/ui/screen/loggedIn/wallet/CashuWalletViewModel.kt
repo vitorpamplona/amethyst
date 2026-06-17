@@ -124,6 +124,24 @@ sealed class CashuSendTokenFlowState {
     ) : CashuSendTokenFlowState()
 }
 
+sealed class CashuRebalanceFlowState {
+    data object Idle : CashuRebalanceFlowState()
+
+    /** Funds are moving — progress in [0f, 1f] from CashuWalletState.rebalance. */
+    data class Working(
+        val progress: Float,
+    ) : CashuRebalanceFlowState()
+
+    data class Completed(
+        val movedSats: Long,
+        val targetMintUrl: String,
+    ) : CashuRebalanceFlowState()
+
+    data class Error(
+        val message: String,
+    ) : CashuRebalanceFlowState()
+}
+
 sealed class CashuRedeemFlowState {
     data object Idle : CashuRedeemFlowState()
 
@@ -175,6 +193,9 @@ class CashuWalletViewModel : ViewModel() {
 
     private val _sendTokenState = MutableStateFlow<CashuSendTokenFlowState>(CashuSendTokenFlowState.Idle)
     val sendTokenState = _sendTokenState.asStateFlow()
+
+    private val _rebalanceState = MutableStateFlow<CashuRebalanceFlowState>(CashuRebalanceFlowState.Idle)
+    val rebalanceState = _rebalanceState.asStateFlow()
 
     private val _redeemState = MutableStateFlow<CashuRedeemFlowState>(CashuRedeemFlowState.Idle)
     val redeemState = _redeemState.asStateFlow()
@@ -757,6 +778,51 @@ class CashuWalletViewModel : ViewModel() {
 
     fun resetSendTokenState() {
         _sendTokenState.value = CashuSendTokenFlowState.Idle
+    }
+
+    // -------- Move coins between mints (rebalance) --------
+
+    /**
+     * Move [sats] from [sourceMintUrl] to [targetMintUrl] with no new
+     * Lightning sats entering the wallet — the evacuation path for coins
+     * sitting at a mint the user doesn't trust. Backed by the tested
+     * [CashuWalletState.rebalance], which fetches its own melt quote and
+     * refuses to spend if the source can't cover amount + fees.
+     */
+    fun rebalanceOut(
+        sourceMintUrl: String,
+        targetMintUrl: String,
+        sats: Long,
+    ) {
+        val vm = accountViewModel ?: return
+        if (sats <= 0) {
+            _rebalanceState.value = CashuRebalanceFlowState.Error("Amount must be positive")
+            return
+        }
+        if (sourceMintUrl == targetMintUrl) {
+            _rebalanceState.value = CashuRebalanceFlowState.Error("Pick a different destination mint")
+            return
+        }
+        _rebalanceState.value = CashuRebalanceFlowState.Working(0f)
+        vm.launchSigner {
+            try {
+                val result =
+                    state.rebalance(
+                        sourceMintUrl = sourceMintUrl,
+                        targetMintUrl = targetMintUrl,
+                        sats = sats,
+                        onProgress = { p -> _rebalanceState.value = CashuRebalanceFlowState.Working(p) },
+                    )
+                _rebalanceState.value =
+                    CashuRebalanceFlowState.Completed(result.movedSats, targetMintUrl)
+            } catch (e: Exception) {
+                _rebalanceState.value = CashuRebalanceFlowState.Error(describeMintError(e))
+            }
+        }
+    }
+
+    fun resetRebalanceState() {
+        _rebalanceState.value = CashuRebalanceFlowState.Idle
     }
 
     // -------- Redeem inbound cashuB / cashuA --------

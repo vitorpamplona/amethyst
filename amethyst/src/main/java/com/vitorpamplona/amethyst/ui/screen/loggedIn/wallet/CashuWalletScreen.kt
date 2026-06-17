@@ -43,6 +43,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -140,6 +141,11 @@ fun CashuWalletScreen(
     var sendLnOpen by remember { mutableStateOf(false) }
     var sendTokenOpen by remember { mutableStateOf(false) }
     var redeemOpen by remember { mutableStateOf(false) }
+    // The unconfigured mint the user chose to move coins off of, plus the
+    // source mint to pre-select when the Send dialogs are opened from that
+    // flow (null = the dialog picks its own default).
+    var evacuateMint by remember { mutableStateOf<String?>(null) }
+    var sendInitialMint by remember { mutableStateOf<String?>(null) }
 
     // pendingQuotes drives a non-modal banner in the wallet body (see
     // PendingQuoteBanner below). Tapping the banner is what opens the
@@ -187,6 +193,7 @@ fun CashuWalletScreen(
                     onSendToken = { sendTokenOpen = true },
                     onRedeem = { redeemOpen = true },
                     onTopUpMint = { nav.nav(Route.TopUpMint(it)) },
+                    onMoveCoins = { evacuateMint = it },
                     onResumePendingQuote = {
                         pendingQuotes.firstOrNull()?.let {
                             viewModel.resumeMintQuote(it)
@@ -224,9 +231,13 @@ fun CashuWalletScreen(
     if (sendLnOpen) {
         SendLnDialog(
             viewModel = viewModel,
-            mints = mints,
+            // displayMints (not just configured) so an unconfigured mint the
+            // user is evacuating is a valid source.
+            mints = displayMints,
+            initialMint = sendInitialMint,
             onDismiss = {
                 sendLnOpen = false
+                sendInitialMint = null
                 viewModel.resetMeltState()
             },
         )
@@ -234,9 +245,11 @@ fun CashuWalletScreen(
     if (sendTokenOpen) {
         SendTokenDialog(
             viewModel = viewModel,
-            mints = mints,
+            mints = displayMints,
+            initialMint = sendInitialMint,
             onDismiss = {
                 sendTokenOpen = false
+                sendInitialMint = null
                 viewModel.resetSendTokenState()
             },
         )
@@ -247,6 +260,31 @@ fun CashuWalletScreen(
             onDismiss = {
                 redeemOpen = false
                 viewModel.resetRedeemState()
+            },
+        )
+    }
+
+    evacuateMint?.let { source ->
+        EvacuateMintDialog(
+            viewModel = viewModel,
+            sourceMint = source,
+            sourceBalance = mintBalances[source] ?: 0L,
+            // Trusted destinations for a rebalance: configured mints other
+            // than the one we're emptying.
+            trustedTargets = mints.filter { it != source },
+            onWithdrawLightning = {
+                sendInitialMint = source
+                evacuateMint = null
+                sendLnOpen = true
+            },
+            onExportToken = {
+                sendInitialMint = source
+                evacuateMint = null
+                sendTokenOpen = true
+            },
+            onDismiss = {
+                evacuateMint = null
+                viewModel.resetRebalanceState()
             },
         )
     }
@@ -326,6 +364,7 @@ private fun CashuWalletContent(
     onSendToken: () -> Unit,
     onRedeem: () -> Unit,
     onTopUpMint: (String) -> Unit,
+    onMoveCoins: (String) -> Unit,
     onResumePendingQuote: () -> Unit,
 ) {
     LazyColumn(
@@ -345,7 +384,12 @@ private fun CashuWalletContent(
         }
 
         if (unconfiguredMints.isNotEmpty()) {
-            item { UntrustedMintBanner(count = unconfiguredMints.size) }
+            item {
+                UntrustedMintBanner(
+                    count = unconfiguredMints.size,
+                    onClick = { unconfiguredMints.firstOrNull()?.let(onMoveCoins) },
+                )
+            }
         }
 
         item {
@@ -366,11 +410,13 @@ private fun CashuWalletContent(
             )
         }
         items(mints, key = { it }) { mint ->
+            val isUntrusted = mint in unconfiguredMints
             MintRow(
                 mint = mint,
                 balanceSats = mintBalances[mint] ?: 0L,
-                untrusted = mint in unconfiguredMints,
+                untrusted = isUntrusted,
                 onTopUp = { onTopUpMint(mint) },
+                onMoveCoins = if (isUntrusted) ({ onMoveCoins(mint) }) else null,
             )
         }
 
@@ -455,14 +501,20 @@ private fun PendingQuoteBanner(
 /**
  * Surfaced above the mint list when we hold a balance at one or more mints
  * the user never configured — almost always coins auto-redeemed from a
- * NIP-61 nutzap sent on a mint outside our kind:10019. Informational for
- * now (it explains the situation and recommends moving the funds); the
- * per-mint "move coins off this mint" action lands in a follow-up.
+ * NIP-61 nutzap sent on a mint outside our kind:10019. Tapping it opens
+ * [EvacuateMintDialog] for the first such mint so the user can move the
+ * funds somewhere they trust.
  */
 @Composable
-private fun UntrustedMintBanner(count: Int) {
+private fun UntrustedMintBanner(
+    count: Int,
+    onClick: () -> Unit,
+) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
     ) {
@@ -495,8 +547,147 @@ private fun UntrustedMintBanner(count: Int) {
                     color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f),
                 )
             }
+            Text(
+                text = stringRes(R.string.cashu_untrusted_mint_move),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
         }
     }
+}
+
+/**
+ * Helps the user get coins OFF a mint they never configured (almost always
+ * a nutzap redeemed on an untrusted mint), offering the three exits whose
+ * backends already exist:
+ *   - rebalance to a mint the user trusts (no new Lightning sats),
+ *   - withdraw via Lightning (hands off to the Send-LN dialog),
+ *   - export as a Cashu token (hands off to the Send-token dialog).
+ * Only the rebalance runs inline; the Lightning / token paths reuse the
+ * existing, tested Send dialogs pre-pointed at this mint.
+ */
+@Composable
+private fun EvacuateMintDialog(
+    viewModel: CashuWalletViewModel,
+    sourceMint: String,
+    sourceBalance: Long,
+    trustedTargets: List<String>,
+    onWithdrawLightning: () -> Unit,
+    onExportToken: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val state by viewModel.rebalanceState.collectAsState()
+    var target by remember { mutableStateOf(trustedTargets.firstOrNull() ?: "") }
+    // Defaults to the whole balance, but rebalance deducts a Lightning fee
+    // from the source, so the user may have to shave a little off — the fee
+    // is only known once the mint returns a melt quote.
+    var amount by remember { mutableStateOf(sourceBalance.toString()) }
+    val busy = state is CashuRebalanceFlowState.Working
+    val done = state is CashuRebalanceFlowState.Completed
+
+    AlertDialog(
+        onDismissRequest = { if (!busy) onDismiss() },
+        title = { Text(stringRes(R.string.cashu_move_coins_title)) },
+        text = {
+            Column {
+                Text(
+                    text = stringRes(R.string.cashu_move_coins_body, sourceMint, sourceBalance.toString()),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                when (val s = state) {
+                    is CashuRebalanceFlowState.Working -> {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringRes(R.string.cashu_move_coins_working))
+                        }
+                    }
+
+                    is CashuRebalanceFlowState.Completed -> {
+                        Text(
+                            text =
+                                stringRes(
+                                    R.string.cashu_move_coins_done,
+                                    s.movedSats.toString(),
+                                    s.targetMintUrl,
+                                ),
+                            color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+
+                    is CashuRebalanceFlowState.Error -> {
+                        Text(
+                            text = s.message,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+
+                    CashuRebalanceFlowState.Idle -> {}
+                }
+
+                if (!busy && !done) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    if (trustedTargets.isNotEmpty()) {
+                        Text(
+                            text = stringRes(R.string.cashu_move_coins_to_mint),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        OutlinedTextField(
+                            value = amount,
+                            onValueChange = { v -> amount = v.filter { it.isDigit() } },
+                            label = { Text(stringRes(R.string.cashu_amount_sats)) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Text(
+                            text = stringRes(R.string.cashu_move_coins_fee_hint),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        MintPicker(trustedTargets, target, { target = it })
+                        TextButton(
+                            onClick = {
+                                amount.toLongOrNull()?.let { viewModel.rebalanceOut(sourceMint, target, it) }
+                            },
+                            enabled = target.isNotBlank() && (amount.toLongOrNull() ?: 0L) > 0L,
+                        ) { Text(stringRes(R.string.cashu_move_coins_move)) }
+                    } else {
+                        Text(
+                            text = stringRes(R.string.cashu_move_coins_no_trusted),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    TextButton(onClick = onWithdrawLightning) {
+                        Text(stringRes(R.string.cashu_move_coins_withdraw_ln))
+                    }
+                    TextButton(onClick = onExportToken) {
+                        Text(stringRes(R.string.cashu_move_coins_export_token))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            if (done) {
+                TextButton(onClick = onDismiss) { Text(stringRes(R.string.cashu_done)) }
+            }
+        },
+        dismissButton = {
+            if (!busy && !done) {
+                TextButton(onClick = onDismiss) { Text(stringRes(R.string.cancel)) }
+            }
+        },
+    )
 }
 
 @Composable
@@ -607,6 +798,7 @@ private fun MintRow(
     balanceSats: Long,
     untrusted: Boolean,
     onTopUp: () -> Unit,
+    onMoveCoins: (() -> Unit)?,
 ) {
     val formattedBalance =
         remember(balanceSats) {
@@ -651,13 +843,25 @@ private fun MintRow(
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.primary,
             )
-            IconButton(onClick = onTopUp) {
-                Icon(
-                    symbol = MaterialSymbols.AddCircle,
-                    contentDescription = stringRes(R.string.topup_mint_action),
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
+            if (onMoveCoins != null) {
+                // Untrusted mint: lead with "move coins out", not "top up".
+                IconButton(onClick = onMoveCoins) {
+                    Icon(
+                        symbol = MaterialSymbols.AutoMirrored.Send,
+                        contentDescription = stringRes(R.string.cashu_untrusted_mint_move),
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                }
+            } else {
+                IconButton(onClick = onTopUp) {
+                    Icon(
+                        symbol = MaterialSymbols.AddCircle,
+                        contentDescription = stringRes(R.string.topup_mint_action),
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
         }
     }
@@ -1049,11 +1253,12 @@ private fun MintPicker(
 private fun SendLnDialog(
     viewModel: CashuWalletViewModel,
     mints: List<String>,
+    initialMint: String?,
     onDismiss: () -> Unit,
 ) {
     val state by viewModel.meltState.collectAsState()
     var invoice by remember { mutableStateOf("") }
-    var pickedMint by remember { mutableStateOf(mints.firstOrNull() ?: "") }
+    var pickedMint by remember { mutableStateOf(initialMint ?: mints.firstOrNull() ?: "") }
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
@@ -1186,12 +1391,13 @@ private fun InvoiceForm(
 private fun SendTokenDialog(
     viewModel: CashuWalletViewModel,
     mints: List<String>,
+    initialMint: String?,
     onDismiss: () -> Unit,
 ) {
     val state by viewModel.sendTokenState.collectAsState()
     var amount by remember { mutableStateOf("") }
     var memo by remember { mutableStateOf("") }
-    var pickedMint by remember { mutableStateOf(mints.firstOrNull() ?: "") }
+    var pickedMint by remember { mutableStateOf(initialMint ?: mints.firstOrNull() ?: "") }
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
