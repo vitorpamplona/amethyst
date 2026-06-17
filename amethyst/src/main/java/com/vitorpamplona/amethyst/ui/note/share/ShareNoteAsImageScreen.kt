@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note.share
 
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -547,6 +548,9 @@ private fun startShareImageFileIntent(
             action = Intent.ACTION_SEND
             type = PNG_MIME
             putExtra(Intent.EXTRA_STREAM, uri)
+            // Attaching the URI as ClipData (not just EXTRA_STREAM) lets the system share sheet
+            // itself read the file so it can render the image thumbnail preview at the top.
+            clipData = ClipData.newUri(context.contentResolver, "Image", uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
     val shareIntent = Intent.createChooser(sendIntent, stringRes(context, R.string.share_as_image))
