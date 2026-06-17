@@ -9,3 +9,16 @@ files:
     translation: amethyst/src/main/res/values-%android_code%/%original_file_name%
     type: android
     skip_untranslated_strings: true
+    # Land Kenyan Swahili (sw-KE) at the base qualifier so every Swahili speaker
+    # (incl. regions we don't target individually) gets full coverage instead of
+    # falling through to English.
+    # REQUIRED Crowdin UI changes (target languages live under Project Settings ->
+    # Languages), otherwise the next sync undoes this:
+    #   - keep "Swahili, Kenya" (sw-KE) checked  -> mapped here to values-sw
+    #   - UNCHECK base "Swahili" (sw): it is an empty target, and leaving it on
+    #     makes both sw and the mapped sw-KE write values-sw (collision).
+    #   - UNCHECK "Swahili, Tanzania" (sw-TZ): empty, else it recreates an empty
+    #     values-sw-rTZ.
+    languages_mapping:
+      android_code:
+        sw-KE: sw
