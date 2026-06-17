@@ -141,7 +141,7 @@ when unset. To fan the release event out to more relays for discoverability,
 set `RELAY_URLS` for the run:
 
 ```bash
-RELAY_URLS="wss://relay.zapstore.dev,wss://relay.damus.io,wss://nos.lol,wss://relay.nostr.band" \
+RELAY_URLS="wss://relay.zapstore.dev,wss://relay.damus.io,wss://nos.lol,wss://vitor.nostr1.com" \
   SIGN_WITH=<amethyst-nsec> zsp publish
 ```
 
