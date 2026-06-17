@@ -57,6 +57,9 @@ class HealthConnectManager(
     companion object {
         private const val TAG = "HealthConnectManager"
 
+        /** How far back the New Workout carousel looks for workouts to offer. */
+        const val LOOKBACK_DAYS = 7L
+
         /** Read permissions needed to map a workout. */
         val PERMISSIONS =
             setOf(

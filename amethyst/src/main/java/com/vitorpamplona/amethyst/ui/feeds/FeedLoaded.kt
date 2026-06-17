@@ -47,7 +47,6 @@ fun FeedLoaded(
     routeForLastRead: String?,
     accountViewModel: AccountViewModel,
     nav: INav,
-    header: (@Composable () -> Unit)? = null,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
 
@@ -55,12 +54,6 @@ fun FeedLoaded(
         contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
-        if (header != null) {
-            item(key = "feed-header", contentType = "feed-header") {
-                header()
-            }
-        }
-
         itemsIndexed(
             items.list,
             key = { _, item -> item.idHex },
