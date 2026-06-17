@@ -126,7 +126,7 @@ private fun NewWorkoutBody(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         // Tap a recent Health Connect workout to pre-load the form.
         DetectedWorkoutCarousel(
