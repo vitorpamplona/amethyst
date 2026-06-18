@@ -18,6 +18,10 @@
         <item quantity="one">%1$d asset bundled</item>
         <item quantity="other">%1$d assets bundled</item>
     </plurals>
+    <plurals name="thread_collapsed_reply_count">
+        <item quantity="one">+%1$d reply</item>
+        <item quantity="other">+%1$d replies</item>
+    </plurals>
     <string name="post_not_found">Event is loading or can\'t be found in your relay list</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Channel Image</string>

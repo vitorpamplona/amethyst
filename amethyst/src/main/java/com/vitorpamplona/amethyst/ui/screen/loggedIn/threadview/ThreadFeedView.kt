@@ -60,6 +60,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -367,33 +368,42 @@ fun RenderThreadFeed(
     val items by loaded.feed.collectAsStateWithLifecycle()
     val levels by viewModel.levelCacheFlow.collectAsStateWithLifecycle()
 
-    // Hides every descendant of a collapsed reply. The feed is ordered depth-first, so a note's
-    // descendants are the contiguous items that follow it with a strictly deeper reply level.
-    val visibleItems by
+    // Hides every descendant of a collapsed reply and counts how many were hidden. The feed is
+    // ordered depth-first, so a note's descendants are the contiguous items that follow it with a
+    // strictly deeper reply level.
+    val visible by
         remember(items, levels) {
             derivedStateOf {
                 val full = items.list
                 if (viewModel.collapsedReplies.isEmpty()) {
-                    full
+                    VisibleThread(full, emptyMap())
                 } else {
                     val result = ArrayList<Note>(full.size)
+                    val hiddenCounts = HashMap<String, Int>()
                     var hideDeeperThan = Int.MAX_VALUE
+                    var collapsedAncestorId: String? = null
                     full.forEach { note ->
                         val level = levels[note] ?: 0
-                        if (level > hideDeeperThan) return@forEach
+                        if (level > hideDeeperThan) {
+                            collapsedAncestorId?.let { hiddenCounts[it] = (hiddenCounts[it] ?: 0) + 1 }
+                            return@forEach
+                        }
 
                         hideDeeperThan = Int.MAX_VALUE
+                        collapsedAncestorId = null
                         result.add(note)
 
                         if (viewModel.isCollapsed(note.idHex)) {
                             hideDeeperThan = level
+                            collapsedAncestorId = note.idHex
                         }
                     }
-                    result
+                    VisibleThread(result, hiddenCounts)
                 }
             }
         }
 
+    val visibleItems = visible.items
     val position = visibleItems.indexOfFirst { it.idHex == noteId }
 
     LaunchedEffect(noteId, position) {
@@ -467,6 +477,7 @@ fun RenderThreadFeed(
                 CollapsedNoteCompose(
                     baseNote = item,
                     modifier = modifier,
+                    hiddenReplyCount = visible.hiddenCounts[item.idHex] ?: 0,
                     onExpand = { viewModel.toggleCollapsed(item.idHex) },
                     accountViewModel = accountViewModel,
                     nav = nav,
@@ -501,14 +512,25 @@ fun RenderThreadFeed(
 }
 
 /**
+ * Holds the thread items currently visible after collapsing, plus, for each collapsed reply id,
+ * the number of descendant replies that were hidden underneath it.
+ */
+private class VisibleThread(
+    val items: List<Note>,
+    val hiddenCounts: Map<String, Int>,
+)
+
+/**
  * Compact rendering of a thread reply the user has collapsed: avatar, author name, and the
- * first two lines of its content, with an ExpandMore indicator to reopen it.
- * Tapping anywhere on the row expands the note (and reveals its hidden children) again.
+ * first two lines of its content. The right side shows how many replies are hidden underneath it
+ * and an ExpandMore indicator. Tapping anywhere on the row expands the note (and reveals its
+ * hidden children) again.
  */
 @Composable
 private fun CollapsedNoteCompose(
     baseNote: Note,
     modifier: Modifier,
+    hiddenReplyCount: Int,
     onExpand: () -> Unit,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -541,6 +563,16 @@ private fun CollapsedNoteCompose(
             }
 
             Spacer(modifier = StdHorzSpacer)
+
+            if (hiddenReplyCount > 0) {
+                Text(
+                    text = pluralStringResource(R.plurals.thread_collapsed_reply_count, hiddenReplyCount, hiddenReplyCount),
+                    color = MaterialTheme.colorScheme.placeholderText,
+                    maxLines = 1,
+                    style = MaterialTheme.typography.labelMedium,
+                )
+                Spacer(modifier = StdHorzSpacer)
+            }
 
             ExpandMoreIcon(modifier = Modifier.size(Size20dp), contentDescriptor = R.string.expand)
         }
