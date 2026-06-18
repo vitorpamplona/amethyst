@@ -18,46 +18,26 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe
+package com.vitorpamplona.quartz.experimental.roadstr.tags
 
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
+import kotlin.math.abs
+import kotlin.math.round
 
-fun compute50kmLine(geoHash: GeoHash): List<String> {
-    val hashes = mutableListOf<String>()
+/**
+ * Formatting for the `lat`/`lon` tag values of Roadstr events. The spec requires
+ * a decimal string with exactly 7 fractional digits (e.g. `48.8566140`), which is
+ * locale-independent here (unlike `String.format`, which is unavailable in
+ * `commonMain` anyway).
+ */
+object RoadCoordinate {
+    private const val SCALE = 10_000_000L // 7 decimal places
 
-    hashes.add(geoHash.toString())
-
-    var currentGeoHash = geoHash
-    repeat(5) {
-        currentGeoHash = currentGeoHash.westernNeighbour
-        hashes.add(currentGeoHash.toString())
+    fun format(value: Double): String {
+        val scaled = round(value * SCALE).toLong()
+        val negative = scaled < 0L
+        val absValue = abs(scaled)
+        val intPart = absValue / SCALE
+        val fracPart = (absValue % SCALE).toString().padStart(7, '0')
+        return (if (negative) "-" else "") + intPart + "." + fracPart
     }
-
-    currentGeoHash = geoHash
-    repeat(5) {
-        currentGeoHash = currentGeoHash.easternNeighbour
-        hashes.add(currentGeoHash.toString())
-    }
-
-    return hashes
-}
-
-fun compute50kmRange(geoHash: GeoHash): List<String> {
-    val hashes = mutableListOf<String>()
-
-    hashes.addAll(compute50kmLine(geoHash))
-
-    var currentGeoHash = geoHash
-    repeat(5) {
-        currentGeoHash = currentGeoHash.northernNeighbour
-        hashes.addAll(compute50kmLine(currentGeoHash))
-    }
-
-    currentGeoHash = geoHash
-    repeat(5) {
-        currentGeoHash = currentGeoHash.southernNeighbour
-        hashes.addAll(compute50kmLine(currentGeoHash))
-    }
-
-    return hashes
 }

@@ -18,46 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe
+package com.vitorpamplona.quartz.experimental.roadstr.tags
 
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
 
-fun compute50kmLine(geoHash: GeoHash): List<String> {
-    val hashes = mutableListOf<String>()
+/** The `lat` tag of a Roadstr event: latitude as a decimal string with 7 fractional digits. */
+class LatitudeTag {
+    companion object {
+        const val TAG_NAME = "lat"
 
-    hashes.add(geoHash.toString())
+        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
 
-    var currentGeoHash = geoHash
-    repeat(5) {
-        currentGeoHash = currentGeoHash.westernNeighbour
-        hashes.add(currentGeoHash.toString())
+        fun parse(tag: Array<String>): Double? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            return tag[1].toDoubleOrNull()
+        }
+
+        fun assemble(latitude: Double) = arrayOf(TAG_NAME, RoadCoordinate.format(latitude))
     }
-
-    currentGeoHash = geoHash
-    repeat(5) {
-        currentGeoHash = currentGeoHash.easternNeighbour
-        hashes.add(currentGeoHash.toString())
-    }
-
-    return hashes
-}
-
-fun compute50kmRange(geoHash: GeoHash): List<String> {
-    val hashes = mutableListOf<String>()
-
-    hashes.addAll(compute50kmLine(geoHash))
-
-    var currentGeoHash = geoHash
-    repeat(5) {
-        currentGeoHash = currentGeoHash.northernNeighbour
-        hashes.addAll(compute50kmLine(currentGeoHash))
-    }
-
-    currentGeoHash = geoHash
-    repeat(5) {
-        currentGeoHash = currentGeoHash.southernNeighbour
-        hashes.addAll(compute50kmLine(currentGeoHash))
-    }
-
-    return hashes
 }
