@@ -313,13 +313,20 @@ class TorManager(
      * the per-relay success/failure outcome and the Tor-routing of each url) detects the
      * all-failing condition and pokes us here — analogous to [onNetworkChange].
      *
-     * Recovery mirrors the post-Active stuck-Connecting path: drop the client and wipe
-     * `arti/state/` (we *did* bootstrap, so a fully-dead exit set behind a healthy-looking
-     * guards.json points at a bad persisted guard/circuit sample worth rebuilding), then bump
-     * [resetEpoch] so the status combine re-enters the INTERNAL branch and runs a full
-     * re-init. Shares [lastSelfHealAtMs]/[SELF_HEAL_COOLDOWN_MS] with the Connecting watchdog
-     * so the two can't thrash — at most one self-heal per cooldown window. If circuits are
-     * still dead after the reset, the cooldown suppresses further resets and the 60s
+     * The failure is exit-side, not entry-side: the dead circuits' *exits* can't reach the
+     * relays (`ExitTimeout` / `RESOLVEFAILED`), while the guards (entry) and the cached
+     * consensus are fine. So recovery is a **warm** [TorBackend.reset]: drop the in-process
+     * client so the next start rebuilds the circuit pool from scratch — a fresh exit draw —
+     * but keep `arti/state/` (the guards were never the problem) and the consensus cache, so
+     * the re-bootstrap is a ~5s warm restart, not a ~60s cold consensus re-download. We
+     * deliberately do NOT [TorBackend.resetWithCleanState] here: exits aren't persisted, so
+     * wiping guards + cache can't improve exit selection, and the 60s cold bootstrap it forces
+     * is exactly the blackout that strands users on the [connectionFailure] dialog. Then bump
+     * [resetEpoch] so the status combine re-enters the INTERNAL branch and re-inits.
+     *
+     * Shares [lastSelfHealAtMs]/[SELF_HEAL_COOLDOWN_MS] with the Connecting watchdog so the
+     * two can't thrash — at most one self-heal per cooldown window. If the fresh circuits are
+     * still dead after the rotation, the cooldown suppresses further resets and the 60s
      * [connectionFailure] dialog still offers the user the bypass.
      */
     fun onTorCircuitsDead() {
@@ -328,9 +335,9 @@ class TorManager(
         val now = nowMs()
         if (now - lastSelfHealAtMs < SELF_HEAL_COOLDOWN_MS) return
         lastSelfHealAtMs = now
-        Log.w("TorManager") { "Tor Active but all circuits failing — self-healing (drop client + wipe state)" }
+        Log.w("TorManager") { "Tor Active but all circuits failing — self-healing (drop client to rotate exits, keep state)" }
         scope.launch(ioDispatcher) {
-            service.resetWithCleanState()
+            service.reset()
             resetEpoch.update { it + 1 }
         }
     }
