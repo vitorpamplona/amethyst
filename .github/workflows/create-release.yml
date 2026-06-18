@@ -321,6 +321,23 @@ jobs:
           source scripts/asset-name.sh
           collect_cli_assets "${{ matrix.family }}" "${{ matrix.arch }}" "${{ steps.ver.outputs.version }}" dist
 
+      # Homebrew-core ships a no-JRE jar bundle and depends_on "openjdk" — it
+      # cannot use the jlink tarball above (bundled runtime) nor build from
+      # source (its sandbox blocks Gradle's Maven downloads). installDist
+      # (bin/amy + lib/*.jar, no runtime/) is exactly that bundle. It is pure
+      # JVM bytecode, so one platform-independent asset serves every OS; we cut
+      # it on the linux leg only. amyImage depends on installDist, so the
+      # cli/build/install/amy tree already exists here.
+      - name: Package no-JRE jvm bundle for Homebrew (linux leg only)
+        if: matrix.family == 'linux'
+        run: |
+          set -euo pipefail
+          VER="${{ steps.ver.outputs.version }}"
+          SRC="cli/build/install/amy"
+          test -x "$SRC/bin/amy"
+          ( cd "$SRC" && tar czf "$OLDPWD/dist/amy-${VER}-jvm.tar.gz" bin lib )
+          echo "Collected: dist/amy-${VER}-jvm.tar.gz"
+
       - name: Enforce CLI size budget (200 MB per asset)
         run: |
           set -euo pipefail

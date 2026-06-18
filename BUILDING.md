@@ -360,6 +360,51 @@ The cask filename is `amethyst-nostr` (not `amethyst` — that's taken by a
 tiling window manager). After the first PR is merged, `bump-homebrew.yml`
 auto-submits new version bumps on each stable release.
 
+> **The desktop app is already on mainline Homebrew.** `homebrew/cask` *is* the
+> mainline cask repo — GUI apps live in homebrew-**cask**, CLIs in
+> homebrew-**core**; both are "mainline." A private tap is only the *fallback*
+> if Homebrew ever rejects the (now signed + notarized) cask.
+
+### Homebrew-core formula for the `amy` CLI (one-time initial PR)
+
+The CLI goes to **homebrew-core** (mainline formulae), not homebrew-cask —
+casks are for GUI apps. homebrew-core builds in a **network-sandboxed**
+environment, so a from-source Gradle build can't resolve its Maven
+dependencies there. Instead the formula downloads the pre-built **no-JRE jar
+bundle** `amy-<version>-jvm.tar.gz` (published by `create-release.yml`) and
+`depends_on "openjdk"`. The reference formula lives at
+[`packaging/homebrew/amy.rb`](packaging/homebrew/amy.rb).
+
+To submit:
+
+```bash
+# 1. Grab the published asset's sha256
+curl -fsSL -o amy-jvm.tar.gz \
+  https://github.com/vitorpamplona/amethyst/releases/download/v1.12.1/amy-1.12.1-jvm.tar.gz
+shasum -a 256 amy-jvm.tar.gz
+
+# 2. Fill the url + sha256 into packaging/homebrew/amy.rb, then open the PR
+brew create --set-name amy --tap homebrew/core \
+  https://github.com/vitorpamplona/amethyst/releases/download/v1.12.1/amy-1.12.1-jvm.tar.gz
+#    (paste the reference formula body, run `brew audit --new amy`,
+#     `brew install --build-from-source amy`, `brew test amy`, then PR it.)
+```
+
+Caveats that the maintainer must weigh before submitting:
+
+- **Name collision.** `amy` may already exist in homebrew-core — check with
+  `brew search amy` first. If taken, fall back to `amethyst-cli`.
+- **Pre-built-jar scrutiny.** homebrew-core prefers source builds; downloading
+  a jar bundle is an accepted-but-reviewed pattern for JVM tools. Be ready to
+  justify it (sandboxed Gradle can't fetch Maven deps).
+- **Bundle size.** The bundle is ~70 MB today because `:commons` leaks
+  Compose/Skiko jars onto the CLI classpath. Trimming that (a `:commons`
+  core/ui split) would shrink it and smooth review — tracked as a follow-up.
+
+After the formula merges, the `livecheck` block lets homebrew-core's BrewTestBot
+auto-open version-bump PRs on each stable release — no token or workflow on our
+side (unlike the cask/winget bumps).
+
 ### Winget (one-time initial submission)
 
 ```bash
