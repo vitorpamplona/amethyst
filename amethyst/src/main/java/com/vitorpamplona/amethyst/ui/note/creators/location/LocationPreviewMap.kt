@@ -21,14 +21,13 @@
 package com.vitorpamplona.amethyst.ui.note.creators.location
 
 import android.view.MotionEvent
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -107,7 +106,7 @@ fun LocationPreviewMap(
     }
 
     AndroidView(
-        modifier = modifier.fillMaxWidth().height(180.dp),
+        modifier = modifier.fillMaxWidth().aspectRatio(1f),
         factory = { mapView },
         update = { map ->
             val point = GeoPoint(latitude, longitude)
