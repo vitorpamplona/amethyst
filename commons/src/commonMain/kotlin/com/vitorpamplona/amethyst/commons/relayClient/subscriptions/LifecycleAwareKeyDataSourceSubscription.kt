@@ -23,16 +23,17 @@ package com.vitorpamplona.amethyst.commons.relayClient.subscriptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableQueryState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 private const val UNSUBSCRIBE_GRACE_MILLIS = 30_000L
@@ -49,16 +50,14 @@ private const val UNSUBSCRIBE_GRACE_MILLIS = 30_000L
  * rebuilding the relay REQ — which would otherwise lose EOSE state and
  * trigger a refetch on return.
  *
- * The grace timer runs on a dedicated [Dispatchers.Default] scope driven by
- * [Lifecycle.currentStateFlow] rather than on the composition's frame-clock
- * coupled scope (`rememberCoroutineScope`). On a backgrounded app the UI
- * frame clock stops ticking, so a timer scheduled there could be starved and
- * the unsubscribe — and therefore the relay disconnect it triggers — might
- * never run. This is most visible on the relay feed, whose dedicated one-off
- * relay is kept connected by nothing else and would leak forever. Using a
- * plain coroutine dispatcher keeps the timer firing while backgrounded;
- * [collectLatest] cancels the pending delay automatically the moment the
- * lifecycle returns to STARTED.
+ * Lifecycle transitions are observed with a main-thread [LifecycleEventObserver],
+ * which fires synchronously during `onStop`/`onStart`. Detecting the transition
+ * via a background-dispatched flow instead delivered `ON_STOP` up to ~60s late on
+ * a backgrounded device (the collector only resumed on the next relay keep-alive
+ * tick), leaving feeds connected long after the app was paused. Only the grace
+ * *delay* runs on a [Dispatchers.Default] scope, so it isn't gated by the UI
+ * frame clock (which stops ticking while backgrounded); returning to STARTED
+ * cancels the pending unsubscribe before it fires.
  *
  * Use this for heavy feed subscriptions (home, video, discovery, chatroom list)
  * that should NOT run when the app is truly in the background. When an
@@ -113,31 +112,41 @@ private fun LifecycleAwareSubscription(
     val lifecycle = LocalLifecycleOwner.current.lifecycle
 
     DisposableEffect(key, lifecycle) {
-        // Background scope so the grace timer is not gated by the UI frame clock,
-        // which stops ticking while the app is backgrounded.
+        // Only the grace delay runs on a background scope so it isn't gated by the UI
+        // frame clock, which stops ticking while the app is backgrounded.
         val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
-        scope.launch {
-            // `subscribed` is confined to this single collector coroutine, so no
-            // cross-thread synchronization is needed for it.
-            var subscribed = false
-            lifecycle.currentStateFlow.collectLatest { current ->
-                if (current.isAtLeast(Lifecycle.State.STARTED)) {
-                    if (!subscribed) {
+        // graceJob is only ever read/written from the main thread (observer callbacks),
+        // so no synchronization is needed. subscribe()/unsubscribe() are idempotent
+        // (reference-counted map ops), so re-issuing subscribe() on each ON_START is safe.
+        var graceJob: Job? = null
+
+        val observer =
+            LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_START -> {
+                        graceJob?.cancel()
+                        graceJob = null
                         subscribe()
-                        subscribed = true
                     }
-                } else if (subscribed) {
-                    // Stopped: keep the REQ alive for a short grace period.
-                    // collectLatest cancels this delay if we return to STARTED first.
-                    delay(UNSUBSCRIBE_GRACE_MILLIS)
-                    unsubscribe()
-                    subscribed = false
+
+                    Lifecycle.Event.ON_STOP -> {
+                        graceJob?.cancel()
+                        graceJob =
+                            scope.launch {
+                                if (UNSUBSCRIBE_GRACE_MILLIS > 0) delay(UNSUBSCRIBE_GRACE_MILLIS)
+                                unsubscribe()
+                            }
+                    }
+
+                    else -> {}
                 }
             }
-        }
+
+        lifecycle.addObserver(observer)
 
         onDispose {
+            lifecycle.removeObserver(observer)
             scope.cancel()
             // Idempotent: removing an absent key is a cheap no-op. Guarantees the
             // subscription is released even if the grace timer was still pending.

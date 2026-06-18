@@ -1341,7 +1341,9 @@
     <string name="call_settings_turn_credential">Pověření</string>
     <string name="always_on_notif_channel_description">Udržuje připojení k vašim inbox relayím aktivní pro oznámení v reálném čase</string>
     <string name="always_on_notif_title">Amethyst oznámení aktivní</string>
-    <string name="always_on_notif_connected">Připojeno k %1$d inbox relayím</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="other">Připojeno k %1$d inbox relayím</item>
+    </plurals>
     <string name="always_on_notif_connecting">Připojování k inbox relayím\u2026</string>
     <string name="always_on_notif_setting_title">Služba trvalých oznámení</string>
     <string name="always_on_notif_setting_description">Udržuje trvalé připojení k vašim inbox relayím pro okamžité doručování oznámení. Zobrazuje průběžné oznámení. Spotřebovává více baterie, ale zajišťuje, že nezmeškáte žádnou zprávu.</string>

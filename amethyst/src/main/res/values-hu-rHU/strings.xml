@@ -1327,7 +1327,9 @@
     <string name="call_settings_turn_credential">Hitelesítési adatok</string>
     <string name="always_on_notif_channel_description">Aktív kapcsolatot tart fenn a beérkező üzenetek átjátszóival a valós idejű értesítések érdekében</string>
     <string name="always_on_notif_title">Amethyst értesítések aktíválva</string>
-    <string name="always_on_notif_connected">Kapcsolódva %1$d beérkező üzenetátjátszóhoz</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="other">Kapcsolódva %1$d beérkező üzenetátjátszóhoz</item>
+    </plurals>
     <string name="always_on_notif_connecting">Kapcsolódás a beérkező üzenetátjátszókhoz\u2026</string>
     <string name="always_on_notif_setting_title">Folyamatos értesítési szolgáltatás</string>
     <string name="always_on_notif_setting_description">Folyamatos kapcsolatot tart fenn a beérkező üzenetek átjátszóival az értesítések azonnali kézbesítése érdekében. Megjeleníti a folyamatban lévő értesítéseket. Több akkumulátort fogyaszt, de így biztosan nem marad le egyetlen üzenetről sem.</string>

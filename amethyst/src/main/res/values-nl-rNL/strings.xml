@@ -1278,7 +1278,9 @@
     <string name="call_settings_turn_credential">Credential</string>
     <string name="always_on_notif_channel_description">Houdt verbindingen met je inbox-relays actief voor realtime meldingen</string>
     <string name="always_on_notif_title">Amethyst-meldingen actief</string>
-    <string name="always_on_notif_connected">Verbonden met %1$d inbox-relays</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="other">Verbonden met %1$d inbox-relays</item>
+    </plurals>
     <string name="always_on_notif_connecting">Verbinden met inbox-relays…</string>
     <string name="always_on_notif_setting_title">Altijd-aan meldingsdienst</string>
     <string name="always_on_notif_setting_description">Houdt een persistente verbinding met je inbox-relays voor directe melding. Toont een permanente notificatie. Gebruikt meer batterij maar zorgt dat je nooit een bericht mist.</string>

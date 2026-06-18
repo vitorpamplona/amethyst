@@ -1359,7 +1359,9 @@ Za podpisovanje se je potrebno prijaviti s privatnim ključem</string>
     <string name="call_settings_turn_credential">Akreditivi</string>
     <string name="always_on_notif_channel_description">Ohranja aktivne povezave z vašimi releji za obvestila v realnem času</string>
     <string name="always_on_notif_title">Amethyst obvestila so aktivna</string>
-    <string name="always_on_notif_connected">Povezan z %1$d vhodnimi releji</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="other">Povezan z %1$d vhodnimi releji</item>
+    </plurals>
     <string name="always_on_notif_connecting">Povezovanje vhodnih relejev\u2026</string>
     <string name="always_on_notif_setting_title">Vedno aktivna obvestila</string>
     <string name="always_on_notif_setting_description">Ohranja stalno povezavo z vašimi releji za takojšnjo dostavo obvestil. Prikazuje trajno obvestilo. Porabi več baterije, a zagotavlja, da ne zamudite nobenega sporočila.</string>
