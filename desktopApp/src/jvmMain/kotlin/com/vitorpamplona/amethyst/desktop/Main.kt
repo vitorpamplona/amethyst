@@ -63,8 +63,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.BitmapPainter
-import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyShortcut
 import androidx.compose.ui.unit.dp
@@ -142,8 +140,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.time.Duration.Companion.seconds
 
 private val isMacOS = com.vitorpamplona.amethyst.desktop.platform.PlatformInfo.isMacOS
 
@@ -219,13 +215,7 @@ fun main() {
     // on macOS the logo is then wrapped in a squircle so it matches
     // first-party dock icons.
     try {
-        val bytes = Unit::class.java.getResourceAsStream("/icon.png")!!.readBytes()
-        val raw = javax.imageio.ImageIO.read(java.io.ByteArrayInputStream(bytes))
-        val adapted =
-            raw?.let {
-                com.vitorpamplona.amethyst.desktop.platform.PlatformAppIcon
-                    .adaptForHost(it)
-            }
+        val adapted = com.vitorpamplona.amethyst.desktop.platform.IconResources.adaptedBufferedImage
         if (adapted != null && java.awt.Taskbar.isTaskbarSupported()) {
             val taskbar = java.awt.Taskbar.getTaskbar()
             if (taskbar.isSupported(java.awt.Taskbar.Feature.ICON_IMAGE)) {
@@ -297,21 +287,7 @@ fun main() {
         // Window title-bar / taskbar thumbnail icon. On macOS the source logo
         // is wrapped in a squircle so it matches every other dock icon; on
         // other platforms the raw transparent logo is used as-is.
-        val appIcon =
-            remember {
-                val bytes = Unit::class.java.getResourceAsStream("/icon.png")!!.readBytes()
-                val raw = javax.imageio.ImageIO.read(java.io.ByteArrayInputStream(bytes))
-                val adapted =
-                    com.vitorpamplona.amethyst.desktop.platform.PlatformAppIcon
-                        .adaptForHost(raw)
-                val buf = java.io.ByteArrayOutputStream()
-                javax.imageio.ImageIO.write(adapted, "png", buf)
-                val bitmap =
-                    org.jetbrains.skia.Image
-                        .makeFromEncoded(buf.toByteArray())
-                        .toComposeImageBitmap()
-                BitmapPainter(bitmap)
-            }
+        val appIcon = com.vitorpamplona.amethyst.desktop.platform.IconResources.adaptedBitmapPainter
 
         Window(
             onCloseRequest = ::exitApplication,
@@ -686,11 +662,12 @@ fun App(
     onShowImportFollowListDialog: () -> Unit = {},
     onDismissImportFollowListDialog: () -> Unit = {},
     onRestartApp: () -> Unit = {},
-    torManager: com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager,
+    torManager: com.vitorpamplona.amethyst.commons.tor.ITorManager,
     torTypeFlow: kotlinx.coroutines.flow.MutableStateFlow<com.vitorpamplona.amethyst.commons.tor.TorType>,
     externalPortFlow: kotlinx.coroutines.flow.MutableStateFlow<Int>,
     initialTorSettings: com.vitorpamplona.amethyst.commons.tor.TorSettings,
     onNavigateToScreen: ((DeckColumnType) -> Unit) -> Unit = {},
+    testOverrides: LaunchTestOverrides? = null,
 ) {
     val singlePaneState = remember { SinglePaneState() }
     val pinnedNavBarState = remember { PinnedNavBarState(workspaceManager).also { it.loadFromWorkspace() } }
@@ -700,11 +677,14 @@ fun App(
         onNavigateToScreen { screen -> singlePaneState.navigate(screen) }
     }
 
-    // Always reload from prefs — after key() rebuild, prefs have the latest saved settings
+    // Always reload from prefs — after key() rebuild, prefs have the latest saved settings.
+    // Tests can short-circuit the prefs read via `testOverrides.torSettingsOverride` so the
+    // Tor splash gate (below) does not block them behind a real kmp-tor runtime.
     var torSettings by remember {
         mutableStateOf(
-            com.vitorpamplona.amethyst.desktop.tor.DesktopTorPreferences
-                .load(),
+            testOverrides?.torSettingsOverride
+                ?: com.vitorpamplona.amethyst.desktop.tor.DesktopTorPreferences
+                    .load(),
         )
     }
 
@@ -713,15 +693,7 @@ fun App(
     val torStatus by torManager.status.collectAsState()
     val isTorExpected = torSettings.torType != com.vitorpamplona.amethyst.commons.tor.TorType.OFF
     if (isTorExpected && torStatus !is com.vitorpamplona.amethyst.commons.tor.TorServiceStatus.Active) {
-        val splashIcon =
-            remember {
-                val bytes = Unit::class.java.getResourceAsStream("/icon.png")!!.readBytes()
-                val bitmap =
-                    org.jetbrains.skia.Image
-                        .makeFromEncoded(bytes)
-                        .toComposeImageBitmap()
-                BitmapPainter(bitmap)
-            }
+        val splashIcon = com.vitorpamplona.amethyst.desktop.platform.IconResources.rawBitmapPainter
         androidx.compose.foundation.layout.Box(
             modifier =
                 androidx.compose.ui.Modifier
@@ -766,14 +738,14 @@ fun App(
         mutableStateOf<com.vitorpamplona.amethyst.desktop.ui.deck.AppDrawerTab?>(null)
     }
 
-    val localCache = remember { DesktopLocalCache() }
+    val localCache = remember { testOverrides?.localCache ?: DesktopLocalCache() }
     val accountState by accountManager.accountState.collectAsState()
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
 
     // Local relay store — persists events to SQLite per account
     val localRelayStore =
         remember {
-            com.vitorpamplona.amethyst.desktop.relay
+            testOverrides?.localRelayStore ?: com.vitorpamplona.amethyst.desktop.relay
                 .LocalRelayStore(scope)
         }
     val localRelayMaintenance =
@@ -831,7 +803,10 @@ fun App(
             .setup()
     }
 
-    val relayManager = remember(httpClient) { DesktopRelayConnectionManager(httpClient) }
+    val relayManager =
+        remember(httpClient) {
+            testOverrides?.relayManager ?: DesktopRelayConnectionManager(httpClient)
+        }
     val nip11Fetcher = remember { Nip11Fetcher() }
 
     // Start 1Hz metrics snapshot for relay dashboard
@@ -940,9 +915,11 @@ fun App(
 
     // Try to load saved account on startup
     DisposableEffect(Unit) {
-        relayManager.addDefaultRelays()
-        relayManager.connect()
-        subscriptionsCoordinator.start()
+        if (testOverrides?.skipStartupRelayBootstrap != true) {
+            relayManager.addDefaultRelays()
+            relayManager.connect()
+            subscriptionsCoordinator.start()
+        }
 
         scope.launch(Dispatchers.IO) {
             // Load account list from encrypted storage
@@ -996,15 +973,7 @@ fun App(
                     when (accountState) {
                         is AccountState.Loading -> {
                             // Branded loading screen while accounts load from storage
-                            val loadingIcon =
-                                remember {
-                                    val bytes = Unit::class.java.getResourceAsStream("/icon.png")!!.readBytes()
-                                    val bitmap =
-                                        org.jetbrains.skia.Image
-                                            .makeFromEncoded(bytes)
-                                            .toComposeImageBitmap()
-                                    BitmapPainter(bitmap)
-                                }
+                            val loadingIcon = com.vitorpamplona.amethyst.desktop.platform.IconResources.rawBitmapPainter
                             Box(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center,
@@ -1287,53 +1256,54 @@ fun MainContent(
                 .DesktopDraftStore(appScope)
         }
 
-    // Bootstrap subscription: fetch relay config events (kinds 10002, 10050, 10007, 10006)
-    // Uses DisposableEffect to clean up subscription on account change
+    // Bootstrap subscription: fetch relay config events (kinds 10002, 10050, 10007, 10006).
+    // Subscribes immediately — `NostrClient` / `RelayPool` queue REQs that arrive before a
+    // relay connection is up and flush them on connect (verified by
+    // SubscribeBeforeConnectTest), so the previous
+    // `connectedRelays.first { isNotEmpty() }` + 30s timeout gate has been
+    // removed. Per the Phase 5.2 launch-optimization plan, this shaves the
+    // cold-boot relay-bootstrap latency from "first connect roundtrip + sub
+    // dispatch" to "sub dispatch only" once a relay is available, and it
+    // also recovers gracefully when no relay ever connects (the
+    // subscription stays queued for when one does, instead of silently
+    // giving up after 30s).
     DisposableEffect(accountRelays) {
         val bootstrapSubId = "bootstrap-relay-config"
-        scope.launch {
-            val connected =
-                withTimeoutOrNull(30.seconds) {
-                    relayManager.connectedRelays.first { it.isNotEmpty() }
-                }
-            if (connected != null) {
-                val filter =
-                    Filter(
-                        kinds =
-                            listOf(
-                                AdvertisedRelayListEvent.KIND,
-                                ChatMessageRelayListEvent.KIND,
-                                SearchRelayListEvent.KIND,
-                                BlockedRelayListEvent.KIND,
-                            ),
-                        authors = listOf(account.pubKeyHex),
-                        limit = 4,
-                    )
-                relayManager.subscribe(
-                    subId = bootstrapSubId,
-                    filters = listOf(filter),
-                    listener =
-                        object : SubscriptionListener {
-                            override fun onEvent(
-                                event: com.vitorpamplona.quartz.nip01Core.core.Event,
-                                isLive: Boolean,
-                                relay: NormalizedRelayUrl,
-                                forFilters: List<Filter>?,
-                            ) {
-                                // NIP-65 (kind 10002) must go through justConsumeMyOwnEvent
-                                // because localCache.consume() doesn't handle addressable events
-                                if (event is AdvertisedRelayListEvent) {
-                                    scope.launch(Dispatchers.IO) {
-                                        localCache.justConsumeMyOwnEvent(event)
-                                    }
-                                }
-                                // Route to accountRelays for persistence + state updates
-                                accountRelays.consumeIfRelevant(event)
+        val filter =
+            Filter(
+                kinds =
+                    listOf(
+                        AdvertisedRelayListEvent.KIND,
+                        ChatMessageRelayListEvent.KIND,
+                        SearchRelayListEvent.KIND,
+                        BlockedRelayListEvent.KIND,
+                    ),
+                authors = listOf(account.pubKeyHex),
+                limit = 4,
+            )
+        relayManager.subscribe(
+            subId = bootstrapSubId,
+            filters = listOf(filter),
+            listener =
+                object : SubscriptionListener {
+                    override fun onEvent(
+                        event: com.vitorpamplona.quartz.nip01Core.core.Event,
+                        isLive: Boolean,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        // NIP-65 (kind 10002) must go through justConsumeMyOwnEvent
+                        // because localCache.consume() doesn't handle addressable events
+                        if (event is AdvertisedRelayListEvent) {
+                            scope.launch(Dispatchers.IO) {
+                                localCache.justConsumeMyOwnEvent(event)
                             }
-                        },
-                )
-            }
-        }
+                        }
+                        // Route to accountRelays for persistence + state updates
+                        accountRelays.consumeIfRelevant(event)
+                    }
+                },
+        )
         onDispose { relayManager.unsubscribe(bootstrapSubId) }
     }
 

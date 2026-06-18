@@ -250,13 +250,58 @@ provided automatically; everything else you set yourself.)
 | `SONATYPE_PASSWORD` | Maven Central user token password | Same |
 | `SIGNING_PRIVATE_KEY` | **GPG/PGP** private key, ASCII-armored | Signs the Maven artifacts (Central requires it) |
 | `SIGNING_PASSWORD` | Passphrase for that GPG key | Same |
+| `MAC_CERTIFICATE_P12` | Base64 of your **Apple Developer ID Application** cert (`.p12`, includes the private key) | Signs the macOS desktop **DMG** and the macOS **amy** jlink tarball |
+| `MAC_CERTIFICATE_PASSWORD` | Password set when exporting the `.p12` | Imports the cert into the CI keychain |
+| `MAC_SIGN_IDENTITY` | Full identity string, e.g. `Developer ID Application: Your Name (TEAMID)` | The `codesign` identity to sign with |
+| `MAC_NOTARY_APPLE_ID` | Apple ID email of the notarization account | Apple notarization (`notarytool`) |
+| `MAC_NOTARY_PASSWORD` | **App-specific** password for that Apple ID (not the login password) | Same |
+| `MAC_NOTARY_TEAM_ID` | 10-char Apple Developer **Team ID** | Same |
 | `HOMEBREW_TOKEN` | PAT for `Homebrew/homebrew-cask` | Desktop cask bump (stable tags) |
 | `WINGET_TOKEN` | PAT for `microsoft/winget-pkgs` | Desktop winget bump (stable tags) |
 | `CROWDIN_PERSONAL_TOKEN`, `CROWDIN_PROJECT_ID` | Crowdin API creds | Translation sync (separate workflow, not the release) |
 
-Note the **two distinct signing identities** people often conflate:
+Note the **three distinct signing identities** people often conflate:
 `SIGNING_KEY` + `KEY_*` is the **Android keystore**; `SIGNING_PRIVATE_KEY` +
-`SIGNING_PASSWORD` is the **GPG key** for Maven Central. They are unrelated.
+`SIGNING_PASSWORD` is the **GPG key** for Maven Central; `MAC_CERTIFICATE_*` +
+`MAC_SIGN_IDENTITY` + `MAC_NOTARY_*` is the **Apple Developer ID** for the macOS
+desktop DMG. They are unrelated — each comes from a different authority.
+
+The macOS signing secrets are **optional**: if `MAC_CERTIFICATE_P12` is unset
+the release workflow still builds the DMG **and** the macOS `amy` tarball, just
+**unsigned** (the previous behavior). Provision all six to switch signing +
+notarization on for both. Obtaining them requires Apple Developer Program
+membership ($99/yr). The same one certificate signs both artifacts.
+
+The macOS `amy` tarball is the jlink image (bundled JRE), so signing it means
+codesigning every Mach-O binary in that runtime with hardened-runtime
+entitlements (`cli/packaging/macos/amy.entitlements` — needed so the JVM can
+load the secp256k1 native library it extracts at runtime). A loose `.tar.gz`
+cannot be **stapled** (Apple's `stapler` only handles `.app`/`.dmg`/`.pkg`), so
+Gatekeeper verifies notarization **online** on first run — fine for a CLI.
+Note the Homebrew-core jvm bundle (`amy-<version>-jvm.tar.gz`) is **not** signed:
+Homebrew removes the quarantine attribute on its own downloads.
+
+> **Validated (Developer ID `D77MCV9NZ7`):** signing every Mach-O in the bundled
+> JRE with hardened runtime + `amy.entitlements` lets `amy init` derive a key via
+> secp256k1 with no library-validation crash. Dropping `disable-library-validation`
+> reproduces `UnsatisfiedLinkError: … different Team IDs` on the runtime-extracted
+> `libsecp256k1-jni.dylib` — so that entitlement is load-bearing, not decorative.
+>
+> **Open risk — embedded jar natives.** The notary service unpacks `lib/*.jar`
+> recursively and checks every Mach-O for a signature + hardened runtime. Our
+> sign loop only touches loose files, so 9 unsigned natives ride along inside
+> jars on a macOS build: `secp256k1` (1, required at runtime), `jna` (2),
+> `sqlite` (2), and `skiko` (4, dead weight — Compose UI the CLI never renders).
+> Whether `notarytool` returns `Accepted` or `Invalid` on these is **unverified**
+> (the local validation had no notary creds). **Decide it with one run:** set the
+> six `MAC_*` secrets and trigger `create-release.yml` via `workflow_dispatch`
+> with `dry_run=true` — the sign+notarize step runs regardless of `dry_run` and
+> now prints the per-file notary log on a non-`Accepted` verdict. If it comes
+> back `Invalid`, the fix is to codesign the dylibs *inside* those jars before
+> zipping (and/or strip the unused `skiko`/Compose jars from the CLI image — the
+> `:commons` core/ui split the size budget already flags). The **desktop** app
+> bundles the same jars through Compose/jpackage notarization, so run a desktop
+> dry-run too; its in-jar handling differs and is likewise unverified.
 
 Generating the values:
 
@@ -269,6 +314,14 @@ base64 -i upload.jks | tr -d '\n'        # paste output into SIGNING_KEY
 # GPG key → armored private key for SIGNING_PRIVATE_KEY
 gpg --full-generate-key                  # create the key (once)
 gpg --armor --export-secret-keys <KEY_ID>   # paste output into SIGNING_PRIVATE_KEY
+
+# Apple Developer ID Application cert → base64 for MAC_CERTIFICATE_P12.
+# In Keychain Access, export the "Developer ID Application: ..." cert (with its
+# private key) as a .p12, setting an export password (-> MAC_CERTIFICATE_PASSWORD).
+base64 -i developer_id.p12 | tr -d '\n'  # paste output into MAC_CERTIFICATE_P12
+security find-identity -v -p codesigning  # shows the exact MAC_SIGN_IDENTITY string
+# MAC_NOTARY_PASSWORD is an app-specific password from https://appleid.apple.com
+# (Sign-In and Security -> App-Specific Passwords), NOT your Apple ID login.
 ```
 
 `SONATYPE_USERNAME`/`SONATYPE_PASSWORD` are a **user token** from
@@ -338,6 +391,51 @@ brew bump-cask-pr amethyst-nostr \
 The cask filename is `amethyst-nostr` (not `amethyst` — that's taken by a
 tiling window manager). After the first PR is merged, `bump-homebrew.yml`
 auto-submits new version bumps on each stable release.
+
+> **The desktop app is already on mainline Homebrew.** `homebrew/cask` *is* the
+> mainline cask repo — GUI apps live in homebrew-**cask**, CLIs in
+> homebrew-**core**; both are "mainline." A private tap is only the *fallback*
+> if Homebrew ever rejects the (now signed + notarized) cask.
+
+### Homebrew-core formula for the `amy` CLI (one-time initial PR)
+
+The CLI goes to **homebrew-core** (mainline formulae), not homebrew-cask —
+casks are for GUI apps. homebrew-core builds in a **network-sandboxed**
+environment, so a from-source Gradle build can't resolve its Maven
+dependencies there. Instead the formula downloads the pre-built **no-JRE jar
+bundle** `amy-<version>-jvm.tar.gz` (published by `create-release.yml`) and
+`depends_on "openjdk"`. The reference formula lives at
+[`cli/packaging/homebrew/amy.rb`](cli/packaging/homebrew/amy.rb).
+
+To submit:
+
+```bash
+# 1. Grab the published asset's sha256
+curl -fsSL -o amy-jvm.tar.gz \
+  https://github.com/vitorpamplona/amethyst/releases/download/v1.12.1/amy-1.12.1-jvm.tar.gz
+shasum -a 256 amy-jvm.tar.gz
+
+# 2. Fill the url + sha256 into cli/packaging/homebrew/amy.rb, then open the PR
+brew create --set-name amy --tap homebrew/core \
+  https://github.com/vitorpamplona/amethyst/releases/download/v1.12.1/amy-1.12.1-jvm.tar.gz
+#    (paste the reference formula body, run `brew audit --new amy`,
+#     `brew install --build-from-source amy`, `brew test amy`, then PR it.)
+```
+
+Caveats that the maintainer must weigh before submitting:
+
+- **Name collision.** `amy` may already exist in homebrew-core — check with
+  `brew search amy` first. If taken, fall back to `amethyst-cli`.
+- **Pre-built-jar scrutiny.** homebrew-core prefers source builds; downloading
+  a jar bundle is an accepted-but-reviewed pattern for JVM tools. Be ready to
+  justify it (sandboxed Gradle can't fetch Maven deps).
+- **Bundle size.** The bundle is ~70 MB today because `:commons` leaks
+  Compose/Skiko jars onto the CLI classpath. Trimming that (a `:commons`
+  core/ui split) would shrink it and smooth review — tracked as a follow-up.
+
+After the formula merges, the `livecheck` block lets homebrew-core's BrewTestBot
+auto-open version-bump PRs on each stable release — no token or workflow on our
+side (unlike the cask/winget bumps).
 
 ### Winget (one-time initial submission)
 
@@ -480,9 +578,17 @@ for the deprecation date. When it hits:
 Homebrew has committed to disabling unsigned casks in `Homebrew/homebrew-cask`
 on 2026-09-01. Before that date:
 
-**Option A**: Commit budget to Apple Developer Program ($99/yr), add
-`signing { sign.set(true) }` + `notarization {}` blocks to
-`desktopApp/build.gradle.kts`, wire Developer ID + notary creds into CI.
+**Option A (wiring done — needs Apple creds)**: The `signing { sign.set(true) }`
++ `notarization {}` blocks are already in `desktopApp/build.gradle.kts` (gated on
+the `AMETHYST_MAC_SIGN_IDENTITY` env var), and the macOS leg of
+`create-release.yml` imports a Developer ID cert into a throwaway keychain and
+exports the signing/notary env. It all stays a **no-op until the six
+`MAC_*`/notary secrets are provisioned** (see [§ Secrets the CI
+needs](#secrets-the-ci-needs)) — until then the DMG builds unsigned. To turn it
+on: join the Apple Developer Program ($99/yr), create a *Developer ID
+Application* certificate, generate an app-specific password, and set the six
+secrets. The first signed+notarized DMG is best validated with a
+`workflow_dispatch` dry-run before a real tag.
 
 **Option B**: Pivot to a private Homebrew tap:
 
