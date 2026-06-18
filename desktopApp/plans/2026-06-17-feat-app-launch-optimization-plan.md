@@ -11,14 +11,38 @@ deepened: 2026-06-17
 
 ## Progress Log
 
-| Date       | Phase | Outcome                                                                                  | Commit      |
-|------------|-------|------------------------------------------------------------------------------------------|-------------|
-| 2026-06-17 | 1.1   | `AccountManagerLoadStateTransitionsTest` — 2 tests pass                                  | `ff55898ab` |
-| 2026-06-17 | 1.2   | `LocalRelayStoreHydrationTest` — 5 tests pass                                            | `ff55898ab` |
-| 2026-06-17 | 1.3   | `LocalRelayStore` gains `homeDir` ctor param (default unchanged)                         | `ff55898ab` |
-| 2026-06-17 | 5.1   | `IconResources` collapses 4 sites + 2 `ImageIO.read` calls into one lazy each; 5 tests   | `b338d7db4` |
+| Date       | Phase     | Outcome                                                                                  | Commit      |
+|------------|-----------|------------------------------------------------------------------------------------------|-------------|
+| 2026-06-17 | 1.1       | `AccountManagerLoadStateTransitionsTest` — 2 tests pass                                  | `ff55898ab` |
+| 2026-06-17 | 1.2       | `LocalRelayStoreHydrationTest` — 5 tests pass                                            | `ff55898ab` |
+| 2026-06-17 | 1.3       | `LocalRelayStore` gains `homeDir` ctor param (default unchanged)                         | `ff55898ab` |
+| 2026-06-17 | 5.1       | `IconResources` collapses 4 sites + 2 `ImageIO.read` calls into one lazy each; 5 tests   | `b338d7db4` |
+| 2026-06-18 | 2.1 / 2.2 | `InProcessWebsocketBuilder` + `LaunchFixtureRelay` (wraps quartz `InProcessWebSocket` + `NostrServer` with `EmptyPolicy`); roundtrip test green | next commit |
+| 2026-06-18 | 2.3       | `LaunchFixture` synthesizes 50 kind:1 + author kind:0 + kind:3 + kind:10002 from a fixed RNG seed (no JSONL artifact / `amy` dependency) | next commit |
+| 2026-06-18 | 3.1       | `LaunchMarkers` (single-threaded `mutableMapOf` + `TimeSource.Monotonic`) + `LocalNoteCardInstrumentation` CompositionLocal + `NoteCard.Modifier.testTag(NOTE_CARD_TEST_TAG).onPlaced { … }` instrumentation — production overhead = 1 composition-local read + 1 null check | next commit |
+| 2026-06-18 | 3.2 / 4   | `LaunchBenchmark` warm harness (2 warmup + 5 measured, median/IQR/min, atomic file write, JVM/OS/arch in header, opt-in via `AMETHYST_BENCH=true`). Baseline captured at `desktopApp/benchmarks/baseline-main.txt` | next commit |
+| 2026-06-18 | 5.2       | `SubscribeBeforeConnectTest` proves `NostrClient`/`RelayPool` queue REQs pre-connect; `Main.kt:1242` bootstrap gate `connectedRelays.first { isNotEmpty() }` + 30s `withTimeoutOrNull` removed — subscription fires eagerly and the pool flushes on connect | next commit |
+| 2026-06-18 | 6         | Post-fix snapshot at `desktopApp/benchmarks/with-phase5-fixes.txt`                       | next commit |
 
-**Next on the critical path:** Phase 1.4 (App() Compose smoke test — needs DeckState / WorkspaceManager / TorManager mocks) → Phase 2 (in-process relay seam in `:quartz` testFixtures) → Phase 3 (benchmark harness) → Phase 4 (baseline) → Phase 5.2 (feed bootstrap gate fix). Phase 5.1 has already landed but its end-to-end delta will be measured once Phase 3 is in place.
+**Still pending after this session:**
+
+- **Phase 1.4** — `App()` Compose UI smoke test. Hard-blocked on mocking the
+  six App() dependencies that have substantial real implementations
+  (DeckState, WorkspaceManager, DesktopTorManager, TorType / port flows,
+  initialTorSettings). The `BenchmarkRelayConnectionManager` subclass added
+  in 3.2 is the seam the future App() harness will use.
+- **Phase 2.4** — wire fixture relay into `AppStateMachineTest` (depends on
+  Phase 1.4).
+- **Cold-fork shell driver** for the benchmark (per-sample JVM fork). The
+  current single-JVM harness measures the same code path at the
+  classloader-+-JIT-warm regime; the cold-fork variant adds JVM-startup
+  costs into the picture.
+- **Compose-driving variant** of the benchmark (wires `LaunchMarkers` to
+  `LocalNoteCardInstrumentation` for real-paint timing).
+- The Phase 5.2 fix's measurable delta — the slim non-Compose benchmark
+  does not drive the App() gate, so the gate fix is validated by the
+  `SubscribeBeforeConnectTest` invariant rather than by a benchmark delta
+  in this report.
 
 ## Enhancement Summary
 
@@ -512,7 +536,7 @@ Five scenarios unit tests with mocks won't catch:
 - [ ] **Phase 3.2**: Cold harness (shell-script, fork per sample, N=10) and warm harness (single JVM, N=20, discard 5 warmup) both run reproducibly. Pinned JVM flags. Output headers include git SHA, JVM/OS/arch. Control benchmark (`setContent { Box {} }`) reports harness floor.
 - [ ] **Phase 4**: `desktopApp/benchmarks/baseline-main-cold.txt` and `-warm.txt` committed; plan updated with numbers. Re-run delta ≤ 15% median-to-median.
 - [x] **Phase 5.1**: icon decoded exactly once per process (unit test); microbench delta reported; end-to-end delta reported. _Code + unit test landed 2026-06-17 (commit `b338d7db4`). Delta numbers pending Phase 3 benchmark harness._
-- [ ] **Phase 5.2**: bootstrap subscription fires before any relay reaches CONNECTED state OR Pool queues pre-connect (whichever investigation shows). 4 new tests: `slowRelayDoesNotStallFeed`, `noRelaysAvailableShowsErrorState`, `relayListArrivesLateStartsSubscriptionThen`, `relaysAddedMidLoadDoNotDoubleSubscribe`. Home + DM share single helper.
+- [x] **Phase 5.2** (partial): investigation chose candidate (a) — `NostrClient`/`RelayPool` queue REQs pre-connect (verified by `SubscribeBeforeConnectTest`). The bootstrap gate at `Main.kt:1242` is removed and the subscription fires eagerly. The four planned regression tests (`slowRelayDoesNotStallFeed`, `noRelaysAvailableShowsErrorState`, `relayListArrivesLateStartsSubscriptionThen`, `relaysAddedMidLoadDoNotDoubleSubscribe`) are still pending — they require driving the `App()` composable, which is blocked on Phase 1.4 harness work. The DM gate at `Main.kt:1290` is left untouched in this session (separate code path through `subscriptionsCoordinator`).
 
 ### Non-Functional Requirements
 

@@ -137,8 +137,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.time.Duration.Companion.seconds
 
 private val isMacOS = com.vitorpamplona.amethyst.desktop.platform.PlatformInfo.isMacOS
 
@@ -1237,53 +1235,54 @@ fun MainContent(
                 .DesktopDraftStore(appScope)
         }
 
-    // Bootstrap subscription: fetch relay config events (kinds 10002, 10050, 10007, 10006)
-    // Uses DisposableEffect to clean up subscription on account change
+    // Bootstrap subscription: fetch relay config events (kinds 10002, 10050, 10007, 10006).
+    // Subscribes immediately — `NostrClient` / `RelayPool` queue REQs that arrive before a
+    // relay connection is up and flush them on connect (verified by
+    // SubscribeBeforeConnectTest), so the previous
+    // `connectedRelays.first { isNotEmpty() }` + 30s timeout gate has been
+    // removed. Per the Phase 5.2 launch-optimization plan, this shaves the
+    // cold-boot relay-bootstrap latency from "first connect roundtrip + sub
+    // dispatch" to "sub dispatch only" once a relay is available, and it
+    // also recovers gracefully when no relay ever connects (the
+    // subscription stays queued for when one does, instead of silently
+    // giving up after 30s).
     DisposableEffect(accountRelays) {
         val bootstrapSubId = "bootstrap-relay-config"
-        scope.launch {
-            val connected =
-                withTimeoutOrNull(30.seconds) {
-                    relayManager.connectedRelays.first { it.isNotEmpty() }
-                }
-            if (connected != null) {
-                val filter =
-                    Filter(
-                        kinds =
-                            listOf(
-                                AdvertisedRelayListEvent.KIND,
-                                ChatMessageRelayListEvent.KIND,
-                                SearchRelayListEvent.KIND,
-                                BlockedRelayListEvent.KIND,
-                            ),
-                        authors = listOf(account.pubKeyHex),
-                        limit = 4,
-                    )
-                relayManager.subscribe(
-                    subId = bootstrapSubId,
-                    filters = listOf(filter),
-                    listener =
-                        object : SubscriptionListener {
-                            override fun onEvent(
-                                event: com.vitorpamplona.quartz.nip01Core.core.Event,
-                                isLive: Boolean,
-                                relay: NormalizedRelayUrl,
-                                forFilters: List<Filter>?,
-                            ) {
-                                // NIP-65 (kind 10002) must go through justConsumeMyOwnEvent
-                                // because localCache.consume() doesn't handle addressable events
-                                if (event is AdvertisedRelayListEvent) {
-                                    scope.launch(Dispatchers.IO) {
-                                        localCache.justConsumeMyOwnEvent(event)
-                                    }
-                                }
-                                // Route to accountRelays for persistence + state updates
-                                accountRelays.consumeIfRelevant(event)
+        val filter =
+            Filter(
+                kinds =
+                    listOf(
+                        AdvertisedRelayListEvent.KIND,
+                        ChatMessageRelayListEvent.KIND,
+                        SearchRelayListEvent.KIND,
+                        BlockedRelayListEvent.KIND,
+                    ),
+                authors = listOf(account.pubKeyHex),
+                limit = 4,
+            )
+        relayManager.subscribe(
+            subId = bootstrapSubId,
+            filters = listOf(filter),
+            listener =
+                object : SubscriptionListener {
+                    override fun onEvent(
+                        event: com.vitorpamplona.quartz.nip01Core.core.Event,
+                        isLive: Boolean,
+                        relay: NormalizedRelayUrl,
+                        forFilters: List<Filter>?,
+                    ) {
+                        // NIP-65 (kind 10002) must go through justConsumeMyOwnEvent
+                        // because localCache.consume() doesn't handle addressable events
+                        if (event is AdvertisedRelayListEvent) {
+                            scope.launch(Dispatchers.IO) {
+                                localCache.justConsumeMyOwnEvent(event)
                             }
-                        },
-                )
-            }
-        }
+                        }
+                        // Route to accountRelays for persistence + state updates
+                        accountRelays.consumeIfRelevant(event)
+                    }
+                },
+        )
         onDispose { relayManager.unsubscribe(bootstrapSubId) }
     }
 
