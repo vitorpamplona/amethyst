@@ -172,6 +172,9 @@ class RelayPool(
 
         if (atLeastOne) {
             _availableRelays.update { relays.keys() }
+            // Removed relays were just disconnected; reflect that in the connected set
+            // now rather than waiting for their (possibly dropped) onDisconnected callback.
+            refreshConnectedRelays()
         }
     }
 
@@ -199,14 +202,6 @@ class RelayPool(
         val relayInPool = relays.remove(relay)
         if (relayInPool != null) {
             relayInPool.disconnect()
-            // Reflect the disconnect immediately. disconnect() uses OkHttp cancel(),
-            // whose onClosed/onFailure callback — the only other path that prunes
-            // _connectedRelays — is async and, when cancelling many sockets at once
-            // (e.g. a feed teardown when the app backgrounds), frequently never arrives.
-            // That leaves the connected set stale while the pool itself has already
-            // shrunk. The callback, if it does fire later, repeats this subtraction
-            // idempotently.
-            _connectedRelays.update { it - relay }
             return true
         }
         return false
@@ -215,6 +210,7 @@ class RelayPool(
     fun removeRelay(relay: NormalizedRelayUrl) {
         if (removeRelayInner(relay)) {
             _availableRelays.update { relays.keys() }
+            refreshConnectedRelays()
         }
     }
 
@@ -223,6 +219,26 @@ class RelayPool(
             disconnect()
             relays.clear()
             _availableRelays.update { emptySet() }
+            refreshConnectedRelays()
+        }
+    }
+
+    /**
+     * Recomputes [_connectedRelays] from the source of truth: a relay is connected iff it
+     * is currently in the pool AND its socket reports ready ([IRelayClient.isConnected]).
+     *
+     * This is a pure projection of the pool rather than a set we add to / remove from on
+     * each event, so it cannot drift from reality. An incrementally maintained set goes
+     * stale whenever a state change isn't observed — e.g. OkHttp's async cancel() callback
+     * is dropped under mass teardown, or a socket dies without an onDisconnected — and then
+     * reports relays as connected that no longer are. Relays removed from the pool have
+     * already been disconnected (isConnected() == false), so they fall out here naturally.
+     */
+    private fun refreshConnectedRelays() {
+        val connected = mutableSetOf<NormalizedRelayUrl>()
+        relays.forEach { url, relay -> if (relay.isConnected()) connected.add(url) }
+        if (_connectedRelays.value != connected) {
+            _connectedRelays.value = connected
         }
     }
 
@@ -236,12 +252,12 @@ class RelayPool(
         pingMillis: Int,
         compressed: Boolean,
     ) {
-        _connectedRelays.update { it + relay.url }
+        refreshConnectedRelays()
         listener.onConnected(relay, pingMillis, compressed)
     }
 
     override fun onDisconnected(relay: IRelayClient) {
-        _connectedRelays.update { it - relay.url }
+        refreshConnectedRelays()
         listener.onDisconnected(relay)
     }
 
