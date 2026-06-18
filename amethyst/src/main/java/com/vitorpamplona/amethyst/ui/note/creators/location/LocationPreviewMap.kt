@@ -51,26 +51,28 @@ private const val DEFAULT_ZOOM = 16.0
 
 /**
  * Night-mode filter for the (always-light) MAPNIK tiles so the map follows the
- * app theme. Inverts lightness while desaturating, which reads as a clean dark
- * grey map — unlike a plain colour invert, which turns forests magenta and
- * water orange.
+ * app theme. This is a lightness invert composed with a 180° hue rotation: it
+ * darkens the map (light land → near-black) while *preserving* hue, so forests
+ * stay green and water stays blue and the surfaces remain distinguishable —
+ * unlike a plain colour invert (forests → magenta) or a desaturating invert
+ * (everything → black).
  */
 private val NIGHT_TILE_FILTER: ColorFilter =
     ColorMatrixColorFilter(
         floatArrayOf(
-            -0.6f,
-            -0.4f,
-            -0.4f,
+            0.574f,
+            -1.430f,
+            -0.144f,
             0f,
             255f,
-            -0.4f,
-            -0.6f,
-            -0.4f,
+            -0.426f,
+            -0.430f,
+            -0.144f,
             0f,
             255f,
-            -0.4f,
-            -0.4f,
-            -0.6f,
+            -0.426f,
+            -1.430f,
+            0.856f,
             0f,
             255f,
             0f,
