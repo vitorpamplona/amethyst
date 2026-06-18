@@ -786,6 +786,12 @@ open class CommentPostViewModel :
         notifying = notifying?.filter { it != userToRemove }
     }
 
+    fun addToReplyList(user: User) {
+        if (notifying?.contains(user) != true) {
+            notifying = (notifying ?: emptyList()).plus(user)
+        }
+    }
+
     override fun onMessageChanged() {
         urlPreviews.update(message.text.toString())
         revalidateDraft()
@@ -820,6 +826,7 @@ open class CommentPostViewModel :
                 val lastWord = message.currentWord()
                 userSuggestions.replaceCurrentWord(message, lastWord, item)
                 urlPreviews.update(message.text.toString())
+                addToReplyList(item)
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
                 forwardZapTo.value.addItem(item)
                 forwardZapToEditting.clearText()
