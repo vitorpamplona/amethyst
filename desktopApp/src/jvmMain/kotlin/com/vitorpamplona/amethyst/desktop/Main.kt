@@ -662,7 +662,7 @@ fun App(
     onShowImportFollowListDialog: () -> Unit = {},
     onDismissImportFollowListDialog: () -> Unit = {},
     onRestartApp: () -> Unit = {},
-    torManager: com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager,
+    torManager: com.vitorpamplona.amethyst.commons.tor.ITorManager,
     torTypeFlow: kotlinx.coroutines.flow.MutableStateFlow<com.vitorpamplona.amethyst.commons.tor.TorType>,
     externalPortFlow: kotlinx.coroutines.flow.MutableStateFlow<Int>,
     initialTorSettings: com.vitorpamplona.amethyst.commons.tor.TorSettings,
