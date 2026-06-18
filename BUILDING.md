@@ -405,7 +405,7 @@ environment, so a from-source Gradle build can't resolve its Maven
 dependencies there. Instead the formula downloads the pre-built **no-JRE jar
 bundle** `amy-<version>-jvm.tar.gz` (published by `create-release.yml`) and
 `depends_on "openjdk"`. The reference formula lives at
-[`packaging/homebrew/amy.rb`](packaging/homebrew/amy.rb).
+[`cli/packaging/homebrew/amy.rb`](cli/packaging/homebrew/amy.rb).
 
 To submit:
 
@@ -415,7 +415,7 @@ curl -fsSL -o amy-jvm.tar.gz \
   https://github.com/vitorpamplona/amethyst/releases/download/v1.12.1/amy-1.12.1-jvm.tar.gz
 shasum -a 256 amy-jvm.tar.gz
 
-# 2. Fill the url + sha256 into packaging/homebrew/amy.rb, then open the PR
+# 2. Fill the url + sha256 into cli/packaging/homebrew/amy.rb, then open the PR
 brew create --set-name amy --tap homebrew/core \
   https://github.com/vitorpamplona/amethyst/releases/download/v1.12.1/amy-1.12.1-jvm.tar.gz
 #    (paste the reference formula body, run `brew audit --new amy`,
