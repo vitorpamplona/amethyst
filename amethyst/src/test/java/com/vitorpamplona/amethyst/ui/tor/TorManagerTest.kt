@@ -273,6 +273,23 @@ class TorManagerTest {
         }
 
     @Test
+    fun `watchdog wipes state on first stuck-Connecting when guards prove prior bootstrap`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val backend = FakeTorBackend().apply { bootstrappedBefore = true }
+            // Never reaches Active in this session, but on-disk state proves a prior bootstrap.
+            val manager = buildManager(backend = backend, clock = { 1_000_000_000_000L })
+            advanceUntilIdle()
+
+            assertEquals(TorServiceStatus.Connecting, manager.status.value)
+
+            advanceTimeBy(TorManager.SELF_HEAL_AFTER_MS + 1_000L)
+            runCurrent()
+
+            assertEquals("seeded from disk: must wipe stale/poisoned state, not gentle-reset", 0, backend.resetCount)
+            assertEquals(1, backend.resetWithCleanStateCount)
+        }
+
+    @Test
     fun `watchdog uses full reset after first Active`() =
         runTest(UnconfinedTestDispatcher()) {
             val backend = FakeTorBackend()
@@ -475,6 +492,11 @@ private class FakeTorBackend : TorBackend {
         private set
     var resetWithCleanStateCount = 0
         private set
+
+    /** Simulates a persisted confirmed guard on disk (prior successful bootstrap). */
+    var bootstrappedBefore = false
+
+    override suspend fun hasBootstrappedBefore(): Boolean = bootstrappedBefore
 
     override suspend fun start() {
         startCount++

@@ -37,4 +37,13 @@ interface TorBackend {
     suspend fun reset()
 
     suspend fun resetWithCleanState()
+
+    /**
+     * True when on-disk state proves Tor bootstrapped successfully on this
+     * install before. Lets [TorManager] seed `hasEverBootstrapped` across process
+     * restarts so the stuck-Connecting watchdog wipes stale/poisoned state rather
+     * than waiting it out as a first bootstrap. Implementations do file IO, so
+     * this is a `suspend` call.
+     */
+    suspend fun hasBootstrappedBefore(): Boolean
 }

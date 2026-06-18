@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.tor
 
 import android.content.Context
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
@@ -99,9 +100,21 @@ class TorService(
      */
     private fun guardsFile() = File(File(File(artiDataDir(), "state"), "state"), "guards.json")
 
+    /** Reads and parses [guardsFile], or null if it is absent/unreadable. */
+    private fun readGuardsTree(): JsonNode? {
+        val file = guardsFile()
+        if (!file.exists()) return null
+        return try {
+            jacksonObjectMapper().readTree(file)
+        } catch (e: Exception) {
+            Log.w("TorService") { "Could not inspect guards.json: ${e.message}" }
+            null
+        }
+    }
+
     /**
      * Detects the wedged-guard-sample state behind the long-standing "can't
-     * connect to Tor" bug.
+     * connect to Tor" bug (see [ArtiGuardState.hasNoUsableGuards]).
      *
      * On a flaky network, Arti records circuit failures past the first hop as
      * "indeterminate" (it can't tell whether the guard or a later hop was at
@@ -116,43 +129,20 @@ class TorService(
      * `AllGuardsDown`. The state persists in `guards.json`, and bootstrap still
      * "succeeds" (it reads cached directory data), so none of the init-failure
      * self-heal paths ever fire and Tor is stuck across restarts.
-     *
-     * A single usable guard is enough to keep building circuits, so we only
-     * recover at the last resort: when a non-empty guard set has *zero* usable
-     * guards. A guard is unusable on disk if it has been permanently
-     * `disabled` or dropped from the consensus (`unlisted_since` set);
-     * reachability is in-memory only and not persisted, so it can't be checked
-     * here. Returns true when at least one non-empty selection has no usable
-     * guard left.
      */
-    private fun noUsableGuards(): Boolean {
-        val file = guardsFile()
-        if (!file.exists()) return false
+    private fun noUsableGuards(): Boolean = readGuardsTree()?.let { ArtiGuardState.hasNoUsableGuards(it) } ?: false
 
-        return try {
-            val root = jacksonObjectMapper().readTree(file)
-            var wedged = false
-            // Each top-level field is a guard-set selection (e.g. "default").
-            root.forEach { selection ->
-                val guards = selection.get("guards") ?: return@forEach
-                if (guards.isArray && guards.size() > 0) {
-                    val usable =
-                        guards.count { guard ->
-                            val disabled = guard.get("disabled")
-                            val unlisted = guard.get("unlisted_since")
-                            val isDisabled = disabled != null && !disabled.isNull
-                            val isUnlisted = unlisted != null && !unlisted.isNull
-                            !isDisabled && !isUnlisted
-                        }
-                    if (usable == 0) wedged = true
-                }
-            }
-            wedged
-        } catch (e: Exception) {
-            Log.w("TorService") { "Could not inspect guards.json: ${e.message}" }
-            false
+    /**
+     * True when the persisted guard sample proves Tor bootstrapped successfully
+     * on this install before (a confirmed guard on disk; see
+     * [ArtiGuardState.hasConfirmedGuard]). [TorManager] seeds its in-memory
+     * `hasEverBootstrapped` from this so a stuck bootstrap on a fresh process
+     * wipes stale/poisoned state instead of nursing it as a first bootstrap.
+     */
+    override suspend fun hasBootstrappedBefore(): Boolean =
+        withContext(Dispatchers.IO) {
+            readGuardsTree()?.let { ArtiGuardState.hasConfirmedGuard(it) } ?: false
         }
-    }
 
     /**
      * Clears all Arti persistent data (state + cache). Used as a last resort
