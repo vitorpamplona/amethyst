@@ -18,25 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.roadstr.tags
+package com.vitorpamplona.quartz.experimental.roadstr.confirmation
 
-import com.vitorpamplona.quartz.experimental.roadstr.RoadEventStatus
-import com.vitorpamplona.quartz.nip01Core.core.has
-import com.vitorpamplona.quartz.utils.ensure
+import com.vitorpamplona.quartz.experimental.roadstr.confirmation.tags.RoadEventStatusTag
+import com.vitorpamplona.quartz.experimental.roadstr.confirmation.tags.RoadReportTag
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
 
-/** The `status` tag of a Roadstr confirmation (kind 1316): `still_there` or `no_longer_there`. */
-class RoadEventStatusTag {
-    companion object {
-        const val TAG_NAME = "status"
+fun TagArray.roadReport() = firstNotNullOfOrNull(RoadReportTag::parse)
 
-        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
-
-        fun parse(tag: Array<String>): RoadEventStatus? {
-            ensure(tag.has(1)) { return null }
-            ensure(tag[0] == TAG_NAME) { return null }
-            return RoadEventStatus.fromCode(tag[1])
-        }
-
-        fun assemble(status: RoadEventStatus) = arrayOf(TAG_NAME, status.code)
-    }
-}
+fun TagArray.roadEventStatus() = firstNotNullOfOrNull(RoadEventStatusTag::parse)

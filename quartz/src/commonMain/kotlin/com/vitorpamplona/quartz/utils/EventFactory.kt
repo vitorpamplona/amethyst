@@ -53,8 +53,8 @@ import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
-import com.vitorpamplona.quartz.experimental.roadstr.RoadEventConfirmationEvent
-import com.vitorpamplona.quartz.experimental.roadstr.RoadEventReportEvent
+import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
+import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent

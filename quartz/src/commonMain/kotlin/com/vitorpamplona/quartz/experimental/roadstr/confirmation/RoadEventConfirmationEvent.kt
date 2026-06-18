@@ -18,24 +18,25 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.roadstr
+package com.vitorpamplona.quartz.experimental.roadstr.confirmation
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.experimental.roadstr.tags.LatitudeTag
-import com.vitorpamplona.quartz.experimental.roadstr.tags.LongitudeTag
-import com.vitorpamplona.quartz.experimental.roadstr.tags.RoadEventStatusTag
+import com.vitorpamplona.quartz.experimental.roadstr.confirmation.tags.RoadEventStatus
+import com.vitorpamplona.quartz.experimental.roadstr.confirmation.tags.RoadReportTag
+import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
+import com.vitorpamplona.quartz.experimental.roadstr.tags.coordinates
+import com.vitorpamplona.quartz.experimental.roadstr.tags.latitude
+import com.vitorpamplona.quartz.experimental.roadstr.tags.longitude
+import com.vitorpamplona.quartz.experimental.roadstr.tags.roadGeohashes
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.nip40Expiration.ExpirationTag
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -46,7 +47,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * <https://github.com/jooray/roadstr>.
  *
  * Tags (canonical order):
- * - `e` — the referenced report event id.
+ * - `e` — the referenced report event id ([RoadReportTag]).
  * - `status` — [RoadEventStatus.STILL_THERE] (confirm) or [RoadEventStatus.NO_LONGER_THERE] (deny).
  * - `g` / `lat` / `lon` — optional copy of the report's location, so confirmations
  *   are reachable through the same `#g` geohash queries as reports.
@@ -61,11 +62,16 @@ class RoadEventConfirmationEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    /** The referenced report event id from the first `e` tag. */
-    fun reportId() = tags.firstNotNullOfOrNull(ETag::parse)?.eventId
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    EventHintProvider {
+    override fun eventHints() = tags.mapNotNull(RoadReportTag::parseAsHint)
 
-    fun status() = tags.firstNotNullOfOrNull(RoadEventStatusTag::parse)
+    override fun linkedEventIds() = tags.mapNotNull(RoadReportTag::parseId)
+
+    /** The referenced report event id from the first `e` tag. */
+    fun reportId() = tags.roadReport()?.eventId
+
+    fun status() = tags.roadEventStatus()
 
     fun isConfirmation() = status() == RoadEventStatus.STILL_THERE
 
@@ -73,13 +79,13 @@ class RoadEventConfirmationEvent(
 
     fun geohashes() = tags.geohashes()
 
-    fun latitude() = tags.firstNotNullOfOrNull(LatitudeTag::parse)
+    fun latitude() = tags.latitude()
 
-    fun longitude() = tags.firstNotNullOfOrNull(LongitudeTag::parse)
+    fun longitude() = tags.longitude()
 
     fun alt() = tags.firstNotNullOfOrNull(AltTag::parse)
 
-    fun relayExpiration() = tags.firstNotNullOfOrNull(ExpirationTag::parse)
+    fun relayExpiration() = tags.expiration()
 
     companion object {
         const val KIND = 1316
@@ -92,21 +98,28 @@ class RoadEventConfirmationEvent(
             longitude: Double? = null,
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<RoadEventConfirmationEvent>.() -> Unit = {},
-        ): EventTemplate<RoadEventConfirmationEvent> =
-            eventTemplate(KIND, "", createdAt) {
-                add(ETag.assemble(reportId, null, null))
-                add(RoadEventStatusTag.assemble(status))
-                if (latitude != null && longitude != null) {
-                    val geohash6 = GeoHash.encode(latitude, longitude, 6).toString()
-                    add(GeoHashTag.assembleSingle(geohash6.substring(0, 4)))
-                    add(GeoHashTag.assembleSingle(geohash6.substring(0, 5)))
-                    add(GeoHashTag.assembleSingle(geohash6))
-                    add(LatitudeTag.assemble(latitude))
-                    add(LongitudeTag.assemble(longitude))
-                }
-                expiration(createdAt + RoadEventReportEvent.RELAY_TTL_SECONDS)
-                alt(ALT_DESCRIPTION)
-                initializer()
+        ) = eventTemplate(KIND, "", createdAt) {
+            report(reportId)
+            status(status)
+            if (latitude != null && longitude != null) {
+                roadGeohashes(latitude, longitude)
+                coordinates(latitude, longitude)
             }
+            expiration(createdAt + RoadEventReportEvent.RELAY_TTL_SECONDS)
+            alt(ALT_DESCRIPTION)
+            initializer()
+        }
+
+        fun build(
+            report: EventHintBundle<RoadEventReportEvent>,
+            status: RoadEventStatus,
+            latitude: Double? = null,
+            longitude: Double? = null,
+            createdAt: Long = TimeUtils.now(),
+            initializer: TagArrayBuilder<RoadEventConfirmationEvent>.() -> Unit = {},
+        ) = build(report.event.id, status, latitude, longitude, createdAt) {
+            report(report)
+            initializer()
+        }
     }
 }

@@ -40,10 +40,10 @@ import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
-import com.vitorpamplona.quartz.experimental.roadstr.RoadEventConfirmationEvent
-import com.vitorpamplona.quartz.experimental.roadstr.RoadEventReportEvent
-import com.vitorpamplona.quartz.experimental.roadstr.RoadEventStatus
-import com.vitorpamplona.quartz.experimental.roadstr.RoadEventType
+import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
+import com.vitorpamplona.quartz.experimental.roadstr.confirmation.tags.RoadEventStatus
+import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
+import com.vitorpamplona.quartz.experimental.roadstr.report.tags.RoadEventType
 
 /** Emoji marker for a road event category — keeps the card icon-light and locale-independent. */
 private fun RoadEventType.emoji(): String =

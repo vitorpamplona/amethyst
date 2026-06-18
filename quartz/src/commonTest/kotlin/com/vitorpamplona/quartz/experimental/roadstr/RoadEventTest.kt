@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.quartz.experimental.roadstr
 
+import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
+import com.vitorpamplona.quartz.experimental.roadstr.confirmation.tags.RoadEventStatus
+import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
+import com.vitorpamplona.quartz.experimental.roadstr.report.tags.RoadEventType
 import com.vitorpamplona.quartz.experimental.roadstr.tags.RoadCoordinate
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash

@@ -18,17 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.roadstr
+package com.vitorpamplona.quartz.experimental.roadstr.tags
 
-/** Confirmation status carried in the `status` tag of a Roadstr confirmation (kind 1316). */
-enum class RoadEventStatus(
-    val code: String,
-) {
-    STILL_THERE("still_there"),
-    NO_LONGER_THERE("no_longer_there"),
-    ;
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
 
-    companion object {
-        fun fromCode(code: String?): RoadEventStatus? = entries.firstOrNull { it.code == code }
-    }
-}
+fun TagArray.latitude() = firstNotNullOfOrNull(LatitudeTag::parse)
+
+fun TagArray.longitude() = firstNotNullOfOrNull(LongitudeTag::parse)

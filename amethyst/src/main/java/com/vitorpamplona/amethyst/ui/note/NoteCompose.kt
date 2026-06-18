@@ -237,8 +237,8 @@ import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAss
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
-import com.vitorpamplona.quartz.experimental.roadstr.RoadEventConfirmationEvent
-import com.vitorpamplona.quartz.experimental.roadstr.RoadEventReportEvent
+import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
+import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent

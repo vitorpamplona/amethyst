@@ -75,6 +75,8 @@ import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
+import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
@@ -3868,6 +3870,14 @@ object LocalCache : ILocalCache, ICacheProvider {
 
                 is PollResponseEvent -> {
                     consume(event, relay, wasVerified)
+                }
+
+                is RoadEventReportEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
+                }
+
+                is RoadEventConfirmationEvent -> {
+                    consumeRegularEvent(event, relay, wasVerified)
                 }
 
                 is RelayDiscoveryEvent -> {

@@ -18,7 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.roadstr
+package com.vitorpamplona.quartz.experimental.roadstr.report.tags
+
+import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.ensure
 
 /**
  * Road event categories carried in the `t` tag of a Roadstr report (kind 1315).
@@ -49,5 +52,31 @@ enum class RoadEventType(
 
     companion object {
         fun fromCode(code: String?): RoadEventType? = entries.firstOrNull { it.code == code }
+    }
+}
+
+/** The `t` tag of a Roadstr report (kind 1315): the [RoadEventType] code. */
+class RoadEventTypeTag {
+    companion object {
+        const val TAG_NAME = "t"
+
+        fun isTag(tag: Array<String>) = tag.has(1) && tag[0] == TAG_NAME && tag[1].isNotEmpty()
+
+        /** Parses the tag into a known [RoadEventType], or null when missing/unknown. */
+        fun parse(tag: Array<String>): RoadEventType? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            return RoadEventType.fromCode(tag[1])
+        }
+
+        /** Returns the raw `t` value even when it is not a known [RoadEventType]. */
+        fun parseCode(tag: Array<String>): String? {
+            ensure(tag.has(1)) { return null }
+            ensure(tag[0] == TAG_NAME) { return null }
+            ensure(tag[1].isNotEmpty()) { return null }
+            return tag[1]
+        }
+
+        fun assemble(type: RoadEventType) = arrayOf(TAG_NAME, type.code)
     }
 }

@@ -18,23 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.experimental.roadstr
+package com.vitorpamplona.quartz.experimental.roadstr.report
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.experimental.roadstr.tags.LatitudeTag
-import com.vitorpamplona.quartz.experimental.roadstr.tags.LongitudeTag
+import com.vitorpamplona.quartz.experimental.roadstr.report.tags.RoadEventType
+import com.vitorpamplona.quartz.experimental.roadstr.tags.coordinates
+import com.vitorpamplona.quartz.experimental.roadstr.tags.latitude
+import com.vitorpamplona.quartz.experimental.roadstr.tags.longitude
+import com.vitorpamplona.quartz.experimental.roadstr.tags.roadGeohashes
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
-import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHashTag
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohashes
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.nip40Expiration.ExpirationTag
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -64,22 +62,22 @@ class RoadEventReportEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
-    /** The raw event-type code from the first `t` tag (may be a value outside [RoadEventType]). */
-    fun roadEventTypeCode() = tags.firstNotNullOfOrNull(HashtagTag::parse)
-
     /** The parsed [RoadEventType], or null when the `t` tag is missing/unknown. */
-    fun roadEventType() = RoadEventType.fromCode(roadEventTypeCode())
+    fun roadEventType() = tags.roadEventType()
 
-    /** All `g` geohash tags, finest-to-coarsest as published. */
+    /** The raw event-type code from the first `t` tag (may be outside [RoadEventType]). */
+    fun roadEventTypeCode() = tags.roadEventTypeCode()
+
+    /** All `g` geohash tags, coarse-to-fine as published. */
     fun geohashes() = tags.geohashes()
 
-    fun latitude() = tags.firstNotNullOfOrNull(LatitudeTag::parse)
+    fun latitude() = tags.latitude()
 
-    fun longitude() = tags.firstNotNullOfOrNull(LongitudeTag::parse)
+    fun longitude() = tags.longitude()
 
     fun alt() = tags.firstNotNullOfOrNull(AltTag::parse)
 
-    fun relayExpiration() = tags.firstNotNullOfOrNull(ExpirationTag::parse)
+    fun relayExpiration() = tags.expiration()
 
     /** Client-side effective expiry (`created_at + ` the type's TTL), or null if the type is unknown. */
     fun effectiveExpirationAt(): Long? = roadEventType()?.let { createdAt + it.effectiveTtlSeconds }
@@ -103,19 +101,13 @@ class RoadEventReportEvent(
             comment: String = "",
             createdAt: Long = TimeUtils.now(),
             initializer: TagArrayBuilder<RoadEventReportEvent>.() -> Unit = {},
-        ): EventTemplate<RoadEventReportEvent> {
-            val geohash6 = GeoHash.encode(latitude, longitude, 6).toString()
-            return eventTemplate(KIND, comment, createdAt) {
-                add(HashtagTag.assemble(type.code))
-                add(GeoHashTag.assembleSingle(geohash6.substring(0, 4)))
-                add(GeoHashTag.assembleSingle(geohash6.substring(0, 5)))
-                add(GeoHashTag.assembleSingle(geohash6))
-                add(LatitudeTag.assemble(latitude))
-                add(LongitudeTag.assemble(longitude))
-                expiration(createdAt + RELAY_TTL_SECONDS)
-                alt(altDescription(type))
-                initializer()
-            }
+        ) = eventTemplate(KIND, comment, createdAt) {
+            roadEventType(type)
+            roadGeohashes(latitude, longitude)
+            coordinates(latitude, longitude)
+            expiration(createdAt + RELAY_TTL_SECONDS)
+            alt(altDescription(type))
+            initializer()
         }
     }
 }
