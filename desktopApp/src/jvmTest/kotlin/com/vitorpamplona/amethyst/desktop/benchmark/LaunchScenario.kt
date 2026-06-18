@@ -26,7 +26,7 @@ import com.vitorpamplona.amethyst.commons.model.account.SignerType
 import com.vitorpamplona.amethyst.desktop.account.AccountManager
 import com.vitorpamplona.amethyst.desktop.account.AccountState
 import com.vitorpamplona.amethyst.desktop.cache.DesktopLocalCache
-import com.vitorpamplona.amethyst.desktop.network.RelayConnectionManager
+import com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager
 import com.vitorpamplona.amethyst.desktop.relay.LocalRelayStore
 import com.vitorpamplona.amethyst.desktop.testrelay.LaunchFixture
 import com.vitorpamplona.amethyst.desktop.testrelay.LaunchFixtureRelay
@@ -34,7 +34,6 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import io.mockk.coEvery
@@ -111,7 +110,7 @@ object LaunchScenario {
             localRelayStore.openForAccount(fixture.ownerKeyPair.pubKey.toHexKey())
 
             val relay = LaunchFixtureRelay.open(fixture.events)
-            val relayManager = BenchmarkRelayConnectionManager(relay.builder)
+            val relayManager = DesktopRelayConnectionManager(relay.builder)
 
             val eventCounter = AtomicInteger(0)
             val eoseSignal = CompletableDeferred<Unit>()
@@ -190,13 +189,3 @@ object LaunchScenario {
             }
         }
 }
-
-/**
- * Open the `websocketBuilder` ctor parameter so the benchmark can substitute
- * the in-process builder. Production callers go through
- * [com.vitorpamplona.amethyst.desktop.network.DesktopRelayConnectionManager]
- * which wires OkHttp.
- */
-private class BenchmarkRelayConnectionManager(
-    builder: WebsocketBuilder,
-) : RelayConnectionManager(builder)

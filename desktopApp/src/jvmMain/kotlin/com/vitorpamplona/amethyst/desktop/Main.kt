@@ -667,6 +667,7 @@ fun App(
     externalPortFlow: kotlinx.coroutines.flow.MutableStateFlow<Int>,
     initialTorSettings: com.vitorpamplona.amethyst.commons.tor.TorSettings,
     onNavigateToScreen: ((DeckColumnType) -> Unit) -> Unit = {},
+    testOverrides: LaunchTestOverrides? = null,
 ) {
     val singlePaneState = remember { SinglePaneState() }
     val pinnedNavBarState = remember { PinnedNavBarState(workspaceManager).also { it.loadFromWorkspace() } }
@@ -676,11 +677,14 @@ fun App(
         onNavigateToScreen { screen -> singlePaneState.navigate(screen) }
     }
 
-    // Always reload from prefs — after key() rebuild, prefs have the latest saved settings
+    // Always reload from prefs — after key() rebuild, prefs have the latest saved settings.
+    // Tests can short-circuit the prefs read via `testOverrides.torSettingsOverride` so the
+    // Tor splash gate (below) does not block them behind a real kmp-tor runtime.
     var torSettings by remember {
         mutableStateOf(
-            com.vitorpamplona.amethyst.desktop.tor.DesktopTorPreferences
-                .load(),
+            testOverrides?.torSettingsOverride
+                ?: com.vitorpamplona.amethyst.desktop.tor.DesktopTorPreferences
+                    .load(),
         )
     }
 
@@ -734,14 +738,14 @@ fun App(
         mutableStateOf<com.vitorpamplona.amethyst.desktop.ui.deck.AppDrawerTab?>(null)
     }
 
-    val localCache = remember { DesktopLocalCache() }
+    val localCache = remember { testOverrides?.localCache ?: DesktopLocalCache() }
     val accountState by accountManager.accountState.collectAsState()
     val scope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
 
     // Local relay store — persists events to SQLite per account
     val localRelayStore =
         remember {
-            com.vitorpamplona.amethyst.desktop.relay
+            testOverrides?.localRelayStore ?: com.vitorpamplona.amethyst.desktop.relay
                 .LocalRelayStore(scope)
         }
     val localRelayMaintenance =
@@ -799,7 +803,10 @@ fun App(
             .setup()
     }
 
-    val relayManager = remember(httpClient) { DesktopRelayConnectionManager(httpClient) }
+    val relayManager =
+        remember(httpClient) {
+            testOverrides?.relayManager ?: DesktopRelayConnectionManager(httpClient)
+        }
     val nip11Fetcher = remember { Nip11Fetcher() }
 
     // Start 1Hz metrics snapshot for relay dashboard
@@ -896,9 +903,11 @@ fun App(
 
     // Try to load saved account on startup
     DisposableEffect(Unit) {
-        relayManager.addDefaultRelays()
-        relayManager.connect()
-        subscriptionsCoordinator.start()
+        if (testOverrides?.skipStartupRelayBootstrap != true) {
+            relayManager.addDefaultRelays()
+            relayManager.connect()
+            subscriptionsCoordinator.start()
+        }
 
         scope.launch(Dispatchers.IO) {
             // Load account list from encrypted storage

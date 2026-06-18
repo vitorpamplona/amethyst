@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.network
 
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 
 /**
@@ -27,8 +28,19 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSoc
  * Now Tor-aware: passes the DesktopHttpClient's getHttpClient which selects
  * proxy or direct client per relay URL based on Tor settings.
  */
-class DesktopRelayConnectionManager(
-    httpClient: DesktopHttpClient,
-) : RelayConnectionManager(
+open class DesktopRelayConnectionManager : RelayConnectionManager {
+    /** Production constructor: wires OkHttp via the Tor-aware [DesktopHttpClient]. */
+    constructor(httpClient: DesktopHttpClient) : super(
         websocketBuilder = BasicOkHttpWebSocket.Builder(httpClient::getHttpClient),
     )
+
+    /**
+     * Test-only constructor: substitute a custom [WebsocketBuilder], e.g. the
+     * in-process one wired by `LaunchTestOverrides`. Kept on the production
+     * class (rather than a `desktopApp/jvmTest` subclass) so the existing
+     * `LocalRelayManager` composition local — typed as
+     * `DesktopRelayConnectionManager?` and consumed widely across screens —
+     * does not need to be relaxed.
+     */
+    constructor(websocketBuilder: WebsocketBuilder) : super(websocketBuilder)
+}
