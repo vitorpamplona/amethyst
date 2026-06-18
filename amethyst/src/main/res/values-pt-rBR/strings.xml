@@ -1320,9 +1320,6 @@
     <string name="call_settings_turn_credential">Credencial</string>
     <string name="always_on_notif_channel_description">Mantém as conexões com seus relays de caixa de entrada ativas para notificações em tempo real</string>
     <string name="always_on_notif_title">Notificações do Amethyst ativas</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="other">Conectado a %1$d relays de caixa de entrada</item>
-    </plurals>
     <string name="always_on_notif_connecting">Conectando aos relays de caixa de entrada\u2026</string>
     <string name="always_on_notif_setting_title">Serviço de notificações sempre ativo</string>
     <string name="always_on_notif_setting_description">Mantém uma conexão persistente com seus relays de caixa de entrada para entrega instantânea de notificações. Mostra uma notificação contínua. Usa mais bateria, mas garante que você nunca perca uma mensagem.</string>
@@ -3043,6 +3040,7 @@
         <item quantity="one">%1$s +%2$d a mais</item>
         <item quantity="other">%1$s +%2$d a mais</item>
     </plurals>
+    <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
     <string name="goal_amount_label">Valor da meta (sats)</string>
     <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Descreva sua meta</string>
