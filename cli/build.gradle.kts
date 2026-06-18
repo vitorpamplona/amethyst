@@ -30,6 +30,28 @@ dependencies {
     implementation(libs.slf4j.nop)
 }
 
+// amy is headless. It compiles against zero Compose UI (the Compose deps are
+// `implementation` in :commons, so they never reach the CLI compile classpath —
+// verified), yet they still ride the *runtime* classpath into the shipped image:
+// ~29 MB of Compose desktop render stack, including skiko's native .dylibs that
+// needlessly enlarge the macOS notarization surface. None of it is reachable
+// from a CLI command, so drop the whole UI layer from the runtime image. Keep
+// `androidx.compose.runtime` — snapshot state + the @Stable/@Immutable
+// annotations ARE CLI-safe and used by commons models/state holders (see
+// commons/ARCHITECTURE.md §1). A regression here is caught by the "no Compose UI
+// in the amy image" assertion in .github/workflows/create-release.yml.
+configurations.named("runtimeClasspath") {
+    // skiko (native renderer + its .dylibs) and the Compose UI bytecode layer.
+    // NB: Compose Multiplatform publishes UI under org.jetbrains.compose.* — only
+    // `runtime` relocates to androidx.compose.runtime, which we deliberately keep.
+    exclude(group = "org.jetbrains.skiko")
+    exclude(group = "org.jetbrains.compose.ui")
+    exclude(group = "org.jetbrains.compose.foundation")
+    exclude(group = "org.jetbrains.compose.material")
+    exclude(group = "org.jetbrains.compose.material3")
+    exclude(group = "org.jetbrains.compose.animation")
+}
+
 application {
     mainClass.set("com.vitorpamplona.amethyst.cli.MainKt")
     applicationName = "amy"

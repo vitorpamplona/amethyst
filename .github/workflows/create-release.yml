@@ -282,6 +282,24 @@ jobs:
           timeout_minutes: 15
           command: ./gradlew --no-daemon :cli:${{ matrix.tasks }}
 
+      # amy is headless: the Compose UI render stack (skiko + its native dylibs,
+      # foundation/material/material3/ui/animation) must never reach the CLI
+      # image. cli/build.gradle.kts excludes it from runtimeClasspath; this
+      # guards against a transitive dep silently dragging it back (size + macOS
+      # notarization-surface regression). compose.runtime is CLI-safe and stays.
+      - name: Assert no Compose UI in the amy image
+        run: |
+          set -euo pipefail
+          LIB="cli/build/install/amy/lib"
+          leak="$(ls "$LIB" | grep -iE 'skiko|foundation(-layout)?-desktop|material3?-desktop|material-ripple|ui-desktop|animation(-core)?-desktop' || true)"
+          if [ -n "$leak" ]; then
+            echo "::error::Compose UI render stack leaked into the amy CLI image:"
+            echo "$leak" | sed 's/^/  /'
+            echo "Exclude it in cli/build.gradle.kts (configurations.runtimeClasspath)."
+            exit 1
+          fi
+          echo "OK: no skiko / Compose UI render jars in the amy image ($(du -sh "$LIB" | cut -f1))."
+
       # macOS only: import the Developer ID cert (no-op without the secret) so
       # the next step can codesign the jlink image. The jvm bundle for
       # Homebrew-core is NOT signed here — Homebrew strips quarantine itself.
