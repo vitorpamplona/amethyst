@@ -352,6 +352,7 @@ fun NoteCompose(
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
+    onClick: (() -> Unit)? = null,
     moreOptions: (@Composable () -> Unit)? = null,
 ) {
     WatchNoteEvent(
@@ -382,6 +383,7 @@ fun NoteCompose(
                 parentBackgroundColor = parentBackgroundColor,
                 accountViewModel = accountViewModel,
                 nav = nav,
+                onClick = onClick,
                 moreOptions = moreOptions,
             )
         }
@@ -403,6 +405,7 @@ fun AcceptableNote(
     parentBackgroundColor: MutableState<Color>? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
+    onClick: (() -> Unit)? = null,
     moreOptions: (@Composable () -> Unit)?,
 ) {
     if (isQuotedNote || isBoostedNote) {
@@ -455,6 +458,7 @@ fun AcceptableNote(
                         accountViewModel = accountViewModel,
                         showPopup = showPopup,
                         nav = nav,
+                        onClick = onClick,
                         moreOptions = moreOptions,
                     )
                 }
@@ -509,6 +513,7 @@ fun AcceptableNote(
                         accountViewModel = accountViewModel,
                         showPopup = showPopup,
                         nav = nav,
+                        onClick = onClick,
                         moreOptions = moreOptions,
                     )
                 }
@@ -575,6 +580,7 @@ private fun CheckNewAndRenderNote(
     accountViewModel: AccountViewModel,
     showPopup: () -> Unit,
     nav: INav,
+    onClick: (() -> Unit)? = null,
     moreOptions: (@Composable () -> Unit)? = null,
 ) {
     val backgroundColor =
@@ -588,7 +594,7 @@ private fun CheckNewAndRenderNote(
     InnerNoteWithReactions(
         baseNote = baseNote,
         backgroundColor = backgroundColor,
-        clickModifier = clickableNoteModifier(baseNote, modifier, accountViewModel, showPopup, nav),
+        clickModifier = clickableNoteModifier(baseNote, modifier, accountViewModel, showPopup, nav, onClick),
         isBoostedNote = isBoostedNote,
         isQuotedNote = isQuotedNote,
         unPackReply = unPackReply,
@@ -618,25 +624,30 @@ fun clickableNoteModifier(
     accountViewModel: AccountViewModel,
     showPopup: () -> Unit,
     nav: INav,
+    onClick: (() -> Unit)? = null,
 ): Modifier =
-    remember(baseNote, modifier) {
+    remember(baseNote, modifier, onClick) {
         modifier
             .combinedClickable(
                 onClick = {
-                    val redirectToNote =
-                        if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
-                            baseNote.replyTo?.lastOrNull() ?: baseNote
-                        } else {
-                            baseNote
-                        }
-
-                    nav.nav {
-                        if (redirectToNote.event is DraftWrapEvent) {
-                            withContext(Dispatchers.IO) {
-                                routeEditDraftTo(redirectToNote, accountViewModel.account)
+                    if (onClick != null) {
+                        onClick()
+                    } else {
+                        val redirectToNote =
+                            if (baseNote.event is RepostEvent || baseNote.event is GenericRepostEvent) {
+                                baseNote.replyTo?.lastOrNull() ?: baseNote
+                            } else {
+                                baseNote
                             }
-                        } else {
-                            routeFor(redirectToNote, accountViewModel.account)
+
+                        nav.nav {
+                            if (redirectToNote.event is DraftWrapEvent) {
+                                withContext(Dispatchers.IO) {
+                                    routeEditDraftTo(redirectToNote, accountViewModel.account)
+                                }
+                            } else {
+                                routeFor(redirectToNote, accountViewModel.account)
+                            }
                         }
                     }
                 },

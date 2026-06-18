@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -60,10 +61,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -94,8 +97,10 @@ import com.vitorpamplona.amethyst.ui.note.CheckAndDisplayEditStatus
 import com.vitorpamplona.amethyst.ui.note.CheckHiddenFeedWatchBlockAndReport
 import com.vitorpamplona.amethyst.ui.note.DisplayDraft
 import com.vitorpamplona.amethyst.ui.note.DisplayOtsIfInOriginal
+import com.vitorpamplona.amethyst.ui.note.ExpandMoreIcon
 import com.vitorpamplona.amethyst.ui.note.Expiration
 import com.vitorpamplona.amethyst.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.ui.note.LoadDecryptedContent
 import com.vitorpamplona.amethyst.ui.note.LongPressToQuickAction
 import com.vitorpamplona.amethyst.ui.note.NoteAuthorPicture
 import com.vitorpamplona.amethyst.ui.note.NoteCompose
@@ -222,6 +227,8 @@ import com.vitorpamplona.amethyst.ui.theme.EditFieldBorder
 import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.PaddingHorizontal12Modifier
+import com.vitorpamplona.amethyst.ui.theme.Size20dp
+import com.vitorpamplona.amethyst.ui.theme.Size40dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -366,8 +373,45 @@ fun RenderThreadFeed(
     nav: INav,
 ) {
     val items by loaded.feed.collectAsStateWithLifecycle()
+    val levels by viewModel.levelCacheFlow.collectAsStateWithLifecycle()
 
-    val position = items.list.indexOfFirst { it.idHex == noteId }
+    // Hides every descendant of a collapsed reply and counts how many were hidden. The feed is
+    // ordered depth-first, so a note's descendants are the contiguous items that follow it with a
+    // strictly deeper reply level.
+    val visible by
+        remember(items, levels) {
+            derivedStateOf {
+                val full = items.list
+                if (viewModel.collapsedReplies.isEmpty()) {
+                    VisibleThread(full, emptyMap())
+                } else {
+                    val result = ArrayList<Note>(full.size)
+                    val hiddenCounts = HashMap<String, Int>()
+                    var hideDeeperThan = Int.MAX_VALUE
+                    var collapsedAncestorId: String? = null
+                    full.forEach { note ->
+                        val level = levels[note] ?: 0
+                        if (level > hideDeeperThan) {
+                            collapsedAncestorId?.let { hiddenCounts[it] = (hiddenCounts[it] ?: 0) + 1 }
+                            return@forEach
+                        }
+
+                        hideDeeperThan = Int.MAX_VALUE
+                        collapsedAncestorId = null
+                        result.add(note)
+
+                        if (viewModel.isCollapsed(note.idHex)) {
+                            hideDeeperThan = level
+                            collapsedAncestorId = note.idHex
+                        }
+                    }
+                    VisibleThread(result, hiddenCounts)
+                }
+            }
+        }
+
+    val visibleItems = visible.items
+    val position = visibleItems.indexOfFirst { it.idHex == noteId }
 
     LaunchedEffect(noteId, position) {
         // hack to allow multiple scrolls to Item while posts on the screen load.
@@ -386,7 +430,7 @@ fun RenderThreadFeed(
 
         if (position >= 0 && !viewModel.hasDragged.value) {
             val offset =
-                if (position > items.list.size - 3) {
+                if (position > visibleItems.size - 3) {
                     0
                 } else {
                     -200
@@ -402,9 +446,15 @@ fun RenderThreadFeed(
         state = listState,
     ) {
         itemsIndexed(
-            items.list,
+            visibleItems,
             key = { _, item -> item.idHex },
-            contentType = { index, _ -> if (index == 0) "master" else "reply" },
+            contentType = { index, item ->
+                when {
+                    index == 0 -> "master"
+                    viewModel.isCollapsed(item.idHex) -> "collapsed"
+                    else -> "reply"
+                }
+            },
         ) { index, item ->
             val level = viewModel.levelFlowForItem(item).collectAsStateWithLifecycle(0)
 
@@ -430,12 +480,23 @@ fun RenderThreadFeed(
                         nav = nav,
                     )
                 }
+            } else if (viewModel.isCollapsed(item.idHex)) {
+                CollapsedNoteCompose(
+                    baseNote = item,
+                    modifier = modifier,
+                    hiddenReplyCount = visible.hiddenCounts[item.idHex] ?: 0,
+                    onExpand = { viewModel.toggleCollapsed(item.idHex) },
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
             } else {
                 val selectedNoteColor = MaterialTheme.colorScheme.selectedNote
                 val background =
                     remember {
                         if (item.idHex == noteId) mutableStateOf(selectedNoteColor) else null
                     }
+
+                val onCollapse = remember(item) { { viewModel.toggleCollapsed(item.idHex) } }
 
                 NoteCompose(
                     baseNote = item,
@@ -446,12 +507,85 @@ fun RenderThreadFeed(
                     parentBackgroundColor = background,
                     accountViewModel = accountViewModel,
                     nav = nav,
+                    onClick = onCollapse,
                 )
             }
 
             HorizontalDivider(
                 thickness = DividerThickness,
             )
+        }
+    }
+}
+
+/**
+ * Holds the thread items currently visible after collapsing, plus, for each collapsed reply id,
+ * the number of descendant replies that were hidden underneath it.
+ */
+private class VisibleThread(
+    val items: List<Note>,
+    val hiddenCounts: Map<String, Int>,
+)
+
+/**
+ * Compact rendering of a thread reply the user has collapsed: avatar, author name, and the
+ * first two lines of its content. The right side shows how many replies are hidden underneath it
+ * and an ExpandMore indicator. Tapping anywhere on the row expands the note (and reveals its
+ * hidden children) again.
+ */
+@Composable
+private fun CollapsedNoteCompose(
+    baseNote: Note,
+    modifier: Modifier,
+    hiddenReplyCount: Int,
+    onExpand: () -> Unit,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    WatchNoteEvent(baseNote, accountViewModel, nav) {
+        Row(
+            modifier =
+                modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onExpand)
+                    // Match NoteComposeLayout: 12dp leading/trailing padding, 10dp top.
+                    .padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            NoteAuthorPicture(baseNote = baseNote, size = Size40dp, accountViewModel = accountViewModel, nav = nav)
+
+            // 10dp gap between the avatar and the name, same as NoteComposeLayout's authorContentGap.
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                NoteUsernameDisplay(baseNote, accountViewModel = accountViewModel)
+
+                LoadDecryptedContent(baseNote, accountViewModel) { body ->
+                    Text(
+                        text = body,
+                        color = MaterialTheme.colorScheme.placeholderText,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+
+            Spacer(modifier = StdHorzSpacer)
+
+            // The label carries an explicit '\n' so the count and the word always stack on two
+            // lines (e.g. "+1\nreply"), keeping the horizontal footprint small and consistent.
+            // Always shown — even "+0 replies" — so every collapsed card looks the same.
+            Text(
+                text = pluralStringResource(R.plurals.thread_collapsed_reply_count, hiddenReplyCount, hiddenReplyCount),
+                color = MaterialTheme.colorScheme.placeholderText,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.labelMedium,
+            )
+
+            Spacer(modifier = StdHorzSpacer)
+
+            ExpandMoreIcon(modifier = Modifier.size(Size20dp), contentDescriptor = R.string.expand)
         }
     }
 }
