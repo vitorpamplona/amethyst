@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import android.content.Context
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -33,15 +32,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap
-import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
-import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
@@ -123,13 +119,11 @@ private fun RoadEventType.labelRes(): Int =
 @Composable
 fun RenderRoadEventReport(baseNote: Note) {
     val noteEvent = baseNote.event as? RoadEventReportEvent ?: return
-    val context = LocalContext.current
 
     val type = remember(noteEvent) { noteEvent.roadEventType() }
     val comment = remember(noteEvent) { noteEvent.content.trim() }
     val point = remember(noteEvent) { noteEvent.roadEventPoint() }
     val freshness = remember(noteEvent) { noteEvent.freshnessAlpha() }
-    val meta = remember(noteEvent) { noteEvent.metaLine(context) }
 
     Column(MaterialTheme.colorScheme.replyModifier.padding(10.dp)) {
         val title =
@@ -140,13 +134,6 @@ fun RenderRoadEventReport(baseNote: Note) {
             }
 
         Text(text = title, style = MaterialTheme.typography.titleMedium)
-
-        Spacer(Modifier.height(2.dp))
-        Text(
-            text = meta,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.placeholderText,
-        )
 
         if (comment.isNotEmpty()) {
             Spacer(Modifier.height(6.dp))
@@ -179,11 +166,9 @@ fun RenderRoadEventReport(baseNote: Note) {
 @Composable
 fun RenderRoadEventConfirmation(baseNote: Note) {
     val noteEvent = baseNote.event as? RoadEventConfirmationEvent ?: return
-    val context = LocalContext.current
 
     val status = remember(noteEvent) { noteEvent.status() }
     val point = remember(noteEvent) { noteEvent.roadEventPoint() }
-    val age = remember(noteEvent) { timeAgoNoDot(noteEvent.createdAt, context) }
 
     val denied = status == RoadEventStatus.NO_LONGER_THERE
     val emoji = if (denied) "❌" else "✅"
@@ -193,13 +178,6 @@ fun RenderRoadEventConfirmation(baseNote: Note) {
         val titleRes = if (denied) R.string.road_event_denied else R.string.road_event_confirmed
 
         Text(text = "$emoji ${stringResource(titleRes)}", style = MaterialTheme.typography.titleMedium)
-
-        Spacer(Modifier.height(2.dp))
-        Text(
-            text = "🕒 $age",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.placeholderText,
-        )
 
         Spacer(Modifier.height(4.dp))
         Text(
@@ -279,32 +257,3 @@ private fun RoadEventReportEvent.freshnessAlpha(now: Long = TimeUtils.now()): Fl
         else -> 1f
     }
 }
-
-/** "🕒 23m · expires in 1h" (or "· expired") for the report card subtitle. */
-private fun RoadEventReportEvent.metaLine(
-    context: Context,
-    now: Long = TimeUtils.now(),
-): String {
-    val age = "🕒 ${timeAgoNoDot(createdAt, context)}"
-    val expiryAt = effectiveExpirationAt() ?: return age
-
-    val remaining = expiryAt - now
-    val expiry =
-        if (remaining <= 0L) {
-            stringRes(context, R.string.road_event_expired)
-        } else {
-            stringRes(context, R.string.road_event_expires_in, formatDuration(context, remaining))
-        }
-    return "$age · $expiry"
-}
-
-/** Compact forward duration ("2d" / "3h" / "45m") reusing the time-ago unit strings. */
-private fun formatDuration(
-    context: Context,
-    seconds: Long,
-): String =
-    when {
-        seconds >= TimeUtils.ONE_DAY -> "${seconds / TimeUtils.ONE_DAY}${stringRes(context, R.string.d)}"
-        seconds >= TimeUtils.ONE_HOUR -> "${seconds / TimeUtils.ONE_HOUR}${stringRes(context, R.string.h)}"
-        else -> "${(seconds / TimeUtils.ONE_MINUTE).coerceAtLeast(1)}${stringRes(context, R.string.m)}"
-    }
