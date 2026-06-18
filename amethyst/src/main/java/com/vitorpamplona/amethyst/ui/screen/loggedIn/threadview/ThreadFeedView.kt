@@ -37,7 +37,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -571,13 +570,13 @@ private fun CollapsedNoteCompose(
             Spacer(modifier = StdHorzSpacer)
 
             if (hiddenReplyCount > 0) {
+                // The label carries an explicit '\n' so the count and the word always stack on two
+                // lines (e.g. "+1\nreply"), keeping the horizontal footprint small and consistent.
                 Text(
                     text = pluralStringResource(R.plurals.thread_collapsed_reply_count, hiddenReplyCount, hiddenReplyCount),
                     color = MaterialTheme.colorScheme.placeholderText,
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.labelMedium,
-                    // Allow the label to wrap onto multiple lines so it takes less horizontal room.
-                    modifier = Modifier.widthIn(max = Size55dp),
                 )
                 Spacer(modifier = StdHorzSpacer)
             }
