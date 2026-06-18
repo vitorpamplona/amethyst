@@ -569,17 +569,17 @@ private fun CollapsedNoteCompose(
 
             Spacer(modifier = StdHorzSpacer)
 
-            if (hiddenReplyCount > 0) {
-                // The label carries an explicit '\n' so the count and the word always stack on two
-                // lines (e.g. "+1\nreply"), keeping the horizontal footprint small and consistent.
-                Text(
-                    text = pluralStringResource(R.plurals.thread_collapsed_reply_count, hiddenReplyCount, hiddenReplyCount),
-                    color = MaterialTheme.colorScheme.placeholderText,
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.labelMedium,
-                )
-                Spacer(modifier = StdHorzSpacer)
-            }
+            // The label carries an explicit '\n' so the count and the word always stack on two
+            // lines (e.g. "+1\nreply"), keeping the horizontal footprint small and consistent.
+            // Always shown — even "+0 replies" — so every collapsed card looks the same.
+            Text(
+                text = pluralStringResource(R.plurals.thread_collapsed_reply_count, hiddenReplyCount, hiddenReplyCount),
+                color = MaterialTheme.colorScheme.placeholderText,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.labelMedium,
+            )
+
+            Spacer(modifier = StdHorzSpacer)
 
             ExpandMoreIcon(modifier = Modifier.size(Size20dp), contentDescriptor = R.string.expand)
         }
