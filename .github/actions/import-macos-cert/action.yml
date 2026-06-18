@@ -1,0 +1,52 @@
+name: Import macOS Developer ID certificate
+description: >
+  Import a Developer ID Application certificate (base64-encoded .p12) into a
+  throwaway keychain so codesign/jpackage can find it during the job. Soft:
+  when no certificate is supplied it is a no-op and reports signing=false, so
+  callers build UNSIGNED artifacts exactly as before.
+
+inputs:
+  certificate-p12-base64:
+    description: Base64 of the Developer ID Application .p12 (cert + private key)
+    required: true
+  certificate-password:
+    description: Password used when the .p12 was exported
+    required: true
+
+outputs:
+  signing:
+    description: "'true' if a certificate was imported, else 'false'"
+    value: ${{ steps.import.outputs.signing }}
+
+runs:
+  using: composite
+  steps:
+    - id: import
+      shell: bash
+      env:
+        CERT_P12: ${{ inputs.certificate-p12-base64 }}
+        CERT_PASSWORD: ${{ inputs.certificate-password }}
+      run: |
+        set -euo pipefail
+        if [[ -z "${CERT_P12:-}" ]]; then
+          echo "::notice::No macOS signing certificate configured — artifacts will be UNSIGNED."
+          echo "signing=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        KEYCHAIN="$RUNNER_TEMP/amethyst-signing.keychain-db"
+        KEYCHAIN_PWD="$(openssl rand -base64 24)"
+        CERT_PATH="$RUNNER_TEMP/developer_id.p12"
+        security create-keychain -p "$KEYCHAIN_PWD" "$KEYCHAIN"
+        security set-keychain-settings -lut 21600 "$KEYCHAIN"
+        security unlock-keychain -p "$KEYCHAIN_PWD" "$KEYCHAIN"
+        echo "$CERT_P12" | base64 --decode > "$CERT_PATH"
+        security import "$CERT_PATH" -P "$CERT_PASSWORD" \
+          -k "$KEYCHAIN" -T /usr/bin/codesign -T /usr/bin/productsign
+        # Let codesign use the private key without an interactive UI prompt.
+        security set-key-partition-list -S apple-tool:,apple:,codesign: \
+          -s -k "$KEYCHAIN_PWD" "$KEYCHAIN" >/dev/null
+        # Prepend our keychain to the user search list so codesign sees it.
+        security list-keychains -d user -s "$KEYCHAIN" \
+          $(security list-keychains -d user | sed -e 's/[\"[:space:]]//g')
+        rm -f "$CERT_PATH"
+        echo "signing=true" >> "$GITHUB_OUTPUT"
