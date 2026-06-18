@@ -323,10 +323,31 @@ jobs:
           done < <(find "$IMG" -type f)
           codesign --verify --strict --verbose=2 "$IMG/runtime/bin/java"
           # Notarize: zip the signed image, submit, wait for Apple's verdict.
-          ditto -c -k --keepParent "$IMG" "$RUNNER_TEMP/amy-notarize.zip"
-          xcrun notarytool submit "$RUNNER_TEMP/amy-notarize.zip" \
-            --apple-id "$NOTARY_APPLE_ID" --password "$NOTARY_PASSWORD" \
-            --team-id "$NOTARY_TEAM_ID" --wait
+          # The notary service recursively inspects the lib/*.jar files, so any
+          # unsigned Mach-O embedded in them (secp256k1/jna/sqlite/skiko natives)
+          # can come back Invalid. Surface the per-file log so the first real run
+          # is diagnostic rather than a bare failure.
+          ZIP="$RUNNER_TEMP/amy-notarize.zip"
+          OUT="$RUNNER_TEMP/notary-submit.json"
+          ditto -c -k --keepParent "$IMG" "$ZIP"
+          if ! xcrun notarytool submit "$ZIP" \
+                --apple-id "$NOTARY_APPLE_ID" --password "$NOTARY_PASSWORD" \
+                --team-id "$NOTARY_TEAM_ID" --wait --output-format json > "$OUT"; then
+            echo "::warning::notarytool submit exited non-zero"
+          fi
+          cat "$OUT"
+          STATUS="$(jq -r '.status // "Unknown"' "$OUT" 2>/dev/null || echo Unknown)"
+          SUBMISSION_ID="$(jq -r '.id // empty' "$OUT" 2>/dev/null || true)"
+          if [ "$STATUS" != "Accepted" ]; then
+            echo "::error::Notarization status: $STATUS"
+            if [ -n "$SUBMISSION_ID" ]; then
+              echo "----- notary log -----"
+              xcrun notarytool log "$SUBMISSION_ID" \
+                --apple-id "$NOTARY_APPLE_ID" --password "$NOTARY_PASSWORD" \
+                --team-id "$NOTARY_TEAM_ID" || true
+            fi
+            exit 1
+          fi
 
       # jpackage pins libicu to the build host's version (libicu74 on
       # ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.

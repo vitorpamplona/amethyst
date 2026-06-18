@@ -281,6 +281,28 @@ Gatekeeper verifies notarization **online** on first run — fine for a CLI.
 Note the Homebrew-core jvm bundle (`amy-<version>-jvm.tar.gz`) is **not** signed:
 Homebrew removes the quarantine attribute on its own downloads.
 
+> **Validated (Developer ID `D77MCV9NZ7`):** signing every Mach-O in the bundled
+> JRE with hardened runtime + `amy.entitlements` lets `amy init` derive a key via
+> secp256k1 with no library-validation crash. Dropping `disable-library-validation`
+> reproduces `UnsatisfiedLinkError: … different Team IDs` on the runtime-extracted
+> `libsecp256k1-jni.dylib` — so that entitlement is load-bearing, not decorative.
+>
+> **Open risk — embedded jar natives.** The notary service unpacks `lib/*.jar`
+> recursively and checks every Mach-O for a signature + hardened runtime. Our
+> sign loop only touches loose files, so 9 unsigned natives ride along inside
+> jars on a macOS build: `secp256k1` (1, required at runtime), `jna` (2),
+> `sqlite` (2), and `skiko` (4, dead weight — Compose UI the CLI never renders).
+> Whether `notarytool` returns `Accepted` or `Invalid` on these is **unverified**
+> (the local validation had no notary creds). **Decide it with one run:** set the
+> six `MAC_*` secrets and trigger `create-release.yml` via `workflow_dispatch`
+> with `dry_run=true` — the sign+notarize step runs regardless of `dry_run` and
+> now prints the per-file notary log on a non-`Accepted` verdict. If it comes
+> back `Invalid`, the fix is to codesign the dylibs *inside* those jars before
+> zipping (and/or strip the unused `skiko`/Compose jars from the CLI image — the
+> `:commons` core/ui split the size budget already flags). The **desktop** app
+> bundles the same jars through Compose/jpackage notarization, so run a desktop
+> dry-run too; its in-jar handling differs and is likewise unverified.
+
 Generating the values:
 
 ```bash
