@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.core.isEphemeral
 import com.vitorpamplona.quartz.nip01Core.core.isReplaceable
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.store.FtsReindexProgress
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.DefaultIndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.IndexingStrategy
@@ -526,6 +527,63 @@ open class FsEventStore(
                     }
                 }
             }
+        }
+
+    /**
+     * Resumable, additive FTS rebuild. See
+     * [IEventStore.reindexFullTextSearch] for the loop contract.
+     *
+     * The cursor is the next searchable kind to process, so the store is
+     * walked one `idx/kind/<k>/` directory at a time — that keeps the
+     * scan linear (each directory is listed once, never re-sorted) at the
+     * cost of pausing only between kinds: a single huge kind is processed
+     * in one batch. [batchSize] is a soft floor — whole kinds are
+     * processed until at least that many events have been (re)linked,
+     * then the call yields. Linking is idempotent ([FsIndexer.linkFts]
+     * ignores an existing hardlink), so nothing is wiped and search stays
+     * usable throughout; replaying a kind after a crash is harmless.
+     */
+    override suspend fun reindexFullTextSearch(
+        resumeFrom: String?,
+        batchSize: Int,
+    ): FtsReindexProgress =
+        lockManager.withWriteLock {
+            if (!Files.isDirectory(layout.idxKind)) {
+                return@withWriteLock FtsReindexProgress(cursor = null, processedThisBatch = 0, done = true)
+            }
+            Files.createDirectories(layout.idxFts)
+
+            val resumeKind = resumeFrom?.toIntOrNull()
+            val pending =
+                Files
+                    .list(layout.idxKind)
+                    .use { dirs -> dirs.map { it.fileName.toString() }.toList() }
+                    .mapNotNull { it.toIntOrNull() }
+                    .filter { isSearchableKind(it) && (resumeKind == null || it >= resumeKind) }
+                    .sorted()
+
+            var processed = 0
+            var index = 0
+            while (index < pending.size) {
+                val kind = pending[index]
+                Files.list(layout.kindDir(kind)).use { entries ->
+                    for (entry in entries) {
+                        val id = FsLayout.parseEntry(entry.fileName.toString())?.second ?: continue
+                        val event = readEvent(id) ?: continue
+                        indexer.linkFts(event, layout.canonical(id))
+                        processed++
+                    }
+                }
+                index++
+                if (processed >= batchSize) break
+            }
+
+            val done = index >= pending.size
+            FtsReindexProgress(
+                cursor = if (done) null else pending[index].toString(),
+                processedThisBatch = processed,
+                done = done,
+            )
         }
 
     /**

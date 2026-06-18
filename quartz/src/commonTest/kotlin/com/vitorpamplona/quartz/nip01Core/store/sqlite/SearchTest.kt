@@ -231,6 +231,75 @@ class SearchTest : BaseDBTest() {
         }
 
     @Test
+    fun testResumableReindexProcessesEveryEventInBatches() =
+        forEachDB { db ->
+            // A handful of searchable notes, each with a unique token.
+            val notes =
+                (0 until 5).map { i ->
+                    signer.sign(TextNoteEvent.build("uniqresume$i body", createdAt = TimeUtils.now() + i))
+                }
+            notes.forEach { db.store.insertEvent(it) }
+
+            // Mimic the post-upgrade state: canonical rows present, FTS empty.
+            db.store.pool.useWriter { db.store.fullTextSearchModule.deleteAll(it) }
+            db.store.assertQuery(null, Filter(search = "uniqresume0"))
+
+            // Drive the resumable path two events at a time, persisting only
+            // the opaque cursor between calls — exactly what a paused/resumed
+            // app would do.
+            var cursor: String? = null
+            var batches = 0
+            var processed = 0
+            do {
+                val progress = db.store.reindexFullTextSearch(cursor, batchSize = 2)
+                cursor = progress.cursor
+                processed += progress.processedThisBatch
+                batches++
+            } while (!progress.done)
+
+            // 5 events at 2 per batch ⇒ 3 batches (2 + 2 + 1).
+            kotlin.test.assertEquals(5, processed)
+            kotlin.test.assertEquals(3, batches)
+
+            // Every note is searchable again after the full run.
+            notes.forEachIndexed { i, n -> db.store.assertQuery(n, Filter(search = "uniqresume$i")) }
+        }
+
+    @Test
+    fun testResumableReindexKeepsSearchLiveAndIsIdempotent() =
+        forEachDB { db ->
+            val a = signer.sign(TextNoteEvent.build("uniqalpha note", createdAt = TimeUtils.now()))
+            val b = signer.sign(TextNoteEvent.build("uniqbeta note", createdAt = TimeUtils.now() + 1))
+            db.store.insertEvent(a)
+            db.store.insertEvent(b)
+
+            // First batch (size 1) reindexes only the lowest row_id; the
+            // untouched event keeps the FTS row it already had from insert,
+            // so search stays live for both throughout.
+            val first = db.store.reindexFullTextSearch(null, batchSize = 1)
+            kotlin.test.assertEquals(false, first.done)
+            db.store.assertQuery(a, Filter(search = "uniqalpha"))
+            db.store.assertQuery(b, Filter(search = "uniqbeta"))
+
+            // Finish, then run the whole loop again from scratch: delete-then-
+            // insert per event means no duplicate rows (assertQuery wants 1).
+            var cursor = first.cursor
+            do {
+                val p = db.store.reindexFullTextSearch(cursor, batchSize = 1)
+                cursor = p.cursor
+            } while (!p.done)
+
+            cursor = null
+            do {
+                val p = db.store.reindexFullTextSearch(cursor, batchSize = 10)
+                cursor = p.cursor
+            } while (!p.done)
+
+            db.store.assertQuery(a, Filter(search = "uniqalpha"))
+            db.store.assertQuery(b, Filter(search = "uniqbeta"))
+        }
+
+    @Test
     fun testChannelJsonFieldsAreSearchable() =
         forEachDB { db ->
             val chan =

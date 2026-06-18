@@ -24,6 +24,7 @@ import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.SQLiteException
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip01Core.store.FtsReindexProgress
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.EventFactory
 
@@ -75,6 +76,11 @@ class FullTextSearchModule : IModule {
         """
         INSERT OR ROLLBACK INTO $tableName ($eventHeaderRowIdName, $contentName)
         VALUES (?, ?)
+        """.trimIndent()
+
+    val deleteFTSByRowId =
+        """
+        DELETE FROM $tableName WHERE $eventHeaderRowIdName = ?
         """.trimIndent()
 
     fun insert(
@@ -171,6 +177,81 @@ class FullTextSearchModule : IModule {
                 }
             }
         }
+    }
+
+    /**
+     * Process one batch of a resumable rebuild: re-derive the FTS rows
+     * for up to [batchSize] events whose `row_id > ` [afterRowId] and
+     * whose kind is searchable, ordered by `row_id`.
+     *
+     * `row_id` is a monotonic AUTOINCREMENT key, so it is a stable
+     * cursor that needs no extra bookkeeping. Each event is
+     * delete-then-insert, which keeps the batch idempotent (a replay
+     * after a crash is harmless) and avoids duplicate FTS rows for
+     * events that were already indexed by the normal insert path. Rows
+     * not yet reached keep their previous FTS content, so search stays
+     * usable while the rebuild is in flight.
+     *
+     * Must run inside the caller's per-batch write transaction.
+     */
+    fun reindexBatch(
+        db: SQLiteConnection,
+        afterRowId: Long,
+        batchSize: Int,
+    ): FtsReindexProgress {
+        val kinds = searchableKindsPresent(db)
+        if (kinds.isEmpty()) return FtsReindexProgress(cursor = null, processedThisBatch = 0, done = true)
+
+        val selectSql =
+            "SELECT row_id, id, pubkey, created_at, kind, tags, content, sig " +
+                "FROM event_headers WHERE row_id > ? AND kind IN (${kinds.joinToString(",")}) " +
+                "ORDER BY row_id LIMIT ?"
+
+        var last = afterRowId
+        var processed = 0
+        db.prepare(deleteFTSByRowId).use { del ->
+            db.prepare(insertFTS).use { write ->
+                db.prepare(selectSql).use { read ->
+                    read.bindLong(1, afterRowId)
+                    read.bindLong(2, batchSize.toLong())
+                    while (read.step()) {
+                        val rowId = read.getLong(0)
+                        // Clear any existing row for this event first so a
+                        // replay or an already-indexed event can't duplicate.
+                        del.bindLong(1, rowId)
+                        del.step()
+                        del.reset()
+
+                        val event =
+                            EventFactory.create<Event>(
+                                read.getText(1),
+                                read.getText(2),
+                                read.getLong(3),
+                                read.getInt(4),
+                                OptimizedJsonMapper.fromJsonToTagArray(read.getText(5)),
+                                read.getText(6),
+                                read.getText(7),
+                            )
+                        if (event is SearchableEvent) {
+                            write.bindLong(1, rowId)
+                            write.bindText(2, event.indexableContent())
+                            write.step()
+                            write.reset()
+                        }
+                        last = rowId
+                        processed++
+                    }
+                }
+            }
+        }
+
+        // Fewer than a full page came back ⇒ we hit the end of the table.
+        val done = processed < batchSize
+        return FtsReindexProgress(
+            cursor = if (done) null else last.toString(),
+            processedThisBatch = processed,
+            done = done,
+        )
     }
 
     /**

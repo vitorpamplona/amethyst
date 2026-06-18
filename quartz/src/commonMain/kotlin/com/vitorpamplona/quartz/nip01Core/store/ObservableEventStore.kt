@@ -220,5 +220,10 @@ class ObservableEventStore(
     // projections to observe and no [StoreChange] is emitted.
     override suspend fun reindexFullTextSearch() = inner.reindexFullTextSearch()
 
+    override suspend fun reindexFullTextSearch(
+        resumeFrom: String?,
+        batchSize: Int,
+    ): FtsReindexProgress = inner.reindexFullTextSearch(resumeFrom, batchSize)
+
     override fun close() = inner.close()
 }

@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
@@ -157,6 +158,45 @@ class FsSearchTest {
             assertEquals(1, ftsRoot.resolve("bitcoin").listDirectoryEntries().size)
             // "reindex" appears in both notes — one entry per event, no dupes.
             assertEquals(2, ftsRoot.resolve("reindex").listDirectoryEntries().size)
+        }
+
+    @Test
+    fun `resumable reindex covers every kind across batches`() =
+        runBlocking {
+            // Two searchable kinds (note = kind 1, long-form = kind 30023) so
+            // the kind-granular cursor must advance across more than one dir.
+            val n = note("uniqnote bitcoin", ts = 100)
+            val long =
+                signer.sign(
+                    LongTextNoteEvent.build(
+                        "uniqlong body",
+                        title = "title",
+                        dTag = "d1",
+                        createdAt = 200,
+                    ),
+                )
+            store.insert(n)
+            store.insert(long)
+
+            // Wipe the index, then drive the resumable path one kind at a time.
+            val ftsRoot = root.resolve("idx/fts")
+            Files.walk(ftsRoot).use { stream ->
+                stream.sorted(Comparator.reverseOrder()).forEach { p -> if (p != ftsRoot) Files.deleteIfExists(p) }
+            }
+            assertTrue(store.query<Event>(Filter(search = "uniqnote")).isEmpty())
+
+            var cursor: String? = null
+            var batches = 0
+            do {
+                val progress = store.reindexFullTextSearch(cursor, batchSize = 1)
+                cursor = progress.cursor
+                batches++
+            } while (!progress.done)
+
+            // Two searchable kind dirs, batchSize 1 ⇒ at least two batches.
+            assertTrue(batches >= 2, "expected the cursor to span both kinds, got $batches batch(es)")
+            assertEquals(listOf(n.id), store.query<Event>(Filter(search = "uniqnote")).map { it.id })
+            assertEquals(listOf(long.id), store.query<Event>(Filter(search = "uniqlong")).map { it.id })
         }
 
     @Test
