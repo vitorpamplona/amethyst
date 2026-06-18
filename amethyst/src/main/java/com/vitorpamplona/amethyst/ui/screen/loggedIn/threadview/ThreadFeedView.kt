@@ -27,7 +27,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -546,16 +545,14 @@ private fun CollapsedNoteCompose(
                 modifier
                     .fillMaxWidth()
                     .clickable(onClick = onExpand)
-                    .padding(horizontal = 10.dp, vertical = 10.dp),
+                    // Match NoteComposeLayout: 12dp leading/trailing padding, 10dp top.
+                    .padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Center the smaller avatar inside the full 55dp slot so the text lines up with the
-            // expanded NoteCompose, which uses a 55dp avatar.
-            Box(modifier = Modifier.width(Size55dp), contentAlignment = Alignment.Center) {
-                NoteAuthorPicture(baseNote = baseNote, size = Size40dp, accountViewModel = accountViewModel, nav = nav)
-            }
+            NoteAuthorPicture(baseNote = baseNote, size = Size40dp, accountViewModel = accountViewModel, nav = nav)
 
-            Spacer(modifier = StdHorzSpacer)
+            // 10dp gap between the avatar and the name, same as NoteComposeLayout's authorContentGap.
+            Spacer(modifier = Modifier.width(10.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 NoteUsernameDisplay(baseNote, accountViewModel = accountViewModel)
