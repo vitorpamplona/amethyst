@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal
 
+import com.vitorpamplona.amethyst.commons.ui.feeds.IndexableFeedFilter
 import com.vitorpamplona.amethyst.commons.ui.feeds.isRenderableRepost
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
@@ -42,6 +43,7 @@ import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStory
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -59,7 +61,8 @@ import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 
 class HomeNewThreadFeedFilter(
     val account: Account,
-) : AdditiveFeedFilter<Note>() {
+) : AdditiveFeedFilter<Note>(),
+    IndexableFeedFilter {
     companion object {
         val ADDRESSABLE_KINDS =
             listOf(
@@ -76,7 +79,48 @@ class HomeNewThreadFeedFilter(
                 LiveChessGameEndEvent.KIND,
                 AttestationEvent.KIND,
             )
+
+        /**
+         * Every event kind that [acceptableEvent] can admit, used only to register
+         * this feed's observer in the `LocalCache` inverted index (so the feed is
+         * woken for these kinds instead of every event). This MUST stay a superset
+         * of the type switch in [acceptableEvent]: a kind accepted there but missing
+         * here would only enter the feed on a full refresh, not live. It is a
+         * superset of the relay-subscription kinds in `FilterHomePostsByAuthors`
+         * (asserted by `HomeFeedIndexKindsTest`).
+         */
+        val INDEX_KINDS =
+            listOf(
+                TextNoteEvent.KIND,
+                RepostEvent.KIND,
+                GenericRepostEvent.KIND,
+                ClassifiedsEvent.KIND,
+                FundraiserEvent.KIND,
+                BirdexEvent.KIND,
+                LongTextNoteEvent.KIND,
+                WikiNoteEvent.KIND,
+                ZapPollEvent.KIND,
+                PollEvent.KIND,
+                HighlightEvent.KIND,
+                InteractiveStoryPrologueEvent.KIND,
+                CommentEvent.KIND,
+                AudioTrackEvent.KIND,
+                MusicTrackEvent.KIND,
+                MusicPlaylistEvent.KIND,
+                PodcastEpisodeEvent.KIND,
+                PodcastMetadataEvent.KIND,
+                VoiceEvent.KIND,
+                AudioHeaderEvent.KIND,
+                ChessGameEvent.KIND,
+                LiveChessGameEndEvent.KIND,
+                AttestationEvent.KIND,
+                AttestationRequestEvent.KIND,
+                AttestorRecommendationEvent.KIND,
+                AttestorProficiencyEvent.KIND,
+            )
     }
+
+    override fun indexFilters(): List<Filter> = listOf(Filter(kinds = INDEX_KINDS))
 
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultHomeFollowList.value
 

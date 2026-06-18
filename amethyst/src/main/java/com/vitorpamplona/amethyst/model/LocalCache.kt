@@ -314,6 +314,22 @@ interface ILocalCache {
     }
 }
 
+/**
+ * An incremental change emitted by [LocalCache.observeFeedDeltas]: a candidate
+ * note was inserted ([Added]) or removed ([Removed]) from the cache.
+ */
+sealed interface FeedNoteDelta {
+    val note: Note
+
+    data class Added(
+        override val note: Note,
+    ) : FeedNoteDelta
+
+    data class Removed(
+        override val note: Note,
+    ) : FeedNoteDelta
+}
+
 object LocalCache : ILocalCache, ICacheProvider {
     val antiSpam = AntiSpamFilter()
 
@@ -546,6 +562,51 @@ object LocalCache : ILocalCache, ICacheProvider {
     fun <T : Event> observeLatestEvent(filter: Filter) = observeEvents<T>(filter).map { it.firstOrNull() }
 
     fun observeLatestNote(filter: Filter) = observeNotes(filter).map { it.firstOrNull() }
+
+    /**
+     * Emits an incremental [FeedNoteDelta] for each note inserted/removed that
+     * the inverted index considers a candidate for [filters] (i.e. its kind /
+     * author / tag narrows on one of the filters). The index is a *superset*:
+     * the consumer (a `FeedFilter.applyFilter`, via
+     * `FeedContentState.updateFeedWith`) still decides final inclusion, exactly
+     * as it does today for the global new-event fan-out.
+     *
+     * This replaces, per migrated feed, that feed's participation in
+     * `AccountFeedContentStates.updateFeedsWith` — the feed is now woken only
+     * for matching kinds instead of for every event. Full (re)loads and
+     * membership-change refreshes still go through the existing
+     * `FeedContentState` scan path.
+     *
+     * Removals are broadcast to every observer (deletions have no filterable
+     * shape), so a [FeedNoteDelta.Removed] may reference a note this feed never
+     * held; the downstream `deleteFromFeed` no-ops in that case.
+     *
+     * See `amethyst/plans/2026-06-18-dal-filter-to-localcache-observer.md`.
+     */
+    fun observeFeedDeltas(filters: List<Filter>): Flow<FeedNoteDelta> =
+        callbackFlow {
+            val observer =
+                object : Observable {
+                    override fun new(
+                        event: Event,
+                        note: Note,
+                    ) {
+                        trySend(FeedNoteDelta.Added(note))
+                    }
+
+                    override fun remove(note: Note) {
+                        trySend(FeedNoteDelta.Removed(note))
+                    }
+                }
+
+            observables.register(filters, observer)
+
+            awaitClose {
+                observables.unregister(observer)
+            }
+            // UNLIMITED (not CONFLATED): deltas must not be collapsed — a dropped
+            // Added is a post missing from the feed until the next full refresh.
+        }.buffer(kotlinx.coroutines.channels.Channel.UNLIMITED)
 
     fun checkGetOrCreateUser(key: String): User? = runCatching { getOrCreateUser(key) }.getOrNull()
 

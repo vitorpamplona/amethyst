@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn
 
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedContentState
+import com.vitorpamplona.amethyst.commons.ui.feeds.IndexableFeedFilter
 import com.vitorpamplona.amethyst.model.Account
+import com.vitorpamplona.amethyst.model.FeedNoteDelta
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.TopFilter
@@ -81,9 +83,16 @@ class AccountFeedContentStates(
     val scope: CoroutineScope,
 ) {
     val homeLive = ChannelFeedContentState(HomeLiveFilter(account), scope)
-    val homeNewThreads = FeedContentState(HomeNewThreadFeedFilter(account), scope, LocalCache)
-    val homeReplies = FeedContentState(HomeConversationsFeedFilter(account), scope, LocalCache)
-    val homeEverything = FeedContentState(HomeEverythingFeedFilter(account), scope, LocalCache)
+
+    // Migrated to the LocalCache observer registry: these three feeds are woken
+    // by observeFeedDeltas (indexed by kind) in init{} rather than by the global
+    // updateFeedsWith fan-out below.
+    private val homeNewThreadsFilter = HomeNewThreadFeedFilter(account)
+    private val homeRepliesFilter = HomeConversationsFeedFilter(account)
+    private val homeEverythingFilter = HomeEverythingFeedFilter(account)
+    val homeNewThreads = FeedContentState(homeNewThreadsFilter, scope, LocalCache)
+    val homeReplies = FeedContentState(homeRepliesFilter, scope, LocalCache)
+    val homeEverything = FeedContentState(homeEverythingFilter, scope, LocalCache)
 
     val dmKnown = FeedContentState(ChatroomListKnownFeedFilter(account), scope, LocalCache)
     val dmNew = FeedContentState(ChatroomListNewFeedFilter(account), scope, LocalCache)
@@ -138,7 +147,33 @@ class AccountFeedContentStates(
 
     val webBookmarks = FeedContentState(WebBookmarkFeedFilter(account), scope, LocalCache)
 
+    /**
+     * Wires a migrated feed to the [LocalCache] observer registry: incremental
+     * inserts/removes for the feed's indexed kinds are routed into the same
+     * `FeedContentState` additive path the global fan-out used, so behaviour is
+     * unchanged — only the trigger narrows from "every event" to "events whose
+     * kind this feed cares about". Initial load and membership-change refreshes
+     * still flow through the existing `FeedContentState` scan path.
+     */
+    private fun connectObservedFeed(
+        state: FeedContentState,
+        filter: IndexableFeedFilter,
+    ) {
+        scope.launch(Dispatchers.IO) {
+            LocalCache.observeFeedDeltas(filter.indexFilters()).collect { delta ->
+                when (delta) {
+                    is FeedNoteDelta.Added -> state.updateFeedWith(setOf(delta.note))
+                    is FeedNoteDelta.Removed -> state.deleteFromFeed(setOf(delta.note))
+                }
+            }
+        }
+    }
+
     init {
+        connectObservedFeed(homeNewThreads, homeNewThreadsFilter)
+        connectObservedFeed(homeReplies, homeRepliesFilter)
+        connectObservedFeed(homeEverything, homeEverythingFilter)
+
         // Marmot group list changes (new group, group marked known, group
         // metadata synced) don't flow through LocalCache.newEventBundles, so
         // the additive update path can't see them. Force a full feed rebuild
@@ -187,10 +222,9 @@ class AccountFeedContentStates(
     fun updateFeedsWith(newNotes: Set<Note>) {
         checkNotInMainThread()
 
+        // homeNewThreads / homeReplies / homeEverything are driven by the
+        // LocalCache observer registry (see connectObservedFeed), not this fan-out.
         homeLive.updateFeedWith(newNotes)
-        homeNewThreads.updateFeedWith(newNotes)
-        homeReplies.updateFeedWith(newNotes)
-        homeEverything.updateFeedWith(newNotes)
 
         dmKnown.updateFeedWith(newNotes)
         dmNew.updateFeedWith(newNotes)
@@ -248,10 +282,9 @@ class AccountFeedContentStates(
     fun deleteNotes(newNotes: Set<Note>) {
         checkNotInMainThread()
 
+        // homeNewThreads / homeReplies / homeEverything handle removals via their
+        // observer subscription (FeedNoteDelta.Removed), not this fan-out.
         homeLive.deleteFromFeed(newNotes)
-        homeNewThreads.deleteFromFeed(newNotes)
-        homeReplies.deleteFromFeed(newNotes)
-        homeEverything.deleteFromFeed(newNotes)
 
         dmKnown.updateFeedWith(newNotes)
         dmNew.updateFeedWith(newNotes)

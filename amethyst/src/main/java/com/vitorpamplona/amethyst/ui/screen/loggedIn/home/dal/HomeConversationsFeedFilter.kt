@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.home.dal
 
+import com.vitorpamplona.amethyst.commons.ui.feeds.IndexableFeedFilter
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
@@ -30,6 +31,7 @@ import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.dal.FilterByListParams
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
@@ -41,7 +43,30 @@ import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 
 class HomeConversationsFeedFilter(
     val account: Account,
-) : AdditiveFeedFilter<Note>() {
+) : AdditiveFeedFilter<Note>(),
+    IndexableFeedFilter {
+    companion object {
+        /**
+         * Every event kind [acceptableEvent] can admit, for registering this feed's
+         * observer in the `LocalCache` inverted index. MUST stay a superset of the
+         * type switch in [acceptableEvent] and of the relay-subscription kinds in
+         * `FilterHomePostsByAuthors` (asserted by `HomeFeedIndexKindsTest`).
+         */
+        val INDEX_KINDS =
+            listOf(
+                TextNoteEvent.KIND,
+                ZapPollEvent.KIND,
+                PollResponseEvent.KIND,
+                ChannelMessageEvent.KIND,
+                CommentEvent.KIND,
+                VoiceReplyEvent.KIND,
+                PublicMessageEvent.KIND,
+                LiveActivitiesChatMessageEvent.KIND,
+            )
+    }
+
+    override fun indexFilters(): List<Filter> = listOf(Filter(kinds = INDEX_KINDS))
+
     override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + account.settings.defaultHomeFollowList.value
 
     override fun showHiddenKey(): Boolean =
