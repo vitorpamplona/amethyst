@@ -31,7 +31,9 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
+import com.vitorpamplona.quartz.nip14Subject.SubjectTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -44,7 +46,13 @@ class AudioTrackEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    // content is empty for audio tracks; the only free-text is the subject tag.
+    override fun indexableContent() = listOfNotNull(subject()).joinToString("\n")
+
+    fun subject() = tags.firstNotNullOfOrNull(SubjectTag::parse)
+
     fun participants() = tags.mapNotNull(ParticipantTag::parse)
 
     fun type() = tags.firstNotNullOfOrNull(TypeTag::parse)
