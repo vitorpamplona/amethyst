@@ -172,9 +172,6 @@ class RelayPool(
 
         if (atLeastOne) {
             _availableRelays.update { relays.keys() }
-            // Removed relays were just disconnected; reflect that in the connected set
-            // now rather than waiting for their (possibly dropped) onDisconnected callback.
-            refreshConnectedRelays()
         }
     }
 
@@ -210,7 +207,6 @@ class RelayPool(
     fun removeRelay(relay: NormalizedRelayUrl) {
         if (removeRelayInner(relay)) {
             _availableRelays.update { relays.keys() }
-            refreshConnectedRelays()
         }
     }
 
@@ -219,26 +215,6 @@ class RelayPool(
             disconnect()
             relays.clear()
             _availableRelays.update { emptySet() }
-            refreshConnectedRelays()
-        }
-    }
-
-    /**
-     * Recomputes [_connectedRelays] from the source of truth: a relay is connected iff it
-     * is currently in the pool AND its socket reports ready ([IRelayClient.isConnected]).
-     *
-     * This is a pure projection of the pool rather than a set we add to / remove from on
-     * each event, so it cannot drift from reality. An incrementally maintained set goes
-     * stale whenever a state change isn't observed — e.g. OkHttp's async cancel() callback
-     * is dropped under mass teardown, or a socket dies without an onDisconnected — and then
-     * reports relays as connected that no longer are. Relays removed from the pool have
-     * already been disconnected (isConnected() == false), so they fall out here naturally.
-     */
-    private fun refreshConnectedRelays() {
-        val connected = mutableSetOf<NormalizedRelayUrl>()
-        relays.forEach { url, relay -> if (relay.isConnected()) connected.add(url) }
-        if (_connectedRelays.value != connected) {
-            _connectedRelays.value = connected
         }
     }
 
@@ -252,12 +228,12 @@ class RelayPool(
         pingMillis: Int,
         compressed: Boolean,
     ) {
-        refreshConnectedRelays()
+        _connectedRelays.update { it + relay.url }
         listener.onConnected(relay, pingMillis, compressed)
     }
 
     override fun onDisconnected(relay: IRelayClient) {
-        refreshConnectedRelays()
+        _connectedRelays.update { it - relay.url }
         listener.onDisconnected(relay)
     }
 
