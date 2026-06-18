@@ -49,6 +49,7 @@ comment and fill in the sections below; drop any section that doesn't apply.
 - @npub1w4uswmv6lu9yel005l3qgheysmr7tk9uvwluddznju3nuxalevvs2d0jr5
 - @npub1a3tx8wcrt789skl6gg7rqwj4wey0j53eesr4z6asd4h4jwrd62jq0wkq4k
 - @npub1dn0tej4a5806qk9ts56j572sndvjk27l5qmsxf0z3mquknccve7s4k8tfp
+- @npub1ncff8m25y0c058xdljmxhpr4lxetzjpea6uq9733qmp4slfts43qawj87x
 
 ## Translations
 
