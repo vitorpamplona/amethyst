@@ -255,9 +255,11 @@ class NotificationRelayService : Service() {
                 launch {
                     Amethyst.instance.client.connectedRelaysFlow().collectLatest { relays ->
                         val count = relays.size
+                        Log.d("BgRelayTrace") { "notif-collector received connectedRelays=$count (lastPosted=$connectedRelayCount)" }
                         if (count != connectedRelayCount) {
                             connectedRelayCount = count
                             updateNotification(count)
+                            Log.d("BgRelayTrace") { "notif-popup posted count=$count" }
                         }
                     }
                 }
