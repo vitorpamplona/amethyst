@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
 import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
 /**
  * Agora fundraiser / crowdfunding campaign (kind 33863).
@@ -59,7 +60,10 @@ class FundraiserEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    PublishedAtProvider {
+    PublishedAtProvider,
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
+
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
     fun banner() = tags.firstNotNullOfOrNull(BannerTag::parse)
