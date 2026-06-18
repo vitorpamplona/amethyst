@@ -3073,6 +3073,7 @@
     <plurals name="birdex_species_preview_more">
         <item quantity="other">%1$s + 另%2$d</item>
     </plurals>
+    <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
     <string name="goal_amount_label">目标金额 (sats)</string>
     <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">描述您的目标</string>
