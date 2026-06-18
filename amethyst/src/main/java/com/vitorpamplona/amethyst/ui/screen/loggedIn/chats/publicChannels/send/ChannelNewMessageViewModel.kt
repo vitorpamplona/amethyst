@@ -304,12 +304,8 @@ open class ChannelNewMessageViewModel :
         val version = draftTag.current
         cancel()
 
-        if (channel is LiveActivitiesChannel) {
-            accountViewModel.account.signAndSendPrivatelyOrBroadcast(template) {
-                channelRelays.toList()
-            }
-        } else {
-            accountViewModel.account.signAndSendPrivately(template, channelRelays)
+        accountViewModel.account.signAndSendPrivatelyOrBroadcast(template) {
+            channelRelays.toList()
         }
         accountViewModel.viewModelScope.launch(Dispatchers.IO) {
             accountViewModel.account.deleteDraftIgnoreErrors(version)
