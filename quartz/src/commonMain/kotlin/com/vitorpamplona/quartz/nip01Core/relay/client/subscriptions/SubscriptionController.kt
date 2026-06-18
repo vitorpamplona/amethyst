@@ -51,13 +51,6 @@ class SubscriptionController(
 
     fun getSub(subId: String) = subscriptions.get(subId)
 
-    /** Distinct relays across all active subscriptions managed by this controller. */
-    fun activeRelays(): Set<NormalizedRelayUrl> {
-        val relays = mutableSetOf<NormalizedRelayUrl>()
-        subscriptions.forEach { _, sub -> sub.filters()?.keys?.let { relays.addAll(it) } }
-        return relays
-    }
-
     fun requestNewSubscription(
         subId: String,
         listener: SubscriptionListener,

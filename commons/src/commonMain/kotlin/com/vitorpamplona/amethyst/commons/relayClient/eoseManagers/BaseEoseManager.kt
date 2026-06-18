@@ -25,7 +25,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
 import com.vitorpamplona.quartz.nip01Core.relay.client.subscriptions.SubscriptionController
-import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 
@@ -54,7 +53,6 @@ abstract class BaseEoseManager<T>(
     fun forceInvalidate() {
         updateSubscriptions(allKeys())
         orchestrator.updateRelays()
-        Log.d("BgRelayTrace") { "${this::class.simpleName} — keys=${allKeys().size}, relays=${orchestrator.activeRelays().size}" }
     }
 
     override fun destroy() {

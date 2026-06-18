@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
-import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -157,7 +156,6 @@ class RelayPool(
      */
     fun updatePool(newRelays: Set<NormalizedRelayUrl>) {
         val toRemove = relays.keys() - newRelays
-        Log.d("BgRelayTrace") { "updatePool — desired=${newRelays.size}, inPool=${relays.size()}, toRemove=${toRemove.size}, connected=${connectedRelaysCount()}" }
         var atLeastOne = false
 
         newRelays.forEach { relay ->
@@ -175,7 +173,6 @@ class RelayPool(
         if (atLeastOne) {
             _availableRelays.update { relays.keys() }
         }
-        Log.d("BgRelayTrace") { "updatePool done — cacheConnected=${connectedRelaysCount()}, flowConnected=${_connectedRelays.value.size}, inPool=${relays.size()}" }
     }
 
     fun addRelay(relay: NormalizedRelayUrl): IRelayClient {
@@ -204,11 +201,11 @@ class RelayPool(
             relayInPool.disconnect()
             // Reflect the disconnect immediately. disconnect() uses OkHttp cancel(),
             // whose onClosed/onFailure callback — the only other path that prunes
-            // _connectedRelays — is async and, when cancelling hundreds of sockets at
-            // once in the background, frequently never arrives. That left the connected
-            // set (and the always-on notification's relay count) stale at ~110 while the
-            // pool itself had already shrunk to the desired ~20. The callback, if it does
-            // fire later, repeats this subtraction idempotently.
+            // _connectedRelays — is async and, when cancelling many sockets at once
+            // (e.g. a feed teardown when the app backgrounds), frequently never arrives.
+            // That leaves the connected set stale while the pool itself has already
+            // shrunk. The callback, if it does fire later, repeats this subtraction
+            // idempotently.
             _connectedRelays.update { it - relay }
             return true
         }
