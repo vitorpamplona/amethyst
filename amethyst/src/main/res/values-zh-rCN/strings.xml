@@ -1939,7 +1939,7 @@
     <string name="cashu_p2pk_autogen_warning_edit">会使得锁定到当前密钥的任何 nutzaps 失效。</string>
     <string name="cashu_p2pk_keep_current">保留当前密钥</string>
     <string name="cashu_p2pk_manual_label">P2PK 私钥(十六进制)</string>
-    <string name="wallet_edit_cashu_title">编辑 Cashu 钱包</string>
+    <string name="wallet_edit_cashu_title">编辑铸币厂</string>
     <string name="wallet_save_changes">保存更改</string>
     <string name="cashu_mint_no_recs">尚无推荐</string>
     <string name="cashu_mint_recommended_by">推荐人</string>
@@ -1967,8 +1967,8 @@
     <string name="cashu_history_incoming">已收到</string>
     <string name="cashu_history_outgoing">已发送</string>
     <string name="cashu_settings_title">Cashu 钱包设置</string>
-    <string name="cashu_settings_edit_wallet">编辑钱包详情</string>
-    <string name="cashu_settings_edit_wallet_subtitle">铸币厂，nutzap 密钥</string>
+    <string name="cashu_settings_edit_wallet">我的铸币厂</string>
+    <string name="cashu_settings_edit_wallet_subtitle">添加或移除你的钱包所用的铸币厂。</string>
     <string name="cashu_settings_my_recommendations">我的铸币厂推荐</string>
     <string name="cashu_settings_recommendations_subtitle">公开推荐你信任的铸币厂，并撤回之前的推荐。</string>
     <string name="cashu_settings_no_recommendations">您还没有推荐任何铸币厂。点击铸币厂旁边的朝上拇指公开为其担保。</string>
