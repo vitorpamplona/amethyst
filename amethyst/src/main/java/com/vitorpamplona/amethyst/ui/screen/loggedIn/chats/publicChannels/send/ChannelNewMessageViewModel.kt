@@ -301,12 +301,6 @@ open class ChannelNewMessageViewModel :
         val template = createTemplate() ?: return
         val channelRelays = channel?.relays() ?: emptySet()
 
-        // TEMP DIAGNOSTIC (public chat relay bug): what relays does the send target?
-        val pubChat = channel as? PublicChatChannel
-        Log.w("PublicChatRelayDebug") {
-            "SEND channel=${pubChat?.idHex} declared(info.relays)=${pubChat?.info?.relays} -> target=$channelRelays (empty target -> broadcast fallback)"
-        }
-
         val version = draftTag.current
         cancel()
 
