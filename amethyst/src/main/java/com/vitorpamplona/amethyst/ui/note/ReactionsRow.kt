@@ -44,6 +44,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -59,8 +60,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
@@ -1618,7 +1617,6 @@ private fun BoostTypeChoicePopup(
     )
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun BoostTypeChoicePopup(
     baseNote: Note,
@@ -1642,56 +1640,135 @@ private fun BoostTypeChoicePopup(
             enter = popupAnimationEnter,
             exit = popupAnimationExit,
         ) {
-            FlowRow {
-                Button(
-                    modifier = Modifier.padding(horizontal = 3.dp),
-                    onClick = {
-                        if (accountViewModel.isWriteable()) {
-                            accountViewModel.boost(baseNote)
-                            visibilityState.targetState = false
-                        } else {
-                            onRepost()
-                            visibilityState.targetState = false
-                        }
-                    },
-                    shape = ButtonBorder,
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                        ),
-                ) {
-                    Text(stringRes(R.string.boost), color = Color.White, textAlign = TextAlign.Center)
-                }
-
-                Button(
-                    modifier = Modifier.padding(horizontal = 3.dp),
-                    onClick = onQuote,
-                    shape = ButtonBorder,
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                        ),
-                ) {
-                    Text(stringRes(R.string.quote), color = Color.White, textAlign = TextAlign.Center)
-                }
-
+            BoostTypeChoicePopupContent(
                 // removes the option to fork for now because we do not have screens for
                 // LongForm, Wiki and NIP posting.
-                if (baseNote.event is TextNoteEvent) {
-                    Button(
-                        modifier = Modifier.padding(horizontal = 3.dp),
+                showFork = baseNote.event is TextNoteEvent,
+                onBoost = {
+                    if (accountViewModel.isWriteable()) {
+                        accountViewModel.boost(baseNote)
+                    } else {
+                        onRepost()
+                    }
+                    visibilityState.targetState = false
+                },
+                onQuote = {
+                    onQuote()
+                    visibilityState.targetState = false
+                },
+                onFork = {
+                    onFork()
+                    visibilityState.targetState = false
+                },
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun BoostTypeChoicePopupContent(
+    showFork: Boolean,
+    onBoost: () -> Unit,
+    onQuote: () -> Unit,
+    onFork: () -> Unit,
+) {
+    Box(HalfPadding, contentAlignment = Center) {
+        ElevatedCard(
+            shape = SmallBorder,
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 8.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        ) {
+            FlowRow(
+                modifier = Modifier.padding(horizontal = 5.dp, vertical = 5.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalArrangement = Arrangement.Center,
+                itemVerticalAlignment = CenterVertically,
+            ) {
+                BoostActionChip(
+                    label = stringRes(R.string.boost),
+                    onClick = onBoost,
+                ) { tint ->
+                    RepostedIcon(Size18Modifier, tint)
+                }
+
+                BoostActionChip(
+                    label = stringRes(R.string.quote),
+                    onClick = onQuote,
+                ) { tint ->
+                    Icon(
+                        symbol = MaterialSymbols.FormatQuote,
+                        contentDescription = null,
+                        modifier = Size18Modifier,
+                        tint = tint,
+                    )
+                }
+
+                if (showFork) {
+                    BoostActionChip(
+                        label = stringRes(R.string.fork),
                         onClick = onFork,
-                        shape = ButtonBorder,
-                        colors =
-                            ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                            ),
-                    ) {
-                        Text(stringRes(R.string.fork), color = Color.White, textAlign = TextAlign.Center)
+                    ) { tint ->
+                        Icon(
+                            symbol = MaterialSymbols.EditNote,
+                            contentDescription = null,
+                            modifier = Size18Modifier,
+                            tint = tint,
+                        )
                     }
                 }
             }
         }
+    }
+}
+
+/**
+ * A single quote/repost action rendered as a pill: a coloured leading icon next
+ * to its label, wrapped in the same soft-outlined surface the zap rails use so
+ * the popups read as one family.
+ */
+@Composable
+private fun BoostActionChip(
+    label: String,
+    onClick: () -> Unit,
+    icon: @Composable (Color) -> Unit,
+) {
+    Surface(
+        shape = ButtonBorder,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .clip(ButtonBorder)
+                    .clickable(onClick = onClick)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = CenterVertically,
+        ) {
+            icon(MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = label,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+fun BoostTypeChoicePopupPreview() {
+    ThemeComparisonColumn {
+        BoostTypeChoicePopupContent(
+            showFork = true,
+            onBoost = {},
+            onQuote = {},
+            onFork = {},
+        )
     }
 }
 
