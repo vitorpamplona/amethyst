@@ -20,10 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.location
 
+import android.graphics.ColorFilter
+import android.graphics.ColorMatrixColorFilter
 import android.graphics.drawable.BitmapDrawable
 import android.view.MotionEvent
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
@@ -35,6 +38,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.vitorpamplona.amethyst.ui.theme.isLight
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -44,6 +48,38 @@ import org.osmdroid.views.overlay.Marker
 
 /** Default close-up zoom for a single pinned location (street-level). */
 private const val DEFAULT_ZOOM = 16.0
+
+/**
+ * Night-mode filter for the (always-light) MAPNIK tiles so the map follows the
+ * app theme. Inverts lightness while desaturating, which reads as a clean dark
+ * grey map — unlike a plain colour invert, which turns forests magenta and
+ * water orange.
+ */
+private val NIGHT_TILE_FILTER: ColorFilter =
+    ColorMatrixColorFilter(
+        floatArrayOf(
+            -0.6f,
+            -0.4f,
+            -0.4f,
+            0f,
+            255f,
+            -0.4f,
+            -0.6f,
+            -0.4f,
+            0f,
+            255f,
+            -0.4f,
+            -0.4f,
+            -0.6f,
+            0f,
+            255f,
+            0f,
+            0f,
+            0f,
+            1f,
+            0f,
+        ),
+    )
 
 /**
  * A small OpenStreetMap (osmdroid) preview centered on [latitude]/[longitude]
@@ -75,6 +111,7 @@ fun LocationPreviewMap(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val darkTheme = !MaterialTheme.colorScheme.isLight
 
     val markerIcon =
         remember(pinColor, pinEmoji) {
@@ -133,6 +170,9 @@ fun LocationPreviewMap(
             val point = GeoPoint(latitude, longitude)
             map.controller.setZoom(zoom)
             map.controller.setCenter(point)
+
+            // Follow the app theme: dim the bright MAPNIK tiles in dark mode.
+            map.overlayManager.tilesOverlay.setColorFilter(if (darkTheme) NIGHT_TILE_FILTER else null)
 
             map.overlays.removeAll { it is Marker }
             val marker =
