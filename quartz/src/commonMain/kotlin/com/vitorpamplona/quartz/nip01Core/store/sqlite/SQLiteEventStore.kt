@@ -35,6 +35,12 @@ import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.utils.EventFactory
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 
 class SQLiteEventStore(
     val driver: SQLiteDriver = BundledSQLiteDriver(),
@@ -45,6 +51,11 @@ class SQLiteEventStore(
 ) {
     companion object {
         const val DATABASE_VERSION = 3
+
+        // Rows per background-reindex batch. Each batch is one writer
+        // transaction; the writer mutex is released between batches so live
+        // inserts/queries interleave instead of waiting for the whole reindex.
+        const val REINDEX_BATCH_SIZE = 500
     }
 
     val seedModule = SeedModule()
@@ -131,6 +142,26 @@ class SQLiteEventStore(
         )
     }
 
+    // Background worker for one-off maintenance that must not block app
+    // startup — currently the post-migration full-text reindex backfill.
+    private val maintenanceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    init {
+        // Kicked off asynchronously: it returns immediately when there is no
+        // pending reindex (the common case), and otherwise backfills the FTS
+        // index in the background while the rest of the app runs normally.
+        maintenanceScope.launch {
+            try {
+                reindexFullTextIfPending()
+            } catch (_: Throwable) {
+                // Best-effort maintenance. A failure here only leaves search
+                // degraded until the next launch retries; it must never crash
+                // the store. (CancellationException from close() lands here too
+                // and is intentionally swallowed.)
+            }
+        }
+    }
+
     private fun getUserVersion(db: SQLiteConnection): Int =
         db.prepare("PRAGMA user_version").use { stmt ->
             stmt.step()
@@ -168,40 +199,154 @@ class SQLiteEventStore(
                     // Upgrade from version 2 to 3
                     // The full-text index dropped its dedicated foreign-key
                     // column and now aligns the FTS rowid with
-                    // event_headers.row_id. Rebuild only the FTS index in place
-                    // so the cached events themselves survive the upgrade.
+                    // event_headers.row_id. Recreate the (now empty) FTS table
+                    // structure cheaply inside the migration and record a
+                    // persistent marker; the actual repopulation from
+                    // event_headers happens later in the background via
+                    // [reindexFullTextIfPending] so the migration — and app
+                    // startup — never blocks on a large reindex.
                     fullTextSearchModule.drop(db)
                     fullTextSearchModule.create(db)
-                    reindexFullText(db)
+                    createReindexMarker(db)
                 }
             }
         }
     }
 
-    /**
-     * Repopulates [FullTextSearchModule] from the events already stored in
-     * event_headers. Used by migrations that recreate the FTS table without
-     * touching the source events. Reading event_headers while inserting into
-     * event_fts is safe because they are different tables.
-     */
-    private fun reindexFullText(db: SQLiteConnection) {
-        db.prepare("SELECT row_id, id, pubkey, created_at, kind, tags, content, sig FROM event_headers").use { stmt ->
-            while (stmt.step()) {
-                val rowId = stmt.getLong(0)
-                val event =
-                    EventFactory.create<Event>(
-                        stmt.getText(1),
-                        stmt.getText(2),
-                        stmt.getLong(3),
-                        stmt.getInt(4),
-                        OptimizedJsonMapper.fromJsonToTagArray(stmt.getText(5)),
-                        stmt.getText(6),
-                        stmt.getText(7),
-                    )
-                fullTextSearchModule.insert(event, rowId, db)
-            }
+    // ------------------------------------------------------------------
+    // Background full-text reindex
+    //
+    // When a migration recreates the FTS table it leaves a persistent
+    // `fts_reindex` marker holding a progress cursor (the highest
+    // event_headers.row_id already backfilled). The backfill walks
+    // event_headers in row_id order in small committed batches, so it
+    // interleaves with normal relay inserts/queries and survives process
+    // death: the cursor is persisted, and on the next launch the marker is
+    // still present so the work resumes where it stopped. Search is merely
+    // degraded (partial results) until it finishes — never blocked.
+    // ------------------------------------------------------------------
+
+    private val reindexMarkerTable = "fts_reindex"
+
+    private fun createReindexMarker(db: SQLiteConnection) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS $reindexMarkerTable (next_row_id INTEGER NOT NULL)")
+        db.execSQL("DELETE FROM $reindexMarkerTable")
+        // row_id is AUTOINCREMENT starting at 1, so 0 means "nothing done yet".
+        db.execSQL("INSERT INTO $reindexMarkerTable (next_row_id) VALUES (0)")
+    }
+
+    private fun hasReindexMarker(db: SQLiteConnection): Boolean = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = '$reindexMarkerTable'").use { it.step() }
+
+    private fun getReindexCursor(db: SQLiteConnection): Long =
+        db.prepare("SELECT next_row_id FROM $reindexMarkerTable LIMIT 1").use {
+            if (it.step()) it.getLong(0) else 0L
+        }
+
+    private fun setReindexCursor(
+        db: SQLiteConnection,
+        value: Long,
+    ) {
+        db.prepare("UPDATE $reindexMarkerTable SET next_row_id = ?").use {
+            it.bindLong(1, value)
+            it.step()
         }
     }
+
+    private fun dropReindexMarker(db: SQLiteConnection) {
+        db.execSQL("DROP TABLE IF EXISTS $reindexMarkerTable")
+    }
+
+    /**
+     * Drives the background backfill loop while a reindex marker exists.
+     * Each iteration processes one batch in its own writer transaction, then
+     * releases the writer mutex so other writes get a turn. [yield] makes the
+     * loop cancellation-aware (see [close]).
+     */
+    internal suspend fun reindexFullTextIfPending() {
+        if (!pool.useReader { hasReindexMarker(it) }) return
+
+        while (true) {
+            val done = pool.useWriter { db -> reindexNextBatch(db, REINDEX_BATCH_SIZE) }
+            if (done) break
+            yield()
+        }
+    }
+
+    /**
+     * Indexes up to [limit] not-yet-processed events (row_id greater than the
+     * persisted cursor) into the FTS table and advances the cursor. Returns
+     * true once there is nothing left, after dropping the marker. A single
+     * malformed cached row is skipped — the cursor still moves past it, so the
+     * backfill can never get stuck retrying the same row.
+     */
+    private fun reindexNextBatch(
+        db: SQLiteConnection,
+        limit: Int,
+    ): Boolean =
+        db.transaction {
+            // The marker may have been dropped by a previous batch (or, in
+            // theory, another backfiller) — treat its absence as "done" rather
+            // than reading a cursor from a missing table.
+            if (!hasReindexMarker(db)) {
+                true
+            } else {
+                val cursor = getReindexCursor(db)
+                var lastRowId = cursor
+                var count = 0
+
+                db
+                    .prepare(
+                        "SELECT row_id, id, pubkey, created_at, kind, tags, content, sig FROM event_headers " +
+                            "WHERE row_id > ? ORDER BY row_id LIMIT ?",
+                    ).use { stmt ->
+                        stmt.bindLong(1, cursor)
+                        stmt.bindLong(2, limit.toLong())
+                        while (stmt.step()) {
+                            val rowId = stmt.getLong(0)
+                            try {
+                                val event =
+                                    EventFactory.create<Event>(
+                                        stmt.getText(1),
+                                        stmt.getText(2),
+                                        stmt.getLong(3),
+                                        stmt.getInt(4),
+                                        OptimizedJsonMapper.fromJsonToTagArray(stmt.getText(5)),
+                                        stmt.getText(6),
+                                        stmt.getText(7),
+                                    )
+                                fullTextSearchModule.insertIfAbsent(event, rowId, db)
+                            } catch (_: Throwable) {
+                                // Skip a row that fails to parse/index; advancing the
+                                // cursor below guarantees forward progress regardless.
+                            }
+                            lastRowId = rowId
+                            count++
+                        }
+                    }
+
+                if (count == 0) {
+                    dropReindexMarker(db)
+                    true
+                } else {
+                    setReindexCursor(db, lastRowId)
+                    false
+                }
+            }
+        }
+
+    /**
+     * Test hook: simulates the post-migration state by clearing the FTS table
+     * and arming the reindex marker, so a test can then drive
+     * [reindexFullTextIfPending] deterministically.
+     */
+    internal suspend fun dropFtsAndMarkPendingForTest() =
+        pool.useWriter { db ->
+            db.transaction {
+                fullTextSearchModule.drop(db)
+                fullTextSearchModule.create(db)
+                createReindexMarker(db)
+            }
+        }
 
     suspend fun clearDB() =
         pool.useWriter { db ->
@@ -375,7 +520,10 @@ class SQLiteEventStore(
 
     suspend fun deleteExpiredEvents() = pool.useWriter { expirationModule.deleteExpiredEvents(it) }
 
-    fun close() = pool.close()
+    fun close() {
+        maintenanceScope.cancel()
+        pool.close()
+    }
 }
 
 class RawEvent(

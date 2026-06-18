@@ -165,4 +165,33 @@ class SearchTest : BaseDBTest() {
             db.assertQuery(repo, Filter(search = "uniqdesc"))
             db.assertQuery(repo, Filter(kinds = listOf(GitRepositoryEvent.KIND), search = "uniqdesc"))
         }
+
+    @Test
+    fun testBackgroundReindexBackfillsExistingEvents() =
+        forEachDB { db ->
+            val a = signer.sign(CalendarEvent.build(title = "uniqalpha", content = "uniqbody"))
+            val b = signer.sign(GitRepositoryEvent.build(name = "uniqgamma", description = "uniqdelta"))
+            db.store.insertEvent(a)
+            db.store.insertEvent(b)
+
+            // Live insert path already indexed them.
+            db.assertQuery(a, Filter(search = "uniqalpha"))
+            db.assertQuery(b, Filter(search = "uniqdelta"))
+
+            // Simulate the post-migration state: FTS table emptied + marker armed.
+            db.store.dropFtsAndMarkPendingForTest()
+            db.assertQuery(null, Filter(search = "uniqalpha"))
+            db.assertQuery(null, Filter(search = "uniqdelta"))
+
+            // Background backfill rebuilds the index from event_headers.
+            db.store.reindexFullTextIfPending()
+            db.assertQuery(a, Filter(search = "uniqalpha"))
+            db.assertQuery(a, Filter(search = "uniqbody"))
+            db.assertQuery(b, Filter(search = "uniqgamma"))
+            db.assertQuery(b, Filter(search = "uniqdelta"))
+
+            // Marker is cleared, so a second run is a no-op and search still works.
+            db.store.reindexFullTextIfPending()
+            db.assertQuery(a, Filter(search = "uniqalpha"))
+        }
 }

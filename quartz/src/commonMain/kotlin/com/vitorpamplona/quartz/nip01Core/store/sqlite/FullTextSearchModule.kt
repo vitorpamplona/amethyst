@@ -89,6 +89,30 @@ class FullTextSearchModule : IModule {
         }
     }
 
+    // Idempotent variant used by the background reindex backfill: a row may
+    // already have been indexed by the live insert path (event_headers.row_id
+    // is monotonic, so freshly received events land above the backfill cursor),
+    // and re-indexing it must be a no-op rather than a constraint failure.
+    val insertIfAbsentFTS =
+        """
+        INSERT OR IGNORE INTO $tableName ($rowIdName, $contentName)
+        VALUES (?, ?)
+        """.trimIndent()
+
+    fun insertIfAbsent(
+        event: Event,
+        headerId: Long,
+        db: SQLiteConnection,
+    ) {
+        if (event is SearchableEvent) {
+            db.prepare(insertIfAbsentFTS).use { stmt ->
+                stmt.bindLong(1, headerId)
+                stmt.bindText(2, event.indexableContent())
+                stmt.step()
+            }
+        }
+    }
+
     fun versionFinder(db: SQLiteConnection): Int {
         // Defensive cleanup in case a previous probe left these behind
         // (e.g. a partial create() during an upgrade) — without this,
