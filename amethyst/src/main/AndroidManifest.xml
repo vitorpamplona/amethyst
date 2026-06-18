@@ -29,6 +29,14 @@
     <!-- To Upload media (old devices) -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
 
+    <!-- Android 13+ (API 33): granular media read access so the system photo picker
+         can surface all albums / the browse affordance when uploading images & videos. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+
+    <!-- Android 14+ (API 34): partial ("selected photos") access for the picker. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
+
     <!-- To read QRs that contain nostr:<NIP19> -->
     <!-- To take pictures -->
     <uses-permission android:name="android.permission.CAMERA" />
