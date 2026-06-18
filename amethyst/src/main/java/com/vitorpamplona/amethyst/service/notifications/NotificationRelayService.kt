@@ -43,10 +43,12 @@ import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 
 /**
@@ -79,6 +81,10 @@ class NotificationRelayService : Service() {
         private const val NOTIFICATION_ID = 9832
 
         private const val ACTION_START = "com.vitorpamplona.amethyst.START_NOTIFICATION_SERVICE"
+
+        // Throttle interval for refreshing the persistent notification's relay count.
+        // Keeps notification updates well under Android's rate limit (~10/s).
+        private const val NOTIFICATION_REFRESH_MS = 1000L
 
         const val ACTION_AUTO_RESTART = "com.vitorpamplona.amethyst.AUTO_RESTART_NOTIFICATION_SERVICE"
 
@@ -243,6 +249,7 @@ class NotificationRelayService : Service() {
      * drafts, and relay list changes. Since the service keeps the client connected,
      * those subscriptions remain active on the relays.
      */
+    @OptIn(FlowPreview::class)
     private fun startRelayConnection() {
         relayServiceCollectorJob?.cancel()
         relayServiceCollectorJob =
@@ -254,15 +261,22 @@ class NotificationRelayService : Service() {
                 }
 
                 launch {
-                    Amethyst.instance.client.connectedRelaysFlow().collectLatest { relays ->
-                        val count = relays.size
-                        Log.d("BgRelayTrace") { "notif-collector received connectedRelays=$count (lastPosted=$connectedRelayCount)" }
-                        if (count != connectedRelayCount) {
-                            connectedRelayCount = count
-                            updateNotification(count)
-                            Log.d("BgRelayTrace") { "notif-popup posted count=$count" }
+                    // sample() caps how often we touch the notification. During feed
+                    // load/teardown connectedRelaysFlow churns dozens of times per second;
+                    // posting on every delta blows past Android's notification rate limit
+                    // (~10/s), which silently drops updates and leaves the visible count
+                    // stuck on a stale intermediate value. One refresh per second stays
+                    // well under the limit and always lands the settled count.
+                    Amethyst.instance.client
+                        .connectedRelaysFlow()
+                        .sample(NOTIFICATION_REFRESH_MS)
+                        .collectLatest { relays ->
+                            val count = relays.size
+                            if (count != connectedRelayCount) {
+                                connectedRelayCount = count
+                                updateNotification(count)
+                            }
                         }
-                    }
                 }
             }
     }
