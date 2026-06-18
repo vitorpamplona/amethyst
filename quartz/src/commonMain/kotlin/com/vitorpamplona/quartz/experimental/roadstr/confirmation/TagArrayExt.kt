@@ -18,46 +18,12 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe
+package com.vitorpamplona.quartz.experimental.roadstr.confirmation
 
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
+import com.vitorpamplona.quartz.experimental.roadstr.confirmation.tags.RoadEventStatusTag
+import com.vitorpamplona.quartz.experimental.roadstr.confirmation.tags.RoadReportTag
+import com.vitorpamplona.quartz.nip01Core.core.TagArray
 
-fun compute50kmLine(geoHash: GeoHash): List<String> {
-    val hashes = mutableListOf<String>()
+fun TagArray.roadReport() = firstNotNullOfOrNull(RoadReportTag::parse)
 
-    hashes.add(geoHash.toString())
-
-    var currentGeoHash = geoHash
-    repeat(5) {
-        currentGeoHash = currentGeoHash.westernNeighbour
-        hashes.add(currentGeoHash.toString())
-    }
-
-    currentGeoHash = geoHash
-    repeat(5) {
-        currentGeoHash = currentGeoHash.easternNeighbour
-        hashes.add(currentGeoHash.toString())
-    }
-
-    return hashes
-}
-
-fun compute50kmRange(geoHash: GeoHash): List<String> {
-    val hashes = mutableListOf<String>()
-
-    hashes.addAll(compute50kmLine(geoHash))
-
-    var currentGeoHash = geoHash
-    repeat(5) {
-        currentGeoHash = currentGeoHash.northernNeighbour
-        hashes.addAll(compute50kmLine(currentGeoHash))
-    }
-
-    currentGeoHash = geoHash
-    repeat(5) {
-        currentGeoHash = currentGeoHash.southernNeighbour
-        hashes.addAll(compute50kmLine(currentGeoHash))
-    }
-
-    return hashes
-}
+fun TagArray.roadEventStatus() = firstNotNullOfOrNull(RoadEventStatusTag::parse)

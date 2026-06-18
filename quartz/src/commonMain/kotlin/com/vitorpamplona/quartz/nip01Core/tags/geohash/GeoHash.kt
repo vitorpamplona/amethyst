@@ -18,12 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.location
-
-import android.location.Location
+package com.vitorpamplona.quartz.nip01Core.tags.geohash
 
 /**
  * GeoHash encoding/decoding based on Gustavo Niemeyer's algorithm (2008).
+ *
+ * Pure-Kotlin and platform-agnostic (lives in `commonMain`), so any Nostr
+ * protocol code can derive `g` tags from coordinates and walk neighboring cells
+ * without depending on a platform location API. Callers that work with a
+ * platform `Location` type add thin conversion helpers in their own module
+ * (e.g. `amethyst`'s `Location.toGeoHash()` / `GeoHash.toLocation()`).
  *
  * Bits are interleaved: even-indexed bits (0, 2, 4, ...) = longitude,
  * odd-indexed bits (1, 3, 5, ...) = latitude.
@@ -237,12 +241,6 @@ class GeoHash private constructor(
     val easternNeighbour: GeoHash get() = fromBitArrays(latBits, numLat, mask(lonBits + 1L, numLon), numLon)
     val westernNeighbour: GeoHash get() = fromBitArrays(latBits, numLat, mask(lonBits - 1L, numLon), numLon)
 
-    fun toLocation(): Location =
-        Location("").also {
-            it.latitude = centerLat
-            it.longitude = centerLon
-        }
-
     override fun toString(): String {
         val charCount = significantBits / BITS_PER_CHAR
         val sb = StringBuilder(charCount)
@@ -262,7 +260,5 @@ class GeoHash private constructor(
 
     override fun hashCode(): Int = 31 * bits.hashCode() + significantBits
 }
-
-fun Location.toGeoHash(charsCount: Int = GeoHash.MAX_CHAR_PRECISION): GeoHash = GeoHash.encode(latitude, longitude, charsCount)
 
 fun String.toGeoHash(): GeoHash? = GeoHash.decode(this)

@@ -18,46 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.model.topNavFeeds.aroundMe
+package com.vitorpamplona.quartz.experimental.roadstr.confirmation
 
-import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
+import com.vitorpamplona.quartz.experimental.roadstr.confirmation.tags.RoadEventStatus
+import com.vitorpamplona.quartz.experimental.roadstr.confirmation.tags.RoadEventStatusTag
+import com.vitorpamplona.quartz.experimental.roadstr.confirmation.tags.RoadReportTag
+import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 
-fun compute50kmLine(geoHash: GeoHash): List<String> {
-    val hashes = mutableListOf<String>()
+fun TagArrayBuilder<RoadEventConfirmationEvent>.report(reportId: HexKey) = addUnique(RoadReportTag.assemble(reportId, null, null))
 
-    hashes.add(geoHash.toString())
+fun TagArrayBuilder<RoadEventConfirmationEvent>.report(reportHint: EventHintBundle<RoadEventReportEvent>) = addUnique(RoadReportTag.assemble(reportHint))
 
-    var currentGeoHash = geoHash
-    repeat(5) {
-        currentGeoHash = currentGeoHash.westernNeighbour
-        hashes.add(currentGeoHash.toString())
-    }
-
-    currentGeoHash = geoHash
-    repeat(5) {
-        currentGeoHash = currentGeoHash.easternNeighbour
-        hashes.add(currentGeoHash.toString())
-    }
-
-    return hashes
-}
-
-fun compute50kmRange(geoHash: GeoHash): List<String> {
-    val hashes = mutableListOf<String>()
-
-    hashes.addAll(compute50kmLine(geoHash))
-
-    var currentGeoHash = geoHash
-    repeat(5) {
-        currentGeoHash = currentGeoHash.northernNeighbour
-        hashes.addAll(compute50kmLine(currentGeoHash))
-    }
-
-    currentGeoHash = geoHash
-    repeat(5) {
-        currentGeoHash = currentGeoHash.southernNeighbour
-        hashes.addAll(compute50kmLine(currentGeoHash))
-    }
-
-    return hashes
-}
+fun TagArrayBuilder<RoadEventConfirmationEvent>.status(status: RoadEventStatus) = addUnique(RoadEventStatusTag.assemble(status))
