@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
+import android.content.Context
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -31,12 +32,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap
+import com.vitorpamplona.amethyst.ui.note.timeAgoNoDot
+import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
@@ -44,15 +49,20 @@ import com.vitorpamplona.quartz.experimental.roadstr.confirmation.tags.RoadEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.tags.RoadEventType
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.toGeoHash
+import com.vitorpamplona.quartz.utils.TimeUtils
 
-/** Emoji marker for a road event category — keeps the card icon-light and locale-independent. */
+/**
+ * Emoji marker for a road event category. Mirrors the icon set of the roadstr
+ * reference clients (<https://github.com/jooray/roadstr>) so a report reads the
+ * same across implementations; keeps the card icon-light and locale-independent.
+ */
 private fun RoadEventType.emoji(): String =
     when (this) {
         RoadEventType.POLICE -> "👮"
         RoadEventType.SPEED_CAMERA -> "📷"
         RoadEventType.TRAFFIC_JAM -> "🚗"
         RoadEventType.ACCIDENT -> "💥"
-        RoadEventType.ROAD_CLOSURE -> "⛔"
+        RoadEventType.ROAD_CLOSURE -> "🚫"
         RoadEventType.CONSTRUCTION -> "🚧"
         RoadEventType.HAZARD -> "⚠️"
         RoadEventType.ROAD_CONDITION -> "🛣️"
@@ -60,7 +70,29 @@ private fun RoadEventType.emoji(): String =
         RoadEventType.FOG -> "🌫️"
         RoadEventType.ICE -> "🧊"
         RoadEventType.ANIMAL -> "🦌"
-        RoadEventType.OTHER -> "📍"
+        RoadEventType.OTHER -> "ℹ️"
+    }
+
+/**
+ * Per-category pin color. Uses the exact palette from the roadstr reference
+ * clients (<https://github.com/jooray/roadstr>) so a pin's color carries the
+ * same meaning across the network.
+ */
+private fun RoadEventType.color(): Color =
+    when (this) {
+        RoadEventType.POLICE -> Color(0xFF0000FF)
+        RoadEventType.SPEED_CAMERA -> Color(0xFF800080)
+        RoadEventType.TRAFFIC_JAM -> Color(0xFFFF8C00)
+        RoadEventType.ACCIDENT -> Color(0xFFFF0000)
+        RoadEventType.ROAD_CLOSURE -> Color(0xFF8B0000)
+        RoadEventType.CONSTRUCTION -> Color(0xFFFFD700)
+        RoadEventType.HAZARD -> Color(0xFFFF4500)
+        RoadEventType.ROAD_CONDITION -> Color(0xFF4682B4)
+        RoadEventType.POTHOLE -> Color(0xFF795548)
+        RoadEventType.FOG -> Color(0xFF9E9E9E)
+        RoadEventType.ICE -> Color(0xFF00CED1)
+        RoadEventType.ANIMAL -> Color(0xFF4CAF50)
+        RoadEventType.OTHER -> Color(0xFF808080)
     }
 
 private fun RoadEventType.labelRes(): Int =
@@ -91,10 +123,13 @@ private fun RoadEventType.labelRes(): Int =
 @Composable
 fun RenderRoadEventReport(baseNote: Note) {
     val noteEvent = baseNote.event as? RoadEventReportEvent ?: return
+    val context = LocalContext.current
 
     val type = remember(noteEvent) { noteEvent.roadEventType() }
     val comment = remember(noteEvent) { noteEvent.content.trim() }
     val point = remember(noteEvent) { noteEvent.roadEventPoint() }
+    val freshness = remember(noteEvent) { noteEvent.freshnessAlpha() }
+    val meta = remember(noteEvent) { noteEvent.metaLine(context) }
 
     Column(MaterialTheme.colorScheme.replyModifier.padding(10.dp)) {
         val title =
@@ -105,6 +140,13 @@ fun RenderRoadEventReport(baseNote: Note) {
             }
 
         Text(text = title, style = MaterialTheme.typography.titleMedium)
+
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = meta,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.placeholderText,
+        )
 
         if (comment.isNotEmpty()) {
             Spacer(Modifier.height(6.dp))
@@ -118,7 +160,12 @@ fun RenderRoadEventReport(baseNote: Note) {
 
         if (point != null) {
             Spacer(Modifier.height(8.dp))
-            RoadEventMap(point)
+            RoadEventMap(
+                point = point,
+                pinColor = type?.color(),
+                pinEmoji = type?.emoji(),
+                pinAlpha = freshness,
+            )
         }
     }
 }
@@ -132,30 +179,33 @@ fun RenderRoadEventReport(baseNote: Note) {
 @Composable
 fun RenderRoadEventConfirmation(baseNote: Note) {
     val noteEvent = baseNote.event as? RoadEventConfirmationEvent ?: return
+    val context = LocalContext.current
 
     val status = remember(noteEvent) { noteEvent.status() }
     val point = remember(noteEvent) { noteEvent.roadEventPoint() }
+    val age = remember(noteEvent) { timeAgoNoDot(noteEvent.createdAt, context) }
+
+    val denied = status == RoadEventStatus.NO_LONGER_THERE
+    val emoji = if (denied) "❌" else "✅"
+    val pinColor = if (denied) Color(0xFFF44336) else Color(0xFF4CAF50)
 
     Column(MaterialTheme.colorScheme.replyModifier.padding(10.dp)) {
-        val emoji = if (status == RoadEventStatus.NO_LONGER_THERE) "❌" else "✅"
-        val titleRes =
-            if (status == RoadEventStatus.NO_LONGER_THERE) {
-                R.string.road_event_denied
-            } else {
-                R.string.road_event_confirmed
-            }
+        val titleRes = if (denied) R.string.road_event_denied else R.string.road_event_confirmed
 
         Text(text = "$emoji ${stringResource(titleRes)}", style = MaterialTheme.typography.titleMedium)
+
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = "🕒 $age",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.placeholderText,
+        )
 
         Spacer(Modifier.height(4.dp))
         Text(
             text =
                 stringResource(
-                    if (status == RoadEventStatus.NO_LONGER_THERE) {
-                        R.string.road_event_denies_report
-                    } else {
-                        R.string.road_event_confirms_report
-                    },
+                    if (denied) R.string.road_event_denies_report else R.string.road_event_confirms_report,
                 ),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.placeholderText,
@@ -163,18 +213,30 @@ fun RenderRoadEventConfirmation(baseNote: Note) {
 
         if (point != null) {
             Spacer(Modifier.height(8.dp))
-            RoadEventMap(point)
+            RoadEventMap(
+                point = point,
+                pinColor = pinColor,
+                pinEmoji = emoji,
+            )
         }
     }
 }
 
-/** A rounded OpenStreetMap preview with a pin at the road event's [point]. */
+/** A rounded OpenStreetMap preview with a colored emoji pin at the road event's [point]. */
 @Composable
-private fun RoadEventMap(point: Pair<Double, Double>) {
+private fun RoadEventMap(
+    point: Pair<Double, Double>,
+    pinColor: Color? = null,
+    pinEmoji: String? = null,
+    pinAlpha: Float = 1f,
+) {
     LocationPreviewMap(
         latitude = point.first,
         longitude = point.second,
         modifier = Modifier.clip(RoundedCornerShape(8.dp)),
+        pinColor = pinColor,
+        pinEmoji = pinEmoji,
+        pinAlpha = pinAlpha,
     )
 }
 
@@ -198,3 +260,51 @@ private fun resolveRoadEventPoint(
     val decoded = runCatching { finest.toGeoHash() }.getOrNull() ?: return null
     return decoded.centerLat to decoded.centerLon
 }
+
+/**
+ * Marker opacity by freshness, matching the roadstr clients: full while the
+ * report has plenty of life left, dimmed to 0.6 once under 25% of its effective
+ * TTL remains, and faded to 0.4 once effectively expired. Returns 1f when the
+ * type (and therefore the TTL) is unknown.
+ */
+private fun RoadEventReportEvent.freshnessAlpha(now: Long = TimeUtils.now()): Float {
+    val expiryAt = effectiveExpirationAt() ?: return 1f
+    val total = expiryAt - createdAt
+    if (total <= 0L) return 1f
+
+    val fraction = (expiryAt - now).toFloat() / total
+    return when {
+        fraction <= 0f -> 0.4f
+        fraction < 0.25f -> 0.6f
+        else -> 1f
+    }
+}
+
+/** "🕒 23m · expires in 1h" (or "· expired") for the report card subtitle. */
+private fun RoadEventReportEvent.metaLine(
+    context: Context,
+    now: Long = TimeUtils.now(),
+): String {
+    val age = "🕒 ${timeAgoNoDot(createdAt, context)}"
+    val expiryAt = effectiveExpirationAt() ?: return age
+
+    val remaining = expiryAt - now
+    val expiry =
+        if (remaining <= 0L) {
+            stringRes(context, R.string.road_event_expired)
+        } else {
+            stringRes(context, R.string.road_event_expires_in, formatDuration(context, remaining))
+        }
+    return "$age · $expiry"
+}
+
+/** Compact forward duration ("2d" / "3h" / "45m") reusing the time-ago unit strings. */
+private fun formatDuration(
+    context: Context,
+    seconds: Long,
+): String =
+    when {
+        seconds >= TimeUtils.ONE_DAY -> "${seconds / TimeUtils.ONE_DAY}${stringRes(context, R.string.d)}"
+        seconds >= TimeUtils.ONE_HOUR -> "${seconds / TimeUtils.ONE_HOUR}${stringRes(context, R.string.h)}"
+        else -> "${(seconds / TimeUtils.ONE_MINUTE).coerceAtLeast(1)}${stringRes(context, R.string.m)}"
+    }

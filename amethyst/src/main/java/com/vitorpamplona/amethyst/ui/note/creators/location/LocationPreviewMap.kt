@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.note.creators.location
 
+import android.graphics.drawable.BitmapDrawable
 import android.view.MotionEvent
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,6 +28,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
@@ -51,6 +54,11 @@ private const val DEFAULT_ZOOM = 16.0
  * servers, which requires the app's package name as the User-Agent (set on
  * [Configuration] below) — without it OSM returns HTTP 403.
  *
+ * When [pinColor] and [pinEmoji] are supplied the marker becomes a colored
+ * teardrop with the category emoji on it (see [roadEventPinBitmap]); otherwise
+ * osmdroid's default pin is used. [pinAlpha] fades the marker to signal
+ * freshness (e.g. an event close to its effective expiry).
+ *
  * Pan/zoom stay enabled, but a touch listener asks the parent to stop
  * intercepting gestures while the finger is on the map, so dragging the map
  * pans it instead of scrolling the surrounding feed.
@@ -61,9 +69,22 @@ fun LocationPreviewMap(
     longitude: Double,
     modifier: Modifier = Modifier,
     zoom: Double = DEFAULT_ZOOM,
+    pinColor: Color? = null,
+    pinEmoji: String? = null,
+    pinAlpha: Float = 1f,
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+
+    val markerIcon =
+        remember(pinColor, pinEmoji) {
+            if (pinColor != null && pinEmoji != null) {
+                val bitmap = roadEventPinBitmap(pinEmoji, pinColor.toArgb(), context.resources.displayMetrics.density)
+                BitmapDrawable(context.resources, bitmap)
+            } else {
+                null
+            }
+        }
 
     val mapView =
         remember(context) {
@@ -119,6 +140,8 @@ fun LocationPreviewMap(
                     position = point
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                     setInfoWindow(null)
+                    markerIcon?.let { icon = it }
+                    alpha = pinAlpha
                 }
             map.overlays.add(marker)
             map.invalidate()
