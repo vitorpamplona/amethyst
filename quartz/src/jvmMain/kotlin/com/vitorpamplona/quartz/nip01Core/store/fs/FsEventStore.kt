@@ -554,6 +554,7 @@ open class FsEventStore(
             Files.createDirectories(layout.idxFts)
 
             val resumeKind = resumeFrom?.toIntOrNull()
+            val target = batchSize.coerceAtLeast(1)
             val pending =
                 Files
                     .list(layout.idxKind)
@@ -575,7 +576,7 @@ open class FsEventStore(
                     }
                 }
                 index++
-                if (processed >= batchSize) break
+                if (processed >= target) break
             }
 
             val done = index >= pending.size

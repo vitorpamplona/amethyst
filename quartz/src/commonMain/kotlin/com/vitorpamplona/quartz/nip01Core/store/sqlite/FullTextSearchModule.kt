@@ -199,6 +199,9 @@ class FullTextSearchModule : IModule {
         afterRowId: Long,
         batchSize: Int,
     ): FtsReindexProgress {
+        // A non-positive page would select no rows yet never report done,
+        // spinning the caller's loop forever — clamp to at least one.
+        val limit = batchSize.coerceAtLeast(1)
         val kinds = searchableKindsPresent(db)
         if (kinds.isEmpty()) return FtsReindexProgress(cursor = null, processedThisBatch = 0, done = true)
 
@@ -213,7 +216,7 @@ class FullTextSearchModule : IModule {
             db.prepare(insertFTS).use { write ->
                 db.prepare(selectSql).use { read ->
                     read.bindLong(1, afterRowId)
-                    read.bindLong(2, batchSize.toLong())
+                    read.bindLong(2, limit.toLong())
                     while (read.step()) {
                         val rowId = read.getLong(0)
                         // Clear any existing row for this event first so a
@@ -246,7 +249,7 @@ class FullTextSearchModule : IModule {
         }
 
         // Fewer than a full page came back ⇒ we hit the end of the table.
-        val done = processed < batchSize
+        val done = processed < limit
         return FtsReindexProgress(
             cursor = if (done) null else last.toString(),
             processedThisBatch = processed,

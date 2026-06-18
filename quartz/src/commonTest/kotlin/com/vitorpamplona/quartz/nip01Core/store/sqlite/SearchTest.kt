@@ -300,6 +300,27 @@ class SearchTest : BaseDBTest() {
         }
 
     @Test
+    fun testResumableReindexClampsNonPositiveBatchSize() =
+        forEachDB { db ->
+            val a = signer.sign(TextNoteEvent.build("uniqclamp note", createdAt = TimeUtils.now()))
+            db.store.insertEvent(a)
+            db.store.pool.useWriter { db.store.fullTextSearchModule.deleteAll(it) }
+
+            // batchSize 0 must not spin forever: it is clamped to one event
+            // per call. Cap the loop so a regression fails fast instead of
+            // hanging the suite.
+            var cursor: String? = null
+            var guard = 0
+            do {
+                val progress = db.store.reindexFullTextSearch(cursor, batchSize = 0)
+                cursor = progress.cursor
+                check(guard++ < 100) { "reindex did not terminate with batchSize=0" }
+            } while (!progress.done)
+
+            db.store.assertQuery(a, Filter(search = "uniqclamp"))
+        }
+
+    @Test
     fun testChannelJsonFieldsAreSearchable() =
         forEachDB { db ->
             val chan =
