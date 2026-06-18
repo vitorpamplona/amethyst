@@ -1,0 +1,21 @@
+# LaunchBenchmark report — POST-PHASE-5.2 (gate removal) snapshot
+# Captured AFTER the Main.kt bootstrap-gate removal. NOTE: the slim
+# benchmark does not actually exercise the gated code path (the gate is
+# inside the App() composable, which this harness does not drive). The
+# row remains a harness-floor sanity check; the gate-removal payoff
+# manifests during real App() boot when no relay has connected yet and
+# the previous 30s `withTimeoutOrNull` would otherwise idle the
+# subscription.
+# date            2026-06-18T07:57:51.519608Z
+# jvm             21.0.9 Homebrew
+# os              Mac OS X 26.5 aarch64
+# cpus            10
+# max-heap-mb     512
+# git-sha         48726ee4df23bf97c6e302766af42e048c3060f0
+# iterations      5 (after 2 warmup, discarded)
+# fork-mode       single-JVM (cold-fork driver deferred)
+
+t_account_logged_in            n=5  min=  0.21ms  q1=  0.48ms  median=  0.72ms  q3=  0.87ms  max=  1.15ms
+t_first_event                  n=5  min=  1.17ms  q1=  1.34ms  median=  1.46ms  q3=  2.06ms  max=  2.10ms
+t_n_events                     n=5  min=  1.51ms  q1=  1.76ms  median=  2.63ms  q3=  2.75ms  max=  3.55ms
+# events-consumed per iteration: [23, 50, 15, 28, 23]
