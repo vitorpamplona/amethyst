@@ -93,10 +93,27 @@ class TorManager(
      * bootstrap there is no stale state to wipe, and wiping just forces an unnecessary
      * re-bootstrap cycle. Once we've seen Tor work once, persisted `arti/state/` is fair game
      * for the recovery to wipe.
+     *
+     * Also seeded at startup from [TorBackend.hasBootstrappedBefore]: the in-memory flag resets
+     * every process, but Arti's persisted guard sample does not. If it already holds a confirmed
+     * guard, Tor bootstrapped here before, so a stuck Connecting span means the persisted state
+     * is stale/poisoned and the watchdog should wipe it. Without this seed a fresh process would
+     * mistake poisoned guards for a pristine first bootstrap and only ever gentle-reset (keeping
+     * the poison), looping forever — the exact "can't connect to Tor across restarts" failure.
      */
     @Volatile private var hasEverBootstrapped: Boolean = false
 
     init {
+        // Seed hasEverBootstrapped from persisted on-disk evidence before the watchdog can fire
+        // (well under SELF_HEAL_AFTER_MS), so a stuck bootstrap on a previously-working install
+        // wipes its stale guard state instead of nursing it.
+        scope.launch(ioDispatcher) {
+            if (service.hasBootstrappedBefore()) {
+                hasEverBootstrapped = true
+                Log.d("TorManager") { "Seeded hasEverBootstrapped from persisted confirmed guard" }
+            }
+        }
+
         scope.launch(ioDispatcher) {
             lastBypassApprovalMs = torPrefs.loadLastBypassApprovalMs()
         }
