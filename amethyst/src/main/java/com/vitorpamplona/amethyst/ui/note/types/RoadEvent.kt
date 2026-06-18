@@ -20,19 +20,24 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
@@ -111,10 +116,10 @@ private fun RoadEventType.labelRes(): Int =
 /**
  * Self-contained card for a Roadstr road event report (kind 1315).
  *
- * Shows the category (emoji + localized label), the optional free-text comment,
- * and a map pinned at the event's coordinates. Identical in the feed and the
- * opened thread view, so it takes no `makeItShort` flag — mirroring
- * [RenderBirdex].
+ * A map hero pinned at the event's coordinates, with a floating category pill
+ * (colored per [RoadEventType.color]) and the optional free-text comment below.
+ * Identical in the feed and the opened thread view, so it takes no `makeItShort`
+ * flag — mirroring [RenderBirdex].
  */
 @Composable
 fun RenderRoadEventReport(baseNote: Note) {
@@ -125,43 +130,25 @@ fun RenderRoadEventReport(baseNote: Note) {
     val point = remember(noteEvent) { noteEvent.roadEventPoint() }
     val freshness = remember(noteEvent) { noteEvent.freshnessAlpha() }
 
-    Column(MaterialTheme.colorScheme.replyModifier.padding(10.dp)) {
-        val title =
-            if (type != null) {
-                "${type.emoji()} ${stringResource(type.labelRes())}"
-            } else {
-                stringResource(R.string.road_event_unknown)
-            }
+    val color = type?.color() ?: MaterialTheme.colorScheme.outline
+    val emoji = type?.emoji() ?: "📍"
+    val label = if (type != null) stringResource(type.labelRes()) else stringResource(R.string.road_event_unknown)
 
-        Text(text = title, style = MaterialTheme.typography.titleMedium)
-
-        if (comment.isNotEmpty()) {
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = comment,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 4,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-
-        if (point != null) {
-            Spacer(Modifier.height(8.dp))
-            RoadEventMap(
-                point = point,
-                pinColor = type?.color(),
-                pinEmoji = type?.emoji(),
-                pinAlpha = freshness,
-            )
-        }
-    }
+    RoadEventCard(
+        chipColor = color,
+        chipEmoji = emoji,
+        chipLabel = label,
+        point = point,
+        pinAlpha = freshness,
+        comment = comment,
+    )
 }
 
 /**
  * Self-contained card for a Roadstr confirmation/denial (kind 1316).
  *
- * Shows whether the referenced report was confirmed (still there) or denied
- * (no longer there), plus a one-line description of the action.
+ * Same hero/pill layout as a report, with a green ✅ "Still there" or red ❌
+ * "No longer there" pill and a one-line description of the action.
  */
 @Composable
 fun RenderRoadEventConfirmation(baseNote: Note) {
@@ -172,50 +159,104 @@ fun RenderRoadEventConfirmation(baseNote: Note) {
 
     val denied = status == RoadEventStatus.NO_LONGER_THERE
     val emoji = if (denied) "❌" else "✅"
-    val pinColor = if (denied) Color(0xFFF44336) else Color(0xFF4CAF50)
+    val color = if (denied) Color(0xFFF44336) else Color(0xFF4CAF50)
 
-    Column(MaterialTheme.colorScheme.replyModifier.padding(10.dp)) {
-        val titleRes = if (denied) R.string.road_event_denied else R.string.road_event_confirmed
+    RoadEventCard(
+        chipColor = color,
+        chipEmoji = emoji,
+        chipLabel = stringResource(if (denied) R.string.road_event_denied else R.string.road_event_confirmed),
+        point = point,
+        subtitle = stringResource(if (denied) R.string.road_event_denies_report else R.string.road_event_confirms_report),
+    )
+}
 
-        Text(text = "$emoji ${stringResource(titleRes)}", style = MaterialTheme.typography.titleMedium)
-
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text =
-                stringResource(
-                    if (denied) R.string.road_event_denies_report else R.string.road_event_confirms_report,
-                ),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.placeholderText,
-        )
-
+/**
+ * Shared road event card chrome: a full-bleed [LocationPreviewMap] hero with a
+ * floating [CategoryPill] overlaid on its top-start, and an optional
+ * [subtitle] + [comment] block below. When [point] is null the pill stands on
+ * its own so the card still reads.
+ */
+@Composable
+private fun RoadEventCard(
+    chipColor: Color,
+    chipEmoji: String,
+    chipLabel: String,
+    point: Pair<Double, Double>?,
+    pinAlpha: Float = 1f,
+    comment: String = "",
+    subtitle: String? = null,
+) {
+    Column(MaterialTheme.colorScheme.replyModifier) {
         if (point != null) {
-            Spacer(Modifier.height(8.dp))
-            RoadEventMap(
-                point = point,
-                pinColor = pinColor,
-                pinEmoji = emoji,
+            Box(Modifier.fillMaxWidth()) {
+                LocationPreviewMap(
+                    latitude = point.first,
+                    longitude = point.second,
+                    pinColor = chipColor,
+                    pinEmoji = chipEmoji,
+                    pinAlpha = pinAlpha,
+                )
+                CategoryPill(
+                    color = chipColor,
+                    emoji = chipEmoji,
+                    label = chipLabel,
+                    modifier = Modifier.align(Alignment.TopStart).padding(10.dp),
+                )
+            }
+        } else {
+            CategoryPill(
+                color = chipColor,
+                emoji = chipEmoji,
+                label = chipLabel,
+                modifier = Modifier.padding(12.dp),
             )
+        }
+
+        if (subtitle != null || comment.isNotEmpty()) {
+            Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.placeholderText,
+                    )
+                }
+                if (comment.isNotEmpty()) {
+                    if (subtitle != null) Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = comment,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 4,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
         }
     }
 }
 
-/** A rounded OpenStreetMap preview with a colored emoji pin at the road event's [point]. */
+/** A floating rounded pill: [emoji] + [label] on a [color] background, text auto-contrasted. */
 @Composable
-private fun RoadEventMap(
-    point: Pair<Double, Double>,
-    pinColor: Color? = null,
-    pinEmoji: String? = null,
-    pinAlpha: Float = 1f,
+private fun CategoryPill(
+    color: Color,
+    emoji: String,
+    label: String,
+    modifier: Modifier = Modifier,
 ) {
-    LocationPreviewMap(
-        latitude = point.first,
-        longitude = point.second,
-        modifier = Modifier.clip(RoundedCornerShape(8.dp)),
-        pinColor = pinColor,
-        pinEmoji = pinEmoji,
-        pinAlpha = pinAlpha,
-    )
+    Surface(
+        modifier = modifier,
+        color = color,
+        contentColor = if (color.luminance() > 0.55f) Color.Black else Color.White,
+        shape = RoundedCornerShape(50),
+        shadowElevation = 3.dp,
+    ) {
+        Text(
+            text = "$emoji  $label",
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
 }
 
 /**
