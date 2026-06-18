@@ -140,6 +140,18 @@ class AccountManager internal constructor(
     private val _forceLogoutReason = MutableStateFlow<String?>(null)
     val forceLogoutReason: StateFlow<String?> = _forceLogoutReason.asStateFlow()
 
+    // Set to true when accounts.json.enc points at an account whose key cannot
+    // be recovered from the OS keychain on cold boot — i.e. the user is forced
+    // back to the login screen because the keychain read returned nothing for
+    // a key we previously persisted. Mirrors [storageCorruption] / [forceLogoutReason]
+    // (a separate diagnostic channel, not embedded in [AccountState]).
+    private val _keychainUnavailable = MutableStateFlow(false)
+    val keychainUnavailable: StateFlow<Boolean> = _keychainUnavailable.asStateFlow()
+
+    fun clearKeychainUnavailable() {
+        _keychainUnavailable.value = false
+    }
+
     private val _loginProgress = MutableStateFlow<LoginProgress?>(null)
     val loginProgress: StateFlow<LoginProgress?> = _loginProgress.asStateFlow()
 
@@ -284,7 +296,12 @@ class AccountManager internal constructor(
             return Result.success(state)
         }
 
-        // No private key — fall back to read-only
+        // accounts.json.enc said this is an Internal (nsec) account but the
+        // keychain returned no key. Hardening (46caa4d79) ensures legitimate
+        // logout removes the AccountInfo too, so reaching here means the read
+        // side of the keychain is broken (e.g. ProGuard-stripped backend in
+        // the macOS release DMG). Flag it so the login screen can explain.
+        _keychainUnavailable.value = true
         return loadReadOnlyAccount(npub)
     }
 
@@ -297,7 +314,11 @@ class AccountManager internal constructor(
         val ephemeralPrivKeyHex =
             perAccountKey?.takeIf { it.isNotEmpty() }
                 ?: secureStorage.getPrivateKey(LEGACY_BUNKER_EPHEMERAL_KEY_ALIAS)?.takeIf { it.isNotEmpty() }
-                ?: return Result.failure(Exception("Ephemeral key not found"))
+                ?: run {
+                    // See [loadInternalAccount] for why we flag this here too.
+                    _keychainUnavailable.value = true
+                    return Result.failure(Exception("Ephemeral key not found"))
+                }
 
         val ephemeralKeyPair = KeyPair(privKey = ephemeralPrivKeyHex.hexToByteArray())
         val ephemeralSigner = NostrSignerInternal(ephemeralKeyPair)
