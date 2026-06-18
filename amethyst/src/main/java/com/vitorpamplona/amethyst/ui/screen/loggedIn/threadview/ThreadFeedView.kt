@@ -27,6 +27,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -36,6 +37,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -545,7 +547,11 @@ private fun CollapsedNoteCompose(
                     .padding(horizontal = 10.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            NoteAuthorPicture(baseNote = baseNote, size = Size40dp, accountViewModel = accountViewModel, nav = nav)
+            // Center the smaller avatar inside the full 55dp slot so the text lines up with the
+            // expanded NoteCompose, which uses a 55dp avatar.
+            Box(modifier = Modifier.width(Size55dp), contentAlignment = Alignment.Center) {
+                NoteAuthorPicture(baseNote = baseNote, size = Size40dp, accountViewModel = accountViewModel, nav = nav)
+            }
 
             Spacer(modifier = StdHorzSpacer)
 
