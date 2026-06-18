@@ -171,18 +171,22 @@ class TorManagerTest {
     // ------------------------------------------------------------------
 
     @Test
-    fun `onTorCircuitsDead wipes state and re-inits when Active`() =
+    fun `onTorCircuitsDead rotates exits with a warm reset when Active`() =
         runTest(UnconfinedTestDispatcher()) {
             val backend = FakeTorBackend()
             val manager = buildManager(backend = backend, clock = { 1_000_000_000_000L })
             advanceUntilIdle()
             backend.setActive(17392)
             advanceUntilIdle()
+            val resetCountBefore = backend.resetCount
 
             manager.onTorCircuitsDead()
             advanceUntilIdle()
 
-            assertEquals("Active-but-failing recovery wipes state", 1, backend.resetWithCleanStateCount)
+            // Exit failures are exit-side: warm reset (keep guards + cache) to rotate exits,
+            // never a state wipe (which only forces a 60s cold bootstrap).
+            assertEquals("Active-but-failing recovery rotates exits warm", resetCountBefore + 1, backend.resetCount)
+            assertEquals("must not wipe state for an exit-side failure", 0, backend.resetWithCleanStateCount)
             // resetEpoch bump re-enters INTERNAL → start() runs again.
             assertTrue("re-init should call start() again", backend.startCount >= 2)
         }
@@ -195,10 +199,12 @@ class TorManagerTest {
             advanceUntilIdle()
             // Still Connecting (never reached Active).
             assertEquals(TorServiceStatus.Connecting, manager.status.value)
+            val resetCountBefore = backend.resetCount
 
             manager.onTorCircuitsDead()
             advanceUntilIdle()
 
+            assertEquals("no rotation while not Active", resetCountBefore, backend.resetCount)
             assertEquals(0, backend.resetWithCleanStateCount)
         }
 
@@ -212,10 +218,12 @@ class TorManagerTest {
             advanceUntilIdle()
             manager.sessionBypass.value = true
             advanceUntilIdle()
+            val resetCountBefore = backend.resetCount
 
             manager.onTorCircuitsDead()
             advanceUntilIdle()
 
+            assertEquals("no rotation while bypassing", resetCountBefore, backend.resetCount)
             assertEquals(0, backend.resetWithCleanStateCount)
         }
 
@@ -228,10 +236,11 @@ class TorManagerTest {
             advanceUntilIdle()
             backend.setActive(17392)
             advanceUntilIdle()
+            val resetCountBefore = backend.resetCount
 
             manager.onTorCircuitsDead()
             advanceUntilIdle()
-            assertEquals(1, backend.resetWithCleanStateCount)
+            assertEquals(resetCountBefore + 1, backend.resetCount)
 
             // Backend is Active again (re-init bootstrapped). A second call inside the cooldown
             // window must be suppressed.
@@ -239,7 +248,7 @@ class TorManagerTest {
             advanceUntilIdle()
             manager.onTorCircuitsDead()
             advanceUntilIdle()
-            assertEquals("cooldown should suppress the second self-heal", 1, backend.resetWithCleanStateCount)
+            assertEquals("cooldown should suppress the second self-heal", resetCountBefore + 1, backend.resetCount)
 
             // Past the cooldown it can fire again.
             clockNow += TorManager.SELF_HEAL_COOLDOWN_MS + 1_000L
@@ -247,7 +256,8 @@ class TorManagerTest {
             advanceUntilIdle()
             manager.onTorCircuitsDead()
             advanceUntilIdle()
-            assertEquals("after cooldown elapses, self-heal fires again", 2, backend.resetWithCleanStateCount)
+            assertEquals("after cooldown elapses, self-heal fires again", resetCountBefore + 2, backend.resetCount)
+            assertEquals("exit-side rotations never wipe state", 0, backend.resetWithCleanStateCount)
         }
 
     // ------------------------------------------------------------------
