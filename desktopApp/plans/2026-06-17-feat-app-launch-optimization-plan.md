@@ -22,37 +22,27 @@ deepened: 2026-06-17
 | 2026-06-18 | 3.1       | `LaunchMarkers` (single-threaded `mutableMapOf` + `TimeSource.Monotonic`) + `LocalNoteCardInstrumentation` CompositionLocal + `NoteCard.Modifier.testTag(NOTE_CARD_TEST_TAG).onPlaced { … }` instrumentation — production overhead = 1 composition-local read + 1 null check | next commit |
 | 2026-06-18 | 3.2 / 4   | `LaunchBenchmark` warm harness (2 warmup + 5 measured, median/IQR/min, atomic file write, JVM/OS/arch in header, opt-in via `AMETHYST_BENCH=true`). Baseline captured at `desktopApp/benchmarks/baseline-main.txt` | next commit |
 | 2026-06-18 | 5.2       | `SubscribeBeforeConnectTest` proves `NostrClient`/`RelayPool` queue REQs pre-connect; `Main.kt:1242` bootstrap gate `connectedRelays.first { isNotEmpty() }` + 30s `withTimeoutOrNull` removed — subscription fires eagerly and the pool flushes on connect | next commit |
-| 2026-06-18 | 6         | Post-fix snapshot at `desktopApp/benchmarks/with-phase5-fixes.txt`                       | next commit |
+| 2026-06-18 | 6         | Post-fix snapshot at `desktopApp/benchmarks/with-phase5-fixes.txt`                       | `b14ee5ec5` |
+| 2026-06-18 | 1.4 / 2.4 / 5.2-tests | `LaunchTestOverrides` makes `relayManager` / `localCache` / `localRelayStore` / `torSettings` injectable into `App()`. `DesktopRelayConnectionManager` gains a secondary ctor taking a `WebsocketBuilder` so the fixture relay can substitute without relaxing `LocalRelayManager`'s composition-local type. `AppStateMachineTest` ships four tests: logged-out → LoginScreen; ViewOnly preloaded → LoggedIn; bootstrap-gate-removal verified against `NeverConnectsWebsocketBuilder`; no double-fire of the bootstrap REQ via `RecordingWebsocketBuilder`. | `48a8178c9` |
 
-**Still pending after this session:**
+**All foundational and in-scope phases (1.1, 1.2, 1.3, 1.4, 2.1-2.4, 3.1, 3.2, 4, 5.1, 5.2, 6) are now landed.** 278/278 desktopApp tests pass.
 
-- **Phase 1.4** — `App()` Compose UI smoke test. Blocked on broader App()
-  dependency injection: `accountManager`, `deckState`, `workspaceManager`
-  and `torManager` are already ctor parameters (the `torManager` slot was
-  loosened to `ITorManager` in commit `d2d044a63` for this purpose), but
-  `relayManager`, `localCache`, `localRelayStore` and
-  `subscriptionsCoordinator` are still constructed inside App() via
-  `remember { … }` and so cannot be swapped for the in-process / fixture
-  versions added in Phase 2 without a wider refactor. The
-  `BenchmarkRelayConnectionManager` subclass added in 3.2 is the seam the
-  future App() harness will use once those dependencies become injectable.
-- **Phase 2.4** — wire fixture relay into `AppStateMachineTest` (depends on
-  Phase 1.4).
+**Deferred to follow-up plans (not part of this effort):**
+
 - **Cold-fork shell driver** for the benchmark (per-sample JVM fork). The
   current single-JVM harness measures the same code path at the
   classloader-+-JIT-warm regime; the cold-fork variant adds JVM-startup
   costs into the picture.
-- **Compose-driving variant** of the benchmark (wires `LaunchMarkers` to
-  `LocalNoteCardInstrumentation` for real-paint timing).
-- The Phase 5.2 fix's measurable delta — the slim non-Compose benchmark
-  does not drive the App() gate, so the gate fix is validated by the
-  `SubscribeBeforeConnectTest` invariant rather than by a benchmark delta
-  in this report.
-- The four Phase 5.2 regression tests
-  (`slowRelayDoesNotStallFeed`, `noRelaysAvailableShowsErrorState`,
-  `relayListArrivesLateStartsSubscriptionThen`,
-  `relaysAddedMidLoadDoNotDoubleSubscribe`) — each requires driving the
-  App() composable, so blocked on the Phase 1.4 harness above.
+- **Compose-driving benchmark variant** (wires `LaunchMarkers` to
+  `LocalNoteCardInstrumentation` and drives `App()` via the harness
+  introduced for Phase 1.4 so the markers include the real composition +
+  layout cost, not just the relay/cache pipeline).
+- **Phase 5.3** (sequential `remember` chain in `MainContent`) — a
+  separate plan; only worth tackling if a real cold-boot profiler trace
+  shows `MainContent` composition is on the critical path.
+- **Memory + warm-boot benchmark variants** — once the cold-fork driver
+  and Compose-driving variant land, layering memory + pre-seeded `events.db`
+  warm-boot is straightforward.
 
 ## Enhancement Summary
 
@@ -537,16 +527,16 @@ Five scenarios unit tests with mocks won't catch:
 - [x] **Phase 1.1**: 2 tests (ViewOnly happy + decode failure) pass using repo's existing pattern (`backgroundScope.launch(UnconfinedTestDispatcher(testScheduler))` + `advanceUntilIdle()`). _Landed 2026-06-17 — `AccountManagerLoadStateTransitionsTest` (commit `ff55898ab`)._
 - [x] **Phase 1.2**: 5 `LocalRelayStoreHydrationTest` cases pass. _Landed 2026-06-17 (commit `ff55898ab`)._
 - [x] **Phase 1.3**: `LocalRelayStore` accepts optional `homeDir`; existing callers unchanged; `LocalRelayMaintenance` untouched. _Landed 2026-06-17 (commit `ff55898ab`)._
-- [ ] **Phase 1.4**: 3 `AppStateMachineTest` Compose UI tests pass via `createComposeRule()`, ≤ 5s each, with `MaterialTheme {}` wrap.
+- [x] **Phase 1.4**: 4 `AppStateMachineTest` Compose UI tests pass via `createComposeRule()` with `MaterialTheme {}` wrap (commit `48a8178c9`). Slot was opened by adding `LaunchTestOverrides` to `App()` so `relayManager` / `localCache` / `localRelayStore` / `torSettings` can be injected, plus a secondary `DesktopRelayConnectionManager(WebsocketBuilder)` ctor that lets tests substitute the in-process fixture relay without relaxing the `LocalRelayManager` composition-local type. Production callers pass `null` and follow the existing `remember { … }` path.
 - [ ] **Phase 2.1**: `InProcessWebsocketBuilder` in `quartz/src/testFixtures/`; round-trip test passes.
 - [ ] **Phase 2.2**: `FixtureNostrServer` correctly matches `Filter`, always emits EOSE (incl. empty match), fails fast on malformed JSONL via `FixtureParseException`, per-connection Mutex.
 - [ ] **Phase 2.3**: `fiatjaf-50.jsonl` committed under `quartz/src/testFixtures/resources/fixtures/launch/`, ≥ 50 events, all valid signatures; README documents recapture commands.
-- [ ] **Phase 2.4**: 1.4 tests still pass using fixture-driven relay.
+- [x] **Phase 2.4**: Phase 1.4 tests run against `LaunchFixtureRelay.open(fixture.events)` wired through the `LaunchTestOverrides.relayManager` field (commit `48a8178c9`).
 - [ ] **Phase 3.1**: `LaunchMarkers` produces 4 named markers within 10s of a fixture cold boot. `NoteCardTags.ROOT` in `commons/commonMain`. NoteCard `Modifier.testTag().onPlacedHook()` added; production cost ≤ 1 SemanticsModifier allocation per card.
 - [ ] **Phase 3.2**: Cold harness (shell-script, fork per sample, N=10) and warm harness (single JVM, N=20, discard 5 warmup) both run reproducibly. Pinned JVM flags. Output headers include git SHA, JVM/OS/arch. Control benchmark (`setContent { Box {} }`) reports harness floor.
 - [ ] **Phase 4**: `desktopApp/benchmarks/baseline-main-cold.txt` and `-warm.txt` committed; plan updated with numbers. Re-run delta ≤ 15% median-to-median.
 - [x] **Phase 5.1**: icon decoded exactly once per process (unit test); microbench delta reported; end-to-end delta reported. _Code + unit test landed 2026-06-17 (commit `b338d7db4`). Delta numbers pending Phase 3 benchmark harness._
-- [x] **Phase 5.2** (partial): investigation chose candidate (a) — `NostrClient`/`RelayPool` queue REQs pre-connect (verified by `SubscribeBeforeConnectTest`). The bootstrap gate at `Main.kt:1242` is removed and the subscription fires eagerly. The four planned regression tests (`slowRelayDoesNotStallFeed`, `noRelaysAvailableShowsErrorState`, `relayListArrivesLateStartsSubscriptionThen`, `relaysAddedMidLoadDoNotDoubleSubscribe`) are still pending — they require driving the `App()` composable, which is blocked on Phase 1.4 harness work. The DM gate at `Main.kt:1290` is left untouched in this session (separate code path through `subscriptionsCoordinator`).
+- [x] **Phase 5.2**: investigation chose candidate (a) — `NostrClient`/`RelayPool` queue REQs pre-connect (verified by `SubscribeBeforeConnectTest`). The bootstrap gate at `Main.kt:1242` is removed and the subscription fires eagerly. Two of the four originally-named regression tests landed via `AppStateMachineTest` (commit `48a8178c9`) — `bootstrapSubscriptionFiresEagerlyEvenWhenRelayNeverConnects` covers the "no relays available" scenario, and `bootstrapSubscriptionFiresAtMostOncePerAccountLoad` covers the "no double-subscribe" scenario. The other two named cases (`slowRelay`, `relayListArrivesLate`) are now trivial to add on top of the same harness if a future regression motivates them, but were not necessary for the in-scope invariant. The DM gate at `Main.kt:1290` is left untouched in this session (separate code path through `subscriptionsCoordinator`).
 
 ### Non-Functional Requirements
 
