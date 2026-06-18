@@ -50,6 +50,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
@@ -164,6 +166,25 @@ fun NoteCard(
         }
     val cardColors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface)
     val cardShape = MaterialTheme.shapes.medium
+
+    // Launch-instrumentation hook. The composition-local read is one slot lookup
+    // and the resulting `instrumentation` reference is null in production, so the
+    // onPlaced callback is a single null check per placement. See
+    // desktopApp/plans/2026-06-17-feat-app-launch-optimization-plan.md § Phase 3.1.
+    val instrumentation = LocalNoteCardInstrumentation.current
+    val instrumentedModifier =
+        remember(modifier, instrumentation, note.id) {
+            var fired = false
+            modifier
+                .testTag(NOTE_CARD_TEST_TAG)
+                .onPlaced {
+                    if (!fired && instrumentation != null) {
+                        fired = true
+                        instrumentation.onPlaced(note.id)
+                    }
+                }
+        }
+
     val cardBody: @Composable ColumnScope.() -> Unit = {
         Column(modifier = Modifier.padding(16.dp)) {
             // Reply context — embedded parent + "Replying to @X" label.
@@ -380,7 +401,7 @@ fun NoteCard(
     if (onClick != null) {
         OutlinedCard(
             onClick = onClick,
-            modifier = modifier,
+            modifier = instrumentedModifier,
             colors = cardColors,
             border = cardBorder,
             shape = cardShape,
@@ -388,7 +409,7 @@ fun NoteCard(
         )
     } else {
         OutlinedCard(
-            modifier = modifier,
+            modifier = instrumentedModifier,
             colors = cardColors,
             border = cardBorder,
             shape = cardShape,
