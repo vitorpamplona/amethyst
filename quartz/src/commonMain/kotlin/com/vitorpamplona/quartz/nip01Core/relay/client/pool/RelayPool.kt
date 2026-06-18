@@ -202,6 +202,14 @@ class RelayPool(
         val relayInPool = relays.remove(relay)
         if (relayInPool != null) {
             relayInPool.disconnect()
+            // Reflect the disconnect immediately. disconnect() uses OkHttp cancel(),
+            // whose onClosed/onFailure callback — the only other path that prunes
+            // _connectedRelays — is async and, when cancelling hundreds of sockets at
+            // once in the background, frequently never arrives. That left the connected
+            // set (and the always-on notification's relay count) stale at ~110 while the
+            // pool itself had already shrunk to the desired ~20. The callback, if it does
+            // fire later, repeats this subtraction idempotently.
+            _connectedRelays.update { it - relay }
             return true
         }
         return false
@@ -218,6 +226,7 @@ class RelayPool(
             disconnect()
             relays.clear()
             _availableRelays.update { emptySet() }
+            _connectedRelays.update { emptySet() }
         }
     }
 
