@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.service.images.ImageCacheFactory
 import com.vitorpamplona.amethyst.service.images.ImageLoaderSetup
 import com.vitorpamplona.amethyst.service.images.ThumbnailDiskCache
 import com.vitorpamplona.amethyst.service.localStore.LocalEventStore
+import com.vitorpamplona.amethyst.service.localStore.LocalRelayWebsocketBuilder
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.notifications.AlwaysOnNotificationServiceManager
 import com.vitorpamplona.amethyst.service.notifications.NotificationDispatcher
@@ -480,8 +481,24 @@ class AppModules(
             OkHttpLnurlEndpointResolver(roleBasedHttpClientBuilder::okHttpClientForMoney)
     }
 
-    // Provides a relay pool
-    val client: INostrClient = NostrClient(websocketBuilder, applicationIOScope)
+    // On-device SQLite relay that permanently keeps kind-0, relay lists and
+    // trusted assertions for every user we see. Exposed as just another relay
+    // (LOCAL_RELAY_URL) so any NostrClient subscription/publish can query it
+    // in-process, without a websocket. See LocalRelayWebsocketBuilder.
+    val localEventStore =
+        LocalEventStore(
+            dbFile = File(appContext.filesDir, "local-event-store/events.db"),
+            scope = applicationIOScope,
+        )
+
+    // Provides a relay pool. The websocket builder is wrapped so connections to
+    // the local relay are served from SQLite in-process; all other relays dial
+    // over the network as usual.
+    val client: INostrClient =
+        NostrClient(
+            LocalRelayWebsocketBuilder(websocketBuilder, localEventStore),
+            applicationIOScope,
+        )
 
     // Self-heals the "Tor Active but every circuit dead" state the lifecycle watchdogs can't
     // see (they only arm while Connecting). Watches Tor-routed relay outcomes and, when enough
@@ -507,16 +524,8 @@ class AppModules(
             applicationIOScope,
         )
 
-    // Permanently keeps kind-0, relay lists and trusted assertions for every
-    // user we see, so the app can render people offline. Hydrated into the cache
-    // at boot (see initiate) before remote relays connect.
-    val localEventStore =
-        LocalEventStore(
-            dbFile = File(appContext.filesDir, "local-event-store/events.db"),
-            scope = applicationIOScope,
-        )
-
-    // Verifies and inserts in the cache from all relays, all subscriptions
+    // Verifies and inserts in the cache from all relays, all subscriptions.
+    // Also write-through every persistable event into the local relay store.
     val cacheClientConnector = CacheClientConnector(client, cache, localEventStore)
 
     // Show messages from the Relay and controls their dismissal
@@ -754,15 +763,9 @@ class AppModules(
             sessionManager.loginWithDefaultAccountIfLoggedOff()
         }
 
-        // Opens the on-device store and replays the persisted user directory
-        // (kind 0, relay lists, trusted assertions) into the cache so people
-        // render offline, before remote relays connect and fill the gaps.
-        applicationIOScope.launch {
-            localEventStore.open()
-            localEventStore.hydrate { event ->
-                cache.justConsume(event, null, wasVerified = true)
-            }
-        }
+        // Opens the on-device relay store off the main thread so its first
+        // query/write doesn't pay the DB-open cost inline.
+        localEventStore.warmup()
 
         // forces initialization of uiPrefs in the main thread to avoid blinking themes
         uiPrefs
