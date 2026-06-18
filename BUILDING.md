@@ -250,7 +250,7 @@ provided automatically; everything else you set yourself.)
 | `SONATYPE_PASSWORD` | Maven Central user token password | Same |
 | `SIGNING_PRIVATE_KEY` | **GPG/PGP** private key, ASCII-armored | Signs the Maven artifacts (Central requires it) |
 | `SIGNING_PASSWORD` | Passphrase for that GPG key | Same |
-| `MAC_CERTIFICATE_P12` | Base64 of your **Apple Developer ID Application** cert (`.p12`, includes the private key) | Signs the macOS desktop **DMG** |
+| `MAC_CERTIFICATE_P12` | Base64 of your **Apple Developer ID Application** cert (`.p12`, includes the private key) | Signs the macOS desktop **DMG** and the macOS **amy** jlink tarball |
 | `MAC_CERTIFICATE_PASSWORD` | Password set when exporting the `.p12` | Imports the cert into the CI keychain |
 | `MAC_SIGN_IDENTITY` | Full identity string, e.g. `Developer ID Application: Your Name (TEAMID)` | The `codesign` identity to sign with |
 | `MAC_NOTARY_APPLE_ID` | Apple ID email of the notarization account | Apple notarization (`notarytool`) |
@@ -266,10 +266,20 @@ Note the **three distinct signing identities** people often conflate:
 `MAC_SIGN_IDENTITY` + `MAC_NOTARY_*` is the **Apple Developer ID** for the macOS
 desktop DMG. They are unrelated — each comes from a different authority.
 
-The macOS desktop signing secrets are **optional**: if `MAC_CERTIFICATE_P12` is
-unset the release workflow still builds the DMG, just **unsigned** (the previous
-behavior). Provision all six to switch signing + notarization on. Obtaining them
-requires Apple Developer Program membership ($99/yr).
+The macOS signing secrets are **optional**: if `MAC_CERTIFICATE_P12` is unset
+the release workflow still builds the DMG **and** the macOS `amy` tarball, just
+**unsigned** (the previous behavior). Provision all six to switch signing +
+notarization on for both. Obtaining them requires Apple Developer Program
+membership ($99/yr). The same one certificate signs both artifacts.
+
+The macOS `amy` tarball is the jlink image (bundled JRE), so signing it means
+codesigning every Mach-O binary in that runtime with hardened-runtime
+entitlements (`cli/packaging/macos/amy.entitlements` — needed so the JVM can
+load the secp256k1 native library it extracts at runtime). A loose `.tar.gz`
+cannot be **stapled** (Apple's `stapler` only handles `.app`/`.dmg`/`.pkg`), so
+Gatekeeper verifies notarization **online** on first run — fine for a CLI.
+Note the Homebrew-core jvm bundle (`amy-<version>-jvm.tar.gz`) is **not** signed:
+Homebrew removes the quarantine attribute on its own downloads.
 
 Generating the values:
 

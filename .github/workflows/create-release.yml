@@ -102,40 +102,17 @@ jobs:
           chmod +x desktopApp/packaging/appimage/appimagetool-x86_64.AppImage
 
       # macOS only: import the Developer ID Application cert into a throwaway
-      # keychain so jpackage's codesign pass can find it. Soft-gated — if the
+      # keychain so jpackage's codesign pass can find it. Soft — if the
       # MAC_CERTIFICATE_P12 secret isn't set (forks, or before Apple creds are
       # provisioned) the DMG is built UNSIGNED, exactly as before. notarytool
       # runs as part of the gradle task when the identity env is exported below.
       - name: Import Apple Developer ID certificate (macOS leg, if configured)
         if: matrix.family == 'macos'
         id: mac_keychain
-        env:
-          CERT_P12: ${{ secrets.MAC_CERTIFICATE_P12 }}
-          CERT_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
-        run: |
-          set -euo pipefail
-          if [[ -z "${CERT_P12:-}" ]]; then
-            echo "::notice::MAC_CERTIFICATE_P12 not set — building UNSIGNED DMG."
-            echo "signing=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          KEYCHAIN="$RUNNER_TEMP/amethyst-signing.keychain-db"
-          KEYCHAIN_PWD="$(openssl rand -base64 24)"
-          CERT_PATH="$RUNNER_TEMP/developer_id.p12"
-          security create-keychain -p "$KEYCHAIN_PWD" "$KEYCHAIN"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN"
-          security unlock-keychain -p "$KEYCHAIN_PWD" "$KEYCHAIN"
-          echo "$CERT_P12" | base64 --decode > "$CERT_PATH"
-          security import "$CERT_PATH" -P "$CERT_PASSWORD" \
-            -k "$KEYCHAIN" -T /usr/bin/codesign -T /usr/bin/productsign
-          # Let codesign use the private key without an interactive UI prompt.
-          security set-key-partition-list -S apple-tool:,apple:,codesign: \
-            -s -k "$KEYCHAIN_PWD" "$KEYCHAIN" >/dev/null
-          # Prepend our keychain to the user search list so codesign sees it.
-          security list-keychains -d user -s "$KEYCHAIN" \
-            $(security list-keychains -d user | sed -e 's/[\"[:space:]]//g')
-          rm -f "$CERT_PATH"
-          echo "signing=true" >> "$GITHUB_OUTPUT"
+        uses: ./.github/actions/import-macos-cert
+        with:
+          certificate-p12-base64: ${{ secrets.MAC_CERTIFICATE_P12 }}
+          certificate-password: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
 
       - name: Build desktop artifacts
         uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0
@@ -256,7 +233,7 @@ jobs:
           - { os: macos-14,      arch: arm64, family: macos, tasks: "amyImage" }
           - { os: ubuntu-latest, arch: x64,   family: linux, tasks: "amyImage jpackageDeb jpackageRpm" }
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 45  # macOS leg also codesigns + notarizes the jlink image
     defaults:
       run:
         shell: bash
@@ -304,6 +281,52 @@ jobs:
           max_attempts: 2
           timeout_minutes: 15
           command: ./gradlew --no-daemon :cli:${{ matrix.tasks }}
+
+      # macOS only: import the Developer ID cert (no-op without the secret) so
+      # the next step can codesign the jlink image. The jvm bundle for
+      # Homebrew-core is NOT signed here — Homebrew strips quarantine itself.
+      - name: Import Apple Developer ID certificate (macOS leg, if configured)
+        if: matrix.family == 'macos'
+        id: mac_keychain
+        uses: ./.github/actions/import-macos-cert
+        with:
+          certificate-p12-base64: ${{ secrets.MAC_CERTIFICATE_P12 }}
+          certificate-password: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+
+      # Codesign + notarize the macOS jlink image (amy-<ver>-macos-arm64.tar.gz)
+      # for users who download it directly. A loose tarball can't be stapled
+      # (stapler only does .app/.dmg/.pkg), so Gatekeeper verifies notarization
+      # online on first run. Runs before "Collect" so the tarred image is signed.
+      - name: Sign + notarize amy image (macOS leg, if configured)
+        if: matrix.family == 'macos' && steps.mac_keychain.outputs.signing == 'true'
+        env:
+          SIGN_IDENTITY: ${{ secrets.MAC_SIGN_IDENTITY }}
+          NOTARY_APPLE_ID: ${{ secrets.MAC_NOTARY_APPLE_ID }}
+          NOTARY_PASSWORD: ${{ secrets.MAC_NOTARY_PASSWORD }}
+          NOTARY_TEAM_ID: ${{ secrets.MAC_NOTARY_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          IMG="cli/build/amy-image/amy"
+          ENTITLEMENTS="cli/packaging/macos/amy.entitlements"
+          # Sign every Mach-O binary in the bundled JRE. Each is signed
+          # independently (no enclosing .app seals them), so order is irrelevant.
+          # Executables get the hardened-runtime entitlements; dylibs don't.
+          while IFS= read -r f; do
+            case "$(file -b "$f")" in
+              *Mach-O*executable*)
+                codesign --force --options runtime --timestamp \
+                  --entitlements "$ENTITLEMENTS" --sign "$SIGN_IDENTITY" "$f" ;;
+              *Mach-O*)
+                codesign --force --options runtime --timestamp \
+                  --sign "$SIGN_IDENTITY" "$f" ;;
+            esac
+          done < <(find "$IMG" -type f)
+          codesign --verify --strict --verbose=2 "$IMG/runtime/bin/java"
+          # Notarize: zip the signed image, submit, wait for Apple's verdict.
+          ditto -c -k --keepParent "$IMG" "$RUNNER_TEMP/amy-notarize.zip"
+          xcrun notarytool submit "$RUNNER_TEMP/amy-notarize.zip" \
+            --apple-id "$NOTARY_APPLE_ID" --password "$NOTARY_PASSWORD" \
+            --team-id "$NOTARY_TEAM_ID" --wait
 
       # jpackage pins libicu to the build host's version (libicu74 on
       # ubuntu-24.04). Rewrite the .deb so it installs across Debian/Ubuntu.
