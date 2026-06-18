@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.InlineReplyTarget
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.sendChessNotification
@@ -63,6 +64,7 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
@@ -109,6 +111,108 @@ class EventNotificationConsumer(
     companion object {
         private const val WAKELOCK_TIMEOUT_MS = 10 * 60 * 1000L // 10 minutes
         private const val WAKEUP_WINDOW_MS = 30_000L
+        private const val METADATA_LOAD_TIMEOUT_MS = 5_000L
+
+        // Matches profile mentions (npub / nprofile) with an optional `nostr:`
+        // and/or `@` prefix. Group 1 is the bare bech32 token for decoding.
+        // bech32's fixed charset means the greedy match stops at the first
+        // separator (space, punctuation), capturing exactly the full token.
+        private val USER_MENTION_REGEX =
+            Regex(
+                "(?:nostr:)?@?(npub1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{58}|nprofile1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)",
+                RegexOption.IGNORE_CASE,
+            )
+    }
+
+    /**
+     * Resolves a notification author's profile when their kind:0 metadata isn't
+     * in [LocalCache] yet — the common case when an event arrives in a freshly
+     * woken process (FCM push, cold start) before any feed subscription has
+     * loaded it. Without this the notification renders the raw pubkey with no
+     * avatar.
+     *
+     * Subscribing the [user] to the [com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.UserFinderFilterAssembler]
+     * kicks off the outbox-model load chain:
+     *   1. [com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.loaders.UserOutboxFinderSubAssembler]
+     *      downloads the author's NIP-65 relay list (kind 10002) from the
+     *      account's index relays when we don't have it, then
+     *   2. [com.vitorpamplona.amethyst.service.relayClient.reqCommand.user.watchers.UserWatcherSubAssembler]
+     *      downloads the author's kind:0 metadata from those outbox relays
+     *      (falling back to the index relays if the outbox is missing or
+     *      exhausted).
+     *
+     * We keep the relay pool connected for the duration because in a cold push
+     * process nobody else may be collecting `relayServices`, so there would be
+     * no open sockets to fetch on. Returns as soon as a display name resolves or
+     * after [METADATA_LOAD_TIMEOUT_MS], whichever comes first. No-op when the
+     * metadata is already present.
+     */
+    private suspend fun loadUserMetadataIfMissing(
+        user: User,
+        account: Account,
+    ) {
+        if (user.metadataOrNull()?.bestName() != null) return
+
+        val authorState = UserFinderQueryState(user, account)
+        coroutineScope {
+            // Keep the relay pool connected while we wait for the metadata to
+            // arrive. In a cold push process no one else holds relayServices
+            // open, so the userFinder subscription would otherwise have no
+            // sockets to fetch on.
+            val connectionKeepAlive =
+                launch {
+                    Amethyst.instance.relayProxyClientConnector.relayServices
+                        .collect()
+                }
+            try {
+                Amethyst.instance.sources.userFinder
+                    .subscribe(authorState)
+                withTimeoutOrNull(METADATA_LOAD_TIMEOUT_MS) {
+                    user
+                        .metadata()
+                        .flow
+                        .first { it?.info?.bestName() != null }
+                }
+            } finally {
+                Amethyst.instance.sources.userFinder
+                    .unsubscribe(authorState)
+                connectionKeepAlive.cancel()
+            }
+        }
+    }
+
+    /**
+     * Notification bodies are raw event content, so user mentions still look
+     * like `nostr:npub1…` / `nostr:nprofile1…`. This rewrites each one to
+     * `@DisplayName`, loading the referenced user's metadata first (via the same
+     * index-relay → outbox → kind:0 chain as [loadUserMetadataIfMissing]) when
+     * we don't have it yet. References that don't decode are left untouched.
+     */
+    private suspend fun replaceUserMentions(
+        content: String,
+        account: Account,
+    ): String {
+        val matches = USER_MENTION_REGEX.findAll(content).toList()
+        if (matches.isEmpty()) return content
+
+        val result = StringBuilder(content.length)
+        var lastIndex = 0
+        matches.forEach { match ->
+            result.append(content, lastIndex, match.range.first)
+
+            val hex = decodePublicKeyAsHexOrNull(match.groupValues[1])
+            if (hex != null) {
+                val user = LocalCache.getOrCreateUser(hex)
+                loadUserMetadataIfMissing(user, account)
+                result.append('@').append(user.toBestDisplayName())
+            } else {
+                result.append(match.value)
+            }
+
+            lastIndex = match.range.last + 1
+        }
+        result.append(content, lastIndex, content.length)
+        return result.toString()
     }
 
     /**
@@ -360,7 +464,9 @@ class EventNotificationConsumer(
 
         if (!isKnownRoom) return
 
-        val content = chatNote.event?.content ?: ""
+        chatNote.author?.let { loadUserMetadataIfMissing(it, account) }
+
+        val content = replaceUserMentions(chatNote.event?.content ?: "", account)
         val user = chatNote.author?.toBestDisplayName() ?: ""
         val userPicture = chatNote.author?.profilePicture()
         val accountNpub =
@@ -403,7 +509,9 @@ class EventNotificationConsumer(
 
         if (!isKnownRoom) return
 
-        val content = chatNote.event?.content ?: ""
+        chatNote.author?.let { loadUserMetadataIfMissing(it, account) }
+
+        val content = replaceUserMentions(chatNote.event?.content ?: "", account)
         val user = chatNote.author?.toBestDisplayName() ?: ""
         val userPicture = chatNote.author?.profilePicture()
         val accountNpub =
@@ -453,7 +561,8 @@ class EventNotificationConsumer(
         if (!isKnownRoom) return
 
         val author = note.author ?: return
-        val content = decryptContent(note, account.signer) ?: return
+        loadUserMetadataIfMissing(author, account)
+        val content = replaceUserMentions(decryptContent(note, account.signer) ?: return, account)
         val user = author.toBestDisplayName()
         val userPicture = author.profilePicture()
         val accountNpub =
@@ -503,6 +612,7 @@ class EventNotificationConsumer(
         val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
         val groupName = chatroom.displayName.value?.takeIf { it.isNotBlank() } ?: "a private group"
         val inviter = LocalCache.getOrCreateUser(event.pubKey)
+        loadUserMetadataIfMissing(inviter, account)
         val inviterName = inviter.toBestDisplayName()
         val inviterPicture = inviter.profilePicture()
 
@@ -559,12 +669,13 @@ class EventNotificationConsumer(
         val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
         val groupName = chatroom.displayName.value?.takeIf { it.isNotBlank() } ?: "Private group"
         val sender = LocalCache.getOrCreateUser(innerEvent.pubKey)
+        loadUserMetadataIfMissing(sender, account)
         val senderName = sender.toBestDisplayName()
         val senderPicture = sender.profilePicture()
         // Defensive fallback for the rare empty-content ChatEvent so the
         // popup is still actionable. Non-chat inner kinds were filtered
         // out at the call site by the ChatEvent type narrowing.
-        val body = innerEvent.content.takeIf { it.isNotBlank() } ?: "New message"
+        val body = replaceUserMentions(innerEvent.content.takeIf { it.isNotBlank() } ?: "New message", account)
 
         val accountNpub =
             account.signer.pubKey
@@ -657,6 +768,7 @@ class EventNotificationConsumer(
                 Log.d(TAG) { "Notify Decrypted if Private Zap ${event.id}" }
 
                 val author = LocalCache.getOrCreateUser(decryptedEvent.pubKey)
+                loadUserMetadataIfMissing(author, account)
                 val senderInfo = Pair(author, decryptedEvent.content.ifBlank { null })
 
                 if (noteZapped.event?.content != null) {
@@ -762,6 +874,7 @@ class EventNotificationConsumer(
         if (reactedNote != null && !account.isAcceptable(reactedNote)) return
 
         val author = LocalCache.getOrCreateUser(event.pubKey)
+        loadUserMetadataIfMissing(author, account)
         val user = author.toBestDisplayName()
         val userPicture = author.profilePicture()
 
@@ -877,6 +990,7 @@ class EventNotificationConsumer(
         if (!account.isAcceptable(replyNote)) return
 
         val author = LocalCache.getOrCreateUser(event.pubKey)
+        loadUserMetadataIfMissing(author, account)
         val user = author.toBestDisplayName()
         val userPicture = author.profilePicture()
 
@@ -896,16 +1010,19 @@ class EventNotificationConsumer(
                 ?.take(140)
 
         val content =
-            if (!parentExcerpt.isNullOrBlank()) {
-                replyExcerpt + "\n\n" +
-                    stringRes(
-                        applicationContext,
-                        R.string.app_notification_replies_channel_message_for,
-                        parentExcerpt,
-                    )
-            } else {
-                replyExcerpt
-            }
+            replaceUserMentions(
+                if (!parentExcerpt.isNullOrBlank()) {
+                    replyExcerpt + "\n\n" +
+                        stringRes(
+                            applicationContext,
+                            R.string.app_notification_replies_channel_message_for,
+                            parentExcerpt,
+                        )
+                } else {
+                    replyExcerpt
+                },
+                account,
+            )
 
         val accountNpub =
             account.signer.pubKey
@@ -938,17 +1055,21 @@ class EventNotificationConsumer(
         if (!account.isAcceptable(note)) return
 
         val author = LocalCache.getOrCreateUser(event.pubKey)
+        loadUserMetadataIfMissing(author, account)
         val user = author.toBestDisplayName()
         val userPicture = author.profilePicture()
 
         val title = stringRes(applicationContext, R.string.app_notification_mentions_channel_message, user)
 
         val content =
-            event.content
-                .split("\n")
-                .firstOrNull { it.isNotBlank() }
-                ?.take(280)
-                ?: ""
+            replaceUserMentions(
+                event.content
+                    .split("\n")
+                    .firstOrNull { it.isNotBlank() }
+                    ?.take(280)
+                    ?: "",
+                account,
+            )
 
         val accountNpub =
             account.signer.pubKey
@@ -975,6 +1096,7 @@ class EventNotificationConsumer(
     ) {
         // Age + self-author gates run centrally in dispatchForAccount.
         val author = LocalCache.getOrCreateUser(event.pubKey)
+        loadUserMetadataIfMissing(author, account)
         val user = author.toBestDisplayName()
         val userPicture = author.profilePicture()
         val title = stringRes(applicationContext, R.string.app_notification_chess_channel_name)
@@ -1009,24 +1131,9 @@ class EventNotificationConsumer(
         val callerUser = LocalCache.getOrCreateUser(event.pubKey)
 
         // If the caller's metadata hasn't been loaded yet (e.g. fresh process from
-        // a push notification), briefly subscribe to the user finder so we can
+        // a push notification), briefly load it via the user finder so we can
         // resolve the user's display name instead of showing the raw pubkey.
-        if (callerUser.metadataOrNull()?.bestName() == null) {
-            val authorState = UserFinderQueryState(callerUser, account)
-            try {
-                Amethyst.instance.sources.userFinder
-                    .subscribe(authorState)
-                withTimeoutOrNull(5_000L) {
-                    callerUser
-                        .metadata()
-                        .flow
-                        .first { it?.info?.bestName() != null }
-                }
-            } finally {
-                Amethyst.instance.sources.userFinder
-                    .unsubscribe(authorState)
-            }
-        }
+        loadUserMetadataIfMissing(callerUser, account)
 
         val callerName = callerUser.toBestDisplayName()
 
