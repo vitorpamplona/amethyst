@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.service.relayClient
 
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
+import com.vitorpamplona.amethyst.service.localStore.LocalEventStore
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.EventCollector
@@ -33,10 +34,17 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 class CacheClientConnector(
     val client: INostrClient,
     val cache: LocalCache,
+    val localStore: LocalEventStore? = null,
 ) {
     val receiver =
         EventCollector(client) { event, relay ->
-            cache.justConsume(event, relay, false)
+            val isNew = cache.justConsume(event, relay, false)
+            // Write-through to the on-device store. Only newly-consumed events are
+            // worth persisting; hydration goes straight to the cache (not via this
+            // collector), so it never loops back into the store.
+            if (isNew) {
+                localStore?.enqueue(event)
+            }
         }
 
     val confirmationWatcher =

@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.service.eventCache.MemoryTrimmingService
 import com.vitorpamplona.amethyst.service.images.ImageCacheFactory
 import com.vitorpamplona.amethyst.service.images.ImageLoaderSetup
 import com.vitorpamplona.amethyst.service.images.ThumbnailDiskCache
+import com.vitorpamplona.amethyst.service.localStore.LocalEventStore
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.notifications.AlwaysOnNotificationServiceManager
 import com.vitorpamplona.amethyst.service.notifications.NotificationDispatcher
@@ -506,8 +507,17 @@ class AppModules(
             applicationIOScope,
         )
 
+    // Permanently keeps kind-0, relay lists and trusted assertions for every
+    // user we see, so the app can render people offline. Hydrated into the cache
+    // at boot (see initiate) before remote relays connect.
+    val localEventStore =
+        LocalEventStore(
+            dbFile = File(appContext.filesDir, "local-event-store/events.db"),
+            scope = applicationIOScope,
+        )
+
     // Verifies and inserts in the cache from all relays, all subscriptions
-    val cacheClientConnector = CacheClientConnector(client, cache)
+    val cacheClientConnector = CacheClientConnector(client, cache, localEventStore)
 
     // Show messages from the Relay and controls their dismissal
     val notifyCoordinator = NotifyCoordinator(client)
@@ -742,6 +752,16 @@ class AppModules(
             // loads main account quickly.
             LocalPreferences.loadAccountConfigFromEncryptedStorage()
             sessionManager.loginWithDefaultAccountIfLoggedOff()
+        }
+
+        // Opens the on-device store and replays the persisted user directory
+        // (kind 0, relay lists, trusted assertions) into the cache so people
+        // render offline, before remote relays connect and fill the gaps.
+        applicationIOScope.launch {
+            localEventStore.open()
+            localEventStore.hydrate { event ->
+                cache.justConsume(event, null, wasVerified = true)
+            }
         }
 
         // forces initialization of uiPrefs in the main thread to avoid blinking themes
