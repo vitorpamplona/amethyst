@@ -29,8 +29,6 @@ import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
-import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
-import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -115,9 +113,7 @@ class HashtagFeedFilter(
                 event is MusicTrackEvent ||
                 event is MusicPlaylistEvent ||
                 event is PodcastEpisodeEvent ||
-                event is PodcastMetadataEvent ||
-                event is RoadEventReportEvent ||
-                event is RoadEventConfirmationEvent
+                event is PodcastMetadataEvent
         ) &&
             event.isTaggedHash(hashTag)
 
