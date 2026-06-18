@@ -49,7 +49,11 @@ class PublicChatChannel(
     var infoTags = EmptyTagList
     var updatedMetadataAt: Long = 0
 
-    override fun relays() = info.relays?.toSet() ?: super.relays()
+    // An empty declared-relay list must behave like "no declared relays" and fall
+    // back to the relays the channel was actually observed on. Without ifEmpty,
+    // `emptyList()?.toSet()` short-circuits the elvis to an empty set, so the
+    // channel reports zero relays and messages get published to nowhere.
+    override fun relays() = info.relays?.ifEmpty { null }?.toSet() ?: super.relays()
 
     fun relayHintUrls() = relays().take(3)
 
