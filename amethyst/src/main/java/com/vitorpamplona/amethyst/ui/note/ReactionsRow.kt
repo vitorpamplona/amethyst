@@ -1763,12 +1763,23 @@ private fun BoostActionChip(
 @Composable
 fun BoostTypeChoicePopupPreview() {
     ThemeComparisonColumn {
-        BoostTypeChoicePopupContent(
-            showFork = true,
-            onBoost = {},
-            onQuote = {},
-            onFork = {},
-        )
+        Column {
+            // With the fork action (e.g. a plain text note).
+            BoostTypeChoicePopupContent(
+                showFork = true,
+                onBoost = {},
+                onQuote = {},
+                onFork = {},
+            )
+
+            // Without the fork action (e.g. long-form, wiki, …).
+            BoostTypeChoicePopupContent(
+                showFork = false,
+                onBoost = {},
+                onQuote = {},
+                onFork = {},
+            )
+        }
     }
 }
 
