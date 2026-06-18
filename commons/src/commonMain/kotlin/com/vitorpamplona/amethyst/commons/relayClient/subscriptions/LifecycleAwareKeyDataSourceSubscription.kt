@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.relayClient.subscriptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableComposeSubscriptionManager
@@ -30,10 +31,10 @@ import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManager
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 // DIAGNOSTIC: temporarily 0 to test whether unsubscribing the moment the app
@@ -124,34 +125,50 @@ private fun LifecycleAwareSubscription(
     val lifecycle = LocalLifecycleOwner.current.lifecycle
 
     DisposableEffect(key, lifecycle) {
-        // Background scope so the grace timer is not gated by the UI frame clock,
-        // which stops ticking while the app is backgrounded.
+        // Detect lifecycle transitions with a main-thread LifecycleEventObserver, NOT by
+        // collecting currentStateFlow on a background dispatcher. On a real backgrounded
+        // device the latter delivered ON_STOP ~60s late — it only woke on the next
+        // NostrClient keep-alive tick — leaving heavy feeds (and ~150 relays) connected
+        // for that whole minute after the app was paused. A LifecycleEventObserver fires
+        // synchronously during onStop, so teardown starts immediately.
+        //
+        // The grace *delay* still runs on a background scope so it isn't gated by the UI
+        // frame clock, which stops ticking while the app is backgrounded.
         val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
-        scope.launch {
-            // `subscribed` is confined to this single collector coroutine, so no
-            // cross-thread synchronization is needed for it.
-            var subscribed = false
-            lifecycle.currentStateFlow.collectLatest { current ->
-                if (current.isAtLeast(Lifecycle.State.STARTED)) {
-                    if (!subscribed) {
-                        Log.d("BgRelayTrace") { "subscribe($label) — lifecycle=$current" }
+        // graceJob is only ever read/written from the main thread (observer callbacks),
+        // so no synchronization is needed. subscribe()/unsubscribe() are idempotent
+        // (reference-counted map ops), so re-issuing subscribe() on each ON_START is safe.
+        var graceJob: Job? = null
+
+        val observer =
+            LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_START -> {
+                        graceJob?.cancel()
+                        graceJob = null
+                        Log.d("BgRelayTrace") { "subscribe($label)" }
                         subscribe()
-                        subscribed = true
                     }
-                } else if (subscribed) {
-                    // Stopped: keep the REQ alive for a short grace period.
-                    // collectLatest cancels this delay if we return to STARTED first.
-                    Log.d("BgRelayTrace") { "grace-start($label) — lifecycle=$current, waiting ${UNSUBSCRIBE_GRACE_MILLIS}ms" }
-                    delay(UNSUBSCRIBE_GRACE_MILLIS)
-                    Log.d("BgRelayTrace") { "unsubscribe($label) — grace elapsed while $current" }
-                    unsubscribe()
-                    subscribed = false
+
+                    Lifecycle.Event.ON_STOP -> {
+                        graceJob?.cancel()
+                        graceJob =
+                            scope.launch {
+                                if (UNSUBSCRIBE_GRACE_MILLIS > 0) delay(UNSUBSCRIBE_GRACE_MILLIS)
+                                Log.d("BgRelayTrace") { "unsubscribe($label)" }
+                                unsubscribe()
+                            }
+                    }
+
+                    else -> {}
                 }
             }
-        }
+
+        lifecycle.addObserver(observer)
 
         onDispose {
+            lifecycle.removeObserver(observer)
             scope.cancel()
             Log.d("BgRelayTrace") { "dispose-unsubscribe($label)" }
             // Idempotent: removing an absent key is a cheap no-op. Guarantees the
