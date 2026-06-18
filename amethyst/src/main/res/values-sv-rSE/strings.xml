@@ -1320,9 +1320,6 @@
     <string name="call_settings_turn_credential">Inloggningsuppgift</string>
     <string name="always_on_notif_channel_description">Håller anslutningarna till dina inbox-relän aktiva för realtidsnotifieringar</string>
     <string name="always_on_notif_title">Amethyst-notifieringar aktiva</string>
-    <plurals name="always_on_notif_connected">
-        <item quantity="other">Ansluten till %1$d inbox-relän</item>
-    </plurals>
     <string name="always_on_notif_connecting">Ansluter till inbox-relän\u2026</string>
     <string name="always_on_notif_setting_title">Alltid på-notifieringstjänst</string>
     <string name="always_on_notif_setting_description">Upprätthåller en konstant anslutning till dina inbox-relän för omedelbar leverans av notifieringar. Visar en pågående notifiering. Använder mer batteri men säkerställer att du aldrig missar ett meddelande.</string>
@@ -3043,6 +3040,7 @@
         <item quantity="one">%1$s +%2$d till</item>
         <item quantity="other">%1$s +%2$d till</item>
     </plurals>
+    <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
     <string name="goal_amount_label">Målbelopp (sats)</string>
     <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">Beskriv ditt mål</string>
