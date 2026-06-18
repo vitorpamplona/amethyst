@@ -1403,7 +1403,13 @@ class Account(
                 // missing signature.
                 return
             } else {
-                client.publish(noteEvent, computeRelayListToBroadcast(note))
+                val toRelays = computeRelayListToBroadcast(note)
+                // TEMP DIAGNOSTIC (public chat relay bug): what does broadcast target?
+                Log.w("PublicChatRelayDebug") {
+                    "BROADCAST event=${noteEvent.id} kind=${noteEvent.kind} " +
+                        "channelRelays=${cache.getAnyChannel(noteEvent)?.relays()} -> target=$toRelays"
+                }
+                client.publish(noteEvent, toRelays)
             }
         }
     }
