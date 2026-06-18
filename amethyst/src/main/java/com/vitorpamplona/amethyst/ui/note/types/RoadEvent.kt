@@ -226,6 +226,7 @@ private fun RoadEventCard(
                     Text(
                         text = comment,
                         style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 4,
                         overflow = TextOverflow.Ellipsis,
                     )
