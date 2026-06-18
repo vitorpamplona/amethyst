@@ -20,30 +20,30 @@
  */
 package com.vitorpamplona.amethyst.ui.note.types
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.model.Note
-import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName
+import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap
 import com.vitorpamplona.amethyst.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.ui.theme.replyModifier
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.tags.RoadEventStatus
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.tags.RoadEventType
+import com.vitorpamplona.quartz.nip01Core.tags.geohash.toGeoHash
 
 /** Emoji marker for a road event category — keeps the card icon-light and locale-independent. */
 private fun RoadEventType.emoji(): String =
@@ -84,8 +84,8 @@ private fun RoadEventType.labelRes(): Int =
  * Self-contained card for a Roadstr road event report (kind 1315).
  *
  * Shows the category (emoji + localized label), the optional free-text comment,
- * and the location resolved from the finest published geohash. Identical in the
- * feed and the opened thread view, so it takes no `makeItShort` flag — mirroring
+ * and a map pinned at the event's coordinates. Identical in the feed and the
+ * opened thread view, so it takes no `makeItShort` flag — mirroring
  * [RenderBirdex].
  */
 @Composable
@@ -94,7 +94,7 @@ fun RenderRoadEventReport(baseNote: Note) {
 
     val type = remember(noteEvent) { noteEvent.roadEventType() }
     val comment = remember(noteEvent) { noteEvent.content.trim() }
-    val geohash = remember(noteEvent) { noteEvent.geohashes().maxByOrNull { it.length } }
+    val point = remember(noteEvent) { noteEvent.roadEventPoint() }
 
     Column(MaterialTheme.colorScheme.replyModifier.padding(10.dp)) {
         val title =
@@ -116,9 +116,9 @@ fun RenderRoadEventReport(baseNote: Note) {
             )
         }
 
-        if (geohash != null) {
-            Spacer(Modifier.height(6.dp))
-            RoadEventLocation(geohash)
+        if (point != null) {
+            Spacer(Modifier.height(8.dp))
+            RoadEventMap(point)
         }
     }
 }
@@ -134,7 +134,7 @@ fun RenderRoadEventConfirmation(baseNote: Note) {
     val noteEvent = baseNote.event as? RoadEventConfirmationEvent ?: return
 
     val status = remember(noteEvent) { noteEvent.status() }
-    val geohash = remember(noteEvent) { noteEvent.geohashes().maxByOrNull { it.length } }
+    val point = remember(noteEvent) { noteEvent.roadEventPoint() }
 
     Column(MaterialTheme.colorScheme.replyModifier.padding(10.dp)) {
         val emoji = if (status == RoadEventStatus.NO_LONGER_THERE) "❌" else "✅"
@@ -161,26 +161,40 @@ fun RenderRoadEventConfirmation(baseNote: Note) {
             color = MaterialTheme.colorScheme.placeholderText,
         )
 
-        if (geohash != null) {
-            Spacer(Modifier.height(6.dp))
-            RoadEventLocation(geohash)
+        if (point != null) {
+            Spacer(Modifier.height(8.dp))
+            RoadEventMap(point)
         }
     }
 }
 
-/** A single "📍 City" line that reverse-geocodes [geohash], falling back to the raw geohash. */
+/** A rounded OpenStreetMap preview with a pin at the road event's [point]. */
 @Composable
-private fun RoadEventLocation(geohash: String) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(text = "📍", style = MaterialTheme.typography.bodyMedium)
-        LoadCityName(geohashStr = geohash) { cityName ->
-            Text(
-                text = cityName,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.placeholderText,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
+private fun RoadEventMap(point: Pair<Double, Double>) {
+    LocationPreviewMap(
+        latitude = point.first,
+        longitude = point.second,
+        modifier = Modifier.clip(RoundedCornerShape(8.dp)),
+    )
+}
+
+/**
+ * Best available coordinate for the card map: the event's explicit `lat`/`lon`
+ * tags when present, otherwise the center of the finest published geohash.
+ * Returns null when the event carries no location at all.
+ */
+private fun RoadEventReportEvent.roadEventPoint(): Pair<Double, Double>? = resolveRoadEventPoint(latitude(), longitude(), geohashes())
+
+private fun RoadEventConfirmationEvent.roadEventPoint(): Pair<Double, Double>? = resolveRoadEventPoint(latitude(), longitude(), geohashes())
+
+private fun resolveRoadEventPoint(
+    latitude: Double?,
+    longitude: Double?,
+    geohashes: List<String>,
+): Pair<Double, Double>? {
+    if (latitude != null && longitude != null) return latitude to longitude
+
+    val finest = geohashes.maxByOrNull { it.length } ?: return null
+    val decoded = runCatching { finest.toGeoHash() }.getOrNull() ?: return null
+    return decoded.centerLat to decoded.centerLon
 }
