@@ -133,5 +133,28 @@ interface IEventStore : AutoCloseable {
 
     suspend fun deleteExpiredEvents()
 
+    /**
+     * Wipe and rebuild the NIP-50 full-text search index from the
+     * events already in storage.
+     *
+     * Which kinds are searchable — i.e. implement
+     * `SearchableEvent` — and what text each one contributes is baked
+     * into the quartz build, so it can change across app versions: a
+     * kind that was opaque before may start implementing
+     * `SearchableEvent`, or an existing one may change what its
+     * `indexableContent()` returns. Events that were inserted under the
+     * old code keep their old (or missing) FTS rows until they are
+     * re-indexed, so search silently misses them. Call this once, off
+     * the hot path, after such an upgrade — the app decides when it has
+     * the spare cycles to process the whole store.
+     *
+     * Implementations rebuild from scratch (so the result is the same
+     * whether or not an index already existed) and only visit kinds
+     * that currently map to a searchable event, leaving the bulk of
+     * non-searchable rows (reactions, zaps, follow lists, …) untouched
+     * to keep the scan as cheap as possible.
+     */
+    suspend fun reindexFullTextSearch()
+
     override fun close()
 }

@@ -215,5 +215,10 @@ class ObservableEventStore(
         _changes.emit(StoreChange.DeleteExpired(asOf))
     }
 
+    // Pure index maintenance: it rewrites the FTS index without adding,
+    // removing, or changing any event, so there is nothing for
+    // projections to observe and no [StoreChange] is emitted.
+    override suspend fun reindexFullTextSearch() = inner.reindexFullTextSearch()
+
     override fun close() = inner.close()
 }

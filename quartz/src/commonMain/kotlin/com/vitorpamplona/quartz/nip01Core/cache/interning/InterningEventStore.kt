@@ -123,5 +123,7 @@ class InterningEventStore(
 
     override suspend fun deleteExpiredEvents() = inner.deleteExpiredEvents()
 
+    override suspend fun reindexFullTextSearch() = inner.reindexFullTextSearch()
+
     override fun close() = inner.close()
 }

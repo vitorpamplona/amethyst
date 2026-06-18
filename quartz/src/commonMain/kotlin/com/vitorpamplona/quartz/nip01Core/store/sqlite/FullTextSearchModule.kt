@@ -23,10 +23,13 @@ package com.vitorpamplona.quartz.nip01Core.store.sqlite
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.SQLiteException
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip50Search.SearchableEvent
+import com.vitorpamplona.quartz.utils.EventFactory
 
 class FullTextSearchModule : IModule {
     val tableName = "event_fts"
+    val triggerName = "fts_foreign_key"
     val eventHeaderRowIdName = "event_header_row_id"
     val contentName = "content"
 
@@ -42,7 +45,7 @@ class FullTextSearchModule : IModule {
         // Foreign key cleanup for full text search
         db.execSQL(
             """
-                CREATE TRIGGER fts_foreign_key
+                CREATE TRIGGER $triggerName
                 AFTER DELETE ON event_headers
                 FOR EACH ROW
                 BEGIN
@@ -55,6 +58,17 @@ class FullTextSearchModule : IModule {
 
     override fun drop(db: SQLiteConnection) {
         db.execSQL("DROP TABLE IF EXISTS $tableName")
+    }
+
+    /**
+     * Drop the cleanup trigger on its own. [drop] only removes the FTS
+     * table; the trigger lives on `event_headers`, so a rebuild that
+     * recreates the table without first dropping the trigger would fail
+     * with "trigger already exists". (A schema upgrade doesn't hit this
+     * because dropping `event_headers` takes its triggers with it.)
+     */
+    fun dropTrigger(db: SQLiteConnection) {
+        db.execSQL("DROP TRIGGER IF EXISTS $triggerName")
     }
 
     val insertFTS =
@@ -108,5 +122,82 @@ class FullTextSearchModule : IModule {
 
     override fun deleteAll(db: SQLiteConnection) {
         db.execSQL("DELETE FROM event_fts")
+    }
+
+    /**
+     * Wipe and rebuild the whole FTS index from `event_headers`.
+     *
+     * Wiping is done by dropping and recreating the virtual table, which
+     * empties it in O(1) — far cheaper than DELETE-ing every row out of a
+     * populated FTS index. The rebuild then streams only the rows whose
+     * kind currently parses to a [SearchableEvent] (see
+     * [searchableKindsPresent]) so the common non-searchable bulk —
+     * reactions, zaps, follow lists — is never deserialised. A single
+     * shared INSERT statement is reused across the scan.
+     *
+     * Must run inside the caller's write transaction.
+     */
+    fun reindexAll(db: SQLiteConnection) {
+        dropTrigger(db)
+        drop(db)
+        create(db)
+
+        val kinds = searchableKindsPresent(db)
+        if (kinds.isEmpty()) return
+
+        val selectSql =
+            "SELECT row_id, id, pubkey, created_at, kind, tags, content, sig " +
+                "FROM event_headers WHERE kind IN (${kinds.joinToString(",")})"
+
+        db.prepare(insertFTS).use { write ->
+            db.prepare(selectSql).use { read ->
+                while (read.step()) {
+                    val event =
+                        EventFactory.create<Event>(
+                            read.getText(1),
+                            read.getText(2),
+                            read.getLong(3),
+                            read.getInt(4),
+                            OptimizedJsonMapper.fromJsonToTagArray(read.getText(5)),
+                            read.getText(6),
+                            read.getText(7),
+                        )
+                    if (event is SearchableEvent) {
+                        write.bindLong(1, read.getLong(0))
+                        write.bindText(2, event.indexableContent())
+                        write.step()
+                        write.reset()
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * The distinct kinds present in `event_headers` that currently parse
+     * to a [SearchableEvent]. Kind alone selects the event class in
+     * [EventFactory], so one probe per distinct kind is authoritative;
+     * the result drives a `kind IN (...)` filter on the rebuild scan so
+     * non-searchable rows are skipped at the SQL layer.
+     */
+    private fun searchableKindsPresent(db: SQLiteConnection): List<Int> {
+        val out = ArrayList<Int>()
+        db.prepare("SELECT DISTINCT kind FROM event_headers").use { stmt ->
+            while (stmt.step()) {
+                val kind = stmt.getInt(0)
+                if (isSearchableKind(kind)) out.add(kind)
+            }
+        }
+        return out
+    }
+
+    private fun isSearchableKind(kind: Int): Boolean = EventFactory.create<Event>(PROBE_ID, PROBE_ID, 0L, kind, EMPTY_TAGS, "", "") is SearchableEvent
+
+    companion object {
+        // A non-blank id keeps kinds that lazily hash a missing id (e.g.
+        // NIP-17 chat messages) from doing that work — the probe only
+        // inspects the resulting runtime type.
+        private const val PROBE_ID = "0"
+        private val EMPTY_TAGS = emptyArray<Array<String>>()
     }
 }

@@ -132,6 +132,54 @@ class FsSearchTest {
         }
 
     @Test
+    fun `reindexFullTextSearch rebuilds fts entries after a wipe`() =
+        runBlocking {
+            val a = note("bitcoin reindex", ts = 100)
+            val b = note("nostr reindex", ts = 200)
+            store.insert(a)
+            store.insert(b)
+
+            // Mimic a store written before this kind was searchable: drop
+            // the whole idx/fts/ tree, leaving canonical events intact.
+            val ftsRoot = root.resolve("idx/fts")
+            Files.walk(ftsRoot).use { stream ->
+                stream.sorted(Comparator.reverseOrder()).forEach { p -> if (p != ftsRoot) Files.deleteIfExists(p) }
+            }
+            assertEquals(0, ftsRoot.listDirectoryEntries().size, "precondition: fts wiped")
+            assertTrue(store.query<TextNoteEvent>(Filter(search = "bitcoin")).isEmpty(), "no index, no match")
+
+            store.reindexFullTextSearch()
+
+            assertEquals(listOf(a.id), store.query<TextNoteEvent>(Filter(search = "bitcoin")).map { it.id })
+            assertEquals(listOf(b.id), store.query<TextNoteEvent>(Filter(search = "nostr")).map { it.id })
+            // Reindexing twice must not duplicate entries.
+            store.reindexFullTextSearch()
+            assertEquals(1, ftsRoot.resolve("bitcoin").listDirectoryEntries().size)
+            // "reindex" appears in both notes — one entry per event, no dupes.
+            assertEquals(2, ftsRoot.resolve("reindex").listDirectoryEntries().size)
+        }
+
+    @Test
+    fun `reindexFullTextSearch ignores non-searchable kinds`() =
+        runBlocking {
+            val searchable = note("findme bitcoin", ts = 100)
+            val opaque =
+                signer.sign<Event>(
+                    createdAt = 1,
+                    kind = 9999,
+                    tags = emptyArray(),
+                    content = "findme must not be indexed",
+                )
+            store.insert(searchable)
+            store.insert(opaque)
+
+            store.reindexFullTextSearch()
+
+            // Only the searchable note contributes the "findme" token.
+            assertEquals(listOf(searchable.id), store.query<Event>(Filter(search = "findme")).map { it.id })
+        }
+
+    @Test
     fun `delete removes fts entries`() =
         runBlocking {
             val n = note("bitcoin nostr", ts = 100)

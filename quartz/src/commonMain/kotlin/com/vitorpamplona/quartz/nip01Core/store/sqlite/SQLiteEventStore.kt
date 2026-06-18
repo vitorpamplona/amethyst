@@ -340,6 +340,19 @@ class SQLiteEventStore(
 
     suspend fun deleteExpiredEvents() = pool.useWriter { expirationModule.deleteExpiredEvents(it) }
 
+    /**
+     * Wipe and rebuild the NIP-50 full-text search index for every
+     * stored event. See [IEventStore.reindexFullTextSearch] for when to
+     * call this. The whole rebuild runs in a single write transaction so
+     * the WAL append + sync cost is paid once.
+     */
+    suspend fun reindexFullTextSearch() =
+        pool.useWriter { db ->
+            db.transaction {
+                fullTextSearchModule.reindexAll(db)
+            }
+        }
+
     fun close() = pool.close()
 }
 

@@ -45,19 +45,23 @@ import kotlin.io.path.exists
  *                    external edits.
  * - `compact`        drop dangling `idx/` entries whose canonical is
  *                    gone. Cheaper than scrub.
+ * - `reindex-fts`    wipe and rebuild only the NIP-50 full-text search
+ *                    index from the stored events. Run after a quartz
+ *                    upgrade that changes which kinds are searchable.
  */
 object StoreCommands {
     suspend fun dispatch(
         dataDir: DataDir,
         tail: Array<String>,
     ): Int {
-        if (tail.isEmpty()) return Output.error("bad_args", "store <stat|sweep-expired|scrub|compact>")
+        if (tail.isEmpty()) return Output.error("bad_args", "store <stat|sweep-expired|scrub|compact|reindex-fts>")
         val rest = tail.drop(1).toTypedArray()
         return when (tail[0]) {
             "stat" -> stat(dataDir)
             "sweep-expired" -> sweepExpired(dataDir)
             "scrub" -> scrub(dataDir)
             "compact" -> compact(dataDir)
+            "reindex-fts" -> reindexFts(dataDir)
             else -> Output.error("bad_args", "store ${tail[0]}")
         }
     }
@@ -158,6 +162,22 @@ object StoreCommands {
         withStore(dataDir) { store ->
             store.compact()
             Output.emit(mapOf("ok" to true))
+            0
+        }
+
+    private suspend fun reindexFts(dataDir: DataDir): Int =
+        withStore(dataDir) { store ->
+            val ftsDir = dataDir.eventsDir.toPath().resolve("idx/fts")
+            val before = countEntries(ftsDir)
+            store.reindexFullTextSearch()
+            val after = countEntries(ftsDir)
+            Output.emit(
+                mapOf(
+                    "ok" to true,
+                    "tokens_before" to before,
+                    "tokens_after" to after,
+                ),
+            )
             0
         }
 

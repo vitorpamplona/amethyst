@@ -34,7 +34,9 @@ import com.vitorpamplona.quartz.nip01Core.store.sqlite.IndexingStrategy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.TagNameValueHasher
 import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
+import com.vitorpamplona.quartz.utils.EventFactory
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
@@ -492,6 +494,48 @@ open class FsEventStore(
                 }
             }
         }
+
+    /**
+     * Wipe and rebuild only the `idx/fts/` tree from the stored events.
+     * See [IEventStore.reindexFullTextSearch] for when to call this.
+     *
+     * Unlike [scrub] (which rebuilds every index tree from a full
+     * `events/` walk), this touches nothing but FTS and reads only the
+     * events whose kind is searchable today: it drives the walk from
+     * `idx/kind/<k>/`, which already lists exactly the live canonical
+     * events per kind, and skips kind directories that don't map to a
+     * [SearchableEvent]. The bulk of non-searchable events (reactions,
+     * zaps, follow lists, …) is never opened.
+     */
+    override suspend fun reindexFullTextSearch() =
+        lockManager.withWriteLock {
+            deleteRecursively(layout.idxFts)
+            Files.createDirectories(layout.idxFts)
+
+            if (!Files.isDirectory(layout.idxKind)) return@withWriteLock
+            Files.list(layout.idxKind).use { kindDirs ->
+                for (kindDir in kindDirs) {
+                    val kind = kindDir.fileName.toString().toIntOrNull() ?: continue
+                    if (!isSearchableKind(kind)) continue
+                    Files.list(kindDir).use { entries ->
+                        for (entry in entries) {
+                            val id = FsLayout.parseEntry(entry.fileName.toString())?.second ?: continue
+                            val event = readEvent(id) ?: continue
+                            indexer.linkFts(event, layout.canonical(id))
+                        }
+                    }
+                }
+            }
+        }
+
+    /**
+     * True when [kind] currently parses to a [SearchableEvent]. Kind
+     * alone selects the event class in [EventFactory], so a single probe
+     * per kind is authoritative. The id is non-blank so kinds that lazily
+     * hash a missing id (NIP-17 chat) skip that work — only the runtime
+     * type matters here.
+     */
+    private fun isSearchableKind(kind: Int): Boolean = EventFactory.create<Event>("0", "0", 0L, kind, emptyArray(), "", "") is SearchableEvent
 
     private fun deleteRecursively(p: java.nio.file.Path) {
         if (!Files.exists(p)) return

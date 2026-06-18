@@ -193,6 +193,44 @@ class SearchTest : BaseDBTest() {
         }
 
     @Test
+    fun testReindexFullTextSearchRebuildsTheWholeIndex() =
+        forEachDB { db ->
+            // A calendar event (title tag + content) and a plain note. Both
+            // are searchable kinds, but we'll erase the FTS index to mimic
+            // events that were stored before their kind became searchable.
+            val cal =
+                signer.sign(
+                    CalendarEvent.build(
+                        title = "uniqtitle Meetup",
+                        content = "annual uniqbody gathering",
+                    ),
+                )
+            val note = signer.sign(TextNoteEvent.build("reindex uniqnote please", createdAt = TimeUtils.now()))
+
+            db.store.insertEvent(cal)
+            db.store.insertEvent(note)
+
+            // Wipe the FTS rows but keep the canonical event rows — this is
+            // the state a store ends up in after an upgrade adds search
+            // support for a kind that was inserted under the old code.
+            db.store.pool.useWriter { db.store.fullTextSearchModule.deleteAll(it) }
+            db.store.assertQuery(null, Filter(search = "uniqbody"))
+            db.store.assertQuery(null, Filter(search = "uniqnote"))
+
+            // Rebuilding from storage brings every searchable field back.
+            db.store.reindexFullTextSearch()
+            db.store.assertQuery(cal, Filter(search = "uniqtitle"))
+            db.store.assertQuery(cal, Filter(search = "uniqbody"))
+            db.store.assertQuery(note, Filter(search = "uniqnote"))
+
+            // Running it again must not duplicate rows (assertQuery expects
+            // exactly one match), proving the rebuild starts from a clean slate.
+            db.store.reindexFullTextSearch()
+            db.store.assertQuery(cal, Filter(search = "uniqbody"))
+            db.store.assertQuery(note, Filter(search = "uniqnote"))
+        }
+
+    @Test
     fun testChannelJsonFieldsAreSearchable() =
         forEachDB { db ->
             val chan =

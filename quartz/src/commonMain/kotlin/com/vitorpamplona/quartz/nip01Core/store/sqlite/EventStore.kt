@@ -79,5 +79,7 @@ class EventStore(
 
     override suspend fun deleteExpiredEvents() = store.deleteExpiredEvents()
 
+    override suspend fun reindexFullTextSearch() = store.reindexFullTextSearch()
+
     override fun close() = store.close()
 }
