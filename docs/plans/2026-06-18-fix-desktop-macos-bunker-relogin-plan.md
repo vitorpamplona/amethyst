@@ -6,22 +6,29 @@ date: 2026-06-18
 origin: docs/brainstorms/2026-06-18-fix-macos-bunker-relogin-brainstorm.md
 ---
 
-## Implementation Status (2026-06-18)
+## Implementation Status (2026-06-18, updated)
 
-**Landed in PR 1 (Phases 1 + 2 + partial 3):**
-- ✅ ProGuard keep rules fix (`desktopApp/compose-rules.pro`) — the actual bug fix
+**H1 (ProGuard strip) is REFUTED.** Binary PoW: `./gradlew :desktopApp:proguardReleaseJars` on both `main` and the fix branch produces `java-keyring-1.0.4-*.jar` outputs with byte-identical macOS keychain backend bytecode (`OsxKeychainBackend`, `ModernOsxKeychainBackend`, `pt/davidafsilva/apple/OSXKeychain` including all `_addGenericPassword` / `_findGenericPassword` / `_deleteGenericPassword` / `loadSharedObject` native methods). The original `pt.davidafsilva.apple.**` keep rule was correctly targeting the transitive JNI bridge (`ModernOsxKeychainBackend` holds a `private pt.davidafsilva.apple.OSXKeychain` field). See PR #3260 comment for the full keep-rule audit.
+
+**Landed in PR 1 (defense-in-depth only):**
 - ✅ `AccountManager._keychainUnavailable: StateFlow<Boolean>` mirroring the existing `_storageCorruption` / `_forceLogoutReason` diagnostic channels
 - ✅ `loadInternalAccount` + `loadBunkerAccount` raise the signal when `accounts.json.enc` points at a key the keychain cannot return
 - ✅ `LoginScreen` observes the signal, renders a single-line error banner above the LoginCard; `clearKeychainUnavailable()` invoked from all successful login paths
-- ✅ Four new unit tests in `AccountManagerLoadAccountTest`: Internal-no-privkey signals, Bunker-no-ephemeral signals, `clearKeychainUnavailable()` resets, happy-path does NOT signal
+- ✅ Four new unit tests in `AccountManagerLoadAccountTest`
 
-**Deferred to follow-up (verification + cross-platform sweep):**
-- Phase 0 Track B: visual repro on a signed release DMG — needs a Mac. The ProGuard rule fix is what solves the reported bug; reproducing the broken state requires building + installing the unfixed DMG.
-- Phase 4: Linux DEB + Windows MSI cold-boot smoke test. Same keep rule covers all `internal.**` backends so should incidentally fix them; needs CI matrix run.
-- Phase 5: signed + notarized DMG verification — needs Mac + signing cert.
-- Phase 0 Track A unit test that mocks `Keyring.create()` throwing — required adding a production injection seam for marginal regression value; the actual ProGuard regression is only catchable on a shrunk artifact (Phase 3 #7 smoke test in the plan below), not unit tests.
-- Phase 3 #7 release-DMG smoke test extension — needs work on the existing smoke-test harness (out of scope for one-shot fix).
-- ProGuard `mapping.txt` regression guard gradle task — nice-to-have, deferred.
+**Reverted in PR 1:**
+- ❌ ProGuard keep-rule change — the hypothesis it was based on is refuted by binary PoW; the original `pt.davidafsilva.apple.**` keep is correct and stays in place.
+
+**Open — actual root cause still unidentified.** Working hypotheses:
+- **H2 — Hardened runtime blocks unsigned dylib load.** `OSXKeychain.loadSharedObject()` extracts `libosxkeychain.dylib` to `/tmp` and `System.load()`s it. Hardened-runtime + Gatekeeper on a notarized DMG **rejects loading an unsigned dylib at runtime** unless the app entitlements include `com.apple.security.cs.disable-library-validation`. Dev `./gradlew :desktopApp:run` doesn't apply hardened runtime — explains the dev-works / release-fails split.
+- **H4 — jpackage strips the dylib resource.** Compose-Multiplatform's jpackage path could re-pack jars without preserving `META-INF/native/*` or resource-style `.dylib` files. Worth examining the DMG bundle structure.
+- **H5 — pre-hardening accounts.json.enc migration gap.** If user installed `v1.11.0` then upgraded, the migration from `bunker_uri.txt` → `accounts.json.enc` (commit `46caa4d79`) might leave the bunker entry missing. But this would not happen "every restart, always" — it would happen ONCE post-upgrade. Lower likelihood.
+
+**Verification plan (still needs a Mac + ideally the affected user):**
+- `./gradlew :desktopApp:packageReleaseDmg` locally, install, log in with bunker, quit, relaunch — DOES the bug reproduce on a locally-built (unsigned) DMG?
+- If reproduces on unsigned DMG → not hardened runtime, look at jpackage stripping.
+- If only reproduces on signed/notarized DMG → H2 is the answer; fix is `--mac-entitlements` or `--mac-hardened-runtime` flag config.
+- `codesign --display --entitlements - /Applications/Amethyst.app` on the affected user's installed DMG to see what entitlements were actually applied.
 
 # 🐛 fix(desktop): macOS forced re-login on cold boot — ProGuard strips java-keyring backend
 

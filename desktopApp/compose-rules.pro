@@ -82,14 +82,12 @@
 #   - androidx.sqlite (sqlite-bundled): nativeThreadSafeMode() stripped,
 #     so `BundledSQLiteDriver.threadingMode` threw NoSuchMethodError on the
 #     first relay-store query (LocalRelayStore.refreshStats).
-#   - com.github.javakeyring (java-keyring): Keyring.create() reflection-loads
-#     the OS-specific backend (OSXKeychainBackend / SecretServiceBackend /
-#     WinCredentialStoreBackend). Without these keeps the macOS backend was
-#     stripped, BackendNotSupportedException fired on every cold boot, the
-#     SecureKeyStorage fallback silently returned null, and any account whose
-#     key lived in the keychain (nsec, NIP-46 bunker ephemeral, NWC secret)
-#     was forced to re-log-in every launch of the release DMG. The dev/Gradle
-#     run path skips ProGuard, which is why it never surfaced in development.
+#   - pt.davidafsilva.apple (jkeychain): macOS Keychain JNI for nsec storage.
+#     Note: this lives in the dependency graph as a transitive runtime dep of
+#     `com.github.javakeyring:java-keyring` — `ModernOsxKeychainBackend` holds
+#     a `private pt.davidafsilva.apple.OSXKeychain` field. Keep both the
+#     class and its private native methods (loadSharedObject / the
+#     _addGenericPassword / _findGenericPassword bridge).
 #
 # secp256k1-kmp is already covered by the `-keep class fr.acinq.secp256k1.**`
 # rule mirrored from mobile above.
@@ -98,10 +96,9 @@
     native <methods>;
     static <methods>;
 }
--keep class com.github.javakeyring.** { *; }
--keepclassmembers class com.github.javakeyring.internal.** {
+-keep class pt.davidafsilva.apple.** { *; }
+-keepclassmembers class pt.davidafsilva.apple.** {
     native <methods>;
-    <init>(...);
 }
 
 # kmp-tor — loads native Tor daemon via JNI reflection
