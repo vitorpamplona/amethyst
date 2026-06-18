@@ -26,11 +26,16 @@ deepened: 2026-06-17
 
 **Still pending after this session:**
 
-- **Phase 1.4** — `App()` Compose UI smoke test. Hard-blocked on mocking the
-  six App() dependencies that have substantial real implementations
-  (DeckState, WorkspaceManager, DesktopTorManager, TorType / port flows,
-  initialTorSettings). The `BenchmarkRelayConnectionManager` subclass added
-  in 3.2 is the seam the future App() harness will use.
+- **Phase 1.4** — `App()` Compose UI smoke test. Blocked on broader App()
+  dependency injection: `accountManager`, `deckState`, `workspaceManager`
+  and `torManager` are already ctor parameters (the `torManager` slot was
+  loosened to `ITorManager` in commit `d2d044a63` for this purpose), but
+  `relayManager`, `localCache`, `localRelayStore` and
+  `subscriptionsCoordinator` are still constructed inside App() via
+  `remember { … }` and so cannot be swapped for the in-process / fixture
+  versions added in Phase 2 without a wider refactor. The
+  `BenchmarkRelayConnectionManager` subclass added in 3.2 is the seam the
+  future App() harness will use once those dependencies become injectable.
 - **Phase 2.4** — wire fixture relay into `AppStateMachineTest` (depends on
   Phase 1.4).
 - **Cold-fork shell driver** for the benchmark (per-sample JVM fork). The
@@ -43,6 +48,11 @@ deepened: 2026-06-17
   does not drive the App() gate, so the gate fix is validated by the
   `SubscribeBeforeConnectTest` invariant rather than by a benchmark delta
   in this report.
+- The four Phase 5.2 regression tests
+  (`slowRelayDoesNotStallFeed`, `noRelaysAvailableShowsErrorState`,
+  `relayListArrivesLateStartsSubscriptionThen`,
+  `relaysAddedMidLoadDoNotDoubleSubscribe`) — each requires driving the
+  App() composable, so blocked on the Phase 1.4 harness above.
 
 ## Enhancement Summary
 
