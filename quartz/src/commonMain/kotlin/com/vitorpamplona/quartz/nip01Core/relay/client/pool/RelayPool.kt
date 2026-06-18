@@ -223,7 +223,6 @@ class RelayPool(
             disconnect()
             relays.clear()
             _availableRelays.update { emptySet() }
-            _connectedRelays.update { emptySet() }
         }
     }
 
