@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.followList.followIdSet
 import com.vitorpamplona.quartz.nip51Lists.followList.followIds
 import com.vitorpamplona.quartz.nip51Lists.followList.follows
@@ -53,7 +54,10 @@ class MediaStarterPackEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(title(), description()).joinToString("\n")
+
     override fun pubKeyHints() = tags.mapNotNull(UserTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(UserTag::parseKey)

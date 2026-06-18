@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateReplaceableTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
@@ -52,7 +53,12 @@ class BookmarkListEvent(
     sig: HexKey,
 ) : PrivateReplaceableTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     EventHintProvider,
-    AddressHintProvider {
+    AddressHintProvider,
+    SearchableEvent {
+    // Only the public list title is indexed; bookmarks live in NIP-44
+    // encrypted content and are intentionally never indexed.
+    override fun indexableContent() = listOfNotNull(title()).joinToString("\n")
+
     override fun eventHints() = tags.mapNotNull(EventBookmark::parseAsHint)
 
     override fun linkedEventIds() = tags.mapNotNull(EventBookmark::parseId)

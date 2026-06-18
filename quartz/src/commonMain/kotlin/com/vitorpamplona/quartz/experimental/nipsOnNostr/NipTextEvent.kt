@@ -66,7 +66,7 @@ class NipTextEvent(
     AddressHintProvider,
     IForkableEvent,
     SearchableEvent {
-    override fun indexableContent() = "title: " + title() + "\n" + content
+    override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
 
     override fun dTag() = tags.dTag()
 

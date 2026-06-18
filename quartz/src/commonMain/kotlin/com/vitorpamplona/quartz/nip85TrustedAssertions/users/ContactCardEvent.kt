@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.tags.ActiveHoursEndTag
@@ -60,7 +61,12 @@ class ContactCardEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    // Only the public summary tag is indexed; the rest of the card lives in
+    // NIP-44 encrypted content and is intentionally never indexed.
+    override fun indexableContent() = listOfNotNull(summary()).joinToString("\n")
+
     fun aboutUser() = tags.dTag()
 
     fun rank() = tags.firstNotNullOfOrNull(RankTag::parse)

@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
@@ -55,7 +56,13 @@ class SoftwareReleaseEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    EventHintProvider {
+    EventHintProvider,
+    SearchableEvent {
+    // content carries the release notes (free-text). NOTE: kind 30063 collides
+    // with NIP-51 ReleaseArtifactSetEvent, which is what EventFactory builds for
+    // stored events — so in practice this override is not exercised at runtime.
+    override fun indexableContent() = content
+
     override fun eventHints() = tags.mapNotNull(AssetTag::parseAsHint)
 
     override fun linkedEventIds() = tags.mapNotNull(AssetTag::parseId)

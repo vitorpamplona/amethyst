@@ -26,6 +26,9 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.test.Test
 
@@ -128,5 +131,83 @@ class SearchTest : BaseDBTest() {
             // v1's FTS row must be gone; v2's content takes over.
             db.assertQuery(null, Filter(search = "uniqalpha"))
             db.assertQuery(v2, Filter(search = "uniqbeta"))
+        }
+
+    @Test
+    fun testNewlySearchableKinds() =
+        forEachDB { db ->
+            // CalendarEvent indexes the title tag plus the free-text content.
+            val cal =
+                signer.sign(
+                    CalendarEvent.build(
+                        title = "uniqtitle Meetup",
+                        content = "annual uniqbody gathering",
+                    ),
+                )
+            // GitRepositoryEvent has an empty content field — its searchable
+            // text comes entirely from the name and description tags.
+            val repo =
+                signer.sign(
+                    GitRepositoryEvent.build(
+                        name = "uniqname",
+                        description = "uniqdesc nostr client",
+                    ),
+                )
+
+            db.store.insertEvent(cal)
+            db.store.insertEvent(repo)
+
+            // Title tag and content are both indexed for the calendar event.
+            db.assertQuery(cal, Filter(search = "uniqtitle"))
+            db.assertQuery(cal, Filter(search = "uniqbody"))
+
+            // Name and description tags are indexed even with empty content.
+            db.assertQuery(repo, Filter(search = "uniqname"))
+            db.assertQuery(repo, Filter(search = "uniqdesc"))
+            db.assertQuery(repo, Filter(kinds = listOf(GitRepositoryEvent.KIND), search = "uniqdesc"))
+        }
+
+    @Test
+    fun testProfileJsonFieldsAreSearchable() =
+        forEachDB { db ->
+            // Kind-0 content is JSON; we parse it and index names, bio, and the
+            // addresses people search by (nip05 email, lightning address, URLs).
+            val p =
+                signer.sign(
+                    MetadataEvent.createNew(
+                        name = "uniqalice",
+                        about = "loves uniqbio and coffee",
+                        nip05 = "alice@uniqmail.example",
+                        lnAddress = "alice@uniqln.example",
+                        website = "https://uniqsite.example",
+                    ),
+                )
+            db.store.insertEvent(p)
+
+            db.assertQuery(p, Filter(search = "uniqalice")) // name
+            db.assertQuery(p, Filter(search = "uniqbio")) // about
+            db.assertQuery(p, Filter(search = "uniqmail")) // nip05 email
+            db.assertQuery(p, Filter(search = "uniqln")) // lightning address
+            db.assertQuery(p, Filter(search = "uniqsite")) // website URL
+            db.assertQuery(p, Filter(kinds = listOf(MetadataEvent.KIND), search = "uniqalice"))
+        }
+
+    @Test
+    fun testChannelJsonFieldsAreSearchable() =
+        forEachDB { db ->
+            val chan =
+                signer.sign(
+                    ChannelCreateEvent.build(
+                        name = "uniqchan",
+                        about = "a uniqtopic discussion",
+                        picture = "https://uniqpic.example/c.jpg",
+                        relays = null,
+                    ),
+                )
+            db.store.insertEvent(chan)
+
+            db.assertQuery(chan, Filter(search = "uniqchan")) // name
+            db.assertQuery(chan, Filter(search = "uniqtopic")) // about
+            db.assertQuery(chan, Filter(search = "uniqpic")) // picture URL
         }
 }

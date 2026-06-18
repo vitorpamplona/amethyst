@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.PrivateTagArrayEvent
 import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.encryption.signNip51List
@@ -49,7 +50,12 @@ class RelaySetEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    // Only the public title/description is indexed; relays can live in NIP-44
+    // encrypted content and are intentionally never indexed.
+    override fun indexableContent() = listOfNotNull(title(), description()).joinToString("\n")
+
     fun relays(): List<NormalizedRelayUrl> = tags.mapNotNull(RelayTag.Companion::parse)
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)

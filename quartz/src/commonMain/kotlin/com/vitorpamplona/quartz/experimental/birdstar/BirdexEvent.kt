@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValue
 import com.vitorpamplona.quartz.nip01Core.core.mapValueTagged
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
 /**
  * Birdstar "Birdex" species collection (kind 12473).
@@ -54,7 +55,10 @@ class BirdexEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() = listOfNotNull(summary()).joinToString("\n")
+
     /** Scientific names of the collected species, in event order, from the `n` tags. */
     fun speciesNames() = tags.mapValueTagged("n") { it }
 

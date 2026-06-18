@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelData
 import com.vitorpamplona.quartz.nip28PublicChat.base.ChannelDataNorm
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
@@ -45,7 +46,10 @@ class ChannelCreateEvent(
     content: String,
     sig: HexKey,
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
-    EventHintProvider {
+    EventHintProvider,
+    SearchableEvent {
+    override fun indexableContent() = channelInfo().let { listOfNotNull(it.name, it.about, it.picture).joinToString(" ") }
+
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
     var cache: ChannelDataNorm? = null

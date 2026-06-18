@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.publishedAt.PublishedAtProvider
 import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.PlatformType
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.tags.PlatformLinkTag
 import com.vitorpamplona.quartz.utils.Log
@@ -50,7 +51,27 @@ class AppDefinitionEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    PublishedAtProvider {
+    PublishedAtProvider,
+    SearchableEvent {
+    // App-handler content is JSON; parse it and index the human-meaningful
+    // fields plus the addresses/URLs people search by.
+    override fun indexableContent() =
+        appMetaData()?.let {
+            listOfNotNull(
+                it.name,
+                it.username,
+                it.displayName,
+                it.about,
+                it.nip05,
+                it.lud06,
+                it.lud16,
+                it.website,
+                it.picture,
+                it.banner,
+                it.image,
+            ).joinToString(" ")
+        } ?: ""
+
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient
     private var cachedMetadata: AppMetadata? = null

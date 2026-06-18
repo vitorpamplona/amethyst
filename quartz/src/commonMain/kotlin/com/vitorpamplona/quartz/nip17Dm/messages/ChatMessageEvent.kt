@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.toPTag
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @Immutable
@@ -40,7 +41,11 @@ class ChatMessageEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseDMGroupEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseDMGroupEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    // content is the decrypted (plaintext) direct-message body.
+    override fun indexableContent() = content
+
     fun replyTo() = tags.mapNotNull(ETag::parseId)
 
     companion object {
