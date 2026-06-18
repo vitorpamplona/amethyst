@@ -1345,7 +1345,9 @@ Zaplanowane posty z innych kont nie zostaną opublikowane, dopóki to konto jest
     <string name="call_settings_turn_credential">Uwierzytelnienie</string>
     <string name="always_on_notif_channel_description">Utrzymuje aktywne połączenia z transmiterami skrzynki odbiorczej, umożliwiając otrzymywanie powiadomień w czasie rzeczywistym</string>
     <string name="always_on_notif_title">Powiadomienia Ametyst Aktywne</string>
-    <string name="always_on_notif_connected">Połączono z %1$d transmiterami odbiorczymi</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="other">Połączono z %1$d transmiterami odbiorczymi</item>
+    </plurals>
     <string name="always_on_notif_connecting">Łączenie z transmiterami odbiorczymi\u2026</string>
     <string name="always_on_notif_setting_title">Usługa powiadomień zawsze włączona</string>
     <string name="always_on_notif_setting_description">Utrzymuje stałe połączenie z transmiterami odbiorczymi, aby zapewnić natychmiastowe dostarczanie powiadomień. Wyświetla bieżące powiadomienia. Zużywa więcej baterii, ale gwarantuje, że nigdy nie przegapisz żadnej wiadomości.</string>

@@ -39,6 +39,7 @@ import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.ui.MainActivity
+import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -274,10 +275,15 @@ class NotificationRelayService : Service() {
 
     private fun buildNotification(connectedRelays: Int): Notification {
         val contentText =
-            if (connectedRelays > 0) {
-                getString(R.string.always_on_notif_connected, connectedRelays)
-            } else {
-                getString(R.string.always_on_notif_connecting)
+            when {
+                connectedRelays <= 0 -> getString(R.string.always_on_notif_connecting)
+                // Foreground: the pool also holds the feed/finder outbox relays, so the
+                // count reflects all connections, not just the inbox. Backgrounded, the
+                // feeds tear down and only inbox + DM relays remain.
+                MainActivity.isResumed ->
+                    pluralStringRes(this, R.plurals.always_on_notif_connected_foreground, connectedRelays, connectedRelays)
+                else ->
+                    pluralStringRes(this, R.plurals.always_on_notif_connected, connectedRelays, connectedRelays)
             }
 
         val openAppIntent =

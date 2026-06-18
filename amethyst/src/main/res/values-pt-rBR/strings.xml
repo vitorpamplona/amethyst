@@ -1320,7 +1320,9 @@
     <string name="call_settings_turn_credential">Credencial</string>
     <string name="always_on_notif_channel_description">Mantém as conexões com seus relays de caixa de entrada ativas para notificações em tempo real</string>
     <string name="always_on_notif_title">Notificações do Amethyst ativas</string>
-    <string name="always_on_notif_connected">Conectado a %1$d relays de caixa de entrada</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="other">Conectado a %1$d relays de caixa de entrada</item>
+    </plurals>
     <string name="always_on_notif_connecting">Conectando aos relays de caixa de entrada\u2026</string>
     <string name="always_on_notif_setting_title">Serviço de notificações sempre ativo</string>
     <string name="always_on_notif_setting_description">Mantém uma conexão persistente com seus relays de caixa de entrada para entrega instantânea de notificações. Mostra uma notificação contínua. Usa mais bateria, mas garante que você nunca perca uma mensagem.</string>
