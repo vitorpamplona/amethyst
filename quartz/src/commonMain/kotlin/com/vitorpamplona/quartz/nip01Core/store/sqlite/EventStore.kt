@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
+import com.vitorpamplona.quartz.nip01Core.store.FtsReindexProgress
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 
@@ -78,6 +79,13 @@ class EventStore(
     }
 
     override suspend fun deleteExpiredEvents() = store.deleteExpiredEvents()
+
+    override suspend fun reindexFullTextSearch() = store.reindexFullTextSearch()
+
+    override suspend fun reindexFullTextSearch(
+        resumeFrom: String?,
+        batchSize: Int,
+    ): FtsReindexProgress = store.reindexFullTextSearch(resumeFrom, batchSize)
 
     override fun close() = store.close()
 }

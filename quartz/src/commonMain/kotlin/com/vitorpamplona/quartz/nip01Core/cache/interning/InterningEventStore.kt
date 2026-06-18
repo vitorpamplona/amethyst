@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.cache.interning
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.store.FtsReindexProgress
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 
@@ -122,6 +123,13 @@ class InterningEventStore(
     override suspend fun delete(filters: List<Filter>) = inner.delete(filters)
 
     override suspend fun deleteExpiredEvents() = inner.deleteExpiredEvents()
+
+    override suspend fun reindexFullTextSearch() = inner.reindexFullTextSearch()
+
+    override suspend fun reindexFullTextSearch(
+        resumeFrom: String?,
+        batchSize: Int,
+    ): FtsReindexProgress = inner.reindexFullTextSearch(resumeFrom, batchSize)
 
     override fun close() = inner.close()
 }

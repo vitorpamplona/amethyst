@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.isEphemeral
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.store.FtsReindexProgress
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.IdAndTime
 import com.vitorpamplona.quartz.nip40Expiration.isExpired
@@ -339,6 +340,35 @@ class SQLiteEventStore(
         }
 
     suspend fun deleteExpiredEvents() = pool.useWriter { expirationModule.deleteExpiredEvents(it) }
+
+    /**
+     * Wipe and rebuild the NIP-50 full-text search index for every
+     * stored event. See [IEventStore.reindexFullTextSearch] for when to
+     * call this. The whole rebuild runs in a single write transaction so
+     * the WAL append + sync cost is paid once.
+     */
+    suspend fun reindexFullTextSearch() =
+        pool.useWriter { db ->
+            db.transaction {
+                fullTextSearchModule.reindexAll(db)
+            }
+        }
+
+    /**
+     * One batch of a resumable FTS rebuild. See
+     * [IEventStore.reindexFullTextSearch]. The opaque cursor is the last
+     * `row_id` processed; `null` (or an unparseable value) starts from
+     * the beginning. Each batch is its own write transaction.
+     */
+    suspend fun reindexFullTextSearch(
+        resumeFrom: String?,
+        batchSize: Int,
+    ): FtsReindexProgress =
+        pool.useWriter { db ->
+            db.transaction {
+                fullTextSearchModule.reindexBatch(db, resumeFrom?.toLongOrNull() ?: 0L, batchSize)
+            }
+        }
 
     fun close() = pool.close()
 }

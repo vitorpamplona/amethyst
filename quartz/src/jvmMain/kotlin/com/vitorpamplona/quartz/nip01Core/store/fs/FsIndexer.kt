@@ -86,6 +86,21 @@ internal class FsIndexer(
         }
     }
 
+    /**
+     * Create only the NIP-50 FTS hardlinks for this event (no-op when it
+     * isn't a [SearchableEvent]). Used by the FTS-only rebuild so an
+     * existing kind/author/owner/tag tree is left untouched. Idempotent.
+     */
+    fun linkFts(
+        event: Event,
+        canonical: Path,
+    ) {
+        if (event !is SearchableEvent) return
+        for (token in FsSearchTokenizer.tokenize(event.indexableContent())) {
+            createLink(layout.ftsEntry(token, event.createdAt, event.id), canonical)
+        }
+    }
+
     /** Remove every index hardlink for this event. Missing entries ignored. */
     fun unlink(event: Event) {
         for (path in pathsFor(event)) {

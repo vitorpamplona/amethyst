@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongTextNoteEvent
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
 import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
@@ -129,6 +130,93 @@ class FsSearchTest {
 
             val ftsRoot = root.resolve("idx/fts")
             assertEquals(0, ftsRoot.listDirectoryEntries().size, "unknown kind is not SearchableEvent")
+        }
+
+    @Test
+    fun `reindexFullTextSearch rebuilds fts entries after a wipe`() =
+        runBlocking {
+            val a = note("bitcoin reindex", ts = 100)
+            val b = note("nostr reindex", ts = 200)
+            store.insert(a)
+            store.insert(b)
+
+            // Mimic a store written before this kind was searchable: drop
+            // the whole idx/fts/ tree, leaving canonical events intact.
+            val ftsRoot = root.resolve("idx/fts")
+            Files.walk(ftsRoot).use { stream ->
+                stream.sorted(Comparator.reverseOrder()).forEach { p -> if (p != ftsRoot) Files.deleteIfExists(p) }
+            }
+            assertEquals(0, ftsRoot.listDirectoryEntries().size, "precondition: fts wiped")
+            assertTrue(store.query<TextNoteEvent>(Filter(search = "bitcoin")).isEmpty(), "no index, no match")
+
+            store.reindexFullTextSearch()
+
+            assertEquals(listOf(a.id), store.query<TextNoteEvent>(Filter(search = "bitcoin")).map { it.id })
+            assertEquals(listOf(b.id), store.query<TextNoteEvent>(Filter(search = "nostr")).map { it.id })
+            // Reindexing twice must not duplicate entries.
+            store.reindexFullTextSearch()
+            assertEquals(1, ftsRoot.resolve("bitcoin").listDirectoryEntries().size)
+            // "reindex" appears in both notes — one entry per event, no dupes.
+            assertEquals(2, ftsRoot.resolve("reindex").listDirectoryEntries().size)
+        }
+
+    @Test
+    fun `resumable reindex covers every kind across batches`() =
+        runBlocking {
+            // Two searchable kinds (note = kind 1, long-form = kind 30023) so
+            // the kind-granular cursor must advance across more than one dir.
+            val n = note("uniqnote bitcoin", ts = 100)
+            val long =
+                signer.sign(
+                    LongTextNoteEvent.build(
+                        "uniqlong body",
+                        title = "title",
+                        dTag = "d1",
+                        createdAt = 200,
+                    ),
+                )
+            store.insert(n)
+            store.insert(long)
+
+            // Wipe the index, then drive the resumable path one kind at a time.
+            val ftsRoot = root.resolve("idx/fts")
+            Files.walk(ftsRoot).use { stream ->
+                stream.sorted(Comparator.reverseOrder()).forEach { p -> if (p != ftsRoot) Files.deleteIfExists(p) }
+            }
+            assertTrue(store.query<Event>(Filter(search = "uniqnote")).isEmpty())
+
+            var cursor: String? = null
+            var batches = 0
+            do {
+                val progress = store.reindexFullTextSearch(cursor, batchSize = 1)
+                cursor = progress.cursor
+                batches++
+            } while (!progress.done)
+
+            // Two searchable kind dirs, batchSize 1 ⇒ at least two batches.
+            assertTrue(batches >= 2, "expected the cursor to span both kinds, got $batches batch(es)")
+            assertEquals(listOf(n.id), store.query<Event>(Filter(search = "uniqnote")).map { it.id })
+            assertEquals(listOf(long.id), store.query<Event>(Filter(search = "uniqlong")).map { it.id })
+        }
+
+    @Test
+    fun `reindexFullTextSearch ignores non-searchable kinds`() =
+        runBlocking {
+            val searchable = note("findme bitcoin", ts = 100)
+            val opaque =
+                signer.sign<Event>(
+                    createdAt = 1,
+                    kind = 9999,
+                    tags = emptyArray(),
+                    content = "findme must not be indexed",
+                )
+            store.insert(searchable)
+            store.insert(opaque)
+
+            store.reindexFullTextSearch()
+
+            // Only the searchable note contributes the "findme" token.
+            assertEquals(listOf(searchable.id), store.query<Event>(Filter(search = "findme")).map { it.id })
         }
 
     @Test
