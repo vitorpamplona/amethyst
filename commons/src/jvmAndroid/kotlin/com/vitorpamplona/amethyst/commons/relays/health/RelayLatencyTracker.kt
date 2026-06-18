@@ -70,7 +70,7 @@ class RelayLatencyTracker(
     val maxPendingPerRelay: Int = DEFAULT_MAX_PENDING_PER_RELAY,
     val okTtlMs: Long = DEFAULT_OK_TTL_MS,
     val reqTtlMs: Long = DEFAULT_REQ_TTL_MS,
-) {
+) : RelayLatencyProvider {
     // Per-relay pending maps. `Long` is `currentTimeMillis()` at the time of the send.
     private val pendingEventId = ConcurrentHashMap<NormalizedRelayUrl, MutableMap<String, Long>>()
     private val pendingSubId = ConcurrentHashMap<NormalizedRelayUrl, MutableMap<String, Long>>()
@@ -165,7 +165,7 @@ class RelayLatencyTracker(
      * Expires pending entries older than the configured TTLs and records the TTL value as the
      * sample (per the brainstorm: "punish silent relays"). Idempotent and cheap.
      */
-    fun sweep(nowMs: Long = System.currentTimeMillis()) {
+    override fun sweep(nowMs: Long) {
         for ((relay, pending) in pendingEventId) {
             val it = pending.entries.iterator()
             while (it.hasNext()) {
@@ -199,7 +199,7 @@ class RelayLatencyTracker(
     // ------ Snapshot ------
 
     /** Immutable snapshot of all tracked relays' current rolling-window medians. */
-    fun snapshot(): ImmutableMap<NormalizedRelayUrl, RelayLatencySnapshot> {
+    override fun snapshot(): ImmutableMap<NormalizedRelayUrl, RelayLatencySnapshot> {
         if (samples.isEmpty()) return persistentMapOf()
         val out = HashMap<NormalizedRelayUrl, RelayLatencySnapshot>(samples.size)
         for ((relay, perMetric) in samples) {
@@ -219,7 +219,7 @@ class RelayLatencyTracker(
      * Raw per-relay per-metric sample arrays (chronological order). Used by the persistence
      * layer to encode the rings into the packed `lat_<url>` Preferences key.
      */
-    fun samplesForPersistence(): Map<NormalizedRelayUrl, Map<LatencyMetric, IntArray>> {
+    override fun samplesForPersistence(): Map<NormalizedRelayUrl, Map<LatencyMetric, IntArray>> {
         if (samples.isEmpty()) return emptyMap()
         val out = HashMap<NormalizedRelayUrl, Map<LatencyMetric, IntArray>>(samples.size)
         for ((relay, perMetric) in samples) {
@@ -238,7 +238,7 @@ class RelayLatencyTracker(
      * existing buffers for the listed `(relay, metric)` pairs; other relays/metrics are
      * untouched.
      */
-    fun restoreSamples(saved: Map<NormalizedRelayUrl, Map<LatencyMetric, IntArray>>) {
+    override fun restoreSamples(saved: Map<NormalizedRelayUrl, Map<LatencyMetric, IntArray>>) {
         for ((relay, perMetric) in saved) {
             for ((metric, arr) in perMetric) {
                 if (arr.isEmpty()) continue

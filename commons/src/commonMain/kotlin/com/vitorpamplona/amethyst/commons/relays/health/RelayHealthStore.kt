@@ -21,9 +21,12 @@
 package com.vitorpamplona.amethyst.commons.relays.health
 
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,8 +35,11 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -61,6 +67,16 @@ class RelayHealthStore(
     // (Android/Desktop) should pass `Dispatchers.IO` so `prefs.flush()` doesn't sit on
     // a CPU-bound worker.
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    // Optional latency tracker (jvmAndroidMain in the current build — Desktop wires it,
+    // Android picks up later). When null, [latencySnapshots] stays empty and [slowRelays]
+    // never flags anything.
+    private val latencyTracker: RelayLatencyProvider? = null,
+    // NIP-11 info supplier, used by the slow-relay classifier to skip auth/payment-required
+    // relays. Read on every reclassify tick, so the supplier can return a live snapshot.
+    private val nip11Provider: () -> ImmutableMap<NormalizedRelayUrl, Nip11RelayInformation?> = { persistentMapOf() },
+    // Per-relay auth-completed lookup. Used by the classifier alongside [nip11Provider] —
+    // a NIP-11 auth-required relay only participates in the cohort once auth is complete.
+    private val authProvider: (NormalizedRelayUrl) -> Boolean = { true },
 ) {
     companion object {
         const val PERSIST_DEBOUNCE_MS: Long = 5_000L
@@ -89,6 +105,35 @@ class RelayHealthStore(
     private val _unhealthy = MutableStateFlow<PersistentList<UnhealthyRelay>>(persistentListOf())
     val unhealthy: StateFlow<PersistentList<UnhealthyRelay>> = _unhealthy.asStateFlow()
 
+    private val _latencySnapshots =
+        MutableStateFlow<ImmutableMap<NormalizedRelayUrl, RelayLatencySnapshot>>(persistentMapOf())
+
+    /** Per-relay rolling-window latency snapshot, updated on every 60 s tick. Empty when no tracker. */
+    val latencySnapshots: StateFlow<ImmutableMap<NormalizedRelayUrl, RelayLatencySnapshot>> =
+        _latencySnapshots.asStateFlow()
+
+    /**
+     * Relays classified as "slow" — derived from [latencySnapshots] + the NIP-11 / auth providers.
+     * Re-runs whenever [latencySnapshots] emits (every 60 s tick when a tracker is wired).
+     *
+     * `SharingStarted.Eagerly` so the value is fresh whenever the UI reads `.value` without
+     * an active collector — matches how callers consume [unhealthy].
+     */
+    val slowRelays: StateFlow<ImmutableMap<NormalizedRelayUrl, SlowReason>> =
+        _latencySnapshots
+            .map { snaps ->
+                if (latencyTracker == null || snaps.isEmpty()) {
+                    persistentMapOf<NormalizedRelayUrl, SlowReason>()
+                } else {
+                    classifySlowRelays(
+                        snapshots = snaps,
+                        nip11 = nip11Provider(),
+                        torEnabled = torEnabledProvider(),
+                        authStatus = authProvider,
+                    )
+                }
+            }.stateIn(scope, SharingStarted.Eagerly, persistentMapOf())
+
     @Volatile private var persistJob: Job? = null
 
     @Volatile private var tickJob: Job? = null
@@ -96,6 +141,15 @@ class RelayHealthStore(
     @Volatile private var closed = false
 
     init {
+        // Restore persisted latency samples into the tracker (if both wired).
+        if (latencyTracker != null) {
+            val loadedLatency = state.value.latencySamples
+            if (loadedLatency.isNotEmpty()) {
+                latencyTracker.restoreSamples(loadedLatency)
+                _latencySnapshots.value = latencyTracker.snapshot()
+            }
+        }
+
         // Persist the firstScanAt seed if we just stamped it.
         schedulePersist()
 
@@ -209,6 +263,17 @@ class RelayHealthStore(
 
         val flagged =
             withContext(ioDispatcher) {
+                // Sweep + snapshot the latency tracker inside the same tick (one timer, not two).
+                if (latencyTracker != null) {
+                    latencyTracker.sweep(TimeUtils.nowMillis())
+                    val snap = latencyTracker.snapshot()
+                    // Only emit if anything changed structurally — keeps strong-skipping happy
+                    // on the dashboard rows when the per-tick snapshot is value-equal to the
+                    // previous one (e.g. quiet period, no new samples).
+                    if (snap != _latencySnapshots.value) {
+                        _latencySnapshots.value = snap
+                    }
+                }
                 classifyRelayHealth(
                     records = s.records,
                     listMembership = membership,
@@ -227,11 +292,21 @@ class RelayHealthStore(
         persistJob =
             scope.launch {
                 delay(PERSIST_DEBOUNCE_MS)
-                val snapshot = state.value
                 withContext(ioDispatcher) {
-                    runCatching { persistence.save(snapshot) }
+                    runCatching { persistence.save(snapshotForPersist()) }
                 }
             }
+    }
+
+    /**
+     * Bundles the timestamp/snooze state with the tracker's current sample arrays. Read at
+     * save time so we don't have to mirror per-event sample updates into `state` (which
+     * would break StateFlow equality with IntArrays).
+     */
+    private fun snapshotForPersist(): RelayHealthSnapshot {
+        val timestamps = state.value
+        val latency = latencyTracker?.samplesForPersistence().orEmpty()
+        return if (latency.isEmpty()) timestamps else timestamps.copy(latencySamples = latency)
     }
 
     /**
@@ -245,7 +320,7 @@ class RelayHealthStore(
         closed = true
         persistJob?.cancel()
         tickJob?.cancel()
-        val finalSnapshot = state.value
+        val finalSnapshot = snapshotForPersist()
         val flushScope = CoroutineScope(SupervisorJob() + ioDispatcher)
         flushScope.launch {
             try {
