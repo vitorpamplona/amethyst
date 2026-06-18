@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -67,6 +68,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -575,8 +577,10 @@ private fun CollapsedNoteCompose(
                 Text(
                     text = pluralStringResource(R.plurals.thread_collapsed_reply_count, hiddenReplyCount, hiddenReplyCount),
                     color = MaterialTheme.colorScheme.placeholderText,
-                    maxLines = 1,
+                    textAlign = TextAlign.End,
                     style = MaterialTheme.typography.labelMedium,
+                    // Allow the label to wrap onto multiple lines so it takes less horizontal room.
+                    modifier = Modifier.widthIn(max = Size55dp),
                 )
                 Spacer(modifier = StdHorzSpacer)
             }
