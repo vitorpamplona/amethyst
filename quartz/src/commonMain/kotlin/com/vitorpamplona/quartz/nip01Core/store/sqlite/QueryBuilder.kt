@@ -360,7 +360,7 @@ class QueryBuilder(
         val sql =
             buildString {
                 append("SELECT event_headers.id, event_headers.created_at FROM event_headers")
-                append("\nINNER JOIN ${fts.tableName} ON event_headers.row_id = ${fts.tableName}.${fts.rowIdName}")
+                append("\nINNER JOIN ${fts.tableName} ON event_headers.row_id = ${fts.tableName}.${fts.eventHeaderRowIdName}")
                 if (clause.conditions.isNotEmpty()) {
                     append("\nWHERE ${clause.conditions}")
                 }
@@ -678,13 +678,13 @@ class QueryBuilder(
                     }
 
                     if (mustJoinSearch) {
-                        append(" INNER JOIN ${fts.tableName} ON ${fts.tableName}.${fts.rowIdName} = event_tags.event_header_row_id")
+                        append(" INNER JOIN ${fts.tableName} ON ${fts.tableName}.${fts.eventHeaderRowIdName} = event_tags.event_header_row_id")
                     }
                 } else if (mustJoinSearch) {
-                    append("SELECT ${fts.tableName}.${fts.rowIdName} as row_id FROM ${fts.tableName}")
+                    append("SELECT ${fts.tableName}.${fts.eventHeaderRowIdName} as row_id FROM ${fts.tableName}")
 
                     if (hasHeaders) {
-                        append(" INNER JOIN event_headers ON event_headers.row_id = ${fts.tableName}.${fts.rowIdName}")
+                        append(" INNER JOIN event_headers ON event_headers.row_id = ${fts.tableName}.${fts.eventHeaderRowIdName}")
                     }
                 } else {
                     // no tags and no search.
@@ -864,7 +864,7 @@ class QueryBuilder(
         val sql =
             buildString {
                 append("SELECT event_headers.id, event_headers.pubkey, event_headers.created_at, event_headers.kind, event_headers.tags, event_headers.content, event_headers.sig FROM event_headers")
-                append("\nINNER JOIN ${fts.tableName} ON event_headers.row_id = ${fts.tableName}.${fts.rowIdName}")
+                append("\nINNER JOIN ${fts.tableName} ON event_headers.row_id = ${fts.tableName}.${fts.eventHeaderRowIdName}")
                 if (clause.conditions.isNotEmpty()) {
                     append("\nWHERE ${clause.conditions}")
                 }

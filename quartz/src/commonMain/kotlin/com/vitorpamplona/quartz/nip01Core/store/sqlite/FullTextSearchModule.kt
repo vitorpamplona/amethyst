@@ -27,14 +27,7 @@ import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
 class FullTextSearchModule : IModule {
     val tableName = "event_fts"
-
-    // We don't store the event_headers foreign key as its own indexed column —
-    // an FTS column is tokenized into the searchable text, so a numeric FK would
-    // pollute MATCH results and waste index space. Instead we align the FTS
-    // table's implicit rowid with event_headers.row_id at insert time and join
-    // on it. rowid joins are also the fastest possible, and `rowid` works across
-    // fts3/4/5 (fts4/3 expose it as `docid`, but `rowid` is accepted too).
-    val rowIdName = "rowid"
+    val eventHeaderRowIdName = "event_header_row_id"
     val contentName = "content"
 
     override fun create(db: SQLiteConnection) {
@@ -42,12 +35,11 @@ class FullTextSearchModule : IModule {
         db.execSQL(
             """
                     CREATE VIRTUAL TABLE $tableName
-                    USING fts$ftsVersion($contentName)
+                    USING fts$ftsVersion($eventHeaderRowIdName, $contentName)
                 """,
         )
 
-        // Foreign key cleanup for full text search. Because the FTS rowid is the
-        // event_headers.row_id, we can delete the matching row directly.
+        // Foreign key cleanup for full text search
         db.execSQL(
             """
                 CREATE TRIGGER fts_foreign_key
@@ -55,23 +47,19 @@ class FullTextSearchModule : IModule {
                 FOR EACH ROW
                 BEGIN
                     DELETE FROM $tableName
-                    WHERE $tableName.$rowIdName = old.row_id;
+                    WHERE old.row_id = $tableName.$eventHeaderRowIdName;
                 END;
             """,
         )
     }
 
     override fun drop(db: SQLiteConnection) {
-        // The trigger lives on event_headers, so dropping our table alone won't
-        // remove it. Drop it explicitly so drop() is self-contained and a later
-        // create() doesn't fail with "trigger already exists".
-        db.execSQL("DROP TRIGGER IF EXISTS fts_foreign_key")
         db.execSQL("DROP TABLE IF EXISTS $tableName")
     }
 
     val insertFTS =
         """
-        INSERT OR ROLLBACK INTO $tableName ($rowIdName, $contentName)
+        INSERT OR ROLLBACK INTO $tableName ($eventHeaderRowIdName, $contentName)
         VALUES (?, ?)
         """.trimIndent()
 
@@ -82,30 +70,6 @@ class FullTextSearchModule : IModule {
     ) {
         if (event is SearchableEvent) {
             db.prepare(insertFTS).use { stmt ->
-                stmt.bindLong(1, headerId)
-                stmt.bindText(2, event.indexableContent())
-                stmt.step()
-            }
-        }
-    }
-
-    // Idempotent variant used by the background reindex backfill: a row may
-    // already have been indexed by the live insert path (event_headers.row_id
-    // is monotonic, so freshly received events land above the backfill cursor),
-    // and re-indexing it must be a no-op rather than a constraint failure.
-    val insertIfAbsentFTS =
-        """
-        INSERT OR IGNORE INTO $tableName ($rowIdName, $contentName)
-        VALUES (?, ?)
-        """.trimIndent()
-
-    fun insertIfAbsent(
-        event: Event,
-        headerId: Long,
-        db: SQLiteConnection,
-    ) {
-        if (event is SearchableEvent) {
-            db.prepare(insertIfAbsentFTS).use { stmt ->
                 stmt.bindLong(1, headerId)
                 stmt.bindText(2, event.indexableContent())
                 stmt.step()
