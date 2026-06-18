@@ -27,6 +27,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableQueryState
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -35,7 +36,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-private const val UNSUBSCRIBE_GRACE_MILLIS = 30_000L
+// DIAGNOSTIC: temporarily 0 to test whether unsubscribing the moment the app
+// pauses actually disconnects the feed's outbox relays in the background. If the
+// 30s grace's delay() was being starved on Dispatchers.Default once backgrounded
+// (Doze/app-standby suspends timers), firing immediately on ON_STOP both proves it
+// and fixes the leak. Restore to 30_000L (with a wakelock-/foreground-safe timer)
+// once confirmed, to keep absorbing short app switches.
+private const val UNSUBSCRIBE_GRACE_MILLIS = 0L
 
 /**
  * A lifecycle-aware version of [KeyDataSourceSubscription] that subscribes
@@ -77,6 +84,7 @@ fun <T> LifecycleAwareKeyDataSourceSubscription(
         key = state,
         subscribe = { dataSource.subscribe(state) },
         unsubscribe = { dataSource.unsubscribe(state) },
+        label = dataSource::class.simpleName ?: "?",
     )
 }
 
@@ -89,6 +97,7 @@ fun <T> LifecycleAwareKeyDataSourceSubscription(
         key = states,
         subscribe = { dataSource.subscribe(states) },
         unsubscribe = { dataSource.unsubscribe(states) },
+        label = dataSource::class.simpleName ?: "?",
     )
 }
 
@@ -101,6 +110,7 @@ fun <T : MutableQueryState> LifecycleAwareKeyDataSourceSubscription(
         key = state,
         subscribe = { dataSource.subscribe(state) },
         unsubscribe = { dataSource.unsubscribe(state) },
+        label = dataSource::class.simpleName ?: "?",
     )
 }
 
@@ -109,6 +119,7 @@ private fun LifecycleAwareSubscription(
     key: Any?,
     subscribe: () -> Unit,
     unsubscribe: () -> Unit,
+    label: String,
 ) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
 
@@ -124,13 +135,16 @@ private fun LifecycleAwareSubscription(
             lifecycle.currentStateFlow.collectLatest { current ->
                 if (current.isAtLeast(Lifecycle.State.STARTED)) {
                     if (!subscribed) {
+                        Log.d("BgRelayTrace") { "subscribe($label) — lifecycle=$current" }
                         subscribe()
                         subscribed = true
                     }
                 } else if (subscribed) {
                     // Stopped: keep the REQ alive for a short grace period.
                     // collectLatest cancels this delay if we return to STARTED first.
+                    Log.d("BgRelayTrace") { "grace-start($label) — lifecycle=$current, waiting ${UNSUBSCRIBE_GRACE_MILLIS}ms" }
                     delay(UNSUBSCRIBE_GRACE_MILLIS)
+                    Log.d("BgRelayTrace") { "unsubscribe($label) — grace elapsed while $current" }
                     unsubscribe()
                     subscribed = false
                 }
@@ -139,6 +153,7 @@ private fun LifecycleAwareSubscription(
 
         onDispose {
             scope.cancel()
+            Log.d("BgRelayTrace") { "dispose-unsubscribe($label)" }
             // Idempotent: removing an absent key is a cheap no-op. Guarantees the
             // subscription is released even if the grace timer was still pending.
             unsubscribe()

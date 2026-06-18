@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -156,6 +157,7 @@ class RelayPool(
      */
     fun updatePool(newRelays: Set<NormalizedRelayUrl>) {
         val toRemove = relays.keys() - newRelays
+        Log.d("BgRelayTrace") { "updatePool — desired=${newRelays.size}, inPool=${relays.size()}, toRemove=${toRemove.size}, connected=${connectedRelaysCount()}" }
         var atLeastOne = false
 
         newRelays.forEach { relay ->
