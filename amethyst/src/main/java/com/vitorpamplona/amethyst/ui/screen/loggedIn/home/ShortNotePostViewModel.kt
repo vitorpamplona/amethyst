@@ -1352,8 +1352,27 @@ open class ShortNotePostViewModel :
             emojiSuggestions?.processCurrentWord(lastWord)
         }
 
+        addNotifiedUsersFromMessage()
+
         precomputeAiResults()
         draftTag.newVersion()
+    }
+
+    /**
+     * Surfaces users referenced in the message body (pasted or typed npub/nprofile,
+     * or the author of a pasted note/nevent/naddr) in the notify section, mirroring
+     * what [autocompleteWithUser] does for the @ dropdown. The post already notifies
+     * these authors at send time via [NewMessageTagger]; this keeps the notify chips
+     * in sync so the user can see (and review) who will be tagged.
+     */
+    private fun addNotifiedUsersFromMessage() {
+        val text = message.text.toString()
+        if (!NewMessageTagger.mightContainNostrReference(text)) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val mentioned = NewMessageTagger(message = text, dao = accountViewModel).collectMentions()
+            mentioned.forEach { addToReplyList(it) }
+        }
     }
 
     override fun onForwardZapTextChanged() {

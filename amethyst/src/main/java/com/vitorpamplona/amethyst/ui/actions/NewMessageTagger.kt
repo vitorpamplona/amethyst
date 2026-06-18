@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEmbed
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NNote
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
@@ -50,6 +51,13 @@ class NewMessageTagger(
     val directMentionsNotes = mutableSetOf<Note>()
     val directMentionsUsers = mutableSetOf<User>()
 
+    companion object {
+        private val bechPrefixes = listOf("npub1", "nprofile1", "nevent1", "note1", "naddr1", "nsec1")
+
+        /** Cheap pre-check so callers can skip parsing plain text that cannot hold a reference. */
+        fun mightContainNostrReference(text: String): Boolean = bechPrefixes.any { text.contains(it, ignoreCase = true) }
+    }
+
     fun addUserToMentions(user: User) {
         directMentionsUsers.add(user)
         directMentions.add(user.pubkeyHex)
@@ -64,8 +72,15 @@ class NewMessageTagger(
         eTags = if (eTags?.contains(note) == true) eTags else eTags?.plus(note) ?: listOf(note)
     }
 
-    suspend fun run() {
-        // adds all references to mentions and reply tos
+    /**
+     * Scans the message for user (npub/nprofile) and event (note/nevent/naddr)
+     * references, resolving each into the users that should be notified — the
+     * referenced user itself, or the referenced event's author. Populates the
+     * mention/reply-to sets (and [pTags]/[eTags]) as a side effect and returns
+     * the resolved users. Does not rewrite the message, so it is cheap enough
+     * to call live as the user types or pastes.
+     */
+    suspend fun collectMentions(): Set<User> {
         message.split('\n').forEach { paragraph: String ->
             paragraph.split(' ').forEach { word: String ->
                 val results = parseDirtyWordForKey(word)
@@ -79,7 +94,7 @@ class NewMessageTagger(
                         addUserToMentions(dao.getOrCreateUser(entity.hex))
                     }
 
-                    is com.vitorpamplona.quartz.nip19Bech32.entities.NNote -> {
+                    is NNote -> {
                         addNoteToReplyTos(dao.getOrCreateNote(entity.hex))
                     }
 
@@ -105,6 +120,13 @@ class NewMessageTagger(
             }
         }
 
+        return directMentionsUsers
+    }
+
+    suspend fun run() {
+        // adds all references to mentions and reply tos
+        collectMentions()
+
         // Tags the text in the correct order.
         message =
             message
@@ -123,7 +145,7 @@ class NewMessageTagger(
                                     getNostrAddress(dao.getOrCreateUser(entity.hex).toNProfile(), results.restOfWord)
                                 }
 
-                                is com.vitorpamplona.quartz.nip19Bech32.entities.NNote -> {
+                                is NNote -> {
                                     getNostrAddress(dao.getOrCreateNote(entity.hex).toNEvent(), results.restOfWord)
                                 }
 
