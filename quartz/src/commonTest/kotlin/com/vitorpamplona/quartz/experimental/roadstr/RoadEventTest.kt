@@ -69,7 +69,7 @@ class RoadEventTest {
                     arrayOf("e", reportId),
                     arrayOf("status", "no_longer_there"),
                     arrayOf("expiration", "1701213200"),
-                    arrayOf("alt", "Roadstr: event confirmation"),
+                    arrayOf("alt", "Roadstr: event denied"),
                 ),
             content = "",
             sig = "00".repeat(64),
@@ -129,7 +129,7 @@ class RoadEventTest {
         assertEquals(RoadEventStatus.NO_LONGER_THERE, event.status())
         assertTrue(event.isDenial())
         assertTrue(!event.isConfirmation())
-        assertEquals("Roadstr: event confirmation", event.alt())
+        assertEquals("Roadstr: event denied", event.alt())
     }
 
     @Test
@@ -161,7 +161,7 @@ class RoadEventTest {
 
         assertEquals(reportId, template.tags.first { it[0] == "e" }[1])
         assertEquals("still_there", template.tags.first { it[0] == "status" }[1])
-        assertEquals("Roadstr: event confirmation", template.tags.first { it[0] == "alt" }[1])
+        assertEquals("Roadstr: event confirmed", template.tags.first { it[0] == "alt" }[1])
         assertTrue(template.tags.none { it[0] == "g" || it[0] == "lat" || it[0] == "lon" })
     }
 

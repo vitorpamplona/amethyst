@@ -89,7 +89,14 @@ class RoadEventConfirmationEvent(
 
     companion object {
         const val KIND = 1316
-        const val ALT_DESCRIPTION = "Roadstr: event confirmation"
+
+        /** NIP-31 fallback for a confirmation (`still_there`), per the roadstr spec. */
+        const val ALT_CONFIRMED = "Roadstr: event confirmed"
+
+        /** NIP-31 fallback for a denial (`no_longer_there`), per the roadstr spec. */
+        const val ALT_DENIED = "Roadstr: event denied"
+
+        fun altDescription(status: RoadEventStatus) = if (status == RoadEventStatus.NO_LONGER_THERE) ALT_DENIED else ALT_CONFIRMED
 
         fun build(
             reportId: HexKey,
@@ -106,7 +113,7 @@ class RoadEventConfirmationEvent(
                 coordinates(latitude, longitude)
             }
             expiration(createdAt + RoadEventReportEvent.RELAY_TTL_SECONDS)
-            alt(ALT_DESCRIPTION)
+            alt(altDescription(status))
             initializer()
         }
 

@@ -408,6 +408,9 @@ dependencies {
     implementation(libs.zxing)
     implementation(libs.zxing.embedded)
 
+    // OpenStreetMap tiles for road event location maps (kind 1315/1316)
+    implementation(libs.osmdroid.android)
+
     // Markdown
     // implementation "com.halilibo.compose-richtext:richtext-ui:0.16.0"
     // implementation "com.halilibo.compose-richtext:richtext-ui-material:0.16.0"
