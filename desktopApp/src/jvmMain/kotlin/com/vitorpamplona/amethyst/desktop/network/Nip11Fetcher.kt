@@ -95,6 +95,9 @@ class Nip11Fetcher {
 
     fun getCached(url: NormalizedRelayUrl): Nip11RelayInformation? = cache[url]
 
+    /** Snapshot of every NIP-11 doc fetched so far this session. */
+    fun allCached(): Map<NormalizedRelayUrl, Nip11RelayInformation> = HashMap(cache)
+
     fun clearCache() {
         cache.clear()
     }

@@ -135,6 +135,7 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.BlockedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
+import kotlinx.collections.immutable.toPersistentMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -1440,8 +1441,14 @@ fun MainContent(
     val isImmersive by com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen.current
 
     // Relay-health store: per-account, persists liveness + snooze; installs a
-    // RelayConnectionListener so quartz lifecycle drives the timestamps.
+    // RelayConnectionListener so quartz lifecycle drives the timestamps. The latency tracker
+    // shares the same lifecycle — it's swept + snapshotted on the existing 60 s reclassify tick.
     val torStateForHealth = com.vitorpamplona.amethyst.desktop.ui.tor.LocalTorState.current
+    val relayLatencyTracker =
+        remember(account.pubKeyHex) {
+            com.vitorpamplona.amethyst.commons.relays.health
+                .RelayLatencyTracker()
+        }
     val relayHealthStore =
         remember(account.pubKeyHex) {
             com.vitorpamplona.amethyst.commons.relays.health.RelayHealthStore(
@@ -1455,15 +1462,32 @@ fun MainContent(
                 parentScope = scope,
                 // `prefs.flush()` is blocking — keep it off the composition scope's Main dispatcher.
                 ioDispatcher = kotlinx.coroutines.Dispatchers.IO,
+                latencyTracker = relayLatencyTracker,
+                nip11Provider = {
+                    nip11Fetcher
+                        .allCached()
+                        .mapValues { entry ->
+                            entry.value as com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation?
+                        }.toPersistentMap()
+                },
+                // Desktop doesn't handle NIP-42 AUTH yet — treat any auth-required relay as
+                // "auth not complete", so it's excluded from the slow cohort instead of being
+                // perpetually flagged for sending CLOSED to anonymous queries.
+                authProvider = { false },
             )
         }
-    DisposableEffect(relayHealthStore, relayManager) {
-        val listener =
+    DisposableEffect(relayHealthStore, relayManager, relayLatencyTracker) {
+        val healthListener =
             com.vitorpamplona.amethyst.commons.relays.health
                 .RelayHealthListener(relayHealthStore)
-        listener.installInto(relayManager.client)
+        val latencyListener =
+            com.vitorpamplona.amethyst.commons.relays.health
+                .RelayLatencyListener(relayLatencyTracker)
+        healthListener.installInto(relayManager.client)
+        latencyListener.installInto(relayManager.client)
         onDispose {
-            listener.uninstallFrom(relayManager.client)
+            healthListener.uninstallFrom(relayManager.client)
+            latencyListener.uninstallFrom(relayManager.client)
             relayHealthStore.close()
         }
     }
