@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaIte
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.isHlsMedia
 import com.vitorpamplona.amethyst.service.playback.pip.PipVideoActivity
 import com.vitorpamplona.amethyst.ui.cast.CastDevicePickerDialog
+import com.vitorpamplona.amethyst.ui.cast.rememberCastWithLocalNetworkPermission
 import com.vitorpamplona.amethyst.ui.components.ShareMediaAction
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
@@ -313,6 +314,7 @@ fun RenderTopButtons(
     val captionsContentDescription =
         stringRes(if (captionsEnabled) Res.string.captions_turn_off else Res.string.captions_turn_on)
     val shareDialogVisible = remember { mutableStateOf(false) }
+    val context = LocalContext.current
     val castDialogVisible = remember { mutableStateOf(false) }
     val castSessionState by Amethyst.instance.castRegistry.sessionState
         .collectAsStateWithLifecycle()
@@ -321,15 +323,19 @@ fun RenderTopButtons(
     val castIcon = if (isThisVideoCasting) MaterialSymbols.CastConnected else MaterialSymbols.Cast
     val castContentDescription =
         stringRes(if (isThisVideoCasting) Res.string.cast_stop_casting else Res.string.cast_to_device)
+    // Android 17 Local Network Protection blocks Cast device discovery until the
+    // user grants ACCESS_LOCAL_NETWORK, so gate the picker behind the request.
+    val showCastPicker = remember { { castDialogVisible.value = true } }
+    val openCastPicker = rememberCastWithLocalNetworkPermission(context, showCastPicker)
     val onCastButtonClick =
-        remember(isThisVideoCasting) {
+        remember(isThisVideoCasting, openCastPicker) {
             {
                 if (isThisVideoCasting) {
                     Amethyst.instance.applicationIOScope.launch {
                         Amethyst.instance.castRegistry.stopCasting()
                     }
                 } else {
-                    castDialogVisible.value = true
+                    openCastPicker()
                 }
                 Unit
             }

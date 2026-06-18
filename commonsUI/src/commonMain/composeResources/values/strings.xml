@@ -2694,6 +2694,9 @@
     <string name="nickname_private">Only visible to you</string>
     <string name="cast_to_device_dialog_title">Cast to…</string>
     <string name="cast_searching_for_devices">Searching for devices on your Wi-Fi…</string>
+    <string name="cast_local_network_permission_title">Permission needed</string>
+    <string name="cast_local_network_permission_message">Amethyst needs local network access to find Cast devices on your Wi-Fi. Please enable it in the app settings.</string>
+    <string name="cast_local_network_permission_open_settings">Open settings</string>
     <string name="hls_pick_video_primary">Pick a video</string>
     <string name="hls_pick_video_helper">Your video will be transcoded into multiple resolutions so viewers get smooth playback on any connection.</string>
     <string name="hls_change_video">Change</string>
