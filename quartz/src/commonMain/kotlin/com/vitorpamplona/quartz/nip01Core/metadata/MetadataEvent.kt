@@ -48,6 +48,7 @@ import com.vitorpamplona.quartz.nip39ExtIdentities.githubClaim
 import com.vitorpamplona.quartz.nip39ExtIdentities.mastodonClaim
 import com.vitorpamplona.quartz.nip39ExtIdentities.replaceClaims
 import com.vitorpamplona.quartz.nip39ExtIdentities.twitterClaim
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.text
@@ -64,8 +65,28 @@ class MetadataEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseReplaceableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
     override fun isContentEncoded() = true
+
+    // Profile content is JSON, so we parse it and index only the
+    // human-meaningful fields: names, bio, plus the addresses people search
+    // by (nip05 email, lightning addresses, website/picture/banner URLs).
+    // Mirrors the in-memory searchable set in UserMetadata.anyPropertyContains.
+    override fun indexableContent() =
+        contactMetaData()?.let {
+            listOfNotNull(
+                it.name,
+                it.displayName,
+                it.about,
+                it.nip05,
+                it.lud06,
+                it.lud16,
+                it.website,
+                it.picture,
+                it.banner,
+            ).joinToString(" ")
+        } ?: ""
 
     fun contactMetadataJson() =
         try {

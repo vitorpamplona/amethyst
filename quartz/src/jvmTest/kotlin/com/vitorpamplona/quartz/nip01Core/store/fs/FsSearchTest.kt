@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.store.fs
 
-import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -117,17 +117,18 @@ class FsSearchTest {
     @Test
     fun `non-searchable event does not produce fts entries`() =
         runBlocking {
-            val meta =
-                signer.sign<MetadataEvent>(
+            // An event whose kind has no SearchableEvent mapping must not be indexed.
+            val nonSearchable =
+                signer.sign<Event>(
                     createdAt = 1,
-                    kind = MetadataEvent.KIND,
+                    kind = 9999,
                     tags = emptyArray(),
-                    content = "{\"name\":\"vitor\"}",
+                    content = "this text must not be indexed",
                 )
-            store.insert(meta)
+            store.insert(nonSearchable)
 
             val ftsRoot = root.resolve("idx/fts")
-            assertEquals(0, ftsRoot.listDirectoryEntries().size, "MetadataEvent is not SearchableEvent")
+            assertEquals(0, ftsRoot.listDirectoryEntries().size, "unknown kind is not SearchableEvent")
         }
 
     @Test
