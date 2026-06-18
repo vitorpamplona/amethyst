@@ -44,7 +44,7 @@ class SQLiteEventStore(
     val numReaders: Int = 4,
 ) {
     companion object {
-        const val DATABASE_VERSION = 2
+        const val DATABASE_VERSION = 3
     }
 
     val seedModule = SeedModule()
@@ -164,6 +164,41 @@ class SQLiteEventStore(
                     modules.reversed().forEach { it.drop(db) }
                     modules.forEach { it.create(db) }
                 }
+                2 -> {
+                    // Upgrade from version 2 to 3
+                    // The full-text index dropped its dedicated foreign-key
+                    // column and now aligns the FTS rowid with
+                    // event_headers.row_id. Rebuild only the FTS index in place
+                    // so the cached events themselves survive the upgrade.
+                    fullTextSearchModule.drop(db)
+                    fullTextSearchModule.create(db)
+                    reindexFullText(db)
+                }
+            }
+        }
+    }
+
+    /**
+     * Repopulates [FullTextSearchModule] from the events already stored in
+     * event_headers. Used by migrations that recreate the FTS table without
+     * touching the source events. Reading event_headers while inserting into
+     * event_fts is safe because they are different tables.
+     */
+    private fun reindexFullText(db: SQLiteConnection) {
+        db.prepare("SELECT row_id, id, pubkey, created_at, kind, tags, content, sig FROM event_headers").use { stmt ->
+            while (stmt.step()) {
+                val rowId = stmt.getLong(0)
+                val event =
+                    EventFactory.create<Event>(
+                        stmt.getText(1),
+                        stmt.getText(2),
+                        stmt.getLong(3),
+                        stmt.getInt(4),
+                        OptimizedJsonMapper.fromJsonToTagArray(stmt.getText(5)),
+                        stmt.getText(6),
+                        stmt.getText(7),
+                    )
+                fullTextSearchModule.insert(event, rowId, db)
             }
         }
     }
