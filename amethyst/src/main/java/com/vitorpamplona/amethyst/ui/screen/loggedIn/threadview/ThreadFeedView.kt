@@ -574,7 +574,7 @@ private fun CollapsedNoteCompose(
                 Text(
                     text = pluralStringResource(R.plurals.thread_collapsed_reply_count, hiddenReplyCount, hiddenReplyCount),
                     color = MaterialTheme.colorScheme.placeholderText,
-                    textAlign = TextAlign.End,
+                    textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.labelMedium,
                     // Allow the label to wrap onto multiple lines so it takes less horizontal room.
                     modifier = Modifier.widthIn(max = Size55dp),
