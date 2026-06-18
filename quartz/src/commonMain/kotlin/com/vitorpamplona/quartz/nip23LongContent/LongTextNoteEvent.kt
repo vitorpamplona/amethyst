@@ -71,7 +71,7 @@ class LongTextNoteEvent(
     PublishedAtProvider,
     RootScope,
     SearchableEvent {
-    override fun indexableContent() = "title: " + title() + "\nsummary: " + summary() + "\n" + content
+    override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
 
     override fun eventHints(): List<EventIdHint> {
         val qHints = tags.mapNotNull(QTag::parseEventAsHint)

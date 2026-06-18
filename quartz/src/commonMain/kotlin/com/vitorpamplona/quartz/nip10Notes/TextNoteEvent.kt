@@ -66,7 +66,7 @@ class TextNoteEvent(
     PubKeyHintProvider,
     IForkableEvent,
     SearchableEvent {
-    override fun indexableContent() = "Subject: " + subject() + "\n" + content
+    override fun indexableContent() = listOfNotNull(subject(), content).joinToString("\n")
 
     override fun eventHints(): List<EventIdHint> {
         val eHints = tags.mapNotNull(MarkedETag::parseAsHint)

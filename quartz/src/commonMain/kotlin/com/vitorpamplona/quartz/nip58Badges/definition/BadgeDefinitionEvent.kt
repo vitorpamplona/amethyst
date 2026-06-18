@@ -43,7 +43,7 @@ class BadgeDefinitionEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     SearchableEvent {
-    override fun indexableContent() = "name: " + name().orEmpty() + "\ndescription: " + description().orEmpty() + "\n" + content
+    override fun indexableContent() = listOfNotNull(name(), description(), content).joinToString("\n")
 
     fun name() = tags.badgeName()
 

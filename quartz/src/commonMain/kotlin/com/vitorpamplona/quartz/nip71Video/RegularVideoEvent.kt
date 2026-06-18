@@ -51,7 +51,7 @@ abstract class RegularVideoEvent(
     VideoEvent,
     RootScope,
     SearchableEvent {
-    override fun indexableContent() = "title: " + title().orEmpty() + "\n" + content
+    override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
 
     @kotlinx.serialization.Transient
     @kotlin.jvm.Transient

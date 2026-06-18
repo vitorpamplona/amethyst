@@ -44,7 +44,7 @@ class CalendarEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     SearchableEvent {
-    override fun indexableContent() = "title: " + title().orEmpty() + "\n" + content
+    override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 

@@ -88,12 +88,7 @@ class MusicPlaylistEvent(
             if (address.kind == MusicTrackEvent.KIND) address else null
         }
 
-    override fun indexableContent(): String =
-        buildString {
-            append("title: ").append(title().orEmpty()).append('\n')
-            description()?.let { append("description: ").append(it).append('\n') }
-            append(content)
-        }
+    override fun indexableContent(): String = listOfNotNull(title(), description(), content).joinToString("\n")
 
     companion object {
         const val KIND = 34139

@@ -43,7 +43,7 @@ class FeedDefinitionEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     SearchableEvent {
-    override fun indexableContent() = "title: " + title().orEmpty()
+    override fun indexableContent() = title().orEmpty()
 
     fun title(): String? = tags.firstOrNull { it.size >= 2 && it[0] == "title" }?.get(1)
 

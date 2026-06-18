@@ -105,9 +105,9 @@ class FsSearchTest {
 
             val ftsRoot = root.resolve("idx/fts")
             val tokenDirs = ftsRoot.listDirectoryEntries().map { it.fileName.toString() }.toSet()
-            // TextNoteEvent.indexableContent() prepends a "Subject: " prefix so
-            // we get the content tokens plus the subject ones. What matters is
-            // that each unique token yields exactly one entry under its dir.
+            // This note has no subject, so indexableContent() is just the
+            // content. What matters is that each unique token yields exactly
+            // one entry under its dir.
             assertTrue("bitcoin" in tokenDirs)
             assertTrue("nostr" in tokenDirs)
             assertEquals(1, ftsRoot.resolve("bitcoin").listDirectoryEntries().size)

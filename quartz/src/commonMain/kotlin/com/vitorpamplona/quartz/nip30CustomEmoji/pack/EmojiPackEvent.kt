@@ -49,7 +49,7 @@ class EmojiPackEvent(
     sig: HexKey,
 ) : PrivateTagArrayEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     SearchableEvent {
-    override fun indexableContent() = "title: " + titleOrName().orEmpty() + "\ndescription: " + description().orEmpty() + "\n" + content
+    override fun indexableContent() = listOfNotNull(titleOrName(), description(), content).joinToString("\n")
 
     @Deprecated("NIP-51 has deprecated name. Use title instead", ReplaceWith("title()"))
     fun name() = tags.firstNotNullOfOrNull(NameTag::parse)

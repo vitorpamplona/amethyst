@@ -66,7 +66,7 @@ class GitPullRequestEvent(
     EventHintProvider,
     AddressHintProvider,
     SearchableEvent {
-    override fun indexableContent() = "Subject: " + subject().orEmpty() + "\n" + content
+    override fun indexableContent() = listOfNotNull(subject(), content).joinToString("\n")
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 

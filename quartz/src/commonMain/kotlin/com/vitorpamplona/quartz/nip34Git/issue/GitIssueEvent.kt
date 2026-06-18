@@ -61,7 +61,7 @@ class GitIssueEvent(
     EventHintProvider,
     AddressHintProvider,
     SearchableEvent {
-    override fun indexableContent() = "Subject: " + subject() + "\n" + content
+    override fun indexableContent() = listOfNotNull(subject(), content).joinToString("\n")
 
     override fun eventHints(): List<EventIdHint> {
         val qHints = tags.mapNotNull(QTag::parseEventAsHint)

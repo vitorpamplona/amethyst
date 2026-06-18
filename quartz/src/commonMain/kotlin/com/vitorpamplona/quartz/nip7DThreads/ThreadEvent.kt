@@ -41,7 +41,7 @@ class ThreadEvent(
 ) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
     RootScope,
     SearchableEvent {
-    override fun indexableContent() = "title: " + title() + "\n" + content
+    override fun indexableContent() = listOfNotNull(title(), content).joinToString("\n")
 
     fun title() = tags.title()
 

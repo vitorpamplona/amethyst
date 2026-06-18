@@ -52,7 +52,7 @@ class CalendarTimeSlotEvent(
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     SearchableEvent {
-    override fun indexableContent() = "title: " + title().orEmpty() + "\nsummary: " + summary().orEmpty() + "\n" + content
+    override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
 
     fun title() = tags.firstNotNullOfOrNull(TitleTag.Companion::parse)
 

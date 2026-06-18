@@ -66,7 +66,7 @@ class ZapPollEvent(
     override fun indexableContent() =
         buildString {
             append(content)
-            pollOptionsArray().forEach { append("\nOption: ").append(it.descriptor) }
+            pollOptionsArray().forEach { append('\n').append(it.descriptor) }
         }
 
     override fun eventHints(): List<EventIdHint> {

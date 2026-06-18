@@ -55,7 +55,7 @@ class MeetingSpaceEvent(
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
     PubKeyHintProvider,
     SearchableEvent {
-    override fun indexableContent() = "room: " + room().orEmpty() + "\nsummary: " + summary().orEmpty() + "\n" + content
+    override fun indexableContent() = listOfNotNull(room(), summary(), content).joinToString("\n")
 
     override fun pubKeyHints() = tags.mapNotNull(ParticipantTag::parseAsHint)
 

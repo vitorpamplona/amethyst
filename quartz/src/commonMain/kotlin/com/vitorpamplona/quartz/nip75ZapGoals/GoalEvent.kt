@@ -60,7 +60,7 @@ class GoalEvent(
     AddressHintProvider,
     PubKeyHintProvider,
     SearchableEvent {
-    override fun indexableContent() = "summary: " + summary().orEmpty() + "\n" + content
+    override fun indexableContent() = listOfNotNull(summary(), content).joinToString("\n")
 
     override fun pubKeyHints() = tags.mapNotNull(PTag::parseAsHint)
 

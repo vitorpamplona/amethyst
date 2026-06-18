@@ -65,7 +65,7 @@ class LiveActivitiesEvent(
     PubKeyHintProvider,
     LiveStreamLike,
     SearchableEvent {
-    override fun indexableContent() = "title: " + title().orEmpty() + "\nsummary: " + summary().orEmpty() + "\n" + content
+    override fun indexableContent() = listOfNotNull(title(), summary(), content).joinToString("\n")
 
     override fun eventHints(): List<EventIdHint> {
         val pinnedEvents = pinned()

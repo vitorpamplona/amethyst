@@ -66,7 +66,7 @@ class HighlightEvent(
     AddressHintProvider,
     PubKeyHintProvider,
     SearchableEvent {
-    override fun indexableContent() = "comment: " + comment() + "\ncontext: " + context() + "\n" + content
+    override fun indexableContent() = listOfNotNull(comment(), context(), content).joinToString("\n")
 
     override fun eventHints(): List<EventIdHint> {
         val eHints = tags.mapNotNull(ETag::parseAsHint)

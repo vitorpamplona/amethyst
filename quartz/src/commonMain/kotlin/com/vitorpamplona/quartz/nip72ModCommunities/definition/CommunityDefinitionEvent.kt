@@ -58,7 +58,7 @@ class CommunityDefinitionEvent(
     AddressHintProvider,
     PubKeyHintProvider,
     SearchableEvent {
-    override fun indexableContent() = "name: " + name().orEmpty() + "\ndescription: " + description().orEmpty() + "\nrules: " + rules().orEmpty() + "\n" + content
+    override fun indexableContent() = listOfNotNull(name(), description(), rules(), content).joinToString("\n")
 
     override fun eventHints() = tags.mapNotNull(ETag::parseAsHint) + tags.mapNotNull(QTag::parseEventAsHint)
 
