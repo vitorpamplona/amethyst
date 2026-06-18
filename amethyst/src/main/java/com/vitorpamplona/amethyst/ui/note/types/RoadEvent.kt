@@ -246,7 +246,7 @@ private fun CategoryPill(
     Surface(
         modifier = modifier,
         color = color,
-        contentColor = readableOn(color),
+        contentColor = if (color.luminance() > 0.55f) Color.Black else Color.White,
         shape = RoundedCornerShape(50),
         shadowElevation = 3.dp,
     ) {
@@ -257,19 +257,6 @@ private fun CategoryPill(
             fontWeight = FontWeight.SemiBold,
         )
     }
-}
-
-/**
- * Picks black or white — whichever has the higher WCAG contrast ratio against
- * [background]. A plain luminance threshold mis-handles mid-tone colors (e.g.
- * turquoise/gray), leaving white text barely legible; the contrast ratio does
- * not.
- */
-private fun readableOn(background: Color): Color {
-    val l = background.luminance()
-    val contrastWithBlack = (l + 0.05f) / 0.05f
-    val contrastWithWhite = 1.05f / (l + 0.05f)
-    return if (contrastWithBlack >= contrastWithWhite) Color.Black else Color.White
 }
 
 /**
