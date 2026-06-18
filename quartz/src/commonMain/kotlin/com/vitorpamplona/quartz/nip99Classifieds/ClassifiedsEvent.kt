@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip23LongContent.tags.PublishedAtTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.TitleTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import com.vitorpamplona.quartz.nip99Classifieds.tags.ConditionTag
 import com.vitorpamplona.quartz.nip99Classifieds.tags.LocationTag
@@ -52,7 +53,10 @@ class ClassifiedsEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    PublishedAtProvider {
+    PublishedAtProvider,
+    SearchableEvent {
+    override fun indexableContent() = "title: " + title().orEmpty() + "\nsummary: " + summary().orEmpty() + "\n" + content
+
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
     fun image() = tags.firstNotNullOfOrNull(ImageTag::parse)

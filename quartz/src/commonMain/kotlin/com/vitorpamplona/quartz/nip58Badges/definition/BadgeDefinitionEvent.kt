@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.tags.ImageTag
 import com.vitorpamplona.quartz.nip58Badges.definition.tags.ThumbTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -40,7 +41,10 @@ class BadgeDefinitionEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() = "name: " + name().orEmpty() + "\ndescription: " + description().orEmpty() + "\n" + content
+
     fun name() = tags.badgeName()
 
     fun image() = tags.badgeImageUrl()

@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 
 /**
  * Kind 31890: Feed Definition Event (draft NIP, PR #1181).
@@ -40,7 +41,10 @@ class FeedDefinitionEvent(
     tags: TagArray,
     content: String,
     sig: HexKey,
-) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() = "title: " + title().orEmpty()
+
     fun title(): String? = tags.firstOrNull { it.size >= 2 && it[0] == "title" }?.get(1)
 
     fun emoji(): String? = tags.firstOrNull { it.size >= 2 && it[0] == "emoji" }?.get(1)

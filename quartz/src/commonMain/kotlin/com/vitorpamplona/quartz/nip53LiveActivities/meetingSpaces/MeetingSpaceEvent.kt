@@ -33,6 +33,7 @@ import com.vitorpamplona.quartz.nip23LongContent.tags.ImageTag
 import com.vitorpamplona.quartz.nip23LongContent.tags.SummaryTag
 import com.vitorpamplona.quartz.nip31Alts.AltTag
 import com.vitorpamplona.quartz.nip31Alts.alt
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.EndpointUrlTag
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.RelayListTag
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.RoomNameTag
@@ -52,7 +53,10 @@ class MeetingSpaceEvent(
     content: String,
     sig: HexKey,
 ) : BaseAddressableEvent(id, pubKey, createdAt, KIND, tags, content, sig),
-    PubKeyHintProvider {
+    PubKeyHintProvider,
+    SearchableEvent {
+    override fun indexableContent() = "room: " + room().orEmpty() + "\nsummary: " + summary().orEmpty() + "\n" + content
+
     override fun pubKeyHints() = tags.mapNotNull(ParticipantTag::parseAsHint)
 
     override fun linkedPubKeys() = tags.mapNotNull(ParticipantTag::parseKey)

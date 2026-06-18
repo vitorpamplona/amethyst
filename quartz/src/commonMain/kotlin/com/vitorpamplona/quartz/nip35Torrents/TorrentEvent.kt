@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.nip35Torrents.tags.FileTag
 import com.vitorpamplona.quartz.nip35Torrents.tags.InfoHashTag
 import com.vitorpamplona.quartz.nip35Torrents.tags.TrackerTag
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
+import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.UrlEncoder
 
@@ -49,7 +50,10 @@ class TorrentEvent(
     tags: Array<Array<String>>,
     content: String,
     sig: HexKey,
-) : Event(id, pubKey, createdAt, KIND, tags, content, sig) {
+) : Event(id, pubKey, createdAt, KIND, tags, content, sig),
+    SearchableEvent {
+    override fun indexableContent() = "title: " + title().orEmpty() + "\n" + content
+
     fun title() = tags.firstNotNullOfOrNull(TitleTag::parse)
 
     fun btih() = tags.firstNotNullOfOrNull(BtihTag::parse)
