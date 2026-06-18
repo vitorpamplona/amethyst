@@ -175,6 +175,7 @@ class RelayPool(
         if (atLeastOne) {
             _availableRelays.update { relays.keys() }
         }
+        Log.d("BgRelayTrace") { "updatePool done — cacheConnected=${connectedRelaysCount()}, flowConnected=${_connectedRelays.value.size}, inPool=${relays.size()}" }
     }
 
     fun addRelay(relay: NormalizedRelayUrl): IRelayClient {
