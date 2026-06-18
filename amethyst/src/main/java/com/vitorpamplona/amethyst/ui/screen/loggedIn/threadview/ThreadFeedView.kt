@@ -223,7 +223,6 @@ import com.vitorpamplona.amethyst.ui.theme.EditFieldTrailingIconModifier
 import com.vitorpamplona.amethyst.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.ui.theme.PaddingHorizontal12Modifier
 import com.vitorpamplona.amethyst.ui.theme.Size20dp
-import com.vitorpamplona.amethyst.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.ui.theme.StdHorzSpacer
@@ -523,7 +522,7 @@ private fun CollapsedNoteCompose(
                     .padding(horizontal = 10.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            NoteAuthorPicture(baseNote = baseNote, size = Size25dp, accountViewModel = accountViewModel, nav = nav)
+            NoteAuthorPicture(baseNote = baseNote, size = Size55dp, accountViewModel = accountViewModel, nav = nav)
 
             Spacer(modifier = StdHorzSpacer)
 
