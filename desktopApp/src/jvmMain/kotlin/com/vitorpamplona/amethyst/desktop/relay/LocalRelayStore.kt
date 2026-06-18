@@ -37,14 +37,15 @@ import java.io.File
 
 class LocalRelayStore(
     private val scope: CoroutineScope,
+    private val homeDir: File = File(System.getProperty("user.home")),
 ) : AutoCloseable {
     companion object {
         val LOCAL_RELAY_URL: NormalizedRelayUrl = NormalizedRelayUrl("ws://localhost/amethyst-local/")
-
-        private fun dbDir(pubKeyHex: String): File = File(System.getProperty("user.home"), ".amethyst/accounts/${pubKeyHex.take(8)}")
-
-        fun dbFile(pubKeyHex: String): File = File(dbDir(pubKeyHex), "events.db")
     }
+
+    private fun dbDir(pubKeyHex: String): File = File(homeDir, ".amethyst/accounts/${pubKeyHex.take(8)}")
+
+    fun dbFile(pubKeyHex: String): File = File(dbDir(pubKeyHex), "events.db")
 
     private val lock = Any()
 

@@ -18,29 +18,33 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.network
+package com.vitorpamplona.amethyst.desktop.testrelay
 
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.server.NostrServer
+import com.vitorpamplona.quartz.nip01Core.relay.server.inprocess.InProcessWebSocket
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 
 /**
- * Desktop-specific relay connection manager that configures OkHttp for websockets.
- * Now Tor-aware: passes the DesktopHttpClient's getHttpClient which selects
- * proxy or direct client per relay URL based on Tor settings.
+ * Phase 2.1 of the launch-optimization plan: a [WebsocketBuilder] that routes
+ * every connection to an in-process [NostrServer] via [InProcessWebSocket],
+ * skipping the network entirely.
+ *
+ * Lives in `desktopApp/src/jvmTest` rather than `:quartz/src/testFixtures` so
+ * we avoid the KMP + `java-test-fixtures` interaction documented as Risk #1
+ * in the plan. Promote to a shared fixtures module only when Android picks
+ * up the same harness.
+ *
+ * See desktopApp/plans/2026-06-17-feat-app-launch-optimization-plan.md
+ * § Phase 2.1.
  */
-open class DesktopRelayConnectionManager : RelayConnectionManager {
-    /** Production constructor: wires OkHttp via the Tor-aware [DesktopHttpClient]. */
-    constructor(httpClient: DesktopHttpClient) : super(
-        websocketBuilder = BasicOkHttpWebSocket.Builder(httpClient::getHttpClient),
-    )
-
-    /**
-     * Test-only constructor: substitute a custom [WebsocketBuilder], e.g. the
-     * in-process one wired by `LaunchTestOverrides`. Kept on the production
-     * class (rather than a `desktopApp/jvmTest` subclass) so the existing
-     * `LocalRelayManager` composition local — typed as
-     * `DesktopRelayConnectionManager?` and consumed widely across screens —
-     * does not need to be relaxed.
-     */
-    constructor(websocketBuilder: WebsocketBuilder) : super(websocketBuilder)
+class InProcessWebsocketBuilder(
+    private val server: NostrServer,
+) : WebsocketBuilder {
+    override fun build(
+        url: NormalizedRelayUrl,
+        out: WebSocketListener,
+    ): WebSocket = InProcessWebSocket(server, out)
 }
