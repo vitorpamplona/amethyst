@@ -53,7 +53,7 @@ import com.vitorpamplona.amethyst.service.images.ImageCacheFactory
 import com.vitorpamplona.amethyst.service.images.ImageLoaderSetup
 import com.vitorpamplona.amethyst.service.images.ThumbnailDiskCache
 import com.vitorpamplona.amethyst.service.localStore.LocalEventStore
-import com.vitorpamplona.amethyst.service.localStore.LocalRelayWebsocketBuilder
+import com.vitorpamplona.amethyst.service.localStore.LocalRelayBuilder
 import com.vitorpamplona.amethyst.service.location.LocationState
 import com.vitorpamplona.amethyst.service.notifications.AlwaysOnNotificationServiceManager
 import com.vitorpamplona.amethyst.service.notifications.NotificationDispatcher
@@ -95,6 +95,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayLogger
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.stats.RelayReqStats
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip03Timestamp.VerificationStateCache
 import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
@@ -491,13 +492,14 @@ class AppModules(
             scope = applicationIOScope,
         )
 
-    // Provides a relay pool. The websocket builder is wrapped so connections to
-    // the local relay are served from SQLite in-process; all other relays dial
-    // over the network as usual.
+    // Provides a relay pool. The relay builder is wrapped so the local URL is
+    // backed by a LocalStoreRelayClient (served straight from SQLite, no socket);
+    // every other URL is a normal websocket-backed relay.
     val client: INostrClient =
         NostrClient(
-            LocalRelayWebsocketBuilder(websocketBuilder, localEventStore),
-            applicationIOScope,
+            websocketBuilder = websocketBuilder,
+            parentScope = applicationIOScope,
+            relayBuilder = LocalRelayBuilder(BasicRelayBuilder(websocketBuilder), localEventStore),
         )
 
     // Self-heals the "Tor Active but every circuit dead" state the lifecycle watchdogs can't

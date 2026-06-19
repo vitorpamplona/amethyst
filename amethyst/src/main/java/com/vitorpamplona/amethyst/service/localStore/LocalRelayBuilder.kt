@@ -20,37 +20,32 @@
  */
 package com.vitorpamplona.amethyst.service.localStore
 
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.RelayBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.local.LocalStoreRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.server.inprocess.InProcessWebSocket
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 
 /**
- * [WebsocketBuilder] that turns the on-device [LocalEventStore] into just
- * another relay in the pool. Connections to [LocalEventStore.LOCAL_RELAY_URL]
- * are served in-process (no socket) by an [InProcessWebSocket] over the local
- * relay's [NostrServer][com.vitorpamplona.quartz.nip01Core.relay.server.NostrServer];
- * every other URL is delegated to the real (OkHttp) transport unchanged.
+ * [RelayBuilder] that makes the on-device [LocalEventStore] just another relay
+ * in the pool: [LocalEventStore.LOCAL_RELAY_URL] is served by a
+ * [LocalStoreRelayClient] straight from SQLite (no socket, no JSON), and every
+ * other URL is delegated to the real (websocket) [delegate] unchanged.
  *
- * Wrap the app's normal websocket builder with this before handing it to
- * [com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient] — from then on
- * any subscription/publish that includes the local URL is answered from SQLite.
+ * Wrap the app's default relay builder with this before handing it to
+ * [com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient].
  */
-class LocalRelayWebsocketBuilder(
-    private val delegate: WebsocketBuilder,
+class LocalRelayBuilder(
+    private val delegate: RelayBuilder,
     private val localStore: LocalEventStore,
-) : WebsocketBuilder {
+) : RelayBuilder {
     override fun build(
         url: NormalizedRelayUrl,
-        out: WebSocketListener,
-    ): WebSocket =
+        listener: RelayConnectionListener,
+    ): IRelayClient =
         if (url == LocalEventStore.LOCAL_RELAY_URL) {
-            InProcessWebSocket(localStore.server, out)
+            LocalStoreRelayClient(url, localStore.store, listener, localStore.scope)
         } else {
-            delegate.build(url, out)
+            delegate.build(url, listener)
         }
-
-    // The in-process relay is always reachable; defer to the real transport otherwise.
-    override fun canConnect(url: NormalizedRelayUrl): Boolean = url == LocalEventStore.LOCAL_RELAY_URL || delegate.canConnect(url)
 }

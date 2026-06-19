@@ -21,10 +21,11 @@
 package com.vitorpamplona.amethyst.service.localStore
 
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.RelayBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip85TrustedAssertions.users.ContactCardEvent
 import kotlinx.coroutines.CoroutineScope
@@ -51,66 +52,48 @@ class LocalEventStoreTest {
     }
 
     @Test
-    fun routesLocalUrlInProcessAndDelegatesEverythingElse() {
+    fun delegatesNonLocalUrlsToTheRealBuilder() {
         val other = NormalizedRelayUrl("wss://relay.example.com/")
-        val sentinel = NoopWebSocket()
+        val sentinel = NoopRelayClient(other)
         val delegate =
-            object : WebsocketBuilder {
+            object : RelayBuilder {
                 var builtUrl: NormalizedRelayUrl? = null
 
                 override fun build(
                     url: NormalizedRelayUrl,
-                    out: WebSocketListener,
-                ): WebSocket {
+                    listener: RelayConnectionListener,
+                ): IRelayClient {
                     builtUrl = url
                     return sentinel
                 }
-
-                // delegate refuses everything — proves the local relay bypasses it.
-                override fun canConnect(url: NormalizedRelayUrl) = false
             }
 
-        // DB stays closed: nothing here touches the local relay's server.
+        // DB stays closed: building a non-local relay never touches localStore.store.
         val store = LocalEventStore(File("unused/events.db"), CoroutineScope(Dispatchers.Unconfined))
-        val builder = LocalRelayWebsocketBuilder(delegate, store)
+        val builder = LocalRelayBuilder(delegate, store)
 
         // A non-local URL is delegated to the real transport untouched.
-        assertSame(sentinel, builder.build(other, NoopListener))
+        assertSame(sentinel, builder.build(other, NoopConnectionListener))
         assertEquals(other, delegate.builtUrl)
-
-        // The local relay is always reachable even though the delegate refuses.
-        assertTrue(builder.canConnect(LocalEventStore.LOCAL_RELAY_URL))
-        // Non-local connectivity defers to the delegate.
-        assertFalse(builder.canConnect(other))
     }
 
-    private object NoopListener : WebSocketListener {
-        override fun onOpen(
-            pingMillis: Int,
-            compression: Boolean,
-        ) = Unit
+    private object NoopConnectionListener : RelayConnectionListener
 
-        override fun onMessage(text: String) = Unit
-
-        override fun onClosed(
-            code: Int,
-            reason: String,
-        ) = Unit
-
-        override fun onFailure(
-            t: Throwable,
-            code: Int?,
-            response: String?,
-        ) = Unit
-    }
-
-    private class NoopWebSocket : WebSocket {
-        override fun needsReconnect() = false
-
+    private class NoopRelayClient(
+        override val url: NormalizedRelayUrl,
+    ) : IRelayClient {
         override fun connect() = Unit
 
-        override fun disconnect() = Unit
+        override fun needsToReconnect() = false
 
-        override fun send(msg: String) = true
+        override fun connectAndSyncFiltersIfDisconnected(ignoreRetryDelays: Boolean) = Unit
+
+        override fun isConnected() = false
+
+        override fun sendOrConnectAndSync(cmd: Command) = Unit
+
+        override fun sendIfConnected(cmd: Command) = Unit
+
+        override fun disconnect() = Unit
     }
 }

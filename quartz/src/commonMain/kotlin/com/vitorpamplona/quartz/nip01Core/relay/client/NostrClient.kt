@@ -29,6 +29,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.pool.PoolRequests
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayPool
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.RelayBuilder
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CloseCmd
@@ -80,10 +82,19 @@ import kotlinx.coroutines.launch
 class NostrClient(
     private val websocketBuilder: WebsocketBuilder,
     private val parentScope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+    /**
+     * Decides what kind of [IRelayClient] backs each URL. Defaults to a
+     * websocket-backed [BasicRelayBuilder] over [websocketBuilder] — the prior
+     * behaviour. Pass a custom builder to serve specific URLs from another
+     * transport (e.g. an on-device store via
+     * [com.vitorpamplona.quartz.nip01Core.relay.client.single.local.LocalStoreRelayClient])
+     * while delegating the rest to the default.
+     */
+    relayBuilder: RelayBuilder = BasicRelayBuilder(websocketBuilder),
 ) : INostrClient,
     RelayConnectionListener,
     AutoCloseable {
-    private val relayPool: RelayPool = RelayPool(websocketBuilder, this)
+    private val relayPool: RelayPool = RelayPool(relayBuilder, this)
 
     /** Scope for all subscriptions. */
     private val scope = CoroutineScope(parentScope.coroutineContext + SupervisorJob())

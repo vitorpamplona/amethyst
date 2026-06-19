@@ -24,9 +24,6 @@ import com.vitorpamplona.amethyst.commons.service.BasicBundledInsert
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.server.NostrServer
-import com.vitorpamplona.quartz.nip01Core.relay.server.policies.KindAllowDenyPolicy
-import com.vitorpamplona.quartz.nip01Core.relay.server.policies.VerifyPolicy
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip17Dm.settings.ChatMessageRelayListEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
@@ -49,37 +46,38 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 /**
- * On-device SQLite relay that permanently keeps the user-directory events the
+ * On-device SQLite store that permanently keeps the user-directory events the
  * app needs to render people: kind 0 (profile metadata), relay lists (NIP-65,
  * DM, search and the NIP-51 relay lists) and trusted assertions (NIP-85), for
  * every user we see.
  *
- * It is exposed to the rest of the app as **just another relay**: an in-process
- * [NostrServer] over the SQLite store is plugged into the normal
- * [com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient] via
- * [LocalRelayWebsocketBuilder], so any subscription/publish targeting
- * [LOCAL_RELAY_URL] is answered straight from SQLite without ever touching a
- * websocket. Callers query it with ordinary REQ filters and get EVENT/EOSE back.
+ * The [store] is exposed to the relay client as just another relay via
+ * [LocalRelayBuilder] +
+ * [com.vitorpamplona.quartz.nip01Core.relay.client.single.local.LocalStoreRelayClient],
+ * so any [com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient]
+ * subscription/publish targeting [LOCAL_RELAY_URL] is answered straight from
+ * SQLite — no socket, no relay-server engine.
  *
- * The store is populated by a write-through from [com.vitorpamplona.amethyst.service.relayClient.CacheClientConnector]:
- * every persistable event that arrives from a remote relay is also inserted
- * here. Because all persisted kinds are replaceable/addressable, the store keeps
- * exactly one current version per (kind, pubkey[, d-tag]), so it stays small
- * even though it never prunes by age. NIP-40 expiration and NIP-09 deletions are
- * still honoured by the store's own triggers.
+ * It is populated by a write-through from
+ * [com.vitorpamplona.amethyst.service.relayClient.CacheClientConnector]: every
+ * persistable event arriving from a remote relay is also inserted here. Because
+ * all persisted kinds are replaceable/addressable, the store keeps exactly one
+ * current version per (kind, pubkey[, d-tag]), so it stays small even though it
+ * never prunes by age. NIP-40 expiration and NIP-09 deletions are honoured by
+ * the store's own triggers.
  *
  * A single global DB is used (not per-account): this is public, cross-account
  * data, and both the relay client and the cache are app-wide singletons.
  */
 class LocalEventStore(
     private val dbFile: File,
-    private val scope: CoroutineScope,
+    val scope: CoroutineScope,
 ) : AutoCloseable {
     companion object {
         /** Stable URL clients use to reach this relay. */
         val LOCAL_RELAY_URL = NormalizedRelayUrl("ws://localhost/amethyst-local/")
 
-        /** The only kinds this relay keeps. Everything else is ignored/rejected. */
+        /** The only kinds this store keeps. Everything else is ignored. */
         val PERSISTED_KINDS: Set<Int> =
             setOf(
                 MetadataEvent.KIND, // 0
@@ -104,24 +102,9 @@ class LocalEventStore(
         fun shouldPersist(event: Event): Boolean = event.kind in PERSISTED_KINDS
     }
 
-    // One EventStore instance shared by the relay server and the write-through.
-    private val backendDelegate = lazy { openStore() }
-    private val backend by backendDelegate
-
-    /**
-     * In-process relay over [backend]. REQ/COUNT/NIP-50 reads are served from
-     * SQLite; EVENT ingest from the socket is verified and restricted to the
-     * persisted kinds. Lazily built on first use (first connection or write) so
-     * the DB is opened off the main thread.
-     */
-    private val serverDelegate =
-        lazy {
-            NostrServer(
-                store = backend,
-                policyBuilder = { VerifyPolicy + KindAllowDenyPolicy(allow = PERSISTED_KINDS) },
-            )
-        }
-    val server by serverDelegate
+    // Opened lazily (off the main thread via warmup, or on first relay use).
+    private val storeDelegate = lazy { openStore() }
+    val store: EventStore by storeDelegate
 
     // 250ms batching window so a burst of profiles collapses into one transaction.
     private val writeBundler = BasicBundledInsert<Event>(delay = 250, dispatcher = Dispatchers.IO, scope = scope)
@@ -138,12 +121,11 @@ class LocalEventStore(
         }
     }
 
-    /** Opens the DB and the relay server off the main thread before first use. */
+    /** Opens the DB off the main thread before its first relay query/write. */
     fun warmup() {
         scope.launch {
             try {
-                server
-                backend.deleteExpiredEvents()
+                store.deleteExpiredEvents()
             } catch (e: Exception) {
                 Log.w("LocalEventStore") { "Warmup failed: ${e.message}" }
             }
@@ -161,19 +143,15 @@ class LocalEventStore(
             // batchInsert uses per-row savepoints, so a UNIQUE-constraint clash
             // (an older replaceable losing to a newer one) skips that row instead
             // of failing the whole batch.
-            backend.batchInsert(batch.toList())
+            store.batchInsert(batch.toList())
         }
     }
 
     override fun close() {
-        runCatching {
-            // NostrServer.close() also closes the underlying store.
-            if (serverDelegate.isInitialized()) {
-                server.close()
-            } else if (backendDelegate.isInitialized()) {
-                backend.close()
-            }
-        }.onFailure { Log.w("LocalEventStore") { "Close error: ${it.message}" } }
+        if (storeDelegate.isInitialized()) {
+            runCatching { store.close() }
+                .onFailure { Log.w("LocalEventStore") { "Close error: ${it.message}" } }
+        }
     }
 
     private fun deleteDbFiles(path: String) {

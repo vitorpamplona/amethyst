@@ -23,11 +23,10 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.pool
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.EmptyConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.single.RelayBuilder
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -55,7 +54,7 @@ import kotlinx.coroutines.flow.update
  * - Maintaining optimal relay connections (updatePool/addRelay/removeRelay methods)
  */
 class RelayPool(
-    val websocketBuilder: WebsocketBuilder,
+    val relayBuilder: RelayBuilder,
     val listener: RelayConnectionListener = EmptyConnectionListener,
 ) : RelayConnectionListener {
     private val relays = LargeCache<NormalizedRelayUrl, IRelayClient>()
@@ -68,12 +67,7 @@ class RelayPool(
 
     fun getRelay(url: NormalizedRelayUrl): IRelayClient? = relays.get(url)
 
-    private fun createNewRelay(url: NormalizedRelayUrl) =
-        BasicRelayClient(
-            url = url,
-            socketBuilder = websocketBuilder,
-            listener = this,
-        )
+    private fun createNewRelay(url: NormalizedRelayUrl) = relayBuilder.build(url, this)
 
     fun reconnectIfNeedsTo(ignoreRetryDelays: Boolean = false) {
         relays.forEach { url, relay ->
