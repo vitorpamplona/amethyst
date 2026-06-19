@@ -2,6 +2,7 @@
 
 Release notes for Amethyst, one file per version. Files are named with zero-padded version numbers so they sort correctly in any file browser. Use [`TEMPLATE.md`](TEMPLATE.md) as the starting point for the next release.
 
+- [v1.12.6 — Napplets, Static Sites & Cashu Multi-Mint](v1.12.06.md)
 - [v1.12.5 — macOS Desktop Signing Fix (cont.)](v1.12.05.md)
 - [v1.12.4 — macOS Desktop Signing Fix](v1.12.04.md)
 - [v1.12.3 — Relay Latency Health & a macOS Notarization Fix](v1.12.03.md)
