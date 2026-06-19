@@ -106,10 +106,17 @@ class LiveStreamsFeedFilter(
         val allParticipants =
             items.associate { it to counter.countFollowsThatParticipateOn(it, null) }
 
+        // Snapshots the status order once per item. convertStatusToOrder reads the
+        // OnlineChecker cache and the moving five-minute window, both of which can change
+        // mid-sort (a background online check can update the cache). Reading it lazily inside
+        // the comparator makes the ordering unstable and TimSort throws
+        // "Comparison method violates its general contract!".
+        val statusOrders = items.associateWith { convertStatusToOrder(it.event) }
+
         return items
             .sortedWith(
                 compareBy(
-                    { convertStatusToOrder(it.event) },
+                    { statusOrders[it] },
                     { participantCounts[it] },
                     { allParticipants[it] },
                     {
