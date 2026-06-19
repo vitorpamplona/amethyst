@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
+import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -64,7 +64,7 @@ class ChatroomListKnownFeedFilter(
                         .getOrCreatePublicChatChannel(channelId)
                         .notes
                         .filter { _, it -> account.isAcceptable(it) && it.event != null }
-                        .sortedWith(DefaultFeedOrder)
+                        .sortedByDefaultFeedOrder()
                         .firstOrNull()
                 }
 
@@ -76,7 +76,7 @@ class ChatroomListKnownFeedFilter(
                         .getOrCreateEphemeralChannel(it)
                         .notes
                         .filter { _, it -> account.isAcceptable(it) && it.event != null }
-                        .sortedWith(DefaultFeedOrder)
+                        .sortedByDefaultFeedOrder()
                         .firstOrNull()
                 }
 
@@ -264,12 +264,19 @@ class ChatroomListKnownFeedFilter(
 
     override fun sort(items: Set<Note>): List<Note> {
         val pinned = account.settings.syncedSettings.chats.pinnedChatrooms.value
-        if (pinned.isEmpty()) return items.sortedWith(DefaultFeedOrder)
+        if (pinned.isEmpty()) return items.sortedByDefaultFeedOrder()
 
         val me = account.userProfile().pubkeyHex
-        return items.sortedWith(
-            compareByDescending<Note> { isPinned(it, me, pinned) }.then(DefaultFeedOrder),
-        )
+        // Snapshots isPinned + createdAt once per note so the comparator stays consistent
+        // even if another thread swaps a Note's event mid-sort. Avoids TimSort's
+        // "Comparison method violates its general contract!" IllegalArgumentException.
+        return items
+            .map { Triple(it, isPinned(it, me, pinned), it.createdAt() ?: 0L) }
+            .sortedWith(
+                compareByDescending<Triple<Note, Boolean, Long>> { it.second }
+                    .thenByDescending { it.third }
+                    .thenBy { it.first.idHex },
+            ).map { it.first }
     }
 
     private fun isPinned(

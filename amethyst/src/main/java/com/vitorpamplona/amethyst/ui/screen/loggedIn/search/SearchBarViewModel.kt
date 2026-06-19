@@ -38,7 +38,7 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.User
 import com.vitorpamplona.amethyst.service.relayClient.searchCommand.SearchQueryState
-import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
+import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.ui.navigation.routes.Route
 import com.vitorpamplona.amethyst.ui.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.ui.note.creators.userSuggestions.userUriPrefixes
@@ -276,11 +276,11 @@ class SearchBarViewModel(
                 }
 
                 SearchSortOrder.RELEVANCE, SearchSortOrder.NEWEST -> {
-                    filtered.sortedWith(DefaultFeedOrder)
+                    filtered.sortedByDefaultFeedOrder()
                 }
 
                 else -> {
-                    filtered.sortedWith(DefaultFeedOrder)
+                    filtered.sortedByDefaultFeedOrder()
                 }
             }
         }.flowOn(Dispatchers.IO)

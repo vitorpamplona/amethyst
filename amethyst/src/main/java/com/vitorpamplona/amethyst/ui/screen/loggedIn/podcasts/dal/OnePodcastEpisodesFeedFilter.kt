@@ -24,14 +24,14 @@ import com.vitorpamplona.amethyst.model.Account
 import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
+import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 
 /**
  * Every episode of a single podcast. Per NIP-F4 each podcast is its own keypair, so all
  * episodes (kind 54) of a show are authored by [podcastPubkey]. Episodes are regular events,
- * so they live in `LocalCache.notes`. Most-recent-first via [DefaultFeedOrder].
+ * so they live in `LocalCache.notes`. Most-recent-first via [sortedByDefaultFeedOrder].
  */
 class OnePodcastEpisodesFeedFilter(
     val podcastPubkey: HexKey,
@@ -58,5 +58,5 @@ class OnePodcastEpisodesFeedFilter(
             account.isAcceptable(note)
     }
 
-    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
+    override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()
 }

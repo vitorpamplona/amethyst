@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.model.LocalCache
 import com.vitorpamplona.amethyst.model.Note
 import com.vitorpamplona.amethyst.model.filterIntoSet
 import com.vitorpamplona.amethyst.ui.dal.AdditiveFeedFilter
-import com.vitorpamplona.amethyst.ui.dal.DefaultFeedOrder
+import com.vitorpamplona.amethyst.ui.dal.sortedByDefaultFeedOrder
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
 
 class WebBookmarkFeedFilter(
@@ -52,5 +52,5 @@ class WebBookmarkFeedFilter(
         return noteEvent is WebBookmarkEvent && noteEvent.pubKey == account.userProfile().pubkeyHex
     }
 
-    override fun sort(items: Set<Note>): List<Note> = items.sortedWith(DefaultFeedOrder)
+    override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()
 }
