@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuToken
 import com.vitorpamplona.amethyst.commons.model.nip60Cashu.Proof
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip60Cashu.token.V4Token
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.serialization.ExperimentalSerializationApi
