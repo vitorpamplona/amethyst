@@ -16,6 +16,10 @@
         <item quantity="one">%1$d asset egybecsomagolva</item>
         <item quantity="other">%1$d asset egybecsomagolva</item>
     </plurals>
+    <plurals name="thread_collapsed_reply_count">
+        <item quantity="one">+%1$d\nválasz</item>
+        <item quantity="other">+%1$d\nválasz</item>
+    </plurals>
     <string name="post_not_found">Az esemény épp betöltődik vagy nem található az átjátszólistában</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">Csatorna profilképe</string>
@@ -443,6 +447,7 @@
     <string name="quick_action_share_browser_link">Böngésző-hivatkozás megosztása</string>
     <string name="quick_action_share">Megosztás</string>
     <string name="share_as_image">Megosztás képként</string>
+    <string name="share_as_image_url">Kép webcímének megosztása</string>
     <string name="share_as_image_generating">Előnézet előállítása…</string>
     <string name="share_as_image_watermark">Megosztva az Amethysten keresztül·</string>
     <string name="quick_action_copy_user_id">Szerző-azonosító</string>
@@ -658,7 +663,7 @@
     <string name="workout_distance">Távolság</string>
     <string name="workout_pace">Tempó</string>
     <string name="workout_speed">Sebesség</string>
-    <string name="workout_elevation">Magasság</string>
+    <string name="workout_elevation">Magasságkülönbség</string>
     <string name="workout_elevation_loss">Szintcsökkenés</string>
     <string name="workout_calories">Kalória</string>
     <string name="workout_steps">Lépések</string>
@@ -1327,6 +1332,14 @@
     <string name="call_settings_turn_credential">Hitelesítési adatok</string>
     <string name="always_on_notif_channel_description">Aktív kapcsolatot tart fenn a beérkező üzenetek átjátszóival a valós idejű értesítések érdekében</string>
     <string name="always_on_notif_title">Amethyst értesítések aktíválva</string>
+    <plurals name="always_on_notif_connected">
+        <item quantity="one">Kapcsolódva %1$d beérkező üzenetátjátszóhoz</item>
+        <item quantity="other">Kapcsolódva %1$d beérkező üzenetátjátszóhoz</item>
+    </plurals>
+    <plurals name="always_on_notif_connected_foreground">
+        <item quantity="one">Kapcsolódva %1$d átjátszóhoz</item>
+        <item quantity="other">Kapcsolódva %1$d átjátszóhoz</item>
+    </plurals>
     <string name="always_on_notif_connecting">Kapcsolódás a beérkező üzenetátjátszókhoz\u2026</string>
     <string name="always_on_notif_setting_title">Folyamatos értesítési szolgáltatás</string>
     <string name="always_on_notif_setting_description">Folyamatos kapcsolatot tart fenn a beérkező üzenetek átjátszóival az értesítések azonnali kézbesítése érdekében. Megjeleníti a folyamatban lévő értesítéseket. Több akkumulátort fogyaszt, de így biztosan nem marad le egyetlen üzenetről sem.</string>
@@ -1605,6 +1618,22 @@
     <string name="music_track_uploading">Feltöltés…</string>
     <string name="music_track_uploading_banner">Borító és hangfájl feltöltése, majd közzététel. Ez akkor is folytatódik, ha elhagyja a képernyőt.</string>
     <string name="music_track_upload_failed">Nem sikerült feltölteni: %1$s</string>
+    <string name="edit_music_playlist">Lejátszási lista szerkesztése</string>
+    <string name="music_playlist_edit_action">Lejátszási lista szerkesztése</string>
+    <string name="music_playlist_title_label">Cím</string>
+    <string name="music_playlist_description_label">Leírás (nem kötelező)</string>
+    <string name="music_playlist_notes_label">Megjegyzés (nem kötelező)</string>
+    <string name="music_playlist_cover_upload_cta">Egy borítókép feltöltése</string>
+    <string name="music_playlist_cover_upload_hint">Válasszon egy négyzet alakú képet a lejátszási lista borítóképének.</string>
+    <string name="music_playlist_private_hint">Rejtse el ezt a lejátszási listát a nyilvános profiljáról.</string>
+    <string name="music_playlist_collaborative_hint">Engedélyezze, hogy mások is hozzáadhassanak számokat ehhez a lejátszási listához.</string>
+    <string name="music_playlist_delete">Lejátszási lista törlése</string>
+    <string name="music_playlist_delete_confirm">Közzéteszi a NIP-09 szerinti törlést ehhez a lejátszási listához?</string>
+    <string name="music_playlist_uploading_banner">Borítókép feltöltése és közzététele. Ez a folyamat akkor is folytatódik, ha elhagyja ezt a képernyőt.</string>
+    <string name="music_playlist_no_tracks_hint">Még nincsenek számok. Adjon hozzá számokat egy dal menüjéből a „Hozzáadás a lejátszási listához” gombbal.</string>
+    <string name="music_playlist_move_track_up">Szám mozgatása felfelé</string>
+    <string name="music_playlist_move_track_down">Szám mozgatása lefel</string>
+    <string name="music_playlist_remove_track">Szám eltávolítása a lejátszási listáról</string>
     <string name="loading_location">Helyszín betöltése…</string>
     <string name="lack_location_permissions">A helyszín-meghatározás nincs engedélyezve</string>
     <string name="add_sensitive_content_explainer">Hozzáadja az érzékeny tartalomra vonatkozó figyelmeztetést a tartalom megjelenítése előtt. Ez ideális bármilyen NSFW tartalom vagy olyan tartalom esetén, amelyet egyesek sértőnek vagy zavarónak találhatnak</string>
@@ -1924,6 +1953,7 @@
     <string name="cashu_mints">Mintek</string>
     <string name="cashu_mint_url">Mint webcíme</string>
     <string name="cashu_remove_mint">Mint eltávolítása</string>
+    <string name="cashu_add_mint">Mint hozzáadása</string>
     <string name="cashu_history">Előzmények</string>
     <string name="cashu_edit_wallet">Pénztárca szerkesztése</string>
     <string name="cashu_p2pk_section">Nutzap kulcs (speciális)</string>
@@ -1932,7 +1962,7 @@
     <string name="cashu_p2pk_autogen_warning_edit">Érvényteleníti a jelenlegi kulcshoz zárolt összes függőben lévő nutzapot.</string>
     <string name="cashu_p2pk_keep_current">Jelenlegi kulcs megtartása</string>
     <string name="cashu_p2pk_manual_label">P2PK privát kulcs (hex)</string>
-    <string name="wallet_edit_cashu_title">Cashu pénztárca szerkesztése</string>
+    <string name="wallet_edit_cashu_title">Mintek szerkesztése</string>
     <string name="wallet_save_changes">Módosítások mentése</string>
     <string name="cashu_mint_no_recs">Még nincsenek ajánlások</string>
     <string name="cashu_mint_recommended_by">Ajánlotta:</string>
@@ -1962,9 +1992,10 @@
     <string name="cashu_history_incoming">Fogadott</string>
     <string name="cashu_history_outgoing">Elküldött</string>
     <string name="cashu_settings_title">Cashu pénztárca beállításai</string>
-    <string name="cashu_settings_edit_wallet">Tárca adatainak szerkesztése</string>
-    <string name="cashu_settings_edit_wallet_subtitle">Mintek, nutzap kulcs</string>
+    <string name="cashu_settings_edit_wallet">Saját mintek</string>
+    <string name="cashu_settings_edit_wallet_subtitle">Adja hozzá vagy távolítsa el a pénztárcájában használt minteket.</string>
     <string name="cashu_settings_my_recommendations">Saját mint-ajánlások</string>
+    <string name="cashu_settings_recommendations_subtitle">Vállaljon nyilvánosan kezességet az Ön által megbízhatónak tartott Mintekért, és vonja vissza az ajánlásokat.</string>
     <string name="cashu_settings_no_recommendations">Még nem ajánlott egy mintet sem. Koppintson a felfelé mutató hüvelykujjra egy mint mellett, hogy nyilvánosan ajánlja azt.</string>
     <string name="cashu_settings_delete_recommendation">Ajánlás törlése</string>
     <string name="cashu_settings_delete_confirm_title">Visszavonja az ajánlást?</string>
@@ -1975,6 +2006,25 @@
     <string name="cashu_settings_restore_running">Mintek vizsgálata…</string>
     <string name="cashu_settings_restore_nothing_found">Nem található visszaállítható bizonyíték.</string>
     <string name="cashu_settings_restore_result">%1$s visszaállíttva %2$s bizonyítékon keresztül.</string>
+    <string name="cashu_settings_stop_nutzaps">Nutzapok fogadásának leállítása</string>
+    <string name="cashu_settings_stop_nutzaps_subtitle">Vonja vissza a kind:10019 eseményét, hogy mások ne küldhessenek Önnek több nutzapot. Az Ön pénztárcája és egyenlege változatlan marad.</string>
+    <string name="cashu_settings_stop_nutzaps_confirm_title">Leállítja a nutzapok fogadását?</string>
+    <string name="cashu_settings_stop_nutzaps_confirm_body">A nutzap-info eseményét egy üresre cseréljük, és kérni fogjuk a törlését. A továbbiakban nem fognak tudni nutzapot küldeni Önnek. Ezt a pénztárcája szerkesztésével bármikor visszakapcsolhatja. Ez az egyenlegét nem érinti.</string>
+    <string name="cashu_settings_recreate_key">Nutzap-kulcs újraelőállítása</string>
+    <string name="cashu_settings_recreate_key_subtitle">Egy teljesen új kulcs előállítása a nutzapok fogadásához. Ritkán van rá szükség - általában csak akkor, ha a jelenlegi kulcsa kiszivárgott. A régi kulcsára már elküldött, de még be nem váltott nutzapok elvesznek.</string>
+    <string name="cashu_settings_recreate_key_confirm_title">Újraelőállítja a nutzap-kulcsot?</string>
+    <string name="cashu_settings_recreate_key_confirm_body">Egy új P2PK kulcs kerül előállításra és közzétételre a kind:10019 és kind:17375 eseményeiben, megtartva a jelenlegi Minjeit. A küldők elkezdenek nutzapokat zárolni az új kulcshoz. A régi kulcsára már elküldött, de még be nem váltott nutzapok helyreállíthatatlanná válnak. Erre ritkán van szükség.</string>
+    <string name="cashu_settings_recreate_key_action">Kulcs újraelőállítása</string>
+    <string name="cashu_settings_import_key">Nutzap-kulcs importálása</string>
+    <string name="cashu_settings_import_key_subtitle">Cserélje le a nutzap-kulcsát egy beillesztett kulcsra - például a pénztárca biztonsági mentésből történő visszaállításához. Ritkán van rá szükség. A régi kulcsához zárolt nutzapok a továbbiakban nem lesznek beválthatók.</string>
+    <string name="cashu_settings_import_key_confirm_title">Importálja a nutzap-kulcsot?</string>
+    <string name="cashu_settings_import_key_confirm_body">Illessze be a nutzapok fogadásához használandó P2PK privát kulcsot (hex). A kind:10019 és kind:17375 eseményei újra közzé lesznek téve ezzel a kulccsal, megtartva a jelenlegi Minjeit. A jelenlegi kulcsához zárolt nutzapok többé nem lesznek beválthatók, kivéve, ha a kulcs megegyezik. Erre ritkán van szükség.</string>
+    <string name="cashu_settings_import_key_field">P2PK privát kulcs (hex)</string>
+    <string name="cashu_settings_import_key_action">Kulcs importálása</string>
+    <string name="cashu_settings_delete_wallet">Pénztárca törlése</string>
+    <string name="cashu_settings_delete_wallet_subtitle">Távolítsa el a pénztárcát és állítsa le a nutzapokat. A fennmaradó egyenleg helyreállíthatatlanná válhat.</string>
+    <string name="cashu_settings_delete_wallet_confirm_title">Törli ezt a pénztárcát?</string>
+    <string name="cashu_settings_delete_wallet_confirm_body">Ez a művelet a kind:17375 pénztárca és a kind:10019 nutzap-információ törlését kéri. Az ecash-igazolások nem törlődnek a Mintekből, de a pénztárca kulcsának eltűnésével a megmaradt egyenleg és a be nem váltott nutzapok helyreállíthatatlanná válhatnak. Győződjön meg arról, hogy először elköltötte vagy áthelyezte a pénzét. Ez a művelet nem vonható vissza.</string>
     <string name="cashu_pay_invoice">Számla kifizetése</string>
     <string name="cashu_get_quote">Árajánlat kérése</string>
     <string name="cashu_getting_quote">Árajánlat kérése a minttől…</string>
@@ -1993,6 +2043,7 @@
     <string name="cashu_done">Kész</string>
     <string name="cashu_requesting_invoice">Számla kérése a minttől…</string>
     <string name="cashu_waiting_for_payment">Várakozás a számla kifizetésére…</string>
+    <string name="cashu_checking_mint">Mint ellenőrzése…</string>
     <string name="cashu_completing_mint">Bizonyítékok kiállítása…</string>
     <string name="cashu_paying_invoice">Fizetés a minten keresztül…</string>
     <string name="cashu_building_token">Bizonyítékok cseréje…</string>
@@ -2933,6 +2984,23 @@
     </plurals>
     <string name="cashu_pending_quotes_subtitle">Koppintson a folytatáshoz és az állapot ellenőrzéséhez.</string>
     <string name="cashu_pending_quotes_resume">Folytatás</string>
+    <plurals name="cashu_untrusted_mint_title">
+        <item quantity="one">%1$d olyan Mintben lévő pénz, amelyet Ön nem használ</item>
+        <item quantity="other">%1$d olyan Mintben lévő pénz, amelyet Ön nem használ</item>
+    </plurals>
+    <string name="cashu_untrusted_mint_subtitle">Ezek az érmék egy nutzapból érkeztek. Helyezze át őket egy olyan Mintbe, amelyben megbízik, vagy vegye fel őket Lightningon keresztül a biztonságuk érdekében.</string>
+    <string name="cashu_untrusted_mint_badge">Nincs a pénztárcában</string>
+    <string name="cashu_untrusted_mint_move">Áthelyezés</string>
+    <string name="cashu_move_coins_title">Érmék kivonása</string>
+    <string name="cashu_move_coins_body">%2$s satoshi egy olyan Mintben (%1$s), amelyet Ön nem használ. Helyezze át őket egy olyan helyre, amelyben megbízik.</string>
+    <string name="cashu_move_coins_to_mint">Áthelyezés egy olyan Mintbe, amelyben megbízik</string>
+    <string name="cashu_move_coins_move">Áthelyezés</string>
+    <string name="cashu_move_coins_fee_hint">Ebből a pénzverdéből egy kis Lightning-díj kerül levonásra, ezért előfordulhat, hogy a teljes egyenlegnél valamivel kevesebbet kell küldenie.</string>
+    <string name="cashu_move_coins_no_trusted">Először adjon hozzá egy Mintet a pénztárcájához az érmék Mintek közötti áthelyezéséhez, vagy használja az alábbi lehetőségeket.</string>
+    <string name="cashu_move_coins_withdraw_ln">Kifizetés Lightningon keresztül…</string>
+    <string name="cashu_move_coins_export_token">Exportálás Cashu tokenként…</string>
+    <string name="cashu_move_coins_working">Érmék áthelyezése…</string>
+    <string name="cashu_move_coins_done">%1$s satoshi áthelyezve ide: %2$s.</string>
     <string name="event_sync_less_than_until">&lt;%1$s</string>
     <string name="event_sync_status_connecting">Kapcsolódás</string>
     <string name="event_sync_status_downloading">Letöltés</string>
@@ -3049,6 +3117,24 @@
         <item quantity="other">%1$s +%2$d további</item>
     </plurals>
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
+    <string name="road_event_police">Rendőrség</string>
+    <string name="road_event_speed_camera">Sebességmérő kamera</string>
+    <string name="road_event_traffic_jam">Forgalmi dugó</string>
+    <string name="road_event_accident">Baleset</string>
+    <string name="road_event_road_closure">Útlezárás</string>
+    <string name="road_event_construction">Útépítés</string>
+    <string name="road_event_hazard">Veszély</string>
+    <string name="road_event_road_condition">Útviszonyok</string>
+    <string name="road_event_pothole">Kátyú</string>
+    <string name="road_event_fog">Köd</string>
+    <string name="road_event_ice">Jég</string>
+    <string name="road_event_animal">Állat az úton</string>
+    <string name="road_event_other">Útesemény</string>
+    <string name="road_event_unknown">Útesemény</string>
+    <string name="road_event_confirmed">Még mindig ott van</string>
+    <string name="road_event_denied">Már nincs ott</string>
+    <string name="road_event_confirms_report">Útjelentés megerősítése</string>
+    <string name="road_event_denies_report">Útlezárás feloldásának jelentése</string>
     <string name="goal_amount_label">Célösszeg (satoshiban)</string>
     <string name="goal_amount_placeholder">100 000</string>
     <string name="goal_description_label">Cél leírása, bemutatása</string>
