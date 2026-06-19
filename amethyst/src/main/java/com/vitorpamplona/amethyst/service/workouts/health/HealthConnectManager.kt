@@ -96,7 +96,18 @@ class HealthConnectManager(
     suspend fun grantedPermissions(): Set<String> = client.permissionController.getGrantedPermissions()
 
     suspend fun hasAllPermissions(): Boolean {
-        val granted = grantedPermissions()
+        // Some OEM builds report the provider as SDK_AVAILABLE yet fail to bind to the
+        // Health Connect service (e.g. RemoteException "Binding to service failed" on
+        // ITEL/low-end devices). Treat any such failure as "not granted" instead of
+        // letting it crash the app — the carousel then quietly stays in its prompt state.
+        val granted =
+            try {
+                grantedPermissions()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w(TAG, "Failed to read Health Connect granted permissions", e)
+                return false
+            }
         val ok = granted.containsAll(PERMISSIONS)
         if (!ok) {
             Log.i(TAG) { "hasAllPermissions=false; missing=${PERMISSIONS - granted}" }
