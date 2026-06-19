@@ -86,8 +86,8 @@ class DisappearingBarState(
      */
     suspend fun resetToVisible() {
         coroutineScope {
-            launch { animateOne({ topHeightOffset }, 0f, 0f) { topHeightOffset = it } }
-            launch { animateOne({ bottomHeightOffset }, 0f, 0f) { bottomHeightOffset = it } }
+            launch { animateOne({ topHeightOffset }, 0f, 0f, topHeightLimit) { topHeightOffset = it } }
+            launch { animateOne({ bottomHeightOffset }, 0f, 0f, bottomHeightLimit) { bottomHeightOffset = it } }
         }
     }
 
@@ -110,19 +110,27 @@ class DisappearingBarState(
                 positionBiasToHide -> -limit
                 else -> 0f
             }
-        animateOne(get, target, initialVelocityY, set)
+        animateOne(get, target, initialVelocityY, limit, set)
     }
 
     private suspend fun animateOne(
         get: () -> Float,
         target: Float,
         initialVelocity: Float,
+        limit: Float,
         set: (Float) -> Unit,
     ) {
         val start = get()
         if (start == target && initialVelocity == 0f) return
         Animatable(start)
-            .animateTo(
+            .apply {
+                // Clamp to the visible travel range. A critically-damped spring still crosses its
+                // target once when given an initial velocity in the target's direction, so without
+                // these bounds a fast reveal fling would push the offset past 0 (or past -limit on
+                // a hide) and render the bar overshooting its resting edge before springing back.
+                // Hitting a bound ends the animation at the edge — a crisp settle with no rebound.
+                if (limit > 0f) updateBounds(lowerBound = -limit, upperBound = 0f)
+            }.animateTo(
                 targetValue = target,
                 animationSpec = SETTLE_SPRING,
                 initialVelocity = initialVelocity,
