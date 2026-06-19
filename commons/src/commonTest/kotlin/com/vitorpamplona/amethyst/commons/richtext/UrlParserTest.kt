@@ -322,6 +322,34 @@ class UrlParserTest {
         )
 
     @Test
+    fun testUrlWithBalancedParenthesis() =
+        test(
+            "https://en.wikipedia.org/wiki/Bitcoin_(disambiguation)",
+            Urls(withScheme = setOf("https://en.wikipedia.org/wiki/Bitcoin_(disambiguation)")),
+        )
+
+    @Test
+    fun testUrlWithCommaAndBalancedParenthesis() =
+        test(
+            "https://memory-alpha.fandom.com/wiki/Scorpion,_Part_II_(episode)",
+            Urls(withScheme = setOf("https://memory-alpha.fandom.com/wiki/Scorpion,_Part_II_(episode)")),
+        )
+
+    @Test
+    fun testUrlWithBalancedParenthesisInSentence() =
+        test(
+            "Read https://en.wikipedia.org/wiki/Bitcoin_(disambiguation) for context.",
+            Urls(withScheme = setOf("https://en.wikipedia.org/wiki/Bitcoin_(disambiguation)")),
+        )
+
+    @Test
+    fun testUrlWrappedInParenthesisDropsCloser() =
+        test(
+            "(see https://test.com)",
+            Urls(withScheme = setOf("https://test.com")),
+        )
+
+    @Test
     fun testBlossom() {
         val blossom = "blossom:b1674191a88ec5cdd733e4240a81803105dc412d6c6708d53ab94fc248f4f553.pdf?xs=cdn.satellite.earth"
         test(blossom, Urls(blossomUris = setOf(blossom)))
