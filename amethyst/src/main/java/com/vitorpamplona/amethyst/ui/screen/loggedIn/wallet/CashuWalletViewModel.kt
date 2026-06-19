@@ -27,16 +27,14 @@ import com.vitorpamplona.amethyst.model.nip60Cashu.CashuWalletState
 import com.vitorpamplona.amethyst.model.nip60Cashu.MintQuoteStarted
 import com.vitorpamplona.amethyst.model.nip60Cashu.TokenEntry
 import com.vitorpamplona.amethyst.model.nip60Cashu.describeMintError
-import com.vitorpamplona.amethyst.service.cashu.v3.V3Parser
-import com.vitorpamplona.amethyst.service.cashu.v4.V4Parser
-import com.vitorpamplona.amethyst.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.AccountViewModel
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MeltQuoteBolt11ResponseDto
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpException
-import com.vitorpamplona.quartz.nip60Cashu.token.CashuProof
+import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenB64Parser
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.startsWith
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -841,66 +839,33 @@ class CashuWalletViewModel : ViewModel() {
             return
         }
 
-        val (mintUrl, proofs) =
-            when {
-                trimmed.startsWith("cashuB") -> {
-                    when (val parsed = V4Parser.parseCashuB(trimmed)) {
-                        is GenericLoadable.Loaded -> {
-                            val tok = parsed.loaded.firstOrNull()
-                            if (tok == null) {
-                                _redeemState.value = CashuRedeemFlowState.Error("Token has no proofs")
-                                return
-                            }
-                            tok.mint to tok.proofs.map { CashuProof(it.id, it.amount.toLong(), it.secret, it.C) }
-                        }
-                        is GenericLoadable.Error -> {
-                            _redeemState.value = CashuRedeemFlowState.Error(parsed.errorMessage)
-                            return
-                        }
-                        else -> {
-                            _redeemState.value = CashuRedeemFlowState.Error("Could not parse token")
-                            return
-                        }
-                    }
-                }
-                trimmed.startsWith("cashuA") -> {
-                    when (val parsed = V3Parser.parseCashuA(trimmed)) {
-                        is GenericLoadable.Loaded -> {
-                            val tok = parsed.loaded.firstOrNull()
-                            if (tok == null) {
-                                _redeemState.value = CashuRedeemFlowState.Error("Token has no proofs")
-                                return
-                            }
-                            tok.mint to tok.proofs.map { CashuProof(it.id, it.amount.toLong(), it.secret, it.C) }
-                        }
-                        is GenericLoadable.Error -> {
-                            _redeemState.value = CashuRedeemFlowState.Error(parsed.errorMessage)
-                            return
-                        }
-                        else -> {
-                            _redeemState.value = CashuRedeemFlowState.Error("Could not parse token")
-                            return
-                        }
-                    }
-                }
-                else -> {
-                    _redeemState.value =
-                        CashuRedeemFlowState.Error("Not a Cashu token (must start with cashuA or cashuB)")
+        if (!trimmed.startsWith(CashuTokenB64Parser.CashuAPrefix) && !trimmed.startsWith(CashuTokenB64Parser.CashuBPrefix)) {
+            _redeemState.value =
+                CashuRedeemFlowState.Error("Not a Cashu token (must start with cashuA or cashuB)")
+            return
+        }
+
+        // A single token string can carry proofs from more than one mint;
+        // redeem every group rather than just the first.
+        val parsedTokens =
+            CashuTokenB64Parser.parse(trimmed)?.takeIf { it.isNotEmpty() }
+                ?: run {
+                    _redeemState.value = CashuRedeemFlowState.Error("Could not parse token")
                     return
                 }
-            }
 
-        if (mintUrl !in mints.value) {
+        val unknownMint = parsedTokens.firstOrNull { it.mint !in mints.value }?.mint
+        if (unknownMint != null) {
             _redeemState.value =
-                CashuRedeemFlowState.Error("Token mint ($mintUrl) is not in your wallet. Add it first.")
+                CashuRedeemFlowState.Error("Token mint ($unknownMint) is not in your wallet. Add it first.")
             return
         }
 
         _redeemState.value = CashuRedeemFlowState.Redeeming
         vm.launchSigner {
             try {
-                val result = ops.redeemToken(trimmed, proofs, mintUrl)
-                _redeemState.value = CashuRedeemFlowState.Completed(result.amount)
+                val total = parsedTokens.sumOf { ops.redeemToken(trimmed, it.proofs, it.mint).amount }
+                _redeemState.value = CashuRedeemFlowState.Completed(total)
             } catch (e: Exception) {
                 _redeemState.value = CashuRedeemFlowState.Error(describeMintError(e))
             }

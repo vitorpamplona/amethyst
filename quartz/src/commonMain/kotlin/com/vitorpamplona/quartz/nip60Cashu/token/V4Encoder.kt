@@ -18,24 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.cashu.v4
+package com.vitorpamplona.quartz.nip60Cashu.token
 
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
-import com.vitorpamplona.quartz.nip60Cashu.token.CashuProof
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.cbor.Cbor
 import kotlinx.serialization.encodeToByteArray
-import java.util.Base64
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
- * Inverse of [V4Parser]: encode a list of NIP-60 proofs into a `cashuB` token
- * string suitable for sending out-of-band.
+ * Inverse of [com.vitorpamplona.quartz.nip60Cashu.token.V4Token] parsing:
+ * encode a list of NIP-60 proofs into a `cashuB` token string suitable for
+ * sending out-of-band.
  *
  * V4 (NUT-00) wire format:
  *   "cashuB" + Base64URL(CBOR(V4Token { m, u, d?, t: [V4T { i, p: [V4Proof] }] }))
  */
 object V4Encoder {
-    @OptIn(ExperimentalSerializationApi::class)
+    @OptIn(ExperimentalSerializationApi::class, ExperimentalEncodingApi::class)
     fun encode(
         mintUrl: String,
         proofs: List<CashuProof>,
@@ -71,12 +71,8 @@ object V4Encoder {
                 t = groups.toTypedArray(),
             )
 
-        val cbor =
-            Cbor {
-                ignoreUnknownKeys = true
-            }
-        val bytes = cbor.encodeToByteArray(token)
-        val base64 = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
+        val bytes = CashuV4Cbor.encodeToByteArray(token)
+        val base64 = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT).encode(bytes)
         return "cashuB$base64"
     }
 }

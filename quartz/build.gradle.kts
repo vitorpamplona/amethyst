@@ -127,6 +127,9 @@ kotlin {
                 // Kotlin serialization for the times where we need the Json tree and performance is not that important.
                 implementation(libs.kotlinx.serialization.json)
 
+                // CBOR serialization for the NUT-00 v4 (cashuB) token wire format.
+                implementation(libs.kotlinx.serialization.cbor)
+
                 // immutable collections to avoid recomposition
                 implementation(libs.kotlinx.collections.immutable)
 

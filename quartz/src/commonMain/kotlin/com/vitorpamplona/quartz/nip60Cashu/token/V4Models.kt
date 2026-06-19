@@ -18,11 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.cashu.v4
+package com.vitorpamplona.quartz.nip60Cashu.token
 
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.cbor.ByteString
+import kotlinx.serialization.cbor.Cbor
+
+/**
+ * Shared CBOR codec for the NUT-00 v4 (`cashuB`) wire format. Stateless and
+ * thread-safe, so a single instance is reused by [V4Encoder] and
+ * [CashuTokenB64Parser] instead of allocating one per call.
+ */
+@OptIn(ExperimentalSerializationApi::class)
+internal val CashuV4Cbor: Cbor = Cbor { ignoreUnknownKeys = true }
 
 @Serializable
 class V4Token(

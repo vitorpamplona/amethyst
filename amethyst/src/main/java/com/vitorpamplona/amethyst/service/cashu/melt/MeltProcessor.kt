@@ -22,12 +22,11 @@ package com.vitorpamplona.amethyst.service.cashu.melt
 
 import android.content.Context
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuToken
 import com.vitorpamplona.amethyst.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.CashuMintOperations
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MintHttpClient
-import com.vitorpamplona.quartz.nip60Cashu.token.CashuProof
+import com.vitorpamplona.quartz.nip60Cashu.token.CashuToken
 import okhttp3.OkHttpClient
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -54,10 +53,7 @@ class MeltProcessor {
     ): MeltResult {
         try {
             val ops = CashuMintOperations(MintHttpClient(token.mint, okHttpClient))
-            val proofs =
-                token.proofs.map {
-                    CashuProof(id = it.id, amount = it.amount.toLong(), secret = it.secret, c = it.C)
-                }
+            val proofs = token.proofs
 
             // A Lightning address must commit to an amount before we know the
             // fees, so probe with an invoice for the full token value to learn

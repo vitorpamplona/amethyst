@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuToken
 import com.vitorpamplona.amethyst.service.cashu.CashuParser
 import com.vitorpamplona.amethyst.ui.components.GenericLoadable
+import com.vitorpamplona.quartz.nip60Cashu.token.CashuToken
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -48,12 +48,12 @@ class CashuBTest {
             assertEquals(2, parsed.proofs[0].amount)
             assertEquals("407915bc212be61a77e3e6d2aeb4c727980bda51cd06a6afc29e2861768a7837", parsed.proofs[0].secret)
             assertEquals("009a1f293253e41e", parsed.proofs[0].id)
-            assertEquals("02bc9097997d81afb2cc7346b5e4345a9346bd2a506eb7958598a72f0cf85163ea", parsed.proofs[0].C)
+            assertEquals("02bc9097997d81afb2cc7346b5e4345a9346bd2a506eb7958598a72f0cf85163ea", parsed.proofs[0].c)
 
             assertEquals(8, parsed.proofs[1].amount)
             assertEquals("fe15109314e61d7756b0f8ee0f23a624acaa3f4e042f61433c728c7057b931be", parsed.proofs[1].secret)
             assertEquals("009a1f293253e41e", parsed.proofs[1].id)
-            assertEquals("029e8e5050b890a7d6c0968db16bc1d5d5fa040ea1de284f6ec69d61299f671059", parsed.proofs[1].C)
+            assertEquals("029e8e5050b890a7d6c0968db16bc1d5d5fa040ea1de284f6ec69d61299f671059", parsed.proofs[1].c)
         }
     }
 
@@ -68,18 +68,18 @@ class CashuBTest {
             assertEquals(1, parsed[0].proofs[0].amount)
             assertEquals("acc12435e7b8484c3cf1850149218af90f716a52bf4a5ed347e48ecc13f77388", parsed[0].proofs[0].secret)
             assertEquals("00ffd48b8f5ecf80", parsed[0].proofs[0].id)
-            assertEquals("0244538319de485d55bed3b29a642bee5879375ab9e7a620e11e48ba482421f3cf", parsed[0].proofs[0].C)
+            assertEquals("0244538319de485d55bed3b29a642bee5879375ab9e7a620e11e48ba482421f3cf", parsed[0].proofs[0].c)
 
             assertEquals(3, parsed[1].totalAmount)
             assertEquals(2, parsed[1].proofs[0].amount)
             assertEquals("1323d3d4707a58ad2e23ada4e9f1f49f5a5b4ac7b708eb0d61f738f48307e8ee", parsed[1].proofs[0].secret)
             assertEquals("00ad268c4d1f5826", parsed[1].proofs[0].id)
-            assertEquals("023456aa110d84b4ac747aebd82c3b005aca50bf457ebd5737a4414fac3ae7d94d", parsed[1].proofs[0].C)
+            assertEquals("023456aa110d84b4ac747aebd82c3b005aca50bf457ebd5737a4414fac3ae7d94d", parsed[1].proofs[0].c)
 
             assertEquals(1, parsed[1].proofs[1].amount)
             assertEquals("56bcbcbb7cc6406b3fa5d57d2174f4eff8b4402b176926d3a57d3c3dcbb59d57", parsed[1].proofs[1].secret)
             assertEquals("00ad268c4d1f5826", parsed[1].proofs[1].id)
-            assertEquals("0273129c5719e599379a974a626363c333c56cafc0e6d01abe46d5808280789c63", parsed[1].proofs[1].C)
+            assertEquals("0273129c5719e599379a974a626363c333c56cafc0e6d01abe46d5808280789c63", parsed[1].proofs[1].c)
         }
 
     @Test()
@@ -93,11 +93,11 @@ class CashuBTest {
             assertEquals(64, parsed[0].proofs[0].amount)
             assertEquals("7a8dcf9b3e8a247ce339e7369e9b4a19f31eacb69d8b0c65daaeb72d1acb9ad3", parsed[0].proofs[0].secret)
             assertEquals("009bb23d3a912e4e", parsed[0].proofs[0].id)
-            assertEquals("03df591d261bcd176c69e3e833bcab5348ca31d218620492859303a1f5e874e9c7", parsed[0].proofs[0].C)
+            assertEquals("03df591d261bcd176c69e3e833bcab5348ca31d218620492859303a1f5e874e9c7", parsed[0].proofs[0].c)
 
             assertEquals(32, parsed[0].proofs[1].amount)
             assertEquals("9d81c1a2616853ad8049cbcd1c7c247add83b373828620bac2fd7f3e5a58aceb", parsed[0].proofs[1].secret)
             assertEquals("009bb23d3a912e4e", parsed[0].proofs[1].id)
-            assertEquals("039e52c02141738e9dc278db91bf3b333a37d13d8413d5acfe77a6b859de0de806", parsed[0].proofs[1].C)
+            assertEquals("039e52c02141738e9dc278db91bf3b333a37d13d8413d5acfe77a6b859de0de806", parsed[0].proofs[1].c)
         }
 }
