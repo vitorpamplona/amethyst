@@ -42,11 +42,13 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapPrivateEvent
 import com.vitorpamplona.quartz.nip57Zaps.LnZapRequestEvent
 import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 
 class NostrSignerRemote(
     val signer: NostrSignerInternal,
@@ -80,7 +82,19 @@ class NostrSignerRemote(
         ) { event ->
             if (event is NostrConnectEvent) {
                 scope.launch {
-                    manager.newResponse(event)
+                    // Incoming bunker responses come straight off the relay and are
+                    // decrypted here on a fire-and-forget launch whose scope carries no
+                    // CoroutineExceptionHandler. A malformed/hostile event (or a benign
+                    // SignerExceptions from decryption) must not escape and crash the app.
+                    try {
+                        manager.newResponse(event)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: SignerExceptions) {
+                        Log.d("NostrSignerRemote") { "Could not decrypt bunker response ${event.id}: ${e.message}" }
+                    } catch (e: Exception) {
+                        Log.w("NostrSignerRemote", "Failed to process bunker response ${event.id}", e)
+                    }
                 }
             }
         }
