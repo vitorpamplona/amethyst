@@ -23,7 +23,6 @@ package com.vitorpamplona.quartz.nip60Cashu.token
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.cbor.Cbor
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.json.Json
 import kotlin.coroutines.cancellation.CancellationException
@@ -43,6 +42,9 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  * (one [CashuToken] per mint/keyset group).
  */
 object CashuTokenB64Parser {
+    /** Both "cashuA" and "cashuB" prefixes are 6 chars. */
+    private const val PREFIX_LENGTH = 6
+
     private val json =
         Json {
             ignoreUnknownKeys = true
@@ -59,7 +61,9 @@ object CashuTokenB64Parser {
     @OptIn(ExperimentalEncodingApi::class)
     fun parseCashuA(token: String): List<CashuToken>? =
         try {
-            val payload = token.removePrefix("cashuA")
+            // drop() rather than removePrefix() so the case-insensitive
+            // dispatch above stays consistent with prefix stripping.
+            val payload = token.drop(PREFIX_LENGTH)
             val decoded =
                 Base64.Default
                     .withPadding(Base64.PaddingOption.PRESENT_OPTIONAL)
@@ -88,12 +92,12 @@ object CashuTokenB64Parser {
     @OptIn(ExperimentalEncodingApi::class, ExperimentalSerializationApi::class)
     fun parseCashuB(token: String): List<CashuToken>? =
         try {
-            val payload = token.removePrefix("cashuB")
+            val payload = token.drop(PREFIX_LENGTH)
             val bytes =
                 Base64.UrlSafe
                     .withPadding(Base64.PaddingOption.PRESENT_OPTIONAL)
                     .decode(payload)
-            val parsed = Cbor { ignoreUnknownKeys = true }.decodeFromByteArray<V4Token>(bytes)
+            val parsed = CashuV4Cbor.decodeFromByteArray<V4Token>(bytes)
             parsed.t?.map { group ->
                 val keysetId = group.i.toHexKey()
                 val proofs =

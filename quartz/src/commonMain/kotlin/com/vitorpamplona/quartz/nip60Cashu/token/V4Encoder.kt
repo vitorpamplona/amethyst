@@ -22,7 +22,6 @@ package com.vitorpamplona.quartz.nip60Cashu.token
 
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.cbor.Cbor
 import kotlinx.serialization.encodeToByteArray
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
@@ -72,11 +71,7 @@ object V4Encoder {
                 t = groups.toTypedArray(),
             )
 
-        val cbor =
-            Cbor {
-                ignoreUnknownKeys = true
-            }
-        val bytes = cbor.encodeToByteArray(token)
+        val bytes = CashuV4Cbor.encodeToByteArray(token)
         val base64 = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT).encode(bytes)
         return "cashuB$base64"
     }

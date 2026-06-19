@@ -125,4 +125,15 @@ class CashuTokenB64ParserTest {
         assertTrue(CashuTokenB64Parser.parse(cashuTokenA)!!.isNotEmpty())
         assertTrue(CashuTokenB64Parser.parse(cashuTokenB1)!!.isNotEmpty())
     }
+
+    @Test
+    fun acceptsMixedCasePrefix() {
+        // parse() dispatches case-insensitively, so prefix stripping must too —
+        // an upper-cased prefix should still decode the same payload.
+        val upper = "CASHUB" + cashuTokenB1.drop(6)
+        assertEquals(
+            CashuTokenB64Parser.parse(cashuTokenB1)!!.flatMap { it.proofs }.map { it.secret },
+            CashuTokenB64Parser.parse(upper)!!.flatMap { it.proofs }.map { it.secret },
+        )
+    }
 }
