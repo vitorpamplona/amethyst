@@ -14,6 +14,9 @@
     <plurals name="nip82_assets_count">
         <item quantity="other">捆绑了 %1$d 个资产</item>
     </plurals>
+    <plurals name="thread_collapsed_reply_count">
+        <item quantity="other">+%1$d\n条回复</item>
+    </plurals>
     <string name="post_not_found">事件正在加载或无法在你的中继列表中找到</string>
     <string name="post_not_found_short">👀</string>
     <string name="channel_image">频道图片</string>
@@ -1320,6 +1323,9 @@
     <string name="always_on_notif_title">Amethyst 通知活跃</string>
     <plurals name="always_on_notif_connected">
         <item quantity="other">已连接到 %1$d 个收件箱中继</item>
+    </plurals>
+    <plurals name="always_on_notif_connected_foreground">
+        <item quantity="other">已连接到 %1$d 个中继</item>
     </plurals>
     <string name="always_on_notif_connecting">正在连接到收件箱中继\u2026</string>
     <string name="always_on_notif_setting_title">“始终显示通知”服务</string>
@@ -3074,6 +3080,24 @@
         <item quantity="other">%1$s + 另%2$d</item>
     </plurals>
     <!-- Roadstr road event reports (kinds 1315/1316). "Roadstr" is a proper noun, do not translate. -->
+    <string name="road_event_police">警察</string>
+    <string name="road_event_speed_camera">测速照相</string>
+    <string name="road_event_traffic_jam">塞车</string>
+    <string name="road_event_accident">事故</string>
+    <string name="road_event_road_closure">道路关闭</string>
+    <string name="road_event_construction">建设</string>
+    <string name="road_event_hazard">危险</string>
+    <string name="road_event_road_condition">道路状况</string>
+    <string name="road_event_pothole">坑洼</string>
+    <string name="road_event_fog">雾</string>
+    <string name="road_event_ice">冰</string>
+    <string name="road_event_animal">道路上的动物</string>
+    <string name="road_event_other">道路事件</string>
+    <string name="road_event_unknown">道路事件</string>
+    <string name="road_event_confirmed">仍在那里</string>
+    <string name="road_event_denied">已不存在</string>
+    <string name="road_event_confirms_report">确认道路报告</string>
+    <string name="road_event_denies_report">报告道路事件已清理完毕</string>
     <string name="goal_amount_label">目标金额 (sats)</string>
     <string name="goal_amount_placeholder">100000</string>
     <string name="goal_description_label">描述您的目标</string>
