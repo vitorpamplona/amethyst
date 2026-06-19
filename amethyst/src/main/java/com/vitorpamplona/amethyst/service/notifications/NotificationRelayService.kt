@@ -152,6 +152,10 @@ class NotificationRelayService : Service() {
         // Safety: also call startForeground from onStartCommand in case
         // onCreate didn't complete before onStartCommand fired (ntfy #1520)
         initializeForeground()
+        // If we couldn't promote to the foreground, initializeForeground() already
+        // called stopSelf(); don't spin up relay coroutines on a service that's
+        // tearing itself down.
+        if (!foregroundStarted) return START_NOT_STICKY
         startRelayConnection()
         return START_STICKY
     }
@@ -222,14 +226,23 @@ class NotificationRelayService : Service() {
             )
             foregroundStarted = true
         } catch (e: Exception) {
+            // Any failure to promote to the foreground leaves the service in a
+            // "started but not foregrounded" zombie state. Once startForegroundService()
+            // has been called, Android expects startForeground() within ~10s; if it never
+            // lands it fires ForegroundServiceDidNotStartInTimeException and crashes the
+            // whole app. Tearing the service down clears the OS's fgRequired flag, which
+            // cancels that pending timeout, so we must stopSelf() on EVERY failure path —
+            // not just ForegroundServiceStartNotAllowedException. Other causes include
+            // OEM-specific RemoteException/IllegalStateException and resource lookup
+            // failures while building the notification.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
                 e is ForegroundServiceStartNotAllowedException
             ) {
                 Log.w(TAG, "Foreground service start not allowed, stopping self")
-                stopSelf()
             } else {
-                Log.e(TAG, "Failed to start foreground", e)
+                Log.e(TAG, "Failed to start foreground, stopping self", e)
             }
+            stopSelf()
         }
     }
 
