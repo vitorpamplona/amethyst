@@ -297,16 +297,16 @@ repositories {
 Add the following line to your `commonMain` dependencies:
 
 ```gradle
-implementation('com.vitorpamplona.quartz:quartz:1.12.4')
+implementation('com.vitorpamplona.quartz:quartz:1.12.5')
 ```
 
 Variations to each platform are also available:
 
 ```gradle
-implementation('com.vitorpamplona.quartz:quartz-android:1.12.4')
-implementation('com.vitorpamplona.quartz:quartz-jvm:1.12.4')
-implementation('com.vitorpamplona.quartz:quartz-iosarm64:1.12.4')
-implementation('com.vitorpamplona.quartz:quartz-iossimulatorarm64:1.12.4')
+implementation('com.vitorpamplona.quartz:quartz-android:1.12.5')
+implementation('com.vitorpamplona.quartz:quartz-jvm:1.12.5')
+implementation('com.vitorpamplona.quartz:quartz-iosarm64:1.12.5')
+implementation('com.vitorpamplona.quartz:quartz-iossimulatorarm64:1.12.5')
 ```
 
 Check versions on [MavenCentral](https://central.sonatype.com/search?q=com.vitorpamplona.quartz)
